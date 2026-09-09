@@ -246,13 +246,19 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         { kind: "button", id: "transaction-create", icon: "i-plus", label: "Create", ariaLabel: "Create Transaction", onClick: addTransaction },
         // #439: "wide" -- see the Clipboard group's "Duplicate" above.
         { kind: "button", id: "transaction-duplicate", icon: "i-duplicate", label: "Duplicate", ariaLabel: "Duplicate Transaction", size: "wide", onClick: duplicateTransaction, disabled: !selectedTransactionId },
-        ...(viewMode === "Transaction" ? [
-          { kind: "button", id: "transaction-group-add", icon: "i-plus", label: "Add", ariaLabel: "Add Transaction Group", onClick: addTransactionGroup },
-          { kind: "button", id: "transaction-ungroup", icon: "i-ungroup", label: "Ungroup", ariaLabel: "Ungroup selected Transaction", title: "Remove the selected Transaction's Group (keeps the Transaction, ungrouped)", onClick: ungroupSelectedTransaction, disabled: selectedTransactionGroupId === undefined },
-          { kind: "custom", id: "transaction-time-scale", render: () => <TransactionTimeScalePanel key="transaction-time-scale" document={document} onSetScale={commands.setTransactionTimeScale} /> },
-        ] as const : []),
       ],
     },
+    ...(viewMode === "Transaction" ? [{
+      id: "transaction-group", majorGroup: "Group", caption: "Group", items: [
+        { kind: "button", id: "transaction-group-add", icon: "i-plus", label: "Add", ariaLabel: "Add Transaction Group", onClick: addTransactionGroup },
+        { kind: "button", id: "transaction-ungroup", icon: "i-ungroup", label: "Ungroup", ariaLabel: "Ungroup selected Transaction", title: "Remove the selected Transaction's Group (keeps the Transaction, ungrouped)", onClick: ungroupSelectedTransaction, disabled: selectedTransactionGroupId === undefined },
+      ],
+    } as const] : []),
+    ...(viewMode === "Transaction" ? [{
+      id: "transaction-time", majorGroup: "Transaction Time", caption: "Time Scale", items: [
+        { kind: "custom", id: "transaction-time-scale", render: () => <TransactionTimeScalePanel key="transaction-time-scale" document={document} onSetScale={commands.setTransactionTimeScale} /> },
+      ],
+    } as const] : []),
   ];
   const signalRibbonGroups: readonly RibbonGroupSpec[] = [
     {
@@ -290,7 +296,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
   // Lane-specific commands, say) can be added later without re-threading
   // the ActiveContext plumbing again.
   const transactionRibbonGroups: readonly RibbonGroupSpec[] = [];
-  const homeGroups: readonly RibbonGroupSpec[] = composeRibbon({ common: commonRibbonGroups, bySignal: signalRibbonGroups, byTransaction: transactionRibbonGroups }, { viewMode, activeContext }, ["file", "edit", "timeline", "view", "transaction", "layout", "display"]);
+  const homeGroups: readonly RibbonGroupSpec[] = composeRibbon({ common: commonRibbonGroups, bySignal: signalRibbonGroups, byTransaction: transactionRibbonGroups }, { viewMode, activeContext }, ["file", "edit", "timeline", "view", "transaction", "transaction-group", "transaction-time", "layout", "display"]);
   // View tab visual-consistency fix: previously hand-written per-button
   // JSX with its own one-off sizing (tile-shaped toggle buttons, a fixed
   // 3-column grid, an unstyled native <select> that fell through to the

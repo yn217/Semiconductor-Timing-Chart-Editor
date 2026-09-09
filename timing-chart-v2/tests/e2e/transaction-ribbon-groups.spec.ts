@@ -28,7 +28,7 @@ test("Transaction Ribbon splits into Transaction/Group/Time captioned groups, ea
   await expect(ribbon.locator("[data-major-group='Transaction']").getByRole("button", { name: "Create Transaction", exact: true })).toBeVisible();
   await expect(ribbon.locator("[data-major-group='Group']").getByRole("button", { name: "Add Transaction Group", exact: true })).toBeVisible();
   await expect(ribbon.locator("[data-major-group='Group']").getByRole("button", { name: "Ungroup selected Transaction", exact: true })).toBeVisible();
-  await expect(ribbon.locator("[data-major-group='Time']").getByTestId("transaction-time-scale-trigger")).toBeVisible();
+  await expect(ribbon.locator("[data-major-group='Transaction Time']").getByTestId("transaction-time-scale-trigger")).toBeVisible();
   overflow = await ribbon.evaluate((el) => el.scrollWidth - el.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
 
