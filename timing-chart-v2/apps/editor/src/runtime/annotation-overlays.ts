@@ -63,6 +63,23 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
       : ["range", "highlight", "timingRegion", "rectangle", "ellipse"].includes(annotation.type) ? "range"
       : annotation.type === "ghostTrace" ? "trace"
       : ["arrow", "dependency", "measurement", "bracket", "connector"].includes(annotation.type) ? "line" : "point";
+    const markerExtent = annotation.type === "marker" && annotation.verticalSpan
+      ? (() => {
+        if (annotation.verticalSpan.mode === "rows") {
+          const start = projection.rowLayout.find((row) => row.rowId === annotation.verticalSpan?.startRowId);
+          const end = projection.rowLayout.find((row) => row.rowId === annotation.verticalSpan?.endRowId);
+          return start && end ? { top: Math.min(start.y, end.y), bottom: Math.max(start.y + start.height, end.y + end.height) } : undefined;
+        }
+        const anchorPoint = anchors.find((item) => item.field === "anchor");
+        if (!anchorPoint) return undefined;
+        return annotation.verticalSpan.mode === "custom"
+          ? { top: anchorPoint.y + (annotation.verticalSpan.startOffset ?? 0), bottom: anchorPoint.y + (annotation.verticalSpan.endOffset ?? 0) }
+          : { top: 0, bottom: projection.totalHeight };
+      })()
+      : undefined;
+    const markerExtentAnchors = markerExtent && annotation.type === "marker"
+      ? [{ field: "verticalSpanStart" as const, x: anchors[0]!.x, y: markerExtent.top }, { field: "verticalSpanEnd" as const, x: anchors[0]!.x, y: markerExtent.bottom }]
+      : [];
     return [{
       id: annotation.id,
       type: annotation.type,
@@ -73,7 +90,8 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
       ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }),
       ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }),
       ...(annotation.color === undefined ? {} : { color: annotation.color }),
-      anchors,
+      anchors: [...anchors, ...markerExtentAnchors],
+      ...(markerExtent === undefined ? {} : { verticalExtent: markerExtent }),
       ...(annotation.labelOffset === undefined ? {} : { labelOffset: annotation.labelOffset }),
       ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }),
       ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }),

@@ -668,6 +668,10 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
     renderLineBody(body, primitive, lineFirst, lineSecond, rotationDeg);
     body.dataset.annotationField = first.field;
   }
+  if (primitive.type === "marker" && primitive.verticalExtent) {
+    body.style.height = `${Math.max(2, primitive.verticalExtent.bottom - primitive.verticalExtent.top)}px`;
+    body.style.transform = `translate(${first.x}px, ${primitive.verticalExtent.top}px)${rotateSuffix}`;
+  }
   // #378: independent Stroke width/style and Fill color/opacity, applied as
   // inline style overrides on top of the shape's existing CSS defaults (see
   // center-columns.css's [data-annotation-type=...] [data-role="annotation-

@@ -100,7 +100,7 @@ export interface RendererRowIdentitySnapshot {
 export type RendererDiagnosticSummary = Omit<RendererDiagnostics, "waveRendersBySignal" | "localGeometryBuildsBySignal">;
 
 export interface OverlayAnchorPoint {
-  readonly field: "anchor" | "start" | "end" | "from" | "to";
+  readonly field: "anchor" | "start" | "end" | "from" | "to" | "verticalSpanStart" | "verticalSpanEnd";
   readonly x: number;
   readonly y: number;
   readonly threshold?: number;
@@ -118,6 +118,7 @@ export interface AnnotationOverlayPrimitive {
   readonly sourceSignalId?: string;
   readonly traceOffsetCycles?: number;
   readonly anchors: readonly OverlayAnchorPoint[];
+  readonly verticalExtent?: Readonly<{ readonly top: number; readonly bottom: number }>;
   readonly labelOffset?: Readonly<{ x: number; y: number }>;
   readonly lineType?: "straight" | "orthogonal" | "curve" | "diagonal";
   readonly arrowhead?: "end" | "start" | "bidirectional" | "none";
