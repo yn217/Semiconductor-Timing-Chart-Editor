@@ -19,7 +19,7 @@ describe("Reset semantic lifecycle", () => {
   it("rejects invalid metadata without history or dirty changes", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const result = session.execute({ id: commandId("reset_bad"), type: "signal.updateResetSemantics", signalId: "sig_data", resetSemantics: { polarity: "bad" as never, synchronization: "synchronous" } });
-    expect(result).toMatchObject({ ok: false }); expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+    expect(result).toMatchObject({ ok: false, problems: [expect.objectContaining({ code: "INVALID_RESET_SEMANTICS" })] }); expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
   });
   it("rejects invalid clock timing atomically and preserves reset metadata across role changes", () => {
     const source = canonicalFixture(); const session = new CommandHistorySession(source);

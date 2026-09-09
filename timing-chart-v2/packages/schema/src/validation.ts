@@ -72,6 +72,7 @@ const RULE_DESCRIPTORS: readonly CanonicalRuleDescriptor[] = [
   canonicalRule("INVALID_TRANSACTION_PHASE", "Transaction phases must fit their parent range", "$.transactions[*].phases[*]"),
   canonicalRule("INVALID_TRANSACTION_TIME_SCALE", "Transaction time scale must use positive finite ratio and intervals", "$.transactionTimeScale"),
   canonicalRule("INVALID_ENUM_DEFINITION", "Enum definition values and labels must be unique and valid", "$.enumDefinitions[*]"),
+  canonicalRule("INVALID_RESET_SEMANTICS", "Reset semantics must use valid source-time metadata", "$.signals[*].resetSemantics"),
   canonicalRule("LABEL_ANCHOR_BOUNDARY_MISMATCH", "Resume label anchor must match group boundary", "$.timeline.labelAnchors[*].source"),
   canonicalRule("LABEL_ANCHOR_OWNER_MISMATCH", "Label anchor owner must reciprocate", "$.timeline.labelAnchors[*].ownerTimeGroupId"),
   canonicalRule("MISSING_ANNOTATION_ANCHOR", "Annotation must provide its required anchor", "$.annotations[*]"),
@@ -254,6 +255,13 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
   const signals = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
   const transactionGroups = new Map((document.transactionGroups ?? []).map((group) => [group.id, group]));
   const transactionScale = document.transactionTimeScale;
+  document.signals.forEach((signal, index) => {
+    if (signal.type === "clock" || signal.type === "commentRow") return;
+    const reset = signal.resetSemantics;
+    if (!reset) return;
+    const valid = (reset.assertCycle === undefined || (Number.isInteger(reset.assertCycle) && reset.assertCycle >= 0 && reset.assertCycle < document.timeline.cycleCount)) && (reset.deassertCycle === undefined || (Number.isInteger(reset.deassertCycle) && reset.deassertCycle >= 0 && reset.deassertCycle < document.timeline.cycleCount)) && (reset.assertCycle === undefined || reset.deassertCycle === undefined || reset.assertCycle <= reset.deassertCycle);
+    if (!valid) problems.push(problem("INVALID_RESET_SEMANTICS", `$.signals[${index}].resetSemantics`, "Reset assert/deassert cycles must be in range and ordered.", signal.id));
+  });
   if (transactionScale !== undefined && (!Number.isFinite(transactionScale.clockCyclesPerTransactionCycle) || transactionScale.clockCyclesPerTransactionCycle <= 0 || !Number.isInteger(transactionScale.majorInterval) || transactionScale.majorInterval < 1 || !Number.isInteger(transactionScale.minorInterval) || transactionScale.minorInterval < 1)) problems.push(problem("INVALID_TRANSACTION_TIME_SCALE", "$.transactionTimeScale", "Transaction time scale is invalid."));
   const spacerOwners = new Map<string, string>(document.signalGroups.flatMap((group) => (group.spacers ?? []).map((spacer) => [spacer.id, group.id] as const)));
   const spacers = new Set(spacerOwners.keys());
