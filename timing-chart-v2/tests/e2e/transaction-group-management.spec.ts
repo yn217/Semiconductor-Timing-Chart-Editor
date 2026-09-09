@@ -17,10 +17,16 @@ test("Add Transaction Group creates a real Group selectable from the Bottom Pane
 
   await page.getByTestId("add-transaction-group-tree").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  // Creating a Group alone (no Transaction references it yet) doesn't
-  // render a header band -- matches #452's "Group headers only appear
-  // once real Groups are in use" contract, verified via the Bottom
-  // Panel's Group dropdown instead.
+  // Transaction Mode GUI realignment: creating a Group alone (no
+  // Transaction references it yet) used to render nothing at all -- a
+  // real History entry with zero visible feedback, indistinguishable from
+  // the click having silently failed. It now shows its own header band
+  // immediately, with a (0) count, exactly like every other entity this
+  // Tree creates.
+  const emptyHeader = page.getByTestId("transaction-group-header");
+  await expect(emptyHeader).toHaveCount(1);
+  await expect(emptyHeader).toContainText("(0)");
+
   const bottomEditor = page.getByTestId("transaction-editor");
   const groupSelect = bottomEditor.getByLabel("Move selected transaction to group");
 
