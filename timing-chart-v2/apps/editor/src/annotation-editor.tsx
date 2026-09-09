@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import type { HistoryState } from "@timing-chart-v2/history";
-import { DEFAULT_MEASUREMENT_LAYOUT, MEASUREMENT_PROFILES, anchorTransitionFraction, measurementProfilePair, type Annotation, type AnnotationId, type AnnotationType, type CanonicalDocument, type JsonObject, type MeasurementLayout, type MeasurementProfile, type SemanticAnchor, type SignalId, type TransitionAnchorKind } from "@timing-chart-v2/schema";
+import { DEFAULT_MEASUREMENT_LAYOUT, DOCUMENT_RESOURCE_BUDGET, MEASUREMENT_PROFILES, anchorTransitionFraction, measurementProfilePair, parseJsonInput, type Annotation, type AnnotationId, type AnnotationType, type CanonicalDocument, type JsonObject, type MeasurementLayout, type MeasurementProfile, type SemanticAnchor, type SignalId, type TransitionAnchorKind } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { downloadText } from "./download-text.js";
 import { AnnotationList } from "./annotation-list.js";
@@ -97,7 +97,16 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
   const lineControlsEnabled = annotation.type === "arrow" || annotation.type === "dependency";
   const importAnnotations = async (file: File) => {
     try {
-      const parsed: unknown = JSON.parse(await file.text());
+      if (file.size > DOCUMENT_RESOURCE_BUDGET.inputBytes) {
+        setImportStatus(`Import rejected: file exceeds ${DOCUMENT_RESOURCE_BUDGET.inputBytes} bytes.`);
+        return;
+      }
+      const parsedResult = parseJsonInput(await file.text());
+      if (!parsedResult.ok) {
+        setImportStatus(parsedResult.problems[0]?.message ?? "Invalid annotations JSON");
+        return;
+      }
+      const parsed: unknown = parsedResult.value;
       const items = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === "object" && "annotations" in parsed ? (parsed as { annotations: unknown }).annotations : undefined);
       if (!Array.isArray(items) || items.some((item) => item === null || typeof item !== "object" || typeof (item as { id?: unknown }).id !== "string")) throw new Error("Expected an annotation array with stable IDs.");
       const result = onReplaceDocument({ ...document, annotations: items as Annotation[] });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseDocument, scanJsonSyntax } from "@timing-chart-v2/schema";
+import { normalizeDocument, parseDocument, parseJsonInput, scanJsonSyntax } from "@timing-chart-v2/schema";
 
 describe("deterministic JSON syntax diagnostics", () => {
   it("rejects deeply nested JSON before migration walkers recurse", () => {
@@ -8,6 +8,12 @@ describe("deterministic JSON syntax diagnostics", () => {
     const result = parseDocument(JSON.stringify(value));
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.problems[0]).toMatchObject({ code: "RESOURCE_LIMIT_EXCEEDED" });
+  });
+  it("applies the same complexity gate to object and sub-document input", () => {
+    let value: unknown = { formatVersion: 2 };
+    for (let index = 0; index < 140; index += 1) value = { nested: value };
+    expect(normalizeDocument(value)).toMatchObject({ ok: false, kind: "validation", problems: [expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED" })] });
+    expect(parseJsonInput(JSON.stringify(value))).toMatchObject({ ok: false, problems: [expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED" })] });
   });
   it.each([
     ["multiline", "{\n  \"formatVersion\": 2,\n  ]", 3, 3],

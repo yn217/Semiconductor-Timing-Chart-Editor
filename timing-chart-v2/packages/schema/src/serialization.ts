@@ -40,10 +40,24 @@ export function migrateDocument(input: unknown): { document: CanonicalDocument; 
   return { document: cloneUnknown(migrated.value) as CanonicalDocument, warnings: migrated.warnings };
 }
 
+export type JsonInputResult = Readonly<{ ok: true; value: unknown } | { ok: false; problems: readonly DocumentProblem[] }>;
+
+/** Safe JSON boundary for sub-document imports that do not use the full document parser. */
+export function parseJsonInput(source: string): JsonInputResult {
+  const byteProblems = validateDocumentInputBytes(utf8ByteLength(source));
+  if (byteProblems.length > 0) return { ok: false, problems: byteProblems };
+  let value: unknown;
+  try { value = JSON.parse(source); } catch (error) { return { ok: false, problems: [syntaxProblem(error, source)] }; }
+  const complexityProblems = validateDocumentInputComplexity(value);
+  return complexityProblems.length > 0 ? { ok: false, problems: complexityProblems } : { ok: true, value };
+}
+
 export function normalizeDocument(input: unknown): ParseDocumentResult {
   if (input === null || typeof input !== "object" || Array.isArray(input)) {
     return { ok: false, kind: "validation", problems: [{ code: "DOCUMENT_ROOT", path: "$", message: "Document root must be an object." }] };
   }
+  const complexityProblems = validateDocumentInputComplexity(input);
+  if (complexityProblems.length > 0) return { ok: false, kind: "validation", problems: complexityProblems };
   const version = (input as { formatVersion?: unknown }).formatVersion;
   if (!Number.isInteger(version)) {
     return { ok: false, kind: "validation", problems: [{ code: "FORMAT_VERSION", path: "$.formatVersion", message: "formatVersion must be an integer." }] };
