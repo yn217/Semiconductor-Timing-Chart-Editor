@@ -267,6 +267,8 @@
 .ds-ribbon-button[data-ribbon-size="small"] { min-width: 34px; min-height: 38px; padding: 3px 3px 2px; font-size: 10px; }
 .ds-ribbon-button[data-ribbon-size="icon"] { min-width: 30px; min-height: 30px; width: 30px; padding: 3px; }
 .ds-ribbon-button[data-ribbon-size="icon"] > .ds-ribbon-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.ds-ribbon-select[data-ribbon-size="small"], .ds-ribbon-toggle[data-ribbon-size="small"] { font-size: 10px; }
+.ds-ribbon-select[data-ribbon-size="icon"] { width: 30px; min-width: 30px; padding-inline: 2px; }
 
 .ds-ribbon-label { display: flex; min-height: 28px; flex-direction: column; align-items: center; justify-content: flex-start; white-space: nowrap; font-size: 10px; font-weight: 650; }
 

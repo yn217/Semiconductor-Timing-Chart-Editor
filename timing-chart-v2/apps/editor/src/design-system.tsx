@@ -11,16 +11,16 @@ export function DsRibbonButton({ ariaLabel, children, className, dataTestId, dis
   return <button type="button" className={`ds-control ds-ribbon-button ds-ribbon-button--${size}${className ? ` ${className}` : ""}`} aria-label={ariaLabel} data-ribbon-size={size} data-testid={dataTestId} disabled={disabled} title={title} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label" data-v1-label={v1Label}>{children}</span></button>;
 }
 
-export function DsRibbonToggleButton({ ariaLabel, checked, children, className, dataTestId, icon, onClick, title }: { readonly ariaLabel?: string; readonly checked: boolean; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string; readonly icon: ReactNode; readonly onClick: () => void; readonly title?: string | undefined }) {
-  return <button type="button" className={`ds-control ds-ribbon-button ds-ribbon-toggle-button${className ? ` ${className}` : ""}`} aria-label={ariaLabel} aria-pressed={checked} data-testid={dataTestId} title={title} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label">{children}</span></button>;
+export function DsRibbonToggleButton({ ariaLabel, checked, children, className, dataTestId, icon, onClick, size = "large", title }: { readonly ariaLabel?: string; readonly checked: boolean; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string; readonly icon: ReactNode; readonly onClick: () => void; readonly size?: RibbonSizeClass; readonly title?: string | undefined }) {
+  return <button type="button" className={`ds-control ds-ribbon-button ds-ribbon-toggle-button ds-ribbon-button--${size}${className ? ` ${className}` : ""}`} aria-label={ariaLabel} aria-pressed={checked} data-ribbon-size={size} data-testid={dataTestId} title={title} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label">{children}</span></button>;
 }
 
-export function DsRibbonSelect({ ariaLabel, children, className, dataTestId, onChange, value }: { readonly ariaLabel: string; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string | undefined; readonly onChange: (event: ChangeEvent<HTMLSelectElement>) => void; readonly value: string }) {
-  return <select className={`ds-control ds-ribbon-select${className ? ` ${className}` : ""}`} aria-label={ariaLabel} data-testid={dataTestId} value={value} onChange={onChange}>{children}</select>;
+export function DsRibbonSelect({ ariaLabel, children, className, dataTestId, onChange, size = "medium", value }: { readonly ariaLabel: string; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string | undefined; readonly onChange: (event: ChangeEvent<HTMLSelectElement>) => void; readonly size?: RibbonSizeClass; readonly value: string }) {
+  return <select className={`ds-control ds-ribbon-select ds-ribbon-select--${size}${className ? ` ${className}` : ""}`} aria-label={ariaLabel} data-ribbon-size={size} data-testid={dataTestId} value={value} onChange={onChange}>{children}</select>;
 }
 
-export function DsRibbonToggle({ checked, className, dataTestId, label, onChange }: { readonly checked: boolean; readonly className?: ClassName; readonly dataTestId?: string | undefined; readonly label: string; readonly onChange: (event: ChangeEvent<HTMLInputElement>) => void }) {
-  return <label className={`ds-control ds-ribbon-toggle${className ? ` ${className}` : ""}`}><input data-testid={dataTestId} type="checkbox" checked={checked} onChange={onChange} /><span>{label}</span></label>;
+export function DsRibbonToggle({ checked, className, dataTestId, label, onChange, size = "medium" }: { readonly checked: boolean; readonly className?: ClassName; readonly dataTestId?: string | undefined; readonly label: string; readonly onChange: (event: ChangeEvent<HTMLInputElement>) => void; readonly size?: RibbonSizeClass }) {
+  return <label className={`ds-control ds-ribbon-toggle ds-ribbon-toggle--${size}${className ? ` ${className}` : ""}`} data-ribbon-size={size}><input data-testid={dataTestId} type="checkbox" checked={checked} onChange={onChange} /><span>{label}</span></label>;
 }
 
 /** `density` lets a Tab request a compact-grid child layout (smaller
