@@ -208,7 +208,17 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
     else laneTransactionsByKey.set(key, [transaction]);
     transactionCountByGroup.set(transaction.groupId, (transactionCountByGroup.get(transaction.groupId) ?? 0) + 1);
   }
-  const hasGroups = groups.length > 0 && document.transactions.some((transaction) => transaction.groupId !== undefined);
+  // Transaction Mode GUI realignment: this used to also require "at least
+  // one Transaction already references a Group" -- a freshly-created,
+  // still-empty Group (the Tree's own "+" -> Add Transaction Group button)
+  // produced a real History entry with zero visible change anywhere,
+  // reading as "grouping doesn't work" even though the Group genuinely
+  // existed in the document. A Group's existence alone is now enough to
+  // switch into grouped layout, and an empty Group still gets its own
+  // header row (0 count, no lanes under it) -- the same "you can see what
+  // you just created" contract the flat/ungrouped layout already gives
+  // every newly-created Transaction.
+  const hasGroups = groups.length > 0;
   type Section = { readonly groupId: string | undefined; readonly label: string | undefined; readonly color: string | undefined; readonly lanes: readonly string[] };
   const sections: readonly Section[] = hasGroups
     ? (() => {
@@ -220,11 +230,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
           lanesByGroup.get(key)!.add(lane);
         }
         const ordered = [...groups].sort((left, right) => left.order - right.order);
-        const result: Section[] = [];
-        for (const group of ordered) {
-          const lanes = [...(lanesByGroup.get(group.id) ?? [])].sort();
-          if (lanes.length > 0) result.push({ groupId: group.id, label: group.name, color: group.color, lanes });
-        }
+        const result: Section[] = ordered.map((group) => ({ groupId: group.id, label: group.name, color: group.color, lanes: [...(lanesByGroup.get(group.id) ?? [])].sort() }));
         const ungroupedLanes = [...(lanesByGroup.get(undefined) ?? [])].sort();
         if (ungroupedLanes.length > 0) result.push({ groupId: undefined, label: "Ungrouped", color: undefined, lanes: ungroupedLanes });
         return result;
