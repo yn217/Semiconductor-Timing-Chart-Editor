@@ -420,18 +420,16 @@ export function MinimalCycleView() {
   }, [selectedTransactionId, transactionPresentationRevision]);
 
   // #407: Split active pane -- click-delegated (rather than a JSX onClick)
-  // because `.transaction-lanes` and the Signal surface both live inside
-  // `cycle-viewport`, a DOM node owned/rendered by editor-workspace-view.tsx
-  // (Codex's shell-decomposition file), not this one; a plain document-
-  // level listener on the existing `viewport` ref reads which of the two
-  // existing Split regions was clicked without touching that file's JSX at
-  // all. `setActivePaneRef` keeps the listener attached exactly once
+  // because the Split panes are owned/rendered by editor-workspace-view.tsx
+  // (Codex's shell-decomposition file), not this one; a delegated listener
+  // on the cycle panel reads which pane was clicked without touching that
+  // file's JSX at all. `setActivePaneRef` keeps the listener attached once
   // (rather than resubscribing every render) while still calling whichever
   // `setActivePane` closure is current.
   const setActivePaneRef = useRef(setActivePane);
   setActivePaneRef.current = setActivePane;
   useEffect(() => {
-    const root = viewport.current;
+    const root = viewport.current?.closest<HTMLElement>(".cycle-panel");
     if (!root) return;
     const onPointerDownCapture = (event: PointerEvent) => {
       const target = event.target as HTMLElement | null;
