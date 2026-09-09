@@ -289,8 +289,38 @@
    it -- reproduced with a real 2-Group/2-lane sample in Split mode. Kept as
    one shared var so the two rules can't drift apart again. */
 .cycle-panel.mode-split { --split-lanes-height: 112px; }
-.cycle-panel.mode-split .transaction-lanes { max-height: var(--split-lanes-height); overflow: hidden; }
-.cycle-panel.mode-split .surface-host { padding-top: calc(34px + var(--split-lanes-height)); }
+/* #408: Split is a real side-by-side workspace. The two panes share the
+   surrounding timeline controls, while their vertical scrolling remains
+   local to each pane. The Signal renderer stays single-owner in the right
+   pane; TransactionLanes owns the left pane. */
+.cycle-panel.mode-split .split-workspace {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(420px, 2fr);
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+.cycle-panel.mode-split .split-transaction-pane,
+.cycle-panel.mode-split .split-signal-pane {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+.cycle-panel.mode-split .split-transaction-pane {
+  border-right: 1px solid var(--ds-border-subtle, #b7c4d2);
+  overscroll-behavior: contain;
+}
+.cycle-panel.mode-split .split-transaction-pane .transaction-lanes {
+  position: relative;
+  top: 0;
+  width: 100%;
+  min-height: 100%;
+  max-height: none;
+  overflow: visible;
+}
+.cycle-panel.mode-split .split-signal-pane .surface-host { padding-top: 34px; }
 /* #407: Split active pane indicator -- `cycle-viewport[data-active-pane]`
    is set imperatively (minimal-cycle-view.tsx; the element itself is
    editor-workspace-view.tsx's JSX, not this file's), one 2px inset border
