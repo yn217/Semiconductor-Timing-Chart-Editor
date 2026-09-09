@@ -21,7 +21,14 @@ export function annotationAnchorText(anchor: SemanticAnchor | undefined): string
  * forcing an 880px-wide horizontal scroll inside it. */
 export function AnnotationList({ annotations, selectedId, onSelect, commands }: { readonly annotations: readonly Annotation[]; readonly selectedId: AnnotationId | undefined; readonly onSelect: (id: AnnotationId) => void; readonly commands: Pick<EditorSurfaceCommandController, "updateAnnotationProperties"> }) {
   return <div className="annotation-list" role="table" aria-label="Annotations" data-testid="annotation-list">
-    <div className="annotation-list-row annotation-list-header" role="row"><span /><span>#</span><span>Type</span><span>Label / Text</span><span>Start</span><span>End</span><span>Color</span></div>
+    {/* Transaction Mode GUI realignment (Visual Quality pass): the last
+        column is an 18px decorative swatch (`aria-hidden`, no text content
+        of its own) -- the same fixed width is too narrow for the word
+        "Color" as a header label, which was clipping to "C..." via the
+        row's own ellipsis rule. Matches the leading visibility-toggle
+        column's own empty header cell rather than forcing text into a
+        column that was never meant to hold any. */}
+    <div className="annotation-list-row annotation-list-header" role="row"><span /><span>#</span><span>Type</span><span>Label / Text</span><span>Start</span><span>End</span><span aria-hidden="true" /></div>
     {annotations.map((item, index) => <div className="annotation-list-row" role="row" key={item.id} data-annotation-list-id={item.id} data-annotation-row={item.id} data-selected={String(item.id === selectedId)} aria-label={`Select annotation ${item.label || item.type}`} onClick={() => onSelect(item.id)}>
       <button type="button" className="annotation-list-visibility" aria-label={item.visible ? `Hide ${item.label || item.type}` : `Show ${item.label || item.type}`} aria-pressed={item.visible} data-testid={`annotation-list-visibility-${item.id}`} onClick={(event) => { event.stopPropagation(); commands.updateAnnotationProperties({ annotationId: item.id, label: item.label, visible: !item.visible, ...(item.color === undefined ? {} : { color: item.color }), ...(item.lineType === undefined ? {} : { lineType: item.lineType }), ...(item.arrowhead === undefined ? {} : { arrowhead: item.arrowhead }), ...(item.sourceSignalId === undefined ? {} : { sourceSignalId: item.sourceSignalId }), ...(item.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: item.traceOffsetCycles }), ...(item.opacity === undefined ? {} : { opacity: item.opacity }), ...(item.style === undefined ? {} : { style: item.style }), ...(item.measurement === undefined ? {} : { measurement: item.measurement }), ...(item.measurementLayout === undefined ? {} : { measurementLayout: item.measurementLayout }) }); }}><RibbonIcon name={item.visible ? "i-eye" : "i-eye-off"} /></button>
       <span className="annotation-list-index">{index + 1}</span>
