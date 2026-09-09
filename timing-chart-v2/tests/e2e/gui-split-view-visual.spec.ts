@@ -45,6 +45,8 @@ test("captures the V1 Split View composition with both contexts and zero view mu
   await transactionPane.click({ position: { x: 40, y: 40 } });
   await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Transaction");
   await expect(page.locator("[data-major-group='Layout']")).toHaveCount(0);
+  await expect(page.locator("[data-major-group='Group']")).toHaveCount(1);
+  await expect(page.locator("[data-major-group='Transaction Time']")).toHaveCount(1);
   const scrollMetrics = await transactionPane.evaluate((element) => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth }));
   expect(scrollMetrics.scrollWidth).toBeGreaterThan(scrollMetrics.clientWidth);
   await transactionPane.evaluate((element) => { element.scrollLeft = 120; });

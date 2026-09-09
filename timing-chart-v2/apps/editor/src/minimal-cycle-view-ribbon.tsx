@@ -248,13 +248,13 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         { kind: "button", id: "transaction-duplicate", icon: "i-duplicate", label: "Duplicate", ariaLabel: "Duplicate Transaction", size: "wide", onClick: duplicateTransaction, disabled: !selectedTransactionId },
       ],
     },
-    ...(viewMode === "Transaction" ? [{
+    ...(viewMode === "Transaction" || (viewMode === "Split" && activeContext === "Transaction") ? [{
       id: "transaction-group", majorGroup: "Group", caption: "Group", items: [
         { kind: "button", id: "transaction-group-add", icon: "i-plus", label: "Add", ariaLabel: "Add Transaction Group", onClick: addTransactionGroup },
         { kind: "button", id: "transaction-ungroup", icon: "i-ungroup", label: "Ungroup", ariaLabel: "Ungroup selected Transaction", title: "Remove the selected Transaction's Group (keeps the Transaction, ungrouped)", onClick: ungroupSelectedTransaction, disabled: selectedTransactionGroupId === undefined },
       ],
     } as const] : []),
-    ...(viewMode === "Transaction" ? [{
+    ...(viewMode === "Transaction" || (viewMode === "Split" && activeContext === "Transaction") ? [{
       id: "transaction-time", majorGroup: "Transaction Time", caption: "Time Scale", items: [
         { kind: "custom", id: "transaction-time-scale", render: () => <TransactionTimeScalePanel key="transaction-time-scale" document={document} onSetScale={commands.setTransactionTimeScale} /> },
       ],
