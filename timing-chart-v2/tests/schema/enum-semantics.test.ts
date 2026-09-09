@@ -13,4 +13,10 @@ describe("enum semantic resolver", () => {
     expect(validateEnumDefinition({ ...definition, entries: [{ value: 0, label: "IDLE" }, { value: 1, label: "IDLE" }] })).toContain("unique");
     expect(validateEnumDefinition(definition)).toBeUndefined();
   });
+
+  it("uses resolver identity for numeric/string and case variants", () => {
+    expect(validateEnumDefinition({ ...definition, entries: [{ value: 1, label: "ONE" }, { value: "1", label: "STRING_ONE" }] })).toContain("unique");
+    expect(validateEnumDefinition({ ...definition, entries: [{ value: 1, label: "One" }, { value: 2, label: "one" }] })).toContain("unique");
+    expect(resolveEnumValue({ ...definition, entries: [{ value: 1, label: "ONE" }] }, "1")).toBe("ONE");
+  });
 });

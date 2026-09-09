@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { planCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import { parseDocument, serializeValidatedCanonicalDocument, resolveEnumValue, type CommandId, type SignalId } from "@timing-chart-v2/schema";
+import { parseDocument, serializeValidatedCanonicalDocument, resolveEnumValue, validateCanonicalDocument, type CommandId, type SignalId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const id = (value: string) => value as CommandId;
@@ -26,5 +26,11 @@ describe("Enum lifecycle", () => {
     const source = enumDocument(); const session = new CommandHistorySession(source); const before = session.getSnapshot();
     const result = session.execute({ id: id("enum_delete"), type: "enum.delete", enumId: "enum.main" });
     expect(result).toMatchObject({ ok: false, reason: "invalid" }); expect(session.getSnapshot().document).toEqual(before.document); expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+  });
+
+  it("makes enum semantic uniqueness part of authoritative canonical validation", () => {
+    const source = enumDocument();
+    const invalid = { ...source, enumDefinitions: [{ ...source.enumDefinitions![0]!, entries: [{ value: 1, label: "ONE" }, { value: "1", label: "STRING_ONE" }] }] };
+    expect(validateCanonicalDocument(invalid)).toContainEqual(expect.objectContaining({ code: "INVALID_ENUM_DEFINITION", path: "$.enumDefinitions[0]", entityId: "enum.main" }));
   });
 });

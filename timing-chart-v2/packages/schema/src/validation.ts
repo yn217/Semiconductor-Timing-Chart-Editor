@@ -3,6 +3,7 @@ import canonicalSchema from "./canonical-document.schema.json" with { type: "jso
 import { isStableId } from "./stable-id.js";
 import { CANONICAL_PROBLEM_CODES, SCHEMA_RULE_KEYWORDS, type Annotation, type CanonicalDocument, type CanonicalDocumentProblem, type CanonicalProblemCode, type CanonicalRuleDescriptor, type DocumentProblem, type SchemaProblemCode, type SchemaRuleDescriptor, type SchemaRuleKeyword, type SemanticAnchor, type Signal, type SignalValueChange, type TimeGroup } from "./types.js";
 import { valueSignalValueProblem } from "./value-signal-compatibility.js";
+import { validateEnumDefinition } from "./enum-semantics.js";
 import { canonicalReferences } from "./reference-registry.js";
 import { validateTimeGroupHierarchy } from "./time-group-hierarchy.js";
 import { canonicalEntityInventory } from "./canonical-inventory.js";
@@ -70,6 +71,7 @@ const RULE_DESCRIPTORS: readonly CanonicalRuleDescriptor[] = [
   canonicalRule("INVALID_TIME_GROUP_RANGE", "Time Group must use a valid half-open range", "$.timeGroups[*]"),
   canonicalRule("INVALID_TRANSACTION_PHASE", "Transaction phases must fit their parent range", "$.transactions[*].phases[*]"),
   canonicalRule("INVALID_TRANSACTION_TIME_SCALE", "Transaction time scale must use positive finite ratio and intervals", "$.transactionTimeScale"),
+  canonicalRule("INVALID_ENUM_DEFINITION", "Enum definition values and labels must be unique and valid", "$.enumDefinitions[*]"),
   canonicalRule("LABEL_ANCHOR_BOUNDARY_MISMATCH", "Resume label anchor must match group boundary", "$.timeline.labelAnchors[*].source"),
   canonicalRule("LABEL_ANCHOR_OWNER_MISMATCH", "Label anchor owner must reciprocate", "$.timeline.labelAnchors[*].ownerTimeGroupId"),
   canonicalRule("MISSING_ANNOTATION_ANCHOR", "Annotation must provide its required anchor", "$.annotations[*]"),
@@ -331,6 +333,7 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
   });
 
   const timeGroups = new Map<string, TimeGroup>(document.timeGroups.map((group) => [group.id, group]));
+  const enumIds = new Set<string>((document.enumDefinitions ?? []).map((definition) => definition.id));
   const bookmarks = new Set<string>(document.bookmarks.map((bookmark) => bookmark.id));
   const labelAnchors = new Map(document.timeline.labelAnchors.map((anchor) => [anchor.id, anchor]));
   const groups = new Set<string>(document.signalGroups.map((group) => group.id));
@@ -338,7 +341,7 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
     const targetExists = reference.targetType === "signal" ? signals.has(reference.targetId)
       : reference.targetType === "time-group" ? timeGroups.has(reference.targetId)
       : reference.targetType === "group" ? groups.has(reference.targetId)
-      : reference.targetType === "spacer" ? spacers.has(reference.targetId) : reference.targetType === "enum" ? new Set((document.enumDefinitions ?? []).map((definition) => definition.id)).has(reference.targetId) : bookmarks.has(reference.targetId);
+      : reference.targetType === "spacer" ? spacers.has(reference.targetId) : reference.targetType === "enum" ? enumIds.has(reference.targetId) : bookmarks.has(reference.targetId);
     if (!targetExists) {
       const targetLabel = reference.targetType === "signal" ? "Signal"
         : reference.targetType === "time-group" ? "Time Group"
@@ -346,6 +349,10 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
       problems.push(problem("MISSING_CROSS_REFERENCE", reference.path, targetLabel + " '" + reference.targetId + "' does not exist.", reference.ownerId));
     }
   }
+  document.enumDefinitions?.forEach((definition, index) => {
+    const enumProblem = validateEnumDefinition(definition);
+    if (enumProblem) problems.push(problem("INVALID_ENUM_DEFINITION", `$.enumDefinitions[${index}]`, enumProblem, definition.id));
+  });
   document.bookmarks.forEach((bookmark, index) => {
     if (!Number.isInteger(bookmark.start) || bookmark.start < 0 || bookmark.start >= document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.bookmarks[${index}].start`, "Bookmark must be an integer cycle within the source timeline.", bookmark.id));
   });
