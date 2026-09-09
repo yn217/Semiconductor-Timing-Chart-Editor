@@ -228,7 +228,18 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
             already explains via document.transactionTimeScale. Plain
             "N cycles" was ambiguous about which cycle domain it meant. */}
         <div className="property-row"><span>Duration</span><span>{transactionEnd - transactionStart} TC{document.transactionTimeScale ? ` (${(transactionEnd - transactionStart) * document.transactionTimeScale.clockCyclesPerTransactionCycle} clock cycles)` : ""}</span></div>
-        <label>Lane<span className="inspector-field-with-help"><input aria-label="Transaction lane" value={transactionLane} onChange={(event) => setTransactionLane(event.target.value)} /><span className="field-help" tabIndex={0} title="A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track." aria-label="About Lane">ⓘ</span></span></label>
+        {/* Transaction Mode GUI realignment: the reference shows Lane as a
+            dropdown of existing lanes ("Lane 0"). laneId is a free-form
+            identifier (any Lane sharing a name stacks into the same track,
+            including a brand new one a user is naming for the first time),
+            not a fixed enum -- a plain <select> would make picking an
+            EXISTING lane easy but block creating a new one from the
+            Inspector. A <datalist> keeps this the same free-text input
+            (same command, same value shape) while offering every lane
+            already in use as a suggestion, closest to the reference's
+            "pick from existing" affordance without inventing a second Lane
+            identity owner. */}
+        <label>Lane<span className="inspector-field-with-help"><input aria-label="Transaction lane" list="transaction-lane-options" value={transactionLane} onChange={(event) => setTransactionLane(event.target.value)} /><datalist id="transaction-lane-options">{[...new Set(document.transactions.map((item) => item.laneId ?? "lane_0"))].sort().map((laneId) => <option key={laneId} value={laneId} />)}</datalist><span className="field-help" tabIndex={0} title="A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track." aria-label="About Lane">ⓘ</span></span></label>
       </InspectorSection>
       <InspectorSection sectionId="phases" title="Phases" count={phaseRows.length} onAdd={() => setPhaseRows((rows) => { const last = rows.at(-1); const start = last ? last.end : transactionStart; return [...rows, { name: `Phase ${rows.length + 1}`, start, end: Math.min(start + 1, transactionEnd) }]; })} open={transactionSections.phases ?? true} onToggle={() => toggleTransactionSection("phases")}>
         <div className="transaction-phase-editor" data-testid="transaction-phase-editor"><div className="transaction-phase-table">{phaseRows.length > 0 && <div className="transaction-phase-row transaction-phase-row-header" aria-hidden="true"><span>Phase</span><span>Start</span><span>End</span><span /><span /><span /></div>}{phaseRows.map((phase, index) => <div className="transaction-phase-row" key={index} data-phase-index={index}><input aria-label={`Phase ${index + 1} name`} value={phase.name} onChange={(event) => setPhaseRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, name: event.target.value } : row))} /><input aria-label={`Phase ${index + 1} start`} type="number" value={phase.start} onChange={(event) => setPhaseRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, start: Number(event.target.value) } : row))} /><input aria-label={`Phase ${index + 1} end`} type="number" value={phase.end} onChange={(event) => setPhaseRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, end: Number(event.target.value) } : row))} />
