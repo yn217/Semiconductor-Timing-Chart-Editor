@@ -222,6 +222,7 @@
 .transaction-signal-tree-row[data-selected="true"] { background: var(--gui-selected-bg, #eef6ff); }
 .transaction-signal-tree-role { display: grid; flex: 0 0 auto; width: 16px; height: 16px; place-items: center; border-radius: 3px; background: #dbe3ee; color: #5a6b80; font-size: 9px; font-weight: 700; }
 .transaction-lane-labels { position: sticky; left: 0; z-index: 2; width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); height: 100%; background: #f8fafc; }
+.transaction-track { position: relative; z-index: 3; }
 /* #452: Group headers + variable-height lanes (stacked overlapping
    Transactions need more than one row) replaced this column's own fixed
    40px-block-per-lane flow with explicit top/height per band (computed in
@@ -275,6 +276,7 @@
    Group color authored), both fall back to the original static blue. */
 .transaction-phases small { position: absolute; top: 0; bottom: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-inline-start: 1px solid color-mix(in srgb, var(--transaction-color, #2e70ad) 70%, black); background: color-mix(in srgb, var(--transaction-color, #2e70ad) 18%, white); font-size: 9px; line-height: 15px; }
 .transaction-lane > button { position: absolute; top: 4px; z-index: 1; min-width: 18px; height: 20px; display: grid; grid-template-columns: 5px minmax(0,1fr) 5px; align-items: center; overflow: hidden; padding: 0; border: 1px solid color-mix(in srgb, var(--transaction-color, #2e70ad) 85%, black); border-radius: 4px; background: color-mix(in srgb, var(--transaction-color, #2e70ad) 25%, white); color: #174d7c; font-size: 10px; }
+.transaction-track > .transaction-lane > button { z-index: 4; }
 .transaction-lane > button[data-selected="true"] { outline: 2px solid #0b74de; background: color-mix(in srgb, var(--transaction-color, #2e70ad) 45%, white); }
 .transaction-lane > button > i { height: 100%; cursor: ew-resize; }
 .transaction-lane span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: grab; }
