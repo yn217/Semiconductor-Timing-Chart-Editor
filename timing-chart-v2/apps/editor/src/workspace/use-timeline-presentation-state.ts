@@ -59,6 +59,14 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
     collapsedGroupIdsRef.current = empty;
     setCollapsedGroupIds(empty);
     applyCollapsedGroupsRef.current(empty);
+    const initialRange = input.visualReference ? { start: 0, end: 1 } : { start: 2, end: 4 };
+    timelineRangeRef.current = initialRange;
+    rangeSelectionActiveRef.current = false;
+    selectedCycleRef.current = input.visualReference ? 0 : 2;
+    selectedEdgeRef.current = undefined;
+    setTimelineRangeState(initialRange);
+    setRangeSelectionActiveState(false);
+    setSelectedCycleState(input.visualReference ? 0 : 2);
   }, [input.documentEpoch]);
 
   const setCollapsedGroups = useCallback((next: ReadonlySet<GroupId>) => {

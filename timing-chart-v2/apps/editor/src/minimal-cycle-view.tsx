@@ -94,6 +94,7 @@ export function MinimalCycleView() {
   const fileInput = useRef<HTMLInputElement>(null);
   const selection = useSelectionOwner(visualReference ? signalId("sig_cycle_clock") : undefined);
   const editActions = useClipboardActions({ application, selection });
+  const documentEpoch = application.runtime.documentEpoch.current();
   const timelineNavigation = useTimelineNavigationOwner();
   const { signalId: selectedId, signalIds: selectedSignalIds, groupId: selectedGroupId, annotationId: selectedAnnotationId, transactionId: selectedTransactionId } = selection.state;
   const { signalId: selectedSignalRef, signalIds: selectedSignalIdsRef, groupId: selectedGroupRef, spacerId: selectedSpacerRef, annotationId: selectedAnnotationRef, transactionId: selectedTransactionRef } = selection.refs;
@@ -112,7 +113,7 @@ export function MinimalCycleView() {
     applySelectionDecorations,
   } = presentation;
   const zoom = timelineNavigation.zoom;
-  const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>();
+  const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>({ documentEpoch });
   const {
     ribbonTab, setRibbonTab,
     bottomTab, setBottomTab,
@@ -245,7 +246,6 @@ export function MinimalCycleView() {
   const bulkRegistrationDialogRef = useRef<HTMLElement>(null);
   const unsavedFileDialogRef = useRef<HTMLElement>(null);
   const compatibilityDialogRef = useRef<HTMLElement>(null);
-  const documentEpoch = application.runtime.documentEpoch.current();
   const timelinePresentation = useTimelinePresentationState({ visualReference, documentEpoch });
   const {
     collapsedGroupIds,

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cursorDelta, type SemanticCursorState } from "@timing-chart-v2/projection";
 
 export type DensityMode = "compact" | "comfortable";
@@ -51,7 +51,7 @@ export type BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId
  * resize-gesture scratch refs, and the Left Tree filter. None of this is
  * Document/Selection/Timeline canonical state -- every setter here only
  * ever affects layout/chrome, never the .tcd document or command history. */
-export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>() {
+export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>(input: { readonly documentEpoch?: number } = {}) {
   const [ribbonTab, setRibbonTab] = useState("Home");
   const [bottomTab, setBottomTab] = useState<BottomTab>("Signal");
   const [viewMode, setViewModeRaw] = useState<ViewMode>("Cycle");
@@ -92,6 +92,13 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   // document save/open payloads or semantic commands.
   const [cursorA, setCursorA] = useState<SemanticCursor>();
   const [cursorB, setCursorB] = useState<SemanticCursor>();
+  const previousDocumentEpochRef = useRef(input.documentEpoch);
+  useEffect(() => {
+    if (previousDocumentEpochRef.current === input.documentEpoch) return;
+    previousDocumentEpochRef.current = input.documentEpoch;
+    setCursorA(undefined);
+    setCursorB(undefined);
+  }, [input.documentEpoch]);
   const cursorState: SemanticCursorState = { ...(cursorA === undefined ? {} : { a: cursorA }), ...(cursorB === undefined ? {} : { b: cursorB }) };
   const setCursor = (which: "a" | "b", sourceTime: number | undefined) => {
     if (sourceTime !== undefined && !Number.isFinite(sourceTime)) return;
