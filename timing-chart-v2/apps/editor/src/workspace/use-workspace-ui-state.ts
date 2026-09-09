@@ -98,6 +98,8 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     previousDocumentEpochRef.current = input.documentEpoch;
     setCursorA(undefined);
     setCursorB(undefined);
+    setSignalSplitEnabled(false);
+    setSignalSplitRatio(0.5);
   }, [input.documentEpoch]);
   const cursorState: SemanticCursorState = { ...(cursorA === undefined ? {} : { a: cursorA }), ...(cursorB === undefined ? {} : { b: cursorB }) };
   const setCursor = (which: "a" | "b", sourceTime: number | undefined) => {
