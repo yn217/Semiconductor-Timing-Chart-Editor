@@ -1,0 +1,227 @@
+{
+  "generatedAt": "2026-09-09T10:22:37.886Z",
+  "main": "3d62d1a15b8b55ef1f21a5f02f36c81a4483b61c",
+  "codexControl": "61db6d6051c251a75a7082f405e50be3da9b899b",
+  "codex": {
+    "ready": [
+      414,
+      397,
+      282,
+      424,
+      419,
+      426
+    ],
+    "blocked": [
+      258,
+      415,
+      416,
+      429,
+      431,
+      463,
+      495,
+      529
+    ],
+    "completed": [
+      461,
+      530
+    ]
+  },
+  "claude": {
+    "ready": [],
+    "blocked": [],
+    "completed": []
+  },
+  "issues": {
+    "258": {
+      "state": "open",
+      "title": "[V2][Architecture][REOPENED] Finish MinimalCycleView decomposition and add anti-regrowth guard",
+      "updatedAt": "2026-09-08T18:52:23Z",
+      "owner": "hold",
+      "priority": "P1",
+      "area": "architecture",
+      "blocked": false,
+      "blockedBy": [],
+      "stalePlanEntry": false
+    },
+    "282": {
+      "state": "open",
+      "title": "[V2][P1][VALIDATION] Separate schema invariants, canonical invariants, and command policy into stable rule contracts",
+      "updatedAt": "2026-09-08T22:49:55Z",
+      "owner": "codex",
+      "priority": "P1",
+      "area": "validation",
+      "blocked": false,
+      "blockedBy": [],
+      "stalePlanEntry": false
+    },
+    "397": {
+      "state": "open",
+      "title": "[V2][P0][ACCEPTANCE] Transaction + Split View sample suite and real-browser regression verification",
+      "updatedAt": "2026-09-08T22:41:04Z",
+      "owner": "codex",
+      "priority": "P0",
+      "area": "acceptance",
+      "blocked": false,
+      "blockedBy": [],
+      "stalePlanEntry": false
+    },
+    "414": {
+      "state": "open",
+      "title": "[V2][TIMEGROUP][3/5][GUI] Add Excel-like Time Outline rows, hierarchy levels and +/- controls above the ruler",
+      "updatedAt": "2026-09-08T22:41:15Z",
+      "owner": "codex",
+      "priority": "P0",
+      "area": "time-outline",
+      "blocked": false,
+      "blockedBy": [],
+      "stalePlanEntry": false
+    },
+    "415": {
+      "state": "open",
+      "title": "[V2][TIMEGROUP][4/5][CORE] Add nested collapse mapping and shared axis-break geometry",
+      "updatedAt": "2026-09-08T22:41:23Z",
+      "owner": "codex",
+      "priority": "P0",
+      "area": "time-outline",
+      "blocked": true,
+      "blockedBy": [
+        "414"
+      ],
+      "stalePlanEntry": false
+    },
+    "416": {
+      "state": "open",
+      "title": "[V2][TIMEGROUP][5/5][GUI][CLOSURE] Move Time Outline commands to Timeline Ribbon and close persistence/export/E2E acceptance",
+      "updatedAt": "2026-09-06T01:43:14Z",
+      "owner": "codex",
+      "priority": "P0",
+      "area": "time-outline",
+      "blocked": true,
+      "blockedBy": [
+        "415"
+      ],
+      "stalePlanEntry": false
+    },
+    "419": {
+      "state": "open",
+      "title": "[V2][Annotation][Highlight] Add per-highlight Cycle Snap / Free positioning mode",
+      "updatedAt": "2026-09-07T18:19:04Z",
+      "owner": "codex",
+      "priority": "P1",
+      "area": "annotation",
+      "blocked": false,
+      "blockedBy": [],
+      "stalePlanEntry": false
+    },
+    "424": {
+      "state": "open",
+      "title": "[V2][ANNOTATION][MARKER][GUI] Allow Marker to span multiple signal rows with adjustable vertical extent",
+      "updatedAt": "2026-09-06T03:09:09Z",
+      "owner": "codex",
+      "priority": "P1",
+      "area": "annotation",
+      "blocked": false,
+      "blockedBy": [],
+      "stalePlanEntry": false
+    },
+    "426": {
+      "state": "open",
+      "title": "[V2][GUI][BOTTOM][EPIC] Consolidate Bottom Panel UX across Signal / Annotation / Bookmarks / Transaction with consistent Draft → Apply / Cancel workflows",
+      "updatedAt": "2026-09-08T22:47:33Z",
+      "owner": "codex",
+      "priority": "P1",
+      "area": "bottom-panel",
+      "blocked": false,
+      "blockedBy": [],
+      "stalePlanEntry": false
+    },
+    "429": {
+      "state": "open",
+      "title": "[V2][P0][TRANSACTION] Complete Transaction Mode as a production timing-analysis/editor workspace",
+      "updatedAt": "2026-09-08T22:40:53Z",
+      "owner": "codex",
+      "priority": "P0",
+      "area": "transaction",
+      "blocked": true,
+      "blockedBy": [
+        "463",
+        "529"
+      ],
+      "stalePlanEntry": false
+    },
+    "431": {
+      "state": "open",
+      "title": "[V2][UX][EPIC] Close current Timing Chart usability and feature gaps identified from latest UI review",
+      "updatedAt": "2026-09-07T18:18:08Z",
+      "owner": "codex",
+      "priority": "P1",
+      "area": "product",
+      "blocked": true,
+      "blockedBy": [
+        "397",
+        "429"
+      ],
+      "stalePlanEntry": false
+    },
+    "461": {
+      "state": "closed",
+      "title": "[V2][P1][TRANSACTION][DATA] Preserve presentation/group fields on partial Transaction updates",
+      "updatedAt": "2026-09-08T19:00:03Z",
+      "owner": "hold",
+      "priority": "P1",
+      "area": "transaction",
+      "blocked": false,
+      "blockedBy": [],
+      "stalePlanEntry": false
+    },
+    "463": {
+      "state": "open",
+      "title": "[V2][P1][TRANSACTION][PERF] Eliminate O(N²) Transaction lane rendering and virtualize large workspaces",
+      "updatedAt": "2026-09-08T22:50:52Z",
+      "owner": "hold",
+      "priority": "P1",
+      "area": "transaction",
+      "blocked": false,
+      "blockedBy": [],
+      "stalePlanEntry": false
+    },
+    "495": {
+      "state": "open",
+      "title": "[V2][P1][RESET][SEMANTICS] Complete Reset semantics validation, timeline transforms, GUI, and diagnostics",
+      "updatedAt": "2026-09-08T22:48:19Z",
+      "owner": "hold",
+      "priority": "P1",
+      "area": "reset",
+      "blocked": false,
+      "blockedBy": [],
+      "stalePlanEntry": false
+    },
+    "529": {
+      "state": "open",
+      "title": "[V2][P1][STATE][DOCUMENT-EPOCH] Scope entity-keyed transient UI state to the current document generation",
+      "updatedAt": "2026-09-08T22:46:15Z",
+      "owner": "hold",
+      "priority": "P1",
+      "area": "document-epoch",
+      "blocked": false,
+      "blockedBy": [],
+      "stalePlanEntry": false
+    },
+    "530": {
+      "state": "closed",
+      "title": "[V2][P1][TRANSACTION][TIME-SCALE] Preserve optional Transaction time-scale fields on GUI Apply",
+      "updatedAt": "2026-09-08T22:40:26Z",
+      "owner": "hold",
+      "priority": "P1",
+      "area": "transaction",
+      "blocked": false,
+      "blockedBy": [],
+      "stalePlanEntry": false
+    }
+  },
+  "metrics": {
+    "issueCount": 407,
+    "githubRequestCount": 6,
+    "elapsedMs": 11645
+  }
+}

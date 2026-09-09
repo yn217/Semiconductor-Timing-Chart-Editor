@@ -1,0 +1,99 @@
+version: 1
+
+issues:
+  414:
+    owner: codex
+    priority: P0
+    area: time-outline
+    dependsOn: []
+    order: 10
+  415:
+    owner: codex
+    priority: P0
+    area: time-outline
+    dependsOn: [414]
+    order: 20
+  416:
+    owner: codex
+    priority: P0
+    area: time-outline
+    dependsOn: [415]
+    order: 30
+  397:
+    owner: codex
+    priority: P0
+    area: acceptance
+    dependsOn: []
+    order: 40
+  429:
+    owner: codex
+    priority: P0
+    area: transaction
+    dependsOn: [461, 463, 529, 530]
+    order: 50
+  282:
+    owner: codex
+    priority: P1
+    area: validation
+    dependsOn: []
+    order: 60
+  424:
+    owner: codex
+    priority: P1
+    area: annotation
+    dependsOn: []
+    order: 70
+  419:
+    owner: codex
+    priority: P1
+    area: annotation
+    dependsOn: []
+    order: 80
+  426:
+    owner: codex
+    priority: P1
+    area: bottom-panel
+    dependsOn: []
+    order: 90
+  431:
+    owner: codex
+    priority: P1
+    area: product
+    dependsOn: [397, 429]
+    order: 100
+  258:
+    owner: hold
+    priority: P1
+    area: architecture
+    dependsOn: []
+    hold: deferred while active feature work lands
+  463:
+    owner: hold
+    priority: P1
+    area: transaction
+    dependsOn: []
+    hold: completed implementation retained as historical plan entry
+  461:
+    owner: hold
+    priority: P1
+    area: transaction
+    dependsOn: []
+    hold: completed implementation retained as historical plan entry
+  529:
+    owner: hold
+    priority: P1
+    area: document-epoch
+    dependsOn: []
+    hold: completed implementation retained as historical plan entry
+  530:
+    owner: hold
+    priority: P1
+    area: transaction
+    dependsOn: []
+    hold: completed implementation retained as historical plan entry
+  495:
+    owner: hold
+    priority: P1
+    area: reset
+    dependsOn: []
+    hold: decompose before assignment
