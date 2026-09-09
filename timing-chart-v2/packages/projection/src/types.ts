@@ -13,6 +13,7 @@ export interface RowLayoutEntry {
   readonly commentTitle?: string;
   readonly commentBody?: string;
   readonly role?: SignalRole;
+  readonly signalType?: import("@timing-chart-v2/schema").Signal["type"];
   readonly displayStyle?: JsonObject;
   readonly displayAlign?: "left" | "center" | "right";
   readonly displayOverflow?: "expand" | "ellipsis" | "wrap";

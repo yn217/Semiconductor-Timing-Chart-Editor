@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { signalTypeLabel } from "../runtime/signal-type-registry.js";
 import type { GroupId } from "@timing-chart-v2/schema";
 import { ClockGeneratorEditor } from "./clock-generator-editor.js";
 import { CommentRowEditor } from "../comment-row-editor.js";
@@ -23,7 +24,7 @@ export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, p
   return <section className="signal-editor" aria-label="Signal Editor" data-testid="signal-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <div className="editor-tabbar">
       <span className="editor-tab active">Signal</span>
-      <span className="editor-selection">{signal ? `${signal.display.name} · ${signal.type}` : "Select a signal to edit"}</span>
+      <span className="editor-selection">{signal ? `${signal.display.name} · ${signalTypeLabel(signal.type)}` : "Select a signal to edit"}</span>
       {/* Visual Quality Closure pass (#402/#426), Section 10: the Group
           dropdown + Move used to sit in its own bordered row below this
           tabbar (`.signal-context-header`) -- folded onto this one line

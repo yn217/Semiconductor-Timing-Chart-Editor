@@ -79,7 +79,7 @@ import { displayBoundaryForSource } from "../runtime/display-boundary.js";
 import { buildSnapIndex } from "../runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "../runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime } from "../runtime/timeline-viewport-runtime.js";
-import { SIGNAL_TYPE_OPTIONS } from "../runtime/signal-type-registry.js";
+import { SIGNAL_TYPE_OPTIONS, signalTypeLabel as sharedSignalTypeLabel } from "../runtime/signal-type-registry.js";
 
 
 const spacerId = (value: string) => value as SpacerId;
@@ -429,7 +429,7 @@ export function InspectorValueSignalEditor({ signal, document, viewport, command
     else setResetStatus("");
   };
   const fullPath = [...signal.source.instancePath, signal.source.signalName].join(".") || signal.source.signalName;
-  const signalTypeLabel = signal.type === "binary" ? "Signal" : signal.type === "bus" ? "Bus" : signal.type === "logic" ? "Level" : signal.type === "pulse" ? "Pulse" : signal.type.charAt(0).toUpperCase() + signal.type.slice(1);
+  const signalTypeLabel = sharedSignalTypeLabel(signal.type);
   return <aside className="inspector" data-testid="inspector" data-inspector-context="signal" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <InspectorHeaderBar onClose={onClose} />
     <InspectorSelectionHeader iconKind="signal" kind={`${role.charAt(0).toUpperCase() + role.slice(1)} · ${signalTypeLabel}`} title={name || signal.display.name} detail={fullPath} />
