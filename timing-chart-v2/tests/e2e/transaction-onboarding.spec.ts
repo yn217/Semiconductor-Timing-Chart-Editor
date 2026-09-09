@@ -227,7 +227,12 @@ test("Bulk-selecting Transactions applies Color and Delete to every checked row 
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 5 / Redo 0");
   await expect(page.getByTestId("transaction-bulk-toolbar")).toHaveCount(0);
-  await expect(page.getByTestId("transaction-empty-state")).toBeVisible();
+  // #534: the zero-Transaction state is the create form itself, not a
+  // separate "No Transactions yet" onboarding block -- same contract as
+  // the initial empty state, now also true after bulk-deleting the last
+  // remaining Transaction.
+  await expect(page.getByTestId("transaction-empty-state")).toHaveCount(0);
+  await expect(page.getByLabel("New Transaction name")).toBeVisible();
 
   // Undo restores all 3 deleted Transactions in the one History step.
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
