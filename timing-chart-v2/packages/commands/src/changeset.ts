@@ -3,7 +3,7 @@ import type { ChangeSet } from "./types.js";
 const ARRAY_KEYS = [
   "rowOrder", "rowPresentation", "edgeCounter", "addedSignals", "removedSignals", "addedGroups", "removedGroups",
   "waveSemantics", "geometryLocal", "geometryScreenY", "annotationPosition", "annotationStyle", "annotationOrder", "annotationGroups",
-  "bookmarkPosition", "timeGroupSemantics", "transactionSemantics",
+  "bookmarkPosition", "timeGroupSemantics", "transactionSemantics", "transactionGroupSemantics",
 ] as const;
 
 export function mergeChangeSets(changeSets: readonly ChangeSet[]): ChangeSet {
