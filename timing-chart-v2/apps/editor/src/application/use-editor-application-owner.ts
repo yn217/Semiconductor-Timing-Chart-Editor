@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { deriveTimingDiagnostics, type CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { HistoryState } from "@timing-chart-v2/history";
-import { validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
+import { isTrustedParsedCanonicalDocument, validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import { buildCommandRejectionDiagnostics } from "../command-diagnostics.js";
 import { EditorApplicationRuntime } from "../runtime/editor-application-runtime.js";
 
@@ -90,7 +90,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     const session = runtime.session.replace(document);
     setSnapshot(session.getSnapshot());
     setHistory(session.historyState());
-    const canonical = "validated" in document ? document.document : document;
+    const canonical = isTrustedParsedCanonicalDocument(document) ? document.document : document;
     setValidationDiagnostics(deriveTimingDiagnostics(canonical));
     setProblem("");
     setRuntimeDiagnostics(diagnostics);

@@ -432,11 +432,13 @@ export interface DocumentProblem {
 
 export interface MigrationWarning { readonly code: string; readonly path: string; readonly message: string }
 
+declare const parsedCanonicalDocumentBrand: unique symbol;
 export type ParsedCanonicalDocument = Readonly<{
   readonly ok: true;
   readonly document: CanonicalDocument;
   readonly warnings: readonly MigrationWarning[];
   readonly validated: true;
+  readonly [parsedCanonicalDocumentBrand]: true;
 }>;
 
 export type ParseDocumentResult =

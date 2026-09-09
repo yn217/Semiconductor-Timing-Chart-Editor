@@ -5,6 +5,7 @@ import { CANONICAL_PROBLEM_CODES, SCHEMA_RULE_KEYWORDS, type Annotation, type Ca
 import { valueSignalValueProblem } from "./value-signal-compatibility.js";
 import { canonicalReferences } from "./reference-registry.js";
 import { validateTimeGroupHierarchy } from "./time-group-hierarchy.js";
+import { canonicalEntityInventory } from "./canonical-inventory.js";
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, strictRequired: false, allowUnionTypes: true });
 const validateSchema = ajv.compile<CanonicalDocument>(canonicalSchema);
@@ -244,19 +245,7 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
     else allIds.set(id, kind);
   };
 
-  document.signals.forEach((signal, index) => registerId(signal.id, `$.signals[${index}].id`, "signal"));
-  document.signalGroups.forEach((group, index) => {
-    registerId(group.id, `$.signalGroups[${index}].id`, "group");
-    group.spacers?.forEach((spacer, spacerIndex) => registerId(spacer.id, `$.signalGroups[${index}].spacers[${spacerIndex}].id`, "spacer"));
-  });
-  document.annotations.forEach((item, index) => registerId(item.id, `$.annotations[${index}].id`, "annotation"));
-  (document.annotationGroups ?? []).forEach((item, index) => registerId(item.id, `$.annotationGroups[${index}].id`, "annotationGroup"));
-  document.transactions.forEach((item, index) => registerId(item.id, `$.transactions[${index}].id`, "transaction"));
-  (document.transactionGroups ?? []).forEach((item, index) => registerId(item.id, `$.transactionGroups[${index}].id`, "transaction-group"));
-  document.bookmarks.forEach((item, index) => registerId(item.id, `$.bookmarks[${index}].id`, "bookmark"));
-  document.timeGroups.forEach((item, index) => registerId(item.id, `$.timeGroups[${index}].id`, "time-group"));
-  document.timeline.labelAnchors.forEach((item, index) => registerId(item.id, `$.timeline.labelAnchors[${index}].id`, "label-anchor"));
-  document.constraints.forEach((item, index) => registerId(item.id, `$.constraints[${index}].id`, "constraint"));
+  for (const entry of canonicalEntityInventory(document)) registerId(entry.id, entry.path, entry.kind);
 
   if (document.timeline.end !== document.timeline.cycleCount) problems.push(problem("TIMELINE_END_MISMATCH", "$.timeline.end", "Canonical timeline end must equal cycleCount."));
 

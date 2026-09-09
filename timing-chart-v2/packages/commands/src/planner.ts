@@ -16,7 +16,7 @@ import type {
   TransactionPhase,
   ValueSignal,
 } from "@timing-chart-v2/schema";
-import { canonicalDocumentsEqual, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -370,17 +370,7 @@ function transformedClockProblem(document: CanonicalDocument): CommandPlanResult
 }
 
 function canonicalIds(document: CanonicalDocument): Set<string> {
-  return new Set([
-    ...document.signals.map((item) => item.id),
-    ...document.signalGroups.map((item) => item.id),
-    ...document.signalGroups.flatMap((item) => item.spacers?.map((spacer) => spacer.id) ?? []),
-    ...document.annotations.map((item) => item.id),
-    ...document.transactions.map((item) => item.id),
-    ...document.bookmarks.map((item) => item.id),
-    ...document.timeGroups.map((item) => item.id),
-    ...document.timeline.labelAnchors.map((item) => item.id),
-    ...document.constraints.map((item) => item.id),
-  ]);
+  return new Set(canonicalEntityIds(document));
 }
 
 function cloneStableId<T extends string>(sourceId: T, commandId: string, used: Set<string>): T {

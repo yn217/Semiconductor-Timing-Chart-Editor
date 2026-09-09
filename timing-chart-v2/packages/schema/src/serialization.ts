@@ -4,6 +4,12 @@ import { scanJsonSyntax } from "./json-syntax.js";
 import type { CanonicalDocument, DocumentProblem, MigrationWarning, ParseDocumentResult } from "./types.js";
 import { validateDocumentInputBytes, validateDocumentInputComplexity, validateDocumentResourceBudget } from "./resource-budget.js";
 
+const trustedParsedDocuments = new WeakSet<object>();
+
+export function isTrustedParsedCanonicalDocument(value: unknown): value is ParseDocumentResult & { readonly ok: true } {
+  return value !== null && typeof value === "object" && trustedParsedDocuments.has(value);
+}
+
 function cloneUnknown(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(cloneUnknown);
   if (value !== null && typeof value === "object") {
@@ -51,7 +57,9 @@ export function normalizeDocument(input: unknown): ParseDocumentResult {
   if (problems.length > 0) return { ok: false, kind: "validation", sourceFormatVersion: version, problems };
   const budgetProblems = validateDocumentResourceBudget(migrated.document);
   if (budgetProblems.length > 0) return { ok: false, kind: "validation", sourceFormatVersion: version, problems: budgetProblems };
-  return { ok: true, document: migrated.document, warnings: migrated.warnings, validated: true };
+  const result = { ok: true as const, document: migrated.document, warnings: migrated.warnings, validated: true as const };
+  trustedParsedDocuments.add(result);
+  return result as ParseDocumentResult;
 }
 
 export function parseDocument(input: string | unknown): ParseDocumentResult {

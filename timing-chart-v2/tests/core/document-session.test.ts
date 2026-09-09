@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DocumentSession } from "@timing-chart-v2/core";
-import { parseDocument } from "@timing-chart-v2/schema";
+import { isTrustedParsedCanonicalDocument, parseDocument } from "@timing-chart-v2/schema";
 import { DOCUMENT_RESOURCE_BUDGET } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -26,6 +26,12 @@ describe("DocumentSession atomic Open/Save", () => {
     expect(session.getSnapshot().document).toBe(parsed.document);
     expect(Object.isFrozen(session.getSnapshot().document)).toBe(true);
     expect(Object.isFrozen(session.getSnapshot().document.signals)).toBe(true);
+  });
+
+  it("does not trust a forgeable validated boolean outside the parser", () => {
+    const forged = { ok: true, document: canonicalFixture(), warnings: [], validated: true } as never;
+    expect(isTrustedParsedCanonicalDocument(forged)).toBe(false);
+    expect(() => new DocumentSession(forged)).toThrow();
   });
 
   it("replaces once on valid Open and returns a full-document render contract", () => {

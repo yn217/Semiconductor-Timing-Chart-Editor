@@ -17,3 +17,4 @@ export * from "./resource-budget.js";
 export * from "./semantic-equivalence.js";
 export * from "./legend.js";
 export * from "./annotation-semantics.js";
+export * from "./canonical-inventory.js";

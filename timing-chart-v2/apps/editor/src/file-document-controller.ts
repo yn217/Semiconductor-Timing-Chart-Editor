@@ -1,4 +1,4 @@
-import { parseDocument, serializeValidatedCanonicalDocument, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
+import { isTrustedParsedCanonicalDocument, parseDocument, serializeValidatedCanonicalDocument, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 
 export const MAX_OPEN_FILE_BYTES = 32 * 1024 * 1024;
 
@@ -8,7 +8,7 @@ export function parseOpenDocument(text: string): ReturnType<typeof parseDocument
 }
 
 export function canonicalDocumentOf(input: CanonicalDocument | ParsedCanonicalDocument): CanonicalDocument {
-  if ("ok" in input && input.ok === true && input.validated === true) return (input as ParsedCanonicalDocument).document;
+  if (isTrustedParsedCanonicalDocument(input)) return input.document;
   return input as CanonicalDocument;
 }
 

@@ -7,6 +7,7 @@ import {
   type DocumentProblem,
   type MigrationWarning,
   type ParsedCanonicalDocument,
+  isTrustedParsedCanonicalDocument,
   type ParseDocumentResult,
 } from "@timing-chart-v2/schema";
 
@@ -85,7 +86,7 @@ function deepFreeze<T>(value: T): Readonly<T> {
 }
 
 function isParsedCanonicalDocument(value: CanonicalDocument | ParsedCanonicalDocument): value is ParsedCanonicalDocument {
-  return "validated" in value && value.validated === true;
+  return isTrustedParsedCanonicalDocument(value);
 }
 
 function failedOpen(result: Exclude<ParseDocumentResult, { ok: true }>): AtomicOpenResult {
