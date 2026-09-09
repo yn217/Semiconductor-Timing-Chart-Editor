@@ -262,7 +262,14 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
         const laneTransactions = laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? [];
         return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" style={{ top: band.labelTop, height: band.labelHeight }}>
           {laneTransactions.length === 0 && <em>{band.laneId.replace(/^lane_(\d+)$/i, "Lane $1")}</em>}
-          {laneTransactions.map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={() => onSelect(transaction.id)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
+          {/* Transaction Mode GUI realignment ("長い名前は ellipsis +
+              tooltip"): the CSS already truncates a long name with
+              ellipsis (center-columns.css's overflow:hidden/text-overflow:
+              ellipsis on this class), but nothing surfaced the full name
+              once it was cut off. `title` is the same native-tooltip
+              affordance the rest of the app already uses for truncated
+              text, not a new pattern. */}
+          {laneTransactions.map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} title={transaction.name} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={() => onSelect(transaction.id)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
         </span>;
       })}
     </div>
