@@ -1,13 +1,14 @@
 import type { ChangeEvent, ReactNode } from "react";
 
 type ClassName = string | undefined;
+export type RibbonSizeClass = "large" | "medium" | "small" | "icon";
 
 export function DsIconBox({ children }: { readonly children: ReactNode }) {
   return <span className="ds-icon-box" aria-hidden="true">{children}</span>;
 }
 
-export function DsRibbonButton({ ariaLabel, children, className, dataTestId, disabled, icon, onClick, title, v1Label }: { readonly ariaLabel?: string | undefined; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string | undefined; readonly disabled?: boolean | undefined; readonly icon: ReactNode; readonly onClick: () => void; readonly title?: string | undefined; readonly v1Label?: string | undefined }) {
-  return <button type="button" className={`ds-control ds-ribbon-button${className ? ` ${className}` : ""}`} aria-label={ariaLabel} data-testid={dataTestId} disabled={disabled} title={title} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label" data-v1-label={v1Label}>{children}</span></button>;
+export function DsRibbonButton({ ariaLabel, children, className, dataTestId, disabled, icon, onClick, size = "large", title, v1Label }: { readonly ariaLabel?: string | undefined; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string | undefined; readonly disabled?: boolean | undefined; readonly icon: ReactNode; readonly onClick: () => void; readonly size?: RibbonSizeClass; readonly title?: string | undefined; readonly v1Label?: string | undefined }) {
+  return <button type="button" className={`ds-control ds-ribbon-button ds-ribbon-button--${size}${className ? ` ${className}` : ""}`} aria-label={ariaLabel} data-ribbon-size={size} data-testid={dataTestId} disabled={disabled} title={title} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label" data-v1-label={v1Label}>{children}</span></button>;
 }
 
 export function DsRibbonToggleButton({ ariaLabel, checked, children, className, dataTestId, icon, onClick, title }: { readonly ariaLabel?: string; readonly checked: boolean; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string; readonly icon: ReactNode; readonly onClick: () => void; readonly title?: string | undefined }) {

@@ -258,6 +258,16 @@
 
 .ds-ribbon-button:disabled { color: #8a98a8; cursor: not-allowed; }
 
+/* Shared Ribbon presentation classes (#441). Composition chooses a semantic
+   size; these tokens own the geometry so Home/View/contextual tabs do not
+   invent command-specific widths. Labels remain reachable through the native
+   title/aria-label when a command degrades to icon-only. */
+.ds-ribbon-button[data-ribbon-size="large"] { min-width: var(--ds-ribbon-button-min-width); }
+.ds-ribbon-button[data-ribbon-size="medium"] { min-width: 42px; min-height: 48px; padding-inline: 4px; }
+.ds-ribbon-button[data-ribbon-size="small"] { min-width: 34px; min-height: 38px; padding: 3px 3px 2px; font-size: 10px; }
+.ds-ribbon-button[data-ribbon-size="icon"] { min-width: 30px; min-height: 30px; width: 30px; padding: 3px; }
+.ds-ribbon-button[data-ribbon-size="icon"] > .ds-ribbon-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
 .ds-ribbon-label { display: flex; min-height: 28px; flex-direction: column; align-items: center; justify-content: flex-start; white-space: nowrap; font-size: 10px; font-weight: 650; }
 
 .ds-ribbon-toggle { display: flex; min-width: 56px; flex: 0 1 auto; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; padding: 5px 4px 3px; color: #344b65; font-size: 10px; line-height: 13px; text-align: center; }
