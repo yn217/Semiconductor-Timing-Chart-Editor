@@ -8,7 +8,7 @@ export interface DisplayTimeMapping {
   readonly labelFor: (displayCycle: number) => number;
 }
 
-export type HiddenSourcePositionPolicy = "floor" | "ceil" | "omit";
+export type HiddenSourcePositionPolicy = "floor" | "ceil" | "interpolate" | "omit";
 
 /** Resolve a source position without inventing display-cycle zero for folded input. */
 export function resolveSourcePosition(mapping: DisplayTimeMapping, sourceCycle: number, policy: HiddenSourcePositionPolicy = "omit"): number | undefined {
@@ -18,6 +18,13 @@ export function resolveSourcePosition(mapping: DisplayTimeMapping, sourceCycle: 
   if (Number.isInteger(clamped) && mapping.sourceToDisplay[clamped] !== undefined) return mapping.sourceToDisplay[clamped];
   if (policy === "omit") return undefined;
   const index = Math.floor(clamped);
+  if (policy === "interpolate") {
+    const lower = mapping.sourceToDisplay[index];
+    const upper = mapping.sourceToDisplay[index + 1];
+    if (lower !== undefined && upper !== undefined) return lower + (clamped - index) * (upper - lower);
+    if (lower !== undefined) return lower;
+    if (upper !== undefined) return upper;
+  }
   if (policy === "floor") for (let cycle = Math.min(index, mapping.sourceToDisplay.length - 1); cycle >= 0; cycle -= 1) if (mapping.sourceToDisplay[cycle] !== undefined) return mapping.sourceToDisplay[cycle];
   if (policy === "ceil") for (let cycle = Math.max(0, index); cycle < mapping.sourceToDisplay.length; cycle += 1) if (mapping.sourceToDisplay[cycle] !== undefined) return mapping.sourceToDisplay[cycle];
   return undefined;
