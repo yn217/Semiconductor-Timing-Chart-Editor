@@ -45,6 +45,12 @@ test("captures the V1 Split View composition with both contexts and zero view mu
   await transactionPane.click({ position: { x: 40, y: 40 } });
   await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Transaction");
   await expect(page.locator("[data-major-group='Layout']")).toHaveCount(0);
+  const scrollMetrics = await transactionPane.evaluate((element) => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth }));
+  expect(scrollMetrics.scrollWidth).toBeGreaterThan(scrollMetrics.clientWidth);
+  await transactionPane.evaluate((element) => { element.scrollLeft = 120; });
+  await expect.poll(async () => signalPane.evaluate((element) => element.scrollLeft)).toBe(120);
+  await signalPane.evaluate((element) => { element.scrollLeft = 40; });
+  await expect.poll(async () => transactionPane.evaluate((element) => element.scrollLeft)).toBe(40);
   await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true })).toBeVisible();
   await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true })).toBeVisible();
   await mkdir(resolve(process.cwd(), "artifacts", "gui-split-view"), { recursive: true });
