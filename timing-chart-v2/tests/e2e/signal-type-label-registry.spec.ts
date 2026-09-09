@@ -33,4 +33,16 @@ test("Inspector Type dropdown and the Add-Signal menu show identical Signal Type
   const inspectorOptionLabels = await typeSelect.locator("option").allTextContents();
   expect(inspectorOptionLabels.slice(0, 5)).toEqual(["Signal", "Bus", "State", "Level", "Event"]);
   await expect(typeSelect).toHaveValue("bus");
+  await expect(page.locator('[data-role="tree-signal-role"][data-signal-type="bus"]').last()).toHaveText("Bus");
+  await expect(page.getByTestId("signal-editor").locator(".editor-selection")).toContainText("Bus");
+  await typeSelect.selectOption("state");
+  await page.getByTestId("apply-inspector-signal").click();
+  await expect(page.locator('[data-role="tree-signal-role"][data-signal-type="state"]').last()).toHaveText("State");
+  await expect(page.getByTestId("signal-editor").locator(".editor-selection")).toContainText("State");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(typeSelect).toHaveValue("bus");
+  await expect(page.getByTestId("signal-editor").locator(".editor-selection")).toContainText("Bus");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(typeSelect).toHaveValue("state");
+  await expect(page.locator('[data-role="tree-signal-role"][data-signal-type="state"]').last()).toHaveText("State");
 });

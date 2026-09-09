@@ -1,4 +1,5 @@
-import { quickValueOptions, valueSignalWaveDomain, VALUE_SIGNAL_RENDER_POLICY, type ValueSignal } from "@timing-chart-v2/schema";
+import { quickValueOptions, type ValueSignal } from "@timing-chart-v2/schema";
+import { signalTypeDefinition } from "./signal-type-registry.js";
 
 // Value Editor Policy (VALUE type-awareness pass): the ONE place that
 // resolves "given this Signal's type, what should the VALUE control look
@@ -41,7 +42,7 @@ const LOGIC_LABELS: Readonly<Record<string, string>> = { d: "D (weak-low)", u: "
 // reusing it here would silently give Pulse an unconditional copy of
 // Binary's dropdown -- exactly what a per-type policy must not do.
 function logicDomainOptions(type: ValueSignal["type"]): readonly ValueEditorOption[] {
-  const tokens = VALUE_SIGNAL_RENDER_POLICY[type].acceptedTokens ?? [];
+  const tokens = signalTypeDefinition(type).acceptedTokens;
   return tokens.map((token) => ({ value: token.toUpperCase(), label: LOGIC_LABELS[token] ?? token.toUpperCase() }));
 }
 
@@ -71,7 +72,7 @@ function stateOptions(signal: ValueSignal): readonly ValueEditorOption[] {
 }
 
 export function resolveValueEditorPolicy(signal: ValueSignal): ValueEditorPolicy {
-  if (valueSignalWaveDomain(signal.type) === "logic") {
+  if (signalTypeDefinition(signal.type).valueEditorKind === "select") {
     // Binary, Logic, and (legacy-only) Pulse are exactly this: a closed
     // set of WaveDrom logic tokens defined by `VALUE_SIGNAL_RENDER_POLICY`
     // -- Pulse's own accepted-token set (matching Logic's, wider than

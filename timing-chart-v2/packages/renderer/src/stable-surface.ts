@@ -1,4 +1,5 @@
 import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
+import { signalTypeLabel } from "@timing-chart-v2/schema";
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
 
 const WAVE_BATCH_LIMIT = 8;
@@ -943,7 +944,8 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
       shell.setAttribute("aria-grabbed", "false");
     }
     const signature = `${row.kind}\u0000${row.name}\u0000${row.commentTitle ?? ""}\u0000${row.commentBody ?? ""}\u0000${row.groupId}\u0000${row.role ?? ""}\u0000${row.fullPath ?? ""}\u0000${JSON.stringify(row.groupStyle ?? {})}\u0000${JSON.stringify(row.displayStyle ?? {})}\u0000${row.displayAlign ?? ""}\u0000${row.displayOverflow ?? ""}\u0000${row.visible}\u0000${row.groupId !== previousGroupId}`;
-    if (shell.dataset.shellSignature !== signature) { populateShell(shell, row, surface, row.groupId !== previousGroupId); shell.dataset.shellSignature = signature; }
+    const typedSignature = `${signature}\u0000${row.signalType ?? ""}`;
+    if (shell.dataset.shellSignature !== typedSignature) { populateShell(shell, row, surface, row.groupId !== previousGroupId); shell.dataset.shellSignature = typedSignature; }
     if (surface === "left" && row.kind === "timing") {
       const visibility = shell.querySelector<HTMLElement>("[data-role='tree-visibility']");
       if (visibility) {
@@ -989,6 +991,11 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     name.title = row.fullPath ?? row.name;
     const role = createRoleBadge(document, row.kind, row.role, "tree-signal-role");
     role.title = row.kind === "comment" ? "Comment Row" : row.role ?? "internal";
+    if (row.signalType !== undefined) {
+      role.textContent = signalTypeLabel(row.signalType);
+      role.dataset.signalType = row.signalType;
+      role.title = `${signalTypeLabel(row.signalType)} · ${row.role ?? "internal"}`;
+    }
     const visibility = document.createElement("button");
     visibility.type = "button";
     visibility.dataset.role = "tree-visibility";
