@@ -222,7 +222,6 @@ export function AIOperationPanel({ document, revision, selectedSignalId, selecte
       type: signal.type,
       groupId: groupOfRow.get(signal.id),
       visible: signal.display.visible !== false,
-      splitPane: signal.display.splitPane ?? "both",
     }));
     return {
       zoom: getZoom?.() ?? 1,
