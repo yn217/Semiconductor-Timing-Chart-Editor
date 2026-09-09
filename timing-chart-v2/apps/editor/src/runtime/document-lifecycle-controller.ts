@@ -5,7 +5,7 @@ function nextBrowserFrame(): Promise<void> {
   });
 }
 
-export function scheduleInitialTimelineRefresh(renderer: { whenIdle: () => Promise<unknown> }, host: HTMLElement, refresh: { readonly ruler: () => void; readonly range: () => void; readonly playhead: () => void; readonly grid: () => void; readonly zoom: () => void; readonly overlays: () => void; readonly collectErrors: () => void; readonly publish: () => void; }, lifecycle: { readonly isCurrent: () => boolean } = { isCurrent: () => true }): void {
+export function scheduleInitialTimelineRefresh(renderer: { whenIdle: () => Promise<unknown> }, host: HTMLElement, refresh: { readonly ruler: () => void; readonly range: () => void; readonly playhead: () => void; readonly grid: () => void; readonly zoom: () => void; readonly overlays: () => void; readonly collectErrors: () => void; readonly publish: () => void; readonly transactionPresentation?: () => void; }, lifecycle: { readonly isCurrent: () => boolean } = { isCurrent: () => true }): void {
   void renderer.whenIdle().then(() => {
     if (!host.isConnected || !lifecycle.isCurrent()) return;
     return nextBrowserFrame().then(() => {
@@ -20,6 +20,7 @@ export function scheduleInitialTimelineRefresh(renderer: { whenIdle: () => Promi
       refresh.grid();
       refresh.zoom();
       refresh.overlays();
+      refresh.transactionPresentation?.();
       refresh.collectErrors();
       refresh.publish();
       host.dataset.editorIdle = "true";

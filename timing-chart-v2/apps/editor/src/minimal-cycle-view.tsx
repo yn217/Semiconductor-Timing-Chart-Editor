@@ -597,6 +597,7 @@ export function MinimalCycleView() {
     document: snapshot.document,
     documentEpoch,
     revision: snapshot.revision,
+    transactionPresentationRevision,
     history,
     problem,
     diagnostics,

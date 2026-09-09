@@ -386,6 +386,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       grid: () => { if (active) timelineRuntime.refreshGrid(); },
       zoom: () => { if (active) timelineRuntime.setZoom(timelineNavigation.getZoom()); },
       overlays: () => { if (active) timelineRuntime.refreshOverlays(); },
+      transactionPresentation: () => { if (active) setTransactionPresentationRevision((value) => value + 1); },
       collectErrors: () => { if (active) collectWaveErrors(); },
       publish: () => { if (active) publishState(); },
     }, { isCurrent: () => active && documentEpoch.isCurrent(initialDocumentEpoch) });

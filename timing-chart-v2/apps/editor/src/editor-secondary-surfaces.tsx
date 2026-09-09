@@ -33,6 +33,7 @@ export interface EditorSecondarySurfacesInput {
   readonly document: CanonicalDocument;
   readonly documentEpoch: number;
   readonly revision: number;
+  readonly transactionPresentationRevision: number;
   readonly history: HistoryState;
   readonly problem: string;
   readonly diagnostics: readonly DocumentProblem[];
@@ -278,7 +279,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
   };
   const workspaceViewportContent = workspace.viewMode !== "Cycle" && (workspace.viewMode === "Transaction" && workspace.transactionTreeTab === "signals"
     ? <TransactionSignalTree document={input.document} selectedSignalId={selected.signal?.id} onSelectSignal={input.actions.selectHierarchySignal} />
-    : <TransactionLanes document={input.document} documentEpoch={input.documentEpoch} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={(cycle) => refs.transactionBoundaryX.current(cycle)} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(resolveTransactionSnapClientX(clientX))} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />);
+    : <TransactionLanes key={input.transactionPresentationRevision} document={input.document} documentEpoch={input.documentEpoch} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={(cycle) => refs.transactionBoundaryX.current(cycle)} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(resolveTransactionSnapClientX(clientX))} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />);
   const workspaceViewportLegend = <LegendView document={input.document} commands={surfaceCommands} />;
   const workspaceBottom = <BottomEditorPanel
     tabs={workspace.bottomTabs}
