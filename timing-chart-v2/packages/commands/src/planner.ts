@@ -158,6 +158,13 @@ function insertRange<T extends { readonly start: number; readonly end: number }>
   return range;
 }
 
+function mapResetInsert<T extends Signal>(signal: T, at: number, count: number): T {
+  if (signal.type === "clock" || signal.type === "commentRow") return signal;
+  if (!signal.resetSemantics) return signal;
+  const reset = signal.resetSemantics;
+  return { ...signal, resetSemantics: { ...reset, ...(reset.assertCycle === undefined ? {} : { assertCycle: mapInsertPoint(reset.assertCycle, at, count) }), ...(reset.deassertCycle === undefined ? {} : { deassertCycle: mapInsertPoint(reset.deassertCycle, at, count) }) } } as T;
+}
+
 function insertTimeline(document: CanonicalDocument, at: number, count: number): CanonicalDocument {
   const signals = document.signals.map((signal): Signal => {
     if (signal.type === "commentRow") return signal;
@@ -166,7 +173,7 @@ function insertTimeline(document: CanonicalDocument, at: number, count: number):
       generator: { ...signal.generator, start: mapInsertPoint(signal.generator.start, at, count) },
       ...(signal.enable ? { enable: insertChanges(signal.enable, at, count) } : {}),
     };
-    return { ...signal, values: insertChanges(signal.values, at, count) };
+    return mapResetInsert({ ...signal, values: insertChanges(signal.values, at, count) }, at, count);
   });
   const mapAnnotation = (annotation: Annotation): Annotation => {
     const mapped: Record<string, unknown> = { ...annotation };
@@ -226,6 +233,13 @@ function deleteRange<T extends { readonly start: number; readonly end: number }>
   return mappedStart < mappedEnd ? { ...range, start: mappedStart, end: mappedEnd } : undefined;
 }
 
+function mapResetDelete<T extends Signal>(signal: T, start: number, end: number, nextCycleCount: number): T {
+  if (signal.type === "clock" || signal.type === "commentRow") return signal;
+  if (!signal.resetSemantics) return signal;
+  const reset = signal.resetSemantics;
+  return { ...signal, resetSemantics: { ...reset, ...(reset.assertCycle === undefined ? {} : { assertCycle: mapDeletePoint(reset.assertCycle, start, end, nextCycleCount) }), ...(reset.deassertCycle === undefined ? {} : { deassertCycle: mapDeletePoint(reset.deassertCycle, start, end, nextCycleCount) }) } } as T;
+}
+
 /**
  * Apply the explicit Timeline Delete policy to every Annotation shape.
  * Point annotations are clamped to the deletion boundary; span and
@@ -263,7 +277,7 @@ function deleteTimeline(document: CanonicalDocument, start: number, end: number)
       generator: { ...signal.generator, start: mapDeletePoint(signal.generator.start, start, end, nextCycleCount) },
       ...(signal.enable ? { enable: deleteChanges(signal.enable, start, end, nextCycleCount) } : {}),
     };
-    return { ...signal, values: deleteChanges(signal.values, start, end, nextCycleCount) };
+    return mapResetDelete({ ...signal, values: deleteChanges(signal.values, start, end, nextCycleCount) }, start, end, nextCycleCount);
   });
   const annotations = document.annotations.map((annotation) => deleteAnnotation(annotation, start, end, nextCycleCount)).filter((annotation): annotation is Annotation => annotation !== undefined);
   const retainedAnnotationIds = new Set(annotations.map((annotation) => annotation.id));
@@ -532,7 +546,10 @@ function moveTimelineRange(document: CanonicalDocument, start: number, end: numb
     signals: document.signals.map((signal): Signal => {
       if (signal.type === "commentRow") return signal;
       if (signal.type === "clock") return { ...signal, generator: { ...signal.generator, start: moveCycleIndex(signal.generator.start, start, end, to) } };
-      return { ...signal, values: moveChanges(signal.values, document.timeline.cycleCount, start, end, to) };
+      const moved = { ...signal, values: moveChanges(signal.values, document.timeline.cycleCount, start, end, to) };
+      if (!signal.resetSemantics) return moved;
+      const reset = signal.resetSemantics;
+      return { ...moved, resetSemantics: { ...reset, ...(reset.assertCycle === undefined ? {} : { assertCycle: moveCycleIndex(reset.assertCycle, start, end, to) }), ...(reset.deassertCycle === undefined ? {} : { deassertCycle: moveCycleIndex(reset.deassertCycle, start, end, to) }) } };
     }),
     annotations: document.annotations.map((annotation) => ({ ...annotation, anchor: moveAnchor(annotation.anchor, start, end, to), start: moveAnchor(annotation.start, start, end, to), end: moveAnchor(annotation.end, start, end, to), from: moveAnchor(annotation.from, start, end, to), to: moveAnchor(annotation.to, start, end, to) })).map((annotation) => Object.fromEntries(Object.entries(annotation).filter(([, value]) => value !== undefined)) as unknown as Annotation),
     bookmarks: document.bookmarks.map((bookmark) => ({ ...bookmark, start: moveCycleIndex(bookmark.start, start, end, to) })),

@@ -30,4 +30,13 @@ describe("Reset semantic lifecycle", () => {
     expect(roleSession.execute({ id: commandId("role_change"), type: "signal.updateProperties", signalId: "sig_data", name: "DATA", role: "output" }).ok).toBe(true);
     expect(roleSession.getSnapshot().document.signals[1]).toHaveProperty("resetSemantics.polarity", "active-low");
   });
+
+  it("transforms Reset source-time metadata with timeline insert and delete", () => {
+    const source = { ...canonicalFixture(), signals: canonicalFixture().signals.map((signal) => signal.id === "sig_data" ? { ...signal, resetSemantics: { polarity: "active-low", synchronization: "synchronous", assertCycle: 1, deassertCycle: 6 } as const } : signal) };
+    const session = new CommandHistorySession(source);
+    expect(session.execute({ id: commandId("reset_insert"), type: "timeline.insert", at: 2, count: 2 }).ok).toBe(true);
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")).toHaveProperty("resetSemantics.deassertCycle", 8);
+    expect(session.execute({ id: commandId("reset_delete"), type: "timeline.delete", start: 2, end: 4 }).ok).toBe(true);
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")).toHaveProperty("resetSemantics.deassertCycle", 6);
+  });
 });
