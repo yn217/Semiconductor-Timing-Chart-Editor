@@ -17,13 +17,13 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1024, height: 720
       const menu = page.getByRole("menu", { name: "More Home Commands" });
       await expect(menu).toBeVisible();
       for (const label of ["New", "Open", "Save", "Save As", "Recent", "Undo", "Copy", "Paste", "Delete", "Select All Signals", "Hide", "Move Down", "Zoom −", "Zoom +", "Zoom 50%", "Zoom 100%", "Zoom 150%", "Zoom 200%", "Zoom 400%", "Zoom 800%", "Fit Selection", "Fit All", "Grid", "Snap", "Ruler", "MiniMap"]) {
-        await expect(menu.getByRole("button", { name: label, exact: true })).toBeVisible();
+        await expect(menu.getByRole("menuitem", { name: label, exact: true })).toBeVisible();
       }
       for (const label of ["Document Properties", "Problems", "SVG / PNG / PDF"]) {
         await expect(menu.getByRole("menuitem", { name: label, exact: true })).toBeVisible();
       }
       const revision = await page.getByTestId("revision-status").textContent();
-      await menu.getByRole("button", { name: "Select All Signals", exact: true }).click();
+      await menu.getByRole("menuitem", { name: "Select All Signals", exact: true }).click();
       await expect(page.getByTestId("selection-status")).toHaveText("8 signals");
       await expect(page.getByTestId("revision-status")).toHaveText(revision!);
     } else {
@@ -44,7 +44,7 @@ test("Home overflow zoom presets remain view-only at compact width", async ({ pa
   const beforeCounters = await page.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters");
   await ribbon.getByRole("button", { name: "More", exact: true }).click();
   const menu = page.getByRole("menu", { name: "More Home Commands" });
-  await menu.getByRole("button", { name: "Zoom 150%", exact: true }).click();
+  await menu.getByRole("menuitem", { name: "Zoom 150%", exact: true }).click();
   await expect(page.getByTestId("zoom-status-bar")).toHaveText("Zoom: 150%");
   await expect(page.getByTestId("revision-status")).toHaveText(beforeRevision!);
   await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);

@@ -13,6 +13,23 @@
 
 .editor-shell .ribbon-schema-group::after { content: none; }
 
+/* Home is intentionally high-density: schema groups must participate in the
+   available-width negotiation instead of keeping their intrinsic button sum
+   as a flex item's minimum. The More command surface remains the lossless
+   route for commands that no longer fit at compact widths. */
+.editor-shell .ribbon > [data-ribbon-home] {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.editor-shell .ribbon > [data-ribbon-home] > .ds-ribbon-group,
+.editor-shell .ribbon > [data-ribbon-home] > .ribbon-schema-group {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
 .editor-shell .ribbon-schema-group > .ds-ribbon-group {
   min-height: 0;
   height: 100%;
