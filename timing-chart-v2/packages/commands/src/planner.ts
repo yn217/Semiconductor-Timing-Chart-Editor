@@ -14,6 +14,7 @@ import type {
   TimeGroup,
   Transaction,
   TransactionPhase,
+  TransactionGroupId,
   ValueSignal,
 } from "@timing-chart-v2/schema";
 import { canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
@@ -1143,23 +1144,27 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
     case "transactionGroup.create": {
       const group = command.group;
       if (!isStableId(group.id) || !group.name.trim() || !Number.isInteger(group.order) || group.order < 0 || (document.transactionGroups ?? []).some((item) => item.id === group.id)) return fail("invalid", "INVALID_STABLE_ID", "$.group", "Transaction Group must have a unique stable ID, name, and order.");
-      return { ok: true, document: { ...document, transactionGroups: [...(document.transactionGroups ?? []), group] }, changeSet: { transactionSemantics: [] }, inverseChangeSet: { transactionSemantics: [] } };
+      return { ok: true, document: { ...document, transactionGroups: [...(document.transactionGroups ?? []), group] }, changeSet: { transactionGroupSemantics: [group.id] }, inverseChangeSet: { transactionGroupSemantics: [group.id] } };
     }
     case "transactionGroup.rename": {
       const groups = [...(document.transactionGroups ?? [])]; const index = groups.findIndex((item) => item.id === command.groupId);
       if (index < 0 || !command.name.trim()) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction Group does not exist or has an empty name.");
       if (groups[index]!.name === command.name) return fail("no-op", "NO_OP", "$", "Transaction Group is unchanged.");
-      groups[index] = { ...groups[index]!, name: command.name }; return { ok: true, document: { ...document, transactionGroups: groups }, changeSet: { transactionSemantics: [] }, inverseChangeSet: { transactionSemantics: [] } };
+      groups[index] = { ...groups[index]!, name: command.name }; return { ok: true, document: { ...document, transactionGroups: groups }, changeSet: { transactionGroupSemantics: [command.groupId] }, inverseChangeSet: { transactionGroupSemantics: [command.groupId] } };
     }
     case "transactionGroup.update": {
       const groups = [...(document.transactionGroups ?? [])]; const index = groups.findIndex((item) => item.id === command.groupId);
       if (index < 0 || !command.name.trim() || !Number.isInteger(command.order) || command.order < 0) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction Group update is invalid.");
-      groups[index] = { id: command.groupId, name: command.name, order: command.order, ...(command.color ? { color: command.color } : {}) }; return { ok: true, document: { ...document, transactionGroups: groups }, changeSet: { transactionSemantics: [] }, inverseChangeSet: { transactionSemantics: [] } };
+      const current = groups[index]!;
+      const next = { ...current, name: command.name, order: command.order, ...(command.color === undefined ? {} : command.color.trim() === "" ? (() => { const { color: _color, ...rest } = current; return rest; })() : { color: command.color }) };
+      if (JSON.stringify(current) === JSON.stringify(next)) return fail("no-op", "NO_OP", "$", "Transaction Group is unchanged.");
+      groups[index] = next; return { ok: true, document: { ...document, transactionGroups: groups }, changeSet: { transactionGroupSemantics: [command.groupId] }, inverseChangeSet: { transactionGroupSemantics: [command.groupId] } };
     }
     case "transactionGroup.delete": {
       const groups = document.transactionGroups ?? []; if (!groups.some((item) => item.id === command.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction Group does not exist.");
       const transactions = document.transactions.map((item) => item.groupId === command.groupId ? (({ groupId: _removed, ...rest }) => rest)(item) : item);
-      return { ok: true, document: { ...document, transactionGroups: groups.filter((item) => item.id !== command.groupId), transactions }, changeSet: { transactionSemantics: transactions.filter((item, i) => item !== document.transactions[i]).map((item) => item.id) }, inverseChangeSet: { transactionSemantics: [] } };
+      const affectedTransactions = document.transactions.filter((item) => item.groupId === command.groupId).map((item) => item.id);
+      return { ok: true, document: { ...document, transactionGroups: groups.filter((item) => item.id !== command.groupId), transactions }, changeSet: { transactionGroupSemantics: [command.groupId], transactionSemantics: affectedTransactions }, inverseChangeSet: { transactionGroupSemantics: [command.groupId], transactionSemantics: affectedTransactions } };
     }
     case "transaction.moveToGroup": {
       const index = document.transactions.findIndex((item) => item.id === command.transactionId); const transaction = document.transactions[index];
