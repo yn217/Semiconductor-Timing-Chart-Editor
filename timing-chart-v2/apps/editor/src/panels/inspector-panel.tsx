@@ -133,6 +133,22 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
   // per-Transaction raw-text affordance is gone).
   const [phaseRows, setPhaseRows] = useState<{ name: string; start: number; end: number }[]>(() => (transaction?.phases ?? []).map((phase) => ({ ...phase })));
   const [transactionStatus, setTransactionStatus] = useState("");
+  // Keep the draft owner mounted across unrelated commands, but refresh its
+  // committed fields when the selected Transaction itself changes. Linked
+  // Signals and other immediate actions may replace the entity object while
+  // leaving these draft-owned fields untouched, so they are intentionally not
+  // part of this synchronization boundary.
+  useEffect(() => {
+    setTransactionName(transaction?.name ?? "");
+    setTransactionStart(transaction?.start ?? 0);
+    setTransactionEnd(transaction?.end ?? 1);
+    setTransactionLane(transaction?.laneId ?? "lane_0");
+    setTransactionGroupId(transaction?.groupId ?? "");
+    setTransactionColor(transaction?.color ?? "");
+    setTransactionDescription(transaction?.description ?? "");
+    setPhaseRows((transaction?.phases ?? []).map((phase) => ({ ...phase })));
+    setTransactionStatus("");
+  }, [transaction?.id, transaction?.name, transaction?.start, transaction?.end, transaction?.laneId, transaction?.groupId, transaction?.color, transaction?.description, transaction?.phases]);
   const previewGroupStyle = (overrides: Partial<SignalGroupStyle> & { readonly showBorder?: boolean } = {}) => {
     if (!group) return;
     const showBorder = overrides.showBorder ?? groupShowBorder;
