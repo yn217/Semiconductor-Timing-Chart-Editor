@@ -9,7 +9,11 @@ import { expect, test } from "@playwright/test";
 // against the two drifting again), not just that each individually shows
 // some label.
 
-test("Inspector Type dropdown and the Add-Signal menu show identical Signal Type labels from one shared registry", async ({ page }) => {
+for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+test(`Signal types stay synchronized through history and Save/Open at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  await page.setViewportSize(viewport);
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
 
@@ -45,4 +49,16 @@ test("Inspector Type dropdown and the Add-Signal menu show identical Signal Type
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
   await expect(typeSelect).toHaveValue("state");
   await expect(page.locator('[data-role="tree-signal-role"][data-signal-type="state"]').last()).toHaveText("State");
+  const downloadWait = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const download = await downloadWait;
+  const path = await download.path();
+  expect(path).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator('[data-role="tree-signal-name"]').last().click();
+  await expect(page.getByLabel("Inspector signal type")).toHaveValue("state");
+  await expect(page.locator('[data-role="tree-signal-role"][data-signal-type="state"]').last()).toHaveText("State");
+  expect(errors).toEqual([]);
 });
+}
