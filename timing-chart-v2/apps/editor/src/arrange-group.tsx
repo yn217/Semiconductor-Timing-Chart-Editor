@@ -50,6 +50,12 @@ export function ArrangeGroup({ onBringToFront, onSendToBack, onGroup, onUngroup,
       if (target instanceof Node && (rootRef.current?.contains(target) || menuRef.current?.contains(target))) return;
       setOpen(false);
     };
+    // ArrowUp/ArrowDown/Home/End cycling for this menu already comes for
+    // free from runtime/interaction-controller.ts's attachMenuKeyboardNavigation
+    // -- it matches on any `[role='menu']` ancestor generically, not by
+    // class name, so it already covers .arrange-menu too. Escape stays
+    // local since this dropdown owns its own open/close state rather than
+    // going through that shared owner's close callbacks.
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
@@ -59,6 +65,17 @@ export function ArrangeGroup({ onBringToFront, onSendToBack, onGroup, onUngroup,
       window.document.removeEventListener("pointerdown", onPointerDown, true);
       window.document.removeEventListener("keydown", onKeyDown, true);
     };
+  }, [open]);
+  // Accessibility: matches Home Overflow's own open-focus contract
+  // (ribbon/home-overflow.tsx) -- a role="menu" popup should hand focus to
+  // its first enabled item on open, not leave it on the trigger button.
+  // The shared attachMenuKeyboardNavigation already gives this menu Arrow/
+  // Home/End cycling (it matches any [role='menu'] generically); only the
+  // open-focus handoff was missing here.
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => menuRef.current?.querySelector<HTMLButtonElement>("button[role='menuitem']:not(:disabled)")?.focus());
+    return () => cancelAnimationFrame(frame);
   }, [open]);
   // #197: this dropdown used to be a plain CSS `position: absolute; left: 0`
   // box with no viewport-edge awareness at all -- since the Arrange group
