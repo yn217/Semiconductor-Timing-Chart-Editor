@@ -221,7 +221,13 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
       </InspectorSection>
       <InspectorSection sectionId="timing" title="Timing" open={transactionSections.timing ?? true} onToggle={() => toggleTransactionSection("timing")}>
         <div className="inspector-property-pair"><label>Start<input aria-label="Transaction start" type="number" min="0" max={transactionEnd - 1} value={transactionStart} onChange={(event) => setTransactionStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={transactionStart + 1} max={document.timeline.cycleCount} value={transactionEnd} onChange={(event) => setTransactionEnd(Number(event.target.value))} /></label></div>
-        <div className="property-row"><span>Duration</span><span>{transactionEnd - transactionStart} cycles</span></div>
+        {/* Transaction Mode GUI realignment: the reference Inspector shows
+            "Duration: 50 TC (500 clock cycles)" -- Transaction Mode's own
+            semantic unit is the Transaction Cycle (TC), the same unit the
+            Ribbon's own Time Scale readout (editor-secondary-surfaces.tsx)
+            already explains via document.transactionTimeScale. Plain
+            "N cycles" was ambiguous about which cycle domain it meant. */}
+        <div className="property-row"><span>Duration</span><span>{transactionEnd - transactionStart} TC{document.transactionTimeScale ? ` (${(transactionEnd - transactionStart) * document.transactionTimeScale.clockCyclesPerTransactionCycle} clock cycles)` : ""}</span></div>
         <label>Lane<span className="inspector-field-with-help"><input aria-label="Transaction lane" value={transactionLane} onChange={(event) => setTransactionLane(event.target.value)} /><span className="field-help" tabIndex={0} title="A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track." aria-label="About Lane">ⓘ</span></span></label>
       </InspectorSection>
       <InspectorSection sectionId="phases" title="Phases" count={phaseRows.length} onAdd={() => setPhaseRows((rows) => { const last = rows.at(-1); const start = last ? last.end : transactionStart; return [...rows, { name: `Phase ${rows.length + 1}`, start, end: Math.min(start + 1, transactionEnd) }]; })} open={transactionSections.phases ?? true} onToggle={() => toggleTransactionSection("phases")}>
