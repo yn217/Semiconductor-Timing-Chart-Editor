@@ -1,9 +1,9 @@
 # Claude / Codex Issue Ownership
 
-Last reconciled: 2026-09-09 07:35 JST
+Last reconciled: 2026-09-09 20:25 JST
 Repository: `yn217/Semiconductor-Timing-Chart-Editor`
 Current product branch: `main`
-Observed main: `3d62d1a`
+Observed main: `6566c0c`
 
 This file is the authoritative cross-agent ownership split. One Issue has one active implementation owner at a time. Parent product Issues may have explicitly separated Core children, but neither agent may create a parallel owner for the same responsibility.
 
@@ -32,18 +32,14 @@ Ribbon/Tree/Inspector/Bottom composition, visual hierarchy/design system, produc
 ## Current agent task lists
 
 ### Codex — executable now
-Authoritative exact execution order remains `.codex/ISSUE_ORDER.txt`.
+No executable Issue currently.
 
-1. **#282** — stable validation/rule-contract closure.
-   - Re-audit latest main first.
-   - Preserve existing typed schema/canonical/command-policy descriptors.
-   - Close remaining machine-checked emitted-code inventory/drift, cross-layer compatibility, structured diagnostic, and stable code/path/entityId evidence gaps.
-   - If latest main already satisfies a criterion, prove it instead of manufacturing changes.
+Status:
+- **#282 CLOSED** — stable validation/rule-contract closure completed.
+- **#415 BLOCKED** — nested collapse + shared DisplayTimeMapping / Axis Break; depends on live **#414 CLOSED**.
 
-Blocked/high priority after dependency:
-- **#415** — nested collapse + shared DisplayTimeMapping / Axis Break.
-- Depends on **#414 CLOSED**. Do not start early.
-- When #414 closes, safely finish the active bounded Codex issue, then promote #415 ahead of lower-priority work.
+Codex must report `WAITING_FOR_NEXT_CODEX_ISSUE` while #414 remains open and no new bounded Core Issue is explicitly assigned.
+Do not self-promote GUI/product/mixed Issues merely to stay active.
 
 Deferred to avoid conflict:
 - #463 Transaction lane virtualization/performance — wait while Claude is exercising #397/#429 Transaction surfaces.
@@ -52,12 +48,13 @@ Deferred to avoid conflict:
 
 ### Claude — product/GUI lane
 1. **#414** — Excel-like Time Outline GUI. **NOW / highest priority** because it unblocks Codex #415.
-2. **#397** — Transaction + Split Samples A–E real-browser acceptance. #454/#481/#529/#530 are now closed; focus on production Open, interaction, Save/Open, export, responsive/console/performance evidence and file bounded defects only when concrete.
-3. **#429** — Transaction parent closure. Do not rebuild completed children; close after #397 satisfies the product gate.
-4. **#416** — Time Outline final Timeline Ribbon / persistence / export / E2E closure, only after #415 completes.
-5. **#424** — Marker vertical-span GUI/product completion; consume already-completed Core foundation rather than duplicating it.
-6. **#419** — Highlight Cycle Snap / Free GUI/product completion; consume already-completed Core foundation.
-7. Reconcile remaining product lanes: **#403/#407/#408/#409**, **#426**, **#431**, then other GUI/design-system backlog such as #436-#441/#474 as product priority requires.
+2. **#534** — Transaction Bottom empty-state simplification. Small bounded UX follow-up: remove redundant zero-Transaction explanatory empty state and show existing create form directly; preserve search-no-match behavior only when Transactions exist.
+3. **#397** — Transaction + Split Samples A–E real-browser acceptance. Continue production Open, interaction, Save/Open, export, responsive/console/performance evidence; file bounded defects only when concrete.
+4. **#429** — Transaction parent closure. Do not rebuild completed children; close after #397 satisfies the product gate.
+5. **#416** — Time Outline final Timeline Ribbon / persistence / export / E2E closure, only after #415 completes.
+6. **#424** — Marker vertical-span GUI/product completion; consume already-completed Core foundation rather than duplicating it.
+7. **#419** — Highlight Cycle Snap / Free GUI/product completion; consume already-completed Core foundation.
+8. Reconcile remaining product lanes: **#403/#407/#408/#409**, **#426**, **#431**, then other GUI/design-system backlog such as #436-#441/#474 as product priority requires.
 
 #431 is an Epic/product backlog owner, not a Codex executable Issue by itself. Concrete Core defects from #431 should be isolated into bounded child Issues before assignment.
 
@@ -97,7 +94,8 @@ Completed foundations / closure fixes:
 - #530 Transaction time-scale optional-field preservation / Secondary Clock / Save-Open
 - #529 DocumentEpoch stale transient-state isolation
 
-Claude/product remaining:
+Current Claude/product follow-up:
+- #534 Bottom Transaction zero-state density cleanup
 - #397 full Transaction + Split sample-driven acceptance
 - #429 parent closure after #397
 
@@ -134,6 +132,7 @@ Free mode must never persist screen X or ruler DOM positions as Canonical time.
 ## Recently completed — do not reimplement
 
 Codex/runtime/data closure includes:
+- #282
 - #530 #529 #461 #328 #464 #462
 - #481 #459 #460
 - #456 #457 #458
@@ -159,7 +158,7 @@ Hot/shared areas include semantic-command registries, schema/migration files, `m
 - Codex should prefer Core/schema/command/test owners and avoid GUI files unless a production adapter change is strictly necessary.
 - Claude should consume completed Core APIs instead of duplicating semantic owners.
 - If a genuine same-hunk conflict exists, isolate/defer only that bounded Issue; do not reset/stash/clean unrelated work.
-- #415 owns fold/shared mapping runtime; #414/#416/#429/#424/#419 GUI work must not introduce competing time mappers.
+- #415 owns fold/shared mapping runtime; #414/#416/#429/#534/#424/#419 GUI work must not introduce competing time mappers.
 
 ## Implementation-first policy
 `identify concrete missing behavior -> root cause -> bounded production implementation -> focused verification -> evidence/close`.
