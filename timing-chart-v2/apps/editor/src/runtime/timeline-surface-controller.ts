@@ -31,6 +31,7 @@ import { nextCommandId } from "../command-id.js";
 import { nextEntityId } from "../entity-id.js";
 import type { BottomPinnedSelection, TreeTypeFilter } from "../workspace/use-workspace-ui-state.js";
 import type { ContextMenuState } from "../workspace/use-dialog-menu-state.js";
+import { resetInspectorAccordionState } from "../inspector-accordion.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type TimelineRange = Readonly<{ start: number; end: number }>;
@@ -469,6 +470,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       markOpenPhase,
       applyReplacement: ({ document: canonicalDocument, documentEpoch: nextDocumentEpoch }) => {
       timelineRuntime.onDocumentEpochChanged(nextDocumentEpoch);
+      resetInspectorAccordionState();
        interactionHandle?.cancel();
       pendingArrow = undefined;
       pendingArrowAnnotationType = "arrow";
