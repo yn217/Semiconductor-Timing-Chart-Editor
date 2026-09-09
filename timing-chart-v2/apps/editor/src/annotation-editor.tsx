@@ -35,7 +35,7 @@ function AnchorMiniEditor({ label, annotation, field, document, commands }: { re
       <option value="">(cycle only)</option>
       {document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}
     </select>
-    <input aria-label={`Annotation ${label} cycle`} type="number" min="0" max={document.timeline.cycleCount - 1} value={cycle} onChange={(event) => setCycle(Number(event.target.value))} />
+    <input aria-label={`Annotation ${label} cycle`} type="number" min="0" max={document.timeline.cycleCount - 1} step={annotation.type === "highlight" && annotation.positionMode === "free" ? "0.01" : "1"} value={cycle} onChange={(event) => setCycle(Number(event.target.value))} />
     <button type="button" aria-label={`Apply ${label} anchor`} disabled={!hasChanges} onClick={() => commands.setAnnotationAnchor(annotation.id, field, { ...current, cycle, ...(signalId === undefined ? {} : { signalId }) })}>Apply</button>
   </div>;
 }
