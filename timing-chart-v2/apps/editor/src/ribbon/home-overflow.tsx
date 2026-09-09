@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import type { HistoryState } from "@timing-chart-v2/history";
 import { DsIconBox } from "../design-system.js";
@@ -118,7 +118,16 @@ export function HomeOverflow(props: HomeOverflowProps) {
   }, [open]);
 
   const action = (run: () => void) => () => { run(); close(); };
-  const menu = open ? createPortal(<div ref={menuRef} id="home-overflow-menu" className="home-overflow-menu" role="menu" aria-label="More Home Commands" style={{ left: `${position?.left ?? 0}px`, top: `${position?.top ?? 0}px`, height: position ? `${position.height}px` : "auto", maxHeight: `${position?.maxHeight ?? 120}px`, visibility: position ? "visible" : "hidden" }}>
+  const onMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("[role='menuitem']:not(:disabled)")];
+    if (items.length === 0) return;
+    const current = event.target instanceof HTMLElement ? items.indexOf(event.target.closest<HTMLButtonElement>("[role='menuitem']")!) : -1;
+    const next = event.key === "ArrowDown" ? (current + 1) % items.length : event.key === "ArrowUp" ? (current - 1 + items.length) % items.length : event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : undefined;
+    if (next === undefined) return;
+    event.preventDefault();
+    items[next]?.focus();
+  };
+  const menu = open ? createPortal(<div ref={menuRef} onKeyDown={onMenuKeyDown} id="home-overflow-menu" className="home-overflow-menu" role="menu" aria-label="More Home Commands" style={{ left: `${position?.left ?? 0}px`, top: `${position?.top ?? 0}px`, height: position ? `${position.height}px` : "auto", maxHeight: `${position?.maxHeight ?? 120}px`, visibility: position ? "visible" : "hidden" }}>
     <strong>File</strong><button type="button" onClick={action(props.onNew)}>New</button><button type="button" onClick={action(props.onOpen)}>Open</button><button type="button" onClick={action(props.onSave)}>Save</button><button type="button" onClick={action(props.onSaveAs)}>Save As</button><button type="button" onClick={action(props.onRecent)}>Recent</button>
     <strong>History</strong><button type="button" onClick={action(props.onUndo)} disabled={!props.history.canUndo}>Undo</button><button type="button" onClick={action(props.onRedo)} disabled={!props.history.canRedo}>Redo</button>
     <strong>Clipboard</strong><button type="button" onClick={action(props.onCopy)} disabled={!props.hasSelectedClipboard}>Copy</button><button type="button" onClick={action(props.onCut)} disabled={!props.hasSelectedClipboard}>Cut</button><button type="button" onClick={action(props.onPaste)} disabled={!props.clipboardAvailable}>Paste</button><button type="button" onClick={action(props.onDuplicate)} disabled={!props.hasSelectedClipboard}>Duplicate</button>

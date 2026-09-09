@@ -46,9 +46,14 @@ test.describe("Home Ribbon More overlay", () => {
       expect(bounds.right).toBeLessThanOrEqual(bounds.viewportWidth + 0.5);
       expect(bounds.bottom).toBeLessThanOrEqual(bounds.viewportHeight + 0.5);
       expect(bounds.insideRibbon).toBe(false);
-      await expect(menu.getByRole("button", { name: "New", exact: true })).toBeFocused();
+      const firstItem = menu.getByRole("menuitem", { name: "New", exact: true });
+      await expect(firstItem).toBeFocused();
+      await firstItem.press("End");
+      await expect(menu.getByRole("menuitem", { name: "Timeline Editor", exact: true })).toBeFocused();
+      await page.keyboard.press("Home");
+      await expect(firstItem).toBeFocused();
 
-      await menu.getByRole("button", { name: "New", exact: true }).press("Escape");
+      await firstItem.press("Escape");
       await expect(menu).toHaveCount(0);
       await expect(trigger).toBeFocused();
 
