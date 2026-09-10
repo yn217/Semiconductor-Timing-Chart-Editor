@@ -43,6 +43,28 @@ export function EditorWorkspaceView({
       ["b", cursor.b, "Cursor B"],
     ] as const;
     const rulerElements = () => [ruler.current, rulerLower.current].filter((element): element is HTMLDivElement => element !== null);
+    const tickCache = new WeakMap<HTMLDivElement, readonly { readonly x: number; readonly cycle: number }[]>();
+    const cacheTicks = (rulerElement: HTMLDivElement) => {
+      const next = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")].map((candidate) => ({
+        x: candidate.getBoundingClientRect().left,
+        cycle: Number(candidate.dataset.sourceCycle ?? candidate.dataset.cycle),
+      })).filter((tick) => Number.isFinite(tick.x) && Number.isFinite(tick.cycle)).sort((left, right) => left.x - right.x);
+      tickCache.set(rulerElement, next);
+      return next;
+    };
+    const nearestCachedTick = (rulerElement: HTMLDivElement, clientX: number) => {
+      const ticks = tickCache.get(rulerElement) ?? cacheTicks(rulerElement);
+      if (ticks.length === 0) return undefined;
+      let low = 0;
+      let high = ticks.length - 1;
+      while (low < high) {
+        const middle = Math.floor((low + high) / 2);
+        if (ticks[middle]!.x < clientX) low = middle + 1; else high = middle;
+      }
+      const right = ticks[low]!;
+      const left = ticks[Math.max(0, low - 1)]!;
+      return Math.abs(left.x - clientX) <= Math.abs(right.x - clientX) ? left : right;
+    };
     const findTick = (sourceRuler: HTMLDivElement, cycle: number) => {
       const rulers = [sourceRuler, ...rulerElements().filter((element) => element !== sourceRuler)];
       return rulers.flatMap((element) => [...element.querySelectorAll<HTMLElement>("[data-cycle]")]).find((candidate) => Number(candidate.dataset.sourceCycle ?? candidate.dataset.cycle) === cycle);
@@ -50,6 +72,7 @@ export function EditorWorkspaceView({
     const update = () => {
       for (const [viewportElement, rulerElement] of viewports) {
         if (!viewportElement || !rulerElement) continue;
+        cacheTicks(rulerElement);
         let overlay = viewportElement.querySelector<HTMLElement>("[data-role='cursor-overlay']");
         if (!overlay) {
           overlay = viewportElement.ownerDocument.createElement("div");
@@ -103,11 +126,8 @@ export function EditorWorkspaceView({
         if (!which) return;
         event.preventDefault();
         const move = (moveEvent: PointerEvent) => {
-          const nearest = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")].map((candidate) => {
-            const rect = candidate.getBoundingClientRect();
-            return { candidate, distance: Math.abs(moveEvent.clientX - rect.left) };
-          }).sort((left, right) => left.distance - right.distance)[0];
-          if (nearest) onSetCursorAtCycle(which, Number(nearest.candidate.dataset.sourceCycle ?? nearest.candidate.dataset.cycle));
+          const nearest = nearestCachedTick(rulerElement, moveEvent.clientX);
+          if (nearest) onSetCursorAtCycle(which, nearest.cycle);
         };
         const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
         window.addEventListener("pointermove", move);
