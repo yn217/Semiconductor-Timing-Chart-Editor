@@ -92,10 +92,33 @@ export function EditorWorkspaceView({
     };
     update();
     const scrollTargets = [viewport.current, viewportLower.current].filter((item): item is HTMLDivElement => item !== null);
+    const dragHandlers: Array<[HTMLDivElement, (event: PointerEvent) => void]> = [];
+    for (const [viewportElement, rulerElement] of viewports) {
+      if (!viewportElement || !rulerElement || !onSetCursorAtCycle) continue;
+      const onPointerDown = (event: PointerEvent) => {
+        const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='cursor-line']") : null;
+        const which = target?.dataset.cursor as "a" | "b" | undefined;
+        if (!which) return;
+        event.preventDefault();
+        const move = (moveEvent: PointerEvent) => {
+          const nearest = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")].map((candidate) => {
+            const rect = candidate.getBoundingClientRect();
+            return { candidate, distance: Math.abs(moveEvent.clientX - rect.left) };
+          }).sort((left, right) => left.distance - right.distance)[0];
+          if (nearest) onSetCursorAtCycle(which, Number(nearest.candidate.dataset.sourceCycle ?? nearest.candidate.dataset.cycle));
+        };
+        const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up, { once: true });
+      };
+      viewportElement.addEventListener("pointerdown", onPointerDown, true);
+      dragHandlers.push([viewportElement, onPointerDown]);
+    }
     for (const target of scrollTargets) target.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
     return () => {
       for (const target of scrollTargets) target.removeEventListener("scroll", update);
+      for (const [target, handler] of dragHandlers) target.removeEventListener("pointerdown", handler, true);
       window.removeEventListener("resize", update);
     };
   }, [ruler, rulerLower, cursor.a, cursor.b, viewport, viewportLower]);
