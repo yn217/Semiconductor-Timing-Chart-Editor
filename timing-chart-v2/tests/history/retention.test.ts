@@ -8,6 +8,18 @@ import type { CommandId, SignalId } from "@timing-chart-v2/schema";
 // to enforce it, and without breaking Dirty/current-document correctness
 // once the clean snapshot has fallen off the retained Undo horizon.
 describe("CommandHistorySession retention", () => {
+  it("reads Dirty/savepoint state without serializing the current document", () => {
+    const session = new CommandHistorySession(generatePerformanceDocument({ signalCount: 10_000, cycleCount: 10 }));
+    const stringify = JSON.stringify;
+    try {
+      JSON.stringify = (() => { throw new Error("historyState must not serialize the document"); }) as typeof JSON.stringify;
+      expect(session.historyState()).toMatchObject({ dirty: false, undoDepth: 0, redoDepth: 0 });
+      expect(session.historyMetrics().retainedEntryCount).toBe(0);
+    } finally {
+      JSON.stringify = stringify;
+    }
+  });
+
   it("bounds Undo depth for a 10k-action session without deep-cloning or serializing the document to enforce it", () => {
     const session = new CommandHistorySession(generatePerformanceDocument({ signalCount: 10, cycleCount: 10 }));
     const unrelatedSignal = session.getSnapshot().document.signals[9];
