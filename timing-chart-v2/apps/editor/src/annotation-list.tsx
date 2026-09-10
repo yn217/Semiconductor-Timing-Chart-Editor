@@ -5,6 +5,7 @@ import type {
 } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { RibbonIcon } from "./ribbon-icon.js";
+import { annotationPropertiesBase } from "./annotation-style-command.js";
 
 /** Shared read-only anchor formatter -- used by both this list's Start/End
  * columns and the Bottom Annotation Editor's own Start/End summary (Visual
@@ -117,7 +118,7 @@ export function AnnotationList({
               event.stopPropagation();
               commands.updateAnnotationProperties({
                 annotationId: item.id,
-                label: item.label,
+                ...annotationPropertiesBase(item),
                 visible: !item.visible,
                 ...(item.color === undefined ? {} : { color: item.color }),
                 ...(item.lineType === undefined

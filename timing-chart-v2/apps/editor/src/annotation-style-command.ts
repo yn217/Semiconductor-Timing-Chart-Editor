@@ -35,6 +35,12 @@ export function annotationPropertiesBase(annotation: Annotation) {
     ...(annotation.style === undefined ? {} : { style: annotation.style }),
     ...(annotation.measurement === undefined ? {} : { measurement: annotation.measurement }),
     ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout }),
+    ...(annotation.labelOffset === undefined ? {} : { labelOffset: annotation.labelOffset }),
+    ...(annotation.rotation === undefined ? {} : { rotation: annotation.rotation }),
+    ...(annotation.align === undefined ? {} : { align: annotation.align }),
+    ...(annotation.locked === undefined ? {} : { locked: annotation.locked }),
+    ...(annotation.positionMode === undefined ? {} : { positionMode: annotation.positionMode }),
+    ...(annotation.verticalSpan === undefined ? {} : { verticalSpan: annotation.verticalSpan }),
   } as const;
 }
 
