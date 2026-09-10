@@ -51,6 +51,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
   // Epic calls out. Both now live together in one sticky bottom action
   // bar, same shared classes Annotation's own bar already uses.
   const hasChanges = transaction !== undefined && (editName !== transaction.name || editStart !== transaction.start || editEnd !== transaction.end || (editLaneId.trim() || undefined) !== transaction.laneId || !phasesEqual(phaseRows, transaction.phases ?? []));
+  const createHasChanges = transaction === undefined && (name !== "Transaction" || start !== 1 || end !== Math.min(5, document.timeline.cycleCount) || laneId !== "");
   const addPhaseRow = () => setPhaseRows((rows) => { const last = rows.at(-1); const rowStart = last ? last.end : editStart; return [...rows, { name: `Phase ${rows.length + 1}`, start: rowStart, end: Math.min(rowStart + 1, editEnd) }]; });
   const applyTransactionDraft = () => {
     if (!transaction || !hasChanges) return;
@@ -174,6 +175,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
   // or renames any existing field/testid -- overview/multi-select/bulk-ops
   // stays first, quick single-item edit stays available right below it.
   const toolbarAndTable = <>
+    {createHasChanges && <div className="bottom-sticky-actions"><DraftStatus testId="transaction-create-unapplied" /><button type="button" data-testid="cancel-bottom-transaction-create" onClick={onCancel}>Cancel</button></div>}
     {document.transactions.length > 0 && <div className="event-toolbar" role="toolbar" aria-label="Transaction list commands" data-testid="transaction-list-toolbar">
       {/* Transaction Mode GUI realignment: the reference toolbar reads
           "Add / Duplicate / Delete / Group / Ungroup / Color / Search" as
