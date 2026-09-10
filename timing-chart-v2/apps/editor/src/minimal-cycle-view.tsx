@@ -139,7 +139,7 @@ export function MinimalCycleView() {
     followSelection, setFollowSelection, followSelectionRef,
     bottomPinned, setBottomPinned, bottomPinnedRef,
     pinnedBottomSelection, setPinnedBottomSelection,
-    cursorA, cursorB, cursorDelta, setCursor, clearCursor, swapCursors,
+    cursorA, cursorB, cursorDelta, setCursor, clearCursor, moveCursor, swapCursors,
     activePane, setActivePane,
   } = workspace;
   const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Bookmarks" | "AI" | "Problems" | "JSON")[] = viewMode === "Cycle"
@@ -750,6 +750,15 @@ export function MinimalCycleView() {
       onOpenProperties: () => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); },
     },
   };
+  const onCursorKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!event.shiftKey && !event.altKey) return;
+    const delta = event.key === "ArrowLeft" ? -1 : event.key === "ArrowRight" ? 1 : 0;
+    if (delta === 0) return;
+    const target = event.altKey ? "b" : "a";
+    if ((target === "a" ? cursorA : cursorB) === undefined) return;
+    event.preventDefault();
+    moveCursor(target, delta);
+  };
   const shellWorkspace = {
     view: { viewMode, signalSplitEnabled, signalSplitRatio, gridEnabled, snapEnabled, rulerEnabled, cursor: { ...(cursorA === undefined ? {} : { a: cursorA }), ...(cursorB === undefined ? {} : { b: cursorB }), ...(cursorDelta.cycles === undefined ? {} : { deltaCycles: cursorDelta.cycles }) } },
     layout: { leftPaneWidth, frozenPaneMinWidth, frozenPaneWidth, bottomVisible, bottomHeight, inspectorVisible, inspectorWidth },
@@ -761,6 +770,7 @@ export function MinimalCycleView() {
       onFrozenPaneKeyDown: resizeFrozenPaneByKeyboard, onFrozenPanePointerDown: startFrozenPaneResize, onFrozenPanePointerMove: moveFrozenPaneResize, onFrozenPanePointerUp: finishFrozenPaneResize,
       onBottomKeyDown: resizeBottomByKeyboard, onBottomPointerDown: startBottomResize, onBottomPointerMove: moveBottomResize, onBottomPointerUp: finishBottomResize,
       onSignalSplitKeyDown: resizeSignalSplitByKeyboard, onSignalSplitPointerDown: startSignalSplitResize, onSignalSplitPointerMove: moveSignalSplitResize, onSignalSplitPointerUp: finishSignalSplitResize,
+      onViewportKeyDown: onCursorKeyDown,
     },
   };
   const shellStatus = {

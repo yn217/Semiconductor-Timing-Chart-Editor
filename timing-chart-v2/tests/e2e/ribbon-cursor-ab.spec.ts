@@ -19,13 +19,17 @@ test("Cursor A/B Ribbon controls set/swap/clear the status bar readout with zero
   await page.getByTestId("cursor-set-a").click();
   await expect(cursorStatus).toHaveText(/A 2/);
   await expect(page.locator("[data-role='cursor-line'][data-cursor='a']")).toHaveAttribute("data-cycle", "2");
+  await page.getByTestId("cycle-viewport").press("Shift+ArrowRight");
+  await expect(cursorStatus).toHaveText(/A 3/);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 
   await page.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.getByTestId("cursor-set-b").click();
-  await expect(cursorStatus).toContainText("A 2");
+  await expect(cursorStatus).toContainText("A 3");
   await expect(cursorStatus).toContainText("B 2");
   await expect(page.locator("[data-role='cursor-line']")).toHaveCount(2);
+  await page.getByTestId("cycle-viewport").press("Alt+ArrowLeft");
+  await expect(cursorStatus).toContainText("B 1");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 
   await page.getByTestId("cursor-swap").click();
