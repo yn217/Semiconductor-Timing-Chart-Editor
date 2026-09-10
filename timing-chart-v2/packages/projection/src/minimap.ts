@@ -112,3 +112,32 @@ export function buildMiniMapTransactionOverview(document: Pick<CanonicalDocument
   });
   return Object.freeze({ cycleCount, rows: Object.freeze(rows) });
 }
+
+/**
+ * Reuse a transaction overview when a semantic edit touches only existing
+ * lanes. The caller must retain the previous transaction array and group
+ * array; structural changes fall back to the canonical full builder.
+ */
+export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOverview, previousTransactions: readonly Transaction[], previousGroups: CanonicalDocument["transactionGroups"], document: Pick<CanonicalDocument, "transactions" | "transactionGroups" | "timeline">): MiniMapTransactionOverview {
+  if (previous.cycleCount !== Math.max(1, document.timeline.cycleCount) || previousGroups !== document.transactionGroups) return buildMiniMapTransactionOverview(document);
+  const laneKey = (transaction: Transaction) => `${transaction.groupId ?? "ungrouped"}:${transaction.laneId ?? "lane_0"}`;
+  const previousKeys = new Set(previousTransactions.map(laneKey));
+  const nextKeys = new Set(document.transactions.map(laneKey));
+  if (previousKeys.size !== nextKeys.size || [...previousKeys].some((key) => !nextKeys.has(key))) return buildMiniMapTransactionOverview(document);
+  const previousById = new Map(previousTransactions.map((transaction) => [transaction.id, transaction] as const));
+  const changedLanes = new Set<string>();
+  for (const transaction of document.transactions) {
+    const before = previousById.get(transaction.id);
+    if (before !== transaction) changedLanes.add(laneKey(transaction));
+  }
+  if (changedLanes.size === 0) return previous;
+  const colorByGroupId = new Map((document.transactionGroups ?? []).map((group) => [group.id, group.color ?? DEFAULT_TRANSACTION_COLOR]));
+  const rows = previous.rows.map((row) => {
+    if (!changedLanes.has(row.key)) return row;
+    const [, groupId, laneId] = row.key.match(/^([^:]+):(.*)$/) ?? [];
+    const transactions = document.transactions.filter((transaction) => (transaction.groupId ?? "ungrouped") === groupId && (transaction.laneId ?? "lane_0") === laneId);
+    const groupColor = groupId === "ungrouped" ? undefined : colorByGroupId.get(groupId as NonNullable<CanonicalDocument["transactionGroups"]>[number]["id"]);
+    return { ...row, segments: transactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR })).sort((left, right) => left.start - right.start) };
+  });
+  return Object.freeze({ cycleCount: previous.cycleCount, rows: Object.freeze(rows) });
+}

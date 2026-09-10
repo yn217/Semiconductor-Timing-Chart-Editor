@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
 import type { CanonicalDocument, Signal } from "@timing-chart-v2/schema";
-import { buildMiniMapOverview, buildMiniMapTransactionOverview } from "@timing-chart-v2/projection";
+import { buildMiniMapOverview, buildMiniMapTransactionOverview, updateMiniMapTransactionOverview } from "@timing-chart-v2/projection";
 import { calculateMiniMapViewportMetrics } from "./runtime/minimap-viewport.js";
 import { MiniMapOverviewRows, MiniMapTransactionOverviewRows } from "./minimap-overview-rows.js";
 
@@ -18,7 +18,7 @@ type MiniMapOverviewCache = Readonly<{
   signals: readonly SignalOverviewFingerprint[];
   overview: MiniMapOverview;
 }>;
-type TransactionOverviewCache = Readonly<{ fingerprint: string; overview: ReturnType<typeof buildMiniMapTransactionOverview>; builds: number }>;
+type TransactionOverviewCache = Readonly<{ fingerprint: string; transactions: CanonicalDocument["transactions"]; groups: CanonicalDocument["transactionGroups"]; overview: ReturnType<typeof buildMiniMapTransactionOverview>; builds: number }>;
 
 function overviewValues(signal: Signal): readonly unknown[] | undefined {
   return signal.type === "clock" || signal.type === "commentRow" ? undefined : signal.values;
@@ -76,9 +76,9 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
     const fingerprint = document.transactions.map((transaction) => `${transaction.id}:${transaction.start}:${transaction.end}:${transaction.laneId ?? ""}:${transaction.groupId ?? ""}:${transaction.color ?? ""}:${(transaction.phases ?? []).map((phase) => `${phase.start}-${phase.end}-${phase.name}`).join(",")}`).join("|");
     const cached = transactionOverviewCache.current;
     if (cached?.fingerprint === fingerprint) return cached.overview;
-    const overview = buildMiniMapTransactionOverview(document);
-    transactionOverviewBuilds.current += 1;
-    transactionOverviewCache.current = { fingerprint, overview, builds: transactionOverviewBuilds.current };
+    const overview = cached ? updateMiniMapTransactionOverview(cached.overview, cached.transactions, cached.groups, document) : buildMiniMapTransactionOverview(document);
+    if (overview !== cached?.overview) transactionOverviewBuilds.current += 1;
+    transactionOverviewCache.current = { fingerprint, transactions: document.transactions, groups: document.transactionGroups, overview, builds: transactionOverviewBuilds.current };
     return overview;
   }, [document, mode]);
   const sync = () => { const element = viewport.current; if (element) setMetrics(calculateMiniMapViewportMetrics(element)); };
