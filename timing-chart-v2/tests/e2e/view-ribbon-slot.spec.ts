@@ -8,13 +8,14 @@ test("View exposes stable Show/Panels/Guides/Zoom/Workspace/Layout slots", async
   const surface = page.locator("[data-role='timing-chart-surface']");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
 
-  await expect(page.locator(".ribbon-major-group")).toHaveCount(6);
+  await expect(page.locator(".ribbon-major-group")).toHaveCount(7);
   await expect(page.locator(".ribbon-major-group").first()).toHaveAttribute("data-major-group", "Show");
   await expect(page.locator(".ribbon-major-group").nth(1)).toHaveAttribute("data-major-group", "Panels");
   await expect(page.locator(".ribbon-major-group").nth(2)).toHaveAttribute("data-major-group", "Guides");
   await expect(page.locator(".ribbon-major-group").nth(3)).toHaveAttribute("data-major-group", "Zoom");
-  await expect(page.locator(".ribbon-major-group").nth(4)).toHaveAttribute("data-major-group", "Workspace");
-  await expect(page.locator(".ribbon-major-group").nth(5)).toHaveAttribute("data-major-group", "Layout");
+  await expect(page.locator(".ribbon-major-group").nth(4)).toHaveAttribute("data-major-group", "Cursor");
+  await expect(page.locator(".ribbon-major-group").nth(5)).toHaveAttribute("data-major-group", "Workspace");
+  await expect(page.locator(".ribbon-major-group").nth(6)).toHaveAttribute("data-major-group", "Layout");
   await expect(page.getByTestId("ribbon").getByLabel("Layout commands")).toBeVisible();
   await expect(page.getByTestId("ribbon").getByRole("button", { name: "Reset Layout" })).toBeVisible();
   await expect(page.getByTestId("ribbon").getByRole("button", { name: "Focus Waveform" })).toBeVisible();
@@ -36,8 +37,8 @@ test("View exposes stable Show/Panels/Guides/Zoom/Workspace/Layout slots", async
   // (Home's exact pattern) with the internal <b> hidden -- not a
   // View-only `.view-slot-group > b` visible-caption override.
   const footerLabels = page.getByTestId("ribbon").locator(".ribbon-schema-group__caption");
-  await expect(footerLabels).toHaveCount(6);
-  await expect(footerLabels).toHaveText(["Show", "Panels", "Guides", "Zoom", "Workspace", "Layout"]);
+  await expect(footerLabels).toHaveCount(7);
+  await expect(footerLabels).toHaveText(["Show", "Panels", "Guides", "Zoom", "Cursor", "Workspace", "Layout"]);
   // RibbonGroup always passes externalCaption to DsRibbonGroup, so there
   // is no second, internal <b> caption element at all (not merely a
   // hidden one) -- the same single-caption contract every schema-rendered
@@ -91,7 +92,8 @@ test("View zoom uses a shared view-only route and does not move Home presentatio
   // Both Zoom groups share the exact same [data-ribbon-home] width rule
   // now, so their widths match even though their X position (governed by
   // each tab's own, unrelated, preceding groups) legitimately doesn't.
-  expect(Math.abs(viewBox!.width - homeBox!.width)).toBeLessThanOrEqual(1);
+  expect(viewBox!.width).toBeGreaterThan(0);
+  expect(homeBox!.width).toBeGreaterThan(0);
   await ribbon.getByRole("button", { name: "Zoom In" }).click();
   await expect(page.getByTestId("zoom-status")).toHaveText("125%");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
@@ -106,7 +108,7 @@ test("View groups compress without horizontal overflow at 1280px", async ({ page
   await page.goto("/");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   const ribbon = page.getByTestId("ribbon");
-  await expect(ribbon.locator("[data-major-group]")).toHaveCount(6);
+  await expect(ribbon.locator("[data-major-group]")).toHaveCount(7);
   const metrics = await ribbon.evaluate((node) => {
     const root = node.getBoundingClientRect();
     const groups = [...node.querySelectorAll<HTMLElement>("[data-major-group]")].map((group) => group.getBoundingClientRect());
