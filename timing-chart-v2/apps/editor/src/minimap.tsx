@@ -86,7 +86,11 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
   // and other document-identity changes do not cold-rebuild the MiniMap.
   const transactionOverview = useMemo(() => {
     if (mode !== "transaction") return undefined;
-    const fingerprint = document.transactions.map((transaction) => `${transaction.id}:${transaction.start}:${transaction.end}:${transaction.laneId ?? ""}:${transaction.groupId ?? ""}:${transaction.color ?? ""}:${(transaction.phases ?? []).map((phase) => `${phase.start}-${phase.end}-${phase.name}`).join(",")}`).join("|");
+    const fingerprint = [
+      `cycle:${document.timeline.cycleCount}`,
+      `groups:${(document.transactionGroups ?? []).map((group) => `${group.id}:${group.order}:${group.color ?? ""}`).join("|")}`,
+      `transactions:${document.transactions.map((transaction) => `${transaction.id}:${transaction.start}:${transaction.end}:${transaction.laneId ?? ""}:${transaction.groupId ?? ""}:${transaction.color ?? ""}`).join("|")}`,
+    ].join(";");
     const cached = transactionOverviewCache.current;
     if (cached?.fingerprint === fingerprint) return cached.overview;
     const incremental = canIncrementallyUpdateTransactionOverview(cached, document);

@@ -49,4 +49,24 @@ describe("MiniMap overview derivation", () => {
     expect(updated).not.toBe(previous);
     expect(updated.rows).toHaveLength(2);
   });
+
+  it("refreshes both buckets when a Transaction moves between lanes", () => {
+    const source = canonicalFixture();
+    const transactions = [
+      { id: "txn_a", name: "A", start: 1, end: 4, laneId: "lane_0", linkedSignals: [] },
+      { id: "txn_b", name: "B", start: 5, end: 8, laneId: "lane_1", linkedSignals: [] },
+      { id: "txn_c", name: "C", start: 9, end: 10, laneId: "lane_0", linkedSignals: [] },
+    ];
+    const before = { ...source, transactions };
+    const previous = buildMiniMapTransactionOverview(before);
+    const next = { ...before, transactions: [{ ...transactions[0]!, laneId: "lane_1" }, transactions[1]!, transactions[2]!] };
+    const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next);
+    expect(updated.rows.find((row) => row.key === "ungrouped:lane_0")?.segments).toEqual([
+      { start: 9, end: 10, color: "#8895a7" },
+    ]);
+    expect(updated.rows.find((row) => row.key === "ungrouped:lane_1")?.segments).toEqual([
+      { start: 1, end: 4, color: "#8895a7" },
+      { start: 5, end: 8, color: "#8895a7" },
+    ]);
+  });
 });

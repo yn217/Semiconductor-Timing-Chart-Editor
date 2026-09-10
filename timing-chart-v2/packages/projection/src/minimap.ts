@@ -128,7 +128,12 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
   const changedLanes = new Set<string>();
   for (const transaction of document.transactions) {
     const before = previousById.get(transaction.id);
-    if (before !== transaction) changedLanes.add(laneKey(transaction));
+    if (before !== transaction) {
+      // A move invalidates both buckets: the old bucket must lose the
+      // segment, while the new bucket must gain it.
+      if (before) changedLanes.add(laneKey(before));
+      changedLanes.add(laneKey(transaction));
+    }
   }
   if (changedLanes.size === 0) return previous;
   const colorByGroupId = new Map((document.transactionGroups ?? []).map((group) => [group.id, group.color ?? DEFAULT_TRANSACTION_COLOR]));
