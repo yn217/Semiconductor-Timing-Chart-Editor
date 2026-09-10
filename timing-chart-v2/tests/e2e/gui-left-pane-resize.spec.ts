@@ -45,6 +45,9 @@ test("Signal label and timing splitter resizes shared geometry columns without m
     dirty: await page.getByTestId("dirty-status").textContent(),
   };
   const initialWidth = Number(await shell.getAttribute("data-frozen-pane-width"));
+  const initialColumns = await page.locator(".column-headings").evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").slice(1));
+  const roleColumn = Number.parseFloat(initialColumns[0]!);
+  const signalColumn = Number.parseFloat(initialColumns[1]!);
   const resizer = page.getByTestId("frozen-pane-resizer");
   await expect(resizer).toHaveAttribute("aria-valuenow", String(initialWidth));
   const box = await resizer.boundingBox();
@@ -57,7 +60,7 @@ test("Signal label and timing splitter resizes shared geometry columns without m
   expect(resizedWidth).toBeGreaterThan(initialWidth);
   expect(resizedWidth).toBeLessThanOrEqual(360);
   await expect(resizer).toHaveAttribute("aria-valuenow", String(resizedWidth));
-  await expect(page.locator(".column-headings")).toHaveCSS("grid-template-columns", `${Number(await shell.getAttribute("data-left-pane-width"))}px 62px 178px ${resizedWidth - 240}px 640px`);
+  await expect(page.locator(".column-headings")).toHaveCSS("grid-template-columns", `${Number(await shell.getAttribute("data-left-pane-width"))}px ${roleColumn}px ${signalColumn}px ${resizedWidth - roleColumn - signalColumn}px 640px`);
   await expect(page.getByTestId("cycle-ruler")).toHaveCSS("left", `${Number(await shell.getAttribute("data-left-pane-width")) + resizedWidth}px`);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Zoom preset").selectOption("150");
