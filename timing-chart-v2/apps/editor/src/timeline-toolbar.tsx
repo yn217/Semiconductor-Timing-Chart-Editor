@@ -143,8 +143,8 @@ export function TimelineToolbar({ document, range, history, onUndo, onRedo, onRa
         </div>
       </DsRibbonGroup>
     </div>
-    <div className="timeline-slot-group" data-timeline-group="Fold / Break" aria-label="Fold and break commands">
-      <DsRibbonGroup ariaLabel="Fold / Break" className="timeline-fold-group" density="compact-grid" label="Fold / Break">
+    <div className="timeline-slot-group" data-timeline-group="Outline" aria-label="Outline commands">
+      <DsRibbonGroup ariaLabel="Outline" className="timeline-fold-group" density="compact-grid" label="Outline">
         <DsRibbonButton ariaLabel="Create Time Group" dataTestId="time-group-create" icon={<RibbonIcon name="i-plus" />} onClick={() => commands.createTimeGroup({ id: nextEntityId("time", document) as TimeGroupId, name: `Group ${range.start}-${range.end}`, start: range.start, end: range.end, presentation: { collapsed: false, foldStyle: "none" } })} title="Create a Time Group from the selected range">Create</DsRibbonButton>
         <DsRibbonButton ariaLabel="Axis Break" icon={<RibbonIcon name="i-gap" />} onClick={() => commands.createTimeGroup({ id: nextEntityId("time", document) as TimeGroupId, name: `Gap ${range.start}-${range.end}`, start: range.start, end: range.end, presentation: { collapsed: true, foldStyle: "axis-break", foldLabel: "GAP" } })} title="Fold the selected range into a collapsed axis break" v1Label="軸ブレーク">Break</DsRibbonButton>
         <DsRibbonButton ariaLabel="Expand All" dataTestId="time-group-expand-all" icon={<RibbonIcon name="i-expand" />} disabled={!document.timeGroups.some((group) => group.presentation?.collapsed)} onClick={() => commands.expandAllTimeGroups(document.timeGroups)} title="Expand every collapsed Time Group / axis break">Expand</DsRibbonButton>

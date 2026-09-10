@@ -142,6 +142,7 @@ test("Timeline exposes shared N-cycle and Time Group presentation commands", asy
   await expect(timeline.getByRole("button", { name: "Add one cycle", exact: true })).toBeVisible();
   await expect(timeline.getByRole("button", { name: "Add N cycles", exact: true })).toBeVisible();
   await expect(timeline.getByRole("button", { name: "Create Time Group", exact: true })).toBeVisible();
+  await expect(timeline.locator('[data-timeline-group="Outline"]')).toHaveAttribute("aria-label", "Outline commands");
   await expect(timeline.getByRole("button", { name: "Axis Break", exact: true })).toBeVisible();
   await expect(timeline.getByRole("button", { name: "Expand All", exact: true })).toBeDisabled();
 
