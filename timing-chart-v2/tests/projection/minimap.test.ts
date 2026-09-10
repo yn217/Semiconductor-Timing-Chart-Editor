@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMiniMapOverview } from "@timing-chart-v2/projection";
+import { buildMiniMapOverview, buildMiniMapTransactionOverview, updateMiniMapTransactionOverview } from "@timing-chart-v2/projection";
 import type { SignalId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -23,5 +23,30 @@ describe("MiniMap overview derivation", () => {
     expect(overview.rows).toHaveLength(1_000);
     expect(overview.signalLookups).toBe(1_000);
     expect(overview.rows[999]?.rowId).toBe("mini_999");
+  });
+
+  it("updates only the changed Transaction lane and reuses unaffected rows", () => {
+    const source = canonicalFixture();
+    const transactions = [
+      { id: "txn_a", name: "A", start: 1, end: 4, laneId: "lane_0", linkedSignals: [] },
+      { id: "txn_b", name: "B", start: 5, end: 8, laneId: "lane_1", linkedSignals: [] },
+    ];
+    const before = { ...source, transactions };
+    const previous = buildMiniMapTransactionOverview(before);
+    const next = { ...before, transactions: [{ ...transactions[0]!, start: 2, end: 5 }, transactions[1]!] };
+    const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next);
+    expect(updated).not.toBe(previous);
+    expect(updated.rows.find((row) => row.key === "ungrouped:lane_0")?.segments[0]).toEqual({ start: 2, end: 5, color: "#8895a7" });
+    expect(updated.rows.find((row) => row.key === "ungrouped:lane_1")).toBe(previous.rows.find((row) => row.key === "ungrouped:lane_1"));
+  });
+
+  it("falls back to a full overview when a new lane is introduced", () => {
+    const source = canonicalFixture();
+    const before = { ...source, transactions: [{ id: "txn_a", name: "A", start: 1, end: 4, laneId: "lane_0", linkedSignals: [] }] };
+    const previous = buildMiniMapTransactionOverview(before);
+    const next = { ...before, transactions: [...before.transactions, { id: "txn_b", name: "B", start: 5, end: 8, laneId: "lane_1", linkedSignals: [] }] };
+    const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next);
+    expect(updated).not.toBe(previous);
+    expect(updated.rows).toHaveLength(2);
   });
 });
