@@ -62,10 +62,14 @@ test("central Transaction surface remains viewport-bounded across 1k/5k/10k with
     const lanes = page.getByTestId("transaction-lanes");
     const mountSerial = await lanes.getAttribute("data-mount-serial");
     const laneIndexBuildsBeforeSelection = Number(await lanes.getAttribute("data-lane-index-builds"));
+    const stackRowBuildsBeforeSelection = Number(await lanes.getAttribute("data-stack-row-builds"));
+    const treeRowBuildsBeforeSelection = Number(await lanes.getAttribute("data-tree-row-builds"));
     const selectionStarted = await page.evaluate(() => performance.now());
     await selected.evaluate((element) => (element as HTMLButtonElement).click());
     await expect(selected).toHaveAttribute("data-selected", "true");
     await expect(lanes).toHaveAttribute("data-lane-index-builds", String(laneIndexBuildsBeforeSelection));
+    await expect(lanes).toHaveAttribute("data-stack-row-builds", String(stackRowBuildsBeforeSelection));
+    await expect(lanes).toHaveAttribute("data-tree-row-builds", String(treeRowBuildsBeforeSelection));
     const selectionMs = await page.evaluate((startedAt) => performance.now() - startedAt, selectionStarted);
     const scrollStarted = await page.evaluate(() => performance.now());
     await viewport.evaluate((element) => { element.scrollTop = Math.max(1, (element.scrollHeight - element.clientHeight) / 2); element.dispatchEvent(new Event("scroll")); });

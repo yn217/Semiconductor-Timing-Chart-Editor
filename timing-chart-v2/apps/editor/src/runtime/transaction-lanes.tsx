@@ -161,6 +161,8 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
 export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, selectedId, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId) => void; readonly onSnap: (clientX: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void }) {
   const mountSerial = useRef(++transactionLanesMountSerial);
   const laneIndexBuilds = useRef(0);
+  const stackRowBuilds = useRef(0);
+  const treeRowBuilds = useRef(0);
   const stackRowsCache = useRef(new WeakMap<readonly Transaction[], ReturnType<typeof assignStackRows>>());
   const treeRowsCache = useRef(new WeakMap<readonly Transaction[], ReadonlyMap<TransactionId, number>>());
   // #451: one shared filter narrows both the Tree rows (in the label
@@ -270,6 +272,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
       let stackRows = stackRowsCache.current.get(laneTransactions);
       if (!stackRows) {
         stackRows = assignStackRows(laneTransactions);
+        stackRowBuilds.current += 1;
         stackRowsCache.current.set(laneTransactions, stackRows);
       }
       const { rowOf, rowCount } = stackRows;
@@ -287,6 +290,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
       let treeRowOf = treeRowsCache.current.get(laneTransactions);
       if (!treeRowOf) {
         treeRowOf = new Map([...laneTransactions].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)).map((transaction, index) => [transaction.id, index] as const));
+        treeRowBuilds.current += 1;
         treeRowsCache.current.set(laneTransactions, treeRowOf);
       }
       const labelHeight = Math.max(laneTransactions.length, 1) * LANE_ROW_HEIGHT;
@@ -328,7 +332,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
     return isVisible(band.trackTop + 4 + row * LANE_ROW_HEIGHT, LANE_ROW_HEIGHT);
   };
 
-  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
+  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-tree-row-builds={treeRowBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
