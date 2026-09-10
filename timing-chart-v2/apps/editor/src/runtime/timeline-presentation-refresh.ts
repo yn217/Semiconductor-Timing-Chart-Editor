@@ -75,13 +75,14 @@ export function syncPresentationScale(viewport: HTMLElement, host: HTMLElement, 
 }
 
 export function syncRulerScroll(ruler: HTMLElement, viewport: HTMLElement, zoom: number): void {
-  const currentRect = ruler.getBoundingClientRect();
-  const currentTransform = getComputedStyle(ruler).transform;
-  const currentTranslation = currentTransform === "none" ? 0 : new DOMMatrixReadOnly(currentTransform).e;
-  const layoutLeft = currentRect.left - currentTranslation;
-  const stickyLeft = ruler.parentElement?.getBoundingClientRect().left ?? viewport.getBoundingClientRect().left;
-  const waveOrigin = stickyLeft - viewport.scrollLeft;
-  ruler.style.transform = `translateX(${waveOrigin - layoutLeft}px) scaleX(${zoom})`;
+  // Keep scroll translation independent from scale. Reconstructing a
+  // transform from the already-transformed bounding box can lose the ruler's
+  // horizontal correction during synthetic/high-frequency scroll events,
+  // leaving annotation overlays and cycle ticks 1:1 out of alignment.
+  ruler.style.translate = `${-viewport.scrollLeft}px 0`;
+  ruler.style.transform = `scaleX(${zoom})`;
+  const rulerFrame = ruler.parentElement;
+  if (rulerFrame) rulerFrame.style.translate = `${viewport.scrollLeft}px 0`;
   ruler.dataset.scrollLeft = String(viewport.scrollLeft);
 }
 

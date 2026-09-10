@@ -740,7 +740,14 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       applyCanvasCycleSelection,
       onSelect,
       onTreeKeyDown,
-      onScroll: () => timelineRuntime.onViewportScroll(),
+      onScroll: () => {
+        // Keep the sticky ruler in the same scroll transaction as the
+        // scrollable overlay surface. The runtime render path is intentionally
+        // coalesced, but ruler alignment must be immediate for pointer/test
+        // observers that sample geometry in the same task.
+        syncRulerScroll(rulerElement, viewportElement, timelineNavigation.getZoom());
+        timelineRuntime.onViewportScroll();
+      },
       onViewportKeyDown,
       selection,
       execute: (command) => { commandRegistry.current.execute<SemanticCommand>("semantic.execute", command); },
