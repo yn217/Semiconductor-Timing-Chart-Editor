@@ -89,7 +89,7 @@ function previewPhases(transaction: Transaction, preview: TransactionPreview, ed
   return transaction.phases.map((phase) => ({ ...phase, start: Math.max(preview.start, phase.start), end: Math.min(preview.end, phase.end) })).filter((phase) => phase.start < phase.end);
 }
 
-function TransactionBar({ transaction, documentEpoch, row, color, selected, cycleCount, getBoundaryX, onSnap, onSelect, commands, onContextMenu }: {
+function TransactionBar({ transaction, documentEpoch, row, color, selected, cycleCount, getBoundaryX, boundaryXByCycle, onSnap, onSelect, commands, onContextMenu }: {
   readonly transaction: Transaction;
   readonly documentEpoch: number;
   readonly row: number;
@@ -97,6 +97,7 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
   readonly selected: boolean;
   readonly cycleCount: number;
   readonly getBoundaryX: (cycle: number) => number | undefined;
+  readonly boundaryXByCycle: ReadonlyMap<number, number>;
   readonly onSnap: (clientX: number) => number | undefined;
   readonly onSelect: (id: TransactionId) => void;
   readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize">;
@@ -106,8 +107,9 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
   const [preview, setPreview] = useState<TransactionPreview>();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const current = preview ?? { start: transaction.start, end: transaction.end };
-  const startX = getBoundaryX(current.start);
-  const endX = getBoundaryX(current.end);
+  const resolveBoundaryX = (cycle: number) => preview === undefined ? boundaryXByCycle.get(cycle) : getBoundaryX(cycle);
+  const startX = resolveBoundaryX(current.start);
+  const endX = resolveBoundaryX(current.end);
   const phases = preview === undefined ? transaction.phases : previewPhases(transaction, preview, drag?.edge ?? "body");
 
   useEffect(() => {
@@ -390,7 +392,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
           // inline style -- the same interaction-priority bug already
           // fixed for Signal rows under #472.
           const resolvedColor = transaction.color ?? (transaction.groupId === undefined ? undefined : transactionGroupById.get(transaction.groupId)?.color);
-          return <TransactionBar key={transaction.id} transaction={transaction} documentEpoch={documentEpoch} row={row} color={resolvedColor} selected={selectedId === transaction.id} cycleCount={document.timeline.cycleCount} getBoundaryX={getBoundaryX} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
+          return <TransactionBar key={transaction.id} transaction={transaction} documentEpoch={documentEpoch} row={row} color={resolvedColor} selected={selectedId === transaction.id} cycleCount={document.timeline.cycleCount} getBoundaryX={getBoundaryX} boundaryXByCycle={boundaryXByCycle} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
         })}
       </div>)}
     </div>
