@@ -6,6 +6,13 @@ import type { TransactionEditorCommandActions } from "./application/editor-surfa
 import { EditorIconButton } from "./editor-icon.js";
 import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 
+function phasesEqual(left: readonly TransactionPhase[], right: readonly TransactionPhase[]): boolean {
+  return left.length === right.length && left.every((phase, index) => {
+    const other = right[index];
+    return other !== undefined && phase.start === other.start && phase.end === other.end && phase.name === other.name;
+  });
+}
+
 export function TransactionEditor({ transaction, document, history, onSelect, commands, onUndo, onRedo, onDelete, onCancel, onToggleTransactionSignal }: { readonly transaction: Transaction | undefined; readonly document: CanonicalDocument; readonly history: HistoryState; readonly onSelect: (id: TransactionId) => void; readonly commands: TransactionEditorCommandActions; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void }) {
   const [name, setName] = useState("Transaction");
   const [start, setStart] = useState(1);
@@ -42,7 +49,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
   // one Draft's two actions, the exact split-placement inconsistency the
   // Epic calls out. Both now live together in one sticky bottom action
   // bar, same shared classes Annotation's own bar already uses.
-  const hasChanges = transaction !== undefined && (editName !== transaction.name || editStart !== transaction.start || editEnd !== transaction.end || (editLaneId.trim() || undefined) !== transaction.laneId || JSON.stringify(phaseRows) !== JSON.stringify(transaction.phases ?? []));
+  const hasChanges = transaction !== undefined && (editName !== transaction.name || editStart !== transaction.start || editEnd !== transaction.end || (editLaneId.trim() || undefined) !== transaction.laneId || !phasesEqual(phaseRows, transaction.phases ?? []));
   const addPhaseRow = () => setPhaseRows((rows) => { const last = rows.at(-1); const rowStart = last ? last.end : editStart; return [...rows, { name: `Phase ${rows.length + 1}`, start: rowStart, end: Math.min(rowStart + 1, editEnd) }]; });
   const applyTransactionDraft = () => {
     if (!transaction || !hasChanges) return;
