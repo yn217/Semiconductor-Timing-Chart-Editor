@@ -44,13 +44,12 @@ export function EditorWorkspaceView({
       ["b", cursor.b, "Cursor B"],
     ] as const;
     const rulerElements = () => [ruler.current, rulerLower.current].filter((element): element is HTMLDivElement => element !== null);
-    const tickCache = new WeakMap<HTMLDivElement, { ticks: readonly { readonly x: number; readonly cycle: number }[]; scrollLeft: number }>();
+    const tickCache = new WeakMap<HTMLDivElement, { ticks: readonly { readonly x: number; readonly cycle: number }[]; byCycle: ReadonlyMap<number, HTMLElement>; scrollLeft: number }>();
     const cacheTicks = (rulerElement: HTMLDivElement, scrollOwner: HTMLDivElement = rulerElement) => {
-      const next = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")].map((candidate) => ({
-        x: candidate.getBoundingClientRect().left,
-        cycle: Number(candidate.dataset.sourceCycle ?? candidate.dataset.cycle),
-      })).filter((tick) => Number.isFinite(tick.x) && Number.isFinite(tick.cycle)).sort((left, right) => left.x - right.x);
-      tickCache.set(rulerElement, { ticks: next, scrollLeft: scrollOwner.scrollLeft });
+      const measured = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")].map((candidate) => ({ candidate, x: candidate.getBoundingClientRect().left, cycle: Number(candidate.dataset.sourceCycle ?? candidate.dataset.cycle) }));
+      const valid = measured.filter((tick) => Number.isFinite(tick.x) && Number.isFinite(tick.cycle));
+      const next = valid.map(({ x, cycle }) => ({ x, cycle })).sort((left, right) => left.x - right.x);
+      tickCache.set(rulerElement, { ticks: next, byCycle: new Map(valid.map(({ cycle, candidate }) => [cycle, candidate])), scrollLeft: scrollOwner.scrollLeft });
       return next;
     };
     const shiftCachedTicks = (rulerElement: HTMLDivElement, scrollOwner: HTMLDivElement) => {
@@ -60,7 +59,7 @@ export function EditorWorkspaceView({
       const delta = cached.scrollLeft - nextScrollLeft;
       if (delta === 0) return cached.ticks;
       const ticks = cached.ticks.map((tick) => ({ ...tick, x: tick.x + delta }));
-      tickCache.set(rulerElement, { ticks, scrollLeft: nextScrollLeft });
+      tickCache.set(rulerElement, { ...cached, ticks, scrollLeft: nextScrollLeft });
       return ticks;
     };
     const nearestCachedTick = (rulerElement: HTMLDivElement, clientX: number) => {
@@ -78,7 +77,12 @@ export function EditorWorkspaceView({
     };
     const findTick = (sourceRuler: HTMLDivElement, cycle: number) => {
       const rulers = [sourceRuler, ...rulerElements().filter((element) => element !== sourceRuler)];
-      return rulers.flatMap((element) => [...element.querySelectorAll<HTMLElement>("[data-cycle]")]).find((candidate) => Number(candidate.dataset.sourceCycle ?? candidate.dataset.cycle) === cycle);
+      for (const element of rulers) {
+        const cached = tickCache.get(element) ?? (cacheTicks(element), tickCache.get(element));
+        const candidate = cached?.byCycle.get(cycle);
+        if (candidate) return candidate;
+      }
+      return undefined;
     };
     const update = () => {
       for (const [viewportElement, rulerElement] of viewports) {
