@@ -19,7 +19,10 @@ async function createTransaction(page: Page, name = "DMA Read", start = 2, end =
   // would leave this second "set the exact values" edit as a no-op Apply
   // that never enables.
   await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
-  await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+  // Keep this acceptance suite on the same Transaction workspace owner as
+  // the current production drag/export contract; Split View geometry has a
+  // separate pane-relative coordinate surface.
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   const lane = page.getByTestId("transaction-lanes");
   await lane.locator("[data-transaction-id]").first().click();
   const editor = page.getByTestId("transaction-editor");
