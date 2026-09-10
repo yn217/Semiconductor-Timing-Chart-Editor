@@ -34,10 +34,9 @@ export class EditorApplicationRuntime {
   }
 
   /** Signal Split View (#200): the Lower pane has its own DOM renderer and
-   * geometry registry, but it deliberately uses the same unfiltered Signal
-   * sequence as Upper. The old per-Signal upper/lower assignment model is
-   * deprecated; Split is two vertical viewports over one canonical row list. */
+   * geometry registry while consuming the canonical lower-pane projection.
+   * Signals assigned to `both` remain present in both pane projections. */
   createSignalSplitLowerPane(): { readonly geometry: GeometryRegistry; readonly projection: ProjectionCoordinator } {
-    return { geometry: new GeometryRegistry(), projection: new ProjectionCoordinator() };
+    return { geometry: new GeometryRegistry(), projection: new ProjectionCoordinator({ pane: "lower" }) };
   }
 }

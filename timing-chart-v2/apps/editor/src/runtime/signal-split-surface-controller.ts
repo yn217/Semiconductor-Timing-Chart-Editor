@@ -28,6 +28,10 @@ export function createSignalSplitSurfaceController(input: TimelineSurfaceRuntime
       const viewportLowerElement = viewportLower.current;
       if (!hostLowerElement || !viewportLowerElement) return undefined;
       let active = true;
+      // The upper coordinator is the shared primary renderer; when Signal
+      // Split is enabled it must apply the complementary pane filter so the
+      // Inspector's Upper/Lower/Both assignment is reflected in both hosts.
+      runtime.projection.setPane("upper");
       const { geometry: geometryRegistryLower, projection: projectionCoordinatorLower } = runtime.createSignalSplitLowerPane();
       const adapterLower = runtime.createWaveDromAdapter();
       const providerLower = createWaveformSurfaceProvider({
@@ -102,6 +106,7 @@ export function createSignalSplitSurfaceController(input: TimelineSurfaceRuntime
         hostLowerElement.removeEventListener("click", onLowerCanvasClick);
         renderCoordinatorLower.dispose();
         if (signalSplitRuntimeRef.current) signalSplitRuntimeRef.current = null;
+        runtime.projection.setPane(undefined);
       };
     },
   };
