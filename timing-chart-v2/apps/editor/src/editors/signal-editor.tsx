@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signalTypeLabel } from "../runtime/signal-type-registry.js";
 import type { GroupId } from "@timing-chart-v2/schema";
 import { ClockGeneratorEditor } from "./clock-generator-editor.js";
@@ -13,6 +13,7 @@ export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, p
   // the "current group" check-state and the safe fallback below.
   const currentGroup = signal ? groups.find((group) => group.rows.includes(signal.id)) : undefined;
   const [targetGroupId, setTargetGroupId] = useState(currentGroup?.id ?? "");
+  useEffect(() => { setTargetGroupId(currentGroup?.id ?? ""); }, [signal?.id, currentGroup?.id]);
   // #402: Group candidates are derived from the live document every
   // render (never a fixed/cached array), so a Group added/renamed/removed
   // elsewhere is reflected immediately. If the previously selected target
