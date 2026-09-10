@@ -114,6 +114,7 @@ function InspectorClockEditor({ signal, document, viewport, commands, onReveal, 
     </form></InspectorSection>
     {problem && <div className="editor-problem" role="alert" data-testid="clock-conversion-problem">{problem}</div>}</div>
     <div className="inspector-sticky-footer">
+      {edgeCounterChanged && <DraftStatus testId="inspector-edge-counter-unapplied" />}
       <span className="inspector-footer-buttons"><button type="button" data-testid="cancel-inspector-draft" onClick={onCancel}>Revert</button></span>
     </div>
     <MiniMap document={document} viewport={viewport} />
