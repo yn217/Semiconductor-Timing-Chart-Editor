@@ -105,7 +105,9 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   const cursorState: SemanticCursorState = { ...(cursorA === undefined ? {} : { a: cursorA }), ...(cursorB === undefined ? {} : { b: cursorB }) };
   const setCursor = (which: "a" | "b", sourceTime: number | undefined) => {
     if (sourceTime !== undefined && !Number.isFinite(sourceTime)) return;
-    if (which === "a") setCursorA(sourceTime); else setCursorB(sourceTime);
+    const maximum = input.cycleCount === undefined ? Number.POSITIVE_INFINITY : Math.max(0, input.cycleCount - 1);
+    const bounded = sourceTime === undefined ? undefined : Math.max(0, Math.min(maximum, sourceTime));
+    if (which === "a") setCursorA(bounded); else setCursorB(bounded);
   };
   const clearCursor = (which: "a" | "b") => setCursor(which, undefined);
   const moveCursor = (which: "a" | "b", deltaCycles: number) => {
