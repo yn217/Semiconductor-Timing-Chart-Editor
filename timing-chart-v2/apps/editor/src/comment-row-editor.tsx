@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { CommentRow, JsonObject } from "@timing-chart-v2/schema";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { FontStyleToolbar } from "./font-style-toolbar.js";
+import { DraftStatus } from "./draft-status.js";
 
 export function CommentRowEditor({ signal, commands, onCancel }: {
   readonly signal: CommentRow;
@@ -48,7 +49,7 @@ export function CommentRowEditor({ signal, commands, onCancel }: {
     <label>Spacing Before<input aria-label="Comment Row spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label>
     <label>Spacing After<input aria-label="Comment Row spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label>
     <div className="bottom-sticky-actions">
-      {hasChanges && <output className="draft-unapplied-indicator" data-testid="comment-row-unapplied">● Unapplied changes</output>}
+      {hasChanges && <DraftStatus testId="comment-row-unapplied" />}
       <span className="bottom-sticky-buttons">
         <button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button>
         <button type="submit" data-testid="apply-comment-row" disabled={!hasChanges}>Apply Comment Row</button>
