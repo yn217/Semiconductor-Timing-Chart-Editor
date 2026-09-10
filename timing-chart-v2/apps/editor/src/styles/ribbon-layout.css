@@ -46,3 +46,9 @@
   text-align: center;
   white-space: nowrap;
 }
+
+.ribbon-schema-overflow { position: relative; align-self: center; }
+.ribbon-schema-overflow > summary { min-width: 42px; padding: 5px 6px; border: 1px solid #b7c7d8; border-radius: 3px; background: #f4f8fc; color: #29425e; cursor: pointer; font-size: 10px; list-style: none; text-align: center; }
+.ribbon-schema-overflow > summary::-webkit-details-marker { display: none; }
+.ribbon-schema-overflow > div { position: absolute; z-index: 1000; right: 0; top: calc(100% + 4px); display: grid; min-width: 150px; gap: 3px; padding: 6px; border: 1px solid #aebdce; border-radius: 4px; background: #fff; box-shadow: 0 8px 22px #20365244; }
+.ribbon-schema-overflow button { min-height: 26px; padding: 3px 7px; border: 1px solid #c4cfdb; border-radius: 3px; background: #f9fbfd; color: #29425e; text-align: left; }

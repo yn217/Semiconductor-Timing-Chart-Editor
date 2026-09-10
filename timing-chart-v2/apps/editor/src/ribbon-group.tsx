@@ -1,4 +1,4 @@
-import { resolveRibbonPresentation, type RibbonGroupSpec, type RibbonItemSpec, type RibbonPresentationSize } from "./ribbon-schema.js";
+import { partitionRibbonItems, resolveRibbonPresentation, type RibbonGroupSpec, type RibbonItemSpec, type RibbonPresentationSize } from "./ribbon-schema.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSplitButton, DsRibbonToggle } from "./design-system.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 
@@ -7,12 +7,18 @@ import { RibbonIcon } from "./ribbon-icon.js";
  * group goes through the single `DsRibbonButton` primitive -- there is no
  * second, hand-written button path left to drift out of sync with it. */
 export function RibbonGroup({ spec, available = "large" }: { readonly spec: RibbonGroupSpec; readonly available?: RibbonPresentationSize }) {
+  const partition = partitionRibbonItems(spec.items, available);
   return <div className="ribbon-major-group ribbon-schema-group" data-major-group={spec.majorGroup} data-ribbon-home aria-label={`${spec.majorGroup} commands`}>
     <DsRibbonGroup ariaLabel={spec.majorGroup} className={`home-${spec.id}-group ${spec.id}-group`} label={spec.caption} externalCaption>
-      {spec.items.map((item) => <RibbonSchemaItem key={item.id} item={item} available={available} />)}
+      {partition.visible.map((item) => <RibbonSchemaItem key={item.id} item={item} available={available} />)}
+      {partition.overflow.length > 0 && <RibbonSchemaOverflow items={partition.overflow} />}
     </DsRibbonGroup>
     <span className="ribbon-schema-group__caption">{spec.caption}</span>
   </div>;
+}
+
+function RibbonSchemaOverflow({ items }: { readonly items: readonly RibbonItemSpec[] }) {
+  return <details className="ribbon-schema-overflow"><summary aria-label="More ribbon commands">More</summary><div role="menu" aria-label="More ribbon commands">{items.map((item) => item.kind === "custom" ? item.render() : <button key={item.id} type="button" role="menuitem" data-ribbon-command-id={item.id} disabled={item.kind !== "toggle" && item.disabled} onClick={item.kind === "toggle" ? item.onChange : item.onClick}>{item.label}</button>)}</div></details>;
 }
 
 function RibbonSchemaItem({ item, available }: { readonly item: RibbonItemSpec; readonly available: RibbonPresentationSize }) {
