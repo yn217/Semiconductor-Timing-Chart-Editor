@@ -23,11 +23,63 @@ export interface EditorWorkspaceViewProps {
 export function EditorWorkspaceView({
   viewModel,
 }: EditorWorkspaceViewProps) {
-  const { viewMode, signalSplitEnabled, signalSplitRatio, gridEnabled, snapEnabled, rulerEnabled } = viewModel.view;
+  const { viewMode, signalSplitEnabled, signalSplitRatio, gridEnabled, snapEnabled, rulerEnabled, cursor } = viewModel.view;
   const { leftPaneWidth, frozenPaneMinWidth, frozenPaneWidth, bottomVisible, bottomHeight, inspectorVisible, inspectorWidth } = viewModel.layout;
   const { viewport, gridLayer, ruler, host, viewportLower, rulerLower, hostLower, gridLayerLower } = viewModel.refs;
   const { header, viewportContent, viewportLegend, bottom, inspector } = viewModel.content;
   const { onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onLeftPaneKeyDown, onLeftPanePointerDown, onLeftPanePointerMove, onLeftPanePointerUp, onFrozenPaneKeyDown, onFrozenPanePointerDown, onFrozenPanePointerMove, onFrozenPanePointerUp, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onSignalSplitKeyDown, onSignalSplitPointerDown, onSignalSplitPointerMove, onSignalSplitPointerUp } = viewModel.interactions;
+  useEffect(() => {
+    // Cursor A/B are workspace-only source-cycle markers. The ruler is the
+    // shared display-time owner, so resolve each marker from the rendered
+    // source-cycle tick instead of deriving a second x scale in React.
+    const viewports = [
+      [viewport.current, ruler.current],
+      [viewportLower.current, rulerLower.current],
+    ] as const;
+    const cursors = [
+      ["a", cursor.a, "Cursor A"],
+      ["b", cursor.b, "Cursor B"],
+    ] as const;
+    const update = () => {
+      for (const [viewportElement, rulerElement] of viewports) {
+        if (!viewportElement || !rulerElement) continue;
+        let overlay = viewportElement.querySelector<HTMLElement>("[data-role='cursor-overlay']");
+        if (!overlay) {
+          overlay = viewportElement.ownerDocument.createElement("div");
+          overlay.dataset.role = "cursor-overlay";
+          overlay.setAttribute("aria-hidden", "true");
+          viewportElement.append(overlay);
+        }
+        const viewportRect = viewportElement.getBoundingClientRect();
+        for (const [key, cycle, label] of cursors) {
+          let line = overlay.querySelector<HTMLElement>(`[data-cursor='${key}']`);
+          if (cycle === undefined) { line?.remove(); continue; }
+          if (!line) {
+            line = viewportElement.ownerDocument.createElement("div");
+            line.dataset.cursor = key;
+            line.dataset.role = "cursor-line";
+            line.setAttribute("aria-label", label);
+            overlay.append(line);
+          }
+          const tick = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")]
+            .find((candidate) => Number(candidate.dataset.sourceCycle ?? candidate.dataset.cycle) === cycle);
+          if (!tick) { line.hidden = true; continue; }
+          const tickRect = tick.getBoundingClientRect();
+          line.hidden = false;
+          line.style.left = `${tickRect.left - viewportRect.left}px`;
+          line.dataset.cycle = String(cycle);
+        }
+      }
+    };
+    update();
+    const scrollTargets = [viewport.current, viewportLower.current].filter((item): item is HTMLDivElement => item !== null);
+    for (const target of scrollTargets) target.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      for (const target of scrollTargets) target.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [ruler, rulerLower, cursor.a, cursor.b, viewport, viewportLower]);
   useEffect(() => {
     if (viewMode !== "Split") return undefined;
     const panel = viewport.current?.closest<HTMLElement>(".cycle-panel");

@@ -160,6 +160,10 @@
 .range-selection-band[hidden] { display: none; }
 
 .cycle-ruler [data-role="playhead"] { position: absolute; z-index: 20; top: 0; bottom: 0; width: 2px; background: #d23b31; box-shadow: 0 0 0 1px #ffffffaa; pointer-events: none; }
+.cursor-overlay { position: absolute; z-index: 21; inset: 0; pointer-events: none; overflow: hidden; }
+.cursor-overlay [data-role="cursor-line"] { position: absolute; top: 0; bottom: 0; width: 2px; border-left: 1px dashed #8a45b7; opacity: .82; pointer-events: none; }
+.cursor-overlay [data-cursor="a"] { border-color: #1d73be; }
+.cursor-overlay [data-cursor="b"] { border-color: #b34735; }
 
 .cycle-ruler .timeline-marker { z-index: 4; top: 19px; width: max-content; height: 14px; padding: 1px 4px; border: 0; border-radius: 3px; background: #fff1b8; color: #715900; font: 9px/12px "Segoe UI", sans-serif; }
 
