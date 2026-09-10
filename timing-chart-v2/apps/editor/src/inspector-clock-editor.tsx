@@ -55,6 +55,23 @@ function InspectorClockEditor({ signal, document, viewport, commands, onReveal, 
   });
   const generatorChanged = JSON.stringify(generator) !== JSON.stringify(signal.generator);
   const edgeCounterChanged = JSON.stringify(edgeCounter) !== JSON.stringify(signal.edgeCounter);
+  const propertiesChanged = name !== signal.name
+    || role !== signal.role
+    || visible !== (signal.display.visible !== false)
+    || spacingBefore !== (signal.spacingBefore ?? 0)
+    || spacingAfter !== (signal.spacingAfter ?? 0)
+    || align !== (signal.display.align ?? "left")
+    || overflow !== (signal.display.overflow ?? "ellipsis")
+    || textColor !== styleString(styleObject, "color", "#152033")
+    || rowBackground !== styleString(styleObject, "background", "#ffffff")
+    || fontFamily !== styleString(styleObject, "fontFamily", "Inter")
+    || fontSize !== styleNumber(styleObject, "fontSize", 12)
+    || bold !== (styleObject.fontWeight === "bold")
+    || italic !== (styleObject.fontStyle === "italic")
+    || underline !== styleString(styleObject, "textDecoration", "").includes("underline")
+    || strikethrough !== styleString(styleObject, "textDecoration", "").includes("line-through")
+    || waveformColor !== styleString(styleObject, "waveformColor", "#111111")
+    || waveformBackground !== styleString(styleObject, "waveformBackground", "#ffffff");
   const updateOffset = (axis: "x" | "y", value: number) => setEdgeCounter((current) => ({ ...current, offset: { x: axis === "x" ? value : current.offset.x, y: axis === "y" ? value : current.offset.y } }));
   const applyProperties = (event: FormEvent) => {
     event.preventDefault();
@@ -79,7 +96,7 @@ function InspectorClockEditor({ signal, document, viewport, commands, onReveal, 
       <label>Reference Edge<select aria-label="Reference Edge" value={referenceEdge} onChange={(event) => setReferenceEdge(event.target.value as "rising" | "falling")}><option value="rising">Rising</option><option value="falling">Falling</option></select></label><button type="button" data-testid="apply-reference-edge" onClick={() => commands.setReferenceEdge(referenceEdge)}>Apply Reference Edge</button>
       <label>Spacing Before<input aria-label="Inspector signal spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label>
       <label>Spacing After<input aria-label="Inspector signal spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label>
-      <button type="submit" data-testid="apply-inspector-clock-properties">Apply Properties</button>
+      <button type="submit" data-testid="apply-inspector-clock-properties" disabled={!propertiesChanged}>Apply Properties</button>
     </form></InspectorSection>
     <section data-testid="clock-convert-section"><h3>Convert Type</h3><p className="inspector-note">Converting discards the Clock generator, enable waveform, and Edge Counter state.</p>{!conversionConfirm ? <><label>Target Type<select aria-label="Clock conversion target" value={conversionTarget} onChange={(event) => setConversionTarget(event.target.value as "binary" | "bus" | "state")}><option value="binary">Binary</option><option value="bus">Bus</option><option value="state">State</option></select></label><button type="button" data-testid="open-clock-conversion" onClick={() => setConversionConfirm(true)}>Convert Clock</button></> : <div role="alertdialog" aria-label="Confirm Clock conversion"><p>Clock-only generator, enable waveform, and Edge Counter state will be discarded.</p>{convertsReferenceClock && <p data-testid="reference-clock-conversion-warning">This is the document Reference Clock. Converting it also removes the Reference Clock designation and switches the timeline to clockless mode; no replacement Clock is selected automatically.</p>}<button type="button" data-testid="confirm-clock-conversion" onClick={convertClock}>Apply Conversion</button><button type="button" data-testid="cancel-clock-conversion" onClick={() => setConversionConfirm(false)}>Cancel</button></div>}</section>
     {/* #470: "Source / Hierarchy" is hidden from the normal Inspector -- see
