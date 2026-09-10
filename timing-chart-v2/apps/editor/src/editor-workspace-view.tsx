@@ -57,6 +57,9 @@ export function EditorWorkspaceView({
           overlay.setAttribute("aria-hidden", "true");
           viewportElement.append(overlay);
         }
+        overlay.style.position = "absolute";
+        overlay.style.inset = "0";
+        overlay.style.pointerEvents = "none";
         const viewportRect = viewportElement.getBoundingClientRect();
         for (const [key, cycle, label] of cursors) {
           let line = overlay.querySelector<HTMLElement>(`[data-cursor='${key}']`);
@@ -89,6 +92,13 @@ export function EditorWorkspaceView({
           if (!tick) { line.hidden = true; continue; }
           const tickRect = tick.getBoundingClientRect();
           line.hidden = false;
+          // Keep the dynamically-created guide independently hit-testable even
+          // before the stylesheet/layout pass has assigned the overlay rule.
+          line.style.position = "absolute";
+          line.style.top = "0";
+          line.style.width = "2px";
+          line.style.height = `${Math.max(viewportElement.clientHeight, 1)}px`;
+          line.style.pointerEvents = "auto";
           line.style.left = `${tickRect.left - viewportRect.left}px`;
           line.dataset.cycle = String(cycle);
         }
