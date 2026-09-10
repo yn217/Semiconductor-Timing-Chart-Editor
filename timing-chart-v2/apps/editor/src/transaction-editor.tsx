@@ -23,6 +23,10 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
   const [editStart, setEditStart] = useState(transaction?.start ?? 0);
   const [editEnd, setEditEnd] = useState(transaction?.end ?? 1);
   const [editLaneId, setEditLaneId] = useState(transaction?.laneId ?? "");
+  useEffect(() => {
+    if (transaction !== undefined) return;
+    setName("Transaction"); setStart(1); setEnd(Math.min(5, document.timeline.cycleCount)); setLaneId("");
+  }, [transaction?.id, document.timeline.cycleCount]);
   // #426 Bottom Panel Consolidation: the Goal's own target structure for
   // this tab is "List / Timing / Phase / Linked Signals" -- Phase and
   // Linked Signal editing previously existed only in the Inspector
