@@ -166,9 +166,9 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
   // box), matching how the Signal Tree's own text filter never touches
   // Inspector/Bottom's own current selection.
   const needle = filter.trim().toLocaleLowerCase();
-  const transactionGroupById = new Map<string, NonNullable<CanonicalDocument["transactionGroups"]>[number]>((rawDocument.transactionGroups ?? []).map((group) => [group.id, group]));
-  const groupNameById = new Map([...transactionGroupById].map(([id, group]) => [id, group.name]));
-  const document: CanonicalDocument = needle.length === 0 ? rawDocument : { ...rawDocument, transactions: rawDocument.transactions.filter((transaction) => transaction.id === selectedId || transaction.name.toLocaleLowerCase().includes(needle) || (transaction.groupId !== undefined && (groupNameById.get(transaction.groupId) ?? "").toLocaleLowerCase().includes(needle))) };
+  const transactionGroupById = useMemo(() => new Map<string, NonNullable<CanonicalDocument["transactionGroups"]>[number]>((rawDocument.transactionGroups ?? []).map((group) => [group.id, group])), [rawDocument.transactionGroups]);
+  const groupNameById = useMemo(() => new Map([...transactionGroupById].map(([id, group]) => [id, group.name])), [transactionGroupById]);
+  const document = useMemo<CanonicalDocument>(() => needle.length === 0 ? rawDocument : { ...rawDocument, transactions: rawDocument.transactions.filter((transaction) => transaction.id === selectedId || transaction.name.toLocaleLowerCase().includes(needle) || (transaction.groupId !== undefined && (groupNameById.get(transaction.groupId) ?? "").toLocaleLowerCase().includes(needle))) }, [groupNameById, needle, rawDocument, selectedId]);
   // #397 Transaction Mode GUI Closure: Group collapse/expand -- purely
   // local, transient presentation state (never persisted, never touches
   // Canonical), same "view-only toggle" shape as the Signal Tree's own
