@@ -169,6 +169,9 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
   const stackRowsCache = useRef(new WeakMap<readonly Transaction[], ReturnType<typeof assignStackRows>>());
   const treeRowsCache = useRef(new WeakMap<readonly Transaction[], ReadonlyMap<TransactionId, number>>());
   const laneArrayCache = useRef<ReadonlyMap<string, readonly Transaction[]> | undefined>(undefined);
+  const laneTransactionCache = useRef<ReadonlyMap<TransactionId, Transaction> | undefined>(undefined);
+  const laneKeyCache = useRef<ReadonlyMap<TransactionId, string> | undefined>(undefined);
+  const laneOrderCache = useRef<readonly TransactionId[] | undefined>(undefined);
   // #451: one shared filter narrows both the Tree rows (in the label
   // column below) and the central bars together -- searching never hides
   // a Transaction from one surface while leaving it selectable from the
@@ -213,23 +216,64 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
   const laneKey = (groupId: string | undefined, laneId: string) => `${groupId ?? "ungrouped"}\u0000${laneId}`;
   const { laneTransactionsByKey, transactionCountByGroup } = useMemo(() => {
     laneIndexBuilds.current += 1;
-    const nextLaneTransactionsByKey = new Map<string, Transaction[]>();
+    const previous = laneArrayCache.current;
+    const previousTransactions = laneTransactionCache.current;
+    const previousKeys = laneKeyCache.current;
+    const changedKeys = new Set<string>();
     const transactionCountByGroup = new Map<string | undefined, number>();
+    const currentTransactions = new Map<TransactionId, Transaction>();
+    const currentKeys = new Map<TransactionId, string>();
+    const currentOrder: TransactionId[] = [];
     for (const transaction of document.transactions) {
       const laneId = transaction.laneId ?? "lane_0";
       const key = laneKey(transaction.groupId, laneId);
-      const laneTransactions = nextLaneTransactionsByKey.get(key);
-      if (laneTransactions) laneTransactions.push(transaction);
-      else nextLaneTransactionsByKey.set(key, [transaction]);
+      currentTransactions.set(transaction.id, transaction);
+      currentKeys.set(transaction.id, key);
+      currentOrder.push(transaction.id);
+      const before = previousTransactions?.get(transaction.id);
+      if (before !== transaction) {
+        changedKeys.add(key);
+        const previousKey = previousKeys?.get(transaction.id);
+        if (previousKey !== undefined) changedKeys.add(previousKey);
+      }
       transactionCountByGroup.set(transaction.groupId, (transactionCountByGroup.get(transaction.groupId) ?? 0) + 1);
     }
-    const laneTransactionsByKey = new Map<string, readonly Transaction[]>();
-    for (const [key, next] of nextLaneTransactionsByKey) {
-      const previous = laneArrayCache.current?.get(key);
-      const reusable = previous !== undefined && previous.length === next.length && previous.every((transaction, index) => transaction === next[index]);
-      laneTransactionsByKey.set(key, reusable ? previous : next);
+    if (previousTransactions) {
+      if (laneOrderCache.current?.length !== currentOrder.length || laneOrderCache.current?.some((id, index) => id !== currentOrder[index])) {
+        for (const key of previous?.keys() ?? []) changedKeys.add(key);
+        for (const key of currentKeys.values()) changedKeys.add(key);
+      }
+      for (const [id, before] of previousTransactions) {
+        if (!currentTransactions.has(id)) {
+          const previousKey = previousKeys?.get(id);
+          if (previousKey !== undefined) changedKeys.add(previousKey);
+        }
+        if (before !== currentTransactions.get(id)) {
+          const previousKey = previousKeys?.get(id);
+          if (previousKey !== undefined) changedKeys.add(previousKey);
+        }
+      }
+    }
+    const laneTransactionsByKey = new Map<string, readonly Transaction[]>(previous ?? []);
+    for (const key of changedKeys) laneTransactionsByKey.delete(key);
+    const changedBuckets = new Map<string, Transaction[]>();
+    for (const transaction of document.transactions) {
+      const key = currentKeys.get(transaction.id)!;
+      if (!changedKeys.has(key)) continue;
+      const bucket = changedBuckets.get(key);
+      if (bucket) bucket.push(transaction); else changedBuckets.set(key, [transaction]);
+    }
+    for (const [key, bucket] of changedBuckets) laneTransactionsByKey.set(key, bucket);
+    if (previous === undefined) {
+      for (const transaction of document.transactions) {
+        const key = currentKeys.get(transaction.id)!;
+        if (!laneTransactionsByKey.has(key)) laneTransactionsByKey.set(key, [transaction]);
+      }
     }
     laneArrayCache.current = laneTransactionsByKey;
+    laneTransactionCache.current = currentTransactions;
+    laneKeyCache.current = currentKeys;
+    laneOrderCache.current = currentOrder;
     return { laneTransactionsByKey, transactionCountByGroup };
   }, [document.transactions]);
   // Transaction Mode GUI realignment: this used to also require "at least
