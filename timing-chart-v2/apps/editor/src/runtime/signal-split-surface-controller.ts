@@ -20,6 +20,7 @@ export function createSignalSplitSurfaceController(input: TimelineSurfaceRuntime
       if (!signalSplitEnabled) {
         signalSplitRuntimeRef.current?.dispose();
         signalSplitRuntimeRef.current = null;
+        runtime.projection.setPane(undefined);
         forceUpperReprojectRef.current();
         return undefined;
       }
