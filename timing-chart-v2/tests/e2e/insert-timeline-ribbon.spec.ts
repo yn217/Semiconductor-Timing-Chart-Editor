@@ -165,6 +165,7 @@ test("Time Group outline rows expose mapped spans and shared collapse controls a
   const ruler = page.getByTestId("cycle-ruler");
   const outline = ruler.locator(".time-outline-row");
   await expect(outline).toHaveCount(1);
+  await expect(outline.getByRole("button", { name: "Show outline level 1", exact: true })).toBeVisible();
   const item = outline.locator("[data-outline-time-group-id]");
   await expect(item).toHaveCount(1);
   await expect(item.getByRole("button", { name: "Collapse Group 2-4", exact: true })).toBeVisible();

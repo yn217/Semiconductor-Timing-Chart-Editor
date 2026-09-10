@@ -143,6 +143,8 @@
 
 .cycle-ruler-content { position: relative; width: var(--wave-width, 640px); min-width: var(--wave-width, 640px); height: 34px; pointer-events: auto; }
 .time-outline-row { position: absolute; z-index: 6; left: 0; right: 0; height: 20px; border-bottom: 1px solid #cbd4df; background: #eef3f8; pointer-events: none; }
+.time-outline-level { width: 18px; height: 17px; margin: 1px 4px 0 2px; padding: 0; border: 1px solid #8ea7c0; border-radius: 2px; background: #fff; color: #405875; font: 9px/15px Consolas, monospace; cursor: pointer; pointer-events: auto; }
+.time-outline-level:focus-visible, .time-outline-toggle:focus-visible { outline: 2px solid var(--ds-focus-color, #2678bc); outline-offset: 1px; }
 .time-outline-item { position: absolute; top: 2px; height: 16px; overflow: hidden; padding: 1px 4px; border: 1px solid #8ea7c0; border-radius: 3px; background: #f8fbff; color: #405875; font: 9px/12px "Segoe UI", sans-serif; text-overflow: ellipsis; white-space: nowrap; pointer-events: auto; }
 .time-outline-toggle { width: 14px; height: 14px; margin-right: 3px; padding: 0; border: 0; background: transparent; color: #2c587f; font: 11px/12px Consolas, monospace; cursor: pointer; }
 

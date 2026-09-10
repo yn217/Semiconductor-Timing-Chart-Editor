@@ -34,6 +34,23 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     row.className = "time-outline-row";
     row.dataset.depth = String(depth);
     row.setAttribute("role", "group");
+    const levelButton = element.ownerDocument.createElement("button");
+    levelButton.type = "button";
+    levelButton.className = "time-outline-level";
+    levelButton.dataset.level = String(depth + 1);
+    levelButton.setAttribute("aria-label", `Show outline level ${depth + 1}`);
+    levelButton.textContent = String(depth + 1);
+    levelButton.addEventListener("click", () => {
+      for (const candidate of document.timeGroups) {
+        const candidateDepth = hierarchy.depthById.get(candidate.id) ?? 0;
+        const shouldCollapse = candidateDepth >= depth + 1;
+        const isCollapsed = candidate.presentation?.collapsed === true;
+        if (shouldCollapse === isCollapsed) continue;
+        const command = element.ownerDocument.querySelector<HTMLButtonElement>(`[data-testid='time-group-${shouldCollapse ? "collapse" : "expand"}-${candidate.id}']`);
+        command?.click();
+      }
+    });
+    row.append(levelButton);
     for (const group of document.timeGroups.filter((item) => hierarchy.depthById.get(item.id) === depth)) {
       // A collapsed group removes its interior source cycles from the
       // display mapping. Keep the Outline item visible by anchoring its
