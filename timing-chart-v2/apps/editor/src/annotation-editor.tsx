@@ -86,8 +86,9 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
   // (Type/Label/Start/End/type-specific geometry/Color), which is what
   // actually fixes "Style outweighs semantic fields"; starting it closed
   // would additionally mean it re-closes after every single Apply (this
-  // editor remounts on each committed revision, same as every other
-  // Bottom tab's Draft-reset contract -- a real annoyance for anyone
+  // selected-entity editor. The draft-reset contract is now scoped to the
+  // selected entity and explicit reset tokens, so ordinary revisions do not
+  // remount it -- a real annoyance for anyone
   // making several style edits in a row, since Apply Annotation Undo/Redo/
   // Bold/etc. all commit a revision).
   const [styleOpen, setStyleOpen] = useState(true);

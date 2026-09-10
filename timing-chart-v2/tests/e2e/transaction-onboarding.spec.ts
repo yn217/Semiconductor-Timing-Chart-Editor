@@ -44,9 +44,9 @@ async function createReadRequestTransaction(page: Page, { withLinks = false }: {
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
 
   if (withLinks) {
-    // Linking a signal dispatches transaction.linkSignal immediately, which
-    // bumps canonical revision and remounts the whole Inspector -- the
-    // picker's open/closed flag is module-scoped (see
+    // Linking a signal dispatches transaction.linkSignal immediately and
+    // updates the canonical revision. The picker's open/closed flag is
+    // module-scoped (see
     // transaction-linked-signals.tsx) so it survives that remount, same as
     // Label Style's accordion state; no need to re-open between picks.
     await inspector.getByTestId("open-linked-signal-picker").click();
@@ -56,6 +56,26 @@ async function createReadRequestTransaction(page: Page, { withLinks = false }: {
     }
   }
 }
+
+test("Transaction property edits preserve editor and Inspector identity", async ({ page }) => {
+  await openTransactionMode(page);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
+  const editor = page.getByTestId("transaction-editor");
+  await editor.getByLabel("Transaction name", { exact: true }).fill("Stable Editor");
+  await editor.getByLabel("Transaction start", { exact: true }).fill("2");
+  await editor.getByLabel("Transaction end", { exact: true }).fill("8");
+  await editor.getByTestId("apply-transaction-properties").click();
+  await expect(editor).toBeVisible();
+  await editor.evaluate((node) => node.setAttribute("data-identity-probe", "editor"));
+  const inspector = page.getByTestId("inspector");
+  await inspector.evaluate((node) => node.setAttribute("data-identity-probe", "inspector"));
+  const start = editor.getByLabel("Transaction start", { exact: true });
+  await start.fill("3");
+  await editor.getByTestId("apply-transaction-properties").click();
+  await expect(start).toHaveValue("3");
+  await expect(editor).toHaveAttribute("data-identity-probe", "editor");
+  await expect(inspector).toHaveAttribute("data-identity-probe", "inspector");
+});
 
 test("Transaction Mode shows the create form directly and does not mutate the document merely by entering it", async ({ page }) => {
   await openTransactionMode(page);
