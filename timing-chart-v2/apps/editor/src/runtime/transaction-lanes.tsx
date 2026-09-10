@@ -6,6 +6,7 @@ import { InlineNameInput } from "../inline-name-input.js";
 const LANE_ROW_HEIGHT = 40;
 const GROUP_HEADER_HEIGHT = 24;
 let transactionLanesMountSerial = 0;
+const EMPTY_TRANSACTION_GROUPS: NonNullable<CanonicalDocument["transactionGroups"]> = [];
 
 // #452: within one lane, Transactions whose [start,end) ranges overlap must
 // stack into separate rows rather than fully occluding each other -- a
@@ -208,7 +209,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
     // (the same laneId string in two different Groups is two independent
   // tracks, not one shared one), matching the approved reference's
   // "Memory / Lane 0" vs "CPU / Lane 1" structure.
-  const groups = document.transactionGroups ?? [];
+  const groups = document.transactionGroups ?? EMPTY_TRANSACTION_GROUPS;
   const laneKey = (groupId: string | undefined, laneId: string) => `${groupId ?? "ungrouped"}\u0000${laneId}`;
   const { laneTransactionsByKey, transactionCountByGroup } = useMemo(() => {
     laneIndexBuilds.current += 1;
