@@ -90,6 +90,13 @@ test("central Transaction surface remains viewport-bounded across 1k/5k/10k with
       await expect(lanes).toHaveAttribute("data-mount-serial", mountSerial!);
     }
     const orderedMoveDurations = [...repeatedMoveDurations].sort((left, right) => left - right);
+    // Keep the measurement as a real regression gate, not artifact-only
+    // evidence. The limit is intentionally generous for shared CI hosts;
+    // it still rejects the multi-second runaway observed before the indexed
+    // Transaction presentation work.
+    expect(Math.max(...repeatedMoveDurations)).toBeLessThan(5_000);
+    expect(selectionMs).toBeLessThan(5_000);
+    expect(scrollMs).toBeLessThan(5_000);
     expect(metrics.totalHeight).toBeGreaterThan(1_000);
     expect(metrics.mountedBars).toBeLessThan(1_000);
     expect(metrics.mountedTreeRows).toBeLessThan(1_000);
