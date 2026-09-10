@@ -11,6 +11,15 @@ export function DsRibbonButton({ ariaLabel, children, className, dataTestId, dis
   return <button type="button" className={`ds-control ds-ribbon-button ds-ribbon-button--${size}${className ? ` ${className}` : ""}`} aria-label={ariaLabel} data-ribbon-size={size} data-testid={dataTestId} disabled={disabled} title={title} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label" data-v1-label={v1Label}>{children}</span></button>;
 }
 
+/** Shared CAD/EDA split-button primitive: the primary action and menu action
+ * retain separate accessible names while sharing one size-class container. */
+export function DsRibbonSplitButton({ ariaLabel, children, className, dataTestId, disabled, icon, menuAriaLabel, onClick, onMenuClick, size = "large", title }: { readonly ariaLabel: string; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string; readonly disabled?: boolean; readonly icon: ReactNode; readonly menuAriaLabel: string; readonly onClick: () => void; readonly onMenuClick: () => void; readonly size?: RibbonSizeClass; readonly title?: string }) {
+  return <span className={`ds-control ds-ribbon-split-button ds-ribbon-split-button--${size}${className ? ` ${className}` : ""}`} data-ribbon-size={size} data-testid={dataTestId} title={title}>
+    <button type="button" className="ds-ribbon-button ds-ribbon-split-button__primary" aria-label={ariaLabel} disabled={disabled} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label">{children}</span></button>
+    <button type="button" className="ds-ribbon-split-button__menu" aria-label={menuAriaLabel} aria-haspopup="menu" disabled={disabled} onClick={onMenuClick}>▾</button>
+  </span>;
+}
+
 export function DsRibbonToggleButton({ ariaLabel, checked, children, className, dataTestId, icon, onClick, size = "large", title }: { readonly ariaLabel?: string; readonly checked: boolean; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string; readonly icon: ReactNode; readonly onClick: () => void; readonly size?: RibbonSizeClass; readonly title?: string | undefined }) {
   return <button type="button" className={`ds-control ds-ribbon-button ds-ribbon-toggle-button ds-ribbon-button--${size}${className ? ` ${className}` : ""}`} aria-label={ariaLabel} aria-pressed={checked} data-ribbon-size={size} data-testid={dataTestId} title={title} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label">{children}</span></button>;
 }
