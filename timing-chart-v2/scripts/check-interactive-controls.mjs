@@ -32,6 +32,12 @@ function lineNumber(source, offset) {
   return source.slice(0, offset).split("\n").length;
 }
 
+function stripCommentsPreservingLines(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, (comment) => comment.replace(/[^\n]/g, " "))
+    .replace(/\/\/[^\n]*/g, (comment) => comment.replace(/[^\n]/g, " "));
+}
+
 /** Finds the full `<button ...>...</button>` element (opening tag through its
  * matching close tag) starting at an opening tag discovered by
  * openingButtonTags, so callers can inspect the button's visible/accessible
@@ -76,16 +82,17 @@ export function auditPreviewControls(source, file = "fixture.tsx") {
 }
 
 export function auditSource(source, file = "fixture.tsx") {
+  const executableSource = stripCommentsPreservingLines(source);
   const errors = [];
-  for (const tag of openingButtonTags(source)) {
+  for (const tag of openingButtonTags(executableSource)) {
     const disabled = /\bdisabled\s*=/.test(tag.text);
     const hasBehavior = /\bon(?:Click|KeyDown|PointerDown|PointerUp|DragOver|DragLeave|Drop|Submit)\s*=/.test(tag.text)
       || /\btype\s*=\s*["']submit["']/.test(tag.text);
     if (!hasBehavior) {
-      errors.push(`${file}:${lineNumber(source, tag.offset)} enabled/disabled <button> has no command, form-submit, or event behavior`);
+      errors.push(`${file}:${lineNumber(executableSource, tag.offset)} enabled/disabled <button> has no command, form-submit, or event behavior`);
     }
   }
-  errors.push(...auditPreviewControls(source, file));
+  errors.push(...auditPreviewControls(executableSource, file));
   return errors;
 }
 
