@@ -91,4 +91,22 @@ describe("MiniMap overview derivation", () => {
     const resized = { ...recolored, timeline: { ...recolored.timeline, cycleCount: recolored.timeline.cycleCount + 5 } };
     expect(updateMiniMapTransactionOverview(recoloredOverview, recolored.transactions, recolored.transactionGroups, resized).cycleCount).toBe(resized.timeline.cycleCount);
   });
+
+  it("preserves group order and color after a group presentation update", () => {
+    const source = canonicalFixture();
+    const groups = [
+      { id: "group_a", name: "A", order: 0, color: "#111111", transactionIds: ["txn_a"] },
+      { id: "group_b", name: "B", order: 1, color: "#222222", transactionIds: ["txn_b"] },
+    ];
+    const transactions = [
+      { id: "txn_a", name: "A", start: 1, end: 4, laneId: "lane_0", groupId: "group_a", linkedSignals: [] },
+      { id: "txn_b", name: "B", start: 5, end: 8, laneId: "lane_0", groupId: "group_b", linkedSignals: [] },
+    ];
+    const before = { ...source, transactions, transactionGroups: groups };
+    const previous = buildMiniMapTransactionOverview(before);
+    const next = { ...before, transactionGroups: [{ ...groups[1]!, order: 0, color: "#bbbbbb" }, { ...groups[0]!, order: 1 }] };
+    const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next);
+    expect(updated.rows.map((row) => row.key)).toEqual(["group_b:lane_0", "group_a:lane_0"]);
+    expect(updated.rows[0]?.segments[0]?.color).toBe("#bbbbbb");
+  });
 });
