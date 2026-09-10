@@ -156,6 +156,22 @@ test("Timeline exposes shared N-cycle and Time Group presentation commands", asy
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 });
 
+test("Time Group outline rows expose mapped spans and shared collapse controls above the ruler", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const timeline = page.getByTestId("timeline-editor");
+  await timeline.getByTestId("time-group-create").click();
+  const ruler = page.getByTestId("cycle-ruler");
+  const outline = ruler.locator(".time-outline-row");
+  await expect(outline).toHaveCount(1);
+  const item = outline.locator("[data-outline-time-group-id]");
+  await expect(item).toHaveCount(1);
+  await expect(item.getByRole("button", { name: "Collapse Group 2-4", exact: true })).toBeVisible();
+  await item.getByRole("button", { name: "Collapse Group 2-4", exact: true }).click();
+  await expect(timeline.getByRole("button", { name: "Expand Group 2-4", exact: true })).toBeVisible();
+});
+
 test("Timeline workflow groups keep explicit cycle semantics and aligned controls", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/");
