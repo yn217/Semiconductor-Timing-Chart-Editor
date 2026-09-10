@@ -198,7 +198,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
     const relevantCycles = [...new Set(document.transactions.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).flatMap(phase => [phase.start, phase.end])]))].sort((left, right) => left - right);
     const cycleXs = relevantCycles.flatMap((cycle) => { const x = getBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
     return { cycleXs, boundaryXByCycle: new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const)) };
-  }, [document, getBoundaryX, presentationRevision]);
+  }, [document.transactions, getBoundaryX, presentationRevision]);
   const x = (cycle: number) => boundaryXByCycle.get(cycle);
 
   // #452: Group headers only appear once real Groups are in use -- a
