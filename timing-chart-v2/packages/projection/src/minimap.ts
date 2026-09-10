@@ -121,11 +121,13 @@ export function buildMiniMapTransactionOverview(document: Pick<CanonicalDocument
 export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOverview, previousTransactions: readonly Transaction[], previousGroups: CanonicalDocument["transactionGroups"], document: Pick<CanonicalDocument, "transactions" | "transactionGroups" | "timeline">): MiniMapTransactionOverview {
   if (previous.cycleCount !== Math.max(1, document.timeline.cycleCount) || previousGroups !== document.transactionGroups) return buildMiniMapTransactionOverview(document);
   const laneKey = (transaction: Transaction) => `${transaction.groupId ?? "ungrouped"}:${transaction.laneId ?? "lane_0"}`;
-  const previousKeys = new Set(previousTransactions.map(laneKey));
-  const nextKeys = new Set(document.transactions.map(laneKey));
-  if (previousKeys.size !== nextKeys.size || [...previousKeys].some((key) => !nextKeys.has(key))) return buildMiniMapTransactionOverview(document);
   const previousById = new Map(previousTransactions.map((transaction) => [transaction.id, transaction] as const));
+  const nextById = new Map(document.transactions.map((transaction) => [transaction.id, transaction] as const));
   const changedLanes = new Set<string>();
+  for (const transaction of previousTransactions) {
+    const next = nextById.get(transaction.id);
+    if (!next) changedLanes.add(laneKey(transaction));
+  }
   for (const transaction of document.transactions) {
     const before = previousById.get(transaction.id);
     if (before !== transaction) {
@@ -137,12 +139,26 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
   }
   if (changedLanes.size === 0) return previous;
   const colorByGroupId = new Map((document.transactionGroups ?? []).map((group) => [group.id, group.color ?? DEFAULT_TRANSACTION_COLOR]));
-  const rows = previous.rows.map((row) => {
-    if (!changedLanes.has(row.key)) return row;
-    const [, groupId, laneId] = row.key.match(/^([^:]+):(.*)$/) ?? [];
-    const transactions = document.transactions.filter((transaction) => (transaction.groupId ?? "ungrouped") === groupId && (transaction.laneId ?? "lane_0") === laneId);
+  const buildRow = (key: string, rowIndex: number) => {
+    const [, groupId, laneId] = key.match(/^([^:]+):(.*)$/) ?? [];
+    const transactions = document.transactions.filter((transaction) => laneKey(transaction) === key);
+    if (transactions.length === 0) return undefined;
     const groupColor = groupId === "ungrouped" ? undefined : colorByGroupId.get(groupId as NonNullable<CanonicalDocument["transactionGroups"]>[number]["id"]);
-    return { ...row, segments: transactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR })).sort((left, right) => left.start - right.start) };
-  });
+    return { key, rowIndex, segments: transactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR })).sort((left, right) => left.start - right.start) };
+  };
+  const rowsByKey = new Map(previous.rows.map((row) => [row.key, row] as const));
+  for (const key of changedLanes) {
+    const row = buildRow(key, 0);
+    if (row) rowsByKey.set(key, row);
+    else rowsByKey.delete(key);
+  }
+  const orderByGroupId = new Map((document.transactionGroups ?? []).map((group) => [group.id, group.order]));
+  const rows = [...rowsByKey.values()].sort((left, right) => {
+    const [, leftGroup, leftLane] = left.key.match(/^([^:]+):(.*)$/) ?? [];
+    const [, rightGroup, rightLane] = right.key.match(/^([^:]+):(.*)$/) ?? [];
+    const leftOrder = leftGroup === "ungrouped" ? Number.MAX_SAFE_INTEGER : orderByGroupId.get(leftGroup! as NonNullable<CanonicalDocument["transactionGroups"]>[number]["id"]) ?? Number.MAX_SAFE_INTEGER;
+    const rightOrder = rightGroup === "ungrouped" ? Number.MAX_SAFE_INTEGER : orderByGroupId.get(rightGroup! as NonNullable<CanonicalDocument["transactionGroups"]>[number]["id"]) ?? Number.MAX_SAFE_INTEGER;
+    return leftOrder - rightOrder || leftLane!.localeCompare(rightLane!);
+  }).map((row, rowIndex) => row.rowIndex === rowIndex ? row : ({ ...row, rowIndex }));
   return Object.freeze({ cycleCount: previous.cycleCount, rows: Object.freeze(rows) });
 }
