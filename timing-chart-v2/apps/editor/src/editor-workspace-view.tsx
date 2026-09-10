@@ -14,6 +14,7 @@ export interface EditorWorkspaceViewModel {
     readonly onSignalSplitKeyDown: KeyboardEventHandler<HTMLDivElement>; readonly onSignalSplitPointerDown: PointerEventHandler<HTMLDivElement>; readonly onSignalSplitPointerMove: PointerEventHandler<HTMLDivElement>; readonly onSignalSplitPointerUp: PointerEventHandler<HTMLDivElement>;
     readonly onViewportKeyDown?: KeyboardEventHandler<HTMLDivElement>;
     readonly onSetCursorAtCycle?: (which: "a" | "b", cycle: number) => void;
+    readonly resolveCursorCycleAtClientX?: (clientX: number, viewport: HTMLDivElement) => number | undefined;
   };
 }
 
@@ -29,7 +30,7 @@ export function EditorWorkspaceView({
   const { leftPaneWidth, frozenPaneMinWidth, frozenPaneWidth, bottomVisible, bottomHeight, inspectorVisible, inspectorWidth } = viewModel.layout;
   const { viewport, gridLayer, ruler, host, viewportLower, rulerLower, hostLower, gridLayerLower } = viewModel.refs;
   const { header, viewportContent, viewportLegend, bottom, inspector } = viewModel.content;
-  const { onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onLeftPaneKeyDown, onLeftPanePointerDown, onLeftPanePointerMove, onLeftPanePointerUp, onFrozenPaneKeyDown, onFrozenPanePointerDown, onFrozenPanePointerMove, onFrozenPanePointerUp, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onSignalSplitKeyDown, onSignalSplitPointerDown, onSignalSplitPointerMove, onSignalSplitPointerUp, onViewportKeyDown, onSetCursorAtCycle } = viewModel.interactions;
+  const { onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onLeftPaneKeyDown, onLeftPanePointerDown, onLeftPanePointerMove, onLeftPanePointerUp, onFrozenPaneKeyDown, onFrozenPanePointerDown, onFrozenPanePointerMove, onFrozenPanePointerUp, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onSignalSplitKeyDown, onSignalSplitPointerDown, onSignalSplitPointerMove, onSignalSplitPointerUp, onViewportKeyDown, onSetCursorAtCycle, resolveCursorCycleAtClientX } = viewModel.interactions;
   useEffect(() => {
     // Cursor A/B are workspace-only source-cycle markers. The ruler is the
     // shared display-time owner, so resolve each marker from the rendered
@@ -126,8 +127,12 @@ export function EditorWorkspaceView({
         if (!which) return;
         event.preventDefault();
         const move = (moveEvent: PointerEvent) => {
-          const nearest = nearestCachedTick(rulerElement, moveEvent.clientX);
-          if (nearest) onSetCursorAtCycle(which, nearest.cycle);
+          const resolved = resolveCursorCycleAtClientX?.(moveEvent.clientX, viewportElement);
+          if (resolved !== undefined) onSetCursorAtCycle(which, resolved);
+          else {
+            const nearest = nearestCachedTick(rulerElement, moveEvent.clientX);
+            if (nearest) onSetCursorAtCycle(which, nearest.cycle);
+          }
         };
         const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
         window.addEventListener("pointermove", move);

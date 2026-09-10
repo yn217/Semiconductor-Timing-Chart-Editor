@@ -773,6 +773,13 @@ export function MinimalCycleView() {
       onSignalSplitKeyDown: resizeSignalSplitByKeyboard, onSignalSplitPointerDown: startSignalSplitResize, onSignalSplitPointerMove: moveSignalSplitResize, onSignalSplitPointerUp: finishSignalSplitResize,
       onViewportKeyDown: onCursorKeyDown,
       onSetCursorAtCycle: (which: "a" | "b", cycle: number) => setCursor(which, cycle),
+      resolveCursorCycleAtClientX: (clientX: number, viewportElement: HTMLDivElement) => {
+        const runtime = timelineRuntimeRef.current;
+        if (!runtime) return undefined;
+        const rect = viewportElement.getBoundingClientRect();
+        const scrollLeft = viewportElement.scrollLeft;
+        return runtime.screenXToSourceCycle(clientX - rect.left + scrollLeft);
+      },
     },
   };
   const shellStatus = {
