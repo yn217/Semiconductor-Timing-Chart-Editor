@@ -68,6 +68,21 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
   const [verticalSpanEndRowId, setVerticalSpanEndRowId] = useState<SignalId | undefined>(annotation.verticalSpan?.endRowId);
   const [verticalSpanStartOffset, setVerticalSpanStartOffset] = useState(annotation.verticalSpan?.startOffset ?? 0);
   const [verticalSpanEndOffset, setVerticalSpanEndOffset] = useState(annotation.verticalSpan?.endOffset ?? 0);
+  useEffect(() => {
+    setLabel(annotation.label); setColor(annotation.color ?? "#d04a36"); setVisible(annotation.visible);
+    setLineType(annotation.lineType ?? "straight"); setArrowhead(annotation.arrowhead ?? "end");
+    setLabelX(annotation.labelOffset?.x ?? 0); setLabelY(annotation.labelOffset?.y ?? -14);
+    setOpacity(annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16));
+    setTraceOffsetCycles(annotation.traceOffsetCycles ?? 0); setStyleDraft(annotation.style ?? {});
+    setMeasurementProfile(annotation.measurement?.profile ?? "cycle");
+    setMeasurementKind(annotation.measurement?.anchorKind ?? "threshold");
+    setMeasurementStart(String(Math.round((anchorTransitionFraction(annotation.start) ?? 0.3) * 100)));
+    setMeasurementEnd(String(Math.round((anchorTransitionFraction(annotation.end) ?? 0.7) * 100)));
+    setMeasurementLayout(annotation.measurementLayout ?? DEFAULT_MEASUREMENT_LAYOUT);
+    setVerticalSpanMode(annotation.verticalSpan?.mode ?? "auto");
+    setVerticalSpanStartRowId(annotation.verticalSpan?.startRowId); setVerticalSpanEndRowId(annotation.verticalSpan?.endRowId);
+    setVerticalSpanStartOffset(annotation.verticalSpan?.startOffset ?? 0); setVerticalSpanEndOffset(annotation.verticalSpan?.endOffset ?? 0);
+  }, [annotation.id]);
   const verticalSpanDraft = { mode: verticalSpanMode, ...(verticalSpanMode === "rows" ? { startRowId: verticalSpanStartRowId, endRowId: verticalSpanEndRowId } : {}), ...(verticalSpanMode === "custom" ? { startOffset: verticalSpanStartOffset, endOffset: verticalSpanEndOffset } : {}) };
   const verticalSpanHasChanges = JSON.stringify(verticalSpanDraft) !== JSON.stringify(annotation.verticalSpan ?? { mode: "auto" });
   const verticalSpanValid = verticalSpanMode !== "rows" || (!!verticalSpanStartRowId && !!verticalSpanEndRowId);
