@@ -27,7 +27,7 @@ function RibbonSchemaOverflow({ items }: { readonly items: readonly RibbonItemSp
     event.preventDefault();
     controls[next]?.focus();
   };
-  return <details className="ribbon-schema-overflow"><summary aria-label="More ribbon commands">More</summary><div role="menu" aria-label="More ribbon commands" onKeyDown={onMenuKeyDown}>{items.map((item) => item.kind === "custom" ? item.render() : <button key={item.id} type="button" role="menuitem" data-ribbon-command-id={item.id} disabled={item.kind !== "toggle" && item.disabled} onClick={item.kind === "toggle" ? item.onChange : item.onClick}>{item.label}</button>)}</div></details>;
+  return <details className="ribbon-schema-overflow"><summary aria-label="More ribbon commands">More</summary><div role="menu" aria-label="More ribbon commands" onKeyDown={onMenuKeyDown} onClick={(event) => { if (event.target instanceof HTMLElement && event.target.closest("button")) event.currentTarget.parentElement?.removeAttribute("open"); }}>{items.map((item) => item.kind === "custom" ? item.render() : <button key={item.id} type="button" role="menuitem" data-ribbon-command-id={item.id} disabled={item.kind !== "toggle" && item.disabled} onClick={item.kind === "toggle" ? item.onChange : item.onClick}>{item.label}</button>)}</div></details>;
 }
 
 function RibbonSchemaItem({ item, available }: { readonly item: RibbonItemSpec; readonly available: RibbonPresentationSize }) {
