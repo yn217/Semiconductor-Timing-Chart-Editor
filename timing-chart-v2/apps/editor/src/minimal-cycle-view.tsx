@@ -415,9 +415,10 @@ export function MinimalCycleView() {
     refreshRangeSelectionBand.current();
   }, [rangePresentationRevision, timelineRange, rangeSelectionActive, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
 
+  const selectedLinkedSignalKey = selectedTransaction?.linkedSignals?.join("\u0000") ?? "";
   useEffect(() => {
     refreshTransactionLinkedRows(host, new Set(selectedTransaction?.linkedSignals ?? []));
-  }, [selectedTransactionId, transactionPresentationRevision]);
+  }, [selectedTransactionId, selectedLinkedSignalKey]);
 
   // #407: Split active pane -- click-delegated (rather than a JSX onClick)
   // because the Split panes are owned/rendered by editor-workspace-view.tsx
