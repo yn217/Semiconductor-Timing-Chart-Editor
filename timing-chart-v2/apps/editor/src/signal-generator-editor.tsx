@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ValueSignal } from "@timing-chart-v2/schema";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { parseSuppressedPeriods } from "./runtime/clock-input.js";
@@ -31,6 +31,14 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
   // closed, and the advanced fields (Initial/Active level, Phase,
   // Suppressed periods) render only when actually opened.
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  // A Bottom editor instance can survive selection changes. Do not carry a
+  // generator Draft from one Signal into another Signal's editing surface.
+  useEffect(() => {
+    setStart(0); setInitial(0); setActive(1); setWidthMode("width");
+    setWidth(1); setDuty(0.5); setPeriod(4); setRepeatMode("finite");
+    setRepeatCount(1); setPhase(0); setSuppressedPeriods("");
+    setError(""); setStatus(""); setAdvancedOpen(false);
+  }, [signal.id]);
   const effectiveWidth = widthMode === "duty" ? Math.min(period - 1, Math.max(1, Math.round(duty * period))) : width;
   // #402: Draft->Apply -- Generate must stay disabled once the computed
   // candidate waveform is byte-for-byte identical to the Signal's current
