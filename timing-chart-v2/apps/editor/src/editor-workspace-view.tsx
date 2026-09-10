@@ -44,17 +44,27 @@ export function EditorWorkspaceView({
       ["b", cursor.b, "Cursor B"],
     ] as const;
     const rulerElements = () => [ruler.current, rulerLower.current].filter((element): element is HTMLDivElement => element !== null);
-    const tickCache = new WeakMap<HTMLDivElement, readonly { readonly x: number; readonly cycle: number }[]>();
+    const tickCache = new WeakMap<HTMLDivElement, { ticks: readonly { readonly x: number; readonly cycle: number }[]; scrollLeft: number }>();
     const cacheTicks = (rulerElement: HTMLDivElement) => {
       const next = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")].map((candidate) => ({
         x: candidate.getBoundingClientRect().left,
         cycle: Number(candidate.dataset.sourceCycle ?? candidate.dataset.cycle),
       })).filter((tick) => Number.isFinite(tick.x) && Number.isFinite(tick.cycle)).sort((left, right) => left.x - right.x);
-      tickCache.set(rulerElement, next);
+      tickCache.set(rulerElement, { ticks: next, scrollLeft: rulerElement.scrollLeft });
       return next;
     };
+    const shiftCachedTicks = (rulerElement: HTMLDivElement) => {
+      const cached = tickCache.get(rulerElement);
+      if (!cached) return cacheTicks(rulerElement);
+      const nextScrollLeft = rulerElement.scrollLeft;
+      const delta = cached.scrollLeft - nextScrollLeft;
+      if (delta === 0) return cached.ticks;
+      const ticks = cached.ticks.map((tick) => ({ ...tick, x: tick.x + delta }));
+      tickCache.set(rulerElement, { ticks, scrollLeft: nextScrollLeft });
+      return ticks;
+    };
     const nearestCachedTick = (rulerElement: HTMLDivElement, clientX: number) => {
-      const ticks = tickCache.get(rulerElement) ?? cacheTicks(rulerElement);
+      const ticks = tickCache.get(rulerElement)?.ticks ?? cacheTicks(rulerElement);
       if (ticks.length === 0) return undefined;
       let low = 0;
       let high = ticks.length - 1;
@@ -73,7 +83,7 @@ export function EditorWorkspaceView({
     const update = () => {
       for (const [viewportElement, rulerElement] of viewports) {
         if (!viewportElement || !rulerElement) continue;
-        cacheTicks(rulerElement);
+        shiftCachedTicks(rulerElement);
         let overlay = viewportElement.querySelector<HTMLElement>("[data-role='cursor-overlay']");
         if (!overlay) {
           overlay = viewportElement.ownerDocument.createElement("div");
