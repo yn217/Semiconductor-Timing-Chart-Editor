@@ -13,6 +13,7 @@ export interface EditorWorkspaceViewModel {
     readonly onBottomKeyDown: KeyboardEventHandler<HTMLDivElement>; readonly onBottomPointerDown: PointerEventHandler<HTMLDivElement>; readonly onBottomPointerMove: PointerEventHandler<HTMLDivElement>; readonly onBottomPointerUp: PointerEventHandler<HTMLDivElement>;
     readonly onSignalSplitKeyDown: KeyboardEventHandler<HTMLDivElement>; readonly onSignalSplitPointerDown: PointerEventHandler<HTMLDivElement>; readonly onSignalSplitPointerMove: PointerEventHandler<HTMLDivElement>; readonly onSignalSplitPointerUp: PointerEventHandler<HTMLDivElement>;
     readonly onViewportKeyDown?: KeyboardEventHandler<HTMLDivElement>;
+    readonly onSetCursorAtCycle?: (which: "a" | "b", cycle: number) => void;
   };
 }
 
@@ -28,7 +29,7 @@ export function EditorWorkspaceView({
   const { leftPaneWidth, frozenPaneMinWidth, frozenPaneWidth, bottomVisible, bottomHeight, inspectorVisible, inspectorWidth } = viewModel.layout;
   const { viewport, gridLayer, ruler, host, viewportLower, rulerLower, hostLower, gridLayerLower } = viewModel.refs;
   const { header, viewportContent, viewportLegend, bottom, inspector } = viewModel.content;
-  const { onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onLeftPaneKeyDown, onLeftPanePointerDown, onLeftPanePointerMove, onLeftPanePointerUp, onFrozenPaneKeyDown, onFrozenPanePointerDown, onFrozenPanePointerMove, onFrozenPanePointerUp, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onSignalSplitKeyDown, onSignalSplitPointerDown, onSignalSplitPointerMove, onSignalSplitPointerUp, onViewportKeyDown } = viewModel.interactions;
+  const { onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onLeftPaneKeyDown, onLeftPanePointerDown, onLeftPanePointerMove, onLeftPanePointerUp, onFrozenPaneKeyDown, onFrozenPanePointerDown, onFrozenPanePointerMove, onFrozenPanePointerUp, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onSignalSplitKeyDown, onSignalSplitPointerDown, onSignalSplitPointerMove, onSignalSplitPointerUp, onViewportKeyDown, onSetCursorAtCycle } = viewModel.interactions;
   useEffect(() => {
     // Cursor A/B are workspace-only source-cycle markers. The ruler is the
     // shared display-time owner, so resolve each marker from the rendered
@@ -61,6 +62,23 @@ export function EditorWorkspaceView({
             line.dataset.role = "cursor-line";
             line.setAttribute("aria-label", label);
             overlay.append(line);
+          }
+          if (onSetCursorAtCycle && line.dataset.dragBound !== "true") {
+            line.dataset.dragBound = "true";
+            line.addEventListener("pointerdown", (event) => {
+              event.preventDefault();
+              const move = (moveEvent: PointerEvent) => {
+                const ticks = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")];
+                const nearest = ticks.map((candidate) => {
+                  const rect = candidate.getBoundingClientRect();
+                  return { candidate, distance: Math.abs(moveEvent.clientX - rect.left) };
+                }).sort((left, right) => left.distance - right.distance)[0];
+                if (nearest) onSetCursorAtCycle(key, Number(nearest.candidate.dataset.sourceCycle ?? nearest.candidate.dataset.cycle));
+              };
+              const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+              window.addEventListener("pointermove", move);
+              window.addEventListener("pointerup", up, { once: true });
+            });
           }
           const tick = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")]
             .find((candidate) => Number(candidate.dataset.sourceCycle ?? candidate.dataset.cycle) === cycle);

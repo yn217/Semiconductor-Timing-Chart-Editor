@@ -771,6 +771,7 @@ export function MinimalCycleView() {
       onBottomKeyDown: resizeBottomByKeyboard, onBottomPointerDown: startBottomResize, onBottomPointerMove: moveBottomResize, onBottomPointerUp: finishBottomResize,
       onSignalSplitKeyDown: resizeSignalSplitByKeyboard, onSignalSplitPointerDown: startSignalSplitResize, onSignalSplitPointerMove: moveSignalSplitResize, onSignalSplitPointerUp: finishSignalSplitResize,
       onViewportKeyDown: onCursorKeyDown,
+      onSetCursorAtCycle: (which: "a" | "b", cycle: number) => setCursor(which, cycle),
     },
   };
   const shellStatus = {
