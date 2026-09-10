@@ -3,6 +3,7 @@ import type { Bookmark, ClockGenerator, ClockSignal, EdgeCounterSettings, Signal
 import { parseSuppressedPeriods } from "../runtime/clock-input.js";
 import { serializeClockSettings } from "../runtime/clock-settings.js";
 import { RibbonIcon } from "../ribbon-icon.js";
+import { DraftStatus } from "../draft-status.js";
 import type { SignalEditorCommandActions } from "../application/editor-surface-command-controller.js";
 
 export function ClockGeneratorEditor({ signal, bookmarks, commands, onDuplicate, onPreview }: { readonly signal: ClockSignal; readonly bookmarks: readonly Bookmark[]; readonly commands: Pick<SignalEditorCommandActions, "updateClockGenerator" | "updateEdgeCounter">; readonly onDuplicate: (signalId: SignalId) => void; readonly onPreview: (draft: ClockGenerator | undefined) => void }) {
@@ -107,7 +108,7 @@ export function ClockGeneratorEditor({ signal, bookmarks, commands, onDuplicate,
       <label>Polarity<select aria-label="Clock polarity" value={generator.polarity} onChange={(event) => setGenerator({ ...generator, polarity: event.target.value as ClockGenerator["polarity"] })}><option value="positive">Positive</option><option value="negative">Negative</option></select></label>
       <label>Suppressed periods<input aria-label="Clock suppressed periods" value={suppressedPeriods} placeholder="e.g. 1, 3" onChange={(event) => setSuppressedPeriods(event.target.value)} /></label>
       {generatorError && <output className="editor-problem" role="alert" data-testid="clock-generator-error">{generatorError}</output>}
-      {generatorChanged && <output className="draft-unapplied-indicator" data-testid="clock-generator-unapplied">● Unapplied changes</output>}
+      {generatorChanged && <DraftStatus testId="clock-generator-unapplied" />}
       <button type="submit" data-testid="apply-clock-generator" disabled={!generatorChanged}>Apply generator</button>
     </form>
     <form className="clock-edge-counter" aria-label="Clock Edge Counter" onSubmit={(event) => {
@@ -124,7 +125,7 @@ export function ClockGeneratorEditor({ signal, bookmarks, commands, onDuplicate,
       <label>Position<select aria-label="Clock edge counter position" value={edgeCounter.position} onChange={(event) => setEdgeCounter({ ...edgeCounter, position: event.target.value as EdgeCounterSettings["position"] })}><option value="above">Above</option><option value="below">Below</option></select></label>
       <label>X Offset<input aria-label="Clock edge counter X offset" type="number" value={edgeCounter.offset.x} onChange={(event) => setEdgeCounter({ ...edgeCounter, offset: { ...edgeCounter.offset, x: Number(event.target.value) } })} /></label>
       <label>Y Offset<input aria-label="Clock edge counter Y offset" type="number" value={edgeCounter.offset.y} onChange={(event) => setEdgeCounter({ ...edgeCounter, offset: { ...edgeCounter.offset, y: Number(event.target.value) } })} /></label>
-      {edgeCounterChanged && <output className="draft-unapplied-indicator" data-testid="clock-edge-counter-unapplied">● Unapplied changes</output>}
+      {edgeCounterChanged && <DraftStatus testId="clock-edge-counter-unapplied" />}
       <button type="submit" data-testid="apply-clock-edge-counter" disabled={!edgeCounterChanged}>Apply edge counter</button>
     </form>
   </div>;
