@@ -469,7 +469,7 @@ export function InspectorValueSignalEditor({ signal, document, viewport, command
         <PropertyToggle label="Visible" ariaLabel="Inspector signal visible" checked={visible} onChange={setVisible} />
         <label>Spacing Before<input aria-label="Inspector signal spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label>
         <label>Spacing After<input aria-label="Inspector signal spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label>
-        <label>Signal Split pane<select aria-label="Signal Split pane" value={splitPane} onChange={(event) => setSplitPane(event.target.value as NonNullable<Signal["display"]["splitPane"]>)}><option value="both">Both panes</option><option value="upper">Upper pane</option><option value="lower">Lower pane</option></select></label>
+        <label>Signal Split pane<select aria-label="Inspector signal split pane" value={splitPane} onChange={(event) => setSplitPane(event.target.value as NonNullable<Signal["display"]["splitPane"]>)}><option value="both">Both panes</option><option value="upper">Upper pane</option><option value="lower">Lower pane</option></select></label>
       </InspectorSection>
       {/* #495: type-specific semantic section (Signal Properties before,
           Appearance/Label Style/Waveform after) -- Enabled gates the rest

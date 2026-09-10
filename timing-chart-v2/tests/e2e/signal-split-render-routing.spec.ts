@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 // #200 PR 4: real per-signal Upper/Lower/Both render routing, on top of PR
 // 3's already-covered dual-viewport/scroll shell (tests/e2e/signal-split.spec.ts).
-// Assigns CLOCK -> Upper, DATA[7:0] -> Lower, RESET_N left at the default
+// Assigns REQUEST -> Upper, DATA[7:0] -> Lower, RESET_N left at the default
 // (Both), and verifies each pane's own DOM only ever mounts its own rows --
 // not just that the toggle/scroll mechanics work.
 //
@@ -54,13 +54,13 @@ async function assignSplitPane(page: import("@playwright/test").Page, host: impo
   await expect(page.getByTestId("history-status")).not.toHaveText(historyBefore ?? "");
 }
 
-test.skip("assigns Signals to Upper/Lower/Both and routes real rows to each pane's own DOM, keeping one stable ID for a Both Signal", async ({ page }) => {
+test("assigns Signals to Upper/Lower/Both and routes real rows to each pane's own DOM, keeping one stable ID for a Both Signal", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
 
   const revisionBefore = await host.getAttribute("data-canonical-revision");
-  await assignSplitPane(page, host, "sig_cycle_clock", "upper", "clock");
+  await assignSplitPane(page, host, "sig_cycle_request", "upper", "signal");
   await expect(host).toHaveAttribute("data-canonical-revision", String(Number(revisionBefore) + 1));
   await assignSplitPane(page, host, "sig_cycle_data", "lower", "signal");
   await expect(host).toHaveAttribute("data-canonical-revision", String(Number(revisionBefore) + 2));
@@ -99,17 +99,17 @@ test.skip("assigns Signals to Upper/Lower/Both and routes real rows to each pane
   await expect(page.getByTestId("history-status")).toHaveText(historyBeforeSplit!);
   await expect(page.getByTestId("dirty-status")).toHaveText(dirtyBeforeSplit!);
 
-  // Upper: CLOCK (upper) and RESET_N (both) render; DATA[7:0] (lower-only) does not.
-  await expect(host.locator("[data-role='timing-row'][data-row-id='sig_cycle_clock']")).toHaveCount(1);
+  // Upper: REQUEST (upper) and RESET_N (both) render; DATA[7:0] (lower-only) does not.
+  await expect(host.locator("[data-role='timing-row'][data-row-id='sig_cycle_request']")).toHaveCount(1);
   await expect(host.locator("[data-role='timing-row'][data-row-id='sig_cycle_reset_n']")).toHaveCount(1);
   await expect(host.locator("[data-role='timing-row'][data-row-id='sig_cycle_data']")).toHaveCount(0);
   await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_data']")).toHaveCount(0);
 
-  // Lower: DATA[7:0] (lower) and RESET_N (both) render; CLOCK (upper-only) does not.
+  // Lower: DATA[7:0] (lower) and RESET_N (both) render; REQUEST (upper-only) does not.
   await expect(lowerHost.locator("[data-role='timing-row'][data-row-id='sig_cycle_data']")).toHaveCount(1);
   await expect(lowerHost.locator("[data-role='timing-row'][data-row-id='sig_cycle_reset_n']")).toHaveCount(1);
-  await expect(lowerHost.locator("[data-role='timing-row'][data-row-id='sig_cycle_clock']")).toHaveCount(0);
-  await expect(lowerHost.locator("[data-role='left-row'][data-row-id='sig_cycle_clock']")).toHaveCount(0);
+  await expect(lowerHost.locator("[data-role='timing-row'][data-row-id='sig_cycle_request']")).toHaveCount(0);
+  await expect(lowerHost.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toHaveCount(0);
 
   // A "both"-assigned Signal is genuinely two separate DOM nodes (one real
   // mount per pane, not one reparented element), but the same one stable
@@ -134,12 +134,12 @@ test.skip("assigns Signals to Upper/Lower/Both and routes real rows to each pane
   await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 2");
   await expect(host.locator("[data-role='timing-row'][data-row-id='sig_cycle_data']")).toHaveCount(1);
-  await expect(lowerHost.locator("[data-role='timing-row'][data-row-id='sig_cycle_clock']")).toHaveCount(1);
+  await expect(lowerHost.locator("[data-role='timing-row'][data-row-id='sig_cycle_request']")).toHaveCount(1);
   await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
   await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   await expect(host.locator("[data-role='timing-row'][data-row-id='sig_cycle_data']")).toHaveCount(0);
-  await expect(lowerHost.locator("[data-role='timing-row'][data-row-id='sig_cycle_clock']")).toHaveCount(0);
+  await expect(lowerHost.locator("[data-role='timing-row'][data-row-id='sig_cycle_request']")).toHaveCount(0);
 
   // Save/Open: splitPane is a document-presentation field and must round-trip.
   // Signal Split's own enabled/ratio state is workspace-chrome UI state
@@ -158,7 +158,7 @@ test.skip("assigns Signals to Upper/Lower/Both and routes real rows to each pane
   const reopenedLowerHost = page.getByTestId("cycle-surface-lower");
   await expect(reopenedLowerHost).toBeVisible();
   await expect(host.locator("[data-role='timing-row'][data-row-id='sig_cycle_data']")).toHaveCount(0);
-  await expect(reopenedLowerHost.locator("[data-role='timing-row'][data-row-id='sig_cycle_clock']")).toHaveCount(0);
+  await expect(reopenedLowerHost.locator("[data-role='timing-row'][data-row-id='sig_cycle_request']")).toHaveCount(0);
   await expect(reopenedLowerHost.locator("[data-role='timing-row'][data-row-id='sig_cycle_data']")).toHaveCount(1);
 });
 
