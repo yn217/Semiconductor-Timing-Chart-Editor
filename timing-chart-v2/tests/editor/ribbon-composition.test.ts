@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { composeRibbon, type RibbonContextGroups } from "../../apps/editor/src/ribbon-composition.js";
-import { resolveRibbonPresentation, type RibbonGroupSpec } from "../../apps/editor/src/ribbon-schema.js";
+import { partitionRibbonItems, resolveRibbonPresentation, type RibbonGroupSpec } from "../../apps/editor/src/ribbon-schema.js";
 
 function group(id: string): RibbonGroupSpec {
   return { id, majorGroup: id, caption: id, items: [] };
@@ -57,5 +57,13 @@ describe("composeRibbon (#405)", () => {
     expect(resolveRibbonPresentation(presentation, "medium")).toBe("small");
     expect(resolveRibbonPresentation({ ...presentation, overflow: "never" }, "icon")).toBe("icon");
     expect(resolveRibbonPresentation({ ...presentation, overflow: "preferred" }, "small")).toBe("overflow");
+  });
+
+  it("partitions overflow candidates without changing command identity or order", () => {
+    const source = group("adaptive").items;
+    const result = partitionRibbonItems(source, "small");
+    expect(result.visible.map((item) => item.id)).toEqual(source.filter((item) => !item.presentation || resolveRibbonPresentation(item.presentation, "small") !== "overflow").map((item) => item.id));
+    expect(result.overflow.every((item) => item.presentation && resolveRibbonPresentation(item.presentation, "small") === "overflow")).toBe(true);
+    expect(new Set([...result.visible, ...result.overflow].map((item) => item.id)).size).toBe(source.length);
   });
 });

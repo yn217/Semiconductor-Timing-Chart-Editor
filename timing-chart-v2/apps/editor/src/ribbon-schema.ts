@@ -15,6 +15,16 @@ export function resolveRibbonPresentation(presentation: RibbonPresentation, avai
   return presentation.overflow === "never" ? "icon" : "overflow";
 }
 
+export function partitionRibbonItems(items: readonly RibbonItemSpec[], available: RibbonPresentationSize): { readonly visible: readonly RibbonItemSpec[]; readonly overflow: readonly RibbonItemSpec[] } {
+  const visible: RibbonItemSpec[] = [];
+  const overflow: RibbonItemSpec[] = [];
+  for (const item of items) {
+    const resolved = "presentation" in item && item.presentation !== undefined ? resolveRibbonPresentation(item.presentation, available) : "large";
+    if (resolved === "overflow") overflow.push(item); else visible.push(item);
+  }
+  return { visible: Object.freeze(visible), overflow: Object.freeze(overflow) };
+}
+
 /**
  * Data-driven ribbon group/item schema. A group's buttons/toggles are
  * defined as an array of these specs, not hand-written per-button JSX --
