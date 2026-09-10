@@ -92,7 +92,10 @@ export function buildMiniMapTransactionOverview(document: Pick<CanonicalDocument
   const byLane = new Map<string, LaneBucket>();
   for (const transaction of document.transactions) {
     const laneId = transaction.laneId ?? "lane_0";
-    const key = `${transaction.groupId ?? ""} ${laneId}`;
+    // Keep the builder's row identity identical to the incremental updater.
+    // A mismatch here makes every first incremental update reconstruct rows
+    // under keys that do not exist in the initial overview.
+    const key = `${transaction.groupId ?? "ungrouped"}:${laneId}`;
     const bucket = byLane.get(key);
     if (bucket) bucket.transactions.push(transaction);
     else byLane.set(key, { groupId: transaction.groupId, laneId, transactions: [transaction] });
