@@ -92,7 +92,10 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
   useEffect(() => {
     setTransactionListScrollTop(0);
     if (transactionListViewportRef.current) transactionListViewportRef.current.scrollTop = 0;
-  }, [search, document.transactions]);
+  // A canonical Transaction edit replaces document.transactions, but it does
+  // not mean the user requested a new list position. Reset only when the
+  // filter changes; structural edits retain the user's scroll context.
+  }, [search]);
   useEffect(() => {
     if (!shouldVirtualizeTransactions || transaction === undefined) return;
     const selectedIndex = visibleTransactions.findIndex((item) => item.id === transaction.id);
