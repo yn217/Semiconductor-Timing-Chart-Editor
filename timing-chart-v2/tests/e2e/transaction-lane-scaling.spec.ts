@@ -22,3 +22,51 @@ test("10k Transaction fixture keeps mounted lane DOM viewport-bounded", async ({
   expect(metrics.mountedTreeRows).toBeLessThan(1_000);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
+
+test("central Transaction surface remains viewport-bounded across 1k/5k/10k with bounded mode, scroll, and selection work", async ({ page }, testInfo) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const measurements: Array<Record<string, number>> = [];
+  for (const transactionCount of [1_000, 5_000, 10_000] as const) {
+    const base = generatePerformanceDocument({ signalCount: 100, cycleCount: 500, profile: "transaction-heavy" });
+    const document = {
+      ...base,
+      transactions: Array.from({ length: transactionCount }, (_, index) => ({
+        id: `txn_latency_${transactionCount}_${index}`,
+        name: `Transaction ${index}`,
+        start: (index * 3) % 490,
+        end: ((index * 3) % 490) + 4,
+        laneId: `lane_${index % 16}`,
+        linkedSignals: [base.signals[index % base.signals.length]!.id],
+      })),
+    };
+    const started = await page.evaluate(() => performance.now());
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: `transaction-${transactionCount}.tcd`, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+    await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", String(transactionCount), { timeout: 60_000 });
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+    await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+    await expect(page.getByTestId("transaction-lanes")).toBeVisible({ timeout: 60_000 });
+    const modeReady = await page.evaluate((startedAt) => performance.now() - startedAt, started);
+    const viewport = page.getByTestId("cycle-viewport");
+    const metrics = await page.getByTestId("transaction-lanes").evaluate((element) => ({
+      totalHeight: Number.parseFloat((element as HTMLElement).style.height),
+      mountedBars: element.querySelectorAll("[data-transaction-id]").length,
+      mountedTreeRows: element.querySelectorAll("[data-testid^='transaction-tree-row-']").length,
+    }));
+    const selected = page.getByTestId("transaction-lanes").locator("[data-transaction-id]:visible").first();
+    const selectionStarted = await page.evaluate(() => performance.now());
+    await selected.evaluate((element) => (element as HTMLButtonElement).click());
+    await expect(selected).toHaveAttribute("data-selected", "true");
+    const selectionMs = await page.evaluate((startedAt) => performance.now() - startedAt, selectionStarted);
+    const scrollStarted = await page.evaluate(() => performance.now());
+    await viewport.evaluate((element) => { element.scrollTop = Math.max(1, (element.scrollHeight - element.clientHeight) / 2); element.dispatchEvent(new Event("scroll")); });
+    await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    const scrollMs = await page.evaluate((startedAt) => performance.now() - startedAt, scrollStarted);
+    expect(metrics.totalHeight).toBeGreaterThan(1_000);
+    expect(metrics.mountedBars).toBeLessThan(1_000);
+    expect(metrics.mountedTreeRows).toBeLessThan(1_000);
+    measurements.push({ transactionCount, modeReadyMs: Math.round(modeReady), scrollMs: Math.round(scrollMs), selectionMs: Math.round(selectionMs), mountedBars: metrics.mountedBars, mountedTreeRows: metrics.mountedTreeRows });
+  }
+  await testInfo.attach("transaction-central-scale-latency.json", { body: Buffer.from(JSON.stringify(measurements, null, 2)), contentType: "application/json" });
+  console.log(`[transaction-central-scale] ${JSON.stringify(measurements)}`);
+});
