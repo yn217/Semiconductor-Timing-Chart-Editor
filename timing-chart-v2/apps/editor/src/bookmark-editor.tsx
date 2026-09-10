@@ -88,6 +88,7 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
           <div className="bottom-sticky-actions">
             {createHasChanges && <DraftStatus testId="bottom-bookmark-create-unapplied" />}
             <span className="bottom-sticky-buttons">
+              <button type="button" data-testid="cancel-bottom-bookmark-create" onClick={onCancel}>Cancel</button>
               <button type="submit" form="bookmark-create-form">Create Bookmark</button>
             </span>
           </div>
