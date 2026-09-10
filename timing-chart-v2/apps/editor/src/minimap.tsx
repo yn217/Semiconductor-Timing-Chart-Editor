@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
-import type { CanonicalDocument, Signal } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, Signal, Transaction } from "@timing-chart-v2/schema";
 import { buildMiniMapOverview, buildMiniMapTransactionOverview, updateMiniMapTransactionOverview } from "@timing-chart-v2/projection";
 import { calculateMiniMapViewportMetrics } from "./runtime/minimap-viewport.js";
 import { MiniMapOverviewRows, MiniMapTransactionOverviewRows } from "./minimap-overview-rows.js";
@@ -71,6 +71,8 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
   const transactionOverviewIncrementalUpdates = useRef(0);
   const overviewCache = useRef<MiniMapOverviewCache | undefined>(undefined);
   const transactionOverviewCache = useRef<TransactionOverviewCache | undefined>(undefined);
+  const transactionFingerprintCache = useRef(new WeakMap<readonly Transaction[], string>());
+  const transactionGroupFingerprintCache = useRef(new WeakMap<NonNullable<CanonicalDocument["transactionGroups"]>, string>());
   const overview = useMemo(() => {
     const cycleCount = Math.max(1, document.timeline.cycleCount);
     const cached = overviewCache.current;
@@ -86,10 +88,21 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
   // and other document-identity changes do not cold-rebuild the MiniMap.
   const transactionOverview = useMemo(() => {
     if (mode !== "transaction") return undefined;
+    let transactionFingerprint = transactionFingerprintCache.current.get(document.transactions);
+    if (transactionFingerprint === undefined) {
+      transactionFingerprint = document.transactions.map((transaction) => `${transaction.id}:${transaction.start}:${transaction.end}:${transaction.laneId ?? ""}:${transaction.groupId ?? ""}:${transaction.color ?? ""}`).join("|");
+      transactionFingerprintCache.current.set(document.transactions, transactionFingerprint);
+    }
+    const groups = document.transactionGroups ?? [];
+    let groupFingerprint = transactionGroupFingerprintCache.current.get(groups);
+    if (groupFingerprint === undefined) {
+      groupFingerprint = groups.map((group) => `${group.id}:${group.order}:${group.color ?? ""}`).join("|");
+      transactionGroupFingerprintCache.current.set(groups, groupFingerprint);
+    }
     const fingerprint = [
       `cycle:${document.timeline.cycleCount}`,
-      `groups:${(document.transactionGroups ?? []).map((group) => `${group.id}:${group.order}:${group.color ?? ""}`).join("|")}`,
-      `transactions:${document.transactions.map((transaction) => `${transaction.id}:${transaction.start}:${transaction.end}:${transaction.laneId ?? ""}:${transaction.groupId ?? ""}:${transaction.color ?? ""}`).join("|")}`,
+      `groups:${groupFingerprint}`,
+      `transactions:${transactionFingerprint}`,
     ].join(";");
     const cached = transactionOverviewCache.current;
     if (cached?.fingerprint === fingerprint) return cached.overview;
