@@ -18,7 +18,16 @@ export function RibbonGroup({ spec, available = "large" }: { readonly spec: Ribb
 }
 
 function RibbonSchemaOverflow({ items }: { readonly items: readonly RibbonItemSpec[] }) {
-  return <details className="ribbon-schema-overflow"><summary aria-label="More ribbon commands">More</summary><div role="menu" aria-label="More ribbon commands">{items.map((item) => item.kind === "custom" ? item.render() : <button key={item.id} type="button" role="menuitem" data-ribbon-command-id={item.id} disabled={item.kind !== "toggle" && item.disabled} onClick={item.kind === "toggle" ? item.onChange : item.onClick}>{item.label}</button>)}</div></details>;
+  const onMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const controls = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("[role='menuitem']:not(:disabled)")];
+    if (controls.length === 0) return;
+    const current = controls.indexOf(event.target instanceof HTMLElement ? event.target.closest<HTMLButtonElement>("[role='menuitem']")! : controls[0]!);
+    const next = event.key === "ArrowDown" ? (current + 1) % controls.length : event.key === "ArrowUp" ? (current - 1 + controls.length) % controls.length : event.key === "Home" ? 0 : event.key === "End" ? controls.length - 1 : undefined;
+    if (next === undefined) return;
+    event.preventDefault();
+    controls[next]?.focus();
+  };
+  return <details className="ribbon-schema-overflow"><summary aria-label="More ribbon commands">More</summary><div role="menu" aria-label="More ribbon commands" onKeyDown={onMenuKeyDown}>{items.map((item) => item.kind === "custom" ? item.render() : <button key={item.id} type="button" role="menuitem" data-ribbon-command-id={item.id} disabled={item.kind !== "toggle" && item.disabled} onClick={item.kind === "toggle" ? item.onChange : item.onClick}>{item.label}</button>)}</div></details>;
 }
 
 function RibbonSchemaItem({ item, available }: { readonly item: RibbonItemSpec; readonly available: RibbonPresentationSize }) {
@@ -33,3 +42,4 @@ function RibbonSchemaItem({ item, available }: { readonly item: RibbonItemSpec; 
   const presentationClass = item.presentation ? ` ribbon-presentation-${size}` : "";
   return <DsRibbonButton ariaLabel={item.ariaLabel ?? item.label} className={`${item.size === "wide" ? "ds-ribbon-button--wide" : ""}${presentationClass}`} dataTestId={item.testId} disabled={item.disabled} icon={<RibbonIcon name={item.icon} />} onClick={item.onClick} {...(item.presentation?.priority === undefined ? {} : { priority: item.presentation.priority, style: { order: item.presentation.priority } })} size={size} title={item.title} v1Label={item.v1Label}>{item.label}</DsRibbonButton>;
 }
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
