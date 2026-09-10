@@ -265,7 +265,7 @@ test("default full-document export contains one row per Signal even when a Signa
 // real two-block layout -- Upper's rows, then Lower's, stacked -- and
 // duplicate a "Both" Signal once per pane rather than pretending the
 // split doesn't exist.
-test.skip("real Upper/Lower assignment produces a combined two-pane export: stacked blocks, and a Both Signal renders once per pane", async ({ page }) => {
+test("real Upper/Lower assignment produces a combined two-pane export: stacked blocks, and a Both Signal renders once per pane", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
