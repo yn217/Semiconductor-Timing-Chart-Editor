@@ -105,3 +105,39 @@ test("central Transaction surface remains viewport-bounded across 1k/5k/10k with
   await testInfo.attach("transaction-central-scale-latency.json", { body: Buffer.from(JSON.stringify(measurements, null, 2)), contentType: "application/json" });
   console.log(`[transaction-central-scale] ${JSON.stringify(measurements)}`);
 });
+
+test("single-lane Transaction edits remain bounded on a large sequential fixture", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const base = generatePerformanceDocument({ signalCount: 40, cycleCount: 500, profile: "transaction-heavy" });
+  const document = {
+    ...base,
+    transactions: Array.from({ length: 10_000 }, (_, index) => ({
+      id: `txn_single_lane_${index}`,
+      name: `Transaction ${index}`,
+      start: index % 490,
+      end: (index % 490) + 4,
+      laneId: "lane_sequential",
+      linkedSignals: [base.signals[index % base.signals.length]!.id],
+    })),
+  };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-single-lane-10k.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "10000", { timeout: 60_000 });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  const lanes = page.getByTestId("transaction-lanes");
+  await expect(lanes).toBeVisible({ timeout: 60_000 });
+  const selected = lanes.locator("[data-transaction-id]:visible").first();
+  await selected.evaluate((element) => (element as HTMLButtonElement).click());
+  const stackBuilds = await lanes.getAttribute("data-stack-row-builds");
+  const treeBuilds = await lanes.getAttribute("data-tree-row-builds");
+  const stackBuildCount = Number(stackBuilds);
+  const treeBuildCount = Number(treeBuilds);
+  const startInput = page.getByTestId("inspector").getByLabel("Transaction start");
+  await startInput.fill("12");
+  await page.getByTestId("inspector").getByTestId("apply-inspector-transaction").click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+  await expect.poll(() => lanes.getAttribute("data-stack-row-builds")).toBe(String(stackBuildCount + 2));
+  await expect.poll(() => lanes.getAttribute("data-tree-row-builds")).toBe(String(treeBuildCount + 2));
+});
