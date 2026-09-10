@@ -306,7 +306,12 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
   const visibleGroupHeaders = groupHeaders.filter((header) => isVisible(header.labelTop, GROUP_HEADER_HEIGHT));
   const bandContainsSelected = (band: LaneBand) => selectedId !== undefined && (laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).some((transaction) => transaction.id === selectedId);
   const visibleLaneBands = laneBands.filter((band) => isVisible(band.labelTop, band.labelHeight) || bandContainsSelected(band));
-  const isTransactionVisible = (band: LaneBand, transaction: Transaction) => {
+  const isTreeTransactionVisible = (band: LaneBand, transaction: Transaction) => {
+    if (selectedId === transaction.id) return true;
+    const row = band.treeRowOf.get(transaction.id) ?? 0;
+    return isVisible(band.labelTop + 4 + row * LANE_ROW_HEIGHT, LANE_ROW_HEIGHT);
+  };
+  const isTrackTransactionVisible = (band: LaneBand, transaction: Transaction) => {
     if (selectedId === transaction.id) return true;
     const row = band.rowOf.get(transaction.id) ?? 0;
     return isVisible(band.trackTop + 4 + row * LANE_ROW_HEIGHT, LANE_ROW_HEIGHT);
@@ -346,7 +351,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
               once it was cut off. `title` is the same native-tooltip
               affordance the rest of the app already uses for truncated
               text, not a new pattern. */}
-          {laneTransactions.filter((transaction) => isTransactionVisible(band, transaction)).map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} title={transaction.name} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={() => onSelect(transaction.id)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
+          {laneTransactions.filter((transaction) => isTreeTransactionVisible(band, transaction)).map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} title={transaction.name} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={() => onSelect(transaction.id)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
         </span>;
       })}
     </div>
@@ -354,7 +359,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
       <div className="transaction-geometry-guides" aria-hidden="true">{cycleXs.map((value) => <i className="transaction-geometry-line" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}</div>
       {visibleGroupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.trackTop, height: GROUP_HEADER_HEIGHT }} />)}
       {visibleLaneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.trackTop, height: band.trackHeight }}>
-        {(laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).filter((transaction) => isTransactionVisible(band, transaction)).map((transaction) => {
+        {(laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).filter((transaction) => isTrackTransactionVisible(band, transaction)).map((transaction) => {
           const startX = x(transaction.start);
           const endX = x(transaction.end);
           if (startX === undefined || endX === undefined) return null;
