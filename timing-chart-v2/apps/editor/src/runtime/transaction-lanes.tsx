@@ -243,7 +243,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
   // every newly-created Transaction.
   const hasGroups = groups.length > 0;
   type Section = { readonly groupId: string | undefined; readonly label: string | undefined; readonly color: string | undefined; readonly lanes: readonly string[] };
-  const sections: readonly Section[] = hasGroups
+  const sections: readonly Section[] = useMemo(() => hasGroups
     ? (() => {
         const lanesByGroup = new Map<string | undefined, Set<string>>();
         for (const transaction of document.transactions) {
@@ -258,7 +258,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
         if (ungroupedLanes.length > 0) result.push({ groupId: undefined, label: "Ungrouped", color: undefined, lanes: ungroupedLanes });
         return result;
       })()
-    : [{ groupId: undefined, label: undefined, color: undefined, lanes: [...new Set(["lane_0", ...document.transactions.map((transaction) => transaction.laneId ?? "lane_0")])].sort() }];
+    : [{ groupId: undefined, label: undefined, color: undefined, lanes: [...new Set(["lane_0", ...document.transactions.map((transaction) => transaction.laneId ?? "lane_0")])].sort() }], [document, groups, hasGroups]);
 
   const groupHeaders: GroupHeaderBand[] = [];
   const laneBands: LaneBand[] = [];
