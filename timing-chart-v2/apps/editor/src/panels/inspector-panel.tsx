@@ -290,6 +290,7 @@ export function InspectorValueSignalEditor({ signal, document, viewport, command
   const [visible, setVisible] = useState(signal.display.visible !== false);
   const [spacingBefore, setSpacingBefore] = useState(signal.spacingBefore ?? 0);
   const [spacingAfter, setSpacingAfter] = useState(signal.spacingAfter ?? 0);
+  const [splitPane, setSplitPane] = useState<NonNullable<Signal["display"]["splitPane"]>>(signal.display.splitPane ?? "both");
   const [align, setAlign] = useState<NonNullable<Signal["display"]["align"]>>(signal.display.align ?? "left");
   const [overflow, setOverflow] = useState<NonNullable<Signal["display"]["overflow"]>>(signal.display.overflow ?? "ellipsis");
   const [style, setStyle] = useState(JSON.stringify(signal.display.style ?? {}));
@@ -330,6 +331,7 @@ export function InspectorValueSignalEditor({ signal, document, viewport, command
     setVisible((current) => current === (signal.display.visible !== false) ? current : signal.display.visible !== false);
     setSpacingBefore((current) => current === (signal.spacingBefore ?? 0) ? current : signal.spacingBefore ?? 0);
     setSpacingAfter((current) => current === (signal.spacingAfter ?? 0) ? current : signal.spacingAfter ?? 0);
+    setSplitPane((current) => current === (signal.display.splitPane ?? "both") ? current : signal.display.splitPane ?? "both");
     setAlign((current) => current === (signal.display.align ?? "left") ? current : signal.display.align ?? "left");
     setOverflow((current) => current === (signal.display.overflow ?? "ellipsis") ? current : signal.display.overflow ?? "ellipsis");
     setStyle((current) => current === nextStyleJson ? current : nextStyleJson);
@@ -377,6 +379,7 @@ export function InspectorValueSignalEditor({ signal, document, viewport, command
     visible !== (signal.display.visible !== false),
     spacingBefore !== (signal.spacingBefore ?? 0),
     spacingAfter !== (signal.spacingAfter ?? 0),
+    splitPane !== (signal.display.splitPane ?? "both"),
     align !== (signal.display.align ?? "left"),
     overflow !== (signal.display.overflow ?? "ellipsis"),
     style !== JSON.stringify(originalStyleForCompare),
@@ -430,7 +433,7 @@ export function InspectorValueSignalEditor({ signal, document, viewport, command
       || strikethrough !== styleString(originalStyle, "textDecoration", "").includes("line-through")
       || waveformColor !== styleString(originalStyle, "waveformColor", "#111111")
       || waveformBackground !== styleString(originalStyle, "waveformBackground", "#ffffff");
-     commands.updateSignalProperties({ signalId: signal.id, name, role, signalType, ...(signalType === "bus" ? { width, displayFormat: format } : {}), visible, ...(signal.spacingBefore === undefined && spacingBefore === 0 ? {} : { spacingBefore }), ...(signal.spacingAfter === undefined && spacingAfter === 0 ? {} : { spacingAfter }), displayAlign: align, displayOverflow: overflow, ...(styleDraftChanged ? { displayStyle: { ...parsedStyle, ...structuredStyle } } : {}) });
+     commands.updateSignalProperties({ signalId: signal.id, name, role, signalType, ...(signalType === "bus" ? { width, displayFormat: format } : {}), visible, ...(signal.spacingBefore === undefined && spacingBefore === 0 ? {} : { spacingBefore }), ...(signal.spacingAfter === undefined && spacingAfter === 0 ? {} : { spacingAfter }), displayAlign: align, displayOverflow: overflow, splitPane, ...(styleDraftChanged ? { displayStyle: { ...parsedStyle, ...structuredStyle } } : {}) });
   };
   // #495: draft-vs-committed compare for the Reset Semantics section's own
   // Apply (same "disabled when unchanged" contract as every other Inspector
@@ -466,6 +469,7 @@ export function InspectorValueSignalEditor({ signal, document, viewport, command
         <PropertyToggle label="Visible" ariaLabel="Inspector signal visible" checked={visible} onChange={setVisible} />
         <label>Spacing Before<input aria-label="Inspector signal spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label>
         <label>Spacing After<input aria-label="Inspector signal spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label>
+        <label>Signal Split pane<select aria-label="Signal Split pane" value={splitPane} onChange={(event) => setSplitPane(event.target.value as NonNullable<Signal["display"]["splitPane"]>)}><option value="both">Both panes</option><option value="upper">Upper pane</option><option value="lower">Lower pane</option></select></label>
       </InspectorSection>
       {/* #495: type-specific semantic section (Signal Properties before,
           Appearance/Label Style/Waveform after) -- Enabled gates the rest
