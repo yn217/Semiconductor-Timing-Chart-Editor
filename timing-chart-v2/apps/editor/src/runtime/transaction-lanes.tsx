@@ -260,11 +260,12 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
       })()
     : [{ groupId: undefined, label: undefined, color: undefined, lanes: [...new Set(["lane_0", ...document.transactions.map((transaction) => transaction.laneId ?? "lane_0")])].sort() }], [document, groups, hasGroups]);
 
-  const groupHeaders: GroupHeaderBand[] = [];
-  const laneBands: LaneBand[] = [];
-  let labelCursor = 0;
-  let trackCursor = 0;
-  for (const section of sections) {
+  const { groupHeaders, laneBands, totalHeight } = useMemo(() => {
+    const groupHeaders: GroupHeaderBand[] = [];
+    const laneBands: LaneBand[] = [];
+    let labelCursor = 0;
+    let trackCursor = 0;
+    for (const section of sections) {
     const sectionKey = section.groupId ?? "ungrouped";
     const collapsed = section.label !== undefined && collapsedGroups.has(sectionKey);
     if (section.label !== undefined) {
@@ -309,8 +310,9 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
       labelCursor += labelHeight;
       trackCursor += trackHeight;
     }
-  }
-  const totalHeight = Math.max(labelCursor, trackCursor, LANE_ROW_HEIGHT);
+    }
+    return { groupHeaders, laneBands, totalHeight: Math.max(labelCursor, trackCursor, LANE_ROW_HEIGHT) };
+  }, [collapsedGroups, laneTransactionsByKey, sections, transactionCountByGroup]);
   const [virtualWindow, setVirtualWindow] = useState({ top: 0, height: 900 });
   useEffect(() => {
     const laneRoot = owner.current;
