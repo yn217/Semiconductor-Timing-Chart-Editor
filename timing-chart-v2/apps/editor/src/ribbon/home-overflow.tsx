@@ -47,6 +47,17 @@ export interface HomeOverflowProps {
   readonly onOpenTimeline: () => void;
 }
 
+type HomeOverflowCommand = Readonly<{
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}>;
+
+type HomeOverflowSection = Readonly<{
+  label: string;
+  commands: readonly HomeOverflowCommand[];
+}>;
+
 export function HomeOverflow(props: HomeOverflowProps) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<{ readonly left: number; readonly top: number; readonly height: number; readonly maxHeight: number }>();
@@ -127,14 +138,18 @@ export function HomeOverflow(props: HomeOverflowProps) {
     event.preventDefault();
     items[next]?.focus();
   };
+  const sections: readonly HomeOverflowSection[] = [
+    { label: "File", commands: [{ label: "New", onClick: props.onNew }, { label: "Open", onClick: props.onOpen }, { label: "Save", onClick: props.onSave }, { label: "Save As", onClick: props.onSaveAs }, { label: "Recent", onClick: props.onRecent }] },
+    { label: "History", commands: [{ label: "Undo", onClick: props.onUndo, disabled: !props.history.canUndo }, { label: "Redo", onClick: props.onRedo, disabled: !props.history.canRedo }] },
+    { label: "Clipboard", commands: [{ label: "Copy", onClick: props.onCopy, disabled: !props.hasSelectedClipboard }, { label: "Cut", onClick: props.onCut, disabled: !props.hasSelectedClipboard }, { label: "Paste", onClick: props.onPaste, disabled: !props.clipboardAvailable }, { label: "Duplicate", onClick: props.onDuplicate, disabled: !props.hasSelectedClipboard }] },
+    { label: "Edit / Selection", commands: [{ label: "Delete", onClick: props.onDelete, disabled: !props.hasDeletableSelection }, { label: "Rename", onClick: props.onRename, disabled: !props.canRenameSelection }, { label: "Clear Selection", onClick: props.onClearSelection }, { label: "Select All Signals", onClick: props.onSelectAll, disabled: !props.hasSelectableSignals }] },
+    { label: "Visibility / Arrange", commands: [{ label: "Show", onClick: () => props.onVisibility(true), disabled: !props.canShowSelection }, { label: "Hide", onClick: () => props.onVisibility(false), disabled: !props.canHideSelection }, { label: "Move Up", onClick: props.onMoveUp, disabled: !props.canMoveUp }, { label: "Move Down", onClick: props.onMoveDown, disabled: !props.canMoveDown }] },
+    { label: "View", commands: [{ label: "Zoom −", onClick: () => props.onZoom(-0.25) }, { label: "Zoom +", onClick: () => props.onZoom(0.25) }, ...[0.5, 1, 1.5, 2, 4, 8].map((zoom) => ({ label: `Zoom ${zoom * 100}%`, onClick: () => props.onSetZoom(zoom) })), { label: "Fit Selection", onClick: props.onFitSelection }, { label: "Fit All", onClick: props.onFitAll }, { label: "Grid", onClick: props.onToggleGrid }, { label: "Snap", onClick: props.onToggleSnap }, { label: "Ruler", onClick: props.onToggleRuler }, { label: "MiniMap", onClick: props.onToggleMinimap }] },
+    { label: "Document", commands: [{ label: "Document Properties", onClick: props.onProperties }, { label: "Problems", onClick: props.onShowProblems }, { label: "SVG / PNG / PDF", onClick: props.onExport }] },
+    { label: "Timeline", commands: [{ label: "Timeline Editor", onClick: props.onOpenTimeline }] },
+  ];
   const menu = open ? createPortal(<div ref={menuRef} onKeyDown={onMenuKeyDown} id="home-overflow-menu" className="home-overflow-menu" role="menu" aria-label="More Home Commands" style={{ left: `${position?.left ?? 0}px`, top: `${position?.top ?? 0}px`, height: position ? `${position.height}px` : "auto", maxHeight: `${position?.maxHeight ?? 120}px`, visibility: position ? "visible" : "hidden" }}>
-    <strong>File</strong><button type="button" role="menuitem" onClick={action(props.onNew)}>New</button><button type="button" role="menuitem" onClick={action(props.onOpen)}>Open</button><button type="button" role="menuitem" onClick={action(props.onSave)}>Save</button><button type="button" role="menuitem" onClick={action(props.onSaveAs)}>Save As</button><button type="button" role="menuitem" onClick={action(props.onRecent)}>Recent</button>
-    <strong>History</strong><button type="button" role="menuitem" onClick={action(props.onUndo)} disabled={!props.history.canUndo}>Undo</button><button type="button" role="menuitem" onClick={action(props.onRedo)} disabled={!props.history.canRedo}>Redo</button>
-    <strong>Clipboard</strong><button type="button" role="menuitem" onClick={action(props.onCopy)} disabled={!props.hasSelectedClipboard}>Copy</button><button type="button" role="menuitem" onClick={action(props.onCut)} disabled={!props.hasSelectedClipboard}>Cut</button><button type="button" role="menuitem" onClick={action(props.onPaste)} disabled={!props.clipboardAvailable}>Paste</button><button type="button" role="menuitem" onClick={action(props.onDuplicate)} disabled={!props.hasSelectedClipboard}>Duplicate</button>
-    <strong>Edit / Selection</strong><button type="button" role="menuitem" onClick={action(props.onDelete)} disabled={!props.hasDeletableSelection}>Delete</button><button type="button" role="menuitem" onClick={action(props.onRename)} disabled={!props.canRenameSelection}>Rename</button><button type="button" role="menuitem" onClick={action(props.onClearSelection)}>Clear Selection</button><button type="button" role="menuitem" onClick={action(props.onSelectAll)} disabled={!props.hasSelectableSignals}>Select All Signals</button>
-    <strong>Visibility / Arrange</strong><button type="button" role="menuitem" onClick={action(() => props.onVisibility(true))} disabled={!props.canShowSelection}>Show</button><button type="button" role="menuitem" onClick={action(() => props.onVisibility(false))} disabled={!props.canHideSelection}>Hide</button><button type="button" role="menuitem" onClick={action(props.onMoveUp)} disabled={!props.canMoveUp}>Move Up</button><button type="button" role="menuitem" onClick={action(props.onMoveDown)} disabled={!props.canMoveDown}>Move Down</button>
-    <strong>View</strong><button type="button" role="menuitem" onClick={action(() => props.onZoom(-0.25))}>Zoom −</button><button type="button" role="menuitem" onClick={action(() => props.onZoom(0.25))}>Zoom +</button><button type="button" role="menuitem" onClick={action(() => props.onSetZoom(0.5))}>Zoom 50%</button><button type="button" role="menuitem" onClick={action(() => props.onSetZoom(1))}>Zoom 100%</button><button type="button" role="menuitem" onClick={action(() => props.onSetZoom(1.5))}>Zoom 150%</button><button type="button" role="menuitem" onClick={action(() => props.onSetZoom(2))}>Zoom 200%</button><button type="button" role="menuitem" onClick={action(() => props.onSetZoom(4))}>Zoom 400%</button><button type="button" role="menuitem" onClick={action(() => props.onSetZoom(8))}>Zoom 800%</button><button type="button" role="menuitem" onClick={action(props.onFitSelection)}>Fit Selection</button><button type="button" role="menuitem" onClick={action(props.onFitAll)}>Fit All</button><button type="button" role="menuitem" onClick={action(props.onToggleGrid)}>Grid</button><button type="button" role="menuitem" onClick={action(props.onToggleSnap)}>Snap</button><button type="button" role="menuitem" onClick={action(props.onToggleRuler)}>Ruler</button><button type="button" role="menuitem" onClick={action(props.onToggleMinimap)}>MiniMap</button>
-    <strong>Document</strong><button type="button" role="menuitem" onClick={action(props.onProperties)}>Document Properties</button><button type="button" role="menuitem" onClick={action(props.onShowProblems)}>Problems</button><button type="button" role="menuitem" onClick={action(props.onExport)}>SVG / PNG / PDF</button><strong>Timeline</strong><button type="button" role="menuitem" onClick={action(props.onOpenTimeline)}>Timeline Editor</button>
+    {sections.map((section) => <div key={section.label} className="home-overflow-section"><strong>{section.label}</strong>{section.commands.map((command) => <button key={command.label} type="button" role="menuitem" onClick={action(command.onClick)} disabled={command.disabled}>{command.label}</button>)}</div>)}
   </div>, window.document.body) : null;
 
   return <><button ref={triggerRef} type="button" className="ds-ribbon-button home-overflow-trigger" aria-expanded={open} aria-controls={open ? "home-overflow-menu" : undefined} onClick={() => setOpen((value) => !value)}><DsIconBox><RibbonIcon name="i-more" /></DsIconBox><span className="ds-ribbon-label">More</span></button>{menu}</>;
