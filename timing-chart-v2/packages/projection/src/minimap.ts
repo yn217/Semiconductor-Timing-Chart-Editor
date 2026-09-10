@@ -139,9 +139,16 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
   }
   if (changedLanes.size === 0) return previous;
   const colorByGroupId = new Map((document.transactionGroups ?? []).map((group) => [group.id, group.color ?? DEFAULT_TRANSACTION_COLOR]));
+  const transactionsByLane = new Map<string, Transaction[]>();
+  for (const transaction of document.transactions) {
+    const key = laneKey(transaction);
+    const lane = transactionsByLane.get(key);
+    if (lane) lane.push(transaction);
+    else transactionsByLane.set(key, [transaction]);
+  }
   const buildRow = (key: string, rowIndex: number) => {
     const [, groupId, laneId] = key.match(/^([^:]+):(.*)$/) ?? [];
-    const transactions = document.transactions.filter((transaction) => laneKey(transaction) === key);
+    const transactions = transactionsByLane.get(key) ?? [];
     if (transactions.length === 0) return undefined;
     const groupColor = groupId === "ungrouped" ? undefined : colorByGroupId.get(groupId as NonNullable<CanonicalDocument["transactionGroups"]>[number]["id"]);
     return { key, rowIndex, segments: transactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR })).sort((left, right) => left.start - right.start) };
