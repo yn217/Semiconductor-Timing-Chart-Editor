@@ -453,7 +453,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       <div className="ribbon-toggles"><button type="button" onClick={onRecent} title="Open the most recently saved document">Recent</button><button type="button" onClick={onProperties} title={`${document.document.title} · ${document.signals.length} signals`}>Properties</button><button type="button" onClick={onExport}>Export</button></div><b>File</b>
     </div>}
       {tab === "Home" && <>
-      {homeGroups.map((group) => <RibbonGroup key={group.id} spec={group} />)}
+      {homeGroups.map((group) => <RibbonGroup key={group.id} spec={group} available={density === "compact" ? "small" : "large"} />)}
       <div className="ribbon-major-group" data-major-group="Options" data-ribbon-home aria-label="Options commands">
         <DsRibbonGroup ariaLabel="Options" className="home-options-group" label="Options">
           <HomeOverflow history={history} hasSelectableSignals={hasSelectableSignals} hasSelectedClipboard={hasSelectedClipboard} clipboardAvailable={clipboardAvailable} hasDeletableSelection={hasDeletableSelection} canRenameSelection={canRenameSelection} canMoveUp={canMoveUp} canMoveDown={canMoveDown} canShowSelection={canShowSelection} canHideSelection={canHideSelection} onNew={onNew} onOpen={onOpen} onSave={onSave} onSaveAs={onSaveAs} onRecent={onRecent} onUndo={onUndo} onRedo={onRedo} onCopy={onCopy} onCut={onCut} onPaste={onPaste} onDuplicate={onDuplicate} onDelete={onDelete} onRename={onRename} onClearSelection={onClearSelection} onSelectAll={onSelectAll} onVisibility={onVisibility} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onZoom={onZoom} onSetZoom={onSetZoom} onFitSelection={onFitSelection} onFitAll={onFitAll} onToggleGrid={onToggleGrid} onToggleSnap={onToggleSnap} onToggleRuler={onToggleRuler} onToggleMinimap={onToggleMinimap} onProperties={onProperties} onShowProblems={onShowProblems} onExport={onExport} onOpenTimeline={onOpenTimeline} />
@@ -540,7 +540,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         </DsRibbonGroup>
       </div>
     </>}
-    {tab === "View" && viewGroups.map((group) => <RibbonGroup key={group.id} spec={group} />)}
+    {tab === "View" && viewGroups.map((group) => <RibbonGroup key={group.id} spec={group} available={density === "compact" ? "small" : "large"} />)}
     {tab === "Review" && <div className="ribbon-group review-group"><ReviewWorkflow diagnostics={diagnostics} document={document} selectedSignalId={selectedSignalId} selectedGroupId={selectedGroupId} onNavigate={onNavigateProblem} onShowProblems={onShowProblems} onRefreshChecks={onRefreshChecks} /><output data-testid="review-problems-count">{problemsCount}</output><b>Review</b></div>}
     {tab === "AI" && <>
       {/* #395 PR1: the full query/preview/apply surface (AIOperationPanel)
