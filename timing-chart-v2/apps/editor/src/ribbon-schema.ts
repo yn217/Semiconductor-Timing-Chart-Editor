@@ -51,6 +51,20 @@ export type RibbonItemSpec =
       readonly presentation?: RibbonPresentation;
     }
   | {
+      readonly kind: "split";
+      readonly id: string;
+      readonly icon: string;
+      readonly label: string;
+      readonly menuAriaLabel: string;
+      readonly onClick: () => void;
+      readonly onMenuClick: () => void;
+      readonly ariaLabel?: string;
+      readonly testId?: string;
+      readonly disabled?: boolean;
+      readonly title?: string;
+      readonly presentation?: RibbonPresentation;
+    }
+  | {
       readonly kind: "custom";
       readonly id: string;
       readonly render: () => ReactNode;

@@ -1,5 +1,5 @@
 import type { RibbonGroupSpec, RibbonItemSpec } from "./ribbon-schema.js";
-import { DsRibbonButton, DsRibbonGroup, DsRibbonToggle } from "./design-system.js";
+import { DsRibbonButton, DsRibbonGroup, DsRibbonSplitButton, DsRibbonToggle } from "./design-system.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 
 /** Renders one ribbon-schema group as a major-group + Ds* group, the same
@@ -18,6 +18,7 @@ export function RibbonGroup({ spec }: { readonly spec: RibbonGroupSpec }) {
 function RibbonSchemaItem({ item }: { readonly item: RibbonItemSpec }) {
   if (item.kind === "custom") return item.render();
   if (item.kind === "toggle") return <DsRibbonToggle checked={item.checked} dataTestId={item.testId} label={item.label} onChange={item.onChange} {...(item.presentation === undefined ? {} : { size: item.presentation.preferredSize })} />;
+  if (item.kind === "split") return <DsRibbonSplitButton ariaLabel={item.ariaLabel ?? item.label} dataTestId={item.testId} disabled={item.disabled} icon={<RibbonIcon name={item.icon} />} menuAriaLabel={item.menuAriaLabel} onClick={item.onClick} onMenuClick={item.onMenuClick} {...(item.presentation === undefined ? {} : { size: item.presentation.preferredSize })} title={item.title}>{item.label}</DsRibbonSplitButton>;
   const presentationClass = item.presentation ? ` ribbon-presentation-${item.presentation.preferredSize}` : "";
   return <DsRibbonButton ariaLabel={item.ariaLabel ?? item.label} className={`${item.size === "wide" ? "ds-ribbon-button--wide" : ""}${presentationClass}`} dataTestId={item.testId} disabled={item.disabled} icon={<RibbonIcon name={item.icon} />} onClick={item.onClick} {...(item.presentation === undefined ? {} : { size: item.presentation.preferredSize })} title={item.title} v1Label={item.v1Label}>{item.label}</DsRibbonButton>;
 }
