@@ -8,7 +8,7 @@ import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/histo
 import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
-import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type ResetSemantics, type SemanticAnchor, type Signal, type SignalGroup, type SignalGroupStyle, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionGroup, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
+import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type ResetSemantics, type SemanticAnchor, type Signal, type SignalGroup, type SignalGroupStyle, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionGroup, type TransactionId, type TransactionPhase, type ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ViewMetricsOwner } from "../runtime/view-metrics.js";
 import { buildViewportWindow } from "../runtime/viewport-window.js";
@@ -81,6 +81,13 @@ import { annotationFields, projectAnnotationOverlays } from "../runtime/annotati
 import { createTimelineViewportRuntime } from "../runtime/timeline-viewport-runtime.js";
 import { SIGNAL_TYPE_OPTIONS, signalTypeLabel as sharedSignalTypeLabel } from "../runtime/signal-type-registry.js";
 
+
+function phasesEqual(left: readonly TransactionPhase[], right: readonly TransactionPhase[]): boolean {
+  return left.length === right.length && left.every((phase, index) => {
+    const other = right[index];
+    return other !== undefined && phase.start === other.start && phase.end === other.end && phase.name === other.name;
+  });
+}
 
 const spacerId = (value: string) => value as SpacerId;
 
@@ -268,7 +275,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
         // wrong. Surface it the exact same way the Phases validation just
         // above already does -- one shared status output, not a second
         // error-reporting mechanism.
-        if (!result.ok && result.reason !== "no-op") setTransactionStatus(result.problems[0]?.message ?? "Could not apply Transaction changes."); }} applyDisabled={transactionName === transaction.name && transactionStart === transaction.start && transactionEnd === transaction.end && transactionLane === (transaction.laneId ?? "lane_0") && transactionGroupId === (transaction.groupId ?? "") && transactionColor === (transaction.color ?? "") && transactionDescription === (transaction.description ?? "") && JSON.stringify(phaseRows) === JSON.stringify(transaction.phases ?? [])} applyTestId="apply-inspector-transaction" />
+        if (!result.ok && result.reason !== "no-op") setTransactionStatus(result.problems[0]?.message ?? "Could not apply Transaction changes."); }} applyDisabled={transactionName === transaction.name && transactionStart === transaction.start && transactionEnd === transaction.end && transactionLane === (transaction.laneId ?? "lane_0") && transactionGroupId === (transaction.groupId ?? "") && transactionColor === (transaction.color ?? "") && transactionDescription === (transaction.description ?? "") && phasesEqual(phaseRows, transaction.phases ?? [])} applyTestId="apply-inspector-transaction" />
     </>}
     <MiniMap document={document} viewport={viewport} mode={minimapMode} />
   </aside>;
