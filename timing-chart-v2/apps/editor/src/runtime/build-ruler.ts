@@ -35,7 +35,14 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     row.dataset.depth = String(depth);
     row.setAttribute("role", "group");
     for (const group of document.timeGroups.filter((item) => hierarchy.depthById.get(item.id) === depth)) {
-      const startDisplay = mapping.sourceToDisplay[group.start];
+      // A collapsed group removes its interior source cycles from the
+      // display mapping. Keep the Outline item visible by anchoring its
+      // start to the preceding visible boundary when the exact start is
+      // folded away, just as the Gap marker does below.
+      const startDisplay = mapping.sourceToDisplay[group.start]
+        ?? (group.start > 0 ? mapping.sourceToDisplay[group.start - 1] : undefined)
+        ?? mapping.sourceToDisplay[group.end]
+        ?? 0;
       const endDisplay = mapping.sourceToDisplay[group.end] ?? mapping.displayCycleCount;
       const startPoint = startDisplay === undefined ? undefined : geometry.find({ signalId: axisOwnerSignalId, cycle: startDisplay, point: "cycle-start" })?.point;
       const endPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: endDisplay, point: "cycle-start" })?.point;

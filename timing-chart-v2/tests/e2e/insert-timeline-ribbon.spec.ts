@@ -170,6 +170,7 @@ test("Time Group outline rows expose mapped spans and shared collapse controls a
   await expect(item.getByRole("button", { name: "Collapse Group 2-4", exact: true })).toBeVisible();
   await item.getByRole("button", { name: "Collapse Group 2-4", exact: true }).click();
   await expect(timeline.getByRole("button", { name: "Expand Group 2-4", exact: true })).toBeVisible();
+  await expect(ruler.locator("[data-outline-time-group-id]").getByRole("button", { name: "Expand Group 2-4", exact: true })).toBeVisible();
 });
 
 test("Timeline workflow groups keep explicit cycle semantics and aligned controls", async ({ page }) => {
