@@ -231,7 +231,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
     }
     laneArrayCache.current = laneTransactionsByKey;
     return { laneTransactionsByKey, transactionCountByGroup };
-  }, [document]);
+  }, [document.transactions]);
   // Transaction Mode GUI realignment: this used to also require "at least
   // one Transaction already references a Group" -- a freshly-created,
   // still-empty Group (the Tree's own "+" -> Add Transaction Group button)
@@ -259,7 +259,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
         if (ungroupedLanes.length > 0) result.push({ groupId: undefined, label: "Ungrouped", color: undefined, lanes: ungroupedLanes });
         return result;
       })()
-    : [{ groupId: undefined, label: undefined, color: undefined, lanes: [...new Set(["lane_0", ...document.transactions.map((transaction) => transaction.laneId ?? "lane_0")])].sort() }], [document, groups, hasGroups]);
+    : [{ groupId: undefined, label: undefined, color: undefined, lanes: [...new Set(["lane_0", ...document.transactions.map((transaction) => transaction.laneId ?? "lane_0")])].sort() }], [document.transactions, groups, hasGroups]);
 
   const { groupHeaders, laneBands, totalHeight } = useMemo(() => {
     const groupHeaders: GroupHeaderBand[] = [];
