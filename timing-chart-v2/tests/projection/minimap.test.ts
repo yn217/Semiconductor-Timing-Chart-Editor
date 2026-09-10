@@ -81,6 +81,29 @@ describe("MiniMap overview derivation", () => {
     expect(updated.rows).toEqual([]);
   });
 
+  it("removes a deleted segment while preserving the remaining Transaction in its lane", () => {
+    const source = canonicalFixture();
+    const transactions = [
+      { id: "txn_a", name: "A", start: 1, end: 4, laneId: "lane_0", linkedSignals: [] },
+      { id: "txn_b", name: "B", start: 5, end: 8, laneId: "lane_0", linkedSignals: [] },
+    ];
+    const before = { ...source, transactions };
+    const previous = buildMiniMapTransactionOverview(before);
+    const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, { ...before, transactions: [transactions[1]!] });
+    expect(updated.rows).toHaveLength(1);
+    expect(updated.rows[0]?.segments).toEqual([{ start: 5, end: 8, color: "#8895a7" }]);
+  });
+
+  it("adds a created Transaction to an existing lane without duplicating the row", () => {
+    const source = canonicalFixture();
+    const before = { ...source, transactions: [{ id: "txn_a", name: "A", start: 1, end: 4, laneId: "lane_0", linkedSignals: [] }] };
+    const previous = buildMiniMapTransactionOverview(before);
+    const next = { ...before, transactions: [...before.transactions, { id: "txn_b", name: "B", start: 5, end: 8, laneId: "lane_0", linkedSignals: [] }] };
+    const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next);
+    expect(updated.rows).toHaveLength(1);
+    expect(updated.rows[0]?.segments).toEqual([{ start: 1, end: 4, color: "#8895a7" }, { start: 5, end: 8, color: "#8895a7" }]);
+  });
+
   it("rebuilds when timeline length or group presentation changes", () => {
     const source = canonicalFixture();
     const group = { id: "group_a", name: "A", order: 0, color: "#123456", transactionIds: [] };
