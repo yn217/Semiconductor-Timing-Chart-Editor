@@ -4,6 +4,7 @@ import type { Bookmark, BookmarkId, CanonicalDocument } from "@timing-chart-v2/s
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { nextEntityId } from "./entity-id.js";
 import { findAdjacentBookmark } from "./runtime/bookmark-navigation.js";
+import { DraftStatus } from "./draft-status.js";
 
 /** #388: Bookmark's own Bottom Panel editor -- moves persistent Bookmark
  * data management out of the Ribbon (which must stay a fixed command
@@ -61,7 +62,7 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
             <label>Comment<input aria-label="Bottom Bookmark comment" value={editComment} onChange={(event) => setEditComment(event.target.value)} /></label>
           </form>
           <div className="bottom-sticky-actions">
-            {hasChanges && <output className="draft-unapplied-indicator" data-testid="bottom-bookmark-unapplied">● Unapplied changes</output>}
+            {hasChanges && <DraftStatus testId="bottom-bookmark-unapplied" />}
             <span className="bottom-sticky-buttons">
               <button type="button" data-testid="cancel-bottom-bookmark" onClick={onCancel}>Cancel</button>
               <button type="submit" form="bookmark-properties-form" data-testid="apply-bottom-bookmark" disabled={!hasChanges}>Apply Changes</button>

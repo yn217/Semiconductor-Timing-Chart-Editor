@@ -9,6 +9,7 @@ import { FontStyleToolbar } from "./font-style-toolbar.js";
 import { StrokeFillToolbar } from "./stroke-fill-toolbar.js";
 import { annotationCapabilityDisabledReason } from "./annotation-capability-matrix.js";
 import { annotationPropertiesBase } from "./annotation-style-command.js";
+import { DraftStatus } from "./draft-status.js";
 
 type AnchorFieldName = "anchor" | "start" | "end" | "from" | "to";
 
@@ -293,7 +294,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
         left, Apply far right) -- sticky regardless of how tall the List/
         Edit panels grow or how the Bottom Editor is resized. */}
     <div className="bottom-sticky-actions">
-      {hasChanges && <output className="draft-unapplied-indicator" data-testid="annotation-properties-unapplied">● Unapplied changes</output>}
+      {hasChanges && <DraftStatus testId="annotation-properties-unapplied" />}
       <span className="bottom-sticky-buttons">
         <button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button>
         <button type="submit" form="annotation-properties-form" data-testid="apply-annotation-properties" disabled={!hasChanges}>Apply Annotation</button>
