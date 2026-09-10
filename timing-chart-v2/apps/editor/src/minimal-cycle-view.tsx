@@ -433,11 +433,11 @@ export function MinimalCycleView() {
     if (!root) return;
     const onPointerDownCapture = (event: PointerEvent) => {
       const target = event.target as HTMLElement | null;
-      setActivePaneRef.current(target?.closest(".transaction-lanes") ? "transaction" : "signal");
+      setActivePaneRef.current(target?.closest(".transaction-lanes, .split-transaction-pane") ? "transaction" : "signal");
     };
     const onFocusIn = (event: FocusEvent) => {
       const target = event.target as HTMLElement | null;
-      setActivePaneRef.current(target?.closest(".transaction-lanes") ? "transaction" : "signal");
+      setActivePaneRef.current(target?.closest(".transaction-lanes, .split-transaction-pane") ? "transaction" : "signal");
     };
     root.addEventListener("pointerdown", onPointerDownCapture, { capture: true });
     root.addEventListener("focusin", onFocusIn);
