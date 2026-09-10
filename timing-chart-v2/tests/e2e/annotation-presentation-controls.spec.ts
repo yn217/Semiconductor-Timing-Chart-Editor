@@ -52,6 +52,7 @@ test("Range Stroke/Fill controls have real canonical + rendered + exported effec
   await fillColor.fill("#00aa00");
   await fillOpacity.fill("0.5");
   await fillOpacity.blur();
+  await editor.getByTestId("apply-annotation-properties").click();
 
   const body = range.locator("[data-role='annotation-body']");
   await expect(body).toHaveCSS("border-width", "6px");

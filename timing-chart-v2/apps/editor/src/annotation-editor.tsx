@@ -93,6 +93,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
   // making several style edits in a row, since Apply Annotation Undo/Redo/
   // Bold/etc. all commit a revision).
   const [styleOpen, setStyleOpen] = useState(true);
+  const [styleDraft, setStyleDraft] = useState<JsonObject>(annotation.style ?? {});
   const [previewRevision, setPreviewRevision] = useState(0);
   const [importStatus, setImportStatus] = useState("Import annotations JSON");
   const fileInput = useRef<HTMLInputElement>(null);
@@ -123,10 +124,10 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
       setImportStatus(error instanceof Error ? error.message : "Invalid annotations JSON");
     }
   };
-  // Font toggles apply immediately against the annotation's live (saved)
-  // properties, not the unsaved draft fields below -- clicking Bold should
-  // never accidentally commit an in-progress label/color edit.
-  const applyFontStyle = (style: JsonObject) => commands.updateAnnotationStyle({ annotationId: annotation.id, ...annotationPropertiesBase(annotation), style });
+  // Font/stroke/fill controls are part of the same Annotation draft as the
+  // semantic fields above. Keeping style local prevents a style click from
+  // committing (and splitting history for) an in-progress label/color edit.
+  const applyFontStyle = (style: JsonObject) => setStyleDraft(style);
   // Preview reflects the CURRENT draft Label/Color/Opacity on the real
   // renderer-owned overlay via a pure DOM-only path (see
   // refreshAnnotationPreview in runtime/presentation-preview.ts) --
@@ -158,8 +159,11 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
     || visible !== annotation.visible
     || (lineControlsEnabled && (lineType !== (annotation.lineType ?? "straight") || arrowhead !== (annotation.arrowhead ?? "end")))
     || (isOpacityType && opacity !== (annotation.opacity ?? defaultOpacity))
-    || (annotation.type === "ghostTrace" && traceOffsetCycles !== (annotation.traceOffsetCycles ?? 0));
-  const applyAnnotationProperties = () => commands.updateAnnotationProperties({ annotationId: annotation.id, ...annotationPropertiesBase(annotation), label, visible, color, ...(lineControlsEnabled ? { lineType, arrowhead } : {}), ...(isOpacityType ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}) });
+    || (annotation.type === "ghostTrace" && traceOffsetCycles !== (annotation.traceOffsetCycles ?? 0))
+    || JSON.stringify(styleDraft) !== JSON.stringify(annotation.style ?? {});
+  const applyAnnotationProperties = () => {
+    commands.updateAnnotationProperties({ annotationId: annotation.id, ...annotationPropertiesBase(annotation), label, visible, color, ...(lineControlsEnabled ? { lineType, arrowhead } : {}), ...(isOpacityType ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}), style: styleDraft });
+  };
   // Quick Presets (Section 10): draft-only field shortcuts, never a second
   // Canonical owner -- clicking one only calls the same setLabel/setColor/
   // etc draft setters the fields below already use, so Apply Annotation
@@ -265,8 +269,8 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
               disclosure earlier in this Epic. */}
           <details className="annotation-style-section" open={styleOpen} onToggle={(event) => setStyleOpen(event.currentTarget.open)}>
             <summary>Style (Font, Stroke, Fill)</summary>
-            <FontStyleToolbar idPrefix="annotation-font" style={annotation.style} onChange={applyFontStyle} />
-            <StrokeFillToolbar idPrefix="annotation-stroke-fill" style={annotation.style} onChange={applyFontStyle} strokeDisabled={!!annotationCapabilityDisabledReason(annotation.type, "stroke")} strokeReason={annotationCapabilityDisabledReason(annotation.type, "stroke")} fillDisabled={!!annotationCapabilityDisabledReason(annotation.type, "fill")} fillReason={annotationCapabilityDisabledReason(annotation.type, "fill")} />
+            <FontStyleToolbar idPrefix="annotation-font" style={styleDraft} onChange={applyFontStyle} />
+            <StrokeFillToolbar idPrefix="annotation-stroke-fill" style={styleDraft} onChange={applyFontStyle} strokeDisabled={!!annotationCapabilityDisabledReason(annotation.type, "stroke")} strokeReason={annotationCapabilityDisabledReason(annotation.type, "stroke")} fillDisabled={!!annotationCapabilityDisabledReason(annotation.type, "fill")} fillReason={annotationCapabilityDisabledReason(annotation.type, "fill")} />
           </details>
           {/* Section 1: Visible last -- a state toggle, not the Annotation's
               identity or geometry. */}
