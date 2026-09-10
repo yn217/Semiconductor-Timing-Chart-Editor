@@ -40,6 +40,7 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
     setError(""); setStatus(""); setAdvancedOpen(false);
   }, [signal.id]);
   const effectiveWidth = widthMode === "duty" ? Math.min(period - 1, Math.max(1, Math.round(duty * period))) : width;
+  const resetDraft = () => { setStart(0); setInitial(0); setActive(1); setWidthMode("width"); setWidth(1); setDuty(0.5); setPeriod(4); setRepeatMode("finite"); setRepeatCount(1); setPhase(0); setSuppressedPeriods(""); setError(""); setStatus(""); setAdvancedOpen(false); };
   // #402: Draft->Apply -- Generate must stay disabled once the computed
   // candidate waveform is byte-for-byte identical to the Signal's current
   // `values`, so re-submitting an unchanged Draft can't manufacture an
@@ -121,7 +122,7 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
             Inspector's Signal Properties Draft, so its wording says which
             one it is instead of a bare, ambiguous "Unapplied changes". */}
         {hasChanges && <DraftStatus testId="signal-generator-unapplied" label="Generator: unapplied changes" />}
-        <button type="submit" data-testid="apply-signal-generator" disabled={!hasChanges}>Generate</button>
+        <button type="button" data-testid="cancel-signal-generator" onClick={resetDraft} disabled={!hasChanges}>Cancel</button><button type="submit" data-testid="apply-signal-generator" disabled={!hasChanges}>Generate</button>
       </div>
     </form>
   </div>;
