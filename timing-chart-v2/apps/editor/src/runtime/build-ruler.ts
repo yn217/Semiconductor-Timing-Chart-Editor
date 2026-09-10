@@ -34,6 +34,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     row.className = "time-outline-row";
     row.dataset.depth = String(depth);
     row.setAttribute("role", "group");
+    row.setAttribute("aria-label", `Outline level ${depth + 1}`);
     const levelButton = element.ownerDocument.createElement("button");
     levelButton.type = "button";
     levelButton.className = "time-outline-level";
