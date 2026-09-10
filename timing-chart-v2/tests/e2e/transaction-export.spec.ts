@@ -76,13 +76,17 @@ test("shares source-time mapping, Snap Service, zoom and scroll in Split View", 
   expect(Math.abs((txBox!.x - transactionPaneBox!.x) - (tickBox!.x - signalPaneBox!.x))).toBeLessThan(3);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click();
-  const zoomTx = await transaction.boundingBox(); const zoomTick = await rulerCycle2.boundingBox();
-  const zoomTransactionPaneBox = await transactionPane.boundingBox(); const zoomSignalPaneBox = await signalPane.boundingBox();
-  expect(Math.abs((zoomTx!.x - zoomTransactionPaneBox!.x) - (zoomTick!.x - zoomSignalPaneBox!.x))).toBeLessThan(3);
+  await expect.poll(async () => {
+    const zoomTx = await transaction.boundingBox(); const zoomTick = await rulerCycle2.boundingBox();
+    const zoomTransactionPaneBox = await transactionPane.boundingBox(); const zoomSignalPaneBox = await signalPane.boundingBox();
+    return Math.abs((zoomTx!.x - zoomTransactionPaneBox!.x) - (zoomTick!.x - zoomSignalPaneBox!.x));
+  }).toBeLessThan(3);
   await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollLeft = 180; element.dispatchEvent(new Event("scroll")); });
-  const scrollTx = await transaction.boundingBox(); const scrollTick = await rulerCycle2.boundingBox();
-  const scrollTransactionPaneBox = await transactionPane.boundingBox(); const scrollSignalPaneBox = await signalPane.boundingBox();
-  expect(Math.abs((scrollTx!.x - scrollTransactionPaneBox!.x) - (scrollTick!.x - scrollSignalPaneBox!.x))).toBeLessThan(3);
+  await expect.poll(async () => {
+    const scrollTx = await transaction.boundingBox(); const scrollTick = await rulerCycle2.boundingBox();
+    const scrollTransactionPaneBox = await transactionPane.boundingBox(); const scrollSignalPaneBox = await signalPane.boundingBox();
+    return Math.abs((scrollTx!.x - scrollTransactionPaneBox!.x) - (scrollTick!.x - scrollSignalPaneBox!.x));
+  }).toBeLessThan(3);
   const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(after.waveDromRenders).toBe(before.waveDromRenders);
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
@@ -274,6 +278,7 @@ test("moves and resizes Transaction edges through the shared rendered-geometry S
   await ready(page);
   await createTransaction(page, "Snapped", 2, 6);
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.getByTestId("transaction-lanes")).toBeVisible();
   const bar = page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first();
   const body = bar.locator("span").first();
   const bodyBox = await body.boundingBox();
