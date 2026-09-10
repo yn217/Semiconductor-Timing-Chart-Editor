@@ -42,6 +42,11 @@ export function EditorWorkspaceView({
       ["a", cursor.a, "Cursor A"],
       ["b", cursor.b, "Cursor B"],
     ] as const;
+    const rulerElements = () => [ruler.current, rulerLower.current].filter((element): element is HTMLDivElement => element !== null);
+    const findTick = (sourceRuler: HTMLDivElement, cycle: number) => {
+      const rulers = [sourceRuler, ...rulerElements().filter((element) => element !== sourceRuler)];
+      return rulers.flatMap((element) => [...element.querySelectorAll<HTMLElement>("[data-cycle]")]).find((candidate) => Number(candidate.dataset.sourceCycle ?? candidate.dataset.cycle) === cycle);
+    };
     const update = () => {
       for (const [viewportElement, rulerElement] of viewports) {
         if (!viewportElement || !rulerElement) continue;
@@ -80,8 +85,7 @@ export function EditorWorkspaceView({
               window.addEventListener("pointerup", up, { once: true });
             });
           }
-          const tick = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")]
-            .find((candidate) => Number(candidate.dataset.sourceCycle ?? candidate.dataset.cycle) === cycle);
+          const tick = findTick(rulerElement, cycle);
           if (!tick) { line.hidden = true; continue; }
           const tickRect = tick.getBoundingClientRect();
           line.hidden = false;
@@ -92,6 +96,11 @@ export function EditorWorkspaceView({
     };
     update();
     const scrollTargets = [viewport.current, viewportLower.current].filter((item): item is HTMLDivElement => item !== null);
+    const rulerObservers = [ruler.current, rulerLower.current].filter((item): item is HTMLDivElement => item !== null).map((target) => {
+      const observer = new MutationObserver(update);
+      observer.observe(target, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-cycle", "data-source-cycle"] });
+      return observer;
+    });
     const dragHandlers: Array<[HTMLDivElement, (event: PointerEvent) => void]> = [];
     for (const [viewportElement, rulerElement] of viewports) {
       if (!viewportElement || !rulerElement || !onSetCursorAtCycle) continue;
@@ -118,6 +127,7 @@ export function EditorWorkspaceView({
     window.addEventListener("resize", update);
     return () => {
       for (const target of scrollTargets) target.removeEventListener("scroll", update);
+      for (const observer of rulerObservers) observer.disconnect();
       for (const [target, handler] of dragHandlers) target.removeEventListener("pointerdown", handler, true);
       window.removeEventListener("resize", update);
     };
