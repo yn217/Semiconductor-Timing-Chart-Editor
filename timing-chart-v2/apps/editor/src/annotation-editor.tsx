@@ -175,9 +175,11 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
     || (lineControlsEnabled && (lineType !== (annotation.lineType ?? "straight") || arrowhead !== (annotation.arrowhead ?? "end")))
     || (isOpacityType && opacity !== (annotation.opacity ?? defaultOpacity))
     || (annotation.type === "ghostTrace" && traceOffsetCycles !== (annotation.traceOffsetCycles ?? 0))
+    || labelX !== (annotation.labelOffset?.x ?? 0)
+    || labelY !== (annotation.labelOffset?.y ?? -14)
     || JSON.stringify(styleDraft) !== JSON.stringify(annotation.style ?? {});
   const applyAnnotationProperties = () => {
-    commands.updateAnnotationProperties({ annotationId: annotation.id, ...annotationPropertiesBase(annotation), label, visible, color, ...(lineControlsEnabled ? { lineType, arrowhead } : {}), ...(isOpacityType ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}), style: styleDraft });
+    commands.updateAnnotationProperties({ annotationId: annotation.id, ...annotationPropertiesBase(annotation), label, visible, color, ...(lineControlsEnabled ? { lineType, arrowhead } : {}), ...(isOpacityType ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}), labelOffset: { x: labelX, y: labelY }, style: styleDraft });
   };
   // Quick Presets (Section 10): draft-only field shortcuts, never a second
   // Canonical owner -- clicking one only calls the same setLabel/setColor/
@@ -291,12 +293,12 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
               identity or geometry. */}
           <label className="check-label"><input aria-label="Annotation visible" type="checkbox" checked={visible} onChange={(event) => setVisible(event.target.checked)} />Visible</label>
         </form>
-        <form className="annotation-properties annotation-label-offset-row" onSubmit={(event) => { event.preventDefault(); commands.updateAnnotationLabelOffset(annotation.id, { x: labelX, y: labelY }); }}>
+        <form className="annotation-properties annotation-label-offset-row" onSubmit={(event) => { event.preventDefault(); if (hasChanges) applyAnnotationProperties(); }}>
           <strong>Label offset</strong>
           <label>X<input aria-label="Annotation label X" type="number" value={labelX} onChange={(event) => setLabelX(Number(event.target.value))} /></label>
           <label>Y<input aria-label="Annotation label Y" type="number" value={labelY} onChange={(event) => setLabelY(Number(event.target.value))} /></label>
-          <button type="submit">Move label</button>
-          <button type="button" onClick={() => commands.resetAnnotationOffsets(annotation.id)}>Reset offsets</button>
+          <button type="submit" disabled={!hasChanges}>Apply Annotation</button>
+          <button type="button" onClick={() => { setLabelX(0); setLabelY(-14); }} disabled={labelX === 0 && labelY === -14}>Reset draft offsets</button>
           <span className="annotation-hint">Arrow keys nudge 1 px; Shift+Arrow nudges 10 px. Drag endpoints to snap.</span>
         </form>
       </section>
