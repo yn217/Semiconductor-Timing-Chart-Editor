@@ -279,16 +279,20 @@ test("moves and resizes Transaction edges through the shared rendered-geometry S
   await createTransaction(page, "Snapped", 2, 6);
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(page.getByTestId("transaction-lanes")).toBeVisible();
-  const bar = page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first();
+  const lanes = page.getByTestId("transaction-lanes");
+  const mountSerial = await lanes.getAttribute("data-mount-serial");
+  const bar = lanes.locator("[data-transaction-id]").first();
   const body = bar.locator("span").first();
   const bodyBox = await body.boundingBox();
   const cycle4 = await page.getByTestId("cycle-ruler").locator("[data-cycle='4']").boundingBox();
   await page.mouse.move(bodyBox!.x + bodyBox!.width / 2, bodyBox!.y + bodyBox!.height / 2); await page.mouse.down(); await page.mouse.move(cycle4!.x + 1, cycle4!.y + 10); await page.mouse.up();
   await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("4");
+  await expect(lanes).toHaveAttribute("data-mount-serial", mountSerial!);
   const endHandle = bar.locator("[data-edge='end']");
   const handleBox = await endHandle.boundingBox(); const cycle10 = await page.getByTestId("cycle-ruler").locator("[data-cycle='10']").boundingBox();
   await page.mouse.move(handleBox!.x + 2, handleBox!.y + 8); await page.mouse.down(); await page.mouse.move(cycle10!.x + 1, cycle10!.y + 10); await page.mouse.up();
   await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("10");
+  await expect(lanes).toHaveAttribute("data-mount-serial", mountSerial!);
   await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
 });
 

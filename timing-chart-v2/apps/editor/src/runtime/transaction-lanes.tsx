@@ -5,6 +5,7 @@ import { InlineNameInput } from "../inline-name-input.js";
 
 const LANE_ROW_HEIGHT = 40;
 const GROUP_HEADER_HEIGHT = 24;
+let transactionLanesMountSerial = 0;
 
 // #452: within one lane, Transactions whose [start,end) ranges overlap must
 // stack into separate rows rather than fully occluding each other -- a
@@ -158,6 +159,7 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
 }
 
 export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, selectedId, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId) => void; readonly onSnap: (clientX: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void }) {
+  const mountSerial = useRef(++transactionLanesMountSerial);
   // #451: one shared filter narrows both the Tree rows (in the label
   // column below) and the central bars together -- searching never hides
   // a Transaction from one surface while leaving it selectable from the
@@ -308,7 +310,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
     return isVisible(band.trackTop + 4 + row * LANE_ROW_HEIGHT, LANE_ROW_HEIGHT);
   };
 
-  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
+  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
