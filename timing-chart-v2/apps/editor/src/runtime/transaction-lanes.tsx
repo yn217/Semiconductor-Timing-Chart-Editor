@@ -160,6 +160,7 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
 
 export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, selectedId, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId) => void; readonly onSnap: (clientX: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void }) {
   const mountSerial = useRef(++transactionLanesMountSerial);
+  const laneIndexBuilds = useRef(0);
   // #451: one shared filter narrows both the Tree rows (in the label
   // column below) and the central bars together -- searching never hides
   // a Transaction from one surface while leaving it selectable from the
@@ -203,6 +204,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
   const groups = document.transactionGroups ?? [];
   const laneKey = (groupId: string | undefined, laneId: string) => `${groupId ?? "ungrouped"}\u0000${laneId}`;
   const { laneTransactionsByKey, transactionCountByGroup } = useMemo(() => {
+    laneIndexBuilds.current += 1;
     const laneTransactionsByKey = new Map<string, Transaction[]>();
     const transactionCountByGroup = new Map<string | undefined, number>();
     for (const transaction of document.transactions) {
@@ -310,7 +312,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
     return isVisible(band.trackTop + 4 + row * LANE_ROW_HEIGHT, LANE_ROW_HEIGHT);
   };
 
-  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
+  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
