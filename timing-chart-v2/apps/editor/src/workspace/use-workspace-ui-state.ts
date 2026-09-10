@@ -118,7 +118,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   const [inspectorResetToken, setInspectorResetToken] = useState(0);
   const [bottomResetToken, setBottomResetToken] = useState(0);
   const [bottomVisible, setBottomVisible] = useState(true);
-  const waveformRestoreRef = useRef<{ readonly inspectorVisible: boolean; readonly bottomVisible: boolean } | undefined>(undefined);
+  const waveformRestoreRef = useRef<{ readonly inspectorVisible: boolean; readonly bottomVisible: boolean; readonly preset: Exclude<WorkspacePreset, "waveform"> } | undefined>(undefined);
 
   const [leftPaneWidth, setLeftPaneWidth] = useState(LEFT_PANE_MIN_WIDTH);
   const leftPaneResizeRef = useRef<PaneResizeGesture | undefined>(undefined);

@@ -4,7 +4,7 @@ import { LEFT_PANE_MIN_WIDTH, type BottomTab, type ViewMode, type WorkspacePrese
 export function useEditorWorkspaceActions(input: {
   readonly workspacePreset: WorkspacePreset;
   readonly setWorkspacePreset: (value: WorkspacePreset) => void;
-  readonly waveformRestoreRef: MutableRefObject<{ readonly inspectorVisible: boolean; readonly bottomVisible: boolean } | undefined>;
+  readonly waveformRestoreRef: MutableRefObject<{ readonly inspectorVisible: boolean; readonly bottomVisible: boolean; readonly preset: Exclude<WorkspacePreset, "waveform"> } | undefined>;
   readonly inspectorVisible: boolean;
   readonly setInspectorVisible: (value: boolean) => void;
   readonly bottomVisible: boolean;
@@ -20,7 +20,7 @@ export function useEditorWorkspaceActions(input: {
 }) {
   const applyWorkspacePreset = (preset: WorkspacePreset) => {
     if (preset === "waveform") {
-      if (input.workspacePreset !== "waveform") input.waveformRestoreRef.current = { inspectorVisible: input.inspectorVisible, bottomVisible: input.bottomVisible };
+      if (input.workspacePreset !== "waveform") input.waveformRestoreRef.current = { inspectorVisible: input.inspectorVisible, bottomVisible: input.bottomVisible, preset: input.workspacePreset };
       input.setWorkspacePreset(preset);
       input.setInspectorVisible(false);
       input.setBottomVisible(false);
@@ -30,8 +30,14 @@ export function useEditorWorkspaceActions(input: {
     if (input.workspacePreset === "waveform" && preset === "edit") {
       const restored = input.waveformRestoreRef.current;
       input.waveformRestoreRef.current = undefined;
+      const restoredPreset = restored?.preset ?? "edit";
+      input.setWorkspacePreset(restoredPreset);
       input.setInspectorVisible(restored?.inspectorVisible ?? true);
       input.setBottomVisible(restored?.bottomVisible ?? true);
+      if (restoredPreset === "review") input.setBottomTab("Problems");
+      else if (restoredPreset === "transaction") { input.setViewMode("Transaction"); input.setBottomTab("Transaction"); }
+      else input.setBottomTab("Signal");
+      return;
     } else {
       input.waveformRestoreRef.current = undefined;
       input.setInspectorVisible(true);
