@@ -3,6 +3,7 @@ import type { ValueSignal } from "@timing-chart-v2/schema";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { parseSuppressedPeriods } from "./runtime/clock-input.js";
 import { generateSignalPulseValues } from "./runtime/signal-generator.js";
+import { DraftStatus } from "./draft-status.js";
 
 // #400: Signal Generator produces single/finite/periodic pulses. It is a
 // pure computation (see runtime/signal-generator.ts for why), committed as
@@ -111,7 +112,7 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
             applied) -- distinct from a Transition row's Draft and from
             Inspector's Signal Properties Draft, so its wording says which
             one it is instead of a bare, ambiguous "Unapplied changes". */}
-        {hasChanges && <output className="draft-unapplied-indicator" data-testid="signal-generator-unapplied">● Generator: unapplied changes</output>}
+        {hasChanges && <DraftStatus testId="signal-generator-unapplied" label="Generator: unapplied changes" />}
         <button type="submit" data-testid="apply-signal-generator" disabled={!hasChanges}>Generate</button>
       </div>
     </form>
