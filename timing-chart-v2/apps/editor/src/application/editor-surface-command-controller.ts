@@ -93,6 +93,7 @@ export interface RibbonCommandActions {
   readonly updateTimeGroup: (payload: CommandPayload<"timeGroup.update">) => CommandResult;
   readonly updateTimeGroupPresentation: (timeGroupId: TimeGroupId, presentation: NonNullable<TimeGroup["presentation"]>) => CommandResult;
   readonly expandAllTimeGroups: (groups: readonly TimeGroup[]) => CommandResult;
+  readonly ungroupTimeGroup: (timeGroupId: TimeGroupId) => CommandResult;
   readonly deleteTimeGroup: (timeGroupId: TimeGroupId) => CommandResult;
   readonly setAnnotationAlign: (annotationId: AnnotationId, align: Annotation["align"]) => CommandResult;
   readonly bringAnnotationsToFront: (annotationIds: readonly AnnotationId[]) => CommandResult;
@@ -194,6 +195,7 @@ export function createEditorSurfaceCommandController(input: {
     updateTimeGroup: (payload) => dispatch<"timeGroup.update">("time_group_update", { type: "timeGroup.update", ...payload }),
     updateTimeGroupPresentation: (timeGroupId, presentation) => dispatch<"timeGroup.updatePresentation">(presentation.collapsed ? "time_group_collapse" : "time_group_expand", { type: "timeGroup.updatePresentation", timeGroupId, presentation }),
     expandAllTimeGroups: (groups) => dispatchBatch<"timeGroup.updatePresentation">("time_group_expand_all", groups.filter((group) => group.presentation?.collapsed).map((group) => ({ type: "timeGroup.updatePresentation", timeGroupId: group.id, presentation: { ...(group.presentation ?? {}), collapsed: false, foldStyle: "none" as const, foldLabel: group.presentation?.foldLabel || group.name } })), "time_group_expand_all"),
+    ungroupTimeGroup: (timeGroupId) => dispatch<"timeGroup.ungroup">("time_group_ungroup", { type: "timeGroup.ungroup", timeGroupId }),
     deleteTimeGroup: (timeGroupId) => dispatch<"timeGroup.delete">("gap_delete", { type: "timeGroup.delete", timeGroupId }),
     setAnnotationAlign: (annotationId, align) => dispatch<"annotation.setAlign">("annotation_align", { type: "annotation.setAlign", annotationId, align }),
     bringAnnotationsToFront: (annotationIds) => dispatchBatch<"annotation.bringToFront">("annotation_bring_front", annotationIds.map((annotationId) => ({ type: "annotation.bringToFront", annotationId }))),

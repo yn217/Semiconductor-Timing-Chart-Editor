@@ -174,6 +174,23 @@ test("Time Group outline rows expose mapped spans and shared collapse controls a
   await expect(ruler.locator("[data-outline-time-group-id]").getByRole("button", { name: "Expand Group 2-4", exact: true })).toBeVisible();
 });
 
+test("Time Group outline exposes Ungroup through the semantic timeline command", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range start").fill("2");
+  await page.getByLabel("Timeline range end").fill("5");
+  await page.getByRole("button", { name: "Create Time Group", exact: true }).click();
+  const group = page.getByTestId(/time-group-edit-/).last();
+  await expect(group).toBeVisible();
+  const groupId = await group.getAttribute("data-testid");
+  const id = groupId?.replace("time-group-edit-", "");
+  await expect(page.getByTestId(`time-group-ungroup-${id}`)).toBeVisible();
+  await page.getByTestId(`time-group-ungroup-${id}`).click();
+  await expect(page.locator("[data-time-group-id]")).toHaveCount(0);
+  await expect(page.getByTestId("history-status")).toContainText("History");
+});
+
 test("Timeline workflow groups keep explicit cycle semantics and aligned controls", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/");
