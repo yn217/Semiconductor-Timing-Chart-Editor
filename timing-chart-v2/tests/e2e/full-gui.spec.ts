@@ -694,7 +694,7 @@ test("Bottom Signal Context Editor keeps the V1 continuous center editing surfac
   await expect(bottom).toHaveCSS("grid-column-end", "auto");
   await expect(bottom.locator(".bottom-tabs")).toHaveCSS("height", "38px");
   await expect(bottom.getByTestId("signal-editor")).toBeVisible();
-  await expect(bottom.getByTestId("signal-editor")).toContainText("REQUEST · binary");
+  await expect(bottom.getByTestId("signal-editor")).toContainText("REQUEST · Signal");
   await expect(bottom.getByRole("table", { name: "Signal events" })).toBeVisible();
   await page.screenshot({ path: ".tmp_gui_reference/gui-batch-bottom-signal-1672x941.png", animations: "disabled" });
 });

@@ -38,7 +38,7 @@ test("follows row selection and exposes derived Event Table columns", async ({ p
 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
-  await expect(editor).toContainText("REQUEST · binary");
+  await expect(editor).toContainText("REQUEST · Signal");
   await expect(editor.getByRole("table", { name: "Signal events" }).locator("form.event-row")).toHaveCount(3);
   // Visual Quality Closure follow-up, Section 7: a row reads as plain text
   // at rest -- each read-only cell keeps its own stable `data-testid`

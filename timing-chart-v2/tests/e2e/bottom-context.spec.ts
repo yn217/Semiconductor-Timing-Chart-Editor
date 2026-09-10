@@ -17,13 +17,13 @@ test("Follow Selection OFF freezes the Bottom target; Pin locks in whatever is c
   const host = page.getByTestId("cycle-surface");
   const bottom = page.getByTestId("bottom-editor");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
-  await expect(bottom).toContainText("REQUEST · binary");
+  await expect(bottom).toContainText("REQUEST · Signal");
   await bottom.getByTestId("follow-selection").uncheck();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click();
   await expect(page.getByTestId("selection-status")).toHaveText("READY");
   // Follow Selection OFF: Bottom stays on REQUEST even though selection
   // (and Inspector) moved to READY.
-  await expect(bottom).toContainText("REQUEST · binary");
+  await expect(bottom).toContainText("REQUEST · Signal");
   await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
 
   // Pin locks in whatever Bottom is CURRENTLY showing (REQUEST, the frozen
@@ -31,21 +31,21 @@ test("Follow Selection OFF freezes the Bottom target; Pin locks in whatever is c
   // longer see in the panel.
   await bottom.getByTestId("bottom-pin").click();
   await expect(bottom.getByTestId("bottom-pin")).toHaveText("Unpin");
-  await expect(bottom).toContainText("REQUEST · binary");
+  await expect(bottom).toContainText("REQUEST · Signal");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid']").click();
   await expect(page.getByTestId("selection-status")).toHaveText("VALID");
-  await expect(bottom).toContainText("REQUEST · binary");
+  await expect(bottom).toContainText("REQUEST · Signal");
 
   // Unpin with Follow Selection still off: stays frozen at REQUEST (does
   // not jump to the now-current VALID selection) -- Follow Selection OFF
   // still means "don't move".
   await bottom.getByTestId("bottom-pin").click();
   await expect(bottom.getByTestId("bottom-pin")).toHaveText("Pin");
-  await expect(bottom).toContainText("REQUEST · binary");
+  await expect(bottom).toContainText("REQUEST · Signal");
 
   // Turning Follow Selection back on resumes live tracking.
   await bottom.getByTestId("follow-selection").check();
-  await expect(bottom).toContainText("VALID · binary");
+  await expect(bottom).toContainText("VALID · Signal");
 });
 
 test("Bottom Pin preserves a selected Group JSON context without view mutation", async ({ page }) => {
