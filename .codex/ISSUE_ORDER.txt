@@ -3,125 +3,108 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-09 20:33 JST
+# Last reconciled by ChatGPT: 2026-09-11 06:52 JST
 #
 # Codex implements on main and only READS codex-control.
 # Never merge/cherry-pick codex-control into main.
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line.
 #
 # Observed live state at reconciliation:
-#   main = 6566c0c merge #537 transaction tree long-name tooltip
-#   #282 = CLOSED
-#   #163 = OPEN and explicitly promoted for Codex
-#   #414 = OPEN
-#   #415 = intentionally SKIPPED/DEFERRED by user instruction; do not auto-promote when #414 closes
-#   #534 = OPEN, Claude/product GUI lane
+#   main = c051583 reuse unaffected transaction lane partitions
+#   #163 = OPEN, near closure
+#   #414 = CLOSED
+#   #397 = CLOSED
+#   #534 = CLOSED
+#   #416 = CLOSED
+#   #424 = CLOSED
+#   #419 = CLOSED
+#   #548 = OPEN, Transaction MiniMap correctness blocker for #429
+#   #463 = OPEN, Transaction large-workspace performance blocker for #429
+#   #549 = OPEN, Cursor drag runtime/geometry follow-up
+#   #415 = OPEN but intentionally SKIPPED/DEFERRED by explicit user instruction
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
 # STATUS: ACTIVE
 #
-# 1) #163 Semantic Command + History / ChangeSet closure.
-# Re-audit latest main first. Much of the foundation already exists; do not rebuild it.
-# Focus on remaining concrete defects only: Comment Row typed mutation contract, rejected-operation
-# atomicity including transient side effects, ChangeSet exactness (especially row/Y invalidation),
-# bounded-cost Dirty/savepoint behavior if still present, History scaling evidence/decision, and
-# current Signal property mutation coverage required by production semantics.
+# 1) Finish #163 Semantic Command / History / ChangeSet closure.
+#    Remaining: History storage scaling evidence/decision; rejected-command success-only transient
+#    effects through shared adapters; final cross-adapter/ChangeSet audit. Do not redo already-fixed
+#    Comment Row, Signal property, NO_OP, Dirty-read or TransactionGroup work.
 163
 #
-# After #163:
-# - add executable evidence to Issue #163;
-# - close only when current acceptance is actually satisfied;
+# 2) #548 Transaction MiniMap incremental correctness.
+#    Direct #429 blocker. Fix old/new lane/group invalidation, delete/create, Group color/order,
+#    timeline extent, Undo/Redo and real Chromium ghost-segment regressions.
+548
+#
+# 3) #463 Transaction large-workspace performance/invalidation closure.
+#    #397 is CLOSED, so the old defer is removed. Reuse existing virtualization/indexing/partition
+#    work; close remaining 1k/5k/10k latency, bounded invalidation and production interaction evidence.
+#    Before editing Transaction runtime, check for genuine same-hunk conflict with Claude #429 visual work.
+463
+#
+# 4) #549 Cursor A/B drag runtime/geometry cleanup.
+#    Remove duplicate drag ownership and per-pointermove DOM tick scanning; use shared TimeAxis/Snap/
+#    DisplayTimeMapping geometry. Do not redesign Cursor UI.
+549
+#
+# After every completed Issue:
 # - push/verify main == origin/main;
-# - re-read this file before taking any next issue.
+# - add executable evidence and close only when acceptance is satisfied;
+# - re-read this queue and skip any entry already closed by another agent.
 #
 # ============================================================================
 # EXPLICITLY SKIPPED / DEFERRED
 # ============================================================================
 # #415 Nested collapse + shared DisplayTimeMapping / Axis Break
-# Owner: Codex, but intentionally skipped by current user instruction.
-# Dependency remains #414 completed/closed, but even after #414 closes, DO NOT auto-promote #415.
-# #415 may start only after a later explicit queue update/user instruction promotes it.
+# - #414 is now CLOSED, but the user explicitly instructed us to skip #415.
+# - DO NOT auto-promote or execute #415 until a later explicit user/task-list update resumes it.
+# - #416 is already CLOSED; do not use its historical dependency text to force #415 execution.
 #
-# Time Outline chain remains:
-#   DONE  #412 -> #413
-#   NOW   Claude/product GUI #414
-#   SKIP  Codex #415 until explicitly re-promoted
-#   WAIT  Claude #416 on #415
+# #258 broad MinimalCycleView decomposition remains deferred while shared editor/product surfaces
+# are active. Avoid refactor-driven conflict churn unless explicitly transferred.
 #
-# #463 Transaction lane virtualization/performance remains deferred while Claude/product acceptance
-# #397/#429 is actively exercising Transaction lane presentation/runtime.
+# #495 mixes Reset Core semantics with GUI; split/transfer a bounded Core child before Codex takes it.
 #
-# #258 broad MinimalCycleView decomposition remains deferred while product agents are modifying
-# shared editor surfaces; avoid refactor-driven merge conflict churn.
+# ============================================================================
+# CLAUDE / PRODUCT LANE — NOT CODEX WHOLE-ISSUE WORK
+# ============================================================================
+#   #429 Transaction visual/product convergence — Claude NOW.
+#        Consume #548/#463 runtime fixes; do not duplicate their internals.
+#        Target approved screenshots at 1672x941 and 1280x720: grouped compact Tree, Group/Lane +
+#        Phase center, table-first Bottom with no persistent duplicate single-item editor, compact
+#        Inspector, populated MiniMap, TC ruler, no unexplained blank/overlap regions.
+#   #426 Bottom Panel consolidation — Claude after #429 unless product priority changes.
+#   #431 UX/Product Completion Epic — planning/closure owner, not a Codex executable Issue itself.
+#   #403-#409 and #436-#441/#474 — remaining GUI/design-system backlog as live state/priority allows.
+#   #205 — mixed annotation product scope unless decomposed.
 #
-# #495 mixes Reset Core semantics with production GUI work. Split/transfer a bounded Core child
-# before Codex consumes it wholesale.
+# Completed product items removed from active Claude list:
+#   #414 #416 #397 #534 #424 #419
 #
 # ============================================================================
 # COMPLETED / REMOVED FROM CODEX QUEUE
 # ============================================================================
 # Do not re-add merely for another audit or extra tests:
-#   #282
-#   #530 #529
-#   #461 #328 #464 #462
-#   #481 #459 #460
-#   #457 #458 #456
-#   #443
-#   #433 #450 #455 #448 #447 #435 #434 #442 #445 #446 #449 #444
-#   #430 #432 #412 #413
-#   #410 #399 #398 #237 #417 #428 #272
-#   #363 #269 #281 #372 #366 #369
-#   #221 #171 #170 #167 #161 #175
-#   #451 #452 #453 #454 #473
-#
-# ============================================================================
-# GUI / PRODUCT LANES — NON-EXECUTABLE BY CODEX AS WHOLE ISSUES
-# ============================================================================
-#   #414 Time Outline GUI — Claude NOW / highest priority
-#   #534 Transaction Bottom empty-state simplification — Claude/product quick UX follow-up
-#   #397 Transaction + Split sample-driven final acceptance — Claude/product
-#   #429 Transaction parent closure — Claude/product; close after #397 evidence
-#   #416 Time Outline final Ribbon/export/E2E closure — blocked by skipped #415
-#   #424 Marker vertical-span GUI/product completion
-#   #419 Highlight Snap/Free GUI/product completion
-#   #426 Bottom Panel consolidation
-#   #431 UX/Product Completion Epic
-#   #403-#409 Contextual Ribbon / Cycle-Transaction Split
-#   #436-#441 Ribbon/GUI visual architecture
-#   #205 Datasheet-grade annotation product completion
-#
-# Mixed Core+GUI/product issues must not be consumed wholesale merely to keep Codex busy.
-# If a concrete bounded Core/runtime defect is discovered, create/transfer a narrow child Issue first.
+#   #282 #530 #529 #461 #328 #464 #462 #481 #459 #460 #457 #458 #456 #443
+#   #433 #450 #455 #448 #447 #435 #434 #442 #445 #446 #449 #444 #430 #432
+#   #412 #413 #410 #399 #398 #237 #417 #428 #272 #363 #269 #281 #372 #366
+#   #369 #221 #171 #170 #167 #161 #175 #451 #452 #453 #454 #473
 #
 # ============================================================================
 # EXECUTION POLICY
 # ============================================================================
-# For each executable issue:
 # 1. sync latest origin/main;
-# 2. read the live GitHub Issue and current comments;
-# 3. inspect/reproduce the concrete current gap before editing;
-# 4. if current main already satisfies a criterion, prove it; do not manufacture code;
-# 5. otherwise implement the minimum coherent production fix;
-# 6. add focused regression tests;
-# 7. run applicable typecheck/unit/architecture/performance/Chromium checks and git diff --check;
-# 8. inspect/stage only intended hunks;
-# 9. commit/push to main according to repository workflow;
-# 10. verify main == origin/main;
-# 11. add evidence to the Issue and close only when acceptance is satisfied;
-# 12. re-read this queue before taking the next issue.
-#
-# ============================================================================
-# SINGLE-WORKTREE / DIRTY-WORK SAFETY
-# ============================================================================
-# - One repository / one main worktree / sequential Codex stream.
-# - No temporary clone or git worktree add.
-# - Never reset/stash/clean/delete unrelated user/agent work.
-# - Dirty file != blocker; classify hunks before acting.
-# - Finish/test/commit previous-Issue dirty work first.
-# - Same-file non-overlap may be partially staged.
-# - Only a genuine same-hunk unsafe conflict may be deferred as DEFERRED_LOCAL_CONFLICT.
+# 2. read live Issue/comments and inspect current production owner;
+# 3. reproduce/audit the concrete gap before editing;
+# 4. if main already satisfies it, prove and close; do not manufacture code;
+# 5. implement minimum coherent production fix + focused regression tests;
+# 6. run applicable typecheck/unit/architecture/performance/Chromium checks + git diff --check;
+# 7. stage only intended hunks; no reset/stash/clean unrelated work;
+# 8. commit/push main, verify main == origin/main, add Issue evidence, close only if accepted;
+# 9. re-read this queue before the next Issue.
 #
 # ============================================================================
 # GLOBAL ARCHITECTURE / SAFETY
