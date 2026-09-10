@@ -2,7 +2,7 @@ import { useEffect, type KeyboardEventHandler, type PointerEventHandler, type Re
 import { LEFT_PANE_MAX_WIDTH, LEFT_PANE_MIN_WIDTH } from "./workspace/use-workspace-ui-state.js";
 
 export interface EditorWorkspaceViewModel {
-  readonly view: { readonly viewMode: string; readonly signalSplitEnabled: boolean; readonly signalSplitRatio: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly zoom?: number; readonly cursor: { readonly a?: number; readonly b?: number; readonly deltaCycles?: number } };
+  readonly view: { readonly viewMode: string; readonly signalSplitEnabled: boolean; readonly signalSplitRatio: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly zoom?: number; readonly cursorPresentationRevision?: number; readonly cursor: { readonly a?: number; readonly b?: number; readonly deltaCycles?: number } };
   readonly layout: { readonly leftPaneWidth: number; readonly frozenPaneMinWidth: number; readonly frozenPaneWidth: number; readonly bottomVisible: boolean; readonly bottomHeight: number; readonly inspectorVisible: boolean; readonly inspectorWidth: number };
   readonly refs: { readonly viewport: RefObject<HTMLDivElement | null>; readonly gridLayer: RefObject<HTMLDivElement | null>; readonly ruler: RefObject<HTMLDivElement | null>; readonly host: RefObject<HTMLDivElement | null>; readonly viewportLower: RefObject<HTMLDivElement | null>; readonly rulerLower: RefObject<HTMLDivElement | null>; readonly hostLower: RefObject<HTMLDivElement | null>; readonly gridLayerLower: RefObject<HTMLDivElement | null> };
   readonly content: { readonly header: ReactNode; readonly viewportContent: ReactNode; readonly viewportLegend: ReactNode; readonly bottom: ReactNode; readonly inspector: ReactNode };
@@ -26,7 +26,7 @@ export interface EditorWorkspaceViewProps {
 export function EditorWorkspaceView({
   viewModel,
 }: EditorWorkspaceViewProps) {
-  const { viewMode, signalSplitEnabled, signalSplitRatio, gridEnabled, snapEnabled, rulerEnabled, zoom, cursor } = viewModel.view;
+  const { viewMode, signalSplitEnabled, signalSplitRatio, gridEnabled, snapEnabled, rulerEnabled, zoom, cursorPresentationRevision, cursor } = viewModel.view;
   const { leftPaneWidth, frozenPaneMinWidth, frozenPaneWidth, bottomVisible, bottomHeight, inspectorVisible, inspectorWidth } = viewModel.layout;
   const { viewport, gridLayer, ruler, host, viewportLower, rulerLower, hostLower, gridLayerLower } = viewModel.refs;
   const { header, viewportContent, viewportLegend, bottom, inspector } = viewModel.content;
@@ -176,7 +176,7 @@ export function EditorWorkspaceView({
       for (const cleanupDrag of activeDragCleanups) cleanupDrag();
       window.removeEventListener("resize", update);
     };
-  }, [ruler, rulerLower, cursor.a, cursor.b, zoom, viewport, viewportLower]);
+  }, [ruler, rulerLower, cursor.a, cursor.b, cursorPresentationRevision, zoom, viewport, viewportLower]);
   useEffect(() => {
     if (viewMode !== "Split") return undefined;
     const panel = viewport.current?.closest<HTMLElement>(".cycle-panel");
