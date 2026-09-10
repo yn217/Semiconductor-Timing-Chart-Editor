@@ -298,6 +298,32 @@ test("moves and resizes Transaction edges through the shared rendered-geometry S
   await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
 });
 
+test("keeps TransactionLanes mounted across ten repeated semantic moves", async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+  await ready(page);
+  await createTransaction(page, "Repeated Move", 2, 6);
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  const lanes = page.getByTestId("transaction-lanes");
+  await expect(lanes).toBeVisible();
+  const mountSerial = await lanes.getAttribute("data-mount-serial");
+  const inspector = page.getByTestId("inspector");
+  const start = inspector.getByLabel("Transaction start");
+  const end = inspector.getByLabel("Transaction end");
+  const apply = inspector.getByTestId("apply-inspector-transaction");
+  const durations: number[] = [];
+  for (let index = 0; index < 10; index += 1) {
+    const started = await page.evaluate(() => performance.now());
+    await start.fill(String(3 + index));
+    await end.fill(String(7 + index));
+    await apply.click();
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+    durations.push(await page.evaluate((value) => performance.now() - value, started));
+    await expect(lanes).toHaveAttribute("data-mount-serial", mountSerial!);
+  }
+  await testInfo.attach("transaction-repeated-move-latency.json", { body: Buffer.from(JSON.stringify({ durationsMs: durations, p50Ms: [...durations].sort((a, b) => a - b)[4], p95Ms: [...durations].sort((a, b) => a - b)[8], mountSerial })), contentType: "application/json" });
+  console.log(`[transaction-repeated-move] ${JSON.stringify({ durationsMs: durations, mountSerial })}`);
+});
+
 test("exports deterministic SVG plus PNG and PDF from Canonical ExportScene", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
