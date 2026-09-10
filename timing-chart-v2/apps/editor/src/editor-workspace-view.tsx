@@ -115,8 +115,8 @@ export function EditorWorkspaceView({
     const scrollTargets = [viewport.current, viewportLower.current].filter((item): item is HTMLDivElement => item !== null);
     // Ruler presentation is refreshed by the owning timeline runtime. A
     // deferred pass covers late-mounted ticks without installing a subtree
-    // MutationObserver (which would turn every ruler update into a generic
-    // generic subtree synchronization path).
+    // subtree observer (which would turn every ruler update into a generic
+    // synchronization path).
     const deferredUpdate = requestAnimationFrame(update);
     const rulerResizeObserver = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(update);
     for (const target of [ruler.current, rulerLower.current].filter((item): item is HTMLDivElement => item !== null)) rulerResizeObserver?.observe(target);
