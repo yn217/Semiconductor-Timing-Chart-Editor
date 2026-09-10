@@ -22,8 +22,8 @@ function RibbonSchemaItem({ item, available }: { readonly item: RibbonItemSpec; 
   // keep a command reachable here until that surface consumes the same item
   // result rather than silently dropping an overflow candidate.
   const size = resolved === "overflow" ? "icon" : resolved;
-  if (item.kind === "toggle") return <DsRibbonToggle checked={item.checked} dataTestId={item.testId} label={item.label} onChange={item.onChange} size={size} />;
-  if (item.kind === "split") return <DsRibbonSplitButton ariaLabel={item.ariaLabel ?? item.label} dataTestId={item.testId} disabled={item.disabled} icon={<RibbonIcon name={item.icon} />} menuAriaLabel={item.menuAriaLabel} onClick={item.onClick} onMenuClick={item.onMenuClick} size={size} title={item.title}>{item.label}</DsRibbonSplitButton>;
+  if (item.kind === "toggle") return <DsRibbonToggle checked={item.checked} dataTestId={item.testId} label={item.label} onChange={item.onChange} {...(item.presentation?.priority === undefined ? {} : { priority: item.presentation.priority })} size={size} />;
+  if (item.kind === "split") return <DsRibbonSplitButton ariaLabel={item.ariaLabel ?? item.label} dataTestId={item.testId} disabled={item.disabled} icon={<RibbonIcon name={item.icon} />} menuAriaLabel={item.menuAriaLabel} onClick={item.onClick} onMenuClick={item.onMenuClick} {...(item.presentation?.priority === undefined ? {} : { priority: item.presentation.priority })} size={size} title={item.title}>{item.label}</DsRibbonSplitButton>;
   const presentationClass = item.presentation ? ` ribbon-presentation-${size}` : "";
   return <DsRibbonButton ariaLabel={item.ariaLabel ?? item.label} className={`${item.size === "wide" ? "ds-ribbon-button--wide" : ""}${presentationClass}`} dataTestId={item.testId} disabled={item.disabled} icon={<RibbonIcon name={item.icon} />} onClick={item.onClick} {...(item.presentation?.priority === undefined ? {} : { priority: item.presentation.priority })} size={size} title={item.title} v1Label={item.v1Label}>{item.label}</DsRibbonButton>;
 }
