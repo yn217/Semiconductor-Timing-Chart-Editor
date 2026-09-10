@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { Bookmark, ClockGenerator, ClockSignal, EdgeCounterSettings, SignalId } from "@timing-chart-v2/schema";
+import { clockFrequency, type Bookmark, type ClockGenerator, type ClockSignal, type EdgeCounterSettings, type SignalId } from "@timing-chart-v2/schema";
 import { parseSuppressedPeriods } from "../runtime/clock-input.js";
 import { serializeClockSettings } from "../runtime/clock-settings.js";
 import { RibbonIcon } from "../ribbon-icon.js";
@@ -74,6 +74,7 @@ export function ClockGeneratorEditor({ signal, bookmarks, commands, onDuplicate,
   })();
   const generatorChanged = JSON.stringify(normalizedDraftGenerator) !== JSON.stringify(signal.generator);
   const edgeCounterChanged = JSON.stringify(edgeCounter) !== JSON.stringify(signal.edgeCounter);
+  const relativeFrequency = clockFrequency({ ...signal, generator } as ClockSignal);
   return <div className="clock-editor">
     <div className="event-toolbar" role="toolbar" aria-label="Clock context commands" data-testid="clock-context-toolbar">
       <span className="clock-context-label">Signal: {signal.display.name}    Type: Clock</span>
@@ -104,6 +105,7 @@ export function ClockGeneratorEditor({ signal, bookmarks, commands, onDuplicate,
       <label>Period<input aria-label="Clock period" type="number" min="1" step="1" value={generator.period} onChange={(event) => number("period", event.target.value)} /></label>
       <label>Duty<input aria-label="Clock duty" type="number" min="0.01" max="1" step="0.01" value={generator.duty} onChange={(event) => number("duty", event.target.value)} /></label>
       <label>Phase<input aria-label="Clock phase" type="number" step="0.5" value={generator.phase} onChange={(event) => number("phase", event.target.value)} /></label>
+      <output className="clock-derived-frequency" data-testid="clock-derived-frequency" aria-label="Derived clock frequency">Relative frequency: {relativeFrequency === undefined ? "—" : relativeFrequency.toFixed(4)} cycles per reference cycle</output>
       <label>Initial<select aria-label="Clock initial" value={generator.initial} onChange={(event) => setGenerator({ ...generator, initial: Number(event.target.value) as 0 | 1 })}><option value="0">0</option><option value="1">1</option></select></label>
       <label>Polarity<select aria-label="Clock polarity" value={generator.polarity} onChange={(event) => setGenerator({ ...generator, polarity: event.target.value as ClockGenerator["polarity"] })}><option value="positive">Positive</option><option value="negative">Negative</option></select></label>
       <label>Suppressed periods<input aria-label="Clock suppressed periods" value={suppressedPeriods} placeholder="e.g. 1, 3" onChange={(event) => setSuppressedPeriods(event.target.value)} /></label>
