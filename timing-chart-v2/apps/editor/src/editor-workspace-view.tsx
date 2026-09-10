@@ -113,11 +113,13 @@ export function EditorWorkspaceView({
     };
     update();
     const scrollTargets = [viewport.current, viewportLower.current].filter((item): item is HTMLDivElement => item !== null);
-    const rulerObservers = [ruler.current, rulerLower.current].filter((item): item is HTMLDivElement => item !== null).map((target) => {
-      const observer = new MutationObserver(update);
-      observer.observe(target, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-cycle", "data-source-cycle"] });
-      return observer;
-    });
+    // Ruler presentation is refreshed by the owning timeline runtime. A
+    // deferred pass covers late-mounted ticks without installing a subtree
+    // MutationObserver (which would turn every ruler update into a generic
+    // generic subtree synchronization path).
+    const deferredUpdate = requestAnimationFrame(update);
+    const rulerResizeObserver = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(update);
+    for (const target of [ruler.current, rulerLower.current].filter((item): item is HTMLDivElement => item !== null)) rulerResizeObserver?.observe(target);
     const dragHandlers: Array<[HTMLDivElement, (event: PointerEvent) => void]> = [];
     for (const [viewportElement, rulerElement] of viewports) {
       if (!viewportElement || !rulerElement || !onSetCursorAtCycle) continue;
@@ -145,7 +147,8 @@ export function EditorWorkspaceView({
     window.addEventListener("resize", update);
     return () => {
       for (const target of scrollTargets) target.removeEventListener("scroll", update);
-      for (const observer of rulerObservers) observer.disconnect();
+      cancelAnimationFrame(deferredUpdate);
+      rulerResizeObserver?.disconnect();
       for (const [target, handler] of dragHandlers) target.removeEventListener("pointerdown", handler, true);
       window.removeEventListener("resize", update);
     };
