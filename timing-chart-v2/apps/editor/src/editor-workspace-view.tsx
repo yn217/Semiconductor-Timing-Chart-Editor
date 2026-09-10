@@ -138,15 +138,22 @@ export function EditorWorkspaceView({
         const which = target?.dataset.cursor as "a" | "b" | undefined;
         if (!which) return;
         event.preventDefault();
+        let pendingFrame: number | undefined;
+        let pendingClientX = event.clientX;
         const move = (moveEvent: PointerEvent) => {
-          const resolved = resolveCursorCycleAtClientX?.(moveEvent.clientX, viewportElement);
-          if (resolved !== undefined) onSetCursorAtCycle(which, resolved);
-          else {
-            const nearest = nearestCachedTick(rulerElement, moveEvent.clientX);
-            if (nearest) onSetCursorAtCycle(which, nearest.cycle);
-          }
+          pendingClientX = moveEvent.clientX;
+          if (pendingFrame !== undefined) return;
+          pendingFrame = requestAnimationFrame(() => {
+            pendingFrame = undefined;
+            const resolved = resolveCursorCycleAtClientX?.(pendingClientX, viewportElement);
+            if (resolved !== undefined) onSetCursorAtCycle(which, resolved);
+            else {
+              const nearest = nearestCachedTick(rulerElement, pendingClientX);
+              if (nearest) onSetCursorAtCycle(which, nearest.cycle);
+            }
+          });
         };
-        const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+        const up = () => { window.removeEventListener("pointermove", move); if (pendingFrame !== undefined) cancelAnimationFrame(pendingFrame); pendingFrame = undefined; window.removeEventListener("pointerup", up); };
         window.addEventListener("pointermove", move);
         window.addEventListener("pointerup", up, { once: true });
       };
