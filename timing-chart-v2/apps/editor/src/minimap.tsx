@@ -20,6 +20,17 @@ type MiniMapOverviewCache = Readonly<{
 }>;
 type TransactionOverviewCache = Readonly<{ fingerprint: string; transactions: CanonicalDocument["transactions"]; groups: CanonicalDocument["transactionGroups"]; overview: ReturnType<typeof buildMiniMapTransactionOverview>; builds: number }>;
 
+function transactionLaneKeys(transactions: readonly CanonicalDocument["transactions"][number][]): readonly string[] {
+  return [...new Set(transactions.map((transaction) => transaction.laneId ?? "lane_0"))].sort();
+}
+
+function canIncrementallyUpdateTransactionOverview(cache: TransactionOverviewCache | undefined, document: CanonicalDocument): boolean {
+  if (!cache || cache.groups !== document.transactionGroups || cache.overview.cycleCount !== Math.max(1, document.timeline.cycleCount)) return false;
+  const previousKeys = transactionLaneKeys(cache.transactions);
+  const nextKeys = transactionLaneKeys(document.transactions);
+  return previousKeys.length === nextKeys.length && previousKeys.every((key, index) => key === nextKeys[index]);
+}
+
 function overviewValues(signal: Signal): readonly unknown[] | undefined {
   return signal.type === "clock" || signal.type === "commentRow" ? undefined : signal.values;
 }
@@ -56,6 +67,8 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
   const dragging = useRef(false);
   const overviewBuilds = useRef(0);
   const transactionOverviewBuilds = useRef(0);
+  const transactionOverviewFullBuilds = useRef(0);
+  const transactionOverviewIncrementalUpdates = useRef(0);
   const overviewCache = useRef<MiniMapOverviewCache | undefined>(undefined);
   const transactionOverviewCache = useRef<TransactionOverviewCache | undefined>(undefined);
   const overview = useMemo(() => {
@@ -76,7 +89,11 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
     const fingerprint = document.transactions.map((transaction) => `${transaction.id}:${transaction.start}:${transaction.end}:${transaction.laneId ?? ""}:${transaction.groupId ?? ""}:${transaction.color ?? ""}:${(transaction.phases ?? []).map((phase) => `${phase.start}-${phase.end}-${phase.name}`).join(",")}`).join("|");
     const cached = transactionOverviewCache.current;
     if (cached?.fingerprint === fingerprint) return cached.overview;
+    const incremental = canIncrementallyUpdateTransactionOverview(cached, document);
     const overview = cached ? updateMiniMapTransactionOverview(cached.overview, cached.transactions, cached.groups, document) : buildMiniMapTransactionOverview(document);
+    if (!cached) transactionOverviewFullBuilds.current += 1;
+    else if (incremental) transactionOverviewIncrementalUpdates.current += 1;
+    else transactionOverviewFullBuilds.current += 1;
     if (overview !== cached?.overview) transactionOverviewBuilds.current += 1;
     transactionOverviewCache.current = { fingerprint, transactions: document.transactions, groups: document.transactionGroups, overview, builds: transactionOverviewBuilds.current };
     return overview;
@@ -129,5 +146,5 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
   const indicatorWidth = Math.min(1 - metrics.left, Math.max(0.04, metrics.width));
   const indicatorHeight = Math.min(1 - metrics.top, Math.max(0.04, metrics.ratio));
   const fullViewport = metrics.ratio >= 0.999 && metrics.width >= 0.999;
-  return <div ref={documentRef} className="minimap" data-testid="minimap" data-minimap-mode={mode} data-transaction-overview-builds={String(transactionOverviewBuilds.current)} aria-label="MiniMap" data-overview-builds={String(overviewBuilds.current)} data-overview-signal-lookups={String(overview.signalLookups)} data-viewport-top={String(metrics.top)} data-viewport-ratio={String(metrics.ratio)} data-viewport-left={String(metrics.left)} data-viewport-width={String(metrics.width)} onPointerDown={(event) => { if (event.button !== 0) return; dragging.current = true; event.currentTarget.setPointerCapture(event.pointerId); pan(event.clientX, event.clientY); }} onPointerMove={(event) => { if (dragging.current) pan(event.clientX, event.clientY); }} onPointerUp={(event) => { dragging.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => { dragging.current = false; }}><div className="minimap-overview-frame"><div className="minimap-rows">{transactionOverview ? <MiniMapTransactionOverviewRows overview={transactionOverview} /> : <MiniMapOverviewRows overview={overview} />}<i data-testid="minimap-viewport" data-viewport-full={String(fullViewport)} style={{ "--minimap-left": `${metrics.left * 100}%`, "--minimap-width": `${indicatorWidth * 100}%`, "--minimap-top": `${metrics.top * 100}%`, "--minimap-height": `${indicatorHeight * 100}%` } as CSSProperties} /></div></div></div>;
+  return <div ref={documentRef} className="minimap" data-testid="minimap" data-minimap-mode={mode} data-transaction-overview-builds={String(transactionOverviewBuilds.current)} data-transaction-overview-full-builds={String(transactionOverviewFullBuilds.current)} data-transaction-overview-incremental-updates={String(transactionOverviewIncrementalUpdates.current)} aria-label="MiniMap" data-overview-builds={String(overviewBuilds.current)} data-overview-signal-lookups={String(overview.signalLookups)} data-viewport-top={String(metrics.top)} data-viewport-ratio={String(metrics.ratio)} data-viewport-left={String(metrics.left)} data-viewport-width={String(metrics.width)} onPointerDown={(event) => { if (event.button !== 0) return; dragging.current = true; event.currentTarget.setPointerCapture(event.pointerId); pan(event.clientX, event.clientY); }} onPointerMove={(event) => { if (dragging.current) pan(event.clientX, event.clientY); }} onPointerUp={(event) => { dragging.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => { dragging.current = false; }}><div className="minimap-overview-frame"><div className="minimap-rows">{transactionOverview ? <MiniMapTransactionOverviewRows overview={transactionOverview} /> : <MiniMapOverviewRows overview={overview} />}<i data-testid="minimap-viewport" data-viewport-full={String(fullViewport)} style={{ "--minimap-left": `${metrics.left * 100}%`, "--minimap-width": `${indicatorWidth * 100}%`, "--minimap-top": `${metrics.top * 100}%`, "--minimap-height": `${indicatorHeight * 100}%` } as CSSProperties} /></div></div></div>;
 }

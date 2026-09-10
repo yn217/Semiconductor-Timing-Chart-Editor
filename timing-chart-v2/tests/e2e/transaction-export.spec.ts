@@ -306,6 +306,10 @@ test("keeps TransactionLanes mounted across ten repeated semantic moves", async 
   const lanes = page.getByTestId("transaction-lanes");
   await expect(lanes).toBeVisible();
   const mountSerial = await lanes.getAttribute("data-mount-serial");
+  const minimap = page.getByTestId("minimap");
+  await expect(minimap).toHaveAttribute("data-minimap-mode", "transaction");
+  const fullBuildsBefore = Number(await minimap.getAttribute("data-transaction-overview-full-builds"));
+  const incrementalUpdatesBefore = Number(await minimap.getAttribute("data-transaction-overview-incremental-updates"));
   const inspector = page.getByTestId("inspector");
   const start = inspector.getByLabel("Transaction start");
   const end = inspector.getByLabel("Transaction end");
@@ -320,6 +324,8 @@ test("keeps TransactionLanes mounted across ten repeated semantic moves", async 
     durations.push(await page.evaluate((value) => performance.now() - value, started));
     await expect(lanes).toHaveAttribute("data-mount-serial", mountSerial!);
   }
+  expect(Number(await minimap.getAttribute("data-transaction-overview-full-builds"))).toBe(fullBuildsBefore);
+  expect(Number(await minimap.getAttribute("data-transaction-overview-incremental-updates"))).toBeGreaterThanOrEqual(incrementalUpdatesBefore + 10);
   await testInfo.attach("transaction-repeated-move-latency.json", { body: Buffer.from(JSON.stringify({ durationsMs: durations, p50Ms: [...durations].sort((a, b) => a - b)[4], p95Ms: [...durations].sort((a, b) => a - b)[8], mountSerial })), contentType: "application/json" });
   console.log(`[transaction-repeated-move] ${JSON.stringify({ durationsMs: durations, mountSerial })}`);
 });
