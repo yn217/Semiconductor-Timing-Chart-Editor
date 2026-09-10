@@ -40,3 +40,25 @@ test("Cursor A/B Ribbon controls set/swap/clear the status bar readout with zero
   await expect(page.locator("[data-role='cursor-line']")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
+
+test("Cursor A guide drag updates only workspace cursor state", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("cursor-set-a").click();
+  const line = page.locator("[data-role='cursor-line'][data-cursor='a']:visible").first();
+  const targetTick = page.locator("[data-cycle][data-source-cycle='5']").first();
+  await expect(line).toBeVisible();
+  await expect(targetTick).toBeVisible();
+  const lineBox = await line.boundingBox();
+  const tickBox = await targetTick.boundingBox();
+  expect(lineBox).not.toBeNull();
+  expect(tickBox).not.toBeNull();
+  const y = lineBox!.y + Math.max(1, lineBox!.height / 2);
+  await page.mouse.move(lineBox!.x + 1, y);
+  await page.mouse.down();
+  await page.mouse.move(tickBox!.x + tickBox!.width / 2, y);
+  await page.mouse.up();
+  await expect(page.getByTestId("cursor-status")).toContainText("A 5");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});

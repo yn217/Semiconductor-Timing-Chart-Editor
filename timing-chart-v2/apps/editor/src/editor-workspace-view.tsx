@@ -97,7 +97,7 @@ export function EditorWorkspaceView({
           line.style.position = "absolute";
           line.style.top = "0";
           line.style.width = "2px";
-          line.style.height = `${Math.max(viewportElement.clientHeight, 1)}px`;
+          line.style.height = `${Math.max(viewportElement.clientHeight, 250)}px`;
           line.style.pointerEvents = "auto";
           line.style.left = `${tickRect.left - viewportRect.left}px`;
           line.dataset.cycle = String(cycle);
