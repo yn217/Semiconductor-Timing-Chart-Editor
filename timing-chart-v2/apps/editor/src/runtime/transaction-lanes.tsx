@@ -161,6 +161,8 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
 export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, selectedId, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId) => void; readonly onSnap: (clientX: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void }) {
   const mountSerial = useRef(++transactionLanesMountSerial);
   const laneIndexBuilds = useRef(0);
+  const stackRowsCache = useRef(new WeakMap<readonly Transaction[], ReturnType<typeof assignStackRows>>());
+  const treeRowsCache = useRef(new WeakMap<readonly Transaction[], ReadonlyMap<TransactionId, number>>());
   // #451: one shared filter narrows both the Tree rows (in the label
   // column below) and the central bars together -- searching never hides
   // a Transaction from one surface while leaving it selectable from the
@@ -198,7 +200,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
   // renders the exact same flat lane list this component always has, so
   // existing single-group documents/tests see byte-for-byte unchanged
   // layout. Lanes are scoped to their own Group's section once grouped
-  // (the same laneId string in two different Groups is two independent
+    // (the same laneId string in two different Groups is two independent
   // tracks, not one shared one), matching the approved reference's
   // "Memory / Lane 0" vs "CPU / Lane 1" structure.
   const groups = document.transactionGroups ?? [];
@@ -265,7 +267,12 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
     if (collapsed) continue;
     for (const laneId of section.lanes) {
       const laneTransactions = laneTransactionsByKey.get(laneKey(section.groupId, laneId)) ?? [];
-      const { rowOf, rowCount } = assignStackRows(laneTransactions);
+      let stackRows = stackRowsCache.current.get(laneTransactions);
+      if (!stackRows) {
+        stackRows = assignStackRows(laneTransactions);
+        stackRowsCache.current.set(laneTransactions, stackRows);
+      }
+      const { rowOf, rowCount } = stackRows;
       // #451/#452: the Tree label list needs one row per Transaction
       // ALWAYS (two Transactions that don't overlap in time still need
       // two separate, independently-clickable list lines), whereas the
@@ -277,7 +284,11 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
       // always-one-row-per-Transaction sequence (stable start-then-id
       // order), and the lane's height is whichever of the two needs more
       // room, so neither the bars nor the Tree rows ever overlap.
-      const treeRowOf = new Map([...laneTransactions].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)).map((transaction, index) => [transaction.id, index] as const));
+      let treeRowOf = treeRowsCache.current.get(laneTransactions);
+      if (!treeRowOf) {
+        treeRowOf = new Map([...laneTransactions].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)).map((transaction, index) => [transaction.id, index] as const));
+        treeRowsCache.current.set(laneTransactions, treeRowOf);
+      }
       const labelHeight = Math.max(laneTransactions.length, 1) * LANE_ROW_HEIGHT;
       const trackHeight = Math.max(rowCount, 1) * LANE_ROW_HEIGHT;
       laneBands.push({ key: `lane:${section.groupId ?? "ungrouped"}:${laneId}`, laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf, treeRowOf });
