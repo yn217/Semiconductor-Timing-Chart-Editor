@@ -268,20 +268,10 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
   // a fork of the Cycle Mode tree's own rendering, never a second selection
   // owner -- see TransactionSignalTree's own doc comment) in place of
   // TransactionLanes, at the exact same DOM slot.
-  const resolveTransactionSnapClientX = (clientX: number) => {
-    const panel = refs.viewport.current?.closest<HTMLElement>(".cycle-panel.mode-split");
-    if (!panel) return clientX;
-    const track = panel.querySelector<HTMLElement>(".transaction-track");
-    const waveform = panel.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
-    if (!track || !waveform) return clientX;
-    const trackBox = track.getBoundingClientRect();
-    const waveformBox = waveform.getBoundingClientRect();
-    return waveformBox.left + (clientX - trackBox.left);
-  };
   const transactionBoundaryX = useCallback((cycle: number) => refs.transactionBoundaryX.current(cycle), [refs.transactionBoundaryX]);
   const workspaceViewportContent = workspace.viewMode !== "Cycle" && (workspace.viewMode === "Transaction" && workspace.transactionTreeTab === "signals"
     ? <TransactionSignalTree document={input.document} selectedSignalId={selected.signal?.id} onSelectSignal={input.actions.selectHierarchySignal} />
-    : <TransactionLanes document={input.document} documentEpoch={input.documentEpoch} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={transactionBoundaryX} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(resolveTransactionSnapClientX(clientX))} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />);
+    : <TransactionLanes document={input.document} documentEpoch={input.documentEpoch} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={transactionBoundaryX} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(clientX)} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />);
   const workspaceViewportLegend = <LegendView document={input.document} commands={surfaceCommands} />;
   const workspaceBottom = <BottomEditorPanel
     tabs={workspace.bottomTabs}
