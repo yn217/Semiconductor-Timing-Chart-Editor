@@ -142,6 +142,9 @@
 .cycle-ruler { position: sticky; z-index: 18; top: 0; left: var(--time-domain-left, 440px); width: max(0px, calc(100% - var(--time-domain-left, 440px))); height: 34px; margin-bottom: -34px; overflow: hidden; background: #f8fafc; border-bottom: 1px solid #cbd4df; pointer-events: none; }
 
 .cycle-ruler-content { position: relative; width: var(--wave-width, 640px); min-width: var(--wave-width, 640px); height: 34px; pointer-events: auto; }
+.time-outline-row { position: absolute; z-index: 6; left: 0; right: 0; height: 20px; border-bottom: 1px solid #cbd4df; background: #eef3f8; pointer-events: none; }
+.time-outline-item { position: absolute; top: 2px; height: 16px; overflow: hidden; padding: 1px 4px; border: 1px solid #8ea7c0; border-radius: 3px; background: #f8fbff; color: #405875; font: 9px/12px "Segoe UI", sans-serif; text-overflow: ellipsis; white-space: nowrap; pointer-events: auto; }
+.time-outline-toggle { width: 14px; height: 14px; margin-right: 3px; padding: 0; border: 0; background: transparent; color: #2c587f; font: 11px/12px Consolas, monospace; cursor: pointer; }
 
 .cycle-ruler span { position: absolute; top: 0; height: 34px; padding: 9px 0 0 5px; border-left: 1px solid #9eacbd; color: #43516a; font: 10px/1 Consolas, monospace; }
 

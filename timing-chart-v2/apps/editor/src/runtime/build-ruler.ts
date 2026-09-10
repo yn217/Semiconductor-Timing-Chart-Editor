@@ -1,5 +1,5 @@
 import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
-import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
+import { buildTimeGroupHierarchy, type CanonicalDocument, type SignalId } from "@timing-chart-v2/schema";
 import type { DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { presentationCycles } from "../presentation-cycles.js";
@@ -14,11 +14,51 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   }
   delete element.dataset.geometryError;
   element.parentElement?.removeAttribute("data-geometry-error");
+  const scale = actualScreenScale ?? forcedScale ?? 1;
   const rangeBand = element.ownerDocument.createElement("div");
   rangeBand.dataset.role = "range-selection-ruler-band";
   rangeBand.dataset.testid = "range-preview";
   rangeBand.setAttribute("aria-hidden", "true");
   rangeBand.hidden = true;
+  const hierarchy = buildTimeGroupHierarchy(document.timeGroups);
+  const outlineHeight = hierarchy.maxDepth === 0 && document.timeGroups.length === 0 ? 0 : (hierarchy.maxDepth + 1) * 20;
+  const rulerFrame = element.parentElement;
+  if (rulerFrame) {
+    rulerFrame.style.height = `${34 + outlineHeight}px`;
+    rulerFrame.style.marginBottom = `-${34 + outlineHeight}px`;
+  }
+  element.style.height = `${34 + outlineHeight}px`;
+  const outlineRows: HTMLElement[] = [];
+  for (let depth = 0; depth <= hierarchy.maxDepth; depth += 1) {
+    const row = element.ownerDocument.createElement("div");
+    row.className = "time-outline-row";
+    row.dataset.depth = String(depth);
+    row.setAttribute("role", "group");
+    for (const group of document.timeGroups.filter((item) => hierarchy.depthById.get(item.id) === depth)) {
+      const startDisplay = mapping.sourceToDisplay[group.start];
+      const endDisplay = mapping.sourceToDisplay[group.end] ?? mapping.displayCycleCount;
+      const startPoint = startDisplay === undefined ? undefined : geometry.find({ signalId: axisOwnerSignalId, cycle: startDisplay, point: "cycle-start" })?.point;
+      const endPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: endDisplay, point: "cycle-start" })?.point;
+      if (!startPoint || !endPoint) continue;
+      const item = element.ownerDocument.createElement("span");
+      item.className = "time-outline-item";
+      item.dataset.outlineTimeGroupId = group.id;
+      item.style.left = `${startPoint.x * scale}px`;
+      item.style.width = `${Math.max(18, (endPoint.x - startPoint.x) * scale)}px`;
+      const toggle = element.ownerDocument.createElement("button");
+      toggle.type = "button";
+      toggle.className = "time-outline-toggle";
+      toggle.setAttribute("aria-label", `${group.presentation?.collapsed ? "Expand" : "Collapse"} ${group.name}`);
+      toggle.textContent = group.presentation?.collapsed ? "+" : "−";
+      toggle.addEventListener("click", () => {
+        const command = element.ownerDocument.querySelector<HTMLButtonElement>(`[data-testid='time-group-${group.presentation?.collapsed ? "expand" : "collapse"}-${group.id}']`);
+        command?.click();
+      });
+      item.append(toggle, element.ownerDocument.createTextNode(group.name));
+      row.append(item);
+    }
+    outlineRows.push(row);
+  }
   const ticks: HTMLElement[] = [];
   // Fixed pixel-per-cycle by default: 1 local-geometry unit = 1px at 100%
   // zoom, independent of the visible pane's width. Any shrink-to-fit is an
@@ -30,7 +70,6 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   // Prefer the current browser transform whenever it is available. The
   // retained value is only a first-paint fallback; keeping it over a valid
   // SVG matrix lets ruler/grid pitch drift after layout or zoom changes.
-  const scale = actualScreenScale ?? forcedScale ?? 1;
   let finalX = 0;
   for (const display of presentationCycles(mapping.displayCycleCount)) {
     const point = geometry.find({ signalId: axisOwnerSignalId, cycle: display, point: "cycle-start" })?.point;
@@ -41,6 +80,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     tick.dataset.sourceCycle = String(display === mapping.displayCycleCount ? document.timeline.cycleCount : mapping.displayToSource[display]);
     tick.className = "cycle-tick";
     tick.style.left = `${point.x * scale}px`;
+    tick.style.top = `${outlineHeight}px`;
     tick.textContent = String(mapping.labelFor(display));
     ticks.push(tick);
     finalX = point.x;
@@ -55,6 +95,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     marker.className = "timeline-marker";
     marker.dataset.bookmarkId = bookmark.id;
     marker.style.left = `${point.x * scale}px`;
+    marker.style.top = `${outlineHeight + 19}px`;
     marker.textContent = `◆ ${bookmark.name}`;
     overlays.push(marker);
   }
@@ -68,10 +109,11 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     gap.className = "timeline-gap";
     gap.dataset.timeGroupId = group.id;
     gap.style.left = `${point.x * scale}px`;
+    gap.style.top = `${outlineHeight + 2}px`;
     gap.textContent = group.presentation?.foldLabel ?? group.name;
     overlays.push(gap);
   }
-  element.replaceChildren(rangeBand, ...ticks, ...overlays);
+  element.replaceChildren(...outlineRows, rangeBand, ...ticks, ...overlays);
   element.dataset.source = "local-geometry";
   element.parentElement?.setAttribute("data-source", "local-geometry");
   // A short document must still fill the available timing column. The ruler
