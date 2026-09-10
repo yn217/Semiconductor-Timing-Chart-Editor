@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import type { Dispatch, KeyboardEvent, MouseEvent, MutableRefObject, ReactNode, RefObject, SetStateAction } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { HistoryState } from "@timing-chart-v2/history";
@@ -277,9 +278,10 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     const waveformBox = waveform.getBoundingClientRect();
     return waveformBox.left + (clientX - trackBox.left);
   };
+  const transactionBoundaryX = useCallback((cycle: number) => refs.transactionBoundaryX.current(cycle), [refs.transactionBoundaryX]);
   const workspaceViewportContent = workspace.viewMode !== "Cycle" && (workspace.viewMode === "Transaction" && workspace.transactionTreeTab === "signals"
     ? <TransactionSignalTree document={input.document} selectedSignalId={selected.signal?.id} onSelectSignal={input.actions.selectHierarchySignal} />
-    : <TransactionLanes document={input.document} documentEpoch={input.documentEpoch} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={(cycle) => refs.transactionBoundaryX.current(cycle)} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(resolveTransactionSnapClientX(clientX))} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />);
+    : <TransactionLanes document={input.document} documentEpoch={input.documentEpoch} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={transactionBoundaryX} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(resolveTransactionSnapClientX(clientX))} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />);
   const workspaceViewportLegend = <LegendView document={input.document} commands={surfaceCommands} />;
   const workspaceBottom = <BottomEditorPanel
     tabs={workspace.bottomTabs}
