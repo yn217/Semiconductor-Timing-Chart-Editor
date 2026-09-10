@@ -49,6 +49,7 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
   // Apply when the draft is byte-for-byte identical to the committed
   // Bookmark, so a no-op Apply can't manufacture an empty History entry.
   const hasChanges = bookmark !== undefined && (editName !== bookmark.name || editStart !== bookmark.start || editComment !== (bookmark.comment ?? ""));
+  const createHasChanges = name !== "Bookmark" || start !== 0 || comment !== "";
   return <section className="bookmark-editor-panel" data-testid="bookmark-editor-panel" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <header>
       <button type="button" aria-label="Previous bookmark" disabled={document.bookmarks.length === 0} onClick={() => navigate(-1)}>◀ Previous</button>
@@ -85,6 +86,7 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
             <label>Comment<input aria-label="New Bottom Bookmark comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
           </form>
           <div className="bottom-sticky-actions">
+            {createHasChanges && <DraftStatus testId="bottom-bookmark-create-unapplied" />}
             <span className="bottom-sticky-buttons">
               <button type="submit" form="bookmark-create-form">Create Bookmark</button>
             </span>
