@@ -113,7 +113,7 @@ export function MinimalCycleView() {
     applySelectionDecorations,
   } = presentation;
   const zoom = timelineNavigation.zoom;
-  const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>({ documentEpoch });
+  const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>({ documentEpoch, cycleCount: snapshot.document.timeline.cycleCount });
   const {
     ribbonTab, setRibbonTab,
     bottomTab, setBottomTab,

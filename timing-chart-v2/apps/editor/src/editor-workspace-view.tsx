@@ -71,23 +71,6 @@ export function EditorWorkspaceView({
             line.setAttribute("aria-label", label);
             overlay.append(line);
           }
-          if (onSetCursorAtCycle && line.dataset.dragBound !== "true") {
-            line.dataset.dragBound = "true";
-            line.addEventListener("pointerdown", (event) => {
-              event.preventDefault();
-              const move = (moveEvent: PointerEvent) => {
-                const ticks = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")];
-                const nearest = ticks.map((candidate) => {
-                  const rect = candidate.getBoundingClientRect();
-                  return { candidate, distance: Math.abs(moveEvent.clientX - rect.left) };
-                }).sort((left, right) => left.distance - right.distance)[0];
-                if (nearest) onSetCursorAtCycle(key, Number(nearest.candidate.dataset.sourceCycle ?? nearest.candidate.dataset.cycle));
-              };
-              const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
-              window.addEventListener("pointermove", move);
-              window.addEventListener("pointerup", up, { once: true });
-            });
-          }
           const tick = findTick(rulerElement, cycle);
           if (!tick) { line.hidden = true; continue; }
           const tickRect = tick.getBoundingClientRect();

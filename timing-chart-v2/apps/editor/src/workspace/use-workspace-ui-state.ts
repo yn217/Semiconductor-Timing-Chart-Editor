@@ -51,7 +51,7 @@ export type BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId
  * resize-gesture scratch refs, and the Left Tree filter. None of this is
  * Document/Selection/Timeline canonical state -- every setter here only
  * ever affects layout/chrome, never the .tcd document or command history. */
-export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>(input: { readonly documentEpoch?: number } = {}) {
+export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>(input: { readonly documentEpoch?: number; readonly cycleCount?: number } = {}) {
   const [ribbonTab, setRibbonTab] = useState("Home");
   const [bottomTab, setBottomTab] = useState<BottomTab>("Signal");
   const [viewMode, setViewModeRaw] = useState<ViewMode>("Cycle");
@@ -110,7 +110,10 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   const clearCursor = (which: "a" | "b") => setCursor(which, undefined);
   const moveCursor = (which: "a" | "b", deltaCycles: number) => {
     if (!Number.isFinite(deltaCycles)) return;
-    setCursor(which, (which === "a" ? cursorA : cursorB) === undefined ? undefined : (which === "a" ? cursorA : cursorB)! + deltaCycles);
+    const current = which === "a" ? cursorA : cursorB;
+    if (current === undefined) return;
+    const maximum = input.cycleCount === undefined ? Number.POSITIVE_INFINITY : Math.max(0, input.cycleCount - 1);
+    setCursor(which, Math.max(0, Math.min(maximum, current + deltaCycles)));
   };
   const swapCursors = () => { setCursorA(cursorB); setCursorB(cursorA); };
 
