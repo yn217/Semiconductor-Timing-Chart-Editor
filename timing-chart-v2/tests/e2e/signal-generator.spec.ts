@@ -103,7 +103,7 @@ test("Duty mode computes Width from Period, and Generate Waveform is only offere
   expect(await jsonValues(page, "sig_cycle_request")).toEqual([{ start: 0, value: 1 }, { start: 3, value: 0 }]);
 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
-  await expect(editor).toContainText("DATA[7:0] · bus");
+  await expect(editor).toContainText("DATA[7:0] · Bus");
   await expect(editor.getByTestId("apply-signal-generator")).toHaveCount(0);
 });
 
