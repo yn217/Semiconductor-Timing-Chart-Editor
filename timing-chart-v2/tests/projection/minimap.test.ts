@@ -68,6 +68,8 @@ describe("MiniMap overview derivation", () => {
       { start: 1, end: 4, color: "#8895a7" },
       { start: 5, end: 8, color: "#8895a7" },
     ]);
+    expect(updated.rows).toHaveLength(2);
+    expect(updated.rows.map((row) => row.key)).toEqual(["ungrouped:lane_0", "ungrouped:lane_1"]);
   });
 
   it("rebuilds exact rows when the last Transaction is deleted", () => {
