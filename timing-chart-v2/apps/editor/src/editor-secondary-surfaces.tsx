@@ -271,7 +271,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
   const transactionBoundaryX = useCallback((cycle: number) => refs.transactionBoundaryX.current(cycle), [refs.transactionBoundaryX]);
   const workspaceViewportContent = workspace.viewMode !== "Cycle" && (workspace.viewMode === "Transaction" && workspace.transactionTreeTab === "signals"
     ? <TransactionSignalTree document={input.document} selectedSignalId={selected.signal?.id} onSelectSignal={input.actions.selectHierarchySignal} />
-    : <TransactionLanes document={input.document} documentEpoch={input.documentEpoch} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={transactionBoundaryX} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(clientX)} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />);
+    : <TransactionLanes document={input.document} documentEpoch={input.documentEpoch} presentationRevision={input.transactionPresentationRevision} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={transactionBoundaryX} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(clientX)} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />);
   const workspaceViewportLegend = <LegendView document={input.document} commands={surfaceCommands} />;
   const workspaceBottom = <BottomEditorPanel
     tabs={workspace.bottomTabs}
