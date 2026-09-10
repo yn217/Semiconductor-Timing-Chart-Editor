@@ -334,7 +334,7 @@ function timelineChangeSet(...documents: readonly CanonicalDocument[]): ChangeSe
   const annotationGroupIds = unique(documents.flatMap((document) => (document.annotationGroups ?? []).map((group) => group.id)));
   const beforeGroups = new Map((documents[0]?.annotationGroups ?? []).map((group) => [group.id, group.annotationIds]));
   const afterGroups = new Map((documents.at(-1)?.annotationGroups ?? []).map((group) => [group.id, group.annotationIds]));
-  const changedAnnotationGroups = annotationGroupIds.filter((id) => JSON.stringify(beforeGroups.get(id) ?? []) !== JSON.stringify(afterGroups.get(id) ?? []));
+  const changedAnnotationGroups = annotationGroupIds.filter((id) => !semanticEqual(beforeGroups.get(id) ?? [], afterGroups.get(id) ?? []));
   return {
     waveSemantics: signalIds,
     geometryLocal: signalIds,
@@ -617,7 +617,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const nextSpacingBefore = command.spacingBefore ?? row.spacingBefore;
       const nextSpacingAfter = command.spacingAfter ?? row.spacingAfter;
       const nextDisplayStyle = command.displayStyle ?? row.display.style;
-      if (row.title === title && row.body === command.body && row.spacingBefore === nextSpacingBefore && row.spacingAfter === nextSpacingAfter && JSON.stringify(row.display.style ?? {}) === JSON.stringify(nextDisplayStyle ?? {})) return fail("no-op", "NO_OP", "$", "Comment Row is unchanged.");
+      if (row.title === title && row.body === command.body && row.spacingBefore === nextSpacingBefore && row.spacingAfter === nextSpacingAfter && semanticEqual(row.display.style ?? {}, nextDisplayStyle ?? {})) return fail("no-op", "NO_OP", "$", "Comment Row is unchanged.");
       const next: CommentRow = { ...row, title, body: command.body, name: title, display: { ...row.display, name: title, ...(nextDisplayStyle === undefined ? {} : { style: nextDisplayStyle }) }, ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) };
       const spacingChanged = row.spacingBefore !== nextSpacingBefore || row.spacingAfter !== nextSpacingAfter;
       const changeSet: ChangeSet = { rowPresentation: [row.id], ...(spacingChanged ? { geometryScreenY: geometryRowsFrom(document, row.id) } : {}), minimapOverview: true };
@@ -725,7 +725,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (new Set(values.map((change) => change.start)).size !== values.length) return fail("invalid", "DUPLICATE_CHANGE_POINT", "$.values", "Change points must be unique.");
       const valueProblem = valuesCompatibleForType(signal.type, values);
       if (valueProblem) return fail("invalid", "UNSUPPORTED_SIGNAL_VALUE", "$.values", valueProblem);
-      if (JSON.stringify(signal.values) === JSON.stringify(values)) return fail("no-op", "NO_OP", "$.values", "Signal values are unchanged.");
+      if (semanticEqual(signal.values, values)) return fail("no-op", "NO_OP", "$.values", "Signal values are unchanged.");
       const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
       const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
       return { ok: true, document: replaceSignal(document, index, { ...signal, values }), changeSet, inverseChangeSet: changeSet };
@@ -805,7 +805,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const nextSplitPane = command.splitPane ?? currentSplitPane;
       const nextSpacingBefore = command.spacingBefore ?? signal.spacingBefore;
       const nextSpacingAfter = command.spacingAfter ?? signal.spacingAfter;
-      if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth && currentVisible === nextVisible && currentAlign === nextAlign && currentOverflow === nextOverflow && currentSplitPane === nextSplitPane && signal.spacingBefore === nextSpacingBefore && signal.spacingAfter === nextSpacingAfter && JSON.stringify(currentStyle) === JSON.stringify(nextStyle)) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
+      if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth && currentVisible === nextVisible && currentAlign === nextAlign && currentOverflow === nextOverflow && currentSplitPane === nextSplitPane && signal.spacingBefore === nextSpacingBefore && signal.spacingAfter === nextSpacingAfter && semanticEqual(currentStyle, nextStyle)) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
       const nextDisplay = { ...signal.display, name, visible: nextVisible, ...(nextAlign === undefined ? {} : { align: nextAlign }), ...(nextOverflow === undefined ? {} : { overflow: nextOverflow }), ...(nextStyle === undefined ? {} : { style: nextStyle }), ...(nextSplitPane === undefined ? {} : { splitPane: nextSplitPane }) };
       const next: Signal = signal.type === "clock"
         ? { ...signal, name, role: command.role, display: nextDisplay, ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) }
@@ -858,7 +858,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
         const representable = generator.period >= 2 && activeHalfCycles > 0 && activeHalfCycles < totalHalfCycles && Math.abs(activeHalfCycles / totalHalfCycles - generator.duty) <= 1e-9 && generator.initial === (generator.polarity === "positive" ? 0 : 1);
         if (!representable) return fail("invalid", "UNSUPPORTED_CLOCK_DUTY", "$.generator.duty", "This WaveDrom-backed editor supports non-50% duty only at exact half-cycle boundaries with the inactive initial level.");
       }
-      if (JSON.stringify(signal.generator) === JSON.stringify(generator)) return fail("no-op", "NO_OP", "$", "Clock Generator is unchanged.");
+      if (semanticEqual(signal.generator, generator)) return fail("no-op", "NO_OP", "$", "Clock Generator is unchanged.");
       const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
       const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
       return { ok: true, document: replaceSignal(document, index, { ...signal, generator }), changeSet, inverseChangeSet: changeSet };
@@ -875,7 +875,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (typeof settings.show !== "boolean" || !validMode || !validCountFrom || !validPosition || !validAnchor || !Number.isInteger(settings.startNumber) || !Number.isInteger(settings.labelEvery) || settings.labelEvery < 1 || !Number.isFinite(settings.offset.x) || !Number.isFinite(settings.offset.y)) return fail("invalid", "INVALID_EDGE_COUNTER", "$.edgeCounter", "Edge Number settings are invalid.");
       if (settings.countFrom === "marker" && settings.anchorId === undefined) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.edgeCounter.anchorId", "Marker count-from requires an explicit Bookmark anchor.");
       if (settings.anchorId !== undefined && !document.bookmarks.some((bookmark) => bookmark.id === settings.anchorId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.edgeCounter.anchorId", `Bookmark '${settings.anchorId}' does not exist.`);
-      if (JSON.stringify(signal.edgeCounter) === JSON.stringify(settings)) return fail("no-op", "NO_OP", "$", "Edge Number settings are unchanged.");
+      if (semanticEqual(signal.edgeCounter, settings)) return fail("no-op", "NO_OP", "$", "Edge Number settings are unchanged.");
       const changeSet: ChangeSet = { rowPresentation: [signal.id], edgeCounter: [signal.id] };
       return { ok: true, document: replaceSignal(document, index, { ...signal, edgeCounter: settings }), changeSet, inverseChangeSet: changeSet };
     }
@@ -885,7 +885,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!signal || signal.type === "clock" || signal.type === "commentRow") return fail("invalid", "SIGNAL_PROPERTIES_NOT_SUPPORTED", "$.signalId", "Reset semantics require a value signal.");
       const reset = command.resetSemantics;
       if (reset && (!["active-high", "active-low"].includes(reset.polarity) || !["synchronous", "asynchronous"].includes(reset.synchronization) || (reset.assertCycle !== undefined && (!Number.isInteger(reset.assertCycle) || reset.assertCycle < 0 || reset.assertCycle >= document.timeline.cycleCount)) || (reset.deassertCycle !== undefined && (!Number.isInteger(reset.deassertCycle) || reset.deassertCycle < 0 || reset.deassertCycle >= document.timeline.cycleCount)) || (reset.assertCycle !== undefined && reset.deassertCycle !== undefined && reset.assertCycle > reset.deassertCycle))) return fail("invalid", "INVALID_RESET_SEMANTICS", "$.resetSemantics", "Reset semantics must use in-range ordered source-time cycles.");
-      if (JSON.stringify(signal.resetSemantics) === JSON.stringify(reset)) return fail("no-op", "NO_OP", "$", "Reset semantics are unchanged.");
+      if (semanticEqual(signal.resetSemantics, reset)) return fail("no-op", "NO_OP", "$", "Reset semantics are unchanged.");
       return { ok: true, document: replaceSignal(document, index, reset === undefined ? (() => { const { resetSemantics: _reset, ...rest } = signal; return rest; })() : { ...signal, resetSemantics: reset }), changeSet: { waveSemantics: [signal.id] }, inverseChangeSet: { waveSemantics: [signal.id] } };
     }
     case "spacer.create": {
@@ -1012,7 +1012,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!Number.isFinite(command.spacingBefore) || command.spacingBefore < 0 || !Number.isFinite(command.spacingAfter) || command.spacingAfter < 0) return fail("invalid", "INVALID_GROUP_SPACING", "$.spacing", "Group spacing must be finite and non-negative.");
       const style = { ...command.style };
       if (style.opacity !== undefined && (!Number.isFinite(style.opacity) || style.opacity < 0 || style.opacity > 1)) return fail("invalid", "INVALID_GROUP_STYLE", "$.style.opacity", "Group opacity must be between 0 and 1.");
-      if (group.name === name && group.spacingBefore === command.spacingBefore && group.spacingAfter === command.spacingAfter && JSON.stringify(group.style ?? {}) === JSON.stringify(style)) return fail("no-op", "NO_OP", "$", "Group properties are unchanged.");
+      if (group.name === name && group.spacingBefore === command.spacingBefore && group.spacingAfter === command.spacingAfter && semanticEqual(group.style ?? {}, style)) return fail("no-op", "NO_OP", "$", "Group properties are unchanged.");
       const next: SignalGroup = { ...group, name, spacingBefore: command.spacingBefore, spacingAfter: command.spacingAfter, ...(Object.keys(style).length === 0 ? {} : { style }) };
       const groups = [...document.signalGroups]; groups[index] = next;
       const affectedTimingRows = orderedVisibleTimingRows(document).filter((id) => group.rows.includes(id));
@@ -1093,7 +1093,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const groupId = command.clearGroupId ? undefined : command.groupId === undefined ? transaction.groupId : command.groupId;
       const color = command.clearColor ? undefined : command.color === undefined ? transaction.color : command.color;
       const description = command.clearDescription ? undefined : command.description === undefined ? transaction.description : command.description;
-      if (transaction.name === name && transaction.start === command.start && transaction.end === command.end && (transaction.laneId ?? undefined) === (lane ?? undefined) && (transaction.groupId ?? undefined) === (groupId ?? undefined) && transaction.color === color && transaction.description === description && JSON.stringify(transaction.phases ?? []) === JSON.stringify(phases ?? [])) return fail("no-op", "NO_OP", "$", "Transaction is unchanged.");
+      if (transaction.name === name && transaction.start === command.start && transaction.end === command.end && (transaction.laneId ?? undefined) === (lane ?? undefined) && (transaction.groupId ?? undefined) === (groupId ?? undefined) && transaction.color === color && transaction.description === description && semanticEqual(transaction.phases ?? [], phases ?? [])) return fail("no-op", "NO_OP", "$", "Transaction is unchanged.");
       const next: Transaction = { ...transaction, name, start: command.start, end: command.end, ...(lane === undefined ? {} : { laneId: lane }), ...(groupId === undefined ? {} : { groupId }), ...(color === undefined ? {} : { color }), ...(description === undefined ? {} : { description }), ...(phases && phases.length > 0 ? { phases } : {}) };
       if (lane === undefined) delete (next as { laneId?: string }).laneId;
       if (groupId === undefined) delete (next as { groupId?: string }).groupId;
@@ -1173,7 +1173,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (index < 0 || !command.name.trim() || !Number.isInteger(command.order) || command.order < 0) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction Group update is invalid.");
       const current = groups[index]!;
       const next = { ...current, name: command.name, order: command.order, ...(command.color === undefined ? {} : command.color.trim() === "" ? (() => { const { color: _color, ...rest } = current; return rest; })() : { color: command.color }) };
-      if (JSON.stringify(current) === JSON.stringify(next)) return fail("no-op", "NO_OP", "$", "Transaction Group is unchanged.");
+      if (semanticEqual(current, next)) return fail("no-op", "NO_OP", "$", "Transaction Group is unchanged.");
       groups[index] = next; return { ok: true, document: { ...document, transactionGroups: groups }, changeSet: { transactionGroupSemantics: [command.groupId] }, inverseChangeSet: { transactionGroupSemantics: [command.groupId] } };
     }
     case "transactionGroup.delete": {
@@ -1197,14 +1197,14 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
         )
         : { ...currentScale, ...command.scale };
       if (!Number.isFinite(scale.clockCyclesPerTransactionCycle) || scale.clockCyclesPerTransactionCycle <= 0 || !Number.isInteger(scale.majorInterval) || scale.majorInterval < 1 || !Number.isInteger(scale.minorInterval) || scale.minorInterval < 1) return fail("invalid", "INVALID_TRANSACTION_TIME_SCALE", "$.scale", "Transaction time scale must use positive finite ratio and positive integer intervals.");
-      if (JSON.stringify(currentScale ?? {}) === JSON.stringify(scale)) return fail("no-op", "NO_OP", "$", "Transaction time scale is unchanged.");
+      if (semanticEqual(currentScale ?? {}, scale)) return fail("no-op", "NO_OP", "$", "Transaction time scale is unchanged.");
       return { ok: true, document: { ...document, transactionTimeScale: scale }, changeSet: { transactionSemantics: document.transactions.map((item) => item.id) }, inverseChangeSet: { transactionSemantics: document.transactions.map((item) => item.id) } };
     }
     case "annotation.updateAnchor": {
       const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
       const annotation = document.annotations[index];
       if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
-      if (JSON.stringify(annotation.anchor) === JSON.stringify(command.anchor)) return fail("no-op", "NO_OP", "$", "Annotation anchor is unchanged.");
+      if (semanticEqual(annotation.anchor, command.anchor)) return fail("no-op", "NO_OP", "$", "Annotation anchor is unchanged.");
       const annotations = [...document.annotations]; annotations[index] = { ...annotation, anchor: command.anchor };
       const changeSet: ChangeSet = { annotationPosition: [annotation.id] };
       return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
@@ -1219,14 +1219,14 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const annotation = document.annotations.find((item) => item.id === command.annotationId);
       if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
       const annotationGroups = (document.annotationGroups ?? []).map((group) => ({ ...group, annotationIds: group.annotationIds.filter((id) => id !== annotation.id) }));
-      const changeSet: ChangeSet = { annotationPosition: [annotation.id], annotationStyle: [annotation.id], minimapOverview: true, ...(annotationGroups.some((group, index) => JSON.stringify(group) !== JSON.stringify(document.annotationGroups?.[index])) ? { annotationGroups: annotationGroups.map((group) => group.id) } : {}) };
+      const changeSet: ChangeSet = { annotationPosition: [annotation.id], annotationStyle: [annotation.id], minimapOverview: true, ...(annotationGroups.some((group, index) => !semanticEqual(group, document.annotationGroups?.[index])) ? { annotationGroups: annotationGroups.map((group) => group.id) } : {}) };
       return { ok: true, document: { ...document, annotations: document.annotations.filter((item) => item.id !== annotation.id), annotationGroups }, changeSet, inverseChangeSet: changeSet };
     }
     case "annotation.setAnchor": {
       const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
       const annotation = document.annotations[index];
       if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
-      if (JSON.stringify(annotation[command.field]) === JSON.stringify(command.anchor)) return fail("no-op", "NO_OP", "$", "Annotation anchor is unchanged.");
+      if (semanticEqual(annotation[command.field], command.anchor)) return fail("no-op", "NO_OP", "$", "Annotation anchor is unchanged.");
       const annotations = [...document.annotations]; annotations[index] = { ...annotation, [command.field]: command.anchor };
       const changeSet: ChangeSet = { annotationPosition: [annotation.id], minimapOverview: true };
       return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
@@ -1270,7 +1270,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const annotation = document.annotations[index];
       if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
       if (!Number.isFinite(command.labelOffset.x) || !Number.isFinite(command.labelOffset.y)) return fail("invalid", "NON_FINITE_OFFSET", "$.labelOffset", "Label offset must be finite.");
-      if (JSON.stringify(annotation.labelOffset) === JSON.stringify(command.labelOffset)) return fail("no-op", "NO_OP", "$", "Annotation label offset is unchanged.");
+      if (semanticEqual(annotation.labelOffset, command.labelOffset)) return fail("no-op", "NO_OP", "$", "Annotation label offset is unchanged.");
       const annotations = [...document.annotations]; annotations[index] = { ...annotation, labelOffset: command.labelOffset };
       const changeSet: ChangeSet = { annotationPosition: [annotation.id] };
       return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
@@ -1288,7 +1288,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
         return command.profile === "cycle" ? semantic : { ...semantic, point: "transition-center", transition: { kind: command.anchorKind, value } };
       };
       const next = { ...annotation, measurement: { profile: command.profile, anchorKind: command.anchorKind }, start: toCycleAnchor(annotation.start, command.start), end: toCycleAnchor(annotation.end, command.end), ...(command.layout === undefined ? {} : { measurementLayout: command.layout }) };
-      if (JSON.stringify(annotation) === JSON.stringify(next)) return fail("no-op", "NO_OP", "$", "Measurement semantics are unchanged.");
+      if (semanticEqual(annotation, next)) return fail("no-op", "NO_OP", "$", "Measurement semantics are unchanged.");
       const annotations = [...document.annotations]; annotations[index] = next;
       const changeSet: ChangeSet = { annotationPosition: [annotation.id], annotationStyle: [annotation.id] };
       return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
@@ -1300,7 +1300,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
       if (!label) return fail("invalid", "INVALID_LABEL", "$.label", "Annotation label cannot be empty.");
       const next = Object.fromEntries(Object.entries({ ...annotation, label, visible: command.visible, color: command.color, lineType: command.lineType, arrowhead: command.arrowhead, sourceSignalId: command.sourceSignalId, traceOffsetCycles: command.traceOffsetCycles, opacity: command.opacity, style: command.style, measurement: command.measurement, measurementLayout: annotation.measurementLayout }).filter(([, value]) => value !== undefined)) as unknown as Annotation;
-      if (JSON.stringify(annotation) === JSON.stringify(next)) return fail("no-op", "NO_OP", "$", "Annotation properties are unchanged.");
+      if (semanticEqual(annotation, next)) return fail("no-op", "NO_OP", "$", "Annotation properties are unchanged.");
       const annotations = [...document.annotations]; annotations[index] = next;
       const changeSet: ChangeSet = { annotationStyle: [annotation.id], minimapOverview: true };
       return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
@@ -1314,7 +1314,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (span.mode === "rows" && (!span.startRowId || !span.endRowId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.verticalSpan", "Rows mode requires stable start and end row IDs.");
       if (span.mode === "custom" && (!Number.isFinite(span.startOffset ?? 0) || !Number.isFinite(span.endOffset ?? 0))) return fail("invalid", "NON_FINITE_OFFSET", "$.verticalSpan", "Custom span offsets must be finite.");
       if (span.startRowId && !document.signals.some((signal) => signal.id === span.startRowId) || span.endRowId && !document.signals.some((signal) => signal.id === span.endRowId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.verticalSpan", "Vertical span row IDs must reference existing Signals.");
-      if (JSON.stringify(annotation.verticalSpan ?? { mode: "auto" }) === JSON.stringify(span)) return fail("no-op", "NO_OP", "$", "Marker vertical span is unchanged.");
+      if (semanticEqual(annotation.verticalSpan ?? { mode: "auto" }, span)) return fail("no-op", "NO_OP", "$", "Marker vertical span is unchanged.");
       const annotations = [...document.annotations]; annotations[index] = { ...annotation, verticalSpan: span };
       const changeSet: ChangeSet = { annotationStyle: [annotation.id] };
       return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
@@ -1592,7 +1592,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const resolution = resolveTimeGroupRange({ ...document, timeGroups: hierarchyBase }, command);
       if (!resolution.ok) return fail("invalid", resolution.code, "$.range", resolution.message);
       if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount) return fail("invalid", "INVALID_TIME_GROUP_RANGE", "$.timeGroup", "Time Group must be a non-empty half-open range.");
-      if (group.name === command.name && group.start === command.start && group.end === command.end && group.category === command.category && group.comment === command.comment && JSON.stringify(group.presentation) === JSON.stringify(command.presentation)) return fail("no-op", "NO_OP", "$", "Time Group is unchanged.");
+      if (group.name === command.name && group.start === command.start && group.end === command.end && group.category === command.category && group.comment === command.comment && semanticEqual(group.presentation, command.presentation)) return fail("no-op", "NO_OP", "$", "Time Group is unchanged.");
       const nextGroup: TimeGroup = { ...(resolution.parentId === undefined ? {} : { parentId: resolution.parentId }), id: group.id, name: command.name, start: command.start, end: command.end, ...(command.category === undefined ? {} : { category: command.category }), ...(command.comment === undefined ? {} : { comment: command.comment }), ...(command.presentation === undefined ? {} : { presentation: command.presentation }) };
       const timeGroups = hierarchyBase.map((item) => resolution.enclosedIds.has(item.id) && (item.parentId === undefined || !resolution.enclosedIds.has(item.parentId)) ? { ...item, parentId: group.id } : item);
       timeGroups.splice(index, 0, nextGroup);
@@ -1605,7 +1605,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const index = document.timeGroups.findIndex((group) => group.id === command.timeGroupId);
       const group = document.timeGroups[index];
       if (!group) return fail("invalid", "TIME_GROUP_NOT_FOUND", "$.timeGroupId", `Time Group '${command.timeGroupId}' does not exist.`);
-      if (JSON.stringify(group.presentation) === JSON.stringify(command.presentation)) return fail("no-op", "NO_OP", "$", "Time Group presentation is unchanged.");
+      if (semanticEqual(group.presentation, command.presentation)) return fail("no-op", "NO_OP", "$", "Time Group presentation is unchanged.");
       const { presentation: _presentation, ...base } = group;
       const timeGroups = [...document.timeGroups]; timeGroups[index] = { ...base, ...(command.presentation === undefined ? {} : { presentation: command.presentation }) };
       const nextDocument = { ...document, timeGroups };
