@@ -45,18 +45,18 @@ export function EditorWorkspaceView({
     ] as const;
     const rulerElements = () => [ruler.current, rulerLower.current].filter((element): element is HTMLDivElement => element !== null);
     const tickCache = new WeakMap<HTMLDivElement, { ticks: readonly { readonly x: number; readonly cycle: number }[]; scrollLeft: number }>();
-    const cacheTicks = (rulerElement: HTMLDivElement) => {
+    const cacheTicks = (rulerElement: HTMLDivElement, scrollOwner: HTMLDivElement = rulerElement) => {
       const next = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")].map((candidate) => ({
         x: candidate.getBoundingClientRect().left,
         cycle: Number(candidate.dataset.sourceCycle ?? candidate.dataset.cycle),
       })).filter((tick) => Number.isFinite(tick.x) && Number.isFinite(tick.cycle)).sort((left, right) => left.x - right.x);
-      tickCache.set(rulerElement, { ticks: next, scrollLeft: rulerElement.scrollLeft });
+      tickCache.set(rulerElement, { ticks: next, scrollLeft: scrollOwner.scrollLeft });
       return next;
     };
-    const shiftCachedTicks = (rulerElement: HTMLDivElement) => {
+    const shiftCachedTicks = (rulerElement: HTMLDivElement, scrollOwner: HTMLDivElement) => {
       const cached = tickCache.get(rulerElement);
-      if (!cached) return cacheTicks(rulerElement);
-      const nextScrollLeft = rulerElement.scrollLeft;
+      if (!cached) return cacheTicks(rulerElement, scrollOwner);
+      const nextScrollLeft = scrollOwner.scrollLeft;
       const delta = cached.scrollLeft - nextScrollLeft;
       if (delta === 0) return cached.ticks;
       const ticks = cached.ticks.map((tick) => ({ ...tick, x: tick.x + delta }));
@@ -83,7 +83,7 @@ export function EditorWorkspaceView({
     const update = () => {
       for (const [viewportElement, rulerElement] of viewports) {
         if (!viewportElement || !rulerElement) continue;
-        shiftCachedTicks(rulerElement);
+        shiftCachedTicks(rulerElement, viewportElement);
         let overlay = viewportElement.querySelector<HTMLElement>("[data-role='cursor-overlay']");
         if (!overlay) {
           overlay = viewportElement.ownerDocument.createElement("div");
