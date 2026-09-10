@@ -31,6 +31,22 @@ const fail = (reason: "invalid" | "no-op", code: CommandPolicyCode, path: string
 const timingSignalIds = (document: CanonicalDocument) => document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
 const annotationIds = (document: CanonicalDocument) => document.annotations.map((annotation) => annotation.id);
 
+// Command no-op checks must compare semantic data, not serialization order.
+// Keeping this local avoids making routine metadata/layout reads pay a full
+// document serialization cost and also handles equivalent object key order.
+function semanticEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) return true;
+  if (typeof left !== "object" || left === null || typeof right !== "object" || right === null) return false;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return Array.isArray(left) && Array.isArray(right) && left.length === right.length && left.every((value, index) => semanticEqual(value, right[index]));
+  }
+  const leftRecord = left as Record<string, unknown>;
+  const rightRecord = right as Record<string, unknown>;
+  const leftKeys = Object.keys(leftRecord);
+  const rightKeys = Object.keys(rightRecord);
+  return leftKeys.length === rightKeys.length && leftKeys.every((key) => Object.prototype.hasOwnProperty.call(rightRecord, key) && semanticEqual(leftRecord[key], rightRecord[key]));
+}
+
 function transactionPhasesProblem(phases: readonly TransactionPhase[], start: number, end: number): string | undefined {
   const ordered = phases.slice().sort((left, right) => left.start - right.start || left.end - right.end || left.name.localeCompare(right.name));
   if (ordered.some((phase) => !phase.name.trim() || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < start || phase.start >= phase.end || phase.end > end)) return "Phases must be named integer-cycle half-open subranges of the Transaction.";
@@ -571,7 +587,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
     case "document.updateMetadata": {
       if (!command.title.trim()) return fail("invalid", "EMPTY_DOCUMENT_TITLE", "$.title", "Document title must not be empty.");
       const nextDocument = { ...document, document: { ...document.document, title: command.title, header: command.header, footer: command.footer } };
-      if (JSON.stringify(document.document) === JSON.stringify(nextDocument.document)) return fail("no-op", "NO_OP", "$.document", "Document metadata is unchanged.");
+      if (semanticEqual(document.document, nextDocument.document)) return fail("no-op", "NO_OP", "$.document", "Document metadata is unchanged.");
       return { ok: true, document: nextDocument, changeSet: {}, inverseChangeSet: {} };
     }
     case "document.updateLayout": {
@@ -579,14 +595,14 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!Number.isFinite(layout.roleColumnWidth) || layout.roleColumnWidth < 16 || !Number.isFinite(layout.signalNameWidth) || layout.signalNameWidth < 40 || !Number.isFinite(layout.rowHeight) || layout.rowHeight < 12 || !Number.isFinite(layout.signalSpacing) || layout.signalSpacing < 0) return fail("invalid", "INVALID_LAYOUT", "$.layout", "Layout dimensions must be finite and within the supported range.");
       if (layout.signalNameAlign !== "left" && layout.signalNameAlign !== "center" && layout.signalNameAlign !== "right") return fail("invalid", "INVALID_LAYOUT", "$.layout.signalNameAlign", "Signal name alignment is invalid.");
       if (layout.overflow !== "expand" && layout.overflow !== "ellipsis" && layout.overflow !== "wrap") return fail("invalid", "INVALID_LAYOUT", "$.layout.overflow", "Signal overflow mode is invalid.");
-      if (JSON.stringify(document.layout) === JSON.stringify(layout)) return fail("no-op", "NO_OP", "$.layout", "Layout is unchanged.");
+      if (semanticEqual(document.layout, layout)) return fail("no-op", "NO_OP", "$.layout", "Layout is unchanged.");
       const nextDocument = { ...document, layout };
       const timingRows = orderedVisibleTimingRows(document);
       const changeSet: ChangeSet = { geometryScreenY: timingRows, annotationPosition: annotationsForSignals(document, timingRows), minimapOverview: true };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
     case "legend.update": {
-      if (JSON.stringify(document.legend) === JSON.stringify(command.legend)) return fail("no-op", "NO_OP", "$.legend", "Legend is unchanged.");
+      if (semanticEqual(document.legend, command.legend)) return fail("no-op", "NO_OP", "$.legend", "Legend is unchanged.");
       return { ok: true, document: { ...document, legend: command.legend }, changeSet: {}, inverseChangeSet: {} };
     }
     case "commentRow.create":
