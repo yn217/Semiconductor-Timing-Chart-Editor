@@ -13,6 +13,7 @@ export function CommentRowEditor({ signal, commands, onCancel }: {
   const [body, setBody] = useState(signal.body);
   const [spacingBefore, setSpacingBefore] = useState(signal.spacingBefore ?? 0);
   const [spacingAfter, setSpacingAfter] = useState(signal.spacingAfter ?? 0);
+  const [styleDraft, setStyleDraft] = useState<JsonObject>(() => ({ ...(signal.display.style ?? {}) }));
   // #426/#431 item 3 ("Apply/Cancel乱立の整理" -- "同じ entity 内で即時反映と
   // Draftが無秩序に混在しない"): Line spacing used to call
   // `commands.updateCommentRow` directly from its own onChange -- a fresh
@@ -31,18 +32,21 @@ export function CommentRowEditor({ signal, commands, onCancel }: {
     setBody(signal.body);
     setSpacingBefore(signal.spacingBefore ?? 0);
     setSpacingAfter(signal.spacingAfter ?? 0);
+    setStyleDraft({ ...(signal.display.style ?? {}) });
     setLineHeight(typeof signal.display.style?.lineHeight === "number" ? signal.display.style.lineHeight : 1.4);
   }, [signal]);
   const committedLineHeight = typeof signal.display.style?.lineHeight === "number" ? signal.display.style.lineHeight : 1.4;
-  const hasChanges = title !== signal.title || body !== signal.body || spacingBefore !== (signal.spacingBefore ?? 0) || spacingAfter !== (signal.spacingAfter ?? 0) || lineHeight !== committedLineHeight;
+  const committedStyle = { ...(signal.display.style ?? {}) };
+  const nextStyle = { ...styleDraft, lineHeight };
+  const hasChanges = title !== signal.title || body !== signal.body || spacingBefore !== (signal.spacingBefore ?? 0) || spacingAfter !== (signal.spacingAfter ?? 0) || JSON.stringify(nextStyle) !== JSON.stringify({ ...committedStyle, lineHeight: committedLineHeight });
   const apply = () => {
     if (!hasChanges) return;
-    commands.updateCommentRow(signal.id, { title, body, spacingBefore, spacingAfter, displayStyle: { ...signal.display.style, lineHeight } });
+    commands.updateCommentRow(signal.id, { title, body, spacingBefore, spacingAfter, displayStyle: nextStyle });
   };
   return <form className="comment-row-editor" aria-label="Comment Row Editor" data-testid="comment-row-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }} onSubmit={(event) => { event.preventDefault(); apply(); }}>
     <h2>Comment Row</h2>
     <div className="property-row"><span>Scope</span><span>{signal.source.instancePath.join(".") || "(root)"}</span></div>
-    <FontStyleToolbar idPrefix="comment-row-font" style={signal.display.style} onChange={(next: JsonObject) => commands.updateCommentRow(signal.id, { title: signal.title, body: signal.body, displayStyle: next })} />
+    <FontStyleToolbar idPrefix="comment-row-font" style={styleDraft} onChange={(next: JsonObject) => setStyleDraft(next)} />
     <label>Line spacing<input aria-label="Comment Row line spacing" data-testid="comment-row-line-height" type="number" min="1" max="3" step="0.1" value={lineHeight} onChange={(event) => setLineHeight(Number(event.target.value))} /></label>
     <label>Title<input aria-label="Comment Row title" value={title} onChange={(event) => setTitle(event.target.value)} /></label>
     <label>Body<textarea aria-label="Comment Row body" value={body} onChange={(event) => setBody(event.target.value)} rows={4} /></label>
