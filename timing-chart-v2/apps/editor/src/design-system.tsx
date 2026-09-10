@@ -13,8 +13,8 @@ export function DsRibbonButton({ ariaLabel, children, className, dataTestId, dis
 
 /** Shared CAD/EDA split-button primitive: the primary action and menu action
  * retain separate accessible names while sharing one size-class container. */
-export function DsRibbonSplitButton({ ariaLabel, children, className, dataTestId, disabled, icon, menuAriaLabel, onClick, onMenuClick, priority, size = "large", title }: { readonly ariaLabel: string; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string | undefined; readonly disabled?: boolean | undefined; readonly icon: ReactNode; readonly menuAriaLabel: string; readonly onClick: () => void; readonly onMenuClick: () => void; readonly priority?: number; readonly size?: RibbonSizeClass; readonly title?: string | undefined }) {
-  return <span className={`ds-control ds-ribbon-split-button ds-ribbon-split-button--${size}${className ? ` ${className}` : ""}`} data-ribbon-size={size} data-ribbon-priority={priority} data-testid={dataTestId} title={title}>
+export function DsRibbonSplitButton({ ariaLabel, children, className, dataTestId, disabled, icon, menuAriaLabel, onClick, onMenuClick, priority, size = "large", style, title }: { readonly ariaLabel: string; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string | undefined; readonly disabled?: boolean | undefined; readonly icon: ReactNode; readonly menuAriaLabel: string; readonly onClick: () => void; readonly onMenuClick: () => void; readonly priority?: number; readonly size?: RibbonSizeClass; readonly style?: CSSProperties; readonly title?: string | undefined }) {
+  return <span className={`ds-control ds-ribbon-split-button ds-ribbon-split-button--${size}${className ? ` ${className}` : ""}`} data-ribbon-size={size} data-ribbon-priority={priority} data-testid={dataTestId} style={style} title={title}>
     <button type="button" className="ds-ribbon-button ds-ribbon-split-button__primary" aria-label={ariaLabel} disabled={disabled} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label">{children}</span></button>
     <button type="button" className="ds-ribbon-split-button__menu" aria-label={menuAriaLabel} aria-haspopup="menu" disabled={disabled} onClick={onMenuClick}>▾</button>
   </span>;
@@ -28,8 +28,8 @@ export function DsRibbonSelect({ ariaLabel, children, className, dataTestId, onC
   return <select className={`ds-control ds-ribbon-select ds-ribbon-select--${size}${className ? ` ${className}` : ""}`} aria-label={ariaLabel} data-ribbon-size={size} data-testid={dataTestId} value={value} onChange={onChange}>{children}</select>;
 }
 
-export function DsRibbonToggle({ checked, className, dataTestId, label, onChange, priority, size = "medium" }: { readonly checked: boolean; readonly className?: ClassName; readonly dataTestId?: string | undefined; readonly label: string; readonly onChange: (event: ChangeEvent<HTMLInputElement>) => void; readonly priority?: number; readonly size?: RibbonSizeClass }) {
-  return <label className={`ds-control ds-ribbon-toggle ds-ribbon-toggle--${size}${className ? ` ${className}` : ""}`} data-ribbon-size={size} data-ribbon-priority={priority}><input data-testid={dataTestId} type="checkbox" checked={checked} onChange={onChange} /><span>{label}</span></label>;
+export function DsRibbonToggle({ checked, className, dataTestId, label, onChange, priority, size = "medium", style }: { readonly checked: boolean; readonly className?: ClassName; readonly dataTestId?: string | undefined; readonly label: string; readonly onChange: (event: ChangeEvent<HTMLInputElement>) => void; readonly priority?: number; readonly size?: RibbonSizeClass; readonly style?: CSSProperties }) {
+  return <label className={`ds-control ds-ribbon-toggle ds-ribbon-toggle--${size}${className ? ` ${className}` : ""}`} data-ribbon-size={size} data-ribbon-priority={priority} style={style}><input data-testid={dataTestId} type="checkbox" checked={checked} onChange={onChange} /><span>{label}</span></label>;
 }
 
 /** `density` lets a Tab request a compact-grid child layout (smaller
