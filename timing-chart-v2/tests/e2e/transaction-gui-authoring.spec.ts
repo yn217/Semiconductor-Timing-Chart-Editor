@@ -18,11 +18,13 @@ test("builds six transactions through normal GUI selection transitions", async (
   for (let index = 0; index < 3; index++) await page.getByTestId("add-transaction-group-tree").click();
   await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").first().click();
   await inspector.getByLabel("Transaction group", { exact: true }).selectOption({ label: "Group 1" });
+  await expect(inspector.getByLabel("Transaction group", { exact: true })).toHaveValue(/.+/);
   await inspector.getByLabel("Transaction lane", { exact: true }).fill("lane_0");
-  await inspector.getByTestId("add-transaction-phase").click();
-  await inspector.getByTestId("add-transaction-phase").click();
-  await inspector.getByTestId("add-transaction-phase").click();
-  for (let index = 0; index < 3; index++) await inspector.getByLabel(`Phase ${index + 1} name`).fill(["Address", "Read Data", "Response"][index]!);
+  for (let index = 0; index < 3; index++) {
+    await inspector.getByTestId("add-transaction-phase").click();
+    await expect(inspector.locator("[data-phase-index]")).toHaveCount(index + 1);
+    await inspector.getByLabel(`Phase ${index + 1} name`).fill(["Address", "Read Data", "Response"][index]!);
+  }
   await inspector.getByTestId("open-linked-signal-picker").click();
   await inspector.getByLabel("Search linked signals").fill("REQUEST");
   await inspector.getByRole("option", { name: /REQUEST/ }).click();
