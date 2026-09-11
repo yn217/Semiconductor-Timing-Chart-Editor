@@ -458,7 +458,7 @@
    Reference treats this list as a table using the panel's whole width,
    not a set of narrow cards that wrap into multiple columns as the panel
    widens. Same shape as .bookmark-list below. */
-.transaction-list { display: flex; flex-direction: column; gap: 4px; }
+.transaction-list { display: flex; flex-direction: column; gap: 0; }
 /* #453 (bulk operations): the row itself must stay a `<button>` (existing
    tests and the Draft/select contract key off `.transaction-list > button`
    / `getByRole("button", ...)`), and a checkbox can't validly nest inside
@@ -477,6 +477,7 @@
    lengths differ. Fixed widths make every row (and the header, which
    repeats this exact template) share identical column boundaries. */
 .transaction-list-row > button { flex: 1 1 auto; min-width: 0; height: 30px; display: grid; grid-template-columns: 12px minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 5px; border: 1px solid #c2cfdd; border-radius: 3px; text-align: left; padding-inline: 6px; overflow: hidden; }
+.editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row > button { height: 28px; }
 .transaction-list-row > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: #5c687c; }
 /* #397: column header row -- the spacer matches the row checkbox's fixed
    width and `.transaction-list-header-cells` repeats the row button's own

@@ -85,7 +85,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
   const groupNameById = new Map(document.transactionGroups?.map((group) => [group.id, group.name]) ?? []);
   const needle = search.trim().toLocaleLowerCase();
   const visibleTransactions = needle.length === 0 ? document.transactions : document.transactions.filter((item) => item.name.toLocaleLowerCase().includes(needle) || (item.groupId !== undefined && (groupNameById.get(item.groupId) ?? "").toLocaleLowerCase().includes(needle)));
-  const transactionRowHeight = 38;
+  const transactionRowHeight = 30;
   const shouldVirtualizeTransactions = visibleTransactions.length > 200;
   const transactionListViewportRef = useRef<HTMLDivElement>(null);
   const [transactionListScrollTop, setTransactionListScrollTop] = useState(0);
