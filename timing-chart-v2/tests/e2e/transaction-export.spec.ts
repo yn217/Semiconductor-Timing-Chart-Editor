@@ -15,10 +15,11 @@ async function createTransaction(page: Page, name = "DMA Read", start = 2, end =
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Workspace preset").selectOption("transaction");
   const editor = page.getByTestId("transaction-editor");
-  await editor.getByLabel("Transaction name", { exact: true }).fill(name);
-  await editor.getByLabel("Transaction start", { exact: true }).fill(String(start));
-  await editor.getByLabel("Transaction end", { exact: true }).fill(String(end));
-  await editor.getByTestId("apply-transaction-properties").click();
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Transaction name", { exact: true }).fill(name);
+  await inspector.getByLabel("Transaction start", { exact: true }).fill(String(start));
+  await inspector.getByLabel("Transaction end", { exact: true }).fill(String(end));
+  await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   return editor;
 }
