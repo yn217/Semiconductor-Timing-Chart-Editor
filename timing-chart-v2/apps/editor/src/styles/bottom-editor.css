@@ -506,6 +506,9 @@
 .transaction-signal-picker [role="option"]:hover, .transaction-signal-picker [role="option"][aria-selected="true"] { border-color: #9fc4e5; background: #eaf4fd; }
 .transaction-signal-picker [role="option"] span, .transaction-signal-picker [role="option"] small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .transaction-signal-picker [role="option"] small { color: #61758a; font-size: 9px; }
+.transaction-signal-picker .linked-signal-label { display: flex; align-items: center; gap: 5px; }
+.transaction-signal-picker .linked-signal-check { width: 12px; height: 12px; flex: 0 0 12px; border: 1px solid #8a97ab; border-radius: 2px; background: white; }
+.transaction-signal-picker .linked-signal-check[data-checked="true"] { border-color: var(--ds-focus-color, #2678bc); background: var(--ds-focus-color, #2678bc); box-shadow: inset 0 0 0 3px white; }
 .problems-panel header, .json-toolbar { height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-bottom: 1px solid #d5dce5; }
 .problems-panel header span { color: #69778a; }
 .problems-panel p { padding: 18px; color: #667488; }
