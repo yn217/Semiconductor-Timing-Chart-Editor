@@ -164,8 +164,8 @@ test("Bottom Transaction editor deletes its displayed stable target", async ({ p
   await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Transaction", exact: true }).click();
   const editor = page.getByTestId("transaction-editor");
   await editor.locator(".transaction-list").getByRole("button", { name: /Delete me/ }).click();
-  await expect(editor.getByTestId("delete-bottom-transaction")).toBeVisible();
-  await editor.getByTestId("delete-bottom-transaction").click();
+  await expect(editor.getByTestId("bottom-transaction-delete")).toBeVisible();
+  await editor.getByTestId("bottom-transaction-delete").click();
   await expect(page.locator("[data-transaction-id='txn_delete']")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });

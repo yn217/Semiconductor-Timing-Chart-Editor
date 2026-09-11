@@ -127,7 +127,7 @@ test("Sample A: create/rename/move/resize/delete, phase add/edit/delete, link/un
   await bottomEditor.getByTestId("bottom-transaction-duplicate").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 6 / Redo 0");
   await expect(lanes.locator("[data-transaction-id]")).toHaveCount(5);
-  await bottomEditor.getByTestId("delete-bottom-transaction").click();
+  await bottomEditor.getByTestId("bottom-transaction-delete").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 7 / Redo 0");
   await expect(lanes.locator("[data-transaction-id]")).toHaveCount(4);
 
