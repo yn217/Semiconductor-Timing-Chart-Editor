@@ -475,7 +475,7 @@
 /* #397: explicit margin:0 -- the UA default checkbox margin (commonly
    ~3-4px) otherwise silently offsets the button/header alignment below by
    that same amount, since flex item outer size includes margin. */
-.transaction-list-row > input[type="checkbox"] { flex: 0 0 28px; width: 13px; margin: 0; align-self: center; }
+.transaction-list-row > input[type="checkbox"] { flex: 0 0 16px; width: 16px; height: 16px; margin: 0 6px; align-self: center; }
 /* #397: fixed pixel widths (not `auto`) for every trailing column -- each
    row's button is its own independent grid formatting context, so `auto`
    columns size to that one row's own content and drift out of alignment
