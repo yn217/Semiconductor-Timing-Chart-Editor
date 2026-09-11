@@ -52,8 +52,8 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
   const createHasChanges = name !== "Bookmark" || start !== 0 || comment !== "";
   return <section className="bookmark-editor-panel" data-testid="bookmark-editor-panel" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <header>
-      <button type="button" aria-label="Previous bookmark" disabled={document.bookmarks.length === 0} onClick={() => navigate(-1)}>◀ Previous</button>
-      <button type="button" aria-label="Next bookmark" disabled={document.bookmarks.length === 0} onClick={() => navigate(1)}>Next ▶</button>
+      <button type="button" aria-label="Previous bookmark" disabled={document.bookmarks.length === 0} onClick={() => navigate(-1)}>Previous</button>
+      <button type="button" aria-label="Next bookmark" disabled={document.bookmarks.length === 0} onClick={() => navigate(1)}>Next</button>
       <strong>{bookmark ? `Editing: ${bookmark.name}` : "Bookmark Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{bookmark && <><button type="button" onClick={() => onReveal(bookmark.start)}>Reveal</button><button type="button" onClick={duplicate}>Duplicate</button><button type="button" className="danger" data-testid="delete-bottom-bookmark" onClick={onDelete}>Delete Bookmark</button></>}</header>
     {bookmark
       ? <>
