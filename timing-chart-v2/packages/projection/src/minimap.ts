@@ -71,7 +71,7 @@ export interface MiniMapTransactionOverview {
 const DEFAULT_TRANSACTION_COLOR = "#8895a7";
 
 function sortTransactionSegments(left: MiniMapTransactionSegment, right: MiniMapTransactionSegment): number {
-  return left.start - right.start || left.end - right.end || left.color.localeCompare(right.color);
+  return left.start - right.start || left.end - right.end || (left.color < right.color ? -1 : left.color > right.color ? 1 : 0);
 }
 
 /**
