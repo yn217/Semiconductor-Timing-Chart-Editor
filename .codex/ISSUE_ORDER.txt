@@ -3,21 +3,24 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-11 06:52 JST
+# Last reconciled by ChatGPT: 2026-09-11 21:41 JST
 #
 # Codex implements on main and only READS codex-control.
 # Never merge/cherry-pick codex-control into main.
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line.
 #
+# IMPORTANT TEMPORARY OWNERSHIP CHANGE
+# Claude is unavailable. Codex is explicitly authorized to execute GUI / UX / product work in addition
+# to Core / Runtime / Performance work until a later control-file update changes this again.
+# The former "Core only", "do not redesign GUI", "GUI/product whole issues are non-executable by Codex",
+# and "Claude owns #429" restrictions are SUSPENDED for the active queue below.
+# Architecture, safety, Golden/reference integrity, stable-ID, semantic-command, and worktree rules remain.
+#
 # Observed live state at reconciliation:
 #   main = c051583 reuse unaffected transaction lane partitions
-#   #163 = OPEN, near closure
-#   #414 = CLOSED
 #   #397 = CLOSED
-#   #534 = CLOSED
-#   #416 = CLOSED
-#   #424 = CLOSED
-#   #419 = CLOSED
+#   #429 = OPEN, Transaction integrated product/visual closure
+#   #163 = OPEN, near closure
 #   #548 = OPEN, Transaction MiniMap correctness blocker for #429
 #   #463 = OPEN, Transaction large-workspace performance blocker for #429
 #   #549 = OPEN, Cursor drag runtime/geometry follow-up
@@ -26,94 +29,128 @@
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
-# STATUS: ACTIVE
+# STATUS: ACTIVE — CODEX MAY IMPLEMENT GUI/PRODUCT WORK
 #
-# 1) Finish #163 Semantic Command / History / ChangeSet closure.
-#    Remaining: History storage scaling evidence/decision; rejected-command success-only transient
-#    effects through shared adapters; final cross-adapter/ChangeSet audit. Do not redo already-fixed
-#    Comment Row, Signal property, NO_OP, Dirty-read or TransactionGroup work.
+# 1) #429 Transaction Mode visual/product convergence — TOP PRIORITY.
+#    Use the approved Transaction reference screenshot as product authority.
+#    Current production screenshot is materially behind the reference and must be changed, not merely audited.
+#
+#    Required visual/product convergence:
+#    - Left: Transactions/Signals tabs, compact useful width, Add/Search, All Transactions root,
+#      dynamic Group hierarchy with counts, color swatches, Ungrouped, stable-ID selection.
+#    - Center: explicit Group -> Lane -> Transaction -> Phase visual hierarchy; deterministic row/stack
+#      placement; remove huge unexplained blank workspace; make Phase subdivisions visible in bars.
+#    - Time scale/ruler: use canonical TC mapping; do not hardcode the reference's 1 TC = 10 cycles.
+#      Render whatever the document's semantic TC configuration actually says.
+#    - Bottom: table-first multi-Transaction management matching the reference. Remove the persistent
+#      duplicate single-Transaction editor / large "Editing: ..." area from the normal Transaction tab.
+#      Detailed field editing belongs primarily in Inspector. Keep Add/Duplicate/Delete/Group/Ungroup/
+#      Color/Search and dense multi-row table visible.
+#    - Inspector: compact Transaction editor with Group/Lane/Start/End/Duration/Phases/Linked Signals/
+#      Description/Color. No normal raw JSON editor.
+#    - MiniMap: populate from real Transaction geometry; no blank box when Transactions are visible.
+#    - Cross-surface selection: Tree/Canvas/Bottom/Inspector share one selected stable Transaction ID.
+#    - Preserve existing drag preview/commit-on-drop behavior from #481.
+#    - Real-browser visual acceptance at 1672x941 and 1280x720, with screenshots compared against the
+#      approved reference. Do not declare completion because tests pass if the rendered GUI still differs.
+#
+#    #429 may remain OPEN while its runtime blockers #548/#463 are unresolved. Once the visual/product
+#    portion is substantially converged and regression-tested, continue to the next queue item rather than
+#    spinning on blockers. Return to #429 for final closure after #548/#463 are completed.
+429
+#
+# 2) Finish #163 Semantic Command / History / ChangeSet closure.
+#    Remaining only: History storage scaling evidence/decision; rejected-command success-only transient
+#    effects through shared adapters; final cross-adapter/ChangeSet audit. Do not redo fixed foundations.
 163
 #
-# 2) #548 Transaction MiniMap incremental correctness.
-#    Direct #429 blocker. Fix old/new lane/group invalidation, delete/create, Group color/order,
-#    timeline extent, Undo/Redo and real Chromium ghost-segment regressions.
+# 3) #548 Transaction MiniMap incremental correctness.
+#    Fix old/new lane/group invalidation, create/delete, Group color/order, timeline extent, Undo/Redo,
+#    and real Chromium ghost-segment regressions. This is a final #429 blocker.
 548
 #
-# 3) #463 Transaction large-workspace performance/invalidation closure.
-#    #397 is CLOSED, so the old defer is removed. Reuse existing virtualization/indexing/partition
-#    work; close remaining 1k/5k/10k latency, bounded invalidation and production interaction evidence.
-#    Before editing Transaction runtime, check for genuine same-hunk conflict with Claude #429 visual work.
+# 4) #463 Transaction large-workspace performance/invalidation closure.
+#    Reuse existing virtualization/indexing/partition work. Finish 1k/5k/10k latency/invalidation and
+#    production drag/move/resize evidence. This is a final #429 blocker.
 463
 #
-# 4) #549 Cursor A/B drag runtime/geometry cleanup.
+# 5) Reconcile and CLOSE #429 after #548/#463 if visual acceptance still holds.
+#    Re-open the same Issue only as the closure step; do not reimplement already-completed visual work.
+429
+#
+# 6) #549 Cursor A/B drag runtime/geometry cleanup.
 #    Remove duplicate drag ownership and per-pointermove DOM tick scanning; use shared TimeAxis/Snap/
-#    DisplayTimeMapping geometry. Do not redesign Cursor UI.
+#    DisplayTimeMapping geometry. GUI changes are allowed where needed, but do not change product intent.
 549
 #
-# After every completed Issue:
-# - push/verify main == origin/main;
-# - add executable evidence and close only when acceptance is satisfied;
-# - re-read this queue and skip any entry already closed by another agent.
+# After each queue phase:
+# - sync latest origin/main;
+# - read live Issue/comments;
+# - implement concrete production changes, not report-only work;
+# - run focused tests + applicable typecheck/architecture/performance/Chromium + git diff --check;
+# - commit/push intended hunks and verify main == origin/main;
+# - add evidence to the Issue;
+# - re-read this queue before the next entry.
 #
 # ============================================================================
 # EXPLICITLY SKIPPED / DEFERRED
 # ============================================================================
 # #415 Nested collapse + shared DisplayTimeMapping / Axis Break
-# - #414 is now CLOSED, but the user explicitly instructed us to skip #415.
-# - DO NOT auto-promote or execute #415 until a later explicit user/task-list update resumes it.
-# - #416 is already CLOSED; do not use its historical dependency text to force #415 execution.
+# - Still explicitly skipped by user.
+# - DO NOT execute merely because Codex GUI restrictions were lifted.
+# - Resume only after a later explicit user/task-list update.
 #
-# #258 broad MinimalCycleView decomposition remains deferred while shared editor/product surfaces
-# are active. Avoid refactor-driven conflict churn unless explicitly transferred.
+# #258 broad MinimalCycleView decomposition remains deferred unless a concrete active task requires a
+# bounded extraction. Do not start a broad refactor merely because Codex is allowed to touch GUI.
 #
-# #495 mixes Reset Core semantics with GUI; split/transfer a bounded Core child before Codex takes it.
-#
-# ============================================================================
-# CLAUDE / PRODUCT LANE — NOT CODEX WHOLE-ISSUE WORK
-# ============================================================================
-#   #429 Transaction visual/product convergence — Claude NOW.
-#        Consume #548/#463 runtime fixes; do not duplicate their internals.
-#        Target approved screenshots at 1672x941 and 1280x720: grouped compact Tree, Group/Lane +
-#        Phase center, table-first Bottom with no persistent duplicate single-item editor, compact
-#        Inspector, populated MiniMap, TC ruler, no unexplained blank/overlap regions.
-#   #426 Bottom Panel consolidation — Claude after #429 unless product priority changes.
-#   #431 UX/Product Completion Epic — planning/closure owner, not a Codex executable Issue itself.
-#   #403-#409 and #436-#441/#474 — remaining GUI/design-system backlog as live state/priority allows.
-#   #205 — mixed annotation product scope unless decomposed.
-#
-# Completed product items removed from active Claude list:
-#   #414 #416 #397 #534 #424 #419
+# #495 mixed Reset work remains outside this queue unless explicitly promoted.
 #
 # ============================================================================
-# COMPLETED / REMOVED FROM CODEX QUEUE
+# CODEX OWNERSHIP POLICY WHILE CLAUDE IS UNAVAILABLE
 # ============================================================================
-# Do not re-add merely for another audit or extra tests:
-#   #282 #530 #529 #461 #328 #464 #462 #481 #459 #460 #457 #458 #456 #443
-#   #433 #450 #455 #448 #447 #435 #434 #442 #445 #446 #449 #444 #430 #432
-#   #412 #413 #410 #399 #398 #237 #417 #428 #272 #363 #269 #281 #372 #366
-#   #369 #221 #171 #170 #167 #161 #175 #451 #452 #453 #454 #473
+# Codex may modify GUI composition, CSS/design-system use, Ribbon/Tree/Inspector/Bottom layouts,
+# direct interactions, Playwright/browser acceptance, screenshots, and product workflows when needed
+# by an executable queue Issue.
+#
+# The following former restrictions are intentionally removed for this period:
+# - no "Core-only" ownership restriction;
+# - no prohibition on GUI/product whole-Issue execution;
+# - no requirement to wait for Claude on #429 visual work;
+# - no blanket ban on touching GUI files from Codex.
+#
+# Still required:
+# - do not invent unrelated backlog work to stay busy;
+# - do not rewrite completed features without a concrete regression;
+# - preserve one semantic owner and existing architecture;
+# - prefer existing shared design-system primitives over one-off pixel hacks;
+# - screenshots/visual reference are acceptance evidence for GUI work, not optional decoration.
 #
 # ============================================================================
-# EXECUTION POLICY
+# COMPLETED / DO NOT REIMPLEMENT BROADLY
 # ============================================================================
-# 1. sync latest origin/main;
-# 2. read live Issue/comments and inspect current production owner;
-# 3. reproduce/audit the concrete gap before editing;
-# 4. if main already satisfies it, prove and close; do not manufacture code;
-# 5. implement minimum coherent production fix + focused regression tests;
-# 6. run applicable typecheck/unit/architecture/performance/Chromium checks + git diff --check;
-# 7. stage only intended hunks; no reset/stash/clean unrelated work;
-# 8. commit/push main, verify main == origin/main, add Issue evidence, close only if accepted;
-# 9. re-read this queue before the next Issue.
+# #414 #416 #397 #534 #424 #419
+# #282 #530 #529 #461 #328 #464 #462 #481 #459 #460 #457 #458 #456 #443
+# #433 #450 #455 #448 #447 #435 #434 #442 #445 #446 #449 #444 #430 #432
+# #412 #413 #410 #399 #398 #237 #417 #428 #272 #363 #269 #281 #372 #366
+# #369 #221 #171 #170 #167 #161 #175 #451 #452 #453 #454 #473
+#
+# ============================================================================
+# WORKTREE / EXECUTION SAFETY
+# ============================================================================
+# - One repository / one main worktree for Codex stream.
+# - No temporary clones/worktrees solely to bypass ownership.
+# - Never reset/stash/clean/delete unrelated user/agent work.
+# - Dirty file != blocker; inspect/classify hunks.
+# - Genuine same-hunk unsafe conflict may defer only that bounded change.
 #
 # ============================================================================
 # GLOBAL ARCHITECTURE / SAFETY
 # ============================================================================
 # Canonical -> Semantic Commands / History -> Projection -> Renderer -> DOM.
 # One logical user action = one semantic operation = one History unit.
-# Stable IDs are opaque; no array-index identity.
+# Stable IDs are opaque; no array-index/name identity.
 # DOM/ruler samples are not semantic authority.
 # Canonical source time -> DisplayTimeMapping -> TimeAxisGeometry/LocalGeometry -> screen.
 # No fixed cycle*pitch semantic owners or canonical screen coordinates.
-# WaveDrom/default skin remains normative waveform renderer.
-# No Golden/reference/threshold/mask changes merely to pass.
+# WaveDrom/default skin remains normative waveform renderer unless an explicit Issue changes it.
+# No Golden/reference/threshold/mask weakening merely to pass.
