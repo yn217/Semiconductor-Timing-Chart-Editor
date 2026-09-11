@@ -59,4 +59,9 @@ test("builds six transactions through normal GUI selection transitions", async (
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(saved!);
   await expect(page.getByTestId("transaction-editor")).toContainText("Memory");
   await expect(page.getByTestId("transaction-editor")).toContainText("lane_3");
+  await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").first().click();
+  await expect(inspector.getByLabel("Phase 1 name")).toHaveValue("Address");
+  await expect(inspector.getByLabel("Phase 2 name")).toHaveValue("Read Data");
+  await expect(inspector.getByLabel("Phase 3 name")).toHaveValue("Response");
+  await expect(inspector.getByTestId("linked-signal-list")).toContainText("REQUEST");
 });
