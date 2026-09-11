@@ -11,6 +11,7 @@ test("Add Transaction Group creates a real Group selectable from the Bottom Pane
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
 
   // No Group header exists yet -- flat/empty Tree.
   await expect(page.getByTestId("transaction-group-header")).toHaveCount(0);
@@ -60,6 +61,7 @@ test("Transaction Group can be renamed inline and deleted (ungrouping its Transa
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
 
   await page.getByTestId("add-transaction-group-tree").click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
@@ -97,6 +99,7 @@ test("Transaction Group header collapses and expands its Lanes, view-only (zero 
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
 
   await page.getByTestId("add-transaction-group-tree").click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
@@ -128,6 +131,7 @@ test("Ribbon Ungroup acts on the selected Transaction's Group, disabled when not
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
 
   const ribbonUngroup = page.getByTestId("ribbon").getByRole("button", { name: "Ungroup selected Transaction" });
   // Not in Transaction Mode's Ribbon Transaction group at all outside a
