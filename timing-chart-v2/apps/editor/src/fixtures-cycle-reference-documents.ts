@@ -1,4 +1,4 @@
-import type { CanonicalDocument, ClockSignal, CommentRow, SignalRole, SignalId, ValueSignal } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, ClockSignal, CommentRow, SignalRole, SignalId, Transaction, TransactionGroup, ValueSignal } from "@timing-chart-v2/schema";
 import { groupId, signalId, valueSignal } from "./minimal-cycle-view-fixture-helpers.js";
 
 export const clock: ClockSignal = {
@@ -37,6 +37,31 @@ export const cycleDocument: CanonicalDocument = {
   legend: { show: false, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
   layout: { roleColumnWidth: 61, signalNameWidth: 148, signalNameAlign: "left", rowHeight: 30, signalSpacing: 4, overflow: "ellipsis" },
   checkSettings: {},
+};
+
+/** Initial browser document for Transaction-mode inspection. New documents
+ * still use `cycleDocument`; this sample only gives the default workspace
+ * useful content after switching to Transaction mode or refreshing the app. */
+const transactionDemoGroups: readonly TransactionGroup[] = [
+  { id: "demo_tgrp_memory" as TransactionGroup["id"], name: "Memory", color: "#2f6fd1", order: 0 },
+  { id: "demo_tgrp_cpu" as TransactionGroup["id"], name: "CPU", color: "#e07b1f", order: 1 },
+  { id: "demo_tgrp_peripheral" as TransactionGroup["id"], name: "Peripheral", color: "#c62f2f", order: 2 },
+];
+const transactionDemoTransactions = [
+  { id: "demo_txn_read", name: "Read_0", start: 10, end: 60, laneId: "lane_0", groupId: "demo_tgrp_memory", color: "#3b82f6", description: "Memory read transaction", phases: [{ name: "Address", start: 10, end: 20 }, { name: "Read Data", start: 20, end: 50 }, { name: "Response", start: 50, end: 60 }], linkedSignals: ["sig_cycle_data", "sig_cycle_result"] },
+  { id: "demo_txn_write", name: "Write_0", start: 70, end: 130, laneId: "lane_0", groupId: "demo_tgrp_memory", color: "#8b5cf6", description: "Memory write transaction", phases: [{ name: "Address", start: 70, end: 80 }, { name: "Write Data", start: 80, end: 120 }, { name: "Response", start: 120, end: 130 }], linkedSignals: ["sig_cycle_data", "sig_cycle_result"] },
+  { id: "demo_txn_fetch", name: "Fetch_0", start: 15, end: 55, laneId: "lane_1", groupId: "demo_tgrp_cpu", color: "#f59e0b", description: "Instruction fetch", phases: [{ name: "Fetch", start: 15, end: 25 }, { name: "Decode", start: 25, end: 45 }, { name: "Wait", start: 45, end: 55 }], linkedSignals: ["sig_cycle_request"] },
+  { id: "demo_txn_execute", name: "Execute_0", start: 65, end: 120, laneId: "lane_1", groupId: "demo_tgrp_cpu", color: "#10b981", description: "Instruction execute", phases: [{ name: "Execute", start: 65, end: 85 }, { name: "Memory", start: 85, end: 105 }, { name: "Write Back", start: 105, end: 120 }], linkedSignals: ["sig_cycle_ready", "sig_cycle_valid"] },
+  { id: "demo_txn_spi", name: "SPI_0", start: 30, end: 90, laneId: "lane_2", groupId: "demo_tgrp_peripheral", color: "#ef4444", description: "SPI transfer", phases: [{ name: "Command", start: 30, end: 50 }, { name: "Data", start: 50, end: 70 }, { name: "Stop", start: 70, end: 90 }], linkedSignals: ["sig_cycle_ready"] },
+  { id: "demo_txn_other", name: "Transaction2", start: 100, end: 140, laneId: "lane_0", color: "#8895a7", description: "Ungrouped transaction" },
+] as unknown as readonly Transaction[];
+export const transactionDemoDocument: CanonicalDocument = {
+  ...cycleDocument,
+  document: { ...cycleDocument.document, id: "transaction-demo", title: "Sample -- Transaction Mode" },
+  timeline: { ...cycleDocument.timeline, end: 160, cycleCount: 160 },
+  transactionTimeScale: { clockCyclesPerTransactionCycle: 10, majorInterval: 5, minorInterval: 1 },
+  transactionGroups: transactionDemoGroups,
+  transactions: transactionDemoTransactions,
 };
 
 export const v1ReferenceComment: CommentRow = {

@@ -10,7 +10,7 @@ import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { ContextMenuPanel, MinimalCycleViewTitleBar, RenameDialog, BulkRegistrationDialog } from "./minimal-cycle-view-panels.js";
 import { MinimalCycleViewRibbonTabs, refreshTreeCollapsedMetadata, refreshTreeFilterPresentation, refreshTreeRovingFocus } from "./minimal-cycle-view-ui.js";
-import { cycleDocument, v1ReferenceDocument } from "./fixtures-cycle-reference-documents.js";
+import { cycleDocument, transactionDemoDocument, v1ReferenceDocument } from "./fixtures-cycle-reference-documents.js";
 import { signalId } from "./minimal-cycle-view-fixture-helpers.js";
 import { useEditorDialogRuntime } from "./application/use-editor-dialog-runtime.js";
 import { HardwareHierarchyBrowser } from "./hardware-hierarchy-browser.js";
@@ -41,7 +41,7 @@ import { applyRendererHostSizing } from "./runtime/renderer-host-sizing.js";
 import { refreshRulerRangeSelection, refreshTransactionLinkedRows } from "./runtime/editor-dom-bridge.js";
 export function MinimalCycleView() {
   const visualReference = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("visual-reference");
-  const initialDocument = visualReference ? v1ReferenceDocument : cycleDocument;
+  const initialDocument = visualReference ? v1ReferenceDocument : transactionDemoDocument;
   const application = useEditorApplicationOwner(initialDocument);
   const documentLifecycle = useDocumentLifecycle({ application, productTemplate: cycleDocument, persistText: downloadText });
   const exportController = useMemo(() => createEditorExportController(), []);
