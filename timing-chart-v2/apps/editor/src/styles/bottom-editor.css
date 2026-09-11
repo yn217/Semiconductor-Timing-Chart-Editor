@@ -300,6 +300,8 @@
 .event-row:last-child { border-bottom: 0; }
 
 .event-row > * { min-width: 0; margin: 2px 5px; }
+.event-row > input[type="checkbox"] { width: 16px; height: 16px; justify-self: center; margin: 0; border-color: #71839a; }
+.event-row > input[type="checkbox"]:indeterminate { border-color: var(--ds-focus-color, #2678bc); background: linear-gradient(var(--ds-focus-color, #2678bc), var(--ds-focus-color, #2678bc)) center / 8px 2px no-repeat, white; }
 
 .event-row-index { color: #7b8999; font-size: 10px; text-align: center; }
 
