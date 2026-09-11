@@ -190,6 +190,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
           uses -- no new command, no second creation path. */}
       <button type="button" data-testid="bottom-transaction-add" onClick={() => { const id = nextEntityId("transaction", document) as TransactionId; const result = commands.createTransactionFromBottom({ id, name: `Transaction ${document.transactions.length + 1}`, start, end, ...(laneId.trim() ? { laneId: laneId.trim() } : {}) }); if (result.ok) onSelect(id); }}>Add</button>
       <button type="button" data-testid="bottom-transaction-duplicate" disabled={!transaction} onClick={duplicateSelected}>Duplicate</button>
+      <button type="button" className="danger" data-testid="bottom-transaction-delete" disabled={!transaction} onClick={onDelete}>Delete</button>
       <label className="field-inline">Group<select aria-label="Move selected transaction to group" disabled={!transaction} value={transaction?.groupId ?? ""} onChange={(event) => moveSelectedToGroup(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
       <button type="button" data-testid="bottom-transaction-ungroup" disabled={!transaction || !transaction.groupId} onClick={() => moveSelectedToGroup(undefined)}>Ungroup</button>
       <label className="field-inline">Color<input aria-label="Set selected transaction color" type="color" disabled={!transaction} value={transaction?.color ?? "#8895a7"} onChange={(event) => colorSelected(event.target.value)} /></label>
@@ -223,7 +224,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
           spacer matches the row's checkbox column so the cell grid below it
           lines up exactly with each row's button (same grid-template-columns
           CSS rule, reused rather than duplicated). */}
-      <div className="transaction-list-header" aria-hidden="true"><span className="transaction-list-header-spacer" /><span className="transaction-list-header-cells"><span /><span>Name</span><span>Cycles</span><span>Lane</span><span>Links</span><span>Duration</span><span>Group</span><span>Phases</span><span>Description</span></span></div>
+      <div className="transaction-list-header" aria-hidden="true"><span className="transaction-list-header-spacer" /><span className="transaction-list-header-cells"><span /><span>Name</span><span>Group</span><span>Lane</span><span>Start (TC)</span><span>End (TC)</span><span>Duration</span><span># Phases</span><span>Linked Signals</span><span>Color</span><span>Description</span></span></div>
     </>}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: transactionFirstVisibleIndex * transactionRowHeight }} />}{renderedTransactions.map((item) => <div className="transaction-list-row" key={item.id}>
       <input type="checkbox" aria-label={`Select ${item.name}`} checked={validCheckedIds.has(item.id)} onChange={() => toggleChecked(item.id)} />
       <button type="button" data-selected={String(item.id === transaction?.id)} onClick={() => onSelect(item.id)}>
@@ -239,8 +240,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
             and a row silently skipping one grid child shifted Phases one
             column left relative to rows that do have a Group. */}
         <i className="transaction-row-swatch" aria-hidden="true" style={{ background: item.color ?? (item.groupId === undefined ? "#8895a7" : document.transactionGroups?.find((group) => group.id === item.groupId)?.color ?? "#8895a7") }} />
-        <b>{item.name}</b><span>{item.start}–{item.end}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.linkedSignals?.length ?? 0} links</span>
-        <span>{item.end - item.start} cycles</span><span>{item.groupId === undefined ? "—" : groupNameById.get(item.groupId) ?? "Group"}</span><span>{item.phases?.length ?? 0} phases</span>
+        <b>{item.name}</b><span>{item.groupId === undefined ? "—" : groupNameById.get(item.groupId) ?? "Group"}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.start}</span><span>{item.end}</span><span>{item.end - item.start}</span><span>{item.phases?.length ?? 0}</span><span>{item.linkedSignals?.length ?? 0}</span><span className="transaction-row-color-value">{item.color ?? (item.groupId === undefined ? "#8895a7" : document.transactionGroups?.find((group) => group.id === item.groupId)?.color ?? "#8895a7")}</span>
         {/* Transaction Mode GUI realignment: Description is a real,
             already-persisted field (Transaction.description, #454) with no
             column in this table at all -- appended after the original
