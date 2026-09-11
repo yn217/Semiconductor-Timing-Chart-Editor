@@ -60,4 +60,15 @@ test("Transaction canvas body and edge drags commit through the semantic command
   await page.mouse.up();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await expect(inspector.getByLabel("Transaction start")).not.toHaveValue(beforeResize);
+
+  const endHandle = bar.locator(":scope > i[data-edge='end']");
+  const endBox = await endHandle.boundingBox();
+  expect(endBox).not.toBeNull();
+  const beforeEndResize = await inspector.getByLabel("Transaction end").inputValue();
+  await page.mouse.move(endBox!.x + endBox!.width / 2, endBox!.y + endBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(endBox!.x + 14, endBox!.y + endBox!.height / 2, { steps: 3 });
+  await page.mouse.up();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await expect(inspector.getByLabel("Transaction end")).not.toHaveValue(beforeEndResize);
 });
