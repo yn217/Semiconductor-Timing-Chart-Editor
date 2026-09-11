@@ -4,7 +4,7 @@ import { cursorDelta, type SemanticCursorState } from "@timing-chart-v2/projecti
 export type DensityMode = "compact" | "comfortable";
 export type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
 export type TreeTypeFilter = "all" | "input" | "output" | "wire" | "comment";
-export type BottomTab = "Signal" | "Annotation" | "Transaction" | "Bookmarks" | "AI" | "Problems" | "JSON";
+export type BottomTab = "Signal" | "Annotation" | "Transaction" | "Phases" | "Linked Signals" | "Bookmarks" | "AI" | "Problems" | "JSON";
 export type ViewMode = "Cycle" | "Transaction" | "Split";
 
 export type SemanticCursor = number | undefined;

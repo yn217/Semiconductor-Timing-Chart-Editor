@@ -142,10 +142,10 @@ export function MinimalCycleView() {
     cursorA, cursorB, cursorDelta, setCursor, clearCursor, moveCursor, swapCursors,
     activePane, setActivePane,
   } = workspace;
-  const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Bookmarks" | "AI" | "Problems" | "JSON")[] = viewMode === "Cycle"
+  const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Phases" | "Linked Signals" | "Bookmarks" | "AI" | "Problems" | "JSON")[] = viewMode === "Cycle"
     ? ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]
     : viewMode === "Transaction"
-      ? ["Transaction", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]
+      ? ["Transaction", "Phases", "Linked Signals", "Bookmarks", "AI", "Problems", "JSON"]
       : ["Signal", "Transaction", "Annotation", "Bookmarks", "AI", "Problems", "JSON"];
   const workspaceActions = useEditorWorkspaceActions({
     workspacePreset,
