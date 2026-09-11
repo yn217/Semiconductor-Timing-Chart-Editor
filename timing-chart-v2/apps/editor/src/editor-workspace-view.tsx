@@ -149,6 +149,13 @@ export function EditorWorkspaceView({
         event.preventDefault();
         let pendingFrame: number | undefined;
         let pendingClientX = event.clientX;
+        let pointerMoves = 0;
+        let previewFrames = 0;
+        const trace = () => {
+          viewportElement.dataset.cursorDragPointerMoves = String(pointerMoves);
+          viewportElement.dataset.cursorDragPreviewFrames = String(previewFrames);
+        };
+        trace();
         const applyCursorAt = (clientX: number) => {
           const resolved = resolveCursorCycleAtClientX?.(clientX, viewportElement);
           if (resolved !== undefined) onSetCursorAtCycle(which, resolved);
@@ -162,13 +169,16 @@ export function EditorWorkspaceView({
           if (pendingFrame !== undefined) return;
           pendingFrame = requestAnimationFrame(() => {
             pendingFrame = undefined;
+            previewFrames += 1;
+            trace();
             applyCursorAt(pendingClientX);
           });
         };
-        const cleanupDrag = () => { window.removeEventListener("pointermove", move); if (pendingFrame !== undefined) cancelAnimationFrame(pendingFrame); pendingFrame = undefined; window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", cancel); activeDragCleanups.delete(cleanupDrag); };
+        const cleanupDrag = () => { window.removeEventListener("pointermove", moveWithTrace); if (pendingFrame !== undefined) cancelAnimationFrame(pendingFrame); pendingFrame = undefined; trace(); window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", cancel); activeDragCleanups.delete(cleanupDrag); };
         const up = () => { applyCursorAt(pendingClientX); cleanupDrag(); };
         const cancel = () => cleanupDrag();
-        window.addEventListener("pointermove", move);
+        const moveWithTrace = (moveEvent: PointerEvent) => { pointerMoves += 1; trace(); move(moveEvent); };
+        window.addEventListener("pointermove", moveWithTrace);
         window.addEventListener("pointerup", up, { once: true });
         window.addEventListener("pointercancel", cancel, { once: true });
         activeDragCleanups.add(cleanupDrag);
