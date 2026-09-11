@@ -224,8 +224,8 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
           spacer matches the row's checkbox column so the cell grid below it
           lines up exactly with each row's button (same grid-template-columns
           CSS rule, reused rather than duplicated). */}
-      <div className="transaction-list-header" aria-hidden="true"><span className="transaction-list-header-spacer" /><span className="transaction-list-header-cells"><span /><span>Name</span><span>Group</span><span>Lane</span><span>Start (TC)</span><span>End (TC)</span><span>Duration</span><span># Phases</span><span>Linked Signals</span><span>Color</span><span>Description</span></span></div>
-    </>}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: transactionFirstVisibleIndex * transactionRowHeight }} />}{renderedTransactions.map((item) => <div className="transaction-list-row" key={item.id}>
+      <div className="transaction-list-header" data-transaction-table-header="true" aria-hidden="true"><span className="transaction-list-header-spacer" /><span className="transaction-list-header-cells"><span /><span>Name</span><span>Group</span><span>Lane</span><span>Start (TC)</span><span>End (TC)</span><span>Duration</span><span># Phases</span><span>Linked Signals</span><span>Color</span><span>Description</span></span></div>
+    </>}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: transactionFirstVisibleIndex * transactionRowHeight }} />}{renderedTransactions.map((item) => <div className="transaction-list-row" data-transaction-row-id={item.id} key={item.id}>
       <input type="checkbox" aria-label={`Select ${item.name}`} checked={validCheckedIds.has(item.id)} onChange={() => toggleChecked(item.id)} />
       <button type="button" data-selected={String(item.id === transaction?.id)} onClick={() => onSelect(item.id)}>
         {/* #453: every new field is appended AFTER the original 4 (name/

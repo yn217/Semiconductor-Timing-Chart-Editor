@@ -394,7 +394,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
     <div className="transaction-lane-labels">
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
-        return <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" data-collapsed={String(header.collapsed)} style={{ top: header.labelTop, height: GROUP_HEADER_HEIGHT }}>
+        return <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" data-transaction-group-id={header.groupId ?? "ungrouped"} data-collapsed={String(header.collapsed)} style={{ top: header.labelTop, height: GROUP_HEADER_HEIGHT }}>
           <button type="button" className="transaction-group-header-chevron" aria-label={header.collapsed ? `Expand ${header.label}` : `Collapse ${header.label}`} aria-expanded={!header.collapsed} onClick={() => toggleGroupCollapsed(header.groupId ?? "ungrouped")}><EditorIcon name={header.collapsed ? "right" : "down"} /></button>
           {header.color && <i className="transaction-group-swatch" aria-hidden="true" style={{ background: header.color }} />}
           {/* #397 Transaction Mode GUI Closure: rename/delete had zero GUI
@@ -415,7 +415,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
         // reading one shared `document.transactions` + `selectedId`/
         // `onSelect`, not a second selection-owning tree.
         const laneTransactions = laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? [];
-        return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" style={{ top: band.labelTop, height: band.labelHeight }}>
+        return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" data-lane-id={band.laneId} data-transaction-group-id={band.groupId ?? "ungrouped"} style={{ top: band.labelTop, height: band.labelHeight }}>
           {laneTransactions.length === 0 && <em>{band.laneId.replace(/^lane_(\d+)$/i, "Lane $1")}</em>}
           {/* Transaction Mode GUI realignment ("長い名前は ellipsis +
               tooltip"): the CSS already truncates a long name with
@@ -428,7 +428,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
         </span>;
       })}
     </div>
-    <div className="transaction-track" style={{ height: totalHeight }}>
+      <div className="transaction-track" data-transaction-track="true" style={{ height: totalHeight }}>
       <div className="transaction-geometry-guides" aria-hidden="true">{cycleXs.map((value) => <i className="transaction-geometry-line" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}</div>
       {visibleGroupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.trackTop, height: GROUP_HEADER_HEIGHT }} />)}
       {visibleLaneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.trackTop, height: band.trackHeight }}>
