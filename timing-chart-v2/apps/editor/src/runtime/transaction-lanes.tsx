@@ -108,6 +108,8 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
   const [drag, setDrag] = useState<{ edge: TransactionDragEdge; documentEpoch: number }>();
   const [preview, setPreview] = useState<TransactionPreview>();
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const pendingPreviewClientX = useRef<number | undefined>(undefined);
+  const previewFrame = useRef<number | undefined>(undefined);
   const current = preview ?? { start: transaction.start, end: transaction.end };
   const resolveBoundaryX = (cycle: number) => preview === undefined ? boundaryXByCycle.get(cycle) : getBoundaryX(cycle);
   const startX = resolveBoundaryX(current.start);
@@ -115,11 +117,22 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
   const phases = preview === undefined ? transaction.phases : previewPhases(transaction, preview, drag?.edge ?? "body");
 
   useEffect(() => {
+    return () => {
+      if (previewFrame.current !== undefined) cancelAnimationFrame(previewFrame.current);
+      previewFrame.current = undefined;
+      pendingPreviewClientX.current = undefined;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!drag) return undefined;
     if (drag.documentEpoch !== documentEpoch) { setDrag(undefined); setPreview(undefined); return undefined; }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
+        if (previewFrame.current !== undefined) cancelAnimationFrame(previewFrame.current);
+        previewFrame.current = undefined;
+        pendingPreviewClientX.current = undefined;
         setDrag(undefined);
         setPreview(undefined);
       }
@@ -131,9 +144,17 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
   if (startX === undefined || endX === undefined) return null;
   const updatePreview = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!drag || drag.documentEpoch !== documentEpoch) return;
-    const cycle = onSnap(event.clientX);
-    if (cycle === undefined) return;
-    setPreview(previewTransaction(transaction, drag.edge, cycle, cycleCount));
+    pendingPreviewClientX.current = event.clientX;
+    if (previewFrame.current !== undefined) return;
+    previewFrame.current = requestAnimationFrame(() => {
+      previewFrame.current = undefined;
+      const clientX = pendingPreviewClientX.current;
+      pendingPreviewClientX.current = undefined;
+      if (clientX === undefined || !drag || drag.documentEpoch !== documentEpoch) return;
+      const cycle = onSnap(clientX);
+      if (cycle === undefined) return;
+      setPreview(previewTransaction(transaction, drag.edge, cycle, cycleCount));
+    });
   };
   const begin = (event: ReactPointerEvent<HTMLElement>, edge: TransactionDragEdge) => {
     event.preventDefault();
@@ -144,12 +165,18 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
   };
   const cancel = (event?: ReactPointerEvent<HTMLButtonElement>) => {
     event?.preventDefault();
+    if (previewFrame.current !== undefined) cancelAnimationFrame(previewFrame.current);
+    previewFrame.current = undefined;
+    pendingPreviewClientX.current = undefined;
     setDrag(undefined);
     setPreview(undefined);
   };
   const finish = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!drag || drag.documentEpoch !== documentEpoch) return;
     event.preventDefault();
+    if (previewFrame.current !== undefined) cancelAnimationFrame(previewFrame.current);
+    previewFrame.current = undefined;
+    pendingPreviewClientX.current = undefined;
     const cycle = onSnap(event.clientX);
     const final = cycle === undefined ? preview : previewTransaction(transaction, drag.edge, cycle, cycleCount);
     setDrag(undefined);
