@@ -492,6 +492,7 @@
 .transaction-list-header-cells { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: 12px minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); gap: 5px; padding-inline: 6px; color: #5c687c; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; position: sticky; top: 0; z-index: 2; }
 .transaction-list-header-cells > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .transaction-row-swatch { width: 10px; height: 10px; border-radius: 3px; border: 1px solid #0000001a; }
+.transaction-row-color-swatch { display: block; width: 26px; height: 11px; border-radius: 2px; border: 1px solid #0000001a; }
 /* #388: Bookmark's Bottom Panel list -- Marker | Name | Cycle | Comment
    columns, one row per canonical Bookmark (never a second stored copy). */
 .bookmark-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
