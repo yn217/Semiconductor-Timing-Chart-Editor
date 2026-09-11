@@ -1,3 +1,5 @@
+import { EditorIcon } from "./editor-icon.js";
+
 /** Inspector redesign (shared primitive): a compact, always-present header
  * naming what is currently selected -- "what am I editing, and where does
  * it sit" -- before any Property below it. One component used by every
@@ -35,6 +37,6 @@ export function InspectorHeaderBar({ label, onClose }: { readonly label?: string
   return <header>
     <span>Inspector</span>
     {label && <b>{label}</b>}
-    <button type="button" aria-label="Close Inspector" data-testid="inspector-close" onClick={onClose}>×</button>
+    <button type="button" aria-label="Close Inspector" data-testid="inspector-close" onClick={onClose}><EditorIcon name="close" /></button>
   </header>;
 }
