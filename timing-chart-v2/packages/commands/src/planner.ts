@@ -1125,6 +1125,10 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const end = command.edge === "end" ? command.value : transaction.end;
       if (!Number.isInteger(command.value) || start < 0 || start >= end || end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.value", "Resized Transaction must remain a non-empty half-open range.");
       if (start === transaction.start && end === transaction.end) return fail("no-op", "NO_OP", "$", "Transaction edge is unchanged.");
+      // Phase resize policy (Issue #551): a resize must not silently clip or
+      // delete semantic Phase ranges. Reject the gesture atomically; callers
+      // retain the original Transaction, History, Dirty and selection state.
+      if (transaction.phases?.some((phase) => phase.start < start || phase.end > end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.value", "Transaction resize would clip a Phase; resize the Phase explicitly first.");
       const phases = transaction.phases?.map((phase) => ({ ...phase, start: Math.max(start, phase.start), end: Math.min(end, phase.end) })).filter((phase) => phase.start < phase.end);
       const { phases: _phases, ...base } = transaction;
       const next = phases?.length ? { ...base, start, end, phases } : { ...base, start, end };
