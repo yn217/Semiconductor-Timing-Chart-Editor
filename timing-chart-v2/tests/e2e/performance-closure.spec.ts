@@ -223,7 +223,9 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
   await host.locator("[data-role='frozen-row'][data-row-id='sig_perf_1']").click();
   const editBefore = await counters(page); const event = page.getByTestId("signal-editor").locator("form.event-row").first();
   await event.getByRole("button", { name: /Edit transition/ }).click();
-  await event.getByLabel("Value 0").fill("1"); await event.getByRole("button", { name: "Save" }).click(); await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const valueEditor = event.getByLabel("Value 0");
+  if (await valueEditor.evaluate((element) => element.tagName === "SELECT")) await valueEditor.selectOption("1"); else await valueEditor.fill("1");
+  await event.getByRole("button", { name: "Save" }).click(); await expect(host).toHaveAttribute("data-editor-idle", "true");
   const editAfter = await counters(page); expect(editAfter.waveDromRenders).toBe(editBefore.waveDromRenders + 1); expect(editAfter.localGeometryBuilds).toBe(editBefore.localGeometryBuilds + 1);
 
   const annotation = host.locator("[data-role='annotation-owner']").first(); await annotation.locator("[data-role='annotation-label']").click({ force: true });
