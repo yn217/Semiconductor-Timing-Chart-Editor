@@ -29,7 +29,7 @@ test("MiniMap shows a Transaction-aware overview in Transaction Mode: one segmen
   await openSample(page);
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
-  await page.getByTestId("transaction-tree-row-txn_read0").click();
+  await page.getByTestId("transaction-left-tree-row-txn_read0").click();
 
   const minimap = page.getByTestId("minimap");
   await expect(minimap).toHaveAttribute("data-minimap-mode", "transaction");
