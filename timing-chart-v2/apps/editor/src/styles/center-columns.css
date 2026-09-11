@@ -290,6 +290,45 @@
 .transaction-lane span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: grab; }
 
 .cycle-panel.mode-transaction .surface-host { visibility: hidden; }
+.cycle-panel.mode-transaction .transaction-left-tree {
+  position: absolute;
+  z-index: 18;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--gui-left-width);
+  overflow: auto;
+  border-right: 1px solid #cbd4df;
+  background: #f8fafc;
+}
+.transaction-left-tree-root, .transaction-left-tree-group-header {
+  display: flex;
+  align-items: center;
+  min-height: 30px;
+  gap: 5px;
+  padding: 0 8px;
+  color: #263d58;
+  font-size: 11px;
+}
+.transaction-left-tree-root { border-bottom: 1px solid #d7e0ea; background: #eef3f8; }
+.transaction-left-tree-root button, .transaction-left-tree-group-header button {
+  display: inline-flex;
+  flex: 0 0 18px;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #405c78;
+}
+.transaction-left-tree-root strong, .transaction-left-tree-group-header strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.transaction-left-tree-root span, .transaction-left-tree-group-header span:last-child { color: #718096; font-size: 10px; }
+.transaction-left-tree-group-header { min-height: 28px; border-bottom: 1px solid #e1e7ef; }
+.transaction-left-tree-swatch, .transaction-left-tree-row i { flex: 0 0 14px; width: 14px; height: 14px; border-radius: 3px; }
+.transaction-left-tree-row { display: flex; align-items: center; width: 100%; min-height: 28px; gap: 7px; padding: 0 10px 0 31px; overflow: hidden; border: 0; background: transparent; color: #304b6a; font-size: 11px; text-align: left; white-space: nowrap; }
+.transaction-left-tree-row:hover, .transaction-left-tree-row[data-selected="true"] { background: #dcecff; color: #155ca0; }
 .cycle-panel.mode-transaction .transaction-lanes { min-height: calc(100% - 34px); }
 .cycle-panel.mode-transaction .transaction-signal-tree { height: calc(100% - 34px); }
 /* #397: `.surface-host`'s padding-top must clear `.transaction-lanes`'s own

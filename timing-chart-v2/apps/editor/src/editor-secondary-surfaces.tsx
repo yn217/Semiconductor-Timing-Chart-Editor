@@ -19,6 +19,7 @@ import { SignalTreeColumnHeader } from "./minimal-cycle-view-panels.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionSignalTree } from "./transaction-signal-tree.js";
+import { TransactionTree } from "./transaction-tree.js";
 import { InspectorPanel } from "./panels/inspector-panel.js";
 import { LegendView } from "./legend-view.js";
 import { ProblemsPanel } from "./problems-panel.js";
@@ -131,6 +132,7 @@ export interface EditorSecondarySurfacesInput {
 export interface EditorSecondarySurfacesOutput {
   readonly surfaceCommands: ReturnType<typeof createEditorSurfaceCommandController>;
   readonly workspaceHeader: ReactNode;
+  readonly workspaceTransactionTree: ReactNode;
   readonly workspaceViewportContent: ReactNode;
   readonly workspaceViewportLegend: ReactNode;
   readonly workspaceBottom: ReactNode;
@@ -273,6 +275,9 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     ? <TransactionSignalTree document={input.document} selectedSignalId={selected.signal?.id} onSelectSignal={input.actions.selectHierarchySignal} />
     : <TransactionLanes document={input.document} documentEpoch={input.documentEpoch} presentationRevision={input.transactionPresentationRevision} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={transactionBoundaryX} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(clientX)} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />);
   const workspaceViewportLegend = <LegendView document={input.document} commands={surfaceCommands} />;
+  const workspaceTransactionTree = workspace.viewMode === "Transaction"
+    ? <TransactionTree document={input.document} filter={workspace.transactionTreeFilter} {...(selected.transactionId === undefined ? {} : { selectedId: selected.transactionId })} onSelect={input.actions.selectTransaction} />
+    : null;
   const workspaceBottom = <BottomEditorPanel
     tabs={workspace.bottomTabs}
     activeTab={workspace.bottomTab}
@@ -286,5 +291,5 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     content={workspace.bottomTab === "Signal" ? signalEditor : workspace.bottomTab === "Annotation" ? annotationEditor : workspace.bottomTab === "Transaction" || workspace.bottomTab === "Phases" || workspace.bottomTab === "Linked Signals" ? transactionEditor : workspace.bottomTab === "Bookmarks" ? bookmarkEditor : workspace.bottomTab === "AI" ? <AIOperationPanel {...aiAssistantPanel} /> : workspace.bottomTab === "Problems" ? <ProblemsPanel diagnostics={input.diagnostics} onNavigate={input.navigateProblem} /> : <AdvancedJsonPanel document={input.document} selectedSignal={bottom.signal} selectedGroup={bottom.group} selectedAnnotation={bottom.annotation} selectedTransaction={bottom.transaction} onReplaceDocument={input.actions.replaceDocument} onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; input.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("advanced-json:")), ...nextDiagnostics]); }} />}
   />;
   const workspaceInspector = <InspectorPanel key={`${input.documentEpoch}:${selected.signalIds.size > 1 ? `multi:${selected.signalIds.size}` : selected.signal?.id ?? selected.group?.id ?? selected.annotation?.id ?? selected.transaction?.id ?? selected.bookmark?.id ?? "none"}:${dialog.inspectorResetToken}`} signal={selected.signal} selectedSignalIds={selected.signalIds} group={selected.group} annotation={selected.annotation} transaction={selected.transaction} bookmark={selected.bookmark} collapsedGroup={selected.group !== undefined && input.timeline.collapsedGroupIds.has(selected.group.id)} onToggleGroupCollapse={selected.group === undefined ? undefined : () => input.timeline.toggleCollapsedGroup(selected.group!.id)} registry={input.command.registry.current} document={input.document} viewport={refs.viewport} commands={surfaceCommands} onReveal={input.actions.revealSelectedInHierarchy} onCancel={() => { if (selected.group) refreshGroupStylePreview(refs.host.current!, selected.group.id, selected.group.style); dialog.setInspectorResetToken((value) => value + 1); }} onClose={() => dialog.setInspectorVisible(false)} onDeleteBookmark={input.actions.deleteBottomBookmark} onToggleTransactionSignal={input.actions.toggleTransactionSignal} onGroupPreview={(groupId, style) => refreshGroupStylePreview(refs.host.current!, groupId, style ?? input.document.signalGroups.find((group) => group.id === groupId)?.style)} minimapMode={workspace.viewMode === "Transaction" ? "transaction" : "signal"} />;
-  return { surfaceCommands, workspaceHeader, workspaceViewportContent, workspaceViewportLegend, workspaceBottom, workspaceInspector, aiBridgeStatus };
+  return { surfaceCommands, workspaceHeader, workspaceTransactionTree, workspaceViewportContent, workspaceViewportLegend, workspaceBottom, workspaceInspector, aiBridgeStatus };
 }
