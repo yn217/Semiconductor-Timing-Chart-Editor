@@ -145,6 +145,11 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
   });
   const clearChecked = () => setCheckedIds(new Set());
   const allVisibleChecked = visibleTransactions.length > 0 && visibleTransactions.every((item) => validCheckedIds.has(item.id));
+  const someVisibleChecked = visibleTransactions.some((item) => validCheckedIds.has(item.id));
+  const selectAllRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (selectAllRef.current) selectAllRef.current.indeterminate = someVisibleChecked && !allVisibleChecked;
+  }, [someVisibleChecked, allVisibleChecked]);
   const toggleAllVisible = () => setCheckedIds((current) => {
     if (allVisibleChecked) {
       const visibleIds = new Set(visibleTransactions.map((item) => item.id));
@@ -216,7 +221,6 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
       <button type="button" data-testid="bulk-clear-selection" onClick={clearChecked}>Clear Selection</button>
     </div>}
     <div ref={transactionListViewportRef} className="transaction-list" onScroll={shouldVirtualizeTransactions ? (event) => setTransactionListScrollTop(event.currentTarget.scrollTop) : undefined} style={shouldVirtualizeTransactions ? { maxHeight: transactionViewportHeight, overflowY: "auto" } : undefined}>{visibleTransactions.length > 0 && <>
-      <label className="field-inline transaction-select-all"><input type="checkbox" aria-label="Select all visible transactions" checked={allVisibleChecked} onChange={toggleAllVisible} />Select all</label>
       {/* #397 Transaction Mode GUI Closure Section 6: column header row,
           same shared pattern as .bookmark-list-header -- fixed labels over
           the fixed 8-column grid every row below uses, so the list reads as
@@ -224,7 +228,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
           spacer matches the row's checkbox column so the cell grid below it
           lines up exactly with each row's button (same grid-template-columns
           CSS rule, reused rather than duplicated). */}
-      <div className="transaction-list-header" data-transaction-table-header="true" aria-hidden="true"><span className="transaction-list-header-spacer" /><span className="transaction-list-header-cells"><span /><span>Name</span><span>Group</span><span>Lane</span><span>Start (TC)</span><span>End (TC)</span><span>Duration</span><span># Phases</span><span>Linked Signals</span><span>Color</span><span>Description</span></span></div>
+      <div className="transaction-list-header" data-transaction-table-header="true"><span className="transaction-list-header-spacer"><input ref={selectAllRef} type="checkbox" aria-label="Select all visible transactions" checked={allVisibleChecked} onChange={toggleAllVisible} /></span><span className="transaction-list-header-cells"><span aria-hidden="true" /><span>Name</span><span>Group</span><span>Lane</span><span>Start (TC)</span><span>End (TC)</span><span>Duration</span><span># Phases</span><span>Linked Signals</span><span>Color</span><span>Description</span></span></div>
     </>}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: transactionFirstVisibleIndex * transactionRowHeight }} />}{renderedTransactions.map((item) => <div className="transaction-list-row" data-transaction-row-id={item.id} key={item.id}>
       <input type="checkbox" aria-label={`Select ${item.name}`} checked={validCheckedIds.has(item.id)} onChange={() => toggleChecked(item.id)} />
       <button type="button" data-selected={String(item.id === transaction?.id)} onClick={() => onSelect(item.id)}>

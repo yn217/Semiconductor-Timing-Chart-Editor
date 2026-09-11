@@ -490,6 +490,8 @@
    grid-template-columns/gap exactly, so header and every row line up. */
 .transaction-list-header { display: flex; align-items: center; gap: 0; padding: 0; }
 .transaction-list-header-spacer { flex: 0 0 28px; width: 28px; }
+.transaction-list-header-spacer { display: grid; place-items: center; }
+.transaction-list-header-spacer > input[type="checkbox"] { width: 13px; height: 13px; margin: 0; }
 .transaction-list-header-cells { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: 12px minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); gap: 0; padding-inline: 0; color: #5c687c; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .01em; position: sticky; top: 0; z-index: 2; }
 .transaction-list-header-cells > span, .transaction-list-row > button > * { min-width: 0; padding-inline: 4px; border-right: 1px solid #dfe7ef; }
 .transaction-list-header-cells > span:first-child, .transaction-list-row > button > i { padding-inline: 0; }
