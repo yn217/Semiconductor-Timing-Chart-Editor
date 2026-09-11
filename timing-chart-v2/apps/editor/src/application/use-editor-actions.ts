@@ -96,6 +96,7 @@ export interface EditorActions {
   readonly toggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => CommandResult;
   readonly createTransaction: () => void;
   readonly createTransactionGroup: () => void;
+  readonly renameTransactionGroup: (groupId: TransactionGroup["id"], name: string) => void;
   readonly duplicateAnnotation: (annotation: Annotation) => void;
   readonly clearSelection: () => void;
   readonly selectAllSignals: () => void;
@@ -243,6 +244,10 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
       type: "transactionGroup.create",
       group: { id, name: `Group ${order + 1}`, order },
     });
+  };
+  const renameTransactionGroup = (groupId: TransactionGroup["id"], name: string) => {
+    if (name.trim().length === 0) return;
+    input.commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: input.nextCommandId("transaction_group_rename"), type: "transactionGroup.rename", groupId, name: name.trim() });
   };
   const duplicateAnnotation = (source: Annotation) => {
     const duplicate = { ...source, id: nextEntityId("annotation", input.document) as AnnotationId };
@@ -427,6 +432,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     toggleTransactionSignal,
     createTransaction,
     createTransactionGroup,
+    renameTransactionGroup,
     duplicateAnnotation,
     clearSelection,
     selectAllSignals,
