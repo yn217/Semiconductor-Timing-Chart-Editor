@@ -34,7 +34,22 @@ test("builds six transactions through normal GUI selection transitions", async (
     await inspector.getByLabel("Transaction group", { exact: true }).selectOption({ label: group });
     await inspector.getByTestId("apply-inspector-transaction").click();
   }
+  await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").nth(5).click();
+  await inspector.getByLabel("Transaction lane", { exact: true }).fill("lane_3");
+  await inspector.getByTestId("apply-inspector-transaction").click();
+  for (const [index, name] of ["Memory", "CPU", "Peripheral"].entries()) {
+    const header = page.getByTestId("transaction-group-header").nth(index);
+    await header.getByRole("textbox").fill(name);
+    await header.getByRole("textbox").press("Enter");
+  }
   await expect(page.getByTestId("transaction-editor").locator("[data-transaction-row-id]")).toHaveCount(6);
   await expect(page.getByTestId("transaction-editor")).toContainText("Read_0");
-  await expect(page.getByTestId("transaction-editor")).toContainText("lane_2");
+  await expect(page.getByTestId("transaction-editor")).toContainText("lane_3");
+  await expect(page.getByTestId("transaction-editor").locator("[data-transaction-row-id]").first()).toContainText("GUI authored transaction");
+  const save = page.waitForEvent("download");
+  await ribbon.getByRole("button", { name: "Save", exact: true }).click();
+  const saved = await (await save).path();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(saved!);
+  await expect(page.getByTestId("transaction-editor")).toContainText("Memory");
+  await expect(page.getByTestId("transaction-editor")).toContainText("lane_3");
 });
