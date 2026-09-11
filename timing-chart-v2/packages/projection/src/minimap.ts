@@ -70,6 +70,10 @@ export interface MiniMapTransactionOverview {
 
 const DEFAULT_TRANSACTION_COLOR = "#8895a7";
 
+function sortTransactionSegments(left: MiniMapTransactionSegment, right: MiniMapTransactionSegment): number {
+  return left.start - right.start || left.end - right.end || left.color.localeCompare(right.color);
+}
+
 /**
  * #429/#397 Transaction Mode Product Closure P1: the MiniMap had no
  * Transaction-aware overview at all -- `buildMiniMapOverview` above only
@@ -110,7 +114,7 @@ export function buildMiniMapTransactionOverview(document: Pick<CanonicalDocument
     const groupColor = bucket.groupId ? colorByGroupId.get(bucket.groupId) : undefined;
     const segments = bucket.transactions
       .map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR }))
-      .sort((left, right) => left.start - right.start);
+      .sort(sortTransactionSegments);
     return { key: `${bucket.groupId ?? "ungrouped"}:${bucket.laneId}`, rowIndex, segments };
   });
   return Object.freeze({ cycleCount, rows: Object.freeze(rows) });
@@ -154,7 +158,7 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
     const transactions = transactionsByLane.get(key) ?? [];
     if (transactions.length === 0) return undefined;
     const groupColor = groupId === "ungrouped" ? undefined : colorByGroupId.get(groupId as NonNullable<CanonicalDocument["transactionGroups"]>[number]["id"]);
-    return { key, rowIndex, segments: transactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR })).sort((left, right) => left.start - right.start) };
+    return { key, rowIndex, segments: transactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR })).sort(sortTransactionSegments) };
   };
   const rowsByKey = new Map(previous.rows.map((row) => [row.key, row] as const));
   for (const key of changedLanes) {
