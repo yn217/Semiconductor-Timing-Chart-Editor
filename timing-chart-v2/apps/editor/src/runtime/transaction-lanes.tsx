@@ -350,7 +350,11 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
         treeRowBuilds.current += 1;
         treeRowsCache.current.set(laneTransactions, treeRowOf);
       }
-      const labelHeight = Math.max(laneTransactions.length, 1) * LANE_ROW_HEIGHT;
+      // Transaction Mode's center label column represents the Lane only;
+      // Transaction names live in the bar header, as in the approved
+      // reference. Keep the label band to one compact Lane row even when
+      // several non-overlapping Transactions share that lane.
+      const labelHeight = LANE_ROW_HEIGHT;
       const trackHeight = Math.max(rowCount, 1) * LANE_ROW_HEIGHT;
       laneBands.push({ key: `lane:${section.groupId ?? "ungrouped"}:${laneId}`, laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf, treeRowOf });
       labelCursor += labelHeight;

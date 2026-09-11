@@ -306,6 +306,7 @@
   left: var(--gui-left-width);
   width: var(--gui-frozen-width, 210px);
 }
+.cycle-panel.mode-transaction .transaction-lane-label-row { display: none; }
 .transaction-left-tree-root, .transaction-left-tree-group-header {
   display: flex;
   align-items: center;
