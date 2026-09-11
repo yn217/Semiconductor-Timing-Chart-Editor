@@ -13,6 +13,9 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
     await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
     await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+    // Match the approved Reference's visible selection state before capturing
+    // the region comparison: Read_0 is selected across the shared surfaces.
+    await page.getByTestId("transaction-left-tree-row-txn_read0").click();
 
     await expect(page.getByTestId("transaction-left-tree")).toContainText("All Transactions");
     await expect(page.getByTestId("transaction-left-tree")).toContainText("Memory");
