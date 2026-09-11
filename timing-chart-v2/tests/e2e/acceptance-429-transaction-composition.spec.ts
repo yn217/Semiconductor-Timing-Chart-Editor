@@ -27,3 +27,37 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await page.screenshot({ path: `test-results/transaction-composition-${viewport.width}x${viewport.height}.png`, fullPage: true });
   });
 }
+
+test("Transaction canvas body and edge drags commit through the semantic command path", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(samplePath);
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+  const bar = page.locator('[data-transaction-id="txn_read0"]');
+  await bar.click();
+  const inspector = page.getByTestId("inspector");
+  const initialStart = await inspector.getByLabel("Transaction start").inputValue();
+  const body = bar.locator(":scope > span").first();
+  const bodyBox = await body.boundingBox();
+  expect(bodyBox).not.toBeNull();
+  await page.mouse.move(bodyBox!.x + bodyBox!.width / 2, bodyBox!.y + bodyBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(bodyBox!.x + bodyBox!.width / 2 + 24, bodyBox!.y + bodyBox!.height / 2, { steps: 3 });
+  await page.mouse.up();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await expect(inspector.getByLabel("Transaction start")).not.toHaveValue(initialStart);
+
+  const startHandle = bar.locator(":scope > i[data-edge='start']");
+  const startBox = await startHandle.boundingBox();
+  expect(startBox).not.toBeNull();
+  const beforeResize = await inspector.getByLabel("Transaction start").inputValue();
+  await page.mouse.move(startBox!.x + startBox!.width / 2, startBox!.y + startBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(startBox!.x + 12, startBox!.y + startBox!.height / 2, { steps: 3 });
+  await page.mouse.up();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await expect(inspector.getByLabel("Transaction start")).not.toHaveValue(beforeResize);
+});
