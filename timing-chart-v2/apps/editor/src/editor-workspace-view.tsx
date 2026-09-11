@@ -139,6 +139,10 @@ export function EditorWorkspaceView({
     for (const [viewportElement, rulerElement] of viewports) {
       if (!viewportElement || !rulerElement || !onSetCursorAtCycle) continue;
       const onPointerDown = (event: PointerEvent) => {
+        // Cursor A/B has one workspace-wide drag owner. A second pointer
+        // must not install another window-level move/up handler while the
+        // first drag is still resolving source-time coordinates.
+        if (activeDragCleanups.size > 0) return;
         const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='cursor-line']") : null;
         const which = target?.dataset.cursor as "a" | "b" | undefined;
         if (!which) return;
@@ -161,10 +165,12 @@ export function EditorWorkspaceView({
             applyCursorAt(pendingClientX);
           });
         };
-        const cleanupDrag = () => { window.removeEventListener("pointermove", move); if (pendingFrame !== undefined) cancelAnimationFrame(pendingFrame); pendingFrame = undefined; window.removeEventListener("pointerup", up); activeDragCleanups.delete(cleanupDrag); };
+        const cleanupDrag = () => { window.removeEventListener("pointermove", move); if (pendingFrame !== undefined) cancelAnimationFrame(pendingFrame); pendingFrame = undefined; window.removeEventListener("pointerup", up); window.removeEventListener("pointercancel", cancel); activeDragCleanups.delete(cleanupDrag); };
         const up = () => { applyCursorAt(pendingClientX); cleanupDrag(); };
+        const cancel = () => cleanupDrag();
         window.addEventListener("pointermove", move);
         window.addEventListener("pointerup", up, { once: true });
+        window.addEventListener("pointercancel", cancel, { once: true });
         activeDragCleanups.add(cleanupDrag);
       };
       viewportElement.addEventListener("pointerdown", onPointerDown, true);
