@@ -240,7 +240,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
             and a row silently skipping one grid child shifted Phases one
             column left relative to rows that do have a Group. */}
         <i className="transaction-row-swatch" aria-hidden="true" style={{ background: item.color ?? (item.groupId === undefined ? "#8895a7" : document.transactionGroups?.find((group) => group.id === item.groupId)?.color ?? "#8895a7") }} />
-        <b>{item.name}</b><span>{item.groupId === undefined ? "—" : groupNameById.get(item.groupId) ?? "Group"}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.start}</span><span>{item.end}</span><span>{item.end - item.start}</span><span>{item.phases?.length ?? 0}</span><span>{item.linkedSignals?.length ?? 0}</span><span className="transaction-row-color-value">{item.color ?? (item.groupId === undefined ? "#8895a7" : document.transactionGroups?.find((group) => group.id === item.groupId)?.color ?? "#8895a7")}</span>
+        <b>{item.name}</b><span>{item.groupId === undefined ? "Ungrouped" : groupNameById.get(item.groupId) ?? "Group"}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.start}</span><span>{item.end}</span><span>{item.end - item.start}</span><span>{item.phases?.length ?? 0}</span><span>{item.linkedSignals?.length ?? 0}</span><span className="transaction-row-color-value">{item.color ?? (item.groupId === undefined ? "#8895a7" : document.transactionGroups?.find((group) => group.id === item.groupId)?.color ?? "#8895a7")}</span>
         {/* Transaction Mode GUI realignment: Description is a real,
             already-persisted field (Transaction.description, #454) with no
             column in this table at all -- appended after the original
