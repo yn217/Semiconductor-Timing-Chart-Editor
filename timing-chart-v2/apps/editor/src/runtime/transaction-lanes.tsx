@@ -416,7 +416,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
         // `onSelect`, not a second selection-owning tree.
         const laneTransactions = laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? [];
         return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" data-lane-id={band.laneId} data-transaction-group-id={band.groupId ?? "ungrouped"} style={{ top: band.labelTop, height: band.labelHeight }}>
-          {laneTransactions.length === 0 && <em>{band.laneId.replace(/^lane_(\d+)$/i, "Lane $1")}</em>}
+          <em className="transaction-lane-label-name">{band.laneId.replace(/^lane_(\d+)$/i, "Lane $1")}</em>
           {/* Transaction Mode GUI realignment ("長い名前は ellipsis +
               tooltip"): the CSS already truncates a long name with
               ellipsis (center-columns.css's overflow:hidden/text-overflow:
