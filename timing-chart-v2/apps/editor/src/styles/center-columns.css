@@ -470,26 +470,28 @@
    one -- so bulk-select's checkbox is a sibling in front of it, both
    wrapped in one `.transaction-list-row` flex item that's now the actual
    list child instead of the button. */
-.transaction-list-row { display: flex; align-items: center; gap: 4px; }
+.transaction-list-row { display: flex; align-items: stretch; gap: 0; min-height: 28px; }
 /* #397: explicit margin:0 -- the UA default checkbox margin (commonly
    ~3-4px) otherwise silently offsets the button/header alignment below by
    that same amount, since flex item outer size includes margin. */
-.transaction-list-row > input[type="checkbox"] { flex: 0 0 auto; width: 13px; margin: 0; }
+.transaction-list-row > input[type="checkbox"] { flex: 0 0 28px; width: 13px; margin: 0; align-self: center; }
 /* #397: fixed pixel widths (not `auto`) for every trailing column -- each
    row's button is its own independent grid formatting context, so `auto`
    columns size to that one row's own content and drift out of alignment
    with every other row (and with the header) the moment two rows' text
    lengths differ. Fixed widths make every row (and the header, which
    repeats this exact template) share identical column boundaries. */
-.transaction-list-row > button { flex: 1 1 auto; min-width: 0; height: 30px; display: grid; grid-template-columns: 12px minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 5px; border: 1px solid #c2cfdd; border-radius: 3px; text-align: left; padding-inline: 6px; overflow: hidden; }
+.transaction-list-row > button { flex: 1 1 auto; min-width: 0; height: 30px; display: grid; grid-template-columns: 12px minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #c2cfdd; border-radius: 0; text-align: left; padding-inline: 0; overflow: hidden; }
 .editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row > button { height: 28px; }
 .transaction-list-row > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: #5c687c; }
 /* #397: column header row -- the spacer matches the row checkbox's fixed
    width and `.transaction-list-header-cells` repeats the row button's own
    grid-template-columns/gap exactly, so header and every row line up. */
-.transaction-list-header { display: flex; align-items: center; gap: 4px; padding: 0 2px; }
-.transaction-list-header-spacer { flex: 0 0 auto; width: 13px; }
-.transaction-list-header-cells { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: 12px minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); gap: 5px; padding-inline: 6px; color: #5c687c; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; position: sticky; top: 0; z-index: 2; }
+.transaction-list-header { display: flex; align-items: center; gap: 0; padding: 0; }
+.transaction-list-header-spacer { flex: 0 0 28px; width: 28px; }
+.transaction-list-header-cells { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: 12px minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); gap: 0; padding-inline: 0; color: #5c687c; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .01em; position: sticky; top: 0; z-index: 2; }
+.transaction-list-header-cells > span, .transaction-list-row > button > * { min-width: 0; padding-inline: 4px; border-right: 1px solid #dfe7ef; }
+.transaction-list-header-cells > span:first-child, .transaction-list-row > button > i { padding-inline: 0; }
 .transaction-list-header-cells > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .transaction-row-swatch { width: 10px; height: 10px; border-radius: 3px; border: 1px solid #0000001a; }
 .transaction-row-color-swatch { display: block; width: 26px; height: 11px; border-radius: 2px; border: 1px solid #0000001a; }
