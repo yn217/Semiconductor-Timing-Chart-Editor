@@ -126,7 +126,7 @@ button, input, select { font: inherit; font-size: var(--ds-font-size); }
   --gui-signal-width: 148px;
   grid-template-rows: 31px 34px 102px minmax(0, 1fr) 25px;
 }
-.editor-shell .desktop-workspace { grid-template-columns: 265px minmax(0, 1fr) 297px; grid-template-rows: minmax(260px, 1fr) 10px var(--gui-bottom-height); }
+.editor-shell .desktop-workspace { grid-template-columns: var(--gui-left-width) minmax(0, 1fr) var(--gui-inspector-width); grid-template-rows: minmax(260px, 1fr) 10px var(--gui-bottom-height); }
 .editor-shell .column-headings { height: 37px; grid-template-columns: var(--gui-left-width, 265px) var(--gui-role-width, 61px) var(--gui-signal-width, 148px) max(0px, calc(var(--gui-frozen-width, 209px) - var(--gui-role-width, 61px) - var(--gui-signal-width, 148px))) minmax(640px, 1fr); }
 .editor-shell .column-headings .role-column-heading { justify-content: center; padding-inline: 4px; font-size: 10px; text-transform: none; letter-spacing: normal; }
 .editor-shell .column-headings .signal-column-heading { padding-inline: 8px; font-size: 10px; text-transform: none; letter-spacing: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
