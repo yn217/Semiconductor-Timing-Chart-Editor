@@ -20,6 +20,8 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(page.getByTestId("transaction-list-toolbar")).toContainText("Add");
     await expect(page.getByTestId("transaction-list-toolbar")).toContainText("Delete");
     await expect(page.getByTestId("transaction-list-search")).toBeVisible();
+    await expect(page.getByTestId("delete-bottom-transaction")).toBeHidden();
+    await expect(page.getByText(/^Editing:/)).toBeHidden();
     for (const heading of ["Name", "Group", "Lane", "Start (TC)", "End (TC)", "Duration", "# Phases", "Linked Signals", "Color", "Description"]) {
       await expect(page.locator(".transaction-list-header-cells")).toContainText(heading);
     }
