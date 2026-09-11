@@ -6,7 +6,12 @@ export function TransactionTree({ document, filter, selectedId, onSelect }: { re
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const groups = useMemo(() => [...(document.transactionGroups ?? [])].sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)), [document.transactionGroups]);
   const needle = filter.trim().toLocaleLowerCase();
-  const matches = (transaction: Transaction) => needle.length === 0 || transaction.name.toLocaleLowerCase().includes(needle);
+  const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
+  const matches = (transaction: Transaction) => {
+    if (needle.length === 0) return true;
+    const groupName = transaction.groupId === undefined ? "" : groupById.get(transaction.groupId)?.name ?? "";
+    return transaction.name.toLocaleLowerCase().includes(needle) || groupName.toLocaleLowerCase().includes(needle);
+  };
   const groupTransactions = (groupId: TransactionGroup["id"] | undefined) => document.transactions.filter((transaction) => transaction.groupId === groupId && matches(transaction)).sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
   const toggle = (key: string) => setCollapsed((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   const renderTransaction = (transaction: Transaction) => <button type="button" key={transaction.id} className="transaction-left-tree-row" data-testid={`transaction-left-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} title={transaction.name} onClick={() => onSelect(transaction.id)}><i aria-hidden="true" style={{ background: transaction.color ?? "#8895a7" }} />{transaction.name}</button>;
