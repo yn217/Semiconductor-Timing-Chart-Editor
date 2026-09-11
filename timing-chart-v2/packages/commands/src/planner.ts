@@ -1172,7 +1172,12 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const groups = [...(document.transactionGroups ?? [])]; const index = groups.findIndex((item) => item.id === command.groupId);
       if (index < 0 || !command.name.trim() || !Number.isInteger(command.order) || command.order < 0) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction Group update is invalid.");
       const current = groups[index]!;
-      const next = { ...current, name: command.name, order: command.order, ...(command.color === undefined ? {} : command.color.trim() === "" ? (() => { const { color: _color, ...rest } = current; return rest; })() : { color: command.color }) };
+      const updated = { ...current, name: command.name, order: command.order };
+      const next = command.color === undefined
+        ? updated
+        : command.color.trim() === ""
+          ? (() => { const { color: _color, ...rest } = updated; return rest; })()
+          : { ...updated, color: command.color };
       if (semanticEqual(current, next)) return fail("no-op", "NO_OP", "$", "Transaction Group is unchanged.");
       groups[index] = next; return { ok: true, document: { ...document, transactionGroups: groups }, changeSet: { transactionGroupSemantics: [command.groupId] }, inverseChangeSet: { transactionGroupSemantics: [command.groupId] } };
     }

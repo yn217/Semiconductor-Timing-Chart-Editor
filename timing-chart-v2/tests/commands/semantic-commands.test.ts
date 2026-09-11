@@ -40,6 +40,15 @@ describe("pure Semantic Command planning", () => {
     const deleted = planCommand(grouped, { id: commandId("txn_group_delete_changes"), type: "transactionGroup.delete", groupId: group.id });
     expect(deleted).toMatchObject({ ok: true, changeSet: { transactionGroupSemantics: [group.id], transactionSemantics: ["txn_changes"] }, inverseChangeSet: { transactionGroupSemantics: [group.id], transactionSemantics: ["txn_changes"] } });
   });
+  it("preserves Group name and order when clearing color in a composite update", () => {
+    const source = canonicalFixture();
+    const group = { id: "txn_group_clear_color" as TransactionGroupId, name: "Memory", color: "#123456", order: 1 } as const;
+    const document = { ...source, transactionGroups: [group] };
+    const updated = planCommand(document, { id: commandId("txn_group_clear_color"), type: "transactionGroup.update", groupId: group.id, name: "DRAM", order: 3, color: "" });
+    expect(updated).toMatchObject({ ok: true });
+    if (!updated.ok) return;
+    expect(updated.document.transactionGroups?.[0]).toEqual({ id: group.id, name: "DRAM", order: 3 });
+  });
   it("validates suppressed clock slots relative to a delayed generator start", () => {
     const source = canonicalFixture();
     const clock = source.signals[0] as ClockSignal;
