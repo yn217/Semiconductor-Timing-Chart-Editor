@@ -154,6 +154,14 @@
 .editor-shell [data-testid="bottom-pin"][aria-pressed="true"] .bottom-pin-label::after { content: "Unpin"; }
 
 .transaction-editor { min-height: 100%; padding: 8px 12px; }
+/* Transaction reference: the Bottom surface is table-first. Selected
+   Transaction detail is owned by Inspector; keep the create form available
+   for the zero-state, but do not let a persistent single-item editor push
+   the dense list below the fold. */
+.transaction-editor > form#transaction-properties-form,
+.transaction-editor > form#transaction-properties-form ~ .transaction-linked-signals,
+.transaction-editor > form#transaction-properties-form ~ .bottom-sticky-actions { display: none; }
+.transaction-editor:has(> form#transaction-properties-form) > header { display: none; }
 .transaction-editor > header { display: flex; align-items: center; gap: 7px; }
 .transaction-editor > header strong { margin-right: auto; }
 .transaction-editor form { display: flex; flex-wrap: wrap; align-items: end; gap: 9px; padding: 9px 0; }
