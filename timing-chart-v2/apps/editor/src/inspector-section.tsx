@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { EditorIcon } from "./editor-icon.js";
 
 /** Inspector redesign: `count` renders as a compact trailing badge (e.g.
  * "0", "3") and `onAdd` (when the section is collapsed) as a small "+"
@@ -12,9 +13,9 @@ export function InspectorSection({ sectionId, title, open, onToggle, count, onAd
   const contentId = `inspector-section-${sectionId}`;
   return <section className={`inspector-section${open ? " is-open" : " is-collapsed"}`} data-section-id={sectionId}>
     <h3 className="inspector-section-heading">
-      <button type="button" className="inspector-section-toggle" aria-expanded={open} aria-controls={contentId} onClick={onToggle}><span aria-hidden="true">{open ? "▼" : "▶"}</span>{title}</button>
+      <button type="button" className="inspector-section-toggle" aria-expanded={open} aria-controls={contentId} onClick={onToggle}><EditorIcon name={open ? "down" : "right"} />{title}</button>
       {count !== undefined && <span className="inspector-section-count" data-testid={`inspector-section-count-${sectionId}`}>{count}</span>}
-      {count !== undefined && !open && onAdd && <button type="button" className="inspector-section-add" aria-label={`Add to ${title}`} onClick={(event) => { event.stopPropagation(); if (!open) onToggle(); onAdd(); }}>+</button>}
+      {count !== undefined && !open && onAdd && <button type="button" className="inspector-section-add" aria-label={`Add to ${title}`} onClick={(event) => { event.stopPropagation(); if (!open) onToggle(); onAdd(); }}><EditorIcon name="plus" /></button>}
     </h3>
     {open && <div id={contentId} className="inspector-section-content">{children}</div>}
   </section>;
