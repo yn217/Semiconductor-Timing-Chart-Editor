@@ -1,11 +1,12 @@
 # Claude / Codex Issue Ownership
 
-Last reconciled: 2026-09-11 06:52 JST
+Last reconciled: 2026-09-12 07:45 JST
 Repository: `yn217/Semiconductor-Timing-Chart-Editor`
 Current product branch: `main`
-Observed main: `c051583`
+Observed main: `45661c7e56511df7ca2de68687c055ebacb67a95`
+Authoritative queue: `codex-control:.codex/ISSUE_ORDER.txt`
 
-One Issue has one active implementation owner at a time. Codex executes only non-comment entries in `.codex/ISSUE_ORDER.txt` on `codex-control` and implements on `main`; never merge/cherry-pick `codex-control` into `main`.
+Claude is currently unavailable. Codex is authorized to execute GUI / UX / QA / product work as well as Core / Runtime / Performance work. One Issue has one active implementation owner at a time.
 
 ## Shared architecture
 - `Canonical -> Semantic Commands / History -> Projection -> Renderer -> DOM`
@@ -14,74 +15,64 @@ One Issue has one active implementation owner at a time. Codex executes only non
 - view-only operations keep Canonical/History/Dirty delta = 0
 - DOM/ruler pixels are not semantic authority
 - `source time -> DisplayTimeMapping -> TimeAxisGeometry/LocalGeometry -> screen`
-- no Golden/reference/threshold/mask changes merely to pass
+- no Golden/reference/threshold/mask weakening merely to pass
 
-## Current task lists
+## Current Codex task list
 
-### Codex — Core / Runtime / Performance
-1. **#163** — Semantic Command / History / ChangeSet final closure.
-   - Remaining only: measured History storage scaling decision/evidence; rejected-command success-only transient effects through shared adapters; final cross-adapter/ChangeSet audit.
-   - Do not redo already-complete Comment Row, Signal property, NO_OP, Dirty-read, TransactionGroup work.
+1. **#555 — P0 Transaction Group Journey blocker**
+   - Fresh-document GUI must support Transaction -> Group assignment.
+   - Left Tree drag/drop + discoverable `Move to Group` menu.
+   - Bottom/Inspector share the same Semantic Command owner.
+   - Multi-select, Ungroup, cross-surface sync, Undo/Redo, Save/Open.
 
-2. **#548** — Transaction MiniMap incremental correctness.
-   - Direct #429 blocker. Old/new lane/group invalidation, create/delete, Group color/order, timeline extent, Undo/Redo, Chromium regression.
+2. **#554 — P0 User Journey re-audit**
+   - Fresh/generic document; no sample-fixture shortcut for authoring proof.
+   - Current Transaction status: Group create/rename progressed, assignment/move is blocked by #555; Lane 3 path still unproven; Phase/Links/selection/persistence/cross-mode journeys remain partially proven.
+   - File bounded P0/P1 bugs when a Journey cannot be completed; do not convert a blocker into an audit-only PASS.
 
-3. **#463** — Transaction large-workspace performance/invalidation closure.
-   - Previous #397 defer removed because #397 is CLOSED.
-   - Existing virtualization/indexing/partition reuse stays; finish reconciled 1k/5k/10k latency/invalidation and production drag/move/resize evidence.
-   - Check same-hunk ownership before touching files Claude is changing for #429 visuals.
+3. **#550 — Transaction Group composite update closure**
+   - Planner fix landed in `b5e8e9f`.
+   - Remaining: exact Undo/Redo and GUI-path evidence; then close if full acceptance is met.
 
-4. **#549** — Cursor A/B drag runtime/geometry cleanup.
-   - One gesture owner; no per-pointermove full ruler DOM scan/sort; shared TimeAxis/Snap/DisplayTimeMapping geometry; range clamp and browser/perf evidence.
+4. **#551 — Transaction Phase resize closure**
+   - Reject-on-phase-clip policy landed in `ae6faee` / `29c3619`.
+   - Remaining: Production pointer/preview rejection UX, successful non-clipping resize History proof, cross-surface consistency.
 
-### Explicitly skipped
-- **#415** — OPEN but explicitly skipped by user. #414 is now CLOSED, but dependency readiness does not authorize execution. Do not auto-promote #415 until explicitly requested.
-- #258 broad MinimalCycleView decomposition — defer while shared product surfaces remain active unless explicitly transferred.
-- #495 mixed Reset Core+GUI — split/transfer bounded Core scope first.
+5. **#553 — Transaction Bottom bulk checkbox closure**
+   - Dedicated checkbox column/Select All/indeterminate landed in `a4316e4`.
+   - Remaining: active-vs-bulk selection isolation, checked-ID bulk commands, responsive browser evidence, checkbox-only semantic zero deltas.
 
-### Claude — GUI / Product
-1. **#429** — Transaction visual/product convergence. **NOW.**
-   - Approved reference screenshot is product authority.
-   - Focus on grouped/compact Left Tree, Group/Lane + Phase central structure, table-first Bottom with no duplicate persistent single-item editor, compact Inspector, populated MiniMap and TC ruler at 1672x941 / 1280x720.
-   - Consume #548/#463 fixes; do not duplicate their projection/performance owners.
+6. **#552 — Annotation list virtualization closure**
+   - Core virtualization/model-index keyboard navigation landed in `45661c7`.
+   - Remaining: 1k/5k/20k real-browser scaling and mounted-row/latency/view-only invariants.
 
-2. **#426** — Bottom Panel cross-tab consolidation after #429 unless user-visible priority changes.
-3. **#431** — UX/Product Completion Epic; use to select/close concrete remaining child work, not as a monolithic Codex task.
-4. Remaining GUI/product backlog such as **#403/#407/#408/#409**, **#436-#441**, **#474**, **#205** according to live issue state and current visual priorities.
+7. **#163 — Semantic Command / History / ChangeSet final closure**
+   - Remaining only: History storage scaling decision/evidence, rejected-command adapter transient effects, final cross-adapter/ChangeSet audit.
 
-## Completed since previous reconciliation
-- **#414** Time Outline GUI — CLOSED
-- **#416** Time Outline final GUI/Ribbon/export/E2E closure — CLOSED
-- **#397** Transaction + Split sample-driven acceptance — CLOSED
-- **#534** Transaction Bottom zero-state simplification — CLOSED
-- **#424** Marker vertical-span GUI — CLOSED
-- **#419** Highlight Snap/Free GUI — CLOSED
+8. **#549 — Cursor A/B runtime/geometry cleanup**
+   - One gesture owner; no per-pointermove full ruler DOM scan/sort; shared TimeAxis/Snap/DisplayTimeMapping geometry.
 
-Do not re-add these broad completed Issues merely for another audit. File narrow regressions if concrete defects appear.
+## Explicitly skipped
+- **#415** — OPEN but explicitly skipped by user. Do not auto-promote.
 
-## Transaction Mode — #429
-Completed foundations include #430/#450/#455/#451/#452/#453/#454/#481/#461/#530/#529/#534/#397.
+## Recently completed / preserve
+- **#429** Transaction Mode visual/product closure — CLOSED.
+- **#548** Transaction MiniMap incremental correctness — CLOSED.
+- **#463** Transaction large-workspace performance/invalidation — CLOSED.
+- Earlier completed broad GUI foundations should not be reopened merely for another audit; #554 should produce narrow regression Issues when real journeys expose gaps.
 
-Remaining:
-- Codex #548 MiniMap correctness
-- Codex #463 performance/invalidation closure
-- Claude #429 screenshot-driven integrated visual convergence
+## Journey policy
 
-#429 closes only after those runtime blockers are gone and the Production view substantially matches the approved reference at both target resolutions.
+Focused tests and fixture rendering are evidence, but not sufficient proof of authoring capability.
 
-## Time Outline
-- #412 CLOSED
-- #413 CLOSED
-- #414 CLOSED
-- #416 CLOSED
-- #415 remains OPEN but explicitly skipped. Do not infer it must run merely from historical dependency text.
+For user-editable workflows, acceptance should prefer:
 
-## Collision rules
-- Codex owns Core/schema/command/projection/runtime/performance work.
-- Claude owns GUI composition/visual hierarchy/product interaction/real-browser acceptance.
-- For #548/#463 vs #429, Claude consumes runtime fixes; Codex avoids visual redesign.
-- Genuine same-hunk conflict may defer only that bounded work; never reset/stash/clean unrelated work.
+`New/generic document -> visible Production GUI operations -> Undo/Redo -> Save/Open -> mode switch -> final state verification`
 
-## Implementation-first policy
-`identify concrete missing behavior -> root cause -> bounded production implementation -> focused verification -> evidence/close`.
-If current main already satisfies an Issue, prove it and close rather than manufacturing code.
+A closed historical feature Issue does not block fixing a reproducible journey defect. Conversely, do not rebuild Canonical/Semantic Command foundations where the missing piece is only the Production interaction route.
+
+## Worktree / collision policy
+- Codex implements on `main`; reads `codex-control` as read-only.
+- Never merge/cherry-pick `codex-control` into `main`.
+- No reset/stash/clean/delete of unrelated work.
+- Inspect dirty hunks; only genuine same-hunk unsafe conflict may defer a bounded change.
