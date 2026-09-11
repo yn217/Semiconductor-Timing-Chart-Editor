@@ -12,6 +12,7 @@ test("Bottom Panel toolbar Add creates a Transaction and Ungroup clears its Grou
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
 
   await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
   const bottomEditor = page.getByTestId("transaction-editor");
