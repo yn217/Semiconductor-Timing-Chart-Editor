@@ -248,6 +248,12 @@
 .event-toolbar[data-testid="transaction-list-toolbar"] .field-inline { display: flex; flex-direction: row; align-items: center; gap: 0; font-size: 0; }
 .event-toolbar[data-testid="transaction-list-toolbar"] .field-inline select { width: 82px; height: var(--ds-control-height); padding: 2px 5px; }
 .event-toolbar[data-testid="transaction-list-toolbar"] .field-inline input[type="color"] { width: 32px; height: var(--ds-control-height); padding: 2px; }
+.event-toolbar[data-testid="transaction-list-toolbar"] .transaction-group-control,
+.event-toolbar[data-testid="transaction-list-toolbar"] .transaction-color-control { position: relative; }
+.event-toolbar[data-testid="transaction-list-toolbar"] .transaction-group-control > span,
+.event-toolbar[data-testid="transaction-list-toolbar"] .transaction-color-control > span { display: inline-flex; align-items: center; height: var(--ds-control-height); padding: 3px 8px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; font-size: 10px; font-weight: 650; }
+.event-toolbar[data-testid="transaction-list-toolbar"] .transaction-group-control > select { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+.event-toolbar[data-testid="transaction-list-toolbar"] .transaction-color-control > input { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
 
 .event-preview { margin-left: auto; color: #246aa8; font-size: 10px; }
 
