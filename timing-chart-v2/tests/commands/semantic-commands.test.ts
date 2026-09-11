@@ -200,6 +200,7 @@ describe("pure Semantic Command planning", () => {
   });
   it("rejects Transaction resize that would clip or remove a Phase", () => {
     const document = canonicalFixture();
+    document.timeline = { ...document.timeline, end: 20, cycleCount: 20 };
     document.transactions = [{ id: "txn_phase_resize" as TransactionId, name: "Read", start: 0, end: 20, laneId: "lane_0", phases: [{ name: "Address", start: 0, end: 5 }, { name: "Data", start: 5, end: 15 }, { name: "Response", start: 15, end: 20 }] }];
     const session = new CommandHistorySession(document);
     const rejected = session.execute({ id: commandId("cmd_resize_phase_reject"), type: "transaction.resize", transactionId: "txn_phase_resize" as TransactionId, edge: "start", value: 8 });
