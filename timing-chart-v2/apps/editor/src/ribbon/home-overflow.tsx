@@ -149,7 +149,7 @@ export function HomeOverflow(props: HomeOverflowProps) {
     { label: "Timeline", commands: [{ label: "Timeline Editor", onClick: props.onOpenTimeline }] },
   ];
   const menu = open ? createPortal(<div ref={menuRef} onKeyDown={onMenuKeyDown} id="home-overflow-menu" className="home-overflow-menu" role="menu" aria-label="More Home Commands" style={{ left: `${position?.left ?? 0}px`, top: `${position?.top ?? 0}px`, height: position ? `${position.height}px` : "auto", maxHeight: `${position?.maxHeight ?? 120}px`, visibility: position ? "visible" : "hidden" }}>
-    {sections.map((section) => <div key={section.label} className="home-overflow-section"><strong>{section.label}</strong>{section.commands.map((command) => <button key={command.label} type="button" role="menuitem" onClick={action(command.onClick)} disabled={command.disabled}>{command.label}</button>)}</div>)}
+    {sections.map((section) => <div key={section.label} className="home-overflow-section" role="group" aria-label={section.label}><strong aria-hidden="true">{section.label}</strong>{section.commands.map((command) => <button key={command.label} type="button" role="menuitem" onClick={action(command.onClick)} disabled={command.disabled}>{command.label}</button>)}</div>)}
   </div>, window.document.body) : null;
 
   return <><button ref={triggerRef} type="button" className="ds-ribbon-button home-overflow-trigger" aria-expanded={open} aria-controls={open ? "home-overflow-menu" : undefined} onClick={() => setOpen((value) => !value)}><DsIconBox><RibbonIcon name="i-more" /></DsIconBox><span className="ds-ribbon-label">More</span></button>{menu}</>;
