@@ -6,6 +6,11 @@ import type {
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { annotationPropertiesBase } from "./annotation-style-command.js";
+import { useEffect, useRef, useState } from "react";
+
+const ANNOTATION_ROW_HEIGHT = 27;
+const ANNOTATION_HEADER_HEIGHT = 25;
+const ANNOTATION_OVERSCAN = 8;
 
 /** Shared read-only anchor formatter -- used by both this list's Start/End
  * columns and the Bottom Annotation Editor's own Start/End summary (Visual
@@ -40,9 +45,30 @@ export function AnnotationList({
     "updateAnnotationProperties"
   >;
 }) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const viewportHeight = listRef.current?.clientHeight ?? 320;
+  const firstVisible = Math.max(0, Math.floor(Math.max(0, scrollTop - ANNOTATION_HEADER_HEIGHT) / ANNOTATION_ROW_HEIGHT) - ANNOTATION_OVERSCAN);
+  const visibleCount = Math.ceil(viewportHeight / ANNOTATION_ROW_HEIGHT) + ANNOTATION_OVERSCAN * 2;
+  const lastVisible = Math.min(annotations.length, firstVisible + visibleCount);
+  const visibleAnnotations = annotations.slice(firstVisible, lastVisible);
+
+  useEffect(() => {
+    const selectedIndex = selectedId === undefined ? -1 : annotations.findIndex((item) => item.id === selectedId);
+    if (selectedIndex < 0 || !listRef.current) return;
+    const top = ANNOTATION_HEADER_HEIGHT + selectedIndex * ANNOTATION_ROW_HEIGHT;
+    const bottom = top + ANNOTATION_ROW_HEIGHT;
+    const viewTop = listRef.current.scrollTop;
+    const viewBottom = viewTop + listRef.current.clientHeight;
+    if (top < viewTop) listRef.current.scrollTop = top;
+    else if (bottom > viewBottom) listRef.current.scrollTop = bottom - listRef.current.clientHeight;
+  }, [annotations, selectedId]);
+
   return (
     <div
+      ref={listRef}
       className="annotation-list"
+      onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
       role="table"
       aria-label="Annotations"
       data-testid="annotation-list"
@@ -63,7 +89,10 @@ export function AnnotationList({
         <span>End</span>
         <span aria-hidden="true" />
       </div>
-      {annotations.map((item, index) => (
+      <div style={{ height: firstVisible * ANNOTATION_ROW_HEIGHT }} aria-hidden="true" />
+      {visibleAnnotations.map((item, visibleIndex) => {
+        const index = firstVisible + visibleIndex;
+        return (
         <div
           className="annotation-list-row"
           role="row"
@@ -83,23 +112,16 @@ export function AnnotationList({
             }
             if (["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
               event.preventDefault();
-              const rows = [
-                ...event.currentTarget.parentElement!.querySelectorAll<HTMLElement>(
-                  "[data-annotation-row]",
-                ),
-              ];
               const nextIndex =
                 event.key === "Home"
                   ? 0
                   : event.key === "End"
-                    ? rows.length - 1
+                    ? annotations.length - 1
                     : index + (event.key === "ArrowDown" ? 1 : -1);
-              const next = rows[nextIndex];
-              const nextId = next?.dataset.annotationListId as
-                AnnotationId | undefined;
-              if (next && nextId) {
-                onSelect(nextId);
-                next.focus();
+              const nextItem = annotations[nextIndex];
+              if (nextItem) {
+                onSelect(nextItem.id);
+                requestAnimationFrame(() => listRef.current?.querySelector<HTMLElement>(`[data-annotation-list-id="${CSS.escape(nextItem.id)}"]`)?.focus());
               }
             }
           }}
@@ -165,7 +187,9 @@ export function AnnotationList({
             aria-hidden="true"
           />
         </div>
-      ))}
+        );
+      })}
+      <div style={{ height: Math.max(0, annotations.length - lastVisible) * ANNOTATION_ROW_HEIGHT }} aria-hidden="true" />
     </div>
   );
 }
