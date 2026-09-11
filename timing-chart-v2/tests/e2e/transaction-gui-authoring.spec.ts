@@ -19,6 +19,7 @@ test("builds six transactions through normal GUI selection transitions", async (
   await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").first().click();
   await inspector.getByLabel("Transaction group", { exact: true }).selectOption({ label: "Group 1" });
   await expect(inspector.getByLabel("Transaction group", { exact: true })).toHaveValue(/.+/);
+  await inspector.getByLabel("Transaction end", { exact: true }).fill("6");
   await inspector.getByLabel("Transaction lane", { exact: true }).fill("lane_0");
   for (let index = 0; index < 3; index++) {
     await inspector.getByTestId("add-transaction-phase").click();
@@ -30,6 +31,10 @@ test("builds six transactions through normal GUI selection transitions", async (
   await inspector.getByRole("option", { name: /REQUEST/ }).click();
   await inspector.getByLabel("Transaction color").fill("#3366ff");
   await inspector.getByTestId("apply-inspector-transaction").click();
+  await expect(page.getByTestId("history-status")).toContainText("History");
+  await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").nth(1).click();
+  await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").first().click();
+  await expect(inspector.locator("[data-phase-index]")).toHaveCount(3);
   for (const [index, group] of [[1, "Group 1"], [2, "Group 2"], [3, "Group 2"], [4, "Group 3"]] as const) {
     await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").nth(index).click();
     await expect(inspector.getByLabel("Transaction name", { exact: true })).toHaveValue(["Read_0", "Write_0", "Fetch_0", "Execute_0", "SPI_0"][index]!);
