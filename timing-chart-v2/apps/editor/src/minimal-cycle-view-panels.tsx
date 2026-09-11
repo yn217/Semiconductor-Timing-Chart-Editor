@@ -11,7 +11,7 @@ export type MinimalCycleViewPanelsProps = { readonly children?: ReactNode; reado
 const spacerId = (value: string) => value as SpacerId;
 export function MinimalCycleViewPanels({ children, workspace, tail, bottom, inspector, overlays, fileInput, status }: MinimalCycleViewPanelsProps) { if (children !== undefined) return <>{children}</>; return <><div className="desktop-workspace">{workspace}{tail}{bottom}{inspector}</div>{overlays}{fileInput}{status}</>; }
 
-export function ContextMenuPanel({ contextMenu, hasSelectedClipboard, clipboardAvailable, hasSelectedEntity, hasSelectedSignal, hasDeletableSelection, canRenameSelection, canMoveUp, canMoveDown, canShowSelection, canHideSelection, copySelectedSignal, cutSelectedSignal, pasteSelectedEntity, duplicateSelectedEntity, moveSelection, setSelectionVisibility, renameSelection, closeContextMenu, deleteSelection, addBookmarkAtCycle }: any) {
+export function ContextMenuPanel({ contextMenu, hasSelectedClipboard, clipboardAvailable, hasSelectedEntity, hasSelectedSignal, hasDeletableSelection, canRenameSelection, canMoveUp, canMoveDown, canShowSelection, canHideSelection, copySelectedSignal, cutSelectedSignal, pasteSelectedEntity, duplicateSelectedEntity, moveSelection, setSelectionVisibility, renameSelection, closeContextMenu, deleteSelection, addBookmarkAtCycle, transactionGroups = [], selectedTransactionGroupId, moveSelectedTransactionToGroup }: any) {
   if (contextMenu?.target === "ruler") return <ContextMenuSurface anchor={contextMenu} target="ruler" label="Ruler context menu">
     <button type="button" role="menuitem" data-testid="ruler-add-bookmark" onClick={() => { addBookmarkAtCycle(contextMenu.cycle); closeContextMenu(); }}>ブックマークを追加</button>
   </ContextMenuSurface>;
@@ -25,6 +25,7 @@ export function ContextMenuPanel({ contextMenu, hasSelectedClipboard, clipboardA
     <button type="button" role="menuitem" onClick={() => { setSelectionVisibility(true); closeContextMenu(); }} disabled={!canShowSelection}>Show</button>
     <button type="button" role="menuitem" onClick={() => { setSelectionVisibility(false); closeContextMenu(); }} disabled={!canHideSelection}>Hide</button>
     <button type="button" role="menuitem" onClick={() => { renameSelection(); closeContextMenu(); }} disabled={!canRenameSelection}>Rename</button>
+    {contextMenu.target === "transaction" && moveSelectedTransactionToGroup && <div role="group" aria-label="Move to Group"><strong>Move to Group</strong><button type="button" role="menuitem" aria-checked={selectedTransactionGroupId === undefined} onClick={() => { moveSelectedTransactionToGroup(undefined); closeContextMenu(); }}>Ungrouped</button>{transactionGroups.map((group: { id: string; name: string }) => <button type="button" role="menuitem" key={group.id} aria-checked={selectedTransactionGroupId === group.id} onClick={() => { moveSelectedTransactionToGroup(group.id); closeContextMenu(); }}>{selectedTransactionGroupId === group.id ? "✓ " : ""}{group.name}</button>)}</div>}
     <button type="button" role="menuitem" onClick={() => { deleteSelection(); closeContextMenu(); }} disabled={!hasDeletableSelection}>Delete</button>
   </ContextMenuSurface> : null;
 }
