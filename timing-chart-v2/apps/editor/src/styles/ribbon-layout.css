@@ -25,6 +25,7 @@
 
 .editor-shell .ribbon > [data-ribbon-home] > .ds-ribbon-group,
 .editor-shell .ribbon > [data-ribbon-home] > .ribbon-schema-group {
+  width: max-content;
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
