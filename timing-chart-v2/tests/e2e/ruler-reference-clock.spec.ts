@@ -24,6 +24,7 @@ function fixture(id: string, title: string, clockId: string, cycleCount: number)
 
 test("keeps the Ruler alive across edits, Undo/Redo, and repeated Opens with a non-default reference clock", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const ruler = page.getByTestId("cycle-ruler");
@@ -100,6 +101,7 @@ test("derives the reference Clock label and edge from canonical state across Sav
     signals: [clockA, clockB, base.signals[1]!],
   };
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   const fileInput = page.locator("input[type='file'][accept='.json,.tcd']");
   await fileInput.setInputFiles({ name: "two-clocks.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
