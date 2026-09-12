@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import type { DragEvent } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import type { ValueSignal } from "@timing-chart-v2/schema";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
@@ -127,6 +128,21 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   const sortedValueIndex = soleChecked === undefined ? -1 : [...signal.values].sort((left, right) => left.start - right.start).findIndex((change) => change.start === soleChecked.start);
   const canMoveUp = sortedValueIndex > 0;
   const canMoveDown = sortedValueIndex >= 0 && sortedValueIndex < signal.values.length - 1;
+  const [dragStart, setDragStart] = useState<number | undefined>();
+  const reorderDrop = (targetStart: number) => {
+    if (dragStart === undefined || dragStart === targetStart) return;
+    const ordered = [...signal.values].sort((left, right) => left.start - right.start);
+    const from = ordered.findIndex((change) => change.start === dragStart);
+    const to = ordered.findIndex((change) => change.start === targetStart);
+    if (from < 0 || to < 0) return;
+    const [item] = ordered.splice(from, 1); ordered.splice(to, 0, item!);
+    const durationByStart = new Map(signal.values.map((change, valueIndex, values) => [change.start, (values[valueIndex + 1]?.start ?? cycleCount) - change.start]));
+    let nextStart = ordered[0]!.start;
+    const reordered = ordered.map((change) => { const next = { ...change, start: nextStart }; nextStart += durationByStart.get(change.start) ?? 0; return next; });
+    const result = commands.replaceValues(signal.id, reordered);
+    if (result.ok) setCheckedStarts(new Set([reordered[to]!.start]));
+    setDragStart(undefined);
+  };
   // Visual Quality Closure pass (#402/#426), Section 4: the checkbox column
   // only ever meant "this row feeds the footer's bulk actions below" -- but
   // nothing on screen said so. A header Select All checkbox (tri-state:
@@ -212,7 +228,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
             exact same `checkedStarts` set each row's own checkbox feeds --
             not a decorative header cell. */}
         <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span>End</span><span>Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
-        {signal.values.map((change, index) => <EventRow key={change.start} index={index + 1} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} checked={checkedStarts.has(change.start)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change.start)} onSelect={setSelectedStart} onDuplicate={() => duplicateChange(change)} commands={commands} />)}
+        {signal.values.map((change, index) => <EventRow key={change.start} index={index + 1} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} checked={checkedStarts.has(change.start)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change.start)} onSelect={setSelectedStart} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setDragStart(change.start)} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setDragStart(undefined)} />)}
       </div>
     </div>
     <div className="event-table-footer">

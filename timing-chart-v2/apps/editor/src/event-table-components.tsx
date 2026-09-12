@@ -36,7 +36,7 @@ export function ValueEditorControl({ signal, value, onChange, ariaLabel, listId 
   </>;
 }
 
-export function EventRow({ signal, change, end, index, selected, checked, canDuplicate, onToggleChecked, onSelect, onDuplicate, commands }: {
+export function EventRow({ signal, change, end, index, selected, checked, canDuplicate, onToggleChecked, onSelect, onDuplicate, commands, draggable, onDragStart, onDragOver, onDrop, onDragEnd }: {
   readonly signal: ValueSignal;
   readonly change: ValueSignal["values"][number];
   readonly end: number;
@@ -54,6 +54,11 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
   readonly onSelect: (start: number) => void;
   readonly onDuplicate: () => void;
   readonly commands: Pick<SignalEditorCommandActions, "replaceValue" | "removeValue">;
+  readonly draggable?: boolean;
+  readonly onDragStart?: () => void;
+  readonly onDragOver?: (event: React.DragEvent<HTMLFormElement>) => void;
+  readonly onDrop?: (event: React.DragEvent<HTMLFormElement>) => void;
+  readonly onDragEnd?: () => void;
 }) {
   const [start, setStart] = useState(change.start);
   const [value, setValue] = useState(String(change.value));
@@ -76,7 +81,7 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
   const cancel = () => { setStart(change.start); setValue(String(change.value)); setComment(change.comment ?? ""); };
   const startEditing = () => { onSelect(change.start); setIsEditing(true); };
   const stopEditing = () => { cancel(); setIsEditing(false); };
-  return <form className={`event-row${selected ? " selected" : ""}${isEditing ? " editing" : ""}`} role="row" data-event-start={change.start} onClick={() => onSelect(change.start)} onSubmit={(event) => {
+  return <form className={`event-row${selected ? " selected" : ""}${isEditing ? " editing" : ""}`} role="row" data-event-start={change.start} draggable={draggable} onDragStart={onDragStart} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onClick={() => onSelect(change.start)} onSubmit={(event) => {
     event.preventDefault();
     if (!hasChanges) return;
     const result = commands.replaceValue(signal.id, change.start, start, value, comment);
