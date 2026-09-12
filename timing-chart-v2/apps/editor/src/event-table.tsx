@@ -133,27 +133,30 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   const isContiguous = selectedIndexes.length > 0 && selectedIndexes.length === selectedIndexes.at(-1)! - selectedIndexes[0]! + 1;
   const canMoveUp = isContiguous && selectedIndexes[0]! > 0;
   const canMoveDown = isContiguous && selectedIndexes.at(-1)! < orderedStarts.length - 1;
-  const [dragStart, setDragStart] = useState<number | undefined>();
+  const [dragStarts, setDragStarts] = useState<ReadonlySet<number>>();
   useEffect(() => {
-    if (dragStart === undefined) return undefined;
-    const cancelDrag = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); setDragStart(undefined); } };
+    if (dragStarts === undefined) return undefined;
+    const cancelDrag = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); setDragStarts(undefined); } };
     window.addEventListener("keydown", cancelDrag);
     return () => window.removeEventListener("keydown", cancelDrag);
-  }, [dragStart]);
+  }, [dragStarts]);
   const reorderDrop = (targetStart: number) => {
-    if (dragStart === undefined || dragStart === targetStart) return;
+    if (dragStarts === undefined || dragStarts.has(targetStart)) return;
     const ordered = [...signal.values].sort((left, right) => left.start - right.start);
-    const from = ordered.findIndex((change) => change.start === dragStart);
+    const selectedIndexes = ordered.map((change, index) => dragStarts.has(change.start) ? index : -1).filter((index) => index >= 0);
+    const from = selectedIndexes[0] ?? -1;
+    const last = selectedIndexes.at(-1) ?? -1;
     const to = ordered.findIndex((change) => change.start === targetStart);
-    if (from < 0 || to < 0) return;
-    const [item] = ordered.splice(from, 1); ordered.splice(from < to ? to - 1 : to, 0, item!);
+    if (from < 0 || to < 0 || selectedIndexes.length !== last - from + 1) { setDragStarts(undefined); return; }
+    const block = ordered.splice(from, selectedIndexes.length);
+    ordered.splice(from < to ? to - selectedIndexes.length : to, 0, ...block);
     const durationValues = [...signal.values].sort((left, right) => left.start - right.start);
     const durationByStart = new Map(durationValues.map((change, valueIndex, values) => [change.start, (values[valueIndex + 1]?.start ?? cycleCount) - change.start]));
     let nextStart = ordered[0]!.start;
     const reordered = ordered.map((change) => { const next = { ...change, start: nextStart }; nextStart += durationByStart.get(change.start) ?? 0; return next; });
     const result = commands.replaceValues(signal.id, reordered);
-    if (result.ok) setCheckedStarts(new Set([reordered[to]!.start]));
-    setDragStart(undefined);
+    if (result.ok) { const nextFirst = from < to ? to - selectedIndexes.length : to; setCheckedStarts(new Set(reordered.slice(nextFirst, nextFirst + block.length).map((change) => change.start))); }
+    setDragStarts(undefined);
   };
   // Visual Quality Closure pass (#402/#426), Section 4: the checkbox column
   // only ever meant "this row feeds the footer's bulk actions below" -- but
@@ -240,7 +243,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
             exact same `checkedStarts` set each row's own checkbox feeds --
             not a decorative header cell. */}
         <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span>End</span><span>Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
-        {signal.values.map((change, index) => <EventRow key={change.start} index={index + 1} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} checked={checkedStarts.has(change.start)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change.start)} onSelect={setSelectedStart} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setDragStart(change.start)} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setDragStart(undefined)} />)}
+        {signal.values.map((change, index) => <EventRow key={change.start} index={index + 1} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} checked={checkedStarts.has(change.start)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change.start)} onSelect={setSelectedStart} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setDragStarts(new Set(checkedStarts.has(change.start) && checkedCount > 1 ? checkedStarts : [change.start]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setDragStarts(undefined)} />)}
       </div>
     </div>
     <div className="event-table-footer">
