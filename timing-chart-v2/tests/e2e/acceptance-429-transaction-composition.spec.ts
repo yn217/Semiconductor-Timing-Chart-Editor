@@ -82,9 +82,11 @@ test("Bookmark inside a collapsed TimeGroup is identified in the Bookmarks panel
   await expect(expandAndJump).toBeVisible();
   await expandAndJump.click();
   await expect(page.getByTestId("bookmark-inside-collapsed")).toBeHidden();
+  await expect(page.locator(".transaction-axis-break-gap")).toHaveCount(0);
   await expect(page.getByTestId("bookmark-row-bookmark-inside-fold")).toContainText("25");
   await page.getByRole("button", { name: "Undo", exact: true }).last().click();
   await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Fold");
+  await expect(page.locator(".transaction-axis-break-gap").first()).toBeVisible();
 });
 
 test("Combined View keeps the shared fold visible in the Transaction pane", async ({ page }) => {
