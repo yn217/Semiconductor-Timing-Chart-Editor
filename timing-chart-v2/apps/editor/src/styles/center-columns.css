@@ -287,6 +287,9 @@
 .transaction-axis-break-gap { position: absolute; top: 0; bottom: 0; z-index: 2; background: var(--canvas-background, #f8fafc); border-inline: 1px solid #94a3b8; pointer-events: none; }
 .transaction-hidden-in-fold { position: absolute; left: 8px; right: 8px; height: 30px; border: 1px dashed #94a3b8; background: #eef2f7; color: #475569; font-size: 11px; text-align: left; padding: 0 8px; z-index: 4; }
 .transaction-hidden-in-fold small { margin-left: 8px; color: #64748b; }
+.transaction-fold-affordance { position: absolute; top: 0; bottom: 0; width: 5px; background: repeating-linear-gradient(135deg, #64748b 0 1px, transparent 1px 3px); pointer-events: none; }
+[data-fold-affordance="start-hidden"] { left: 0; }
+[data-fold-affordance="end-hidden"] { right: 0; }
 .transaction-lane > button { position: absolute; top: 4px; z-index: 1; min-width: 18px; height: 20px; display: grid; grid-template-columns: 5px minmax(0,1fr) 5px; align-items: center; overflow: hidden; padding: 0; border: 1px solid color-mix(in srgb, var(--transaction-color, #2e70ad) 85%, black); border-radius: 4px; background: color-mix(in srgb, var(--transaction-color, #2e70ad) 25%, white); color: #174d7c; font-size: 10px; }
 .transaction-track > .transaction-lane > button { z-index: 4; }
 .transaction-lane > button[data-selected="true"] { outline: 2px solid #0b74de; background: color-mix(in srgb, var(--transaction-color, #2e70ad) 45%, white); }
