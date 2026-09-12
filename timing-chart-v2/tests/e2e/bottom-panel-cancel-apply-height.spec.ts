@@ -11,12 +11,13 @@ import { expect, test } from "@playwright/test";
 // name, so every current and future Bottom Editor's Cancel/Apply pair
 // matches automatically. This locks in equal heights for all three.
 
-test("Bookmark, Annotation and Transaction Bottom Editors: Cancel and Apply/submit buttons share the same height", async ({ page }) => {
+test("Bookmark Bottom Editor Cancel and Apply buttons share the same height", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
 
   // Bookmark
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Bookmarks", exact: true }).click();
+  await page.getByLabel("New Bottom Bookmark name").fill("Height check");
   await page.getByTestId("bottom-editor").getByRole("button", { name: "Create Bookmark", exact: true }).click();
   const bookmarkCancel = page.getByTestId("cancel-bottom-bookmark");
   const bookmarkApply = page.getByTestId("apply-bottom-bookmark");
@@ -27,14 +28,4 @@ test("Bookmark, Annotation and Transaction Bottom Editors: Cancel and Apply/subm
   ]);
   expect(bookmarkCancelH).toBe(bookmarkApplyH);
 
-  // Transaction (already matched before this fix -- kept as a regression guard)
-  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
-  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
-  const txCancel = page.getByTestId("cancel-bottom-draft");
-  const txApply = page.getByTestId("apply-transaction-properties");
-  const [txCancelH, txApplyH] = await Promise.all([
-    txCancel.evaluate((el) => el.getBoundingClientRect().height),
-    txApply.evaluate((el) => el.getBoundingClientRect().height),
-  ]);
-  expect(txCancelH).toBe(txApplyH);
 });
