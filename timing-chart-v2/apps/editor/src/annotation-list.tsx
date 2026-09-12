@@ -54,6 +54,11 @@ export function AnnotationList({
   const visibleAnnotations = annotations.slice(firstVisible, lastVisible);
 
   useEffect(() => {
+    setScrollTop(0);
+    if (listRef.current) listRef.current.scrollTop = 0;
+  }, [annotations]);
+
+  useEffect(() => {
     const selectedIndex = selectedId === undefined ? -1 : annotations.findIndex((item) => item.id === selectedId);
     if (selectedIndex < 0 || !listRef.current) return;
     const top = ANNOTATION_HEADER_HEIGHT + selectedIndex * ANNOTATION_ROW_HEIGHT;
