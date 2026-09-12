@@ -24,6 +24,7 @@ export function TransactionTree({
   onDelete,
   onSetVisibility,
   onSetGroupVisibility,
+  onDeleteGroup,
 }: {
   readonly document: CanonicalDocument;
   readonly documentEpoch: number;
@@ -60,6 +61,7 @@ export function TransactionTree({
     groupId: TransactionGroup["id"] | undefined,
     visible: boolean,
   ) => void;
+  readonly onDeleteGroup?: (groupId: TransactionGroup["id"]) => void;
 }) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [dragOverGroup, setDragOverGroup] = useState<string>();
@@ -485,6 +487,11 @@ export function TransactionTree({
                       >
                         Select Children
                       </button>
+                      {onDeleteGroup && (
+                        <button type="button" role="menuitem" onClick={() => { setOpenGroupMenuId(undefined); onDeleteGroup(group.id); }}>
+                          Delete Group
+                        </button>
+                      )}
                       {onSetGroupVisibility && (
                         <>
                           <button type="button" role="menuitem" onClick={() => { setOpenGroupMenuId(undefined); onSetGroupVisibility(group.id, true); }}>Show All</button>

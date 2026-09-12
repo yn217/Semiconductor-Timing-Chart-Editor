@@ -509,6 +509,9 @@ export function useEditorSecondarySurfaces(
           items.slice(1).forEach((transaction) => input.actions.selectTransaction(transaction.id, true));
           input.actions.setSelectionVisibility(visible);
         }}
+        onDeleteGroup={(groupId) => {
+          surfaceCommands.deleteTransactionGroup(groupId);
+        }}
       />
     ) : null;
   const workspaceBottom = (
