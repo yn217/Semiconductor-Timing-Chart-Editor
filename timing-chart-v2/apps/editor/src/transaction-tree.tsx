@@ -3,7 +3,7 @@ import type { CanonicalDocument, Transaction, TransactionGroup, TransactionId } 
 import { EditorIcon } from "./editor-icon.js";
 import { InlineNameInput } from "./inline-name-input.js";
 
-export function TransactionTree({ document, documentEpoch, filter, filterMode = "all", selectedId, selectedIds, onSelect, onRenameGroup, onMoveToGroup, onContextMenu, onCreateTransaction, onFocusTransaction }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly filter: string; readonly filterMode?: "all" | "grouped" | "ungrouped" | "phases" | "linked" | "visible" | "hidden" | "no-phases"; readonly selectedId?: TransactionId; readonly selectedIds?: ReadonlySet<TransactionId>; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onRenameGroup?: (id: TransactionGroup["id"], name: string) => void; readonly onMoveToGroup?: (transactionId: TransactionId, groupId: TransactionGroup["id"] | undefined) => void; readonly onContextMenu?: (event: React.MouseEvent<HTMLButtonElement>, transactionId: TransactionId) => void; readonly onCreateTransaction?: () => void; readonly onFocusTransaction?: (transactionId: TransactionId) => void }) {
+export function TransactionTree({ document, documentEpoch, filter, filterMode = "all", selectedId, selectedIds, onSelect, onRenameGroup, onMoveToGroup, onContextMenu, onCreateTransaction, onFocusTransaction, onDelete }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly filter: string; readonly filterMode?: "all" | "grouped" | "ungrouped" | "phases" | "linked" | "visible" | "hidden" | "no-phases"; readonly selectedId?: TransactionId; readonly selectedIds?: ReadonlySet<TransactionId>; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onRenameGroup?: (id: TransactionGroup["id"], name: string) => void; readonly onMoveToGroup?: (transactionId: TransactionId, groupId: TransactionGroup["id"] | undefined) => void; readonly onContextMenu?: (event: React.MouseEvent<HTMLButtonElement>, transactionId: TransactionId) => void; readonly onCreateTransaction?: () => void; readonly onFocusTransaction?: (transactionId: TransactionId) => void; readonly onDelete?: () => void }) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [dragOverGroup, setDragOverGroup] = useState<string>();
   const [editingGroupId, setEditingGroupId] = useState<string>();
@@ -33,6 +33,11 @@ export function TransactionTree({ document, documentEpoch, filter, filterMode = 
       if (group) setEditingGroupId(group.id);
     };
     const onArrow = (event: KeyboardEvent) => {
+      if (event.key === "Delete") {
+        const current = event.target instanceof Element ? event.target.closest<HTMLElement>(".transaction-left-tree-row") : null;
+        if (current && onDelete) { event.preventDefault(); onDelete(); }
+        return;
+      }
       if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
       const current = event.target instanceof Element ? event.target.closest<HTMLElement>(".transaction-left-tree-row") : null;
