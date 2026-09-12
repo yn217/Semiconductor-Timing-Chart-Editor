@@ -251,3 +251,26 @@ test("rejects an End resize that would remove the final Phase", async ({ page })
   expect(await host.getAttribute("data-canonical-revision")).toBe(beforeRevision);
   expect(await page.getByTestId("history-status").textContent()).toBe(beforeHistory);
 });
+
+test("persists a valid Transaction resize and its Phases through Save/Open", async ({ page }) => {
+  await ready(page);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path.resolve(process.cwd(), "samples/acceptance-429/sample-transaction-mode-closure.tcd.json"));
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+  const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id='txn_read0']");
+  const before = (await transaction.boundingBox())!;
+  const target = (await page.getByTestId("cycle-ruler").locator("[data-cycle='70']").boundingBox())!;
+  await transaction.locator("[data-edge='end']").hover();
+  await page.mouse.down();
+  await page.mouse.move(target.x, before.y + before.height / 2);
+  await page.mouse.up();
+  await expect(page.locator(".transaction-list-row[data-transaction-row-id='txn_read0']")).toContainText("70");
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await download).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(page.locator(".transaction-list-row[data-transaction-row-id='txn_read0']")).toContainText("70");
+  await expect(page.locator(".transaction-list-row[data-transaction-row-id='txn_read0']")).toContainText("3");
+});
