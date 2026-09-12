@@ -96,6 +96,16 @@ test("Transaction demo is available after a browser reload", async ({ page }) =>
   await expect(page.locator(".transaction-list-header-cells")).toContainText("Linked Signals");
 });
 
+test("Transaction sample is shown after reloading the default browser URL", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(page.getByTestId("transaction-left-tree")).toContainText("All Transactions(6)");
+  await expect(page.locator('[data-transaction-row-id="demo_txn_read"]')).toContainText("Read_0");
+  await page.reload();
+  await expect(page.getByTestId("transaction-left-tree")).toContainText("All Transactions(6)");
+  await expect(page.locator('[data-transaction-row-id="demo_txn_read"]')).toContainText("Read_0");
+});
+
 test("Transaction Tree drag moves a transaction into another group", async ({ page }) => {
   await page.goto("/?transaction-demo");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
