@@ -26,6 +26,7 @@ export interface EditorActionsInput {
   readonly navigation: TimelineNavigationOwner;
   readonly rulerRef: MutableRefObject<HTMLDivElement | null>;
   readonly setBottomTab: (tab: BottomTab) => void;
+  readonly viewMode: "Cycle" | "Transaction" | "Split";
   readonly setBottomVisible: (visible: boolean) => void;
   readonly createBookmarkId: () => BookmarkId;
   readonly nextCommandId: (operation: string) => CommandId;
@@ -100,6 +101,8 @@ export interface EditorActions {
   readonly duplicateAnnotation: (annotation: Annotation) => void;
   readonly clearSelection: () => void;
   readonly selectAllSignals: () => void;
+  readonly selectAllTransactions: () => void;
+  readonly selectAll: () => void;
   readonly renameSelection: () => void;
   readonly applyRename: () => void;
   readonly toggleBottomPin: () => void;
@@ -196,7 +199,8 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     document,
   });
   const selectionActions = createSelectionActions({ document: input.document, selection: input.selection, hostRef: input.hostRef, selectedSignalId: input.selectedSignal?.id });
-  const { selectAnnotation, selectTransaction, clearSelection, selectAllSignals, selectHierarchySignal, revealSelectedInHierarchy } = selectionActions;
+  const { selectAnnotation, selectTransaction, clearSelection, selectAllSignals, selectAllTransactions, selectHierarchySignal, revealSelectedInHierarchy } = selectionActions;
+  const selectAll = () => input.viewMode === "Transaction" ? selectAllTransactions() : selectAllSignals();
   const bottomActions = createBottomEditorActions({
     application: input.application,
     editActions: input.editActions,
@@ -254,7 +258,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     const result = input.application.execute({ id: input.nextCommandId("annotation_duplicate"), type: "annotation.create", annotation: duplicate });
     if (result.ok) input.selection.selectAnnotation(duplicate.id);
   };
-  input.selectAllRef.current = selectAllSignals;
+  input.selectAllRef.current = selectAll;
   const renameSelection = () => {
     const current = input.selectedSignal?.display.name ?? input.selectedGroup?.name ?? input.selectedTransactionName;
     if (current === undefined) return;
@@ -435,7 +439,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     renameTransactionGroup,
     duplicateAnnotation,
     clearSelection,
-    selectAllSignals,
+    selectAllSignals, selectAllTransactions, selectAll,
     renameSelection,
     applyRename,
     toggleBottomPin,
