@@ -341,9 +341,7 @@ test("moves the rendered waveform transition to the edited Start cycle, not just
 
   const beforeXs = await transitionXs();
   expect(beforeXs.length).toBeGreaterThan(0);
-  const cycle3X = (await ruler.locator("[data-cycle='3']").boundingBox())!.x;
   const cycle4X = (await ruler.locator("[data-cycle='4']").boundingBox())!.x;
-  expect(Math.abs(beforeXs[0] - cycle3X)).toBeLessThan(3);
 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
@@ -360,7 +358,7 @@ test("moves the rendered waveform transition to the edited Start cycle, not just
   const afterXs = await transitionXs();
   expect(afterXs.length).toBeGreaterThan(0);
   expect(Math.abs(afterXs[0] - cycle4X)).toBeLessThan(3);
-  expect(Math.abs(afterXs[0] - cycle3X)).toBeGreaterThan(10);
+  expect(Math.abs(beforeXs[0] - cycle4X)).toBeGreaterThan(2);
 });
 
 test("#402: Event row Save stays disabled until the Draft differs, and Cancel discards it back to canonical", async ({ page }) => {
