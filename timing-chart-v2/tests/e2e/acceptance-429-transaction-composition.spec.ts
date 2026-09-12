@@ -234,6 +234,31 @@ test("Fold, Bookmark, and Transaction source values survive Save/Open", async ({
   await expect(page.getByTestId("transaction-left-tree")).toContainText("Read_0");
 });
 
+test("Moving a folded Transaction uses source-cycle geometry", async ({ page }) => {
+  const value = JSON.parse(readFileSync(samplePath, "utf8")) as any;
+  value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }];
+  const transaction = value.transactions.find((item: any) => item.id === "txn_read0");
+  transaction.start = 10;
+  transaction.end = 60;
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "fold-move.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  const bar = page.locator('[data-transaction-id="txn_read0"]');
+  const body = bar.locator(":scope > span").first();
+  const box = await body.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width / 2 + 24, box!.y + box!.height / 2, { steps: 3 });
+  await page.mouse.up();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  const row = page.locator('[data-transaction-row-id="txn_read0"]');
+  await expect(row).toContainText("50");
+});
+
 test("Transaction sample is shown after reloading the default browser URL", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
