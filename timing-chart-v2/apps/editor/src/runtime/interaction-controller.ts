@@ -1,6 +1,5 @@
 import type { CanonicalDocument } from "@timing-chart-v2/schema";
 import type { ImmutableSnapIndex, ScreenGeometryProjector, TimeAxisGeometry } from "@timing-chart-v2/geometry";
-import type { RenderProjection } from "@timing-chart-v2/projection";
 
 export type EditorEventBinding = {
   readonly target: EventTarget;
@@ -25,7 +24,7 @@ export function attachMenuKeyboardNavigation(doc: Document, closeContextMenu: ()
 export function resolveTransactionSnapCycle(context: {
   readonly clientX: number;
   readonly surfaceLeft: number | undefined;
-  readonly projection: RenderProjection;
+  readonly snapAxisRowY: number | undefined;
   readonly timeAxis: TimeAxisGeometry;
   readonly screenGeometry: ScreenGeometryProjector;
   readonly zoom: number;
@@ -46,9 +45,8 @@ export function resolveTransactionSnapCycle(context: {
       );
   }
   const axisOwner = context.timeAxis.ownerSignalId;
-  const axisRow = axisOwner === undefined ? undefined : context.projection.rowLayout.find((row) => row.rowId === axisOwner);
   if (context.surfaceLeft === undefined) return context.cycleBoundaryAtPointerX(context.clientX);
-  if (!axisOwner || !axisRow) {
+  if (!axisOwner || context.snapAxisRowY === undefined) {
     return context.cycleBoundaryAtLocalX(
       context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: 0, scrollY: 0, zoom: context.zoom }).x,
       context.zoom,
@@ -56,6 +54,6 @@ export function resolveTransactionSnapCycle(context: {
     );
   }
   const localPointer = context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: 0, scrollY: 0, zoom: context.zoom });
-  const snap = context.currentSnapIndex().nearest({ x: localPointer.x, y: axisRow.y + context.document.layout.rowHeight / 2 }, 14 / context.zoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
+  const snap = context.currentSnapIndex().nearest({ x: localPointer.x, y: context.snapAxisRowY + context.document.layout.rowHeight / 2 }, 14 / context.zoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
   return snap?.anchor.cycle ?? context.cycleBoundaryAtLocalX(localPointer.x, context.zoom, true);
 }

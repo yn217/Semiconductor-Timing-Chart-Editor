@@ -362,10 +362,14 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     });
     syncFrozenColumnScroll(viewportElement, rendererHost, viewMetricsOwner.snapshot().leftPaneWidth);
     const cycleBoundaryAtX = createTimelineCycleBoundaryResolver({ rendererHost, timelineGeometry, getZoom: timelineNavigation.getZoom, isSnapEnabled: () => snapEnabledRef.current });
+    const transactionSnapAxisY = (() => {
+      const axisOwner = timelineGeometry.timeAxis.ownerSignalId;
+      return axisOwner === undefined ? undefined : projection.rowLayout.find((row) => row.rowId === axisOwner)?.y;
+    })();
     snapTransactionCycle.current = (clientX, surfaceLeft) => resolveTransactionSnapCycle({
       clientX,
       surfaceLeft,
-      projection,
+      snapAxisRowY: transactionSnapAxisY,
       timeAxis: timelineGeometry.timeAxis,
       screenGeometry: timelineGeometry.screen,
       zoom: timelineNavigation.getZoom(),
