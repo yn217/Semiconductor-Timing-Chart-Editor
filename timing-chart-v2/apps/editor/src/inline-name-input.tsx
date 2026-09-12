@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { reconcileNameDraft, type NameDraft } from "./name-draft.js";
 import type { CommandResult } from "@timing-chart-v2/commands";
 
-export function InlineNameInput({ target, value, ariaLabel, onRename, onCommitted, onDraftChange }: { readonly target: object | undefined; readonly value: string; readonly ariaLabel: string; readonly onRename: (name: string) => CommandResult; readonly onCommitted?: (name: string) => void; readonly onDraftChange?: (name: string) => void }) {
+export function InlineNameInput({ target, value, ariaLabel, onRename, onCommitted, onCanceled, autoFocus = false, onDraftChange }: { readonly target: object | undefined; readonly value: string; readonly ariaLabel: string; readonly onRename: (name: string) => CommandResult; readonly onCommitted?: (name: string) => void; readonly onCanceled?: () => void; readonly autoFocus?: boolean; readonly onDraftChange?: (name: string) => void }) {
   const [stored, setStored] = useState<NameDraft>({ target, base: value, value, error: "" });
   const current = reconcileNameDraft(stored, target, value);
   // Reconcile before committing children, so no event sees a previous target's draft.
   if (current !== stored) setStored(current);
   const draft = current.value;
   const error = current.error;
+  useEffect(() => { if (autoFocus) globalThis.document.querySelector<HTMLInputElement>(`input[aria-label="${CSS.escape(ariaLabel)}"]`)?.focus(); }, [ariaLabel, autoFocus]);
   const setDraft = (next: string) => setStored((state) => ({ ...reconcileNameDraft(state, target, value), value: next }));
   const setError = (next: string) => setStored((state) => ({ ...reconcileNameDraft(state, target, value), error: next }));
   const commit = () => {
@@ -24,7 +25,7 @@ export function InlineNameInput({ target, value, ariaLabel, onRename, onCommitte
   return <>
     <input aria-label={ariaLabel} value={draft} data-commit-policy="enter-only" onChange={(event) => { setDraft(event.target.value); onDraftChange?.(event.target.value); setError(""); }} onKeyDown={(event) => {
       if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); commit(); }
-      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setDraft(value); onDraftChange?.(value); setError(""); }
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setDraft(value); onDraftChange?.(value); setError(""); onCanceled?.(); }
     }} />
     {error && <span role="alert" className="editor-problem">{error}</span>}
   </>;
