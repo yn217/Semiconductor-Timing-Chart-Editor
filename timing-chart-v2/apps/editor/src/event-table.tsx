@@ -119,7 +119,8 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     const targetIndex = index + delta;
     if (index < 0 || targetIndex < 0 || targetIndex >= ordered.length) return;
     [ordered[index], ordered[targetIndex]] = [ordered[targetIndex]!, ordered[index]!];
-    const durationByStart = new Map(signal.values.map((change, valueIndex, values) => [change.start, (values[valueIndex + 1]?.start ?? cycleCount) - change.start]));
+    const durationValues = [...signal.values].sort((left, right) => left.start - right.start);
+    const durationByStart = new Map(durationValues.map((change, valueIndex, values) => [change.start, (values[valueIndex + 1]?.start ?? cycleCount) - change.start]));
     let nextStart = ordered[0]!.start;
     const reordered = ordered.map((change) => { const next = { ...change, start: nextStart }; nextStart += durationByStart.get(change.start) ?? 0; return next; });
     const result = commands.replaceValues(signal.id, reordered);
@@ -135,8 +136,9 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     const from = ordered.findIndex((change) => change.start === dragStart);
     const to = ordered.findIndex((change) => change.start === targetStart);
     if (from < 0 || to < 0) return;
-    const [item] = ordered.splice(from, 1); ordered.splice(to, 0, item!);
-    const durationByStart = new Map(signal.values.map((change, valueIndex, values) => [change.start, (values[valueIndex + 1]?.start ?? cycleCount) - change.start]));
+    const [item] = ordered.splice(from, 1); ordered.splice(from < to ? to - 1 : to, 0, item!);
+    const durationValues = [...signal.values].sort((left, right) => left.start - right.start);
+    const durationByStart = new Map(durationValues.map((change, valueIndex, values) => [change.start, (values[valueIndex + 1]?.start ?? cycleCount) - change.start]));
     let nextStart = ordered[0]!.start;
     const reordered = ordered.map((change) => { const next = { ...change, start: nextStart }; nextStart += durationByStart.get(change.start) ?? 0; return next; });
     const result = commands.replaceValues(signal.id, reordered);
