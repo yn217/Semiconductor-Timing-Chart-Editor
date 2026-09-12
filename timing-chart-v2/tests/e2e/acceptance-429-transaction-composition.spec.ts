@@ -123,6 +123,34 @@ test("Transaction MiniMap marks collapsed source ranges without changing viewpor
   await expect(minimap.getByTestId("minimap-viewport")).toBeVisible();
 });
 
+test("Range crossing a fold keeps source boundaries across Cycle and Transaction", async ({ page }) => {
+  const value = JSON.parse(readFileSync(samplePath, "utf8")) as any;
+  value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }];
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "range-fold.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  const wave = page.getByTestId("cycle-surface").locator("[data-role='stable-waveform-surface']");
+  const waveBox = await wave.boundingBox();
+  const start = await page.getByTestId("cycle-ruler").locator("[data-source-cycle='10']").boundingBox();
+  const end = await page.getByTestId("cycle-ruler").locator("[data-source-cycle='60']").boundingBox();
+  expect(waveBox).not.toBeNull();
+  expect(start).not.toBeNull();
+  expect(end).not.toBeNull();
+  await page.mouse.move(start!.x + 1, waveBox!.y + waveBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(end!.x + 1, waveBox!.y + waveBox!.height / 2);
+  await page.mouse.up();
+  const band = page.getByTestId("range-selection-band");
+  await expect(band).toHaveAttribute("data-range-start", "10");
+  await expect(band).toHaveAttribute("data-range-end", "60");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(band).toHaveAttribute("data-range-start", "10");
+  await expect(band).toHaveAttribute("data-range-end", "60");
+});
+
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
   test(`Transaction reference composition at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
