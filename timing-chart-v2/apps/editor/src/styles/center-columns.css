@@ -360,38 +360,49 @@
    it -- reproduced with a real 2-Group/2-lane sample in Split mode. Kept as
    one shared var so the two rules can't drift apart again. */
 .cycle-panel.mode-split { --split-lanes-height: 112px; }
-/* #408: Split is a real side-by-side workspace. The two panes share the
-   surrounding timeline controls, while their vertical scrolling remains
-   local to each pane. The Signal renderer stays single-owner in the right
-   pane; TransactionLanes owns the left pane. */
+/* #573: Combined is a stacked Transaction-over-Cycle workspace. The two
+   panes share the horizontal time viewport while vertical scrolling stays
+   local to each pane. */
 .cycle-panel.mode-split .cycle-viewport.split-signal-pane {
-  display: grid;
-  grid-template-columns: minmax(280px, 1fr) minmax(420px, 2fr);
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
   flex: 1 1 auto;
   overflow: hidden;
 }
 .cycle-panel.mode-split .split-transaction-pane {
-  grid-column: 1;
   position: relative;
   min-width: 0;
   min-height: 0;
+  flex: 0 1 42%;
   overflow: auto;
+  border-bottom: 1px solid var(--ds-border-subtle, #b7c4d2);
 }
 .cycle-panel.mode-split .split-signal-content {
-  grid-column: 2;
   position: relative;
   min-width: 0;
   min-height: 0;
+  flex: 1 1 58%;
   overflow: auto;
   overscroll-behavior: contain;
 }
 .cycle-panel.mode-split .split-transaction-pane {
-  border-right: 1px solid var(--ds-border-subtle, #b7c4d2);
   overscroll-behavior: contain;
   overflow-x: auto;
   z-index: 20;
+}
+.cycle-panel.mode-split .combined-split-divider {
+  flex: 0 0 8px;
+  cursor: row-resize;
+  border-top: 1px solid var(--ds-border-subtle, #b7c4d2);
+  border-bottom: 1px solid var(--ds-border-subtle, #b7c4d2);
+  background: var(--ds-surface-muted, #edf2f7);
+  z-index: 30;
+}
+.cycle-panel.mode-split .combined-split-divider:focus-visible {
+  outline: 2px solid var(--ds-focus-color, #2678bc);
+  outline-offset: -2px;
 }
 .cycle-panel.mode-split .split-transaction-pane .transaction-lanes {
   position: relative;
