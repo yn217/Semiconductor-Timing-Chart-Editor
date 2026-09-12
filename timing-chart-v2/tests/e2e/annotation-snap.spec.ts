@@ -103,6 +103,7 @@ test("edits a linked Ghost Trace and Timing Region without WaveDrom regeneration
 
 test("creates a geometry-backed 30/70 threshold Measurement and preserves it through Save/Open", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
