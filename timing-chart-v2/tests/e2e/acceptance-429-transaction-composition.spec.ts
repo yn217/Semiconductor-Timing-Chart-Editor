@@ -112,6 +112,8 @@ test("Bookmark inside a collapsed TimeGroup is identified in the Bookmarks panel
   await page.getByRole("button", { name: "Undo", exact: true }).last().click();
   await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Fold");
   await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Nested Fold");
+  await page.getByRole("button", { name: "Redo", exact: true }).last().click();
+  await expect(page.getByTestId("bookmark-inside-collapsed")).toBeHidden();
 });
 
 test("Combined View keeps the shared fold visible in the Transaction pane", async ({ page }) => {
