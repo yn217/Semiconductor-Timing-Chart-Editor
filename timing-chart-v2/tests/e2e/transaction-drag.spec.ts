@@ -229,3 +229,25 @@ test("rejects a Transaction resize that would clip a Phase without changing hist
   expect(await host.getAttribute("data-canonical-revision")).toBe(beforeRevision);
   expect(await page.getByTestId("history-status").textContent()).toBe(beforeHistory);
 });
+
+test("rejects an End resize that would remove the final Phase", async ({ page }) => {
+  await ready(page);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path.resolve(process.cwd(), "samples/acceptance-429/sample-transaction-mode-closure.tcd.json"));
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+  const host = page.getByTestId("cycle-surface");
+  const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id='txn_read0']");
+  await expect(transaction).toBeVisible();
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeHistory = await page.getByTestId("history-status").textContent();
+  const box = (await transaction.boundingBox())!;
+  const phaseBoundary = (await page.getByTestId("cycle-ruler").locator("[data-cycle='50']").boundingBox())!;
+  await transaction.locator("[data-edge='end']").hover();
+  await page.mouse.down();
+  await page.mouse.move(phaseBoundary.x, box.y + box.height / 2);
+  await page.mouse.up();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  expect(await host.getAttribute("data-canonical-revision")).toBe(beforeRevision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(beforeHistory);
+});
