@@ -369,14 +369,16 @@
   min-width: 0;
   min-height: 0;
   flex: 1 1 auto;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 .cycle-panel.mode-split .split-transaction-pane {
   position: relative;
   min-width: 0;
   min-height: 0;
   flex: 0 1 42%;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: visible;
   border-bottom: 1px solid var(--ds-border-subtle, #b7c4d2);
 }
 .cycle-panel.mode-split .split-signal-content {
@@ -384,7 +386,8 @@
   min-width: 0;
   min-height: 0;
   flex: 1 1 58%;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: visible;
   overscroll-behavior: contain;
 }
 .cycle-panel.mode-split .split-transaction-pane {

@@ -197,29 +197,6 @@ export function EditorWorkspaceView({
       window.removeEventListener("resize", update);
     };
   }, [ruler, rulerLower, cursor.a, cursor.b, cursorPresentationRevision, zoom, viewport, viewportLower]);
-  useEffect(() => {
-    if (viewMode !== "Split") return undefined;
-    const panel = viewport.current?.closest<HTMLElement>(".cycle-panel");
-    const transactionPane = panel?.querySelector<HTMLElement>(".split-transaction-pane");
-    const signalPane = panel?.querySelector<HTMLElement>(".split-signal-content");
-    if (!transactionPane || !signalPane) return undefined;
-    let syncing = false;
-    const sync = (source: HTMLElement, target: HTMLElement) => {
-      if (syncing || target.scrollLeft === source.scrollLeft) return;
-      syncing = true;
-      target.scrollLeft = source.scrollLeft;
-      syncing = false;
-    };
-    const onTransactionScroll = () => sync(transactionPane, signalPane);
-    const onSignalScroll = () => sync(signalPane, transactionPane);
-    transactionPane.addEventListener("scroll", onTransactionScroll, { passive: true });
-    signalPane.addEventListener("scroll", onSignalScroll, { passive: true });
-    signalPane.scrollLeft = transactionPane.scrollLeft;
-    return () => {
-      transactionPane.removeEventListener("scroll", onTransactionScroll);
-      signalPane.removeEventListener("scroll", onSignalScroll);
-    };
-  }, [viewMode, viewport]);
   return <div className="desktop-workspace">
     <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode} data-signal-split={String(signalSplitEnabled && viewMode === "Cycle")}>
       <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={LEFT_PANE_MIN_WIDTH} aria-valuemax={LEFT_PANE_MAX_WIDTH} aria-valuenow={leftPaneWidth} tabIndex={0} onKeyDown={onLeftPaneKeyDown} onPointerDown={onLeftPanePointerDown} onPointerMove={onLeftPanePointerMove} onPointerUp={onLeftPanePointerUp} onPointerCancel={onLeftPanePointerUp} />
