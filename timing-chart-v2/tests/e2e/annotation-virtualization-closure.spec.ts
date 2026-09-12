@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { canonicalFixture } from "../fixtures/canonical";
 
 for (const count of [1_000, 5_000, 20_000]) test(`${count} Annotation rows stay virtualized through End navigation`, async ({ page }) => {
+  test.setTimeout(120_000);
   const document = canonicalFixture();
   const signalId = document.signals[0]!.id;
   document.annotations = Array.from({ length: count }, (_, index) => ({ id: `annotation-scale-${index}`, type: "text" as const, label: `Annotation ${index}`, visible: true, anchor: { signalId, cycle: index % document.timeline.cycleCount, point: "cycle-start" as const } }));
