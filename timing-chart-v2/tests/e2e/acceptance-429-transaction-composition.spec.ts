@@ -153,3 +153,14 @@ test("Center additive selection projects to Tree and Bottom", async ({ page }) =
   await expect(page.locator('.transaction-list-row[data-transaction-row-id="demo_txn_read"] > button')).toHaveAttribute("data-selected", "true");
   await expect(page.locator('.transaction-list-row[data-transaction-row-id="demo_txn_write"] > button')).toHaveAttribute("data-selected", "true");
 });
+
+test("focused Transaction Tree row supports Delete shortcut", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const row = page.getByTestId("transaction-left-tree-row-demo_txn_other");
+  await row.focus();
+  await row.press("Delete");
+  await expect(page.getByTestId("transaction-left-tree-row-demo_txn_other")).toHaveCount(0);
+  await expect(page.locator('[data-transaction-id="demo_txn_other"]')).toHaveCount(0);
+  await expect(page.locator('[data-transaction-row-id="demo_txn_other"]')).toHaveCount(0);
+});

@@ -35,7 +35,7 @@ export function TransactionTree({ document, documentEpoch, filter, filterMode = 
     const onArrow = (event: KeyboardEvent) => {
       if (event.key === "Delete") {
         const current = event.target instanceof Element ? event.target.closest<HTMLElement>(".transaction-left-tree-row") : null;
-        if (current && onDelete) { event.preventDefault(); onDelete(); }
+        if (current && onDelete) { event.preventDefault(); const id = current.dataset.transactionTreeId as TransactionId | undefined; if (id) { onSelect(id); queueMicrotask(onDelete); } }
         return;
       }
       if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
@@ -53,7 +53,7 @@ export function TransactionTree({ document, documentEpoch, filter, filterMode = 
     globalThis.document.addEventListener("dblclick", onDoubleClick);
     globalThis.document.addEventListener("keydown", onArrow);
     return () => { globalThis.document.removeEventListener("keydown", onKeyDown); globalThis.document.removeEventListener("dblclick", onDoubleClick); globalThis.document.removeEventListener("keydown", onArrow); };
-  }, [groups, onSelect]);
+  }, [groups, onDelete, onSelect]);
   const matches = (transaction: Transaction) => {
     if (filterMode === "grouped" && transaction.groupId === undefined) return false;
     if (filterMode === "ungrouped" && transaction.groupId !== undefined) return false;
