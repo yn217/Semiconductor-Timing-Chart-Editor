@@ -58,6 +58,7 @@ test("hides the reference Clock without losing the axis, then deletes and restor
   const clkA = clock("sig_clk_a", "CLK_A");
   const document = base("clocked", "Clocked Timing", [clkA, data], [clkA.id, data.id], clkA.id);
   await openJson(page, document);
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   const ruler = page.getByTestId("cycle-ruler");
   const initialCount = await ruler.locator("[data-cycle]").count();
