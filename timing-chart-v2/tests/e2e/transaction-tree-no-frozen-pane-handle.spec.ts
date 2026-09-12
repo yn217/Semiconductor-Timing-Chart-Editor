@@ -15,6 +15,9 @@ test("the Cycle-only frozen-pane splitter is absent in Transaction Mode and reap
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // Normal startup opens the built-in Transaction sample; this test covers
+  // the Cycle-only splitter explicitly after entering Cycle mode.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
 
   await expect(page.getByTestId("frozen-pane-resizer")).toBeVisible();
 
