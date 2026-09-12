@@ -465,6 +465,7 @@ export function useEditorSecondarySurfaces(
         }
         commands={surfaceCommands}
         onContextMenu={openTransactionContextMenu}
+        bookmarks={input.document.bookmarks}
       />
     ));
   const workspaceViewportLegend = (

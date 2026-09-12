@@ -337,6 +337,8 @@
 .transaction-left-tree-swatch, .transaction-left-tree-row i { flex: 0 0 14px; width: 14px; height: 14px; border-radius: 3px; }
 .transaction-left-tree-row { display: flex; align-items: center; width: 100%; min-height: var(--transaction-tree-row-height, 29px); height: var(--transaction-tree-row-height, 29px); gap: 7px; padding: 0 10px 0 31px; overflow: hidden; border: 0; background: transparent; color: #304b6a; font-size: 11px; text-align: left; white-space: nowrap; }
 .transaction-left-tree-row-wrap { position: relative; display: flex; align-items: center; }
+.transaction-bookmark-markers { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.transaction-bookmark-markers i { position: absolute; top: 0; bottom: 0; width: 2px; background: #d97706; box-shadow: 0 0 0 1px #fff8; }
 .transaction-left-tree-row-wrap .transaction-left-tree-row { padding-right: 30px; }
 .transaction-left-tree-visibility { position: absolute; right: 7px; width: 20px; height: 20px; padding: 0; border: 0; background: transparent; color: #61758c; font-size: 14px; line-height: 20px; cursor: pointer; }
 .transaction-left-tree-visibility:hover, .transaction-left-tree-visibility:focus-visible { color: #1769aa; }
