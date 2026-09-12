@@ -37,7 +37,16 @@ test("captures the stacked Combined composition with both contexts and zero view
   expect(transactionBox!.y).toBeLessThan(signalBox!.y);
   expect(transactionBox!.x).toBeCloseTo(signalBox!.x, 0);
   expect(transactionBox!.width).toBeCloseTo(signalBox!.width, 0);
-  await expect(page.getByTestId("combined-split-divider")).toBeVisible();
+  const divider = page.getByTestId("combined-split-divider");
+  await expect(divider).toBeVisible();
+  const beforeResizeHeight = transactionBox!.height;
+  const dividerBox = (await divider.boundingBox())!;
+  await page.mouse.move(dividerBox.x + dividerBox.width / 2, dividerBox.y + dividerBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(dividerBox.x + dividerBox.width / 2, dividerBox.y + dividerBox.height / 2 + 48);
+  await page.mouse.up();
+  await expect.poll(async () => (await page.locator(".split-transaction-pane").boundingBox())!.height).not.toBe(beforeResizeHeight);
+  await transactionPane.click({ position: { x: 40, y: 40 } });
   await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Transaction");
   await signalPane.click({ position: { x: 40, y: 100 } });
   await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Signal");
