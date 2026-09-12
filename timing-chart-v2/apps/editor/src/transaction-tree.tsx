@@ -343,6 +343,8 @@ export function TransactionTree({
       <button type="button" className="transaction-left-tree-more" aria-label={`${transaction.name} actions`} title={`${transaction.name} actions`} onClick={(event) => { event.stopPropagation(); setOpenTransactionMenuId((current) => current === transaction.id ? undefined : transaction.id); }}>⋮</button>
       {openTransactionMenuId === transaction.id && <div className="transaction-left-tree-group-menu transaction-left-tree-transaction-menu" role="menu" aria-label={`${transaction.name} actions`}>
         <button type="button" role="menuitem" onClick={() => { setOpenTransactionMenuId(undefined); onFocusTransaction?.(transaction.id); }}>Focus in Timeline</button>
+        {onMoveToGroup && groups.map((group) => <button key={group.id} type="button" role="menuitem" disabled={transaction.groupId === group.id} onClick={() => { setOpenTransactionMenuId(undefined); onMoveToGroup(transaction.id, group.id); }}>Move to {group.name}</button>)}
+        {onMoveToGroup && transaction.groupId !== undefined && <button type="button" role="menuitem" onClick={() => { setOpenTransactionMenuId(undefined); onMoveToGroup(transaction.id, undefined); }}>Ungroup</button>}
         {onDuplicateTransaction && <button type="button" role="menuitem" onClick={() => { setOpenTransactionMenuId(undefined); onSelect(transaction.id); onDuplicateTransaction(transaction.id); }}>Duplicate</button>}
         {onDelete && <button type="button" role="menuitem" onClick={() => { setOpenTransactionMenuId(undefined); onSelect(transaction.id); onDelete(); }}>Delete</button>}
       </div>}
