@@ -27,9 +27,11 @@ function scaleDocument(trial: number, foldCount: 0 | 1_000) {
 }
 
 async function openScaleDocument(page: Page, value: unknown) {
+  const host = page.getByTestId("cycle-surface");
+  const previousEpoch = Number((JSON.parse(await host.getAttribute("data-session-counters") ?? "{}")).projectionDocumentEpoch ?? 0);
   const started = await page.evaluate(() => performance.now());
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "mapping-scale.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
-  const host = page.getByTestId("cycle-surface");
+  await expect.poll(async () => Number((JSON.parse(await host.getAttribute("data-session-counters") ?? "{}")).projectionDocumentEpoch ?? 0), { timeout: 120_000 }).toBeGreaterThan(previousEpoch);
   await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
   return {
     durationMs: await page.evaluate((value) => performance.now() - value, started),
