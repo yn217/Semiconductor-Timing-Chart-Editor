@@ -1135,13 +1135,14 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (phases && phases.length > 0) {
         const first = phases[0]!;
         const last = phases[phases.length - 1]!;
+        const phaseCount = phases.length;
         if (command.edge === "start") {
           if (start >= first.end) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.value", "Transaction start cannot cross the first Phase boundary.");
           if (first.start === transaction.start) phases = phases.map((phase, phaseIndex) => phaseIndex === 0 ? { ...phase, start } : phase);
           else if (first.start < start) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.value", "Transaction resize would clip a Phase; resize the Phase explicitly first.");
         } else {
           if (end <= last.start) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.value", "Transaction end cannot cross the last Phase boundary.");
-          if (last.end === transaction.end) phases = phases.map((phase, phaseIndex) => phaseIndex === phases.length - 1 ? { ...phase, end } : phase);
+          if (last.end === transaction.end) phases = phases.map((phase, phaseIndex) => phaseIndex === phaseCount - 1 ? { ...phase, end } : phase);
           else if (last.end > end) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.value", "Transaction resize would clip a Phase; resize the Phase explicitly first.");
         }
       }
