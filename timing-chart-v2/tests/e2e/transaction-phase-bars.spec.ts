@@ -42,4 +42,15 @@ test("Phase-protected Transaction edge resize is rejected without a canonical ch
   await page.mouse.up();
   await expect(inspector.getByLabel("Transaction start")).toHaveValue(beforeStart);
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+
+  const beforeEnd = await inspector.getByLabel("Transaction end").inputValue();
+  const endHandle = bar.locator(":scope > i[data-edge='end']");
+  const endBox = await endHandle.boundingBox();
+  expect(endBox).not.toBeNull();
+  await page.mouse.move(endBox!.x + endBox!.width / 2, endBox!.y + endBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(endBox!.x - 120, endBox!.y + endBox!.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await expect(inspector.getByLabel("Transaction end")).toHaveValue(beforeEnd);
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
 });
