@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 const samplePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../samples/acceptance-429/sample-transaction-mode-closure.tcd.json");
@@ -120,4 +121,20 @@ test("Transaction Tree group drag is one undoable and redoable semantic operatio
   await page.getByRole("button", { name: "Redo", exact: true }).first().click();
   await expect(cpuGroup).toContainText("Read_0");
   await expect(memoryGroup).not.toContainText("Read_0");
+});
+
+test("Transaction Tree group drag survives Save/Open", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const source = page.getByTestId("transaction-left-tree-row-demo_txn_read");
+  await source.dragTo(page.locator('[data-transaction-group-id="demo_tgrp_cpu"] .transaction-left-tree-group-header'));
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await download).path();
+  expect(savedPath).toBeTruthy();
+  const saved = JSON.parse(readFileSync(savedPath!, "utf8")) as { transactions: readonly { id: string; groupId?: string }[] };
+  expect(saved.transactions.find((item) => item.id === "demo_txn_read")?.groupId).toBe("demo_tgrp_cpu");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.locator('.transaction-left-tree-group[data-transaction-group-id="demo_tgrp_cpu"]')).toContainText("Read_0");
 });
