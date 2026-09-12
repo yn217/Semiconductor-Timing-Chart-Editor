@@ -22,6 +22,7 @@ test.describe("status context", () => {
 
   test("titlebar view-title always agrees with the status bar's Mode (#199)", async ({ page }) => {
     await page.goto("/");
+    await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
     const surface = page.locator("[data-role='timing-chart-surface']");
     const revision = await surface.getAttribute("data-canonical-revision");
     const history = await surface.getAttribute("data-history-depth");
