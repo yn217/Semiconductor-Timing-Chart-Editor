@@ -60,7 +60,6 @@ const HEADER_LINE_LIMIT = 112;
 // #200 combined two-pane export: the visual gap between the stacked
 // Upper and Lower blocks, matching the Editor's own signal-split-pane
 // CSS divider proportions closely enough for a static export.
-const SPLIT_PANE_GAP = 24;
 
 function wrapLayoutText(value: string, limit = HEADER_LINE_LIMIT): string[] {
   const lines: string[] = [];
@@ -192,52 +191,14 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   });
   const cycleWidth = (renderedWaves[0]?.width ?? mapping.displayCycleCount * 20) / mapping.displayCycleCount;
   const rowHeight = Math.max(ROW_HEIGHT, (renderedWaves[0]?.height ?? 30) + 4);
-  // #200 combined two-pane export: when at least one Signal has a real
-  // Upper/Lower splitPane assignment, position every row using two
-  // pane-filtered layouts stacked Upper-above-Lower (matching the Editor's
-  // own two-viewport presentation) instead of the single unfiltered
-  // layout every non-split document still uses byte-for-byte unchanged.
-  // A "both"-assigned Signal is anchored to its Upper position for
-  // annotations/edge-counters/group-bands (rowY/rowEntries hold exactly
-  // one position per row, same as before split existed) but is rendered
-  // TWICE -- once per pane -- in `waveforms`/signal-name `labels` below,
-  // since that duplication is the actual visual point of this feature.
-  // Anything anchored to a "both" Signal (an annotation, an edge counter)
-  // therefore appears once, next to its Upper occurrence only; that is an
-  // explicit, narrower v1 scope boundary, not a misalignment -- every
-  // position it does use comes from the same pane-filtered layout its
-  // corresponding waveform occurrence uses, so nothing ever points at a
-  // stale, pre-split Y coordinate.
-  // Signal Split is view organization, not export semantics. Only an explicit
-  // ExportSettings policy may opt into the stacked two-pane representation.
-  const splitPaneUsed = settings.signalLayout === "preserve-split"
-    && document.signals.some((signal) => signal.display.splitPane === "upper" || signal.display.splitPane === "lower");
   const rowLayout = calculateRowLayout(document, new Set(), { includeHidden: false });
-  const upperLayout = splitPaneUsed ? calculateRowLayout(document, new Set(), { includeHidden: false, reserveHiddenSpace: false, pane: "upper" }) : undefined;
-  const lowerLayout = splitPaneUsed ? calculateRowLayout(document, new Set(), { includeHidden: false, reserveHiddenSpace: false, pane: "lower" }) : undefined;
-  const totalRowHeight = splitPaneUsed ? upperLayout!.totalHeight + SPLIT_PANE_GAP + lowerLayout!.totalHeight : rowLayout.totalHeight;
-  const rowEntries = splitPaneUsed
-    ? new Map([
-        ...upperLayout!.visibleRows.map((entry) => [entry.rowId, entry] as const),
-        // Lower-exclusive rows only -- a "both" Signal already has its
-        // (authoritative) entry from upperLayout above; re-including it
-        // here would silently overwrite that with its Lower position.
-        ...lowerLayout!.visibleRows.filter((entry) => signalById.get(entry.rowId)?.display.splitPane === "lower").map((entry) => [entry.rowId, { ...entry, y: entry.y + upperLayout!.totalHeight + SPLIT_PANE_GAP }] as const),
-      ])
-    : new Map(rowLayout.navigationRows.map((entry) => [entry.rowId, entry]));
+  const totalRowHeight = rowLayout.totalHeight;
+  const rowEntries = new Map(rowLayout.navigationRows.map((entry) => [entry.rowId, entry]));
   const rowY = new Map(signals.map((signal, index) => {
     const entry = rowEntries.get(signal.id);
     return [signal.id, waveTop + (entry?.y ?? index * rowHeight) + (entry?.height ?? rowHeight) / 2] as const;
   }));
-  // One rendered occurrence per pane a wave Signal actually belongs to --
-  // exactly one for every Upper-only/Lower-only/non-split Signal, exactly
-  // two (Upper and Lower) for a "both"-assigned one.
-  const wavePositions = splitPaneUsed
-    ? [
-        ...upperLayout!.visibleRows.filter((entry) => entry.kind === "timing").map((entry) => ({ signal: signalById.get(entry.rowId)!, y: waveTop + entry.y + entry.height / 2 })),
-        ...lowerLayout!.visibleRows.filter((entry) => entry.kind === "timing").map((entry) => ({ signal: signalById.get(entry.rowId)!, y: waveTop + entry.y + upperLayout!.totalHeight + SPLIT_PANE_GAP + entry.height / 2 })),
-      ]
-    : waveSignals.map((signal) => ({ signal, y: rowY.get(signal.id)! }));
+  const wavePositions = waveSignals.map((signal) => ({ signal, y: rowY.get(signal.id)! }));
   const renderedWaveById = new Map(renderedWaves.map((rendered) => [rendered.signal.id, rendered]));
   const waveforms: ExportWave[] = wavePositions.map(({ signal, y }): ExportWave => {
     const rendered = renderedWaveById.get(signal.id)!;
