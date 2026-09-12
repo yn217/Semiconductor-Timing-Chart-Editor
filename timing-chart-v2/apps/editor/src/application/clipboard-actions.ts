@@ -18,7 +18,7 @@ export function useClipboardActions({ application, selection }: { application: E
   const signalsRef = useRef<readonly SignalClipboardItem[]>([]);
   const groupRef = useRef<GroupClipboardItem | undefined>(undefined);
   const annotationRef = useRef<Annotation | undefined>(undefined);
-  const transactionRef = useRef<Transaction | undefined>(undefined);
+  const transactionsRef = useRef<readonly Transaction[]>([]);
   const spacerRef = useRef<SpacerClipboardItem | undefined>(undefined);
   const sourceDocumentEpochRef = useRef<number | undefined>(undefined);
   const document = () => application.runtime.session.current().getSnapshot().document;
@@ -34,17 +34,18 @@ export function useClipboardActions({ application, selection }: { application: E
       spacer: state.spacerId === undefined ? undefined : group?.spacers?.find((item) => item.id === state.spacerId),
       annotation: state.annotationId === undefined ? undefined : current.annotations.find((item) => item.id === state.annotationId),
       transaction: state.transactionId === undefined ? undefined : current.transactions.find((item) => item.id === state.transactionId),
+      transactions: current.transactions.filter((item) => state.transactionIds.has(item.id)),
       signals: current.signals.filter((signal) => state.signalIds.has(signal.id)).flatMap((signal) => {
         const owner = current.signalGroups.find((candidate) => candidate.rows.includes(signal.id));
         return owner ? [{ signal, groupId: owner.id, index: owner.rows.indexOf(signal.id) }] : [];
       }),
     };
   };
-  const setClipboard = ({ signals = [], group, annotation, transaction, spacer }: { signals?: readonly SignalClipboardItem[]; group?: GroupClipboardItem; annotation?: Annotation; transaction?: Transaction; spacer?: SpacerClipboardItem }) => {
+  const setClipboard = ({ signals = [], group, annotation, transactions = [], spacer }: { signals?: readonly SignalClipboardItem[]; group?: GroupClipboardItem; annotation?: Annotation; transactions?: readonly Transaction[]; spacer?: SpacerClipboardItem }) => {
     signalsRef.current = signals;
     groupRef.current = group;
     annotationRef.current = annotation;
-    transactionRef.current = transaction;
+    transactionsRef.current = transactions;
     spacerRef.current = spacer;
     sourceDocumentEpochRef.current = application.runtime.documentEpoch.current();
     setAvailable(true);
@@ -77,9 +78,9 @@ export function useClipboardActions({ application, selection }: { application: E
       const rows = value.group.rows.flatMap((rowId) => value.document.signals.find((signal) => signal.id === rowId) ?? []);
       setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group) } });
       setStatus(`Copied ${value.group.name} group`);
-    } else if (value.transaction && value.signals.length === 0 && !value.annotation) {
-      setClipboard({ transaction: value.transaction });
-      setStatus(`Copied ${value.transaction.name} transaction`);
+    } else if (value.transactions.length > 0 && value.signals.length === 0 && !value.annotation) {
+      setClipboard({ transactions: value.transactions });
+      setStatus(`Copied ${value.transactions.length} transaction${value.transactions.length === 1 ? "" : "s"}`);
     } else if (value.annotation && value.signals.length === 0) {
       setClipboard({ annotation: value.annotation });
       setStatus(`Copied ${value.annotation.label || value.annotation.type} annotation`);
@@ -108,10 +109,10 @@ export function useClipboardActions({ application, selection }: { application: E
       if (result.ok) { selection.clear(); setStatus(`Cut ${value.group.name} group`); }
       return;
     }
-    if (value.transaction && value.signals.length === 0 && !value.annotation) {
-      setClipboard({ transaction: value.transaction });
-      const result = application.execute({ id: nextCommandId("cut_transaction"), type: "transaction.delete", transactionId: value.transaction.id });
-      if (result.ok) { selection.clear(); setStatus(`Cut ${value.transaction.name} transaction`); }
+    if (value.transactions.length > 0 && value.signals.length === 0 && !value.annotation) {
+      setClipboard({ transactions: value.transactions });
+      const result = application.executeBatch(nextCommandId("cut_transactions"), value.transactions.map((transaction) => ({ id: nextCommandId("cut_transaction"), type: "transaction.delete" as const, transactionId: transaction.id })));
+      if (result.ok) { selection.clear(); setStatus(`Cut ${value.transactions.length} transaction${value.transactions.length === 1 ? "" : "s"}`); }
       return;
     }
     if (value.annotation && value.signals.length === 0) {
@@ -182,10 +183,15 @@ export function useClipboardActions({ application, selection }: { application: E
     const result = application.execute({ id: nextCommandId(`${operation}_annotation`), type: "annotation.create", annotation });
     if (result.ok) { selection.selectAnnotation(annotation.id); setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${annotation.label || annotation.type} annotation`); }
   };
-  const createTransaction = (source: Transaction, operation: "paste" | "duplicate") => {
-    const transaction: Transaction = { ...source, id: nextEntityId("transaction", document()) as TransactionId, name: `${source.name} ${operation === "paste" ? "Paste" : "Copy"}` };
-    const result = application.execute({ id: nextCommandId(`${operation}_transaction`), type: "transaction.create", transaction });
-    if (result.ok) { selection.selectTransaction(transaction.id); setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${source.name} transaction`); }
+  const createTransactions = (sources: readonly Transaction[], operation: "paste" | "duplicate") => {
+    const current = document();
+    const created: Transaction[] = [];
+    for (const source of sources) {
+      const transaction: Transaction = { ...source, id: nextEntityId("transaction", { ...current, transactions: [...current.transactions, ...created] }) as TransactionId, name: `${source.name} ${operation === "paste" ? "Paste" : "Copy"}` };
+      created.push(transaction);
+    }
+    const result = application.executeBatch(nextCommandId(`${operation}_transactions`), created.map((transaction) => ({ id: nextCommandId(`${operation}_transaction`), type: "transaction.create" as const, transaction })));
+    if (result.ok) { const ids = created.map((transaction) => transaction.id); selection.selectTransactions(new Set(ids), ids[0]); setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${created.length} transaction${created.length === 1 ? "" : "s"}`); }
   };
   const createSpacer = (input: SpacerClipboardItem, operation: "paste" | "duplicate") => {
     const current = document();
@@ -203,7 +209,7 @@ export function useClipboardActions({ application, selection }: { application: E
     }
     if (groupRef.current) createGroup(groupRef.current, "paste");
     else if (annotationRef.current) createAnnotation(annotationRef.current, "paste");
-    else if (transactionRef.current) createTransaction(transactionRef.current, "paste");
+    else if (transactionsRef.current.length > 0) createTransactions(transactionsRef.current, "paste");
     else if (spacerRef.current) createSpacer(spacerRef.current, "paste");
     else createSignals(signalsRef.current, "paste");
   };
@@ -212,12 +218,13 @@ export function useClipboardActions({ application, selection }: { application: E
     if (value.spacer && value.group) createSpacer({ spacer: value.spacer, groupId: value.group.id, index: value.group.rows.indexOf(value.spacer.id) }, "duplicate");
     else if (value.group) createGroup({ group: value.group, rows: value.group.rows.flatMap((rowId) => value.document.signals.find((signal) => signal.id === rowId) ?? []), sourceIndex: value.document.signalGroups.indexOf(value.group) }, "duplicate");
     else if (value.annotation) createAnnotation(value.annotation, "duplicate");
-    else if (value.transaction) createTransaction(value.transaction, "duplicate");
+    else if (value.transactions.length > 0) createTransactions(value.transactions, "duplicate");
     else createSignals(value.signals, "duplicate");
   };
   const deleteSelection = () => {
     const value = selected();
-    const result = value.transaction ? application.execute({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId: value.transaction.id })
+    const result = value.transactions.length > 1 ? application.executeBatch(nextCommandId("route_delete_transactions"), value.transactions.map((transaction) => ({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete" as const, transactionId: transaction.id })))
+      : value.transaction ? application.execute({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId: value.transaction.id })
       : value.annotation ? application.execute({ id: nextCommandId("route_delete_annotation"), type: "annotation.delete", annotationId: value.annotation.id })
       : value.signals.length > 1 ? application.executeBatch(nextCommandId("route_delete_selection"), value.signals.map(({ signal }) => ({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId: signal.id })))
       : value.signals[0] ? application.execute({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId: value.signals[0].signal.id })
