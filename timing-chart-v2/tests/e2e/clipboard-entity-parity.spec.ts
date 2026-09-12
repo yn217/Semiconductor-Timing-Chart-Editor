@@ -11,6 +11,24 @@ async function openTransactionEditor(page: Page) {
   return page.getByTestId("transaction-editor");
 }
 
+test("Signal Cut/Paste restores the same stable ID and name in the target Group", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const signal = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']");
+  await signal.click();
+  const originalName = await signal.getAttribute("data-name");
+  const ribbon = page.getByTestId("ribbon");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await ribbon.getByRole("button", { name: "Cut", exact: true }).click();
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toHaveCount(0);
+  await host.locator("[data-role='frozen-row'][data-group-id='grp_cycle_payload']").first().click();
+  await ribbon.getByRole("button", { name: "Paste", exact: true }).click();
+  const restored = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']");
+  await expect(restored).toBeVisible();
+  await expect(restored).toHaveAttribute("data-name", originalName!);
+  await expect(restored).toHaveAttribute("data-group-id", "grp_cycle_payload");
+});
+
 test("Comment Row clipboard preserves content, uses fresh IDs, and supports Cut Undo Redo", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
