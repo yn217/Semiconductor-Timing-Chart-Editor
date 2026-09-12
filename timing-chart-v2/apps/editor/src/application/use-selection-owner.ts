@@ -9,6 +9,8 @@ export type SelectionState = Readonly<{
   annotationId: AnnotationId | undefined;
   annotationIds: ReadonlySet<AnnotationId>;
   transactionId: TransactionId | undefined;
+  /** First-class bulk target set; transactionId remains the deterministic primary. */
+  transactionIds: ReadonlySet<TransactionId>;
 }>;
 type SelectionKind = "signal" | "group" | "spacer" | "annotation" | "transaction" | "none";
 export type SelectionCapabilities = Readonly<{
@@ -36,6 +38,7 @@ function initialState(signalId: SignalId | undefined): SelectionState {
     annotationId: undefined,
     annotationIds: new Set(),
     transactionId: undefined,
+    transactionIds: new Set(),
   };
 }
 
@@ -49,8 +52,9 @@ export function deriveSelectionCapabilities(document: CanonicalDocument, selecti
   const selectedGroup = selection.groupId === undefined ? undefined : document.signalGroups.find((group) => group.id === selection.groupId);
   const selectedAnnotation = selection.annotationId === undefined ? undefined : document.annotations.find((annotation) => annotation.id === selection.annotationId);
   const selectedTransaction = selection.transactionId === undefined ? undefined : document.transactions.find((transaction) => transaction.id === selection.transactionId);
+  const selectedTransactions = document.transactions.filter((transaction) => selection.transactionIds.has(transaction.id));
   const hasSelectedSignal = selection.signalIds.size > 0 && selectedSignal !== undefined;
-  const hasSelectedEntity = hasSelectedSignal || selectedGroup !== undefined || selectedTransaction !== undefined || selection.spacerId !== undefined;
+  const hasSelectedEntity = hasSelectedSignal || selectedGroup !== undefined || selectedTransaction !== undefined || selectedTransactions.length > 0 || selection.spacerId !== undefined;
   const hasSelectedClipboard = hasSelectedEntity || selectedAnnotation !== undefined;
   const hasDeletableSelection = hasSelectedEntity || selectedAnnotation !== undefined;
   const selectedSignalGroup = selectedSignal === undefined ? undefined : document.signalGroups.find((group) => group.rows.includes(selectedSignal.id));
@@ -64,7 +68,7 @@ export function deriveSelectionCapabilities(document: CanonicalDocument, selecti
     : selection.signalIds.size === 0 && selectedGroup !== undefined && selection.spacerId === undefined
       ? (() => { const index = document.signalGroups.findIndex((group) => group.id === selectedGroup.id); return index >= 0 && index < document.signalGroups.length - 1; })()
       : false;
-  const canRename = (selection.signalIds.size === 1 && selectedSignal !== undefined) || (selection.signalIds.size === 0 && (selectedGroup !== undefined || selectedTransaction !== undefined));
+  const canRename = (selection.signalIds.size === 1 && selectedSignal !== undefined) || (selection.signalIds.size === 0 && selection.transactionIds.size <= 1 && (selectedGroup !== undefined || selectedTransaction !== undefined));
   const canShow = (selection.signalIds.size > 0 && selectedSignal !== undefined && document.signals.some((signal) => selection.signalIds.has(signal.id) && signal.display.visible === false)) || (selectedTransaction !== undefined && selectedTransaction.visible === false);
   const canHide = (selection.signalIds.size > 0 && selectedSignal !== undefined && document.signals.some((signal) => selection.signalIds.has(signal.id) && signal.display.visible !== false)) || (selectedTransaction !== undefined && selectedTransaction.visible !== false);
   return { hasSelectedSignal, hasSelectedEntity, hasSelectedClipboard, hasDeletableSelection, canRename, canMoveUp, canMoveDown, canShow, canHide };
@@ -108,6 +112,7 @@ export function useSelectionOwner(initialSignalId?: SignalId) {
       annotationId: { get current() { return stateRef.current.annotationId; } },
       annotationIds: { get current() { return stateRef.current.annotationIds; } },
       transactionId: { get current() { return stateRef.current.transactionId; } },
+      transactionIds: { get current() { return stateRef.current.transactionIds; } },
     },
     configure: (effects: SelectionEffects) => { effectsRef.current = effects; },
     selectSignal: (signalId: SignalId, additive = false) => {
@@ -126,9 +131,19 @@ export function useSelectionOwner(initialSignalId?: SignalId) {
       selectAnnotations(ids, annotationId);
     },
     selectAnnotations,
-    selectTransaction: (transactionId: TransactionId) => commit({ ...initialState(undefined), transactionId }, "transaction"),
-    selectTarget: (target: Partial<Omit<SelectionState, "signalIds" | "annotationIds">> & { signalIds?: ReadonlySet<SignalId>; annotationIds?: ReadonlySet<AnnotationId> }) => {
-      const next = { ...initialState(undefined), ...target, signalIds: new Set(target.signalIds ?? []), annotationIds: new Set(target.annotationIds ?? (target.annotationId ? [target.annotationId] : [])) };
+    selectTransaction: (transactionId: TransactionId, additive = false) => {
+      const ids = additive ? new Set(stateRef.current.transactionIds) : new Set<TransactionId>();
+      if (ids.has(transactionId)) ids.delete(transactionId); else ids.add(transactionId);
+      if (ids.size === 0) ids.add(transactionId);
+      commit({ ...initialState(undefined), transactionId, transactionIds: ids }, "transaction");
+    },
+    selectTransactions: (transactionIds: ReadonlySet<TransactionId>, primary?: TransactionId) => {
+      const ids = new Set(transactionIds);
+      const transactionId = primary && ids.has(primary) ? primary : [...ids][0];
+      commit({ ...initialState(undefined), transactionId, transactionIds: ids }, transactionId === undefined ? "none" : "transaction");
+    },
+    selectTarget: (target: Partial<Omit<SelectionState, "signalIds" | "annotationIds" | "transactionIds">> & { signalIds?: ReadonlySet<SignalId>; annotationIds?: ReadonlySet<AnnotationId>; transactionIds?: ReadonlySet<TransactionId> }) => {
+      const next = { ...initialState(undefined), ...target, signalIds: new Set(target.signalIds ?? []), annotationIds: new Set(target.annotationIds ?? (target.annotationId ? [target.annotationId] : [])), transactionIds: new Set(target.transactionIds ?? (target.transactionId ? [target.transactionId] : [])) };
       const kind: SelectionKind = next.signalId ? "signal" : next.groupId ? "group" : next.spacerId ? "spacer" : next.annotationId ? "annotation" : next.transactionId ? "transaction" : "none";
       commit(next, kind);
     },
