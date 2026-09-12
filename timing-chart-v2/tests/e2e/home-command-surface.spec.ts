@@ -246,6 +246,23 @@ test("multi-selection Delete commits selected stable IDs as one atomic operation
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 
+test("Transaction mode multi-selection uses the shared clipboard target set", async ({ page }) => {
+  await ready(page);
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Transaction", exact: true }).click();
+  const first = page.getByTestId("transaction-left-tree-row-demo_txn_read");
+  const second = page.getByTestId("transaction-left-tree-row-demo_txn_write");
+  await first.click();
+  await second.click({ modifiers: ["Control"] });
+  await expect(page.getByTestId("selection-status")).toHaveText("2 transactions");
+  const ribbon = page.getByTestId("ribbon");
+  await ribbon.getByRole("button", { name: "Copy", exact: true }).click();
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Copied 2 transactions");
+  await ribbon.getByRole("button", { name: "Duplicate", exact: true }).click();
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Duplicated 2 transactions");
+  await expect(page.getByTestId("selection-status")).toHaveText("2 transactions");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});
+
 test("multi-signal capability batches visibility and disables primary-only commands", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
