@@ -59,3 +59,27 @@ test("Cycle and Transaction restore their last valid Bottom tab independently", 
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(page.getByRole("tab", { name: "Phases", exact: true })).toHaveAttribute("aria-selected", "true");
 });
+
+test("Combined routes a real Transaction bar drag to the Transaction pane only", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+  const viewport = page.getByTestId("cycle-viewport");
+  const bar = page.locator('[data-transaction-id="demo_txn_read"]');
+  await expect(bar).toBeVisible();
+  await bar.click();
+  const beforeHistory = await page.getByTestId("history-status").textContent();
+  const beforeStart = await page.getByTestId("inspector").getByLabel("Transaction start").inputValue();
+  const box = await bar.locator(":scope > span").boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width / 2 + 24, box!.y + box!.height / 2, { steps: 3 });
+  await page.mouse.up();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).not.toHaveValue(beforeStart);
+  await expect(page.getByTestId("history-status")).not.toHaveText(beforeHistory!);
+  await expect(viewport).toHaveAttribute("data-active-pane", "transaction");
+  await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Transaction");
+});
