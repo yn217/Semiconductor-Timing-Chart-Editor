@@ -76,10 +76,13 @@ test("pinned Transaction edits target the pinned stable ID", async ({ page }) =>
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
   await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
-  await expect(bottom).toContainText("Editing: Pinned Transfer");
-  await bottom.getByLabel("Transaction name").fill("Pinned Transfer Updated");
-  await bottom.getByTestId("apply-transaction-properties").click();
+  const transactionRow = bottom.locator(".transaction-list-row").filter({ hasText: "Pinned Transfer" });
+  await expect(transactionRow).toHaveCount(1);
+  await transactionRow.click();
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Transaction name").fill("Pinned Transfer Updated");
+  await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(bottom).toContainText("Pinned Transfer Updated");
+  await expect(bottom.locator(".transaction-list-row").filter({ hasText: "Pinned Transfer Updated" })).toHaveCount(1);
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toHaveCount(1);
 });
