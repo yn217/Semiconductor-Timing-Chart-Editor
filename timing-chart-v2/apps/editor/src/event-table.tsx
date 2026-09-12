@@ -130,6 +130,12 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   const canMoveUp = sortedValueIndex > 0;
   const canMoveDown = sortedValueIndex >= 0 && sortedValueIndex < signal.values.length - 1;
   const [dragStart, setDragStart] = useState<number | undefined>();
+  useEffect(() => {
+    if (dragStart === undefined) return undefined;
+    const cancelDrag = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); setDragStart(undefined); } };
+    window.addEventListener("keydown", cancelDrag);
+    return () => window.removeEventListener("keydown", cancelDrag);
+  }, [dragStart]);
   const reorderDrop = (targetStart: number) => {
     if (dragStart === undefined || dragStart === targetStart) return;
     const ordered = [...signal.values].sort((left, right) => left.start - right.start);
