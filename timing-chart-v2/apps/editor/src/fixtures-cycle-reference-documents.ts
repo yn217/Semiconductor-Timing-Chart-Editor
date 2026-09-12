@@ -1,4 +1,4 @@
-import type { Bookmark, CanonicalDocument, ClockSignal, CommentRow, SignalRole, SignalId, Transaction, TransactionGroup, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, Bookmark, CanonicalDocument, ClockSignal, CommentRow, SignalRole, SignalId, Transaction, TransactionGroup, ValueSignal } from "@timing-chart-v2/schema";
 import { groupId, signalId, valueSignal } from "./minimal-cycle-view-fixture-helpers.js";
 
 export const clock: ClockSignal = {
@@ -55,13 +55,24 @@ const transactionDemoTransactions = [
   { id: "demo_txn_spi", name: "SPI_0", start: 30, end: 90, laneId: "lane_2", groupId: "demo_tgrp_peripheral", color: "#ef4444", description: "SPI transfer", phases: [{ name: "Command", start: 30, end: 50 }, { name: "Data", start: 50, end: 70 }, { name: "Stop", start: 70, end: 90 }], linkedSignals: ["sig_cycle_ready"] },
   { id: "demo_txn_other", name: "Transaction2", start: 100, end: 140, laneId: "lane_0", color: "#8895a7", description: "Ungrouped transaction" },
 ] as unknown as readonly Transaction[];
+const showcaseAnnotations: readonly Annotation[] = [
+  { id: "demo_ann_request" as Annotation["id"], type: "text", label: "Request accepted", visible: true, color: "#155ca0", anchor: { signalId: signalId("sig_cycle_request"), cycle: 12, point: "value-start" } },
+  { id: "demo_ann_data" as Annotation["id"], type: "range", label: "Data transfer window", visible: true, color: "#b45309", start: { signalId: signalId("sig_cycle_data"), cycle: 24, point: "value-start" }, end: { signalId: signalId("sig_cycle_data"), cycle: 40, point: "value-start" } },
+  { id: "demo_ann_response" as Annotation["id"], type: "arrow", label: "Response", visible: true, color: "#15803d", start: { signalId: signalId("sig_cycle_valid"), cycle: 44, point: "value-start" }, end: { signalId: signalId("sig_cycle_result"), cycle: 52, point: "value-start" }, arrowhead: "end" },
+];
 export const transactionDemoDocument: CanonicalDocument = {
   ...cycleDocument,
   document: { ...cycleDocument.document, id: "transaction-demo", title: "Sample -- Transaction Mode" },
   timeline: { ...cycleDocument.timeline, end: 160, cycleCount: 160 },
   transactionTimeScale: { clockCyclesPerTransactionCycle: 10, majorInterval: 5, minorInterval: 1 },
   transactionGroups: transactionDemoGroups,
-  bookmarks: [{ id: "demo_bookmark_read_start" as Bookmark["id"], name: "Read start", start: 10 }],
+  bookmarks: [
+    { id: "demo_bookmark_reset" as Bookmark["id"], name: "Reset Release", start: 4, comment: "Initialization complete" },
+    { id: "demo_bookmark_request" as Bookmark["id"], name: "Request Start", start: 12, comment: "Request phase begins" },
+    { id: "demo_bookmark_data" as Bookmark["id"], name: "Data Valid", start: 28, comment: "Payload becomes valid" },
+    { id: "demo_bookmark_response" as Bookmark["id"], name: "Response Complete", start: 52, comment: "Response accepted" },
+  ],
+  annotations: showcaseAnnotations,
   transactions: transactionDemoTransactions,
 };
 
