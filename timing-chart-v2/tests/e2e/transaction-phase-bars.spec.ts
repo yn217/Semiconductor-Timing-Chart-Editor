@@ -21,3 +21,25 @@ for (const width of [1280, 1672]) test(`Transaction phases follow semantic durat
   expect(Math.abs(boxes[1]!.right - boxes[2]!.left)).toBeLessThan(1);
   await page.screenshot({ path: `artifacts/transaction-phases-${width}.png` });
 });
+
+test("Phase-protected Transaction edge resize is rejected without a canonical change", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await openTransactionSample(page);
+  const bar = page.locator("[data-transaction-id='demo_txn_read']");
+  await bar.click();
+  const inspector = page.getByTestId("inspector");
+  const beforeStart = await inspector.getByLabel("Transaction start").inputValue();
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const handle = bar.locator(":scope > i[data-edge='start']");
+  const box = await handle.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + 120, box!.y + box!.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await expect(inspector.getByLabel("Transaction start")).toHaveValue(beforeStart);
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+});
