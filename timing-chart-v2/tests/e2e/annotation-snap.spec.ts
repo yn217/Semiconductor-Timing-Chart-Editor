@@ -164,6 +164,7 @@ test("updates Annotation style and label offset without waveform regeneration", 
 
 test("snaps a dragged endpoint to exact rendered cycle geometry", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
