@@ -3,120 +3,104 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-12 11:45 JST
-# Observed main: cc2cc157467e0cf948b28c04f4d08d98d7df9d4c
+# Last reconciled by ChatGPT: 2026-09-13 JST
+# Observed main: b9b7d0d0e1a677752a2fca2e09d021ea5542f564
 #
 # Codex implements on main and only READS codex-control.
 # Never merge/cherry-pick codex-control into main.
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line.
 #
-# Claude is unavailable. Codex is authorized to execute GUI / UX / QA / product work as well as
-# Core / Runtime / Performance work. Architecture and safety rules remain unchanged.
+# Claude is available again. See .codex/AGENT_ASSIGNMENT.md for ownership split.
+# Do NOT execute Issues currently assigned to Claude.
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
 #
-# 1) #555 — P0 Transaction Group real-user D&D blocker.
-#    USER REPRODUCTION OVERRIDES PRIOR FOCUSED-E2E CLAIMS: Transaction -> Group drag/drop is still
-#    not practically usable in the real Production UI. Reproduce from a normal/generic document with
-#    actual pointer drag. Audit current native HTML5 draggable/drop-target wiring, target hit area,
-#    nested controls/event ownership and visible feedback. Do not close from context-menu success or
-#    synthetic/direct command tests. Require Group A -> Group B, Ungrouped -> Group, NO_OP, Undo/Redo,
-#    Save/Open and Left/Center/Bottom/Inspector/MiniMap sync.
-555
-#
-# 2) #559 — Transaction Left Sidebar parity with Cycle.
-#    After #555 D&D works for a real user, continue the broader sidebar parity: Group/Transaction row
-#    actions, Move to Group/Lane discoverability, filters, keyboard/F2/Delete/navigation, Timeline
-#    focus, multi-select bulk actions, visibility policy, responsive evidence, and Cycle regression.
-#    Treat shared Sidebar interaction shell as preferred architecture; do not grow two unrelated UIs.
-559
-#
-# 3) #561 — Cycle/Transaction interaction-owner boundary.
-#    Remove cross-mode DOM-selector exclusion ownership. Scope Cycle and Transaction pointer/gesture
-#    owners to their pane roots; Split must arbitrate explicitly. Real pointer mode-switch journeys.
+# 1) #561 — Cycle/Transaction interaction-owner boundary.
+#    Scope pointer/gesture ownership to pane roots, remove cross-mode selector-blacklist ownership,
+#    and keep Combined/Split arbitration explicit. Real pointer mode-switch acceptance is required.
+#    This is a foundation for Claude-owned #573, so land bounded changes promptly.
 561
 #
-# 4) #562 — Transaction geometry independence from Cycle DOM/runtime.
-#    Refactor started in 96772ee: lane screen-origin captured at pointerdown, but Issue remains OPEN.
-#    Finish mode-neutral semantic time/snap geometry, Transaction-only operation with Cycle surface
-#    unmounted, Split alignment, and real-browser acceptance. Do not hide Cycle DOM queries in helpers.
-562
+# 2) #565 — Cycle Transition semantic reorder + drag/drop.
+#    Correct Move Up/Down semantics, preserve Transition Value/Duration/Comment, recompute Start/End,
+#    unify buttons and D&D through one semantic reorder path, support approved multi-select block move,
+#    one History unit, Undo/Redo, Save/Open and actual browser drag acceptance.
+565
 #
-# 5) #563 — Per-mode workspace/Bottom/pin/follow state isolation.
-#    Bottom-tab normalization/memory and focused mode tests have landed, but full pane width/height and
-#    Pin/Follow/context state ownership must satisfy the Issue. Preserve independent Cycle/Transaction
-#    workspace state and explicit Split policy.
-563
+# 3) #556 — Transaction drag local-preview performance closure.
+#    Pointermove must remain preview-only: no Canonical/History/MiniMap/diagnostic publish per move,
+#    cache geometry at drag start, RAF-coalesce, avoid repeated DOM/layout reads, and provide measured
+#    browser counters/traces. Coordinate with #561 before editing overlapping pointer-owner code.
+556
 #
-# 6) #554 — P0 User Journey re-audit / integration gate.
-#    Re-run only after bounded blockers above progress. Fresh/generic document, visible Production GUI
-#    only; no sample-fixture shortcut for authoring proof. T1/T2 remain blocked until real Transaction
-#    Group drag/drop works. T3 Lane 3 and Phase/Links/selection/persistence/cross-mode journeys remain
-#    to be proven. When a new concrete blocker appears, file a bounded Issue; do not call audit PASS.
-554
-#
-# 7) #550 — Transaction Group composite update closure.
-#    Core fix is already on main (b5e8e9f). Do not reimplement it. Finish exact Undo/Redo and GUI-path
-#    evidence for name/order + color-clear behavior, then close if full Issue acceptance is satisfied.
-550
-#
-# 8) #551 — Non-destructive Transaction Phase resize closure.
-#    Reject-on-clip policy is implemented; latest main includes additional edge tests. Finish Production
-#    pointer/preview rejection UX, selection/Dirty, successful non-clipping resize, and cross-surface
-#    evidence. Do not restore silent clipping.
-551
-#
-# 9) #553 — Transaction Bottom bulk-selection checkbox closure.
-#    Dedicated header/row checkbox column + indeterminate state are implemented (a4316e4). Finish
-#    active-vs-bulk selection isolation, checked-ID bulk commands, responsive browser evidence, and
-#    Canonical/History/Dirty zero-delta proof for checkbox-only operations.
-553
-#
-# 10) #552 — Annotation list virtualization closure.
-#    Core viewport virtualization/model-index keyboard navigation is on main. Finish 1k/5k/20k real-
-#    browser scaling, mounted-row count, offscreen reveal/focus, stable-ID/filter behavior, and
-#    view-only zero-delta evidence. Do not lower the 20k product budget.
-552
-#
-# 11) #163 — Semantic Command / History / ChangeSet final closure.
-#    Finish only the remaining measured History storage decision/evidence, rejected-command adapter
-#    success-only transient effects, and final cross-adapter/ChangeSet audit. Do not rebuild foundations.
+# 4) #163 — Semantic Command / History / ChangeSet final closure.
+#    Finish only remaining measured History/storage/rejected-command/cross-adapter evidence. Do not
+#    rebuild already-proven foundations.
 163
 #
-# 12) #549 — Cursor A/B drag runtime/geometry cleanup.
-#    Remove duplicate gesture ownership and per-pointermove full-ruler DOM scan/sort; use shared
-#    TimeAxis/Snap/DisplayTimeMapping geometry and provide bounded browser/performance evidence.
+# 5) #549 — Cursor A/B drag runtime/geometry cleanup.
+#    One gesture owner; no per-pointermove full-ruler DOM scan/sort; shared TimeAxis/Snap/
+#    DisplayTimeMapping geometry and bounded browser/performance evidence.
 549
 #
 # ============================================================================
-# EXPLICITLY SKIPPED / CLOSED / PRESERVE
+# CLAUDE-OWNED — DO NOT EXECUTE IN CODEX QUEUE
+# ============================================================================
+# #572 Cycle ruler / readable 100% default pitch / cycle labels — Claude ACTIVE FIRST.
+# #573 Combined stacked Transaction-over-Cycle with Cycle-master shared time axis — Claude after #572,
+#      coordinating with Codex-owned #561 for shared pointer/pane ownership.
+# #554 Independent User Journey re-audit — Claude after bounded blockers progress.
+# #568 Broad visual/exploratory QA — Claude discovery/review pass; production changes forbidden there.
+#
+# ============================================================================
+# HOLD / DEPENDENCY / REFERENCE
+# ============================================================================
+# #571 Transaction Bookmark + TimeGroup/Axis Break integration is OPEN, but #415 remains explicitly
+# skipped by user. Do not silently reactivate #415 or build a Transaction-local fold mapper. If #571
+# needs #415 for completion, report the dependency.
+#
+# #570 Product spec is authority/reference, not a parallel implementation owner.
+#
+# #205 Annotation acceptance remains incomplete. Standard/Custom Measurement acceptance is blocked by
+# virtualized overlay stable-identity/selection. Do not loop on `last()`/DOM-order test workarounds;
+# use/create a bounded overlay identity owner before retrying #205 closure.
+#
+# ============================================================================
+# CLOSED / PRESERVE
+# ============================================================================
+# #555 Transaction Group GUI assignment/D&D — CLOSED.
+# #559 Transaction Left Sidebar parity — CLOSED.
+# #562 Transaction geometry independence — CLOSED.
+# #563 Per-mode workspace state isolation — CLOSED.
+# #557 Cycle Home Ribbon File/Time dead-space cleanup — CLOSED.
+# #560 Transaction Group inline rename — CLOSED.
+# #429 Transaction visual/product closure — CLOSED.
+# #548 Transaction MiniMap correctness — CLOSED.
+# #463 Transaction large-workspace performance — CLOSED.
+#
+# ============================================================================
+# EXPLICITLY SKIPPED
 # ============================================================================
 # #415 Nested collapse + shared DisplayTimeMapping / Axis Break remains explicitly skipped by user.
 # Do not auto-promote #415 until a later explicit user/task-list instruction.
 #
-# #429 Transaction visual/product closure is CLOSED. Preserve it; file narrow regressions instead of
-# re-running broad visual closure unless #554 exposes a concrete integrated regression.
-# #548 Transaction MiniMap correctness is CLOSED.
-# #463 Transaction large-workspace performance is CLOSED.
-# #557 Cycle Home Ribbon File/Time dead-space cleanup is CLOSED.
-# #560 Transaction Group inline rename is CLOSED.
-#
 # ============================================================================
-# EXECUTION POLICY
+# EXECUTION / COLLISION POLICY
 # ============================================================================
 # - Read latest origin/main and live Issue/comments before editing.
+# - One active implementation owner per Issue.
+# - Do not execute Claude-owned Issues unless AGENT_ASSIGNMENT is explicitly changed first.
+# - Before editing a shared owner/module, check whether Claude's active Issue is likely touching the
+#   same file/hunk. Genuine same-hunk dependency owner lands first; do not overwrite parallel work.
+# - Commit/push bounded logical changes frequently so the other agent can consume them.
 # - User-visible real-browser reproduction overrides a narrower automated PASS when they conflict.
-# - Do not execute closed/blocked/skipped Issues.
-# - Prefer bounded production implementation over report-only activity.
-# - One active implementation owner per Issue; one logical action = one semantic History unit.
-# - Use fresh-document GUI journeys where editing capability is being proven; fixtures may verify
-#   rendering but do not replace authoring acceptance.
-# - For drag/drop/pointer workflows, require actual browser pointer interaction; direct command calls,
-#   synthetic event dispatch, DOM markers, or source wiring alone are not acceptance.
-# - Focused per-task verification first; broad integration/regression is deferred to explicit closure.
-# - Commit/push intended hunks to main, add evidence to the source Issue, then re-read this queue.
+# - For drag/drop/pointer workflows, require actual browser pointer interaction; direct commands,
+#   synthetic event dispatch, DOM markers or source wiring alone are not acceptance.
+# - Use fresh-document GUI journeys where editing capability is being proven.
+# - Never weaken Golden/reference/threshold/mask merely to pass.
+# - Never reset/stash/clean/delete unrelated user/agent work.
 #
 # ============================================================================
 # GLOBAL ARCHITECTURE / SAFETY
@@ -126,5 +110,3 @@
 # View-only operations keep Canonical/History/Dirty delta = 0.
 # Canonical source time -> DisplayTimeMapping -> TimeAxisGeometry/LocalGeometry -> screen.
 # DOM/ruler pixels are not semantic authority.
-# Never weaken Golden/reference/threshold/mask merely to pass.
-# Never reset/stash/clean/delete unrelated user/agent work.
