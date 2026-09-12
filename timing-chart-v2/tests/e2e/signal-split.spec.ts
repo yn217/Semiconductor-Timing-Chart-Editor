@@ -41,6 +41,7 @@ test("Upper and Lower scroll vertically independently while sharing one horizont
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByTestId("view-panel-signal-split").click();
   const upper = page.getByTestId("cycle-viewport");
