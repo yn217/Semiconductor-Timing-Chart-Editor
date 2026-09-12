@@ -1133,8 +1133,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       // interior Phase boundary is rejected atomically.
       let phases = transaction.phases;
       if (phases && phases.length > 0) {
-        const first = phases[0];
-        const last = phases[phases.length - 1];
+        const first = phases[0]!;
+        const last = phases[phases.length - 1]!;
         if (command.edge === "start") {
           if (start >= first.end) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.value", "Transaction start cannot cross the first Phase boundary.");
           if (first.start === transaction.start) phases = phases.map((phase, phaseIndex) => phaseIndex === 0 ? { ...phase, start } : phase);
