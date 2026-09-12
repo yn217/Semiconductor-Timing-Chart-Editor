@@ -259,6 +259,35 @@ test("Moving a folded Transaction uses source-cycle geometry", async ({ page }) 
   await expect(row).toContainText("50");
 });
 
+test("Resizing a folded Transaction preserves the opposite source boundary and undoes", async ({ page }) => {
+  const value = JSON.parse(readFileSync(samplePath, "utf8")) as any;
+  value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }];
+  const transaction = value.transactions.find((item: any) => item.id === "txn_read0");
+  transaction.start = 10;
+  transaction.end = 60;
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "fold-resize.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  const bar = page.locator('[data-transaction-id="txn_read0"]');
+  await bar.click();
+  const inspector = page.getByTestId("inspector");
+  const startHandle = bar.locator(":scope > i[data-edge='start']");
+  const box = await startHandle.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + 18, box!.y + box!.height / 2, { steps: 3 });
+  await page.mouse.up();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await expect(inspector.getByLabel("Transaction end")).toHaveValue("60");
+  await expect(inspector.getByLabel("Transaction start")).not.toHaveValue("10");
+  await page.getByRole("button", { name: "Undo", exact: true }).first().click();
+  await expect(inspector.getByLabel("Transaction start")).toHaveValue("10");
+});
+
 test("Transaction sample is shown after reloading the default browser URL", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
