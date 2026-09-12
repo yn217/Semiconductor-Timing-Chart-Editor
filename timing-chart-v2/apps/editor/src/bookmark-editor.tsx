@@ -50,13 +50,14 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
   // Bookmark, so a no-op Apply can't manufacture an empty History entry.
   const hasChanges = bookmark !== undefined && (editName !== bookmark.name || editStart !== bookmark.start || editComment !== (bookmark.comment ?? ""));
   const containingGroups = bookmark === undefined ? [] : document.timeGroups.filter((group) => group.presentation?.collapsed && bookmark.start >= group.start && bookmark.start < group.end);
+  const collapsedGroupNames = (start: number) => document.timeGroups.filter((group) => group.presentation?.collapsed && start >= group.start && start < group.end).map((group) => group.name);
   const expandAndJump = () => { for (const group of containingGroups) commands.updateTimeGroupPresentation(group.id, { ...(group.presentation ?? {}), collapsed: false, foldStyle: "none", foldLabel: group.presentation?.foldLabel || group.name }); onReveal(bookmark!.start); };
   const createHasChanges = name !== "Bookmark" || start !== 0 || comment !== "";
   return <section className="bookmark-editor-panel" data-testid="bookmark-editor-panel" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <header>
       <button type="button" aria-label="Previous bookmark" disabled={document.bookmarks.length === 0} onClick={() => navigate(-1)}>Previous</button>
       <button type="button" aria-label="Next bookmark" disabled={document.bookmarks.length === 0} onClick={() => navigate(1)}>Next</button>
-      <strong>{bookmark ? `Editing: ${bookmark.name}` : "Bookmark Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{bookmark && <><button type="button" onClick={() => onReveal(bookmark.start)}>Reveal</button>{containingGroups.length > 0 && <button type="button" data-testid="bookmark-expand-and-jump" onClick={expandAndJump}>Expand and Jump</button>}<button type="button" onClick={duplicate}>Duplicate</button><button type="button" className="danger" data-testid="delete-bottom-bookmark" onClick={onDelete}>Delete Bookmark</button></>}</header>
+      <strong>{bookmark ? `Editing: ${bookmark.name}` : "Bookmark Editor"}</strong>{containingGroups.length > 0 && <small data-testid="bookmark-inside-collapsed">inside collapsed: {containingGroups.map((group) => group.name).join(", ")}</small>}<button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{bookmark && <><button type="button" onClick={() => onReveal(bookmark.start)}>Reveal</button>{containingGroups.length > 0 && <button type="button" data-testid="bookmark-expand-and-jump" onClick={expandAndJump}>Expand and Jump</button>}<button type="button" onClick={duplicate}>Duplicate</button><button type="button" className="danger" data-testid="delete-bottom-bookmark" onClick={onDelete}>Delete Bookmark</button></>}</header>
     {bookmark
       ? <>
           <form id="bookmark-properties-form" onSubmit={(event) => { event.preventDefault(); if (!hasChanges) return; commands.updateBookmark({ bookmarkId: bookmark.id, name: editName.trim() || "Bookmark", start: editStart, comment: editComment }); }}>
@@ -98,7 +99,7 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
     <div className="bookmark-list" data-testid="bookmark-list" role="table" aria-label="Bookmarks">
       <div className="bookmark-list-header" role="row"><span>Marker</span><span>Name</span><span>Cycle</span><span>Comment</span></div>
       {ordered.map((item) => <button type="button" role="row" key={item.id} data-testid={`bookmark-row-${item.id}`} data-selected={String(item.id === bookmark?.id)} onClick={() => onSelect(item.id)} onDoubleClick={() => onReveal(item.start)}>
-        <span aria-hidden="true">◆</span><b>{item.name}</b><span>{item.start}</span><span>{item.comment ?? ""}</span>
+        <span aria-hidden="true">◆</span><b>{item.name}</b><span>{item.start}</span><span>{item.comment ?? ""}{collapsedGroupNames(item.start).map((name) => <small key={name}>inside collapsed: {name}</small>)}</span>
       </button>)}
       {ordered.length === 0 && <p className="inspector-note">No Bookmarks yet.</p>}
     </div>
