@@ -10,11 +10,16 @@ async function openAIAssistant(page: import("@playwright/test").Page) {
   return page.getByTestId("ai-operation-panel");
 }
 
+async function selectRequest(page: import("@playwright/test").Page, host: import("@playwright/test").Locator) {
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+}
+
 test("AI proposal uses preview, deterministic validation, atomic apply, and exact persistence", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequest(page, host);
 
   const ai = await openAIAssistant(page);
   await ai.getByLabel("AI semantic query").fill("rename selected signal to AI_REQUEST");
@@ -57,7 +62,7 @@ test("AI proposal rejects a stale revision after an intervening semantic edit", 
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequest(page, host);
   const ai = await openAIAssistant(page);
   await ai.getByLabel("AI semantic query").fill("rename selected signal to STALE_PROPOSAL");
   await ai.getByRole("button", { name: "Preview", exact: true }).click();
@@ -85,7 +90,7 @@ test("AI Apply reports a stale proposal through the shared Problems diagnostic p
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequest(page, host);
   const ai = await openAIAssistant(page);
   await ai.getByLabel("AI semantic query").fill("rename selected signal to STALE_APPLY");
   await ai.getByRole("button", { name: "Preview", exact: true }).click();
@@ -152,7 +157,7 @@ test("AI Settings default to Always require approval, and every Preview/Validate
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequest(page, host);
   const ai = await openAIAssistant(page);
 
   const activityLog = ai.getByTestId("ai-activity-log");
@@ -228,7 +233,7 @@ test("Scope switches between Selection / Current View / Document, and Current Vi
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequest(page, host);
   await page.getByRole("button", { name: "Hide REQUEST" }).click();
   await expect(page.getByTestId("selection-status")).toHaveText("REQUEST");
 
@@ -270,7 +275,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await page.goto("/");
     const host = page.getByTestId("cycle-surface");
     await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-    await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+    await selectRequest(page, host);
 
     await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
     const ribbon = page.getByTestId("ribbon");
