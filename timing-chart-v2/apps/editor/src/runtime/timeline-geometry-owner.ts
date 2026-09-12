@@ -12,6 +12,17 @@ export type TimelineGeometryOwnerContext = Readonly<{
   onSnapIndexBuilt: () => void;
 }>;
 
+function firstPointAfter(candidates: readonly { readonly point: { readonly x: number } }[], x: number): number {
+  let low = 0;
+  let high = candidates.length;
+  while (low < high) {
+    const middle = low + Math.floor((high - low) / 2);
+    if (candidates[middle]!.point.x <= x) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
 /** Read-only authority for semantic -> display -> local -> screen timeline geometry. */
 export class TimelineGeometryOwner {
   readonly mappingCache: DisplayTimeMappingCache;
@@ -83,14 +94,15 @@ export class TimelineGeometryOwner {
     if (!snapEnabled) {
       const terminal = candidates.at(-1);
       if (terminal && localX >= terminal.point.x - 32 / zoom) return terminal.anchor.cycle;
-      return candidates.filter((candidate) => candidate.point.x <= localX).at(-1)?.anchor.cycle ?? candidates[0]?.anchor.cycle;
+      const insertion = firstPointAfter(candidates, localX);
+      return candidates[Math.max(0, insertion - 1)]?.anchor.cycle;
     }
-    let nearest: { cycle: number; distance: number } | undefined;
-    for (const candidate of candidates) {
-      const distance = Math.abs(candidate.point.x - localX);
-      if (!nearest || distance < nearest.distance) nearest = { cycle: candidate.anchor.cycle, distance };
-    }
-    return nearest?.cycle;
+    const insertion = firstPointAfter(candidates, localX);
+    const before = candidates[insertion - 1];
+    const after = candidates[insertion];
+    if (!before) return after?.anchor.cycle;
+    if (!after) return before.anchor.cycle;
+    return Math.abs(before.point.x - localX) <= Math.abs(after.point.x - localX) ? before.anchor.cycle : after.anchor.cycle;
   }
 
   currentSnapIndex(): ImmutableSnapIndex {
