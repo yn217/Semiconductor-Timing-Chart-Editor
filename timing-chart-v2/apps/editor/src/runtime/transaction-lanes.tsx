@@ -489,7 +489,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
     </div>
       <div className="transaction-track" data-transaction-track="true" style={{ height: totalHeight }}>
       <div className="transaction-geometry-guides" aria-hidden="true">{cycleXs.map((value) => <i className="transaction-geometry-line" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}</div>
-      <div className="transaction-bookmark-markers" aria-label="Transaction bookmarks">{bookmarks.map((bookmark) => { const left = x(bookmark.start); return left === undefined ? null : <i key={bookmark.id} data-bookmark-id={bookmark.id} title={`${bookmark.name}: ${bookmark.start}`} style={{ left }} />; })}</div>
+      <div className="transaction-bookmark-markers" aria-label="Transaction bookmarks">{bookmarks.map((bookmark) => { const left = x(bookmark.start); return left === undefined ? null : <i key={bookmark.id} data-bookmark-id={bookmark.id} data-source-cycle={bookmark.start} title={`${bookmark.name}: ${bookmark.start}`} style={{ left }} />; })}</div>
       {visibleGroupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.trackTop, height: GROUP_HEADER_HEIGHT }} />)}
       {visibleLaneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.trackTop, height: band.trackHeight }}>
         {(laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).filter((transaction) => transaction.visible !== false && isTrackTransactionVisible(band, transaction)).map((transaction) => {
