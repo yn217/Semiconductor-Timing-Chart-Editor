@@ -73,19 +73,20 @@ test("Sample A: create/rename/move/resize/delete, phase add/edit/delete, link/un
   const inspector = page.getByTestId("inspector");
   const bottomEditor = page.getByTestId("transaction-editor");
 
-  // Select Read_0 and confirm Inspector + Bottom share one semantic owner
-  // (no stale values from a previous/default state).
+  // Select Read_0 and confirm the Inspector owns details while Bottom stays
+  // table-first (no stale values from a previous/default state).
   await lanes.locator("[data-transaction-id='txn_read0']").click();
   await expect(inspector.getByLabel("Transaction name")).toHaveValue("Read_0");
-  await expect(bottomEditor.getByLabel("Transaction name")).toHaveValue("Read_0");
+  await expect(bottomEditor.locator("[data-transaction-row-id='txn_read0']")).toContainText("Read_0");
+  await expect(bottomEditor.getByTestId("apply-transaction-properties")).toHaveCount(0);
   await expect(inspector.getByLabel("Transaction start")).toHaveValue("6");
   await expect(inspector.getByLabel("Transaction end")).toHaveValue("12");
 
-  // Rename through the Inspector; Bottom reflects it immediately.
+  // Rename through the Inspector; the Bottom row reflects it immediately.
   await inspector.getByLabel("Transaction name").fill("Read_0_renamed");
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
-  await expect(bottomEditor.getByLabel("Transaction name")).toHaveValue("Read_0_renamed");
+  await expect(bottomEditor.locator("[data-transaction-row-id='txn_read0']")).toContainText("Read_0_renamed");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 
   // Move (Start/End) and lane edit through the Inspector, one Apply.
@@ -97,7 +98,7 @@ test("Sample A: create/rename/move/resize/delete, phase add/edit/delete, link/un
   await inspector.getByLabel("Transaction lane").fill("lane_2");
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
-  await expect(lanes.locator("[data-lane-id='lane_2']")).toBeVisible();
+  await expect(lanes.locator("div.transaction-lane[data-lane-id='lane_2']")).toBeVisible();
 
   // Phase edit: rename an existing phase, delete one, add a new one.
   const phaseTable = inspector.getByTestId("transaction-phase-editor");
