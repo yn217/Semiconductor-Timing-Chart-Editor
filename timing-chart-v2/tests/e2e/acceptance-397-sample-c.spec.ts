@@ -18,7 +18,7 @@ async function openSampleAInSplitMode(page: Page) {
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(samplePath);
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
-  await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
 }
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
@@ -36,7 +36,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     before.revision = await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision");
     before.history = await page.getByTestId("history-status").textContent();
 
-    await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+    await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
     const lanes = page.getByTestId("transaction-lanes");
     const surface = page.locator("[data-role='timing-chart-surface']");
     await expect(lanes).toBeVisible();
