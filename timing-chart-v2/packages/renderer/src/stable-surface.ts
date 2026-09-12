@@ -355,6 +355,11 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       owner.dataset.annotationId = primitive.id;
       owner.setAttribute("role", "button");
       owner.tabIndex = 0;
+      // Keep all identity-bearing metadata current even when the visual body
+      // is unchanged. Virtualized callers may recycle an owner between
+      // projections, so accessibility and kind metadata must not depend on
+      // the visual signature fast path below.
+      syncOverlayIdentity(owner, primitive);
       if (this.#overlaySignatures.get(primitive.id) === signature) continue;
       this.#overlaySignatures.set(primitive.id, signature);
       renderOverlay(owner, primitive);
@@ -604,7 +609,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   }
 }
 
-function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive): void {
+function syncOverlayIdentity(owner: HTMLElement, primitive: AnnotationOverlayPrimitive): void {
   owner.dataset.annotationType = primitive.type;
   owner.dataset.annotationShape = primitive.shape;
   owner.dataset.visible = String(primitive.visible);
@@ -620,6 +625,10 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   else delete owner.dataset.traceOffsetCycles;
   owner.dataset.locked = String(primitive.locked ?? false);
   owner.setAttribute("aria-label", `${primitive.type}: ${primitive.label}${primitive.locked ? " (locked)" : ""}`);
+}
+
+function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive): void {
+  syncOverlayIdentity(owner, primitive);
   owner.hidden = !primitive.visible;
   owner.style.setProperty("--annotation-color", primitive.color ?? "#d04a36");
   owner.style.height = `${primitive.surfaceHeight}px`;
@@ -630,6 +639,7 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   const second = primitive.anchors[1] ?? first;
   const dx = second.x - first.x;
   const dy = second.y - first.y;
+
   // #418: a Measurement's dimension line/label is placed 18px-per-lane
   // *above* its anchors by default -- but when the topmost anchor is on
   // (or near) the first row, that pushes the line/label above local
