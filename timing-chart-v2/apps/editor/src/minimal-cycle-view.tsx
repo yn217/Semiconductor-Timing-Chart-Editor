@@ -328,11 +328,14 @@ export function MinimalCycleView() {
     return referenceClockId === undefined ? undefined : signalById.get(referenceClockId);
   }, [signalById, snapshot.document.timeline.referenceClock]);
   const selectedSignal = selectedId === undefined ? undefined : signalById.get(selectedId);
+  const selectedAnnotationTarget = selectedAnnotationId === undefined ? undefined : annotationById.get(selectedAnnotationId);
   const annotationTargetSignalId = useMemo(() => {
     if (selectedSignal && selectedSignal.type !== "commentRow") return selectedSignal.id;
+    const annotationSignalId = selectedAnnotationTarget?.anchor?.signalId ?? selectedAnnotationTarget?.start?.signalId ?? selectedAnnotationTarget?.from?.signalId;
+    if (annotationSignalId && signalById.get(annotationSignalId)?.type !== "commentRow") return annotationSignalId;
     if (referenceClockSignal && referenceClockSignal.type !== "commentRow") return referenceClockSignal.id;
     return firstNonCommentSignal?.id;
-  }, [firstNonCommentSignal, referenceClockSignal, selectedSignal]);
+  }, [annotationById, firstNonCommentSignal, referenceClockSignal, selectedAnnotationTarget, selectedSignal, signalById]);
   const selectedGroup = selectedGroupId === undefined ? undefined : groupById.get(selectedGroupId);
   const selectedSpacer = selectedSpacerRef.current === undefined ? undefined : selectedGroup?.spacers?.find((spacer) => spacer.id === selectedSpacerRef.current);
   const selectedAnnotation = selectedAnnotationId === undefined ? undefined : annotationById.get(selectedAnnotationId);
