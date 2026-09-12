@@ -88,7 +88,10 @@ function previewPhases(transaction: Transaction, preview: TransactionPreview, ed
     const delta = preview.start - transaction.start;
     return transaction.phases.map((phase) => ({ ...phase, start: phase.start + delta, end: phase.end + delta }));
   }
-  return transaction.phases.map((phase) => ({ ...phase, start: Math.max(preview.start, phase.start), end: Math.min(preview.end, phase.end) })).filter((phase) => phase.start < phase.end);
+  // The semantic resize command rejects any edge change that would clip a
+  // Phase. Keep the live preview non-destructive as well; showing clipped or
+  // disappearing phases before a guaranteed reject is misleading.
+  return transaction.phases;
 }
 
 function TransactionBar({ transaction, documentEpoch, row, color, selected, cycleCount, getBoundaryX, boundaryXByCycle, onSnap, onSelect, commands, onContextMenu }: {
