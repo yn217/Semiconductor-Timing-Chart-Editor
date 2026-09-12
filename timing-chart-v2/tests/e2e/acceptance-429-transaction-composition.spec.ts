@@ -118,6 +118,7 @@ test("Bookmark inside a collapsed TimeGroup is identified in the Bookmarks panel
 
 test("Combined View keeps the shared fold visible in the Transaction pane", async ({ page }) => {
   const value = JSON.parse(readFileSync(samplePath, "utf8")) as any;
+  value.bookmarks = [{ id: "combined-bookmark", name: "Combined marker", start: 10 }];
   value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }];
   const transaction = value.transactions.find((item: any) => item.id === "txn_read0");
   transaction.start = 10;
@@ -131,6 +132,9 @@ test("Combined View keeps the shared fold visible in the Transaction pane", asyn
   await expect(page.locator(".split-transaction-pane")).toBeVisible();
   await expect(page.locator(".split-transaction-pane .transaction-axis-break-gap").first()).toBeVisible();
   await expect(page.locator(".split-transaction-pane [data-transaction-id='txn_read0']")).toBeVisible();
+  await page.locator(".split-transaction-pane .transaction-bookmark-markers [data-bookmark-id='combined-bookmark']").click();
+  await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
+  await expect(page.getByTestId("bookmark-row-combined-bookmark")).toHaveAttribute("data-selected", "true");
 });
 
 test("Transaction MiniMap marks collapsed source ranges without changing viewport policy", async ({ page }) => {

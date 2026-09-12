@@ -272,10 +272,10 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
   const toggleGroupCollapsed = (key: string) => setCollapsedGroups((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   const owner = useRef<HTMLElement>(null);
   const { cycleXs, boundaryXByCycle } = useMemo(() => {
-    const relevantCycles = [...new Set(document.transactions.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).flatMap(phase => [phase.start, phase.end])]))].sort((left, right) => left - right);
+    const relevantCycles = [...new Set([...document.transactions.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).flatMap(phase => [phase.start, phase.end])]), ...bookmarks.map((bookmark) => bookmark.start)])].sort((left, right) => left - right);
     const cycleXs = relevantCycles.flatMap((cycle) => { const x = getBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
     return { cycleXs, boundaryXByCycle: new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const)) };
-  }, [document.transactions, getBoundaryX, presentationRevision]);
+  }, [bookmarks, document.transactions, getBoundaryX, presentationRevision]);
   const x = (cycle: number) => boundaryXByCycle.get(cycle);
   const foldRanges = useMemo<readonly (readonly [number, number])[]>(() => {
     const ranges = (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const).sort((left, right) => left[0] - right[0] || left[1] - right[1]);
