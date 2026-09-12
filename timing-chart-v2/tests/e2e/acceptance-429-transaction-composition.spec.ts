@@ -25,6 +25,7 @@ test("Transaction crossing a collapsed TimeGroup renders an Axis Break gap", asy
   const transaction = value.transactions.find((item: any) => item.id === "txn_read0");
   transaction.start = 10;
   transaction.end = 60;
+  value.bookmarks = [{ id: "combined-bookmark", name: "Combined marker", start: 10 }];
 
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
@@ -131,6 +132,9 @@ test("Combined View keeps the shared fold visible in the Transaction pane", asyn
   await expect(page.locator(".split-transaction-pane")).toBeVisible();
   await expect(page.locator(".split-transaction-pane .transaction-axis-break-gap").first()).toBeVisible();
   await expect(page.locator(".split-transaction-pane [data-transaction-id='txn_read0']")).toBeVisible();
+  await page.locator(".split-transaction-pane .transaction-bookmark-markers [data-bookmark-id='combined-bookmark']").click();
+  await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
+  await expect(page.getByTestId("bookmark-row-combined-bookmark")).toHaveAttribute("data-selected", "true");
 });
 
 test("Transaction MiniMap marks collapsed source ranges without changing viewport policy", async ({ page }) => {
