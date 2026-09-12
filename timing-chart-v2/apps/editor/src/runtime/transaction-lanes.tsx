@@ -94,7 +94,7 @@ function previewPhases(transaction: Transaction, preview: TransactionPreview, ed
   return transaction.phases;
 }
 
-function TransactionBar({ transaction, documentEpoch, row, color, selected, cycleCount, getBoundaryX, boundaryXByCycle, onSnap, onSelect, commands, onContextMenu }: {
+function TransactionBar({ transaction, documentEpoch, row, color, selected, cycleCount, getBoundaryX, boundaryXByCycle, foldRanges, onSnap, onSelect, commands, onContextMenu }: {
   readonly transaction: Transaction;
   readonly documentEpoch: number;
   readonly row: number;
@@ -103,6 +103,7 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
   readonly cycleCount: number;
   readonly getBoundaryX: (cycle: number) => number | undefined;
   readonly boundaryXByCycle: ReadonlyMap<number, number>;
+  readonly foldRanges: readonly (readonly [number, number])[];
   readonly onSnap: (clientX: number, surfaceLeft?: number) => number | undefined;
   readonly onSelect: (id: TransactionId, additive?: boolean) => void;
   readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize">;
@@ -189,7 +190,13 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
     else commands.resize(transaction.id, drag.edge, drag.edge === "start" ? final.start : final.end);
   };
 
-  return <button ref={buttonRef} type="button" data-transaction-id={transaction.id} data-selected={String(selected)} data-drag-preview={String(preview !== undefined)} style={{ left: startX, width: endX - startX, top: 4 + row * LANE_ROW_HEIGHT, ...(color ? { "--transaction-color": color } as CSSProperties : {}) }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)} onContextMenu={(event) => { event.preventDefault(); onSelect(transaction.id); onContextMenu?.(event, transaction.id); }} onPointerMove={updatePreview} onPointerUp={finish} onPointerCancel={cancel}><i data-edge="start" onPointerDown={(event) => begin(event, "start")} /><span onPointerDown={(event) => begin(event, "body")}>{transaction.name}</span><div className="transaction-phases" aria-hidden="true">{phases?.map((phase) => { const from = resolveBoundaryX(phase.start); const to = resolveBoundaryX(phase.end); if (from === undefined || to === undefined || endX <= startX) return null; return <small key={`${phase.start}:${phase.end}:${phase.name}`} title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }}>{phase.name}</small>; })}</div><i data-edge="end" onPointerDown={(event) => begin(event, "end")} /></button>;
+  const visibleBoundary = (cycle: number, direction: -1 | 1) => { for (let candidate = cycle; candidate >= 0 && candidate <= cycleCount; candidate += direction) { const value = getBoundaryX(candidate); if (value !== undefined) return value; } return undefined; };
+  const gaps = foldRanges.flatMap(([fromCycle, toCycle]) => {
+    if (fromCycle <= current.start || toCycle >= current.end) return [];
+    const from = visibleBoundary(fromCycle, -1); const to = visibleBoundary(toCycle, 1);
+    return from === undefined || to === undefined ? [] : [{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }];
+  });
+  return <button ref={buttonRef} type="button" data-transaction-id={transaction.id} data-selected={String(selected)} data-drag-preview={String(preview !== undefined)} style={{ left: startX, width: endX - startX, top: 4 + row * LANE_ROW_HEIGHT, ...(color ? { "--transaction-color": color } as CSSProperties : {}) }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)} onContextMenu={(event) => { event.preventDefault(); onSelect(transaction.id); onContextMenu?.(event, transaction.id); }} onPointerMove={updatePreview} onPointerUp={finish} onPointerCancel={cancel}><i data-edge="start" onPointerDown={(event) => begin(event, "start")} /><span onPointerDown={(event) => begin(event, "body")}>{transaction.name}</span>{gaps.map((gap, index) => <i key={`axis-break-${index}`} className="transaction-axis-break-gap" style={gap} aria-hidden="true" />)}<div className="transaction-phases" aria-hidden="true">{phases?.map((phase) => { const from = resolveBoundaryX(phase.start); const to = resolveBoundaryX(phase.end); if (from === undefined || to === undefined || endX <= startX) return null; return <small key={`${phase.start}:${phase.end}:${phase.name}`} title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }}>{phase.name}</small>; })}</div><i data-edge="end" onPointerDown={(event) => begin(event, "end")} /></button>;
 }
 
 export function TransactionLanes({ document: rawDocument, documentEpoch, presentationRevision, zoom, selectedId, selectedIds, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu, bookmarks = [] }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly presentationRevision?: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly selectedIds?: ReadonlySet<TransactionId>; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSnap: (clientX: number, surfaceLeft?: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void; readonly bookmarks?: readonly Bookmark[] }) {
@@ -239,6 +246,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
     return { cycleXs, boundaryXByCycle: new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const)) };
   }, [document.transactions, getBoundaryX, presentationRevision]);
   const x = (cycle: number) => boundaryXByCycle.get(cycle);
+  const foldRanges = useMemo<readonly (readonly [number, number])[]>(() => (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const), [rawDocument.timeGroups]);
 
   // #452: Group headers only appear once real Groups are in use -- a
   // document with no `transactionGroups` (or none actually referenced)
@@ -488,7 +496,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
           // inline style -- the same interaction-priority bug already
           // fixed for Signal rows under #472.
           const resolvedColor = transaction.color ?? (transaction.groupId === undefined ? undefined : transactionGroupById.get(transaction.groupId)?.color);
-          return <TransactionBar key={transaction.id} transaction={transaction} documentEpoch={documentEpoch} row={row} color={resolvedColor} selected={isTransactionSelected(transaction.id)} cycleCount={document.timeline.cycleCount} getBoundaryX={getBoundaryX} boundaryXByCycle={boundaryXByCycle} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
+          return <TransactionBar key={transaction.id} transaction={transaction} documentEpoch={documentEpoch} row={row} color={resolvedColor} selected={isTransactionSelected(transaction.id)} cycleCount={document.timeline.cycleCount} getBoundaryX={getBoundaryX} boundaryXByCycle={boundaryXByCycle} foldRanges={foldRanges} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
         })}
       </div>)}
     </div>

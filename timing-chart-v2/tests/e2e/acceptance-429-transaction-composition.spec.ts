@@ -16,6 +16,33 @@ test("default browser startup opens the built-in Transaction sample", async ({ p
   await expect(page.locator(".transaction-bookmark-markers [data-bookmark-id='demo_bookmark_read_start']")).toBeVisible();
 });
 
+test("Transaction crossing a collapsed TimeGroup renders an Axis Break gap", async ({ page }) => {
+  const value = JSON.parse(readFileSync(samplePath, "utf8")) as any;
+  value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }];
+  const transaction = value.transactions.find((item: any) => item.id === "txn_read0");
+  transaction.start = 10;
+  transaction.end = 60;
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-fold.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+
+  const bar = page.locator('[data-transaction-id="txn_read0"]');
+  await expect(bar).toBeVisible();
+  const gap = bar.locator(".transaction-axis-break-gap");
+  await expect(gap).toBeVisible();
+  const barBox = await bar.boundingBox();
+  const gapBox = await gap.boundingBox();
+  expect(barBox?.width).toBeGreaterThan(0);
+  expect(gapBox?.width).toBeGreaterThan(0);
+  await bar.click();
+  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("10");
+  await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("60");
+});
+
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
   test(`Transaction reference composition at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
