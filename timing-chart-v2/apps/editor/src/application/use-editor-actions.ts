@@ -182,16 +182,22 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     if (bookmarkId) selectBookmark(bookmarkId);
   };
   const createSelectedAnnotation = (annotation: Annotation) => {
+    const liveDocument = input.application.runtime.session.current().getSnapshot().document;
+    const annotationToCreate = { ...annotation, id: nextEntityId("annotation", liveDocument) as AnnotationId };
     const result = input.application.execute({
       id: input.nextCommandId("annotation_create"),
       type: "annotation.create",
-      annotation,
+      annotation: annotationToCreate,
     });
-    if (result.ok) input.selection.selectAnnotation(annotation.id);
+    if (result.ok) input.selection.selectAnnotation(annotationToCreate.id);
   };
   const createSelectedAnnotationForType = (type: AnnotationType) => {
     if (!input.annotationTargetSignalId) return;
-    createSelectedAnnotation(createAnnotation(type, input.annotationTargetSignalId, input.timelineRange, input.document));
+    // React's `input.document` can still be the previous render immediately
+    // after a successful create. ID allocation must use the live canonical
+    // snapshot owned by the application runtime, otherwise consecutive
+    // creates can reuse the same Annotation ID.
+    createSelectedAnnotation(createAnnotation(type, input.annotationTargetSignalId, input.timelineRange, input.application.runtime.session.current().getSnapshot().document));
   };
   const replaceDocument = (document: CanonicalDocument) => input.application.execute({
     id: input.nextCommandId("json_replace"),

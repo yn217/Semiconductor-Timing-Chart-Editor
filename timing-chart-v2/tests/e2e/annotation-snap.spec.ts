@@ -4,10 +4,20 @@ import { canonicalFixture } from "../fixtures/canonical.js";
 async function createAnnotation(page: import("@playwright/test").Page, type: string) {
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption(type);
-  await page.getByRole("button", { name: "Add annotation" }).click();
   const host = page.getByTestId("cycle-surface");
+  const before = new Set(await host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-id"))));
+  await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  return host.locator("[data-role='annotation-owner']").last();
+  const findNewId = () => host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items, previous) => items.map((item) => item.getAttribute("data-annotation-id")).find((id) => id && !previous.includes(id)), [...before]);
+  await expect.poll(findNewId).toBeTruthy();
+  const annotationId = await findNewId();
+  expect(annotationId).toBeTruthy();
+  return host.locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}']`);
+}
+
+async function selectRequestSignal(host: import("@playwright/test").Locator) {
+  const row = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']");
+  await row.click({ force: true });
 }
 
 test("rejects non-timing and incompatible annotation anchors before replacing the document", async ({ page }) => {
@@ -46,7 +56,7 @@ test("creates every Annotation type on a renderer-owned stable overlay surface",
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(host);
   const surface = host.locator("[data-role='timing-chart-surface']");
   const countersBefore = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   const types = ["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency", "timingRegion", "ghostTrace"];
@@ -69,7 +79,7 @@ test("edits a linked Ghost Trace and Timing Region without WaveDrom regeneration
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(host);
   const surface = host.locator("[data-role='timing-chart-surface']");
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
@@ -79,7 +89,7 @@ test("edits a linked Ghost Trace and Timing Region without WaveDrom regeneration
   await page.getByRole("button", { name: "Add annotation" }).click();
   const ghost = host.locator("[data-role='annotation-owner'][data-annotation-type='ghostTrace']");
   await expect(ghost.locator("[data-role='ghost-trace-path']")).toHaveCount(1);
-  await ghost.locator("[data-role='annotation-label']").click();
+  await ghost.locator("[data-role='annotation-label']").click({ force: true });
   const editor = page.getByTestId("annotation-editor");
   await editor.getByLabel("Ghost Trace cycle offset").fill("2");
   await editor.getByLabel("Annotation opacity").fill("0.35");
@@ -106,7 +116,7 @@ test("creates a geometry-backed 30/70 threshold Measurement and preserves it thr
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(host);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline range start").fill("3");
   await page.getByLabel("Timeline range end").fill("8");
@@ -135,7 +145,7 @@ test("updates Annotation style and label offset without waveform regeneration", 
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(host);
   const owner = await createAnnotation(page, "arrow");
   await expect(owner).toHaveAttribute("data-selected", "true");
   const surface = host.locator("[data-role='timing-chart-surface']");
@@ -167,7 +177,7 @@ test("snaps a dragged endpoint to exact rendered cycle geometry", async ({ page 
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(host);
   const owner = await createAnnotation(page, "arrow");
   const handle = owner.locator("[data-role='annotation-handle'][data-annotation-field='from']");
   const fromBox = await handle.boundingBox();
@@ -195,7 +205,7 @@ test("Snap OFF changes annotation endpoint interaction to free geometry", async 
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(host);
   const owner = await createAnnotation(page, "arrow");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByTestId("snap-toggle").uncheck();
@@ -242,7 +252,7 @@ test("preserves canonical source-cycle anchors through an Axis Break snap", asyn
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(host);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline range start").fill("0");
   await page.getByLabel("Timeline range end").fill("2");
@@ -270,7 +280,7 @@ test("nudges by 1/10 px and cancels pointer preview without a commit", async ({ 
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(host);
   const owner = await createAnnotation(page, "text");
   await owner.focus();
   await owner.press("ArrowRight");
@@ -293,7 +303,7 @@ test("moves the whole Annotation by visual offsets and resets offsets independen
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(host);
   const owner = await createAnnotation(page, "dependency");
   const handles = owner.locator("[data-role='annotation-handle']");
   const before = await handles.evaluateAll((items) => items.map((item) => (item as HTMLElement).style.transform));
@@ -312,9 +322,10 @@ test("moves the whole Annotation by visual offsets and resets offsets independen
 
 test("creates standard and Custom Measurement profiles with explicit transition semantics", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(host);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline range start").fill("3");
   await page.getByLabel("Timeline range end").fill("8");
@@ -323,11 +334,15 @@ test("creates standard and Custom Measurement profiles with explicit transition 
   const toolbar = page.getByTestId("annotation-toolbar");
   const profile = toolbar.getByTestId("measurement-profile");
   for (const [index, [value, start, end]] of [["10-90", "0.1", "0.9"], ["20-80", "0.2", "0.8"], ["50%", "0.5", "0.5"]].entries()) {
-    await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
     await profile.selectOption(value);
+    await expect(profile).toHaveValue(value);
+    const before = new Set(await host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-id"))));
     await page.getByRole("button", { name: "Add annotation" }).click();
-    await expect(host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']")).toHaveCount(index + 1);
-    const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']").last();
+    const findNewId = () => host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items, previous) => items.map((item) => item.getAttribute("data-annotation-id")).find((id) => id && !previous.includes(id)), [...before]);
+    await expect.poll(findNewId).toBeTruthy();
+    const annotationId = await findNewId();
+    expect(annotationId).toBeTruthy();
+    const owner = host.locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}']`);
     const displayProfile = value === "10-90" ? "10%→90%" : value === "20-80" ? "20%→80%" : "50%→50%";
     await expect(owner).toHaveAttribute("aria-label", new RegExp(`${displayProfile}.*threshold`));
     await expect(owner.locator(`[data-role='annotation-handle'][data-anchor-threshold='${start}']`)).toHaveCount(start === end ? 2 : 1);
@@ -337,9 +352,11 @@ test("creates standard and Custom Measurement profiles with explicit transition 
   await toolbar.getByLabel("Measurement anchor kind").selectOption("ratio");
   await toolbar.getByLabel("Custom measurement start").fill("17");
   await toolbar.getByLabel("Custom measurement end").fill("83");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
-  const custom = host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']").last();
+  const customId = await page.getByTestId("annotation-editor").getAttribute("data-bottom-target-id");
+  expect(customId).toBeTruthy();
+  const custom = host.locator(`[data-role='annotation-owner'][data-annotation-id='${customId}']`);
   await expect(custom).toHaveAttribute("aria-label", /17%→83%.*ratio/);
   await expect(custom.locator("[data-role='annotation-handle'][data-anchor-threshold='0.17']")).toHaveCount(1);
   await expect(custom.locator("[data-role='annotation-handle'][data-anchor-transition-kind='ratio']")).toHaveCount(2);
@@ -354,7 +371,7 @@ test("edits Measurement semantics with one history step and preserves them throu
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(host);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline range start").fill("3");
   await page.getByLabel("Timeline range end").fill("8");
@@ -363,8 +380,9 @@ test("edits Measurement semantics with one history step and preserves them throu
   await toolbar.getByLabel("Annotation type").selectOption("measurement");
   await toolbar.getByTestId("measurement-profile").selectOption("30-70");
   await toolbar.getByRole("button", { name: "Add annotation" }).click();
-  const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']");
-  await expect(owner).toHaveCount(1);
+  const ownerId = await page.getByTestId("annotation-editor").getAttribute("data-bottom-target-id");
+  expect(ownerId).toBeTruthy();
+  const owner = host.locator(`[data-role='annotation-owner'][data-annotation-id='${ownerId}']`);
   const editor = page.getByTestId("annotation-editor");
   await editor.getByLabel("Measurement profile").selectOption("custom");
   await editor.getByLabel("Measurement anchor kind").selectOption("ratio");
@@ -399,7 +417,7 @@ test("cancels an active Annotation drag when New replaces the document", async (
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(host);
   const owner = await createAnnotation(page, "dependency");
   const body = owner.locator("[data-role='annotation-body']");
   await body.dispatchEvent("pointerdown", { button: 0, clientX: 100, clientY: 100, pointerId: 19 });
@@ -424,12 +442,12 @@ test("keeps semantic alignment through reorder, zoom, and scroll without wavefor
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const surface = host.locator("[data-role='timing-chart-surface']");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(host);
   const owner = await createAnnotation(page, "text");
   const handle = owner.locator("[data-role='annotation-handle']");
   const beforeCounters = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   const beforeY = (await handle.boundingBox())!.y;
-  await surface.locator("[data-role='left-row'][data-row-id='sig_cycle_request']").dragTo(surface.locator("[data-role='left-row'][data-row-id='sig_cycle_ready']"), { targetPosition: { x: 120, y: 28 } });
+  await surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").dragTo(surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']"), { targetPosition: { x: 120, y: 28 } });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   expect((await handle.boundingBox())!.y).toBeGreaterThan(beforeY);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
@@ -449,7 +467,7 @@ test("ripples and clamps Annotation anchors through Timeline edits with Undo and
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(host);
   const owner = await createAnnotation(page, "text");
   const handle = owner.locator("[data-role='annotation-handle']");
   const originalX = (await handle.boundingBox())!.x;
