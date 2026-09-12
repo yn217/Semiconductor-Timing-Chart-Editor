@@ -1,12 +1,13 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CommandResult } from "@timing-chart-v2/commands";
-import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, Signal, SignalId, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { RibbonIcon } from "./ribbon-icon.js";
 
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
+const itemName = (item: Signal | Transaction) => "display" in item ? item.display.name : item.name;
 
 /** Self-contained trigger + floating panel, same portal/position/dismiss
  * shell as the Home ribbon's overflow menu (minimal-cycle-view-ribbon.tsx),
@@ -15,7 +16,7 @@ function escapeRegExp(text: string): string {
  * substring match/replace on Signal.display.name, mirroring the left
  * tree's existing "Filter signals..." matching convention -- no free-form
  * regex from user input, only an escaped literal. */
-export function FindReplacePanel({ document, onRenameSignals }: { readonly document: CanonicalDocument; readonly onRenameSignals: (items: readonly { readonly signalId: SignalId; readonly name: string }[]) => CommandResult }) {
+export function FindReplacePanel({ document, mode = "signals", onRenameSignals, onRenameTransactions }: { readonly document: CanonicalDocument; readonly mode?: "signals" | "transactions"; readonly onRenameSignals?: (items: readonly { readonly signalId: SignalId; readonly name: string }[]) => CommandResult; readonly onRenameTransactions?: (items: readonly { readonly transactionId: TransactionId; readonly name: string }[]) => CommandResult }) {
   const [open, setOpen] = useState(false);
   const [findText, setFindText] = useState("");
   const [replaceText, setReplaceText] = useState("");
@@ -74,15 +75,16 @@ export function FindReplacePanel({ document, onRenameSignals }: { readonly docum
   // A fresh non-shared RegExp per signal -- a single shared "g" regex is
   // stateful across .test()/.replace() calls (lastIndex), easy to get
   // subtly wrong; building one per name sidesteps that entirely.
-  const matches = needle ? document.signals.filter((signal) => new RegExp(escapeRegExp(needle), "i").test(signal.display.name)) : [];
+  const matches = needle ? mode === "transactions" ? document.transactions.filter((transaction) => new RegExp(escapeRegExp(needle), "i").test(transaction.name)) : document.signals.filter((signal) => new RegExp(escapeRegExp(needle), "i").test(signal.display.name)) : [];
   const preview = matches
-    .map((signal) => ({ signal, nextName: signal.display.name.replace(new RegExp(escapeRegExp(needle), "gi"), replaceText).trim() }))
+    .map((item) => ({ item, nextName: itemName(item).replace(new RegExp(escapeRegExp(needle), "gi"), replaceText).trim() }))
     .filter((item) => item.nextName.length > 0);
   const skippedCount = matches.length - preview.length;
 
   const replaceAll = () => {
     if (preview.length === 0) return;
-    onRenameSignals(preview.map(({ signal, nextName }) => ({ signalId: signal.id, name: nextName })));
+    if (mode === "transactions") onRenameTransactions?.(preview.map(({ item, nextName }) => ({ transactionId: item.id as TransactionId, name: nextName })));
+    else onRenameSignals?.(preview.map(({ item, nextName }) => ({ signalId: item.id as SignalId, name: nextName })));
     setOpen(false);
   };
 
@@ -95,8 +97,8 @@ export function FindReplacePanel({ document, onRenameSignals }: { readonly docum
     {open && createPortal(<div ref={panelRef} className="find-replace-panel" role="dialog" aria-label="Find and Replace" data-testid="find-replace-panel" style={{ left: `${position?.left ?? 0}px`, top: `${position?.top ?? 0}px`, maxHeight: `${position?.maxHeight ?? 200}px`, visibility: position ? "visible" : "hidden" }}>
       <label>Find<input aria-label="Find" data-testid="find-replace-find" value={findText} onChange={(event) => setFindText(event.target.value)} autoFocus /></label>
       <label>Replace with<input aria-label="Replace with" data-testid="find-replace-replace" value={replaceText} onChange={(event) => setReplaceText(event.target.value)} /></label>
-      <output data-testid="find-replace-count">{needle ? `${preview.length} signal${preview.length === 1 ? "" : "s"} will be renamed${skippedCount > 0 ? ` (${skippedCount} skipped: would become empty)` : ""}` : "Enter text to search for"}</output>
-      {preview.length > 0 && <ul className="find-replace-preview">{preview.slice(0, 20).map(({ signal, nextName }) => <li key={signal.id}><span>{signal.display.name}</span><RibbonIcon name="i-chevron-right" /><span>{nextName}</span></li>)}{preview.length > 20 && <li className="find-replace-more">…and {preview.length - 20} more</li>}</ul>}
+      <output data-testid="find-replace-count">{needle ? `${preview.length} ${mode === "transactions" ? "transaction" : "signal"}${preview.length === 1 ? "" : "s"} will be renamed${skippedCount > 0 ? ` (${skippedCount} skipped: would become empty)` : ""}` : "Enter text to search for"}</output>
+      {preview.length > 0 && <ul className="find-replace-preview">{preview.slice(0, 20).map(({ item, nextName }) => <li key={item.id}><span>{itemName(item)}</span><RibbonIcon name="i-chevron-right" /><span>{nextName}</span></li>)}{preview.length > 20 && <li className="find-replace-more">…and {preview.length - 20} more</li>}</ul>}
       <div className="find-replace-actions">
         <button type="button" data-testid="find-replace-apply" disabled={preview.length === 0} onClick={replaceAll}>Replace All</button>
         <button type="button" onClick={() => setOpen(false)}>Cancel</button>

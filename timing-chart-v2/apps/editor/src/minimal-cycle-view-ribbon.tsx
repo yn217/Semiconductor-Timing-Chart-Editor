@@ -195,7 +195,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         // All" (wraps cleanly to 2 lines, matching "Fit Selection"'s shape);
         // the full meaning stays on the accessible name/tooltip.
         { kind: "button", id: "select-all", icon: "i-select-all", label: "Select All", ariaLabel: "Select All Signals", title: "Select All Signals", onClick: onSelectAll, disabled: !hasSelectableSignals },
-        { kind: "custom", id: "find-replace", render: () => <FindReplacePanel key="find-replace" document={document} onRenameSignals={commands.renameSignals} /> },
+        { kind: "custom", id: "find-replace", render: () => <FindReplacePanel key="find-replace" document={document} mode={viewMode === "Transaction" || (viewMode === "Split" && activeContext === "Transaction") ? "transactions" : "signals"} onRenameSignals={commands.renameSignals} onRenameTransactions={commands.renameTransactions} /> },
         { kind: "custom", id: "clipboard-status", render: () => <small key="clipboard-status" data-testid="clipboard-status">{clipboardStatus}</small> },
       ],
     },

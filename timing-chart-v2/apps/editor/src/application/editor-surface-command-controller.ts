@@ -80,6 +80,7 @@ export interface RibbonCommandActions {
   readonly duplicateTransaction: (transaction: Transaction) => CommandResult;
   readonly createTransactionGroup: (group: TransactionGroup) => CommandResult;
   readonly renameSignals: (items: readonly { readonly signalId: SignalId; readonly name: string }[]) => CommandResult;
+  readonly renameTransactions: (items: readonly { readonly transactionId: TransactionId; readonly name: string }[]) => CommandResult;
   readonly setTransactionTimeScale: (scale: TransactionTimeScale) => CommandResult;
   readonly insertTimeline: (at: number, count: number) => CommandResult;
   readonly deleteTimeline: (start: number, end: number) => CommandResult;
@@ -165,6 +166,7 @@ export function createEditorSurfaceCommandController(input: {
     duplicateTransaction: (transaction) => dispatch<"transaction.create">("home_transaction_duplicate", { type: "transaction.create", transaction }),
     createTransactionGroup: (group) => dispatch<"transactionGroup.create">("home_transaction_group_create", { type: "transactionGroup.create", group }),
     renameSignals: (items) => dispatchBatch<"signal.rename">("find_replace_rename", items.map(({ signalId, name }) => ({ type: "signal.rename", signalId, name }))),
+    renameTransactions: (items) => dispatchBatch<"transaction.rename">("find_replace_transaction_rename", items.map(({ transactionId, name }) => ({ type: "transaction.rename", transactionId, name }))),
     setTransactionTimeScale: (scale) => dispatch<"transaction.setTimeScale">("transaction_time_scale_set", { type: "transaction.setTimeScale", scale }),
     moveSpacer: (spacerId, targetGroupId, index) => dispatch<"spacer.move">("spacer_move", { type: "spacer.move", spacerId, targetGroupId, index }),
     updateSpacer: (spacerId, height) => dispatch<"spacer.update">("spacer_update", { type: "spacer.update", spacerId, height }),
