@@ -1,16 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-// Signal Split View (#200) PR 3/4: dual-viewport DOM/scroll-sync structure.
-// Lower is an empty placeholder in this PR -- no renderer/projection mounts
-// into it yet (real per-signal pane routing is PR 4) -- so these tests only
-// cover the DOM/scroll mechanics this PR actually delivers: the toggle is
-// view-only, Upper/Lower scroll vertically independently, and horizontal
-// scroll/zoom stay synchronized between the two panes' rulers.
+// Signal Split View (#200): two viewports over the same Cycle signal list.
 
 test("toggling Signal Split is view-only and Upper's own scroll position survives toggling Lower off and back on", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
 
   const before = {
@@ -34,6 +30,7 @@ test("toggling Signal Split is view-only and Upper's own scroll position survive
   await viewport.evaluate((element) => { element.scrollLeft = 60; element.dispatchEvent(new Event("scroll")); });
   await expect(page.getByTestId("cycle-ruler-lower").locator(".cycle-ruler-content")).toHaveCSS("transform", await page.getByTestId("cycle-ruler").locator(".cycle-ruler-content").evaluate((element) => getComputedStyle(element).transform));
 
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await toggle.click();
   await expect(page.getByTestId("cycle-viewport-lower")).toHaveCount(0);
   await expect(viewport).toHaveJSProperty("scrollLeft", 60);
