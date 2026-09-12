@@ -458,7 +458,7 @@
 .editor-shell[data-show-group-background="false"] .surface-host [data-role$="-row"]:not([data-selected="true"]):not([data-transaction-linked="true"]) { background-color: transparent !important; }
 
 /* Transaction presentation belongs to the center timing surface. */
-.transaction-track { position: absolute; z-index: 3; top: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); width: var(--wave-width, 640px); height: 100%; transform-origin: 0 0; scale: var(--transaction-zoom) 1; }
+.transaction-track { position: absolute; z-index: 3; top: 0; left: calc(var(--gui-timing-left, var(--gui-left-width)) + var(--gui-frozen-width, 210px)); width: var(--wave-width, 640px); height: 100%; transform-origin: 0 0; scale: var(--transaction-zoom) 1; }
 .transaction-geometry-line { position: absolute; top: 0; bottom: 0; width: 1px; border-left: 1px solid #dce4ed; pointer-events: none; }
 /* #397 Transaction Mode GUI Closure Section 6: single full-width column
    (was a wrapping `repeat(auto-fill,minmax(340px,1fr))` card grid) -- the
