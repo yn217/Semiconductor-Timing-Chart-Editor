@@ -19,6 +19,9 @@
 
 .minimap-segment-comment { background: #9a67c2; }
 
+.minimap-folds { position: absolute; inset: 0; pointer-events: none; }
+.minimap-folds i { position: absolute; top: 0; bottom: 0; min-width: 1px; background: repeating-linear-gradient(135deg, #64748b 0 1px, transparent 1px 3px); opacity: .7; }
+
 .minimap-rows > [data-testid="minimap-viewport"] { position: absolute; top: var(--minimap-top, 0%); left: var(--minimap-left, 0%); width: var(--minimap-width, 100%); height: var(--minimap-height, 100%); box-sizing: border-box; min-width: 4px; min-height: 4px; border: 1px solid #126bc0; background: #75b8ef66; pointer-events: none; }
 
 .minimap-overview-frame { display: contents; }
