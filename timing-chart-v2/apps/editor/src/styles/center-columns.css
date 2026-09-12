@@ -171,6 +171,7 @@
 .cursor-overlay [data-cursor="b"] { border-color: #b34735; }
 
 .cycle-ruler .timeline-marker { z-index: 4; top: 19px; width: max-content; height: 14px; padding: 1px 4px; border: 0; border-radius: 3px; background: #fff1b8; color: #715900; font: 9px/12px "Segoe UI", sans-serif; }
+.cycle-ruler .timeline-marker-hidden { border: 1px dashed #a87900; background: #fff7d6; }
 
 .cycle-ruler .timeline-gap { z-index: 3; top: 2px; height: 14px; overflow: hidden; padding: 1px 4px; border: 1px solid #7d6bb2; border-radius: 3px; background: #eee8ffdd; color: #4f3d82; font: 9px/10px "Segoe UI", sans-serif; text-align: center; }
 

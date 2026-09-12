@@ -113,15 +113,21 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   const overlays: HTMLElement[] = [];
   for (const bookmark of document.bookmarks) {
     const displayCycle = mapping.sourceToDisplay[bookmark.start];
-    if (displayCycle === undefined) continue;
-    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
+    const containingFold = displayCycle === undefined ? document.timeGroups.find((group) => group.presentation?.collapsed && bookmark.start >= group.start && bookmark.start < group.end) : undefined;
+    const anchorCycle = containingFold === undefined ? displayCycle : (containingFold.end < document.timeline.cycleCount ? containingFold.end : Math.max(0, containingFold.start - 1));
+    const anchorDisplay = anchorCycle === undefined ? undefined : mapping.sourceToDisplay[anchorCycle];
+    if (anchorDisplay === undefined) continue;
+    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: anchorDisplay, point: "cycle-start" })?.point;
     if (!point) continue;
     const marker = element.ownerDocument.createElement("span");
-    marker.className = "timeline-marker";
+    marker.className = containingFold === undefined ? "timeline-marker" : "timeline-marker timeline-marker-hidden";
     marker.dataset.bookmarkId = bookmark.id;
+    marker.dataset.sourceCycle = String(bookmark.start);
+    if (containingFold !== undefined) marker.dataset.insideCollapsed = containingFold.name;
     marker.style.left = `${point.x * scale}px`;
     marker.style.top = `${outlineHeight + 19}px`;
-    marker.textContent = `◆ ${bookmark.name}`;
+    marker.textContent = containingFold === undefined ? `◆ ${bookmark.name}` : `◆ ${bookmark.name} (inside ${containingFold.name})`;
+    marker.title = containingFold === undefined ? `${bookmark.name}: cycle ${bookmark.start}` : `${bookmark.name}: cycle ${bookmark.start} inside collapsed ${containingFold.name}`;
     overlays.push(marker);
   }
   for (const group of document.timeGroups.filter((item) => item.presentation?.collapsed)) {
