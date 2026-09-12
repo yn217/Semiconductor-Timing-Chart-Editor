@@ -10,6 +10,7 @@ import { expect, test } from "@playwright/test";
 test("Home's Layout group only exposes Auto Space; Time Group creation lives on the Timeline Ribbon", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
 
   const layout = page.getByTestId("ribbon").locator(".home-layout-group");
