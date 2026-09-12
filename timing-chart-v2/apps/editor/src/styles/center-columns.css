@@ -376,7 +376,7 @@
   position: relative;
   min-width: 0;
   min-height: 0;
-  flex: 0 1 42%;
+  flex: 0 0 clamp(160px, 42%, 280px);
   overflow-y: auto;
   overflow-x: visible;
   border-bottom: 1px solid var(--ds-border-subtle, #b7c4d2);
@@ -385,14 +385,14 @@
   position: relative;
   min-width: 0;
   min-height: 0;
-  flex: 1 1 58%;
+  flex: 1 1 auto;
+  min-height: 220px;
   overflow-y: auto;
   overflow-x: visible;
   overscroll-behavior: contain;
 }
 .cycle-panel.mode-split .split-transaction-pane {
   overscroll-behavior: contain;
-  overflow-x: auto;
   z-index: 20;
 }
 .cycle-panel.mode-split .combined-split-divider {
