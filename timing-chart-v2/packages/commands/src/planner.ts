@@ -1308,7 +1308,24 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const label = command.label.trim();
       if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
       if (!label) return fail("invalid", "INVALID_LABEL", "$.label", "Annotation label cannot be empty.");
-      const next = Object.fromEntries(Object.entries({ ...annotation, label, visible: command.visible, color: command.color, lineType: command.lineType, arrowhead: command.arrowhead, sourceSignalId: command.sourceSignalId, traceOffsetCycles: command.traceOffsetCycles, opacity: command.opacity, labelOffset: command.labelOffset, style: command.style, measurement: command.measurement, measurementLayout: annotation.measurementLayout }).filter(([, value]) => value !== undefined)) as unknown as Annotation;
+      // Optional style fields are patch semantics.  Do not turn an omitted
+      // field into an implicit clear (for example, changing an annotation's
+      // color must not erase its independently-authored labelOffset).
+      const next = {
+        ...annotation,
+        label,
+        visible: command.visible,
+        ...(command.color === undefined ? {} : { color: command.color }),
+        ...(command.lineType === undefined ? {} : { lineType: command.lineType }),
+        ...(command.arrowhead === undefined ? {} : { arrowhead: command.arrowhead }),
+        ...(command.sourceSignalId === undefined ? {} : { sourceSignalId: command.sourceSignalId }),
+        ...(command.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: command.traceOffsetCycles }),
+        ...(command.opacity === undefined ? {} : { opacity: command.opacity }),
+        ...(command.labelOffset === undefined ? {} : { labelOffset: command.labelOffset }),
+        ...(command.style === undefined ? {} : { style: command.style }),
+        ...(command.measurement === undefined ? {} : { measurement: command.measurement }),
+        ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout }),
+      } as Annotation;
       if (semanticEqual(annotation, next)) return fail("no-op", "NO_OP", "$", "Annotation properties are unchanged.");
       const annotations = [...document.annotations]; annotations[index] = next;
       const changeSet: ChangeSet = { annotationStyle: [annotation.id], minimapOverview: true };
