@@ -230,3 +230,14 @@ test("Transaction Tree visibility control hides only the selected transaction pr
   await visibility.click();
   await expect(page.locator('[data-transaction-id="demo_txn_read"]')).toHaveCount(1);
 });
+
+test("focused Transaction Tree row supports F2 rename", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  const row = page.getByTestId("transaction-left-tree-row-demo_txn_other");
+  await row.focus();
+  await row.press("F2");
+  const input = page.getByRole("textbox", { name: "Rename Transaction2" });
+  await input.fill("Renamed Transaction");
+  await input.press("Enter");
+  await expect(page.getByTestId("transaction-left-tree-row-demo_txn_other")).toContainText("Renamed Transaction");
+});
