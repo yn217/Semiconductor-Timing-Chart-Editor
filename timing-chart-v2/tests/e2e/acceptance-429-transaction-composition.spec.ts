@@ -85,6 +85,23 @@ test("Bookmark inside a collapsed TimeGroup is identified in the Bookmarks panel
   await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Fold");
 });
 
+test("Combined View keeps the shared fold visible in the Transaction pane", async ({ page }) => {
+  const value = JSON.parse(readFileSync(samplePath, "utf8")) as any;
+  value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }];
+  const transaction = value.transactions.find((item: any) => item.id === "txn_read0");
+  transaction.start = 10;
+  transaction.end = 60;
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "combined-fold.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+  await expect(page.locator(".split-transaction-pane")).toBeVisible();
+  await expect(page.locator(".split-transaction-pane .transaction-axis-break-gap").first()).toBeVisible();
+  await expect(page.locator(".split-transaction-pane [data-transaction-id='txn_read0']")).toBeVisible();
+});
+
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
   test(`Transaction reference composition at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
