@@ -1,6 +1,7 @@
 import { canonicalEntityIds, type CanonicalDocument } from "@timing-chart-v2/schema";
 
 let entitySequence = 0;
+const allocatedEntityIds = new Set<string>();
 
 export function nextEntityId(scope: "bookmark" | "time" | "labelAnchor" | "annotation" | "annotationGroup" | "transaction" | "transactionGroup" | "signal" | "group" | "commentRow" | "spacer", document: CanonicalDocument): string {
   const used = new Set(canonicalEntityIds(document));
@@ -8,6 +9,7 @@ export function nextEntityId(scope: "bookmark" | "time" | "labelAnchor" | "annot
   do {
     entitySequence += 1;
     candidate = `${scope}_phase9_${entitySequence}`;
-  } while (used.has(candidate));
+  } while (used.has(candidate) || allocatedEntityIds.has(candidate));
+  allocatedEntityIds.add(candidate);
   return candidate;
 }
