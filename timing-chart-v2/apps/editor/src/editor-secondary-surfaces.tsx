@@ -215,6 +215,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
   const transactionEditor = <TransactionEditor
     key={`${input.documentEpoch}:${bottom.transaction?.id ?? "none"}:${dialog.bottomResetToken}`}
     transaction={bottom.transaction}
+    selectedTransactionIds={selected.transactionIds}
     document={input.document}
     history={input.history}
     onSelect={input.actions.selectTransaction}

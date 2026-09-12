@@ -14,7 +14,7 @@ function phasesEqual(left: readonly TransactionPhase[], right: readonly Transact
   });
 }
 
-export function TransactionEditor({ transaction, document, history, onSelect, commands, onUndo, onRedo, onDelete, onCancel, onToggleTransactionSignal }: { readonly transaction: Transaction | undefined; readonly document: CanonicalDocument; readonly history: HistoryState; readonly onSelect: (id: TransactionId) => void; readonly commands: TransactionEditorCommandActions; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void }) {
+export function TransactionEditor({ transaction, selectedTransactionIds, document, history, onSelect, commands, onUndo, onRedo, onDelete, onCancel, onToggleTransactionSignal }: { readonly transaction: Transaction | undefined; readonly selectedTransactionIds?: ReadonlySet<TransactionId>; readonly document: CanonicalDocument; readonly history: HistoryState; readonly onSelect: (id: TransactionId) => void; readonly commands: TransactionEditorCommandActions; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void }) {
   const [name, setName] = useState("Transaction");
   const [start, setStart] = useState(1);
   const [end, setEnd] = useState(Math.min(5, document.timeline.cycleCount));
@@ -231,7 +231,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
       <div className="transaction-list-header" data-transaction-table-header="true"><span className="transaction-list-header-spacer"><input ref={selectAllRef} type="checkbox" aria-label="Select all visible transactions" checked={allVisibleChecked} onChange={toggleAllVisible} /></span><span className="transaction-list-header-cells"><span aria-hidden="true" /><span>Name</span><span>Group</span><span>Lane</span><span>Start (TC)</span><span>End (TC)</span><span>Duration</span><span># Phases</span><span>Linked Signals</span><span>Color</span><span>Description</span></span></div>
     </>}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: transactionFirstVisibleIndex * transactionRowHeight }} />}{renderedTransactions.map((item) => <div className="transaction-list-row" data-transaction-row-id={item.id} key={item.id}>
       <input type="checkbox" aria-label={`Select ${item.name}`} checked={validCheckedIds.has(item.id)} onChange={() => toggleChecked(item.id)} />
-      <button type="button" data-selected={String(item.id === transaction?.id)} onClick={() => onSelect(item.id)}>
+      <button type="button" data-selected={String(selectedTransactionIds?.has(item.id) === true || item.id === transaction?.id)} onClick={() => onSelect(item.id)}>
         {/* #453: every new field is appended AFTER the original 4 (name/
             start-end/lane/links), never interspersed between them -- several
             existing tests match this row's accessible name against a regex
