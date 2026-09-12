@@ -254,7 +254,10 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
     return { cycleXs, boundaryXByCycle: new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const)) };
   }, [document.transactions, getBoundaryX, presentationRevision]);
   const x = (cycle: number) => boundaryXByCycle.get(cycle);
-  const foldRanges = useMemo<readonly (readonly [number, number])[]>(() => (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const), [rawDocument.timeGroups]);
+  const foldRanges = useMemo<readonly (readonly [number, number])[]>(() => {
+    const ranges = (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const).sort((left, right) => left[0] - right[0] || left[1] - right[1]);
+    return ranges.reduce<readonly (readonly [number, number])[]>((merged, range) => { const previous = merged.at(-1); if (!previous || range[0] > previous[1]) return [...merged, range]; return [...merged.slice(0, -1), [previous[0], Math.max(previous[1], range[1])] as const]; }, []);
+  }, [rawDocument.timeGroups]);
 
   // #452: Group headers only appear once real Groups are in use -- a
   // document with no `transactionGroups` (or none actually referenced)

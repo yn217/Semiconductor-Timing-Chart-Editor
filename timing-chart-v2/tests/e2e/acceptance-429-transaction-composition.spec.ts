@@ -18,7 +18,7 @@ test("default browser startup opens the built-in Transaction sample", async ({ p
 
 test("Transaction crossing a collapsed TimeGroup renders an Axis Break gap", async ({ page }) => {
   const value = JSON.parse(readFileSync(samplePath, "utf8")) as any;
-  value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }];
+  value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }, { id: "fold-30-50", name: "Nested Fold", start: 30, end: 50, presentation: { collapsed: true } }];
   const transaction = value.transactions.find((item: any) => item.id === "txn_read0");
   transaction.start = 10;
   transaction.end = 60;
@@ -34,6 +34,7 @@ test("Transaction crossing a collapsed TimeGroup renders an Axis Break gap", asy
   await expect(bar).toBeVisible();
   const gap = bar.locator(".transaction-axis-break-gap");
   await expect(gap).toBeVisible();
+  await expect(gap).toHaveCount(1);
   await expect(bar.locator("[data-phase-segment='true']")).toHaveCount(2);
   const barBox = await bar.boundingBox();
   const gapBox = await gap.boundingBox();
