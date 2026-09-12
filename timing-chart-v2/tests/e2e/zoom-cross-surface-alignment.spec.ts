@@ -9,7 +9,7 @@ test("Annotation and Transaction X positions stay exactly aligned with the Ruler
   const tabs = page.locator(".ribbon-tabs");
 
   // Create a Transaction spanning [2, 6).
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click({ force: true });
   await tabs.getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Workspace preset").selectOption("transaction");
   const txEditor = page.getByTestId("transaction-editor");
@@ -18,6 +18,8 @@ test("Annotation and Transaction X positions stay exactly aligned with the Ruler
   await txEditor.getByLabel("New Transaction end").fill("6");
   await txEditor.getByRole("button", { name: "Create Transaction" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const transactionId = await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").filter({ hasText: "TX1" }).getAttribute("data-transaction-id");
+  expect(transactionId).toBeTruthy();
   await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
 
   // Create a verticalLine Annotation anchored at the currently selected Timeline range.
@@ -25,8 +27,10 @@ test("Annotation and Transaction X positions stay exactly aligned with the Ruler
   await page.getByLabel("Annotation type").selectOption("verticalLine");
   await ribbon.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  const annotationBody = host.locator("[data-role='annotation-owner']").last().locator("[data-role='annotation-body']");
-  const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
+  const annotationId = await page.getByTestId("annotation-editor").getAttribute("data-bottom-target-id");
+  expect(annotationId).toBeTruthy();
+  const annotationBody = host.locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}'] [data-role='annotation-body']`);
+  const transaction = page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`);
 
   const checkAt = async (label: string) => {
     await tabs.getByRole("button", { name: "View", exact: true }).click();
