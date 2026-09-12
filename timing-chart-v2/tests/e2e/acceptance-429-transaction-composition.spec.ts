@@ -138,3 +138,18 @@ test("Transaction Tree group drag survives Save/Open", async ({ page }) => {
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await expect(page.locator('.transaction-left-tree-group[data-transaction-group-id="demo_tgrp_cpu"]')).toContainText("Read_0");
 });
+
+test("Center additive selection projects to Tree and Bottom", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const read = page.locator('[data-transaction-id="demo_txn_read"]');
+  const write = page.locator('[data-transaction-id="demo_txn_write"]');
+  await read.click();
+  await write.click({ modifiers: ["Control"] });
+  await expect(read).toHaveAttribute("data-selected", "true");
+  await expect(write).toHaveAttribute("data-selected", "true");
+  await expect(page.getByTestId("transaction-left-tree-row-demo_txn_read")).toHaveAttribute("data-selected", "true");
+  await expect(page.getByTestId("transaction-left-tree-row-demo_txn_write")).toHaveAttribute("data-selected", "true");
+  await expect(page.locator('.transaction-list-row[data-transaction-row-id="demo_txn_read"] > button')).toHaveAttribute("data-selected", "true");
+  await expect(page.locator('.transaction-list-row[data-transaction-row-id="demo_txn_write"] > button')).toHaveAttribute("data-selected", "true");
+});
