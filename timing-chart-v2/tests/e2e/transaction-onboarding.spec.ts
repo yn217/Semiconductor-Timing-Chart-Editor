@@ -123,8 +123,10 @@ test("A Transaction built with phases and Linked Signals survives Save/Open exac
   await openTransactionMode(page);
   await createReadRequestTransaction(page, { withLinks: true });
   const host = page.getByTestId("cycle-surface");
-  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(1);
-  const transactionId = await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first().getAttribute("data-transaction-id");
+  const bottom = page.getByTestId("transaction-editor");
+  const createdRow = bottom.locator("[data-transaction-row-id]").filter({ hasText: "Read Request" });
+  await expect(createdRow).toHaveCount(1);
+  const transactionId = await createdRow.getAttribute("data-transaction-row-id");
 
   const inspector = page.getByTestId("inspector");
   await expect(inspector.getByLabel("Transaction name")).toHaveValue("Read Request");
@@ -133,11 +135,11 @@ test("A Transaction built with phases and Linked Signals survives Save/Open exac
   await expect(linked).toContainText("REQUEST");
   await expect(linked).toContainText("READY");
 
-  // Edit through the Inspector, confirm the Bottom editor reflects it.
+  // Edit through the Inspector; the Bottom remains table-first.
   await inspector.getByLabel("Transaction name").fill("Read Request v2");
   await inspector.getByTestId("apply-inspector-transaction").click();
-  const bottomEditor = page.getByTestId("transaction-editor");
-  await expect(bottomEditor.getByLabel("Transaction name")).toHaveValue("Read Request v2");
+  await expect(bottom.locator("[data-transaction-row-id]").filter({ hasText: "Read Request v2" })).toHaveCount(1);
+  await expect(bottom.getByTestId("apply-transaction-properties")).toHaveCount(0);
 
   // Save/Open must reproduce the exact Transaction/phase/link state.
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
@@ -157,8 +159,8 @@ test("A Transaction built with phases and Linked Signals survives Save/Open exac
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
-  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(1);
-  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first()).toContainText("Read Request v2");
+  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(7);
+  await expect(page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`)).toContainText("Read Request v2");
 });
 
 // #393 item C: normal Phase authoring must not require raw JSON. Add/Edit/
