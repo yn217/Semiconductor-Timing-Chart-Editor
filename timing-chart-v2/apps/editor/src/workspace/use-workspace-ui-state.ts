@@ -55,6 +55,8 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   const [ribbonTab, setRibbonTab] = useState("Home");
   const [bottomTab, setBottomTab] = useState<BottomTab>("Signal");
   const lastBottomTabByModeRef = useRef<{ Cycle: BottomTab; Transaction: BottomTab }>({ Cycle: "Signal", Transaction: "Transaction" });
+  const followSelectionByModeRef = useRef<{ Cycle: boolean; Transaction: boolean }>({ Cycle: true, Transaction: true });
+  const bottomPinnedByModeRef = useRef<{ Cycle: boolean; Transaction: boolean }>({ Cycle: false, Transaction: false });
   const [viewMode, setViewModeRaw] = useState<ViewMode>("Cycle");
   const [activeContext, setActiveContext] = useState<ActiveContext>("Signal");
   // #404: entering Cycle or Transaction normalizes ActiveContext to the one
@@ -63,10 +65,16 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   // Selection change alone must never call this -- only a real ViewMode
   // change may normalize ActiveContext.
   const setViewMode = (next: ViewMode) => {
+    if (viewMode === "Cycle" || viewMode === "Transaction") {
+      followSelectionByModeRef.current[viewMode] = followSelectionRef.current;
+      bottomPinnedByModeRef.current[viewMode] = bottomPinnedRef.current;
+    }
     setViewModeRaw(next);
     setActiveContext((current) => normalizedActiveContextFor(next, current));
     if (next !== "Split") {
       setActivePaneRaw(next === "Transaction" ? "transaction" : "signal");
+      setFollowSelection(followSelectionByModeRef.current[next]);
+      setBottomPinned(bottomPinnedByModeRef.current[next]);
       setBottomTab((current) => {
         const transactionTabs: readonly BottomTab[] = ["Transaction", "Phases", "Linked Signals", "Bookmarks", "AI", "Problems", "JSON"];
         const cycleTabs: readonly BottomTab[] = ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"];
