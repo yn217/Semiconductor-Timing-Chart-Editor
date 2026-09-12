@@ -108,3 +108,23 @@ test("Combined routes a Signal waveform range drag to the Signal pane only", asy
   await expect(page.getByLabel("Timeline range start")).toHaveValue("2");
   await expect(page.getByLabel("Timeline range end")).toHaveValue("6");
 });
+
+test("low-level view mode pointerdown cancels a Transaction drag before pointerup", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+  const bar = page.locator('[data-transaction-id="demo_txn_read"]');
+  await bar.click();
+  const row = page.locator('[data-transaction-row-id="demo_txn_read"]');
+  const before = await row.textContent();
+  const box = await bar.locator(":scope > span").boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width / 2 + 32, box!.y + box!.height / 2, { steps: 2 });
+  const cycleButton = page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true });
+  await cycleButton.dispatchEvent("pointerdown", { button: 0, buttons: 1 });
+  await cycleButton.dispatchEvent("click", { button: 0 });
+  await page.mouse.up();
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.locator('[data-transaction-row-id="demo_txn_read"]')).toHaveText(before!);
+});
