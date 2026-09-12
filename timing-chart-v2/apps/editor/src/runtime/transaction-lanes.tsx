@@ -218,7 +218,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
     const visible = rawDocument.transactions.filter((transaction) => transaction.visible !== false);
     if (needle.length === 0) return visible.length === rawDocument.transactions.length ? rawDocument : { ...rawDocument, transactions: visible };
     return { ...rawDocument, transactions: visible.filter((transaction) => transaction.name.toLocaleLowerCase().includes(needle) || (transaction.groupId !== undefined && (groupNameById.get(transaction.groupId) ?? "").toLocaleLowerCase().includes(needle))) };
-  }, [groupNameById, needle, rawDocument, selectedId]);
+  }, [groupNameById, needle, rawDocument, rawDocument.transactions, selectedId]);
   // #397 Transaction Mode GUI Closure: Group collapse/expand -- purely
   // local, transient presentation state (never persisted, never touches
   // Canonical), same "view-only toggle" shape as the Signal Tree's own
