@@ -15,9 +15,15 @@ for (const count of [1_000, 5_000, 20_000]) test(`${count} Annotation rows stay 
   await page.getByRole("tab", { name: "Annotation", exact: true }).last().click();
   const list = page.getByTestId("annotation-list");
   await expect(list).toBeVisible();
+  const revision = await host.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  const dirty = await page.getByTestId("dirty-status").textContent();
   expect(await list.locator("[data-annotation-list-id]").count()).toBeLessThan(100);
   await list.locator("[data-annotation-list-id]").first().focus();
   await page.keyboard.press("End");
   await expect(list.locator(`[data-annotation-list-id='annotation-scale-${count - 1}']`)).toHaveAttribute("data-selected", "true");
   expect(await list.locator("[data-annotation-list-id]").count()).toBeLessThan(100);
+  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
 });
