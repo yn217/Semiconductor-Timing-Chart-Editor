@@ -130,4 +130,13 @@ button, input, select { font: inherit; font-size: var(--ds-font-size); }
 .editor-shell .column-headings { height: 37px; grid-template-columns: var(--gui-left-width, 265px) var(--gui-role-width, 61px) var(--gui-signal-width, 148px) max(0px, calc(var(--gui-frozen-width, 209px) - var(--gui-role-width, 61px) - var(--gui-signal-width, 148px))) minmax(640px, 1fr); }
 .editor-shell .column-headings .role-column-heading { justify-content: center; padding-inline: 4px; font-size: 10px; text-transform: none; letter-spacing: normal; }
 .editor-shell .column-headings .signal-column-heading { padding-inline: 8px; font-size: 10px; text-transform: none; letter-spacing: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Transaction tree owns the complete left header; Group/Transaction are
+   timeline labels, not columns in this tree. Keep them out of the header
+   grid so tabs, filter, and actions share the real sidebar width. */
+.editor-shell .column-headings[data-testid="transaction-tree-header"] { grid-template-columns: var(--gui-left-width, 246px) minmax(0, 1fr); }
+.editor-shell .column-headings[data-testid="transaction-tree-header"] > .role-column-heading,
+.editor-shell .column-headings[data-testid="transaction-tree-header"] > .signal-column-heading,
+.editor-shell .column-headings[data-testid="transaction-tree-header"] > .frozen-pane-heading-gutter { display: none; }
+.editor-shell .column-headings[data-testid="transaction-tree-header"] > .left-column-heading { flex-wrap: wrap; align-content: center; gap: 2px; overflow: hidden; }
+.editor-shell .column-headings[data-testid="transaction-tree-header"] .transaction-tree-tabs { flex: 0 0 100%; }
 .editor-shell .cycle-viewport { height: calc(100% - 37px); }
