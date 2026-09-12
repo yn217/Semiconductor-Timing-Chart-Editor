@@ -87,7 +87,7 @@ test("Bookmark inside a collapsed TimeGroup is identified in the Bookmarks panel
   await expect(page.getByTestId("bookmark-row-bookmark-inside-fold")).toHaveAttribute("data-selected", "true");
   await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Fold");
   await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Nested Fold");
-  await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.locator(".split-transaction-pane [data-bookmark-id='bookmark-inside-fold']")).toHaveAttribute("data-source-cycle", "25");
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.locator(".cycle-ruler [data-bookmark-id='bookmark-inside-fold']")).toHaveAttribute("data-source-cycle", "25");
@@ -121,7 +121,7 @@ test("Combined View keeps the shared fold visible in the Transaction pane", asyn
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "combined-fold.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
-  await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.locator(".split-transaction-pane")).toBeVisible();
   await expect(page.locator(".split-transaction-pane .transaction-axis-break-gap").first()).toBeVisible();
   await expect(page.locator(".split-transaction-pane [data-transaction-id='txn_read0']")).toBeVisible();
