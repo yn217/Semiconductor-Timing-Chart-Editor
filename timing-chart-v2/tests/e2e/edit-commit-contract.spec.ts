@@ -103,44 +103,18 @@ test("Bottom editors cancel transient drafts and preserve canonical counters", a
   await expect(page.getByTestId("dirty-status")).toHaveText(afterCreate.dirty!);
 });
 
-test("Transaction Bottom editor preserves stable identity across edit, undo and redo", async ({ page }) => {
-  await page.goto("/");
+test("Transaction Bottom table keeps selection while Inspector owns edits", async ({ page }) => {
+  await page.goto("/?transaction-demo");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByTestId("bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
-  const editor = page.getByTestId("transaction-editor");
-  await editor.getByLabel("New Transaction name").fill("Transaction A");
-  await editor.getByLabel("New Transaction start").fill("1");
-  await editor.getByLabel("New Transaction end").fill("4");
-  await editor.getByRole("button", { name: "Create Transaction", exact: true }).click();
-  const row = editor.getByRole("button", { name: /Transaction A 1–4 lane_0/ });
-  await row.click();
-  const id = await page.locator("[data-transaction-id]").filter({ hasText: "Transaction A" }).first().getAttribute("data-transaction-id");
-  expect(id).toBeTruthy();
-  await expect(editor.getByLabel("Transaction name")).toHaveValue("Transaction A");
-  await expect(page.getByTestId("inspector").getByLabel("Transaction name")).toHaveValue("Transaction A");
-  await editor.getByLabel("Transaction name").fill("Transaction A edited");
-  await editor.getByLabel("Transaction start").fill("2");
-  await editor.getByLabel("Transaction end").fill("6");
-  await editor.getByLabel("Transaction lane").fill("lane_1");
-  await editor.getByTestId("apply-transaction-properties").click();
-  await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
-  await expect(page.locator(`[data-transaction-id='${id}']`)).toContainText("Transaction A edited");
-  await expect(editor.getByLabel("Transaction start")).toHaveValue("2");
-  await expect(editor.getByLabel("Transaction end")).toHaveValue("6");
-  await expect(editor.getByLabel("Transaction lane")).toHaveValue("lane_1");
-  await expect(page.getByTestId("inspector").getByLabel("Transaction name")).toHaveValue("Transaction A edited");
-  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
-  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 1");
-  await expect(page.locator(`[data-transaction-id='${id}']`)).toContainText("Transaction A");
-  await expect(editor.getByLabel("Transaction start")).toHaveValue("1");
-  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
-  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
-  await expect(page.locator(`[data-transaction-id='${id}']`)).toContainText("Transaction A edited");
-  await expect(editor.getByLabel("Transaction lane")).toHaveValue("lane_1");
-  await expect(page.locator("[data-transaction-id]")).toHaveCount(1);
+  await page.getByTestId("transaction-editor").getByTestId("transaction-list-toolbar").waitFor();
+  await page.locator('[data-transaction-row-id="demo_txn_read"]').click();
+  const inspector = page.getByTestId("inspector");
+  await expect(inspector.getByLabel("Transaction name")).toHaveValue("Read_0");
+  await expect(page.getByTestId("transaction-editor").getByTestId("apply-transaction-properties")).toHaveCount(0);
+  await expect(page.getByTestId("transaction-editor").getByText("Editing:")).toHaveCount(0);
 });
 
 test("Signal and Group rename use the same explicit Enter/Escape draft contract", async ({ page }) => {
