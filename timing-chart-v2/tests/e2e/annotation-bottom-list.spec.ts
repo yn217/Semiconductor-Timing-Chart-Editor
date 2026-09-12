@@ -13,8 +13,8 @@ test("Annotation bottom editor lists stable annotation IDs without mutating docu
   await annotationTools.getByRole("button", { name: "Add annotation" }).click();
 
   const list = page.getByTestId("annotation-list");
-  await expect(list.locator("[data-annotation-list-id]")).toHaveCount(5);
-  for (const id of ["demo_ann_request", "demo_ann_data", "demo_ann_response"]) {
+  await expect(list.locator("[data-annotation-list-id]")).toHaveCount(18);
+  for (const id of ["demo_ann_request", "demo_ann_data", "demo_ann_response", "demo_ann_measurement", "demo_ann_region", "demo_ann_ghost"]) {
     await expect(list.locator(`[data-annotation-list-id="${id}"]`)).toBeVisible();
   }
   await expect(list.locator(".annotation-list-header")).toContainText("Start");
@@ -26,7 +26,7 @@ test("Annotation bottom editor lists stable annotation IDs without mutating docu
   await expect(page.getByTestId("annotation-preview-status")).toHaveText("Previewing draft (updated 1) · canonical data unchanged");
   const ids = await list.locator("[data-annotation-list-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-list-id")));
   expect(ids).toEqual(ids.filter((id): id is string => id !== null));
-  expect(new Set(ids).size).toBe(5);
+  expect(new Set(ids).size).toBe(18);
   const visibility = list.locator("[data-annotation-list-id]").first().locator("[data-testid^='annotation-list-visibility-']");
   await expect(visibility).toHaveAttribute("aria-pressed", "true");
   const visibilityRevision = await host.getAttribute("data-canonical-revision");
