@@ -24,7 +24,7 @@ test("captures the V1 Split View composition with both contexts and zero view mu
     dirty: await page.getByTestId("dirty-status").textContent(),
     counters: await surface.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters"),
   };
-  await page.getByRole("button", { name: "Split", exact: true }).click();
+  await page.getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.locator(".cycle-panel")).toHaveAttribute("data-view-mode", "Split");
   await expect(page.getByTestId("transaction-lanes")).toBeVisible();
   await expect(surface).toBeVisible();

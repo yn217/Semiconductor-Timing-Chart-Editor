@@ -18,7 +18,7 @@ test("Annotation and Transaction X positions stay exactly aligned with the Ruler
   await txEditor.getByLabel("New Transaction end").fill("6");
   await txEditor.getByRole("button", { name: "Create Transaction" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
 
   // Create a verticalLine Annotation anchored at the currently selected Timeline range.
   await tabs.getByRole("button", { name: "Annotation", exact: true }).click();

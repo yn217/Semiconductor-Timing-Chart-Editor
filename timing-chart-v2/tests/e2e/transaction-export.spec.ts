@@ -66,7 +66,7 @@ test("shares source-time mapping, Snap Service, zoom and scroll in Split View", 
   await createTransaction(page, "Packet", 2, 5);
   const surface = page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']");
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
-  await page.getByRole("button", { name: "Split", exact: true }).click();
+  await page.getByRole("button", { name: "Combined", exact: true }).click();
   const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first();
   await expect(transaction).toBeVisible();
   const rulerCycle2 = page.getByTestId("cycle-ruler").locator("[data-cycle='2']");
@@ -96,7 +96,7 @@ test("shares source-time mapping, Snap Service, zoom and scroll in Split View", 
 test("exports both synchronized signal and transaction layers from Split View", async ({ page }) => {
   await ready(page);
   await createTransaction(page, "Split Export", 2, 6);
-  await page.getByRole("button", { name: "Split", exact: true }).click();
+  await page.getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.getByTestId("transaction-lanes")).toBeVisible();
   await expect(page.getByTestId("cycle-surface")).toBeVisible();
 
@@ -127,7 +127,7 @@ test("exports both synchronized signal and transaction layers from Split View", 
 test("exports SVG, PNG and PDF from Split View through the shared ExportScene", async ({ page }) => {
   await ready(page);
   await createTransaction(page, "Split All Formats", 2, 6);
-  await page.getByRole("button", { name: "Split", exact: true }).click();
+  await page.getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.getByTestId("transaction-lanes")).toBeVisible();
 
   const surface = page.getByTestId("cycle-surface");
@@ -166,7 +166,7 @@ test("exports SVG, PNG and PDF from Split View through the shared ExportScene", 
 test("preserves canonical Split View content through Save/Open", async ({ page }) => {
   await ready(page);
   await createTransaction(page, "Split Persisted", 2, 6);
-  await page.getByRole("button", { name: "Split", exact: true }).click();
+  await page.getByRole("button", { name: "Combined", exact: true }).click();
   // #451: the same name now also appears in the Lane workspace's own Tree
   // rows (transaction-lane-label-row) alongside the central bar -- scope to
   // the bar specifically, since a plain getByText would ambiguously match
@@ -205,7 +205,7 @@ test("keeps the Split View surface contract and view mode changes view-only", as
   await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true })).toHaveCount(0);
   await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true })).toHaveCount(1);
 
-  await page.getByRole("button", { name: "Split", exact: true }).click();
+  await page.getByRole("button", { name: "Combined", exact: true }).click();
   await expect(panel).toHaveAttribute("data-view-mode", "Split");
   await expect(page.getByTestId("transaction-lanes")).toBeVisible();
   await expect(surface).toBeVisible();
@@ -220,7 +220,7 @@ test("keeps the Split View surface contract and view mode changes view-only", as
 
 test("Split View Home exposes command-backed Transaction actions", async ({ page }) => {
   await ready(page);
-  await page.getByRole("button", { name: "Split", exact: true }).click();
+  await page.getByRole("button", { name: "Combined", exact: true }).click();
   const home = page.getByTestId("ribbon");
   const transactionGroup = home.locator("[data-major-group='Transaction']");
   await expect(transactionGroup).toBeVisible();
@@ -248,7 +248,7 @@ test("cross-highlights stable linked Signals when a Transaction is selected", as
     counters: await surface.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters"),
   };
 
-  await page.getByRole("button", { name: "Split", exact: true }).click();
+  await page.getByRole("button", { name: "Combined", exact: true }).click();
   await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").last().click();
   const linkedRows = surface.locator("[data-row-id='sig_cycle_request'][data-transaction-linked='true']");
   await expect(linkedRows.first()).toBeVisible();

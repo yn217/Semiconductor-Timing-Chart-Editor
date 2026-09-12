@@ -27,7 +27,7 @@ test("the Cycle-only frozen-pane splitter is absent in Transaction Mode and reap
   // Cycle-specific inner one is gone.
   await expect(page.getByTestId("left-pane-resizer")).toBeVisible();
 
-  await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.getByTestId("frozen-pane-resizer")).toHaveCount(0);
 
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();

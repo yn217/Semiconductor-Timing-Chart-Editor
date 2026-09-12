@@ -31,7 +31,7 @@ test.describe("status context", () => {
     await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
     await expect(titleBarView).toHaveText("Transaction View");
     await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
-    await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+    await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
     await expect(titleBarView).toHaveText("Split View");
     await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Split");
     expect(await surface.getAttribute("data-canonical-revision")).toBe(revision);

@@ -679,7 +679,7 @@ test("Status Bar exposes derived selection, range, view and renderer state witho
   await page.getByTestId("snap-toggle").uncheck();
   await expect(page.getByTestId("zoom-status-bar")).toHaveText("Zoom: 125%");
   await expect(page.getByTestId("snap-status")).toHaveText("Snap: Off");
-  await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Split");
   await expect(host).toHaveAttribute("data-canonical-revision", revision!);
   await expect(page.getByTestId("history-status")).toHaveText(history!);

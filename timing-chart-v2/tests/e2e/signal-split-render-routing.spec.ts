@@ -35,7 +35,7 @@ test("Signal Split is available only in Cycle View", async ({ page }) => {
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await viewTab.click();
   await expect(page.getByTestId("view-panel-signal-split")).toHaveCount(0);
-  await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
   await viewTab.click();
   await expect(page.getByTestId("view-panel-signal-split")).toHaveCount(0);
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();

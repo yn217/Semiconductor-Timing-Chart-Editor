@@ -19,7 +19,7 @@ test("Split active pane follows clicks on the Signal surface vs Transaction lane
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   const before = await page.getByTestId("history-status").textContent();
 
-  await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
   const viewport = page.getByTestId("cycle-viewport");
   await expect(viewport).toHaveAttribute("data-active-pane", "transaction");
   await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Transaction");

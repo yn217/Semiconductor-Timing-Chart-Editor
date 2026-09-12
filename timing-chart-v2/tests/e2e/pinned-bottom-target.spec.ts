@@ -72,7 +72,7 @@ test("pinned Transaction edits target the pinned stable ID", async ({ page }) =>
   await page.getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(bottom).toContainText("Pinned Transfer");
   await bottom.getByTestId("bottom-pin").click();
-  await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
   await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
