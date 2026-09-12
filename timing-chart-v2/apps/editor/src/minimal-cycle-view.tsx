@@ -42,8 +42,6 @@ import { refreshRulerRangeSelection, refreshTransactionLinkedRows } from "./runt
 export function MinimalCycleView() {
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : undefined;
   const visualReference = searchParams?.has("visual-reference") === true;
-  const transactionDemo = searchParams?.has("transaction-demo") === true;
-  const persistedViewMode = typeof window !== "undefined" ? window.localStorage.getItem("timing-chart-v2.view-mode") : null;
   const initialDocument = visualReference ? v1ReferenceDocument : transactionDemoDocument;
   const application = useEditorApplicationOwner(initialDocument);
   const documentLifecycle = useDocumentLifecycle({ application, productTemplate: cycleDocument, persistText: downloadText });
@@ -119,7 +117,7 @@ export function MinimalCycleView() {
   // Keep the built-in Transaction sample immediately inspectable after a
   // browser refresh. The visual-reference query remains the explicit Cycle
   // surface used by the signal/reference acceptance flow.
-  const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>({ documentEpoch, cycleCount: snapshot.document.timeline.cycleCount, ...((transactionDemo || persistedViewMode === "Transaction") ? { initialViewMode: "Transaction" as const } : {}) });
+  const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>({ documentEpoch, cycleCount: snapshot.document.timeline.cycleCount, ...(!visualReference ? { initialViewMode: "Transaction" as const } : {}) });
   const {
     ribbonTab, setRibbonTab,
     bottomTab, setBottomTab,
