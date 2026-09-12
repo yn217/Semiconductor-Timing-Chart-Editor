@@ -23,13 +23,10 @@ export interface RowLayoutResult {
 
 export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean; readonly reserveHiddenSpace?: boolean; readonly pane?: "upper" | "lower" } = {}): RowLayoutResult {
   const includeHidden = options.includeHidden ?? true;
-  // Signal Split View (#200): a signal's `display.splitPane` (absent means
-  // "both", i.e. today's single-pane behavior) opts it into a specific
-  // pane's Frozen/Timing rendering. Omitting `pane` entirely (every
-  // existing call site) matches every row, byte-for-byte identical to
-  // pre-#200 behavior -- this option only takes effect for a caller that
-  // explicitly requests one pane's filtered view.
-  const matchesPane = (signal: Signal): boolean => options.pane === undefined || (signal.display.splitPane ?? "both") === "both" || signal.display.splitPane === options.pane;
+  // Signal Split is two viewports over the same canonical Signal sequence.
+  // The legacy pane option remains accepted by callers during migration, but
+  // it no longer filters rows based on deprecated per-signal assignment.
+  const matchesPane = (_signal: Signal): boolean => true;
   // Navigation surfaces (Left Tree) show every row -- hidden ones included,
   // each occupying its own real slot -- so their Y sequence must reserve
   // space for hidden rows exactly like visible ones (reserveHiddenSpace

@@ -205,9 +205,9 @@ describe("RowLayout and projection invariants", () => {
     document.signals = document.signals.map((signal) => signal.id === "sig_clk" ? { ...signal, display: { ...signal.display, splitPane: "upper" } } : signal.id === "sig_data" ? { ...signal, display: { ...signal.display, splitPane: "lower" } } : signal);
     const viewport = { viewportStartY: 0, viewportEndY: 200, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] } as const;
     const upperOnly = new DefaultProjectionService({ pane: "upper" }).project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: { fullDocumentReplace: true }, viewport });
-    expect(upperOnly.mountedSignalIds).toEqual(["sig_clk"]);
+    expect(upperOnly.mountedSignalIds).toEqual(["sig_clk", "sig_data"]);
     const lowerOnly = new DefaultProjectionService({ pane: "lower" }).project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: { fullDocumentReplace: true }, viewport });
-    expect(lowerOnly.mountedSignalIds).toEqual(["sig_data"]);
+    expect(lowerOnly.mountedSignalIds).toEqual(["sig_clk", "sig_data"]);
     // A single service instance (the Upper-pane's real usage pattern: one
     // long-lived instance toggled between unfiltered and pane:"upper" as
     // Split turns on/off) must rebuild its cached layout when the pane
@@ -217,7 +217,7 @@ describe("RowLayout and projection invariants", () => {
     expect(beforeSplit.mountedSignalIds).toEqual(["sig_clk", "sig_data"]);
     toggled.setPane("upper");
     const afterSplitOn = toggled.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: {}, viewport });
-    expect(afterSplitOn.mountedSignalIds).toEqual(["sig_clk"]);
+    expect(afterSplitOn.mountedSignalIds).toEqual(["sig_clk", "sig_data"]);
     toggled.setPane(undefined);
     const afterSplitOff = toggled.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: {}, viewport });
     expect(afterSplitOff.mountedSignalIds).toEqual(["sig_clk", "sig_data"]);
@@ -322,7 +322,7 @@ describe("RowLayout and projection invariants", () => {
     }
   });
 
-  it("filters visibleRows by Signal Split pane assignment without leaving a dead gap (#200)", () => {
+  it("keeps the same visible row sequence in either Signal Split pane", () => {
     const base = canonicalFixture();
     const document = {
       ...base,
@@ -333,20 +333,18 @@ describe("RowLayout and projection invariants", () => {
     } as CanonicalDocument;
 
     const upper = calculateRowLayout(document, new Set(), { reserveHiddenSpace: false, pane: "upper" });
-    expect(upper.visibleRows.map((row) => row.rowId)).toEqual(["sig_clk"]);
-    // sig_data (excluded from this pane) must not reserve space: sig_clk
-    // sits directly after the group header, with no dead gap before it.
+    expect(upper.visibleRows.map((row) => row.rowId)).toEqual(["sig_clk", "sig_data"]);
     expect(upper.visibleRows[0]!.y).toBe(upper.groupHeaders[0]!.y + upper.groupHeaders[0]!.height);
 
     const lower = calculateRowLayout(document, new Set(), { reserveHiddenSpace: false, pane: "lower" });
-    expect(lower.visibleRows.map((row) => row.rowId)).toEqual(["sig_data"]);
+    expect(lower.visibleRows.map((row) => row.rowId)).toEqual(["sig_clk", "sig_data"]);
 
     // A "both"-assigned (unset) signal appears in every pane's visibleRows.
     const bothDocument = { ...base, signals: [{ ...base.signals[0]!, display: { ...base.signals[0]!.display, splitPane: "upper" } }, base.signals[1]!] } as CanonicalDocument;
     const bothUpper = calculateRowLayout(bothDocument, new Set(), { reserveHiddenSpace: false, pane: "upper" });
     const bothLower = calculateRowLayout(bothDocument, new Set(), { reserveHiddenSpace: false, pane: "lower" });
     expect(bothUpper.visibleRows.map((row) => row.rowId)).toEqual(["sig_clk", "sig_data"]);
-    expect(bothLower.visibleRows.map((row) => row.rowId)).toEqual(["sig_data"]);
+    expect(bothLower.visibleRows.map((row) => row.rowId)).toEqual(["sig_clk", "sig_data"]);
 
     // Omitting `pane` entirely is byte-for-byte identical to pre-#200 behavior.
     const unfiltered = calculateRowLayout(document, new Set(), { reserveHiddenSpace: false });

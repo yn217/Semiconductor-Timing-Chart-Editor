@@ -6,7 +6,7 @@ import { canonicalFixture } from "../fixtures/canonical.js";
 const id = (value: string) => value as SignalId;
 
 describe("Signal Split projection", () => {
-  it("keeps canonical order while assigning Upper, Lower and Both without cloning identity", () => {
+  it("projects the same canonical order into both panes without cloning identity", () => {
     const base = canonicalFixture();
     const document = {
       ...base,
@@ -19,7 +19,7 @@ describe("Signal Split projection", () => {
       signalGroups: [{ id: "grp_split" as GroupId, name: "Split", rows: ["sig_clk", "sig_upper", "sig_lower", "sig_unassigned"] as RowId[] }],
     } as CanonicalDocument;
     const rows = projectSignalSplitRows(document);
-    expect(rows).toEqual({ upper: [id("sig_clk"), id("sig_upper"), id("sig_unassigned")], lower: [id("sig_clk"), id("sig_lower"), id("sig_unassigned")], both: [id("sig_clk"), id("sig_unassigned")] });
+    expect(rows).toEqual({ upper: [id("sig_clk"), id("sig_upper"), id("sig_lower"), id("sig_unassigned")], lower: [id("sig_clk"), id("sig_upper"), id("sig_lower"), id("sig_unassigned")], both: [id("sig_clk"), id("sig_upper"), id("sig_lower"), id("sig_unassigned")] });
     expect(new Set([...rows.upper, ...rows.lower])).toEqual(new Set(["sig_clk", "sig_upper", "sig_lower", "sig_unassigned"]));
     expect(rows.upper.filter((signalId) => signalId === id("sig_clk"))).toHaveLength(1);
     expect(rows.lower.filter((signalId) => signalId === id("sig_clk"))).toHaveLength(1);
@@ -37,6 +37,6 @@ describe("Signal Split projection", () => {
       ],
       signalGroups: [{ id: "grp_split" as GroupId, name: "Split", rows: [upper, upper, "sig_foreign" as RowId, lower] }],
     } as CanonicalDocument;
-    expect(projectSignalSplitRows(document)).toEqual({ upper: [upper], lower: [lower], both: [] });
+    expect(projectSignalSplitRows(document)).toEqual({ upper: [upper, lower], lower: [upper, lower], both: [upper, lower] });
   });
 });

@@ -1,8 +1,5 @@
 import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 
-/** Presentation-only placement for the Signal Split View. */
-export type SignalSplitPane = "upper" | "lower" | "both";
-
 export interface SignalSplitRows {
   /** Canonical row order, with each Signal ID appearing at most once. */
   readonly upper: readonly SignalId[];
@@ -15,11 +12,9 @@ export interface SignalSplitRows {
 /**
  * Projects the canonical Signal rows into the two Signal Split panes.
  *
- * `signal.display.splitPane` is the only assignment source. An omitted
- * assignment means `both`, preserving the existing single-pane behavior for
- * documents that predate Signal Split. Row order and membership come from
- * the canonical document, so a second standalone assignment list cannot drift
- * from the Signal identity or introduce a second semantic export item.
+ * Signal Split is a second viewport over the same canonical Signal list.
+ * Legacy `display.splitPane` values are intentionally ignored so old
+ * documents cannot change membership between the two viewports.
  */
 export function projectSignalSplitRows(document: CanonicalDocument): SignalSplitRows {
   const signalById = new Map<SignalId, CanonicalDocument["signals"][number]>(document.signals.map((signal) => [signal.id, signal]));
@@ -33,10 +28,9 @@ export function projectSignalSplitRows(document: CanonicalDocument): SignalSplit
     const signal = signalById.get(signalId);
     if (!signal || seen.has(signalId)) continue;
     seen.add(signalId);
-    const pane: SignalSplitPane = signal.display.splitPane ?? "both";
-    if (pane === "upper" || pane === "both") upper.push(signalId);
-    if (pane === "lower" || pane === "both") lower.push(signalId);
-    if (pane === "both") both.push(signalId);
+    upper.push(signalId);
+    lower.push(signalId);
+    both.push(signalId);
   }
 
   return {
