@@ -6,6 +6,7 @@ export type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
 export type TreeTypeFilter = "all" | "input" | "output" | "wire" | "comment";
 export type BottomTab = "Signal" | "Annotation" | "Transaction" | "Phases" | "Linked Signals" | "Bookmarks" | "AI" | "Problems" | "JSON";
 export type ViewMode = "Cycle" | "Transaction" | "Split";
+export type TransactionTreeFilterMode = "all" | "grouped" | "ungrouped" | "phases" | "linked" | "visible" | "hidden" | "no-phases";
 
 export type SemanticCursor = number | undefined;
 
@@ -163,7 +164,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
 
   const [treeFilter, setTreeFilter] = useState("");
   const [transactionTreeFilter, setTransactionTreeFilter] = useState("");
-  const [transactionTreeFilterMode, setTransactionTreeFilterMode] = useState<"all" | "grouped" | "ungrouped" | "phases" | "linked">("all");
+  const [transactionTreeFilterMode, setTransactionTreeFilterMode] = useState<TransactionTreeFilterMode>("all");
   const [treeTypeFilter, setTreeTypeFilter] = useState<TreeTypeFilter>("all");
   // #429/#397 Transaction Mode Product Closure P0-2: which tree the Left
   // panel shows while `viewMode === "Transaction"` -- "transactions" (the

@@ -7,6 +7,7 @@ import type { UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { EditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import type { EditorActions } from "./application/use-editor-actions.js";
 import type { ClipboardActions } from "./application/clipboard-actions.js";
+import type { TransactionTreeFilterMode } from "./workspace/use-workspace-ui-state.js";
 import { useEditorAiAssistantModel } from "./application/use-editor-ai-assistant-model.js";
 import { AnnotationEditor } from "./annotation-editor.js";
 import { AnnotationList } from "./annotation-list.js";
@@ -93,8 +94,8 @@ export interface EditorSecondarySurfacesInput {
     readonly setTreeTypeFilter: (value: TreeTypeFilter) => void;
     readonly transactionTreeFilter: string;
     readonly setTransactionTreeFilter: (value: string) => void;
-    readonly transactionTreeFilterMode: "all" | "grouped" | "ungrouped" | "phases" | "linked";
-    readonly setTransactionTreeFilterMode: (value: "all" | "grouped" | "ungrouped" | "phases" | "linked") => void;
+    readonly transactionTreeFilterMode: TransactionTreeFilterMode;
+    readonly setTransactionTreeFilterMode: (value: TransactionTreeFilterMode) => void;
     readonly transactionTreeTab: "transactions" | "signals";
     readonly setTransactionTreeTab: (tab: "transactions" | "signals") => void;
     readonly setRibbonTab: (tab: string) => void;

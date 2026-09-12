@@ -3,7 +3,7 @@ import type { CanonicalDocument, Transaction, TransactionGroup, TransactionId } 
 import { EditorIcon } from "./editor-icon.js";
 import { InlineNameInput } from "./inline-name-input.js";
 
-export function TransactionTree({ document, documentEpoch, filter, filterMode = "all", selectedId, onSelect, onRenameGroup, onMoveToGroup, onContextMenu, onCreateTransaction, onFocusTransaction }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly filter: string; readonly filterMode?: "all" | "grouped" | "ungrouped" | "phases" | "linked"; readonly selectedId?: TransactionId; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onRenameGroup?: (id: TransactionGroup["id"], name: string) => void; readonly onMoveToGroup?: (transactionId: TransactionId, groupId: TransactionGroup["id"] | undefined) => void; readonly onContextMenu?: (event: React.MouseEvent<HTMLButtonElement>, transactionId: TransactionId) => void; readonly onCreateTransaction?: () => void; readonly onFocusTransaction?: (transactionId: TransactionId) => void }) {
+export function TransactionTree({ document, documentEpoch, filter, filterMode = "all", selectedId, onSelect, onRenameGroup, onMoveToGroup, onContextMenu, onCreateTransaction, onFocusTransaction }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly filter: string; readonly filterMode?: "all" | "grouped" | "ungrouped" | "phases" | "linked" | "visible" | "hidden" | "no-phases"; readonly selectedId?: TransactionId; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onRenameGroup?: (id: TransactionGroup["id"], name: string) => void; readonly onMoveToGroup?: (transactionId: TransactionId, groupId: TransactionGroup["id"] | undefined) => void; readonly onContextMenu?: (event: React.MouseEvent<HTMLButtonElement>, transactionId: TransactionId) => void; readonly onCreateTransaction?: () => void; readonly onFocusTransaction?: (transactionId: TransactionId) => void }) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [dragOverGroup, setDragOverGroup] = useState<string>();
   const [editingGroupId, setEditingGroupId] = useState<string>();
@@ -53,6 +53,9 @@ export function TransactionTree({ document, documentEpoch, filter, filterMode = 
     if (filterMode === "ungrouped" && transaction.groupId !== undefined) return false;
     if (filterMode === "phases" && (transaction.phases?.length ?? 0) === 0) return false;
     if (filterMode === "linked" && (transaction.linkedSignals?.length ?? 0) === 0) return false;
+    if (filterMode === "visible" && transaction.visible === false) return false;
+    if (filterMode === "hidden" && transaction.visible !== false) return false;
+    if (filterMode === "no-phases" && (transaction.phases?.length ?? 0) > 0) return false;
     if (needle.length === 0) return true;
     const groupName = transaction.groupId === undefined ? "" : groupById.get(transaction.groupId)?.name ?? "";
     return transaction.name.toLocaleLowerCase().includes(needle) || groupName.toLocaleLowerCase().includes(needle);
