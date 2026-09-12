@@ -69,8 +69,8 @@ export function deriveSelectionCapabilities(document: CanonicalDocument, selecti
       ? (() => { const index = document.signalGroups.findIndex((group) => group.id === selectedGroup.id); return index >= 0 && index < document.signalGroups.length - 1; })()
       : false;
   const canRename = (selection.signalIds.size === 1 && selectedSignal !== undefined) || (selection.signalIds.size === 0 && selection.transactionIds.size <= 1 && (selectedGroup !== undefined || selectedTransaction !== undefined));
-  const canShow = (selection.signalIds.size > 0 && selectedSignal !== undefined && document.signals.some((signal) => selection.signalIds.has(signal.id) && signal.display.visible === false)) || (selectedTransaction !== undefined && selectedTransaction.visible === false);
-  const canHide = (selection.signalIds.size > 0 && selectedSignal !== undefined && document.signals.some((signal) => selection.signalIds.has(signal.id) && signal.display.visible !== false)) || (selectedTransaction !== undefined && selectedTransaction.visible !== false);
+  const canShow = (selection.signalIds.size > 0 && selectedSignal !== undefined && document.signals.some((signal) => selection.signalIds.has(signal.id) && signal.display.visible === false)) || selectedTransactions.some((transaction) => transaction.visible === false);
+  const canHide = (selection.signalIds.size > 0 && selectedSignal !== undefined && document.signals.some((signal) => selection.signalIds.has(signal.id) && signal.display.visible !== false)) || selectedTransactions.some((transaction) => transaction.visible !== false);
   return { hasSelectedSignal, hasSelectedEntity, hasSelectedClipboard, hasDeletableSelection, canRename, canMoveUp, canMoveDown, canShow, canHide };
 }
 
