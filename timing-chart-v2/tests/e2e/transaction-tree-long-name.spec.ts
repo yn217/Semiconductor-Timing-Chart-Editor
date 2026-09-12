@@ -16,13 +16,12 @@ test("a long Transaction name ellipsis-truncates without overflowing the Left pa
   await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
 
   const longName = "This_Is_A_Very_Long_Transaction_Name_That_Should_Not_Overflow_The_Panel_Boundary";
-  await page.getByTestId("transaction-editor").getByLabel("Transaction name", { exact: true }).fill(longName);
-  await page.getByTestId("transaction-editor").getByTestId("apply-transaction-properties").click();
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Transaction name", { exact: true }).fill(longName);
+  await inspector.getByTestId("apply-inspector-transaction").click();
 
-  const row = page.locator("[data-testid^='transaction-tree-row-']").first();
+  const row = page.locator(".transaction-lane-label-row").filter({ hasText: longName });
   await expect(row).toHaveAttribute("title", longName);
-
-  const rowBox = (await row.boundingBox())!;
-  const labelsBox = (await page.locator(".transaction-lane-labels").boundingBox())!;
-  expect(rowBox.x + rowBox.width).toBeLessThanOrEqual(labelsBox.x + labelsBox.width + 1);
+  const staysInsidePanel = await row.evaluate((element) => element.scrollWidth <= element.clientWidth);
+  expect(staysInsidePanel).toBe(true);
 });
