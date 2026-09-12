@@ -336,6 +336,10 @@
 .transaction-left-tree-group-header[data-drop-target="true"] { outline: 2px solid #3478f6; outline-offset: -2px; background: #e6f1ff; }
 .transaction-left-tree-swatch, .transaction-left-tree-row i { flex: 0 0 14px; width: 14px; height: 14px; border-radius: 3px; }
 .transaction-left-tree-row { display: flex; align-items: center; width: 100%; min-height: var(--transaction-tree-row-height, 29px); height: var(--transaction-tree-row-height, 29px); gap: 7px; padding: 0 10px 0 31px; overflow: hidden; border: 0; background: transparent; color: #304b6a; font-size: 11px; text-align: left; white-space: nowrap; }
+.transaction-left-tree-row-wrap { position: relative; display: flex; align-items: center; }
+.transaction-left-tree-row-wrap .transaction-left-tree-row { padding-right: 30px; }
+.transaction-left-tree-visibility { position: absolute; right: 7px; width: 20px; height: 20px; padding: 0; border: 0; background: transparent; color: #61758c; font-size: 14px; line-height: 20px; cursor: pointer; }
+.transaction-left-tree-visibility:hover, .transaction-left-tree-visibility:focus-visible { color: #1769aa; }
 .transaction-left-tree-row:hover, .transaction-left-tree-row[data-selected="true"] { background: #dcecff; color: #155ca0; }
 .cycle-panel.mode-transaction .transaction-lanes { min-height: calc(100% - 34px); }
 .cycle-panel.mode-transaction .transaction-signal-tree { height: calc(100% - 34px); }
