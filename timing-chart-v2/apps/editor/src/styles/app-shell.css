@@ -146,4 +146,5 @@ button, input, select { font: inherit; font-size: var(--ds-font-size); }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] .transaction-tree-tabs { position: relative; z-index: 1; }
 .editor-shell .transaction-signal-tree { top: 58px; }
 .editor-shell .cycle-panel.mode-transaction .transaction-signal-tree { height: calc(100% - 58px); }
+.editor-shell:has([data-testid="transaction-tree-header"]) .left-pane-resize-handle { pointer-events: none; }
 .editor-shell .cycle-viewport { height: calc(100% - 37px); }
