@@ -117,7 +117,7 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
   const timeDomainExclusions = [
     "[data-role='left-tree-rows']", "[data-role='frozen-label-rows']", "[data-role='annotation-owner']",
     "[data-role='annotation-body']", "[data-role='annotation-label']", "[data-role='annotation-handle']",
-    "[data-testid='transaction-lanes']", "[data-transaction-id]", ".transaction-lane", "[data-testid='editor-legend']",
+    "[data-testid='editor-legend']",
     "[role='menu']", "button", "input", "select", "textarea", "[contenteditable='true']", "[role='separator']", "[draggable='true']",
   ].join(", ");
   const isTimeDomainPointerTarget = (event: MouseEvent | PointerEvent): boolean => {
@@ -126,7 +126,10 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     const bounds = viewportElement.getBoundingClientRect();
     const left = bounds.left + getTimelineOffset();
     if (event.clientX < left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) return false;
-    return target === viewportElement || viewportElement.contains(target);
+    // Cycle ownership is scoped to the Cycle renderer or its ruler. Transaction
+    // lanes are siblings in the viewport and must never be filtered by a growing
+    // list of Transaction selectors merely to keep this owner from handling them.
+    return rendererHost.contains(target) || rulerViewportElement.contains(target);
   };
   const selectedClockEdgeAtPointer = (event: MouseEvent) => {
     const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
@@ -254,7 +257,7 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     if (suppressCanvasClickRef.current) { suppressCanvasClickRef.current = false; return; }
     if (rangeInteractions.consumeCanvasClickSuppression()) return;
     const target = event.target instanceof Element ? event.target : undefined;
-    if (target?.closest("[data-role='tree-visibility'], [data-role='tree-more'], [data-role='tree-collapse'], [data-role='tree-group-more'], [data-row-id], [data-annotation-id], [data-transaction-id]")) { onSelect(event); return; }
+    if (target?.closest("[data-role='tree-visibility'], [data-role='tree-more'], [data-role='tree-collapse'], [data-role='tree-group-more'], [data-row-id], [data-annotation-id]")) { onSelect(event); return; }
     if (getPendingArrow() || rendererHost.dataset.arrowPick) onSelect(event); else if (!selectCanvasCycle(event)) onSelect(event);
   };
   const onViewportClick = (event: MouseEvent) => {
