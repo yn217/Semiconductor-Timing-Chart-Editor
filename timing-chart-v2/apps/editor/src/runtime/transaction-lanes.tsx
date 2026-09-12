@@ -132,6 +132,12 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
   }, []);
 
   useEffect(() => {
+    const cancelForViewModeChange = () => { setDrag(undefined); setPreview(undefined); };
+    window.addEventListener("timing-chart-view-mode-changing", cancelForViewModeChange);
+    return () => window.removeEventListener("timing-chart-view-mode-changing", cancelForViewModeChange);
+  }, []);
+
+  useEffect(() => {
     if (!drag) return undefined;
     if (drag.documentEpoch !== documentEpoch) { setDrag(undefined); setPreview(undefined); return undefined; }
     const onKeyDown = (event: KeyboardEvent) => {
