@@ -114,10 +114,11 @@ export function MinimalCycleView() {
     applySelectionDecorations,
   } = presentation;
   const zoom = timelineNavigation.zoom;
-  // Keep the built-in Transaction sample immediately inspectable after a
-  // browser refresh. The visual-reference query remains the explicit Cycle
-  // surface used by the signal/reference acceptance flow.
-  const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>({ documentEpoch, cycleCount: snapshot.document.timeline.cycleCount, ...(!visualReference ? { initialViewMode: "Transaction" as const } : {}) });
+  // Keep the built-in Transaction sample in the initial Document so it is
+  // immediately available when Transaction mode is selected. Start in the
+  // established Cycle shell so Cycle/Transaction mode switching remains
+  // explicit and does not bypass Cycle's selection owner.
+  const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>({ documentEpoch, cycleCount: snapshot.document.timeline.cycleCount });
   const {
     ribbonTab, setRibbonTab,
     bottomTab, setBottomTab,

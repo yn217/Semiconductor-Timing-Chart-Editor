@@ -8,6 +8,7 @@ const samplePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".
 test("default browser startup opens the built-in Transaction sample", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(page.getByTestId("transaction-left-tree")).toContainText("All Transactions");
   await expect(page.getByTestId("transaction-left-tree")).toContainText("Read_0");
   await expect(page.locator('[data-transaction-row-id="demo_txn_read"]')).toContainText("Memory");
