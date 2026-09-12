@@ -6,7 +6,7 @@ const base = (id: string, title: string, signals: readonly unknown[], rows: read
   timeline: { start: 0, end: 8, cycleCount: 8, timeBase: "cycle", ...(referenceClock === undefined ? {} : { referenceClock, edge: "rising" }), ...(referenceClock === undefined ? { edge: "rising" } : {}), labelAnchors: [] },
   signalGroups: [{ id: "grp_main", name: "Main", rows }],
   signals,
-  bookmarks: [], timeGroups: [], annotations: [], transactions: [], constraints: [],
+  bookmarks: [], timeGroups: [], annotations: [], annotationGroups: [], transactions: [], constraints: [],
   legend: { show: false, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
   layout: { roleColumnWidth: 62, signalNameWidth: 178, signalNameAlign: "left", rowHeight: 30, signalSpacing: 4, overflow: "ellipsis" },
   checkSettings: {},
@@ -18,6 +18,8 @@ const clock = (id: string, name: string) => ({ id, name, type: "clock", role: "i
 async function openJson(page: Page, document: unknown): Promise<void> {
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "fixture.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  const title = (document as { document?: { title?: string } }).document?.title;
+  if (title) await expect(page.locator(".app-titlebar h1")).toHaveText(title);
 }
 
 test("renders a clockless axis and preserves it through Save/Open and SVG export", async ({ page }) => {
@@ -25,6 +27,7 @@ test("renders a clockless axis and preserves it through Save/Open and SVG export
   const document = base("clockless", "Clockless Timing", [data], [data.id]);
   await openJson(page, document);
   const host = page.getByTestId("cycle-surface");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.getByTestId("time-axis-status")).toHaveText("Time Axis: Time · No Clock Reference");
   await expect(page.locator(".column-headings")).toContainText("Axis: Time");
   await expect(page.locator(".column-headings")).not.toContainText("Reference: clk");
