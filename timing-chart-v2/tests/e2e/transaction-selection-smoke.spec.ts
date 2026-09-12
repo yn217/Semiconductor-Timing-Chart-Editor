@@ -7,8 +7,9 @@ test("Transaction tree selection opens the selected canonical transaction in Ins
   await page.getByRole("button", { name: "Transaction", exact: true }).click();
   const tree = page.getByTestId("transaction-left-tree");
   await tree.locator("[data-transaction-tree-id]").first().click();
-  await expect(page.getByTestId("inspector").getByLabel("Transaction name", { exact: true })).toHaveValue("Transaction 1");
-  await page.getByTestId("inspector").getByLabel("Transaction name", { exact: true }).fill("Read_0");
-  await page.getByTestId("inspector").getByTestId("apply-inspector-transaction").click();
-  await expect(page.getByTestId("transaction-editor")).toContainText("Read_0");
+  const inspector = page.getByTestId("inspector");
+  await expect(inspector.getByLabel("Transaction name", { exact: true })).toHaveValue("Read_0");
+  await inspector.getByLabel("Transaction name", { exact: true }).fill("Read_0_selected");
+  await inspector.getByTestId("apply-inspector-transaction").click();
+  await expect(page.getByTestId("transaction-editor").locator(".transaction-list-row").filter({ hasText: "Read_0_selected" })).toHaveCount(1);
 });
