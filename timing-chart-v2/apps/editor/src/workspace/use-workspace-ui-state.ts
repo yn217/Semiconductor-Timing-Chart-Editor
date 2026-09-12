@@ -161,6 +161,27 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   const inspectorResizeRef = useRef<PaneResizeGesture | undefined>(undefined);
   const [bottomHeight, setBottomHeight] = useState(240);
   const bottomResizeRef = useRef<VerticalResizeGesture | undefined>(undefined);
+  // #563: pane dimensions are presentation state too. Keep independent
+  // snapshots so switching Cycle/Transaction does not leak a compact
+  // Transaction layout into Cycle (or a wide Cycle layout into Transaction).
+  const paneDimensionsByModeRef = useRef<Record<"Cycle" | "Transaction", { left: number; frozen: number; inspector: number; bottom: number }>>({
+    Cycle: { left: LEFT_PANE_MIN_WIDTH, frozen: 209, inspector: 297, bottom: 240 },
+    Transaction: { left: LEFT_PANE_MIN_WIDTH, frozen: 209, inspector: 297, bottom: 240 },
+  });
+  const previousPaneModeRef = useRef<ViewMode>(viewMode);
+  useEffect(() => {
+    if (viewMode === "Split") return;
+    if (previousPaneModeRef.current !== viewMode) {
+      previousPaneModeRef.current = viewMode;
+      const next = paneDimensionsByModeRef.current[viewMode];
+      setLeftPaneWidth(next.left);
+      setFrozenPaneWidth(next.frozen);
+      setInspectorWidth(next.inspector);
+      setBottomHeight(next.bottom);
+      return;
+    }
+    paneDimensionsByModeRef.current[viewMode] = { left: leftPaneWidth, frozen: frozenPaneWidth, inspector: inspectorWidth, bottom: bottomHeight };
+  }, [bottomHeight, frozenPaneWidth, inspectorWidth, leftPaneWidth, viewMode]);
 
   const [treeFilter, setTreeFilter] = useState("");
   const [transactionTreeFilter, setTransactionTreeFilter] = useState("");
