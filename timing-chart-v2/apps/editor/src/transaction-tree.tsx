@@ -473,6 +473,18 @@ export function TransactionTree({
                       >
                         New Transaction
                       </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setOpenGroupMenuId(undefined);
+                          items.forEach((transaction, index) =>
+                            onSelect(transaction.id, index > 0),
+                          );
+                        }}
+                      >
+                        Select Children
+                      </button>
                       {onSetGroupVisibility && (
                         <>
                           <button type="button" role="menuitem" onClick={() => { setOpenGroupMenuId(undefined); onSetGroupVisibility(group.id, true); }}>Show All</button>
