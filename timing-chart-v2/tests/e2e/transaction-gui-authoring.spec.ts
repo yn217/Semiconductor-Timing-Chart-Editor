@@ -3,12 +3,16 @@ import { expect, test } from "@playwright/test";
 test("builds six transactions through normal GUI selection transitions", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  await expect(page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]")).toHaveCount(0);
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
   const inspector = page.getByTestId("inspector");
   const ribbon = page.getByTestId("ribbon");
+  const surface = page.getByTestId("cycle-surface");
   for (let index = 0; index < 6; index++) {
     await ribbon.getByRole("button", { name: "Create Transaction", exact: true }).click();
+    await expect(surface).toHaveAttribute("data-editor-idle", "true");
     await expect(inspector.getByLabel("Transaction name", { exact: true })).toHaveValue(`Transaction ${index + 1}`);
     await inspector.getByLabel("Transaction name", { exact: true }).fill(["Read_0", "Write_0", "Fetch_0", "Execute_0", "SPI_0", "Transaction2"][index]!);
     await inspector.getByLabel("Transaction lane", { exact: true }).fill(`lane_${Math.min(index / 2, 2) | 0}`);

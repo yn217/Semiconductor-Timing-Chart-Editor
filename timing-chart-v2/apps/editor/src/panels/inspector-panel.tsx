@@ -178,7 +178,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
     setTransactionStatus("");
     }
     committedTransactionRef.current = { id: transaction?.id, name: transaction?.name ?? "", start: transaction?.start ?? 0, end: transaction?.end ?? 1, lane: transaction?.laneId ?? "lane_0", group: transaction?.groupId ?? "", color: transaction?.color ?? "", description: transaction?.description ?? "", phases: transaction?.phases ?? [] };
-  }, [phaseRows, transaction?.id, transaction?.start, transaction?.end, transaction?.laneId, transaction?.groupId, transaction?.color, transaction?.description, transaction?.phases, transactionName, transactionStart, transactionEnd, transactionLane, transactionGroupId, transactionColor, transactionDescription]);
+  }, [transaction?.id, transaction?.start, transaction?.end, transaction?.laneId, transaction?.groupId, transaction?.color, transaction?.description, transaction?.phases]);
   const previewGroupStyle = (overrides: Partial<SignalGroupStyle> & { readonly showBorder?: boolean } = {}) => {
     if (!group) return;
     const showBorder = overrides.showBorder ?? groupShowBorder;
