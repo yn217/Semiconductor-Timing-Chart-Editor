@@ -59,22 +59,22 @@ async function createReadRequestTransaction(page: Page, { withLinks = false }: {
 
 test("Transaction property edits preserve editor and Inspector identity", async ({ page }) => {
   await openTransactionMode(page);
-  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
   const editor = page.getByTestId("transaction-editor");
-  await editor.getByLabel("Transaction name", { exact: true }).fill("Stable Editor");
-  await editor.getByLabel("Transaction start", { exact: true }).fill("2");
-  await editor.getByLabel("Transaction end", { exact: true }).fill("8");
-  await editor.getByTestId("apply-transaction-properties").click();
+  await editor.getByLabel("New Transaction name").fill("Stable Editor");
+  await editor.getByLabel("New Transaction start").fill("2");
+  await editor.getByLabel("New Transaction end").fill("8");
+  await editor.getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(editor).toBeVisible();
-  await editor.evaluate((node) => node.setAttribute("data-identity-probe", "editor"));
+  await expect(editor.getByText("Editing:", { exact: false })).toHaveCount(0);
+  await expect(editor.locator("[data-transaction-table-header='true']")).toBeVisible();
   const inspector = page.getByTestId("inspector");
-  await inspector.evaluate((node) => node.setAttribute("data-identity-probe", "inspector"));
-  const start = editor.getByLabel("Transaction start", { exact: true });
+  await expect(inspector.getByLabel("Transaction name", { exact: true })).toHaveValue("Stable Editor");
+  const start = inspector.getByLabel("Transaction start", { exact: true });
   await start.fill("3");
-  await editor.getByTestId("apply-transaction-properties").click();
+  await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(start).toHaveValue("3");
-  await expect(editor).toHaveAttribute("data-identity-probe", "editor");
-  await expect(inspector).toHaveAttribute("data-identity-probe", "inspector");
+  await expect(editor.locator("[data-transaction-table-header='true']")).toBeVisible();
+  await expect(editor.getByTestId("apply-transaction-properties")).toHaveCount(0);
 });
 
 test("Transaction Mode shows the create form directly and does not mutate the document merely by entering it", async ({ page }) => {
