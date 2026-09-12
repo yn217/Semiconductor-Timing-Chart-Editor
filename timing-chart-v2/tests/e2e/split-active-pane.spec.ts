@@ -103,7 +103,7 @@ test("Combined routes a Signal waveform range drag to the Signal pane only", asy
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
-  const wave = host.locator("[data-role='stable-waveform-surface'] [data-signal-id='sig_cycle_request']");
+  const wave = host.locator("[data-role='stable-waveform-surface'] [data-signal-id='sig_cycle_clock']");
   const ruler = page.getByTestId("cycle-ruler");
   const waveBox = await wave.boundingBox();
   const start = await ruler.locator("[data-cycle='2']").boundingBox();
