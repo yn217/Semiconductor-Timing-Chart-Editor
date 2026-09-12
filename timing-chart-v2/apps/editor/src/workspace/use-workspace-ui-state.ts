@@ -151,6 +151,21 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   const [inspectorResetToken, setInspectorResetToken] = useState(0);
   const [bottomResetToken, setBottomResetToken] = useState(0);
   const [bottomVisible, setBottomVisible] = useState(true);
+  const panelVisibilityByModeRef = useRef<{ Cycle: { inspector: boolean; bottom: boolean }; Transaction: { inspector: boolean; bottom: boolean } }>({
+    Cycle: { inspector: true, bottom: true }, Transaction: { inspector: true, bottom: true },
+  });
+  const previousVisibilityModeRef = useRef<ViewMode>(viewMode);
+  useEffect(() => {
+    if (viewMode === "Split") return;
+    if (previousVisibilityModeRef.current !== viewMode) {
+      previousVisibilityModeRef.current = viewMode;
+      const next = panelVisibilityByModeRef.current[viewMode];
+      setInspectorVisible(next.inspector);
+      setBottomVisible(next.bottom);
+      return;
+    }
+    panelVisibilityByModeRef.current[viewMode] = { inspector: inspectorVisible, bottom: bottomVisible };
+  }, [bottomVisible, inspectorVisible, viewMode]);
   const waveformRestoreRef = useRef<{ readonly inspectorVisible: boolean; readonly bottomVisible: boolean; readonly preset: Exclude<WorkspacePreset, "waveform"> } | undefined>(undefined);
 
   const [leftPaneWidth, setLeftPaneWidth] = useState(LEFT_PANE_MIN_WIDTH);
