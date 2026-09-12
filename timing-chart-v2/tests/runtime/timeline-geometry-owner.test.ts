@@ -6,6 +6,39 @@ import { signalId } from "../../apps/editor/src/minimal-cycle-view-fixture-helpe
 import { TimelineGeometryOwner } from "../../apps/editor/src/runtime/timeline-geometry-owner.js";
 
 describe("TimelineGeometryOwner", () => {
+  it.each([
+    ["normal Cycle", cycleDocument],
+    ["Combined Cycle pane with collapsed fold", {
+      ...cycleDocument,
+      timeline: { ...cycleDocument.timeline, cycleCount: 20, end: 20 },
+      timeGroups: [{ id: "diagnostic-fold" as never, name: "Fold", start: 2, end: 4, presentation: { collapsed: true, foldStyle: "axis-break" as const, foldLabel: "GAP" } }],
+    }],
+  ])("round-trips every semantic cycle boundary for %s", (name, document) => {
+    const clockId = signalId("sig_cycle_clock");
+    const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 21 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle * 10, y: 0 } })));
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => document,
+      getProjection: () => ({ rowLayout: [{ rowId: clockId, kind: "timing", visible: true, y: 0 }] } as never),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
+    const entries = owner.currentSnapIndex().entries().filter((candidate) => candidate.kind === "cycle-boundary").sort((a, b) => a.point.x - b.point.x);
+    const mapping = owner.displayMapping;
+    const rows = Array.from({ length: 21 }, (_, cycle) => {
+      const expected = owner.sourceBoundaryToLocalX(document, cycle);
+      const stored = entries.find((entry) => entry.anchor.cycle === cycle)?.point.x;
+      const resolved = expected === undefined ? undefined : owner.cycleBoundaryAtLocalX(expected, 1, true);
+      const index = entries.findIndex((entry) => entry.anchor.cycle === cycle);
+      return { cycle, expectedBoundaryX: expected, storedBoundaryX: stored, displayMappedX: mapping.sourceToDisplay[cycle], resolvedCycle: resolved, previousBoundaryX: entries[index - 1]?.point.x, nextBoundaryX: entries[index + 1]?.point.x };
+    });
+    console.table({ configuration: name, rows });
+    const firstFailure = rows.find((row) => row.resolvedCycle !== row.cycle);
+    if (name === "normal Cycle") expect(firstFailure).toBeUndefined();
+    else expect(firstFailure).toMatchObject({ cycle: 2, resolvedCycle: 4, expectedBoundaryX: 20 });
+  });
+
   it("owns source-boundary, presentation-scale, and screen-to-local conversion", () => {
     const clockId = signalId("sig_cycle_clock");
     const clockGeometry = new ImmutableLocalGeometryMap(clockId, [
