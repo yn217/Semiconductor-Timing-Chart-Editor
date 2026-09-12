@@ -6,7 +6,7 @@ async function createAnnotation(page: import("@playwright/test").Page, type: str
   await page.getByLabel("Annotation type").selectOption(type);
   const host = page.getByTestId("cycle-surface");
   const before = new Set(await host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-id"))));
-  await page.getByRole("button", { name: "Add annotation" }).click();
+  await page.getByTestId("annotation-toolbar").getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const findNewId = () => host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items, previous) => items.map((item) => item.getAttribute("data-annotation-id")).find((id) => id && !previous.includes(id)), [...before]);
   await expect.poll(findNewId).toBeTruthy();
@@ -337,7 +337,7 @@ test("creates standard and Custom Measurement profiles with explicit transition 
     await profile.selectOption(value);
     await expect(profile).toHaveValue(value);
     const before = new Set(await host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-id"))));
-    await page.getByRole("button", { name: "Add annotation" }).click();
+    await toolbar.getByRole("button", { name: "Add annotation" }).click();
     const findNewId = () => host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items, previous) => items.map((item) => item.getAttribute("data-annotation-id")).find((id) => id && !previous.includes(id)), [...before]);
     await expect.poll(findNewId).toBeTruthy();
     const annotationId = await findNewId();
@@ -353,7 +353,7 @@ test("creates standard and Custom Measurement profiles with explicit transition 
   await toolbar.getByLabel("Custom measurement start").fill("17");
   await toolbar.getByLabel("Custom measurement end").fill("83");
   await selectRequestSignal(host);
-  await page.getByRole("button", { name: "Add annotation" }).click();
+  await toolbar.getByRole("button", { name: "Add annotation" }).click();
   const customId = await page.getByTestId("annotation-editor").getAttribute("data-bottom-target-id");
   expect(customId).toBeTruthy();
   const custom = host.locator(`[data-role='annotation-owner'][data-annotation-id='${customId}']`);
