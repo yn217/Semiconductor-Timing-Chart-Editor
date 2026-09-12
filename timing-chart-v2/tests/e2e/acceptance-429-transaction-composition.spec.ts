@@ -197,6 +197,19 @@ test("Transaction Tree group header supports left and right collapse navigation"
   await expect(group.locator('[data-transaction-tree-id="demo_txn_read"]')).toHaveCount(1);
 });
 
+test("Transaction Tree Group menu shows and hides all child projections", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  const group = page.locator('[data-transaction-group-id="demo_tgrp_memory"]');
+  await group.locator(".transaction-left-tree-more").click();
+  await group.getByRole("menuitem", { name: "Hide All" }).click();
+  await expect(page.locator('[data-transaction-id="demo_txn_read"]')).toHaveCount(0);
+  await expect(page.locator('[data-transaction-id="demo_txn_write"]')).toHaveCount(0);
+  await group.locator(".transaction-left-tree-more").click();
+  await group.getByRole("menuitem", { name: "Show All" }).click();
+  await expect(page.locator('[data-transaction-id="demo_txn_read"]')).toHaveCount(1);
+  await expect(page.locator('[data-transaction-id="demo_txn_write"]')).toHaveCount(1);
+});
+
 test("Transaction Tree visibility control hides only the selected transaction projection", async ({ page }) => {
   await page.goto("/?transaction-demo");
   const row = page.getByTestId("transaction-left-tree-row-demo_txn_read");
