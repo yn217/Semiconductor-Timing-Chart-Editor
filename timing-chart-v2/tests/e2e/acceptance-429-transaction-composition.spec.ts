@@ -104,3 +104,20 @@ test("Transaction Tree drag moves a transaction into another group", async ({ pa
   await expect(page.locator('.transaction-left-tree-group[data-transaction-group-id="demo_tgrp_cpu"]')).toContainText("Read_0");
   await expect(page.locator('.transaction-left-tree-group[data-transaction-group-id="demo_tgrp_memory"]')).not.toContainText("Read_0");
 });
+
+test("Transaction Tree group drag is one undoable and redoable semantic operation", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const source = page.getByTestId("transaction-left-tree-row-demo_txn_read");
+  const cpu = page.locator('[data-transaction-group-id="demo_tgrp_cpu"] .transaction-left-tree-group-header');
+  const cpuGroup = page.locator('.transaction-left-tree-group[data-transaction-group-id="demo_tgrp_cpu"]');
+  const memoryGroup = page.locator('.transaction-left-tree-group[data-transaction-group-id="demo_tgrp_memory"]');
+  await source.dragTo(cpu);
+  await expect(cpuGroup).toContainText("Read_0");
+  await page.getByRole("button", { name: "Undo", exact: true }).first().click();
+  await expect(memoryGroup).toContainText("Read_0");
+  await expect(cpuGroup).not.toContainText("Read_0");
+  await page.getByRole("button", { name: "Redo", exact: true }).first().click();
+  await expect(cpuGroup).toContainText("Read_0");
+  await expect(memoryGroup).not.toContainText("Read_0");
+});
