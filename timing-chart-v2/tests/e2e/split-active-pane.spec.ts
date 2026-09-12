@@ -45,3 +45,17 @@ test("Split active pane follows clicks on the Signal surface vs Transaction lane
   await expect(page.getByTestId("active-pane-status")).toHaveCount(0);
   await expect(viewport).toHaveAttribute("data-active-pane", "");
 });
+
+test("Cycle and Transaction restore their last valid Bottom tab independently", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.getByRole("tab", { name: "Annotation", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.getByRole("tab", { name: "Transaction", exact: true })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("tab", { name: "Phases", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(page.getByRole("tab", { name: "Annotation", exact: true })).toHaveAttribute("aria-selected", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.getByRole("tab", { name: "Phases", exact: true })).toHaveAttribute("aria-selected", "true");
+});
