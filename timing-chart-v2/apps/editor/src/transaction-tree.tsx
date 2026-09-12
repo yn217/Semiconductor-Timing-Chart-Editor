@@ -22,7 +22,15 @@ export function TransactionTree({ document, filter, selectedId, onSelect, onRena
       setEditingGroupId(group.id);
     };
     globalThis.document.addEventListener("keydown", onKeyDown);
-    return () => globalThis.document.removeEventListener("keydown", onKeyDown);
+    const onDoubleClick = (event: MouseEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const header = target?.closest<HTMLElement>(".transaction-left-tree-group-header");
+      const groupId = header?.closest<HTMLElement>("[data-transaction-group-id]")?.dataset.transactionGroupId;
+      const group = groupId === undefined || groupId === "ungrouped" ? undefined : groups.find((candidate) => candidate.id === groupId);
+      if (group) setEditingGroupId(group.id);
+    };
+    globalThis.document.addEventListener("dblclick", onDoubleClick);
+    return () => { globalThis.document.removeEventListener("keydown", onKeyDown); globalThis.document.removeEventListener("dblclick", onDoubleClick); };
   }, [groups]);
   const matches = (transaction: Transaction) => {
     if (needle.length === 0) return true;
