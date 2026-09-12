@@ -22,7 +22,7 @@ async function openSampleAInSplitMode(page: Page) {
 }
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
-  test(`Cycle/Transaction Split keeps Signal and Transaction panes side-by-side and usable, at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  test(`Cycle/Transaction Combined keeps Transaction above Signal and usable, at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(String(error)));
@@ -47,19 +47,17 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", before.revision!);
     await expect(page.getByTestId("history-status")).toHaveText(before.history!);
 
-    // Non-overlapping, side-by-side panes: the current #408 contract places
-    // Transaction lanes left of the waveform surface. Sample A has 2
-    // Transaction Groups, so this also exercises the real multi-lane layout
-    // without relying on the obsolete stacked-pane geometry.
+    // Combined contract: Transaction lanes occupy the upper pane and the
+    // Cycle waveform occupies the lower pane.
     const transactionPaneBox = (await page.locator(".split-transaction-pane").boundingBox())!;
     const signalPaneBox = (await page.locator(".split-signal-content").boundingBox())!;
     const lanesBox = (await lanes.boundingBox())!;
     const surfaceBox = (await surface.boundingBox())!;
-    expect(transactionPaneBox.x + transactionPaneBox.width).toBeLessThanOrEqual(signalPaneBox.x + 1);
+    expect(transactionPaneBox.y + transactionPaneBox.height).toBeLessThanOrEqual(signalPaneBox.y + 1);
+    expect(transactionPaneBox.x).toBeCloseTo(signalPaneBox.x, 0);
+    expect(transactionPaneBox.width).toBeCloseTo(signalPaneBox.width, 0);
     expect(lanesBox.x).toBeGreaterThanOrEqual(transactionPaneBox.x);
-    expect(lanesBox.x).toBeLessThan(signalPaneBox.x);
     expect(surfaceBox.x).toBeGreaterThanOrEqual(signalPaneBox.x);
-    expect(surfaceBox.x).toBeLessThan(signalPaneBox.x + signalPaneBox.width);
 
     // One shared scrollable viewport owns both -- horizontal scroll/zoom
     // can never drift out of sync because there is only one scroll owner
