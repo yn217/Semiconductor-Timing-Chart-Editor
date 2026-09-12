@@ -53,6 +53,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
 
   await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
@@ -75,7 +76,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   // Read-only: reflects the real, live document -- never a canned/fake value.
   const summary = await callTool("get_document_summary");
   const parsedSummary = JSON.parse(summary.body.result!.content[0]!.text) as { title: string; signalCount: number };
-  expect(parsedSummary.title).toBe("Semiconductor Timing Chart");
+  expect(parsedSummary.title).toBe("Sample -- Transaction Mode");
   expect(parsedSummary.signalCount).toBe(8);
 
   const selection = await callTool("get_selection");
@@ -88,7 +89,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   // edit to target.
   const viewportSnapshot = await callTool("get_viewport_snapshot");
   const parsedViewportSnapshot = JSON.parse(viewportSnapshot.body.result!.content[0]!.text) as { zoom: number; cycleCount: number; selection: { selectedSignalId: string }; elementMap: readonly { id: string; name: string; role: string; groupId?: string }[] };
-  expect(parsedViewportSnapshot.cycleCount).toBe(24);
+  expect(parsedViewportSnapshot.cycleCount).toBe(160);
   expect(parsedViewportSnapshot.selection.selectedSignalId).toBe("sig_cycle_request");
   expect(parsedViewportSnapshot.elementMap).toContainEqual(expect.objectContaining({ id: "sig_cycle_request", name: "REQUEST", role: "input" }));
   expect(parsedViewportSnapshot.elementMap.length).toBe(parsedSummary.signalCount);
