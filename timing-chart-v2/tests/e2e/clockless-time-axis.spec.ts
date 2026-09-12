@@ -90,6 +90,7 @@ test("chooses an explicit reference Clock without fabricating one", async ({ pag
   const clkA = clock("sig_clk_a", "CLK_A");
   const clkB = clock("sig_clk_b", "CLK_B");
   await openJson(page, base("select-reference", "Select Reference", [clkA, clkB, data], [clkA.id, clkB.id, data.id]));
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_clk_b']").click();
   await page.getByTestId("set-reference-clock").click();
