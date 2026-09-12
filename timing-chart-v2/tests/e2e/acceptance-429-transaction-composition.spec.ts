@@ -14,6 +14,8 @@ test("default browser startup opens the built-in Transaction sample", async ({ p
   await expect(page.locator('[data-transaction-row-id="demo_txn_read"]')).toContainText("Memory");
   await expect(page.locator('[data-transaction-row-id="demo_txn_read"]')).toContainText("Memory read transaction");
   await expect(page.locator(".transaction-bookmark-markers [data-bookmark-id='demo_bookmark_read_start']")).toBeVisible();
+  await page.locator(".transaction-bookmark-markers [data-bookmark-id='demo_bookmark_read_start']").click();
+  await expect(page.getByTestId("bookmark-row-demo_bookmark_read_start")).toHaveAttribute("data-selected", "true");
 });
 
 test("Transaction crossing a collapsed TimeGroup renders an Axis Break gap", async ({ page }) => {
