@@ -512,6 +512,10 @@ export function useEditorSecondarySurfaces(
         onDeleteGroup={(groupId) => {
           surfaceCommands.deleteTransactionGroup(groupId);
         }}
+        onDuplicateTransaction={(transactionId) => {
+          input.actions.selectTransaction(transactionId);
+          input.actions.duplicateSelectedEntity();
+        }}
       />
     ) : null;
   const workspaceBottom = (

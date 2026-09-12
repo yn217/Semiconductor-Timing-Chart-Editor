@@ -25,6 +25,7 @@ export function TransactionTree({
   onSetVisibility,
   onSetGroupVisibility,
   onDeleteGroup,
+  onDuplicateTransaction,
 }: {
   readonly document: CanonicalDocument;
   readonly documentEpoch: number;
@@ -62,11 +63,13 @@ export function TransactionTree({
     visible: boolean,
   ) => void;
   readonly onDeleteGroup?: (groupId: TransactionGroup["id"]) => void;
+  readonly onDuplicateTransaction?: (transactionId: TransactionId) => void;
 }) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [dragOverGroup, setDragOverGroup] = useState<string>();
   const [editingGroupId, setEditingGroupId] = useState<string>();
   const [openGroupMenuId, setOpenGroupMenuId] = useState<string>();
+  const [openTransactionMenuId, setOpenTransactionMenuId] = useState<TransactionId>();
   const isTransactionSelected = (id: TransactionId) =>
     selectedId === id || selectedIds?.has(id) === true;
   useEffect(() => {
@@ -74,6 +77,7 @@ export function TransactionTree({
     setDragOverGroup(undefined);
     setEditingGroupId(undefined);
     setOpenGroupMenuId(undefined);
+    setOpenTransactionMenuId(undefined);
   }, [documentEpoch]);
   const groups = useMemo(
     () =>
@@ -322,6 +326,12 @@ export function TransactionTree({
           {transaction.visible === false ? "○" : "●"}
         </button>
       )}
+      <button type="button" className="transaction-left-tree-more" aria-label={`${transaction.name} actions`} title={`${transaction.name} actions`} onClick={(event) => { event.stopPropagation(); setOpenTransactionMenuId((current) => current === transaction.id ? undefined : transaction.id); }}>⋮</button>
+      {openTransactionMenuId === transaction.id && <div className="transaction-left-tree-group-menu transaction-left-tree-transaction-menu" role="menu" aria-label={`${transaction.name} actions`}>
+        <button type="button" role="menuitem" onClick={() => { setOpenTransactionMenuId(undefined); onFocusTransaction?.(transaction.id); }}>Focus in Timeline</button>
+        {onDuplicateTransaction && <button type="button" role="menuitem" onClick={() => { setOpenTransactionMenuId(undefined); onSelect(transaction.id); onDuplicateTransaction(transaction.id); }}>Duplicate</button>}
+        {onDelete && <button type="button" role="menuitem" onClick={() => { setOpenTransactionMenuId(undefined); onSelect(transaction.id); onDelete(); }}>Delete</button>}
+      </div>}
     </div>
   );
   const dropTarget = (groupId: TransactionGroup["id"] | undefined) => {
