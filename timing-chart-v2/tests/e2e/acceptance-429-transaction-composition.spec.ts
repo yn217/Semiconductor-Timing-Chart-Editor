@@ -289,6 +289,24 @@ test("Resizing a folded Transaction preserves the opposite source boundary and u
   await expect(inspector.getByLabel("Transaction start")).toHaveValue("10");
 });
 
+test("Transaction starting inside a fold shows a start-hidden affordance", async ({ page }) => {
+  const value = JSON.parse(readFileSync(samplePath, "utf8")) as any;
+  value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }];
+  const transaction = value.transactions.find((item: any) => item.id === "txn_read0");
+  transaction.start = 25;
+  transaction.end = 60;
+  transaction.phases = [];
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "fold-start-hidden.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  const bar = page.locator('[data-transaction-id="txn_read0"]');
+  await expect(bar).toBeVisible();
+  await expect(bar.locator('[data-fold-affordance="start-hidden"]')).toBeVisible();
+});
+
 test("Transaction sample is shown after reloading the default browser URL", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");

@@ -115,14 +115,14 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
   const pendingPreviewClientX = useRef<number | undefined>(undefined);
   const previewFrame = useRef<number | undefined>(undefined);
   const current = preview ?? { start: transaction.start, end: transaction.end };
-  const resolveBoundaryX = (cycle: number) => preview === undefined ? boundaryXByCycle.get(cycle) : getBoundaryX(cycle);
-  const startX = resolveBoundaryX(current.start);
-  const endX = resolveBoundaryX(current.end);
-  const phases = preview === undefined ? transaction.phases : previewPhases(transaction, preview, drag?.edge ?? "body");
   const containingFold = foldRanges.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.end <= toCycle);
   const startHiddenFold = foldRanges.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.start < toCycle && transaction.end > toCycle);
   const endHiddenFold = foldRanges.find(([fromCycle, toCycle]) => transaction.end > fromCycle && transaction.end <= toCycle && transaction.start < fromCycle);
-
+  const resolveBoundaryX = (cycle: number) => preview === undefined ? boundaryXByCycle.get(cycle) : getBoundaryX(cycle);
+  const resolveVisibleBoundary = (cycle: number, direction: -1 | 1) => { for (let candidate = cycle; candidate >= 0 && candidate <= cycleCount; candidate += direction) { const value = getBoundaryX(candidate); if (value !== undefined) return value; } return undefined; };
+  const startX = resolveBoundaryX(current.start) ?? (startHiddenFold ? resolveVisibleBoundary(startHiddenFold[1], 1) : undefined);
+  const endX = resolveBoundaryX(current.end) ?? (endHiddenFold ? resolveVisibleBoundary(endHiddenFold[0], -1) : undefined);
+  const phases = preview === undefined ? transaction.phases : previewPhases(transaction, preview, drag?.edge ?? "body");
   useEffect(() => {
     return () => {
       if (previewFrame.current !== undefined) cancelAnimationFrame(previewFrame.current);
@@ -196,10 +196,9 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
     else commands.resize(transaction.id, drag.edge, drag.edge === "start" ? final.start : final.end);
   };
 
-  const visibleBoundary = (cycle: number, direction: -1 | 1) => { for (let candidate = cycle; candidate >= 0 && candidate <= cycleCount; candidate += direction) { const value = getBoundaryX(candidate); if (value !== undefined) return value; } return undefined; };
   const gaps = foldRanges.flatMap(([fromCycle, toCycle]) => {
     if (fromCycle <= current.start || toCycle >= current.end) return [];
-    const from = visibleBoundary(fromCycle, -1); const to = visibleBoundary(toCycle, 1);
+    const from = resolveVisibleBoundary(fromCycle, -1); const to = resolveVisibleBoundary(toCycle, 1);
     return from === undefined || to === undefined ? [] : [{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }];
   });
   const phaseSegments = (phase: NonNullable<typeof phases>[number]) => {
