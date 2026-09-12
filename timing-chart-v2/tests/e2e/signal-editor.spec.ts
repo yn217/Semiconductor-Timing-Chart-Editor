@@ -463,3 +463,22 @@ test("Transitions table Select All is a real tri-state checkbox wired to the sam
   await editor.getByLabel("Select transition 1", { exact: true }).check();
   await expect(editor.getByTestId("event-delete-selected")).toBeEnabled();
 });
+
+test("Transition drag handle reorders rows through one history entry", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const editor = page.getByTestId("signal-editor");
+  const rows = editor.locator("form.event-row");
+  const source = rows.nth(1);
+  const target = rows.nth(0);
+  const historyBefore = await page.getByTestId("history-status").textContent();
+  const transfer = await page.evaluateHandle(() => new DataTransfer());
+  await source.getByLabel(/Drag transition/).dispatchEvent("dragstart", { dataTransfer: transfer });
+  await target.dispatchEvent("dragover", { dataTransfer: transfer });
+  await target.dispatchEvent("drop", { dataTransfer: transfer });
+  await expect(page.getByTestId("history-status")).not.toHaveText(historyBefore!);
+  await expect(editor.locator("form.event-row").first().locator("[data-testid^='event-row-value-']")).toHaveText("1");
+  await expect(editor.locator("form.event-row").nth(1).locator("[data-testid^='event-row-value-']")).toHaveText("0");
+});
