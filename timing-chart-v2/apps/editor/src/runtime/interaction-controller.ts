@@ -40,11 +40,9 @@ export function resolveTransactionSnapCycle(context: {
   const axisOwner = context.timeAxis.ownerSignalId;
   const axisRow = axisOwner === undefined ? undefined : context.projection.rowLayout.find((row) => row.rowId === axisOwner);
   if (!waveLayer || !axisOwner || !axisRow) return context.cycleBoundaryAtPointerX(context.clientX);
-  context.host.dataset.transactionSnapAxisRowId = axisRow.rowId;
   const bounds = waveLayer.getBoundingClientRect();
   if (!context.snapEnabled) return context.cycleBoundaryAtX(context.clientX);
   const localPointer = context.screenGeometry.fromScreen({ x: context.clientX - bounds.left, y: 0 }, { scrollX: 0, scrollY: 0, zoom: context.zoom });
   const snap = context.currentSnapIndex().nearest({ x: localPointer.x, y: axisRow.y + context.document.layout.rowHeight / 2 }, 14 / context.zoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
-  context.publishState();
   return snap?.anchor.cycle ?? context.cycleBoundaryAtPointerX(context.clientX);
 }
