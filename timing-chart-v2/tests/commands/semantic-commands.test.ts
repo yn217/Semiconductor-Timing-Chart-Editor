@@ -229,6 +229,21 @@ describe("pure Semantic Command planning", () => {
     expect(session.getSnapshot().document.transactions[0]).toMatchObject({ start: 0, end: 18 });
   });
 
+  it("allows gap-only edge resize and rejects interior Phase boundary crossing", () => {
+    const document = canonicalFixture();
+    document.timeline = { ...document.timeline, end: 30, cycleCount: 30 };
+    document.transactions = [{ id: "txn_phase_gaps" as TransactionId, name: "Read", start: 0, end: 25, laneId: "lane_0", phases: [{ name: "Data", start: 5, end: 10 }, { name: "Response", start: 15, end: 20 }] }];
+    const session = new CommandHistorySession(document);
+    expect(session.execute({ id: commandId("cmd_resize_gap_start"), type: "transaction.resize", transactionId: "txn_phase_gaps" as TransactionId, edge: "start", value: 3 }).ok).toBe(true);
+    expect(session.getSnapshot().document.transactions[0]).toMatchObject({ start: 3, end: 25, phases: document.transactions[0]!.phases });
+    expect(session.execute({ id: commandId("cmd_resize_gap_end"), type: "transaction.resize", transactionId: "txn_phase_gaps" as TransactionId, edge: "end", value: 22 }).ok).toBe(true);
+    expect(session.getSnapshot().document.transactions[0]).toMatchObject({ start: 3, end: 22, phases: document.transactions[0]!.phases });
+    const before = session.getSnapshot().document;
+    const rejected = session.execute({ id: commandId("cmd_resize_interior_boundary"), type: "transaction.resize", transactionId: "txn_phase_gaps" as TransactionId, edge: "start", value: 6 });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_TRANSACTION_PHASE" }] });
+    expect(session.getSnapshot().document).toEqual(before);
+  });
+
   it("preserves omitted Transaction fields and supports explicit clears", () => {
     const document = canonicalFixture();
     const original = {
