@@ -98,25 +98,23 @@ test("Transaction search empty state is reserved for an active no-match filter",
   await expect(page.getByText("No Transactions match this search.")).toBeVisible();
 });
 
-test("Create Transaction removes the empty state as a single History entry, and Undo/Redo restores it exactly", async ({ page }) => {
+test("Create Transaction appends one History entry, and Undo/Redo restores the sample set exactly", async ({ page }) => {
   await openTransactionMode(page);
 
   await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(page.getByTestId("transaction-empty-state")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(1);
+  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(7);
 
-  // Undo removes the created Transaction cleanly -- back to the exact
-  // pre-creation empty state, not a partially-reverted one.
+  // Undo removes only the created Transaction, preserving the sample set.
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
-  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(0);
+  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(6);
   await expect(page.getByTestId("transaction-empty-state")).toHaveCount(0);
-  await expect(page.getByLabel("New Transaction name")).toBeVisible();
 
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(1);
+  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(7);
 });
 
 test("A Transaction built with phases and Linked Signals survives Save/Open exactly, and Inspector/Bottom edits stay synchronized", async ({ page }) => {
