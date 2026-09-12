@@ -210,6 +210,30 @@ test("Transaction demo is available after a browser reload", async ({ page }) =>
   await expect(page.locator(".transaction-list-header-cells")).toContainText("Linked Signals");
 });
 
+test("Fold, Bookmark, and Transaction source values survive Save/Open", async ({ page }) => {
+  const value = JSON.parse(readFileSync(samplePath, "utf8")) as any;
+  value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }];
+  value.bookmarks = [{ id: "bookmark-roundtrip", name: "Roundtrip", start: 25 }];
+  const transaction = value.transactions.find((item: any) => item.id === "txn_read0");
+  transaction.start = 10;
+  transaction.end = 60;
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "fold-roundtrip.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await download).path();
+  expect(savedPath).toBeTruthy();
+  const saved = JSON.parse(readFileSync(savedPath!, "utf8")) as any;
+  expect(saved.timeGroups[0].presentation.collapsed).toBe(true);
+  expect(saved.bookmarks[0].start).toBe(25);
+  expect(saved.transactions.find((item: any) => item.id === "txn_read0")).toMatchObject({ start: 10, end: 60 });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("transaction-left-tree")).toContainText("Read_0");
+});
+
 test("Transaction sample is shown after reloading the default browser URL", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
