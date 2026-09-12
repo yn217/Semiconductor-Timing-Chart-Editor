@@ -516,6 +516,7 @@ export function useEditorSecondarySurfaces(
           input.actions.selectTransaction(transactionId);
           input.actions.duplicateSelectedEntity();
         }}
+        onRenameTransaction={(transactionId, name) => surfaceCommands.renameTransactions([{ transactionId, name }])}
       />
     ) : null;
   const workspaceBottom = (

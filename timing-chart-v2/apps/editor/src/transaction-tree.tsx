@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type DragEvent } from "react";
+import type { CommandResult } from "@timing-chart-v2/commands";
 import type {
   CanonicalDocument,
   Transaction,
@@ -26,6 +27,7 @@ export function TransactionTree({
   onSetGroupVisibility,
   onDeleteGroup,
   onDuplicateTransaction,
+  onRenameTransaction,
 }: {
   readonly document: CanonicalDocument;
   readonly documentEpoch: number;
@@ -64,12 +66,14 @@ export function TransactionTree({
   ) => void;
   readonly onDeleteGroup?: (groupId: TransactionGroup["id"]) => void;
   readonly onDuplicateTransaction?: (transactionId: TransactionId) => void;
+  readonly onRenameTransaction?: (transactionId: TransactionId, name: string) => CommandResult;
 }) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [dragOverGroup, setDragOverGroup] = useState<string>();
   const [editingGroupId, setEditingGroupId] = useState<string>();
   const [openGroupMenuId, setOpenGroupMenuId] = useState<string>();
   const [openTransactionMenuId, setOpenTransactionMenuId] = useState<TransactionId>();
+  const [editingTransactionId, setEditingTransactionId] = useState<TransactionId>();
   const isTransactionSelected = (id: TransactionId) =>
     selectedId === id || selectedIds?.has(id) === true;
   useEffect(() => {
@@ -78,6 +82,7 @@ export function TransactionTree({
     setEditingGroupId(undefined);
     setOpenGroupMenuId(undefined);
     setOpenTransactionMenuId(undefined);
+    setEditingTransactionId(undefined);
   }, [documentEpoch]);
   const groups = useMemo(
     () =>
@@ -106,6 +111,13 @@ export function TransactionTree({
               ".transaction-left-tree-group-header",
             )
           : null;
+      const row = event.target instanceof Element ? event.target.closest<HTMLElement>(".transaction-left-tree-row") : null;
+      const transactionId = row?.dataset.transactionTreeId as TransactionId | undefined;
+      if (transactionId && onRenameTransaction) {
+        event.preventDefault();
+        setEditingTransactionId(transactionId);
+        return;
+      }
       const groupId = header?.closest<HTMLElement>(
         "[data-transaction-group-id]",
       )?.dataset.transactionGroupId;
@@ -224,7 +236,7 @@ export function TransactionTree({
       globalThis.document.removeEventListener("keydown", onArrow);
       globalThis.document.removeEventListener("click", onGroupMultiSelect);
     };
-  }, [collapsed, document, groups, onDelete, onSelect]);
+  }, [collapsed, document, groups, onDelete, onRenameTransaction, onSelect]);
   const matches = (transaction: Transaction) => {
     if (filterMode === "grouped" && transaction.groupId === undefined)
       return false;
@@ -271,7 +283,9 @@ export function TransactionTree({
   const rename = (group: TransactionGroup) => setEditingGroupId(group.id);
   const renderTransaction = (transaction: Transaction) => (
     <div className="transaction-left-tree-row-wrap" key={transaction.id}>
-      <button
+      {editingTransactionId === transaction.id && onRenameTransaction ? (
+        <InlineNameInput target={transaction} value={transaction.name} ariaLabel={`Rename ${transaction.name}`} autoFocus onRename={(name) => onRenameTransaction(transaction.id, name)} onCommitted={() => setEditingTransactionId(undefined)} onCanceled={() => setEditingTransactionId(undefined)} />
+      ) : <button
         type="button"
         draggable={onMoveToGroup !== undefined}
         className="transaction-left-tree-row"
@@ -310,7 +324,7 @@ export function TransactionTree({
           }}
         />
         {transaction.name}
-      </button>
+      </button>}
       {onSetVisibility && (
         <button
           type="button"
