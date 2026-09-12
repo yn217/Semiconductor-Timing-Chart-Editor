@@ -328,15 +328,15 @@ test("moves the rendered waveform transition to the edited Start cycle, not just
   const ruler = page.getByTestId("cycle-ruler");
 
   const transitionXs = async () => {
-    const uses = wave.locator("use");
-    const count = await uses.count();
-    const xs: number[] = [];
-    for (let i = 0; i < count; i += 1) {
-      const box = await uses.nth(i).boundingBox();
-      const shape = await uses.nth(i).getAttribute("xlink:href");
-      if (box && Number.isFinite(box.x) && box.width > 0 && box.height > 0 && shape?.includes("m")) xs.push(box.x);
-    }
-    return xs;
+    // WaveDrom keeps a large hidden symbol pool in each SVG. Restrict the
+    // geometry probe to visible uses so the acceptance check does not spend
+    // a timeout asking Chromium for boxes of hidden template nodes.
+    return wave.locator("use").evaluateAll((nodes) => nodes.flatMap((node) => {
+      const element = node as SVGGraphicsElement;
+      const box = element.getBoundingClientRect();
+      const shape = node.getAttribute("xlink:href") ?? node.getAttribute("href");
+      return box.width > 0 && box.height > 0 && shape?.includes("m") ? [box.x] : [];
+    }));
   };
 
   const beforeXs = await transitionXs();
