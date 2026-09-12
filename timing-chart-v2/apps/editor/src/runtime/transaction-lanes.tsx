@@ -163,7 +163,8 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
       if (clientX === undefined || !drag || drag.documentEpoch !== documentEpoch) return;
       const cycle = onSnap(clientX, drag.surfaceLeft);
       if (cycle === undefined) return;
-      setPreview(previewTransaction(transaction, drag.edge, cycle, cycleCount));
+      const nextPreview = previewTransaction(transaction, drag.edge, cycle, cycleCount);
+      setPreview((current) => current !== undefined && current.start === nextPreview.start && current.end === nextPreview.end ? current : nextPreview);
     });
   };
   const begin = (event: ReactPointerEvent<HTMLElement>, edge: TransactionDragEdge) => {
