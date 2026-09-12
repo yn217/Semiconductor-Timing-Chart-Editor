@@ -23,6 +23,12 @@ test("Annotation bottom editor lists stable annotation IDs without mutating docu
   const ids = await list.locator("[data-annotation-list-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-list-id")));
   expect(ids).toEqual(ids.filter((id): id is string => id !== null));
   expect(new Set(ids).size).toBe(2);
+  const visibility = list.locator("[data-annotation-list-id]").first().locator("[data-testid^='annotation-list-visibility-']");
+  await expect(visibility).toHaveAttribute("aria-pressed", "true");
+  const visibilityRevision = await host.getAttribute("data-canonical-revision");
+  await visibility.click();
+  await expect(visibility).toHaveAttribute("aria-pressed", "false");
+  await expect(host).not.toHaveAttribute("data-canonical-revision", visibilityRevision!);
 
   const revision = await host.getAttribute("data-canonical-revision");
   const history = await page.getByTestId("history-status").textContent();
@@ -38,7 +44,7 @@ test("Annotation bottom editor lists stable annotation IDs without mutating docu
   const importedId = "annotation_imported";
   await page.getByLabel("Import annotations").setInputFiles({ name: "annotations.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify([{ id: importedId, type: "text", label: "Imported", visible: true, anchor: { signalId: "sig_cycle_request", cycle: 2, point: "cycle-start" } }])) });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
   await expect(page.getByTestId("annotation-list").locator(`[data-annotation-list-id="${importedId}"]`)).toHaveAttribute("data-selected", "true");
 
   const downloadPromise = page.waitForEvent("download");
