@@ -13,6 +13,7 @@ test("default browser startup opens the built-in Transaction sample", async ({ p
   await expect(page.getByTestId("transaction-left-tree")).toContainText("Read_0");
   await expect(page.locator('[data-transaction-row-id="demo_txn_read"]')).toContainText("Memory");
   await expect(page.locator('[data-transaction-row-id="demo_txn_read"]')).toContainText("Memory read transaction");
+  await expect(page.locator(".transaction-bookmark-markers [data-bookmark-id='demo_bookmark_read_start']")).toBeVisible();
 });
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
