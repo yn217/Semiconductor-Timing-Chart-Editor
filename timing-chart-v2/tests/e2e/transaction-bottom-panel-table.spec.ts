@@ -36,7 +36,7 @@ for (const [width, height] of [[1672, 941], [1280, 720]] as const) {
     const list = editor.locator(".transaction-list");
     const header = list.locator(".transaction-list-header");
     await expect(header).toBeVisible();
-    await expect(header).toHaveText("NameGroupLaneStart (TC)End (TC)Duration# PhasesLinked SignalsColorDescription");
+    await expect(header).toHaveText("NameGroupLaneStart CycleEnd CycleDuration (cycles)# PhasesLinked SignalsColorDescription");
 
     const rows = list.locator(".transaction-list-row");
     await expect(rows).toHaveCount(2);

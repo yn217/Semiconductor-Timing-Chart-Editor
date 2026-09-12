@@ -191,7 +191,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(page.getByTestId("transaction-list-search")).toBeVisible();
     await expect(page.getByTestId("delete-bottom-transaction")).toBeHidden();
     await expect(page.getByText(/^Editing:/)).toBeHidden();
-    for (const heading of ["Name", "Group", "Lane", "Start (TC)", "End (TC)", "Duration", "# Phases", "Linked Signals", "Color", "Description"]) {
+    for (const heading of ["Name", "Group", "Lane", "Start Cycle", "End Cycle", "Duration (cycles)", "# Phases", "Linked Signals", "Color", "Description"]) {
       await expect(page.locator(".transaction-list-header-cells")).toContainText(heading);
     }
     await expect(page.locator(".inspector > .minimap .minimap-segment-transaction").first()).toBeVisible();
