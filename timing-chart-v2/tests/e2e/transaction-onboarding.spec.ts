@@ -23,12 +23,11 @@ async function openTransactionMode(page: Page) {
 }
 
 async function createReadRequestTransaction(page: Page, { withLinks = false }: { withLinks?: boolean } = {}) {
-  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
   const bottomEditor = page.getByTestId("transaction-editor");
-  await bottomEditor.getByLabel("Transaction name", { exact: true }).fill("Read Request");
-  await bottomEditor.getByLabel("Transaction start", { exact: true }).fill("2");
-  await bottomEditor.getByLabel("Transaction end", { exact: true }).fill("12");
-  await bottomEditor.getByTestId("apply-transaction-properties").click();
+  await bottomEditor.getByLabel("New Transaction name").fill("Read Request");
+  await bottomEditor.getByLabel("New Transaction start").fill("2");
+  await bottomEditor.getByLabel("New Transaction end").fill("12");
+  await bottomEditor.getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
 
   const inspector = page.getByTestId("inspector");
@@ -172,24 +171,24 @@ test("Phases are added, edited, and deleted through the structured table -- raw 
   const inspector = page.getByTestId("inspector");
   const table = inspector.getByTestId("transaction-phase-editor");
   await expect(table.locator(".transaction-phase-row:not(.transaction-phase-row-header)")).toHaveCount(3);
-  // createReadRequestTransaction is 3 commands: the Ribbon's one-click
-  // Create, the Bottom Panel's Name/Start/End Apply, then the phase Apply.
-  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  // createReadRequestTransaction is 2 commands: the Bottom Panel's create,
+  // then the Inspector phase Apply.
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 
   // Edit an existing phase's name through the structured table alone.
   await inspector.getByLabel("Phase 1 name").fill("Setup");
   await inspector.getByTestId("apply-inspector-transaction").click();
-  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
   const bottomEditor = page.getByTestId("transaction-editor");
   // Re-select to force the Inspector/Bottom editors to re-read the committed document.
-  await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first().click();
+  await page.getByTestId("transaction-editor").locator("[data-transaction-row-id]").filter({ hasText: "Read Request" }).click();
   await expect(bottomEditor).toBeVisible();
 
   // Delete the last phase.
   await inspector.getByLabel("Delete phase 3").click();
   await expect(table.locator(".transaction-phase-row:not(.transaction-phase-row-header)")).toHaveCount(2);
   await inspector.getByTestId("apply-inspector-transaction").click();
-  await expect(page.getByTestId("history-status")).toHaveText("History 5 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
 
   // Add a new phase through "Add Phase" -- no JSON typed anywhere.
   await inspector.getByTestId("add-transaction-phase").click();
@@ -197,7 +196,7 @@ test("Phases are added, edited, and deleted through the structured table -- raw 
   await expect(rows).toHaveCount(3);
   await inspector.getByLabel("Phase 3 name").fill("Cooldown");
   await inspector.getByTestId("apply-inspector-transaction").click();
-  await expect(page.getByTestId("history-status")).toHaveText("History 6 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 5 / Redo 0");
 
   // #429/#397: no raw "Advanced: edit as JSON" disclosure exists any more
   // -- verify the final committed state through the structured table
@@ -205,7 +204,7 @@ test("Phases are added, edited, and deleted through the structured table -- raw 
   await expect(inspector.getByTestId("transaction-phase-editor").locator("details")).toHaveCount(0);
   await expect(inspector.getByLabel("Phase 1 name")).toHaveValue("Setup");
   await expect(inspector.getByLabel("Phase 3 name")).toHaveValue("Cooldown");
-  await expect(page.getByTestId("history-status")).toHaveText("History 6 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 5 / Redo 0");
 });
 
 // #453: bulk operations -- checking several rows exposes a Group/Color/
