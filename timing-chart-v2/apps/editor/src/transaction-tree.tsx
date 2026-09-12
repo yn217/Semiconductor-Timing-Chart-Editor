@@ -29,9 +29,23 @@ export function TransactionTree({ document, filter, selectedId, onSelect, onRena
       const group = groupId === undefined || groupId === "ungrouped" ? undefined : groups.find((candidate) => candidate.id === groupId);
       if (group) setEditingGroupId(group.id);
     };
+    const onArrow = (event: KeyboardEvent) => {
+      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+      const current = event.target instanceof Element ? event.target.closest<HTMLElement>(".transaction-left-tree-row") : null;
+      if (!current) return;
+      const rows = [...globalThis.document.querySelectorAll<HTMLElement>(".transaction-left-tree-row")];
+      const next = rows[rows.indexOf(current) + (event.key === "ArrowDown" ? 1 : -1)];
+      if (!next) return;
+      event.preventDefault();
+      next.focus();
+      const id = next.dataset.transactionTreeId as TransactionId | undefined;
+      if (id) onSelect(id);
+    };
     globalThis.document.addEventListener("dblclick", onDoubleClick);
-    return () => { globalThis.document.removeEventListener("keydown", onKeyDown); globalThis.document.removeEventListener("dblclick", onDoubleClick); };
-  }, [groups]);
+    globalThis.document.addEventListener("keydown", onArrow);
+    return () => { globalThis.document.removeEventListener("keydown", onKeyDown); globalThis.document.removeEventListener("dblclick", onDoubleClick); globalThis.document.removeEventListener("keydown", onArrow); };
+  }, [groups, onSelect]);
   const matches = (transaction: Transaction) => {
     if (needle.length === 0) return true;
     const groupName = transaction.groupId === undefined ? "" : groupById.get(transaction.groupId)?.name ?? "";
