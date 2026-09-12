@@ -61,7 +61,19 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   // ActiveContext was already set (no natural single default there). A
   // Selection change alone must never call this -- only a real ViewMode
   // change may normalize ActiveContext.
-  const setViewMode = (next: ViewMode) => { setViewModeRaw(next); setActiveContext((current) => normalizedActiveContextFor(next, current)); if (next !== "Split") setActivePaneRaw(next === "Transaction" ? "transaction" : "signal"); };
+  const setViewMode = (next: ViewMode) => {
+    setViewModeRaw(next);
+    setActiveContext((current) => normalizedActiveContextFor(next, current));
+    if (next !== "Split") {
+      setActivePaneRaw(next === "Transaction" ? "transaction" : "signal");
+      setBottomTab((current) => {
+        const transactionTabs: readonly BottomTab[] = ["Transaction", "Phases", "Linked Signals", "Bookmarks", "AI", "Problems", "JSON"];
+        const cycleTabs: readonly BottomTab[] = ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"];
+        const valid = next === "Transaction" ? transactionTabs : cycleTabs;
+        return valid.includes(current) ? current : valid[0]!;
+      });
+    }
+  };
   // #407: Split's own pane-level counterpart to #404's ActiveContext --
   // "existing Split layout, minimal change" scope (Non-goals explicitly
   // exclude the horizontal side-by-side layout and the final Ribbon wiring
