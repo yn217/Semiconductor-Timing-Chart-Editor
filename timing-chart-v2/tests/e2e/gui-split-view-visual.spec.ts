@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 
-test("captures the V1 Split View composition with both contexts and zero view mutation", async ({ page }) => {
+test("captures the stacked Combined composition with both contexts and zero view mutation", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/");
   const surface = page.getByTestId("cycle-surface");
@@ -34,10 +34,10 @@ test("captures the V1 Split View composition with both contexts and zero view mu
   const signalBox = await signalPane.boundingBox();
   expect(transactionBox).not.toBeNull();
   expect(signalBox).not.toBeNull();
-  expect(transactionBox!.x).toBeLessThan(signalBox!.x);
-  expect(transactionBox!.y).toBeCloseTo(signalBox!.y, 0);
-  expect(transactionBox!.width).toBeGreaterThanOrEqual(280);
-  expect(signalBox!.width).toBeGreaterThanOrEqual(420);
+  expect(transactionBox!.y).toBeLessThan(signalBox!.y);
+  expect(transactionBox!.x).toBeCloseTo(signalBox!.x, 0);
+  expect(transactionBox!.width).toBeCloseTo(signalBox!.width, 0);
+  await expect(page.getByTestId("combined-split-divider")).toBeVisible();
   await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Transaction");
   await signalPane.click({ position: { x: 40, y: 100 } });
   await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Signal");
@@ -47,12 +47,10 @@ test("captures the V1 Split View composition with both contexts and zero view mu
   await expect(page.locator("[data-major-group='Layout']")).toHaveCount(0);
   await expect(page.locator("[data-major-group='Group']")).toHaveCount(1);
   await expect(page.locator("[data-major-group='Transaction Time']")).toHaveCount(1);
-  const scrollMetrics = await transactionPane.evaluate((element) => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth }));
-  expect(scrollMetrics.scrollWidth).toBeGreaterThan(scrollMetrics.clientWidth);
-  await transactionPane.evaluate((element) => { element.scrollLeft = 120; });
-  await expect.poll(async () => signalPane.evaluate((element) => element.scrollLeft)).toBe(120);
-  await signalPane.evaluate((element) => { element.scrollLeft = 40; });
-  await expect.poll(async () => transactionPane.evaluate((element) => element.scrollLeft)).toBe(40);
+  const viewport = page.getByTestId("cycle-viewport");
+  const scrollMetrics = await viewport.evaluate((element) => ({ clientWidth: element.clientWidth, scrollWidth: element.scrollWidth }));
+  expect(scrollMetrics.scrollWidth).toBeGreaterThanOrEqual(scrollMetrics.clientWidth);
+  await expect(viewport).toHaveAttribute("data-pane", "signal");
   await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true })).toBeVisible();
   await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true })).toBeVisible();
   await mkdir(resolve(process.cwd(), "artifacts", "gui-split-view"), { recursive: true });
