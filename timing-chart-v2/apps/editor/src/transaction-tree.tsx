@@ -1,4 +1,4 @@
-import { useMemo, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useState, type DragEvent } from "react";
 import type { CanonicalDocument, Transaction, TransactionGroup, TransactionId } from "@timing-chart-v2/schema";
 import { EditorIcon } from "./editor-icon.js";
 import { InlineNameInput } from "./inline-name-input.js";
@@ -7,6 +7,18 @@ export function TransactionTree({ document, filter, selectedId, onSelect, onRena
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [dragOverGroup, setDragOverGroup] = useState<string>();
   const [editingGroupId, setEditingGroupId] = useState<string>();
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "F2" || event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+      const header = event.target instanceof Element ? event.target.closest<HTMLElement>(".transaction-left-tree-group-header") : null;
+      const groupId = header?.closest<HTMLElement>("[data-transaction-group-id]")?.dataset.transactionGroupId;
+      if (!groupId || groupId === "ungrouped" || !groupById.has(groupId)) return;
+      event.preventDefault();
+      setEditingGroupId(groupId);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [groupById]);
   const groups = useMemo(() => [...(document.transactionGroups ?? [])].sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)), [document.transactionGroups]);
   const needle = filter.trim().toLocaleLowerCase();
   const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
