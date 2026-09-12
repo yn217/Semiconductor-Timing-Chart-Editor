@@ -25,7 +25,6 @@ export function attachMenuKeyboardNavigation(doc: Document, closeContextMenu: ()
 export function resolveTransactionSnapCycle(context: {
   readonly clientX: number;
   readonly surfaceLeft: number | undefined;
-  readonly host: HTMLElement;
   readonly projection: RenderProjection;
   readonly timeAxis: TimeAxisGeometry;
   readonly screenGeometry: ScreenGeometryProjector;
@@ -36,7 +35,6 @@ export function resolveTransactionSnapCycle(context: {
   readonly cycleBoundaryAtPointerX: (clientX: number) => number | undefined;
   readonly cycleBoundaryAtX: (clientX: number) => number | undefined;
   readonly cycleBoundaryAtLocalX: (localX: number, zoom: number, snapEnabled: boolean) => number | undefined;
-  readonly publishState: () => void;
 }): number | undefined {
   if (!context.snapEnabled) {
     return context.surfaceLeft === undefined

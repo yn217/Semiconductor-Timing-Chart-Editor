@@ -365,7 +365,6 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     snapTransactionCycle.current = (clientX, surfaceLeft) => resolveTransactionSnapCycle({
       clientX,
       surfaceLeft,
-      host: rendererHost,
       projection,
       timeAxis: timelineGeometry.timeAxis,
       screenGeometry: timelineGeometry.screen,
@@ -376,7 +375,6 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       cycleBoundaryAtPointerX: cycleBoundaryAtX,
       cycleBoundaryAtX,
       cycleBoundaryAtLocalX: (localX, zoom, snapEnabled) => timelineGeometry.cycleBoundaryAtLocalX(localX, zoom, snapEnabled),
-      publishState,
     });
     publishState();
 
