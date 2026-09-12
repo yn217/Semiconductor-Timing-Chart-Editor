@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("Inspector and Bottom expose the documented edit contract surfaces", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
@@ -21,6 +22,7 @@ test("Inspector and Bottom expose the documented edit contract surfaces", async 
 
 test("Inspector Cancel restores signal and clock drafts without a canonical mutation", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const revision = await host.getAttribute("data-canonical-revision");
@@ -57,6 +59,7 @@ test("Inspector Cancel restores signal and clock drafts without a canonical muta
 // discarding whatever was mid-typed for the previous one).
 test("Bottom editors cancel transient drafts and preserve canonical counters", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
@@ -119,6 +122,7 @@ test("Transaction Bottom table keeps selection while Inspector owns edits", asyn
 
 test("Signal and Group rename use the same explicit Enter/Escape draft contract", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
 
