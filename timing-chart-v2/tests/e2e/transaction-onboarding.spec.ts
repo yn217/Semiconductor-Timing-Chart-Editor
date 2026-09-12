@@ -159,7 +159,7 @@ test("A Transaction built with phases and Linked Signals survives Save/Open exac
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
-  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(7);
+  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(6);
   await expect(page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`)).toContainText("Read Request v2");
 });
 
@@ -214,15 +214,12 @@ test("Phases are added, edited, and deleted through the structured table -- raw 
 // independent of whichever single row (if any) is open for editing.
 test("Bulk-selecting Transactions applies Color and Delete to every checked row as one atomic History entry each", async ({ page }) => {
   await openTransactionMode(page);
-  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
-  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
-  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
-  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(3);
-  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(6);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 
   const list = page.getByTestId("transaction-editor").locator(".transaction-list");
   const rows = list.locator(".transaction-list-row");
-  await expect(rows).toHaveCount(3);
+  await expect(rows).toHaveCount(6);
   // No bulk toolbar until at least one row is checked.
   await expect(page.getByTestId("transaction-bulk-toolbar")).toHaveCount(0);
 
@@ -234,7 +231,7 @@ test("Bulk-selecting Transactions applies Color and Delete to every checked row 
 
   // Bulk Color: one command per checked row, batched into one History entry.
   await bulkToolbar.getByLabel("Set selected transactions color").fill("#ff6600");
-  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   const swatches = rows.locator(".transaction-row-swatch");
   await expect(swatches.nth(0)).toHaveCSS("background-color", "rgb(255, 102, 0)");
   await expect(swatches.nth(1)).toHaveCSS("background-color", "rgb(255, 102, 0)");
@@ -243,10 +240,10 @@ test("Bulk-selecting Transactions applies Color and Delete to every checked row 
   // Select all visible, then Bulk Delete removes every checked row as one
   // History entry and clears the checked set (nothing left to bulk-act on).
   await list.getByLabel("Select all visible transactions").check();
-  await expect(page.getByTestId("transaction-bulk-count")).toHaveText("3 selected");
+  await expect(page.getByTestId("transaction-bulk-count")).toHaveText("6 selected");
   await bulkToolbar.getByTestId("bulk-delete-transactions").click();
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(0);
-  await expect(page.getByTestId("history-status")).toHaveText("History 5 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   await expect(page.getByTestId("transaction-bulk-toolbar")).toHaveCount(0);
   // #534: the zero-Transaction state is the create form itself, not a
   // separate "No Transactions yet" onboarding block -- same contract as
@@ -255,8 +252,8 @@ test("Bulk-selecting Transactions applies Color and Delete to every checked row 
   await expect(page.getByTestId("transaction-empty-state")).toHaveCount(0);
   await expect(page.getByLabel("New Transaction name")).toBeVisible();
 
-  // Undo restores all 3 deleted Transactions in the one History step.
+  // Undo restores all 6 deleted Transactions in the one History step.
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
-  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(3);
-  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 1");
+  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(6);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 1");
 });
