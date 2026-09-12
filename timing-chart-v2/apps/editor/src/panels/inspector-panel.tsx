@@ -159,7 +159,14 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
   // linked-signal command replaces the Transaction object while the user may
   // still be editing phases/name/group/color/description; syncing on every
   // entity-field dependency would silently discard that draft before Apply.
+  const committedTransactionRef = useRef<{ id: string | undefined; name: string; start: number; end: number; lane: string; group: string; color: string; description: string; phases: readonly { name: string; start: number; end: number }[] }>({ id: undefined, name: "", start: 0, end: 1, lane: "lane_0", group: "", color: "", description: "", phases: [] });
   useEffect(() => {
+    const previous = committedTransactionRef.current;
+    const sameDraft = previous.id === transaction?.id
+      && transactionName === previous.name && transactionStart === previous.start && transactionEnd === previous.end
+      && transactionLane === previous.lane && transactionGroupId === previous.group && transactionColor === previous.color
+      && transactionDescription === previous.description && phasesEqual(phaseRows, previous.phases);
+    if (previous.id !== transaction?.id || sameDraft) {
     setTransactionName(transaction?.name ?? "");
     setTransactionStart(transaction?.start ?? 0);
     setTransactionEnd(transaction?.end ?? 1);
@@ -169,7 +176,9 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
     setTransactionDescription(transaction?.description ?? "");
     setPhaseRows((transaction?.phases ?? []).map((phase) => ({ ...phase })));
     setTransactionStatus("");
-  }, [transaction?.id]);
+    }
+    committedTransactionRef.current = { id: transaction?.id, name: transaction?.name ?? "", start: transaction?.start ?? 0, end: transaction?.end ?? 1, lane: transaction?.laneId ?? "lane_0", group: transaction?.groupId ?? "", color: transaction?.color ?? "", description: transaction?.description ?? "", phases: transaction?.phases ?? [] };
+  }, [phaseRows, transaction?.id, transaction?.start, transaction?.end, transaction?.laneId, transaction?.groupId, transaction?.color, transaction?.description, transaction?.phases, transactionName, transactionStart, transactionEnd, transactionLane, transactionGroupId, transactionColor, transactionDescription]);
   const previewGroupStyle = (overrides: Partial<SignalGroupStyle> & { readonly showBorder?: boolean } = {}) => {
     if (!group) return;
     const showBorder = overrides.showBorder ?? groupShowBorder;
