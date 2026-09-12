@@ -119,6 +119,7 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
   const startX = resolveBoundaryX(current.start);
   const endX = resolveBoundaryX(current.end);
   const phases = preview === undefined ? transaction.phases : previewPhases(transaction, preview, drag?.edge ?? "body");
+  const containingFold = foldRanges.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.end <= toCycle);
 
   useEffect(() => {
     return () => {
@@ -145,6 +146,9 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
     return () => window.document.removeEventListener("keydown", onKeyDown);
   }, [drag, documentEpoch]);
 
+  if (containingFold) {
+    return <button type="button" className="transaction-hidden-in-fold" data-transaction-id={transaction.id} data-hidden-in-fold="true" data-selected={String(selected)} style={{ top: 4 + row * LANE_ROW_HEIGHT }} aria-label={`${transaction.name} inside collapsed TimeGroup`} onClick={() => onSelect(transaction.id)}>{transaction.name}<small>inside collapsed range</small></button>;
+  }
   if (startX === undefined || endX === undefined) return null;
   const updatePreview = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!drag || drag.documentEpoch !== documentEpoch) return;

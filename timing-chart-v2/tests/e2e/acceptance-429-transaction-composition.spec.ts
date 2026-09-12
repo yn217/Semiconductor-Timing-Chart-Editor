@@ -43,6 +43,26 @@ test("Transaction crossing a collapsed TimeGroup renders an Axis Break gap", asy
   await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("60");
 });
 
+test("Transaction fully inside a collapsed TimeGroup remains selectable", async ({ page }) => {
+  const value = JSON.parse(readFileSync(samplePath, "utf8")) as any;
+  value.timeGroups = [{ id: "fold-0-100", name: "Fold", start: 0, end: 100, presentation: { collapsed: true } }];
+  const transaction = value.transactions.find((item: any) => item.id === "txn_read0");
+  transaction.start = 25;
+  transaction.end = 35;
+  transaction.phases = [];
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-hidden-fold.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  const hidden = page.locator('[data-transaction-id="txn_read0"][data-hidden-in-fold="true"]');
+  await expect(hidden).toBeVisible();
+  await expect(hidden).toHaveAttribute("aria-label", "Read_0 inside collapsed TimeGroup");
+  await expect(page.locator('[data-transaction-row-id="txn_read0"]')).toContainText("25");
+  await expect(page.locator('[data-transaction-row-id="txn_read0"]')).toContainText("35");
+});
+
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
   test(`Transaction reference composition at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
