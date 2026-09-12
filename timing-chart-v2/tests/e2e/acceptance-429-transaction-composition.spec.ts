@@ -67,7 +67,7 @@ test("Transaction fully inside a collapsed TimeGroup remains selectable", async 
 
 test("Bookmark inside a collapsed TimeGroup is identified in the Bookmarks panel", async ({ page }) => {
   const value = JSON.parse(readFileSync(samplePath, "utf8")) as any;
-  value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }];
+  value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }, { id: "fold-22-30", name: "Nested Fold", start: 22, end: 30, presentation: { collapsed: true } }];
   value.bookmarks = [{ id: "bookmark-inside-fold", name: "Hidden marker", start: 25 }];
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
@@ -78,6 +78,7 @@ test("Bookmark inside a collapsed TimeGroup is identified in the Bookmarks panel
   await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
   await page.getByTestId("bookmark-row-bookmark-inside-fold").click();
   await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Fold");
+  await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Nested Fold");
   const expandAndJump = page.getByTestId("bookmark-expand-and-jump");
   await expect(expandAndJump).toBeVisible();
   const host = page.getByTestId("cycle-surface");
@@ -93,8 +94,9 @@ test("Bookmark inside a collapsed TimeGroup is identified in the Bookmarks panel
   await expect(page.getByTestId("bookmark-row-bookmark-inside-fold")).toContainText("25");
   await page.getByRole("button", { name: "Undo", exact: true }).last().click();
   await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Fold");
+  await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Nested Fold");
   await expect(page.locator(".transaction-axis-break-gap").first()).toBeVisible();
-  await expect(page.locator('[data-transaction-id="txn_read0"] [data-phase-segment="true"]')).toHaveCount(2);
+  await expect(page.locator('[data-transaction-id="txn_read0"] [data-phase-segment="true"]')).toHaveCount(3);
 });
 
 test("Combined View keeps the shared fold visible in the Transaction pane", async ({ page }) => {
