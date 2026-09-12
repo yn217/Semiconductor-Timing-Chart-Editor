@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("Annotation bottom editor lists stable annotation IDs without mutating document state", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
@@ -12,7 +13,10 @@ test("Annotation bottom editor lists stable annotation IDs without mutating docu
   await annotationTools.getByRole("button", { name: "Add annotation" }).click();
 
   const list = page.getByTestId("annotation-list");
-  await expect(list.locator("[data-annotation-list-id]")).toHaveCount(2);
+  await expect(list.locator("[data-annotation-list-id]")).toHaveCount(5);
+  for (const id of ["demo_ann_request", "demo_ann_data", "demo_ann_response"]) {
+    await expect(list.locator(`[data-annotation-list-id="${id}"]`)).toBeVisible();
+  }
   await expect(list.locator(".annotation-list-header")).toContainText("Start");
   await expect(list.locator(".annotation-list-header")).toContainText("End");
   await expect(list.locator(".annotation-list-header")).toContainText("Label / Text");
@@ -22,7 +26,7 @@ test("Annotation bottom editor lists stable annotation IDs without mutating docu
   await expect(page.getByTestId("annotation-preview-status")).toHaveText("Previewing draft (updated 1) · canonical data unchanged");
   const ids = await list.locator("[data-annotation-list-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-list-id")));
   expect(ids).toEqual(ids.filter((id): id is string => id !== null));
-  expect(new Set(ids).size).toBe(2);
+  expect(new Set(ids).size).toBe(5);
   const visibility = list.locator("[data-annotation-list-id]").first().locator("[data-testid^='annotation-list-visibility-']");
   await expect(visibility).toHaveAttribute("aria-pressed", "true");
   const visibilityRevision = await host.getAttribute("data-canonical-revision");
