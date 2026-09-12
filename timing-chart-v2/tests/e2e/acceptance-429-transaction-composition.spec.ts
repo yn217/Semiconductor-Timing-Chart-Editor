@@ -78,6 +78,7 @@ test("Bookmark inside a collapsed TimeGroup is identified in the Bookmarks panel
   await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
   await page.getByTestId("bookmark-row-bookmark-inside-fold").click();
   await expect(page.locator(".cycle-ruler [data-bookmark-id='bookmark-inside-fold']")).toHaveAttribute("data-inside-collapsed", "Fold");
+  await expect(page.locator(".cycle-ruler [data-time-group-id='fold-20-40']")).toBeVisible();
   await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Fold");
   await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Nested Fold");
   const expandAndJump = page.getByTestId("bookmark-expand-and-jump");
