@@ -5,6 +5,15 @@ import { expect, test } from "@playwright/test";
 
 const samplePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../samples/acceptance-429/sample-transaction-mode-closure.tcd.json");
 
+test("default browser startup opens the built-in Transaction sample", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("transaction-left-tree")).toContainText("All Transactions");
+  await expect(page.getByTestId("transaction-left-tree")).toContainText("Read_0");
+  await expect(page.locator('[data-transaction-row-id="demo_txn_read"]')).toContainText("Memory");
+  await expect(page.locator('[data-transaction-row-id="demo_txn_read"]')).toContainText("Memory read transaction");
+});
+
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
   test(`Transaction reference composition at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
