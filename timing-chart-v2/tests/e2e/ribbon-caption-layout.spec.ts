@@ -7,7 +7,9 @@ for (const width of [1280, 1672]) test(`Ribbon caption layout survives mode chan
   const ribbon = page.getByTestId("ribbon");
   const initial = await ribbon.boundingBox();
   for (const mode of ["Cycle", "Transaction", "Split", "Cycle"]) {
-    await page.locator(".view-mode").getByRole("button", { name: mode, exact: true }).click();
+    const modeButton = page.locator(".view-mode").getByRole("button", { name: mode, exact: true });
+    await modeButton.click();
+    if (mode === "Split") await expect(modeButton).toHaveText("Combined");
     expect((await ribbon.boundingBox())!.height).toBe(initial!.height);
     const groups = await ribbon.locator(".ribbon-schema-group").evaluateAll(es => es.filter(e => e.getBoundingClientRect().width > 0).map(e => {
       const body = e.querySelector(".ds-ribbon-group")!.getBoundingClientRect();
