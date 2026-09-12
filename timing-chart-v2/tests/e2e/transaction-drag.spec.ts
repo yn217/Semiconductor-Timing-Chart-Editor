@@ -12,6 +12,7 @@ async function createTransaction(page: Page, name = "DMA Read", start = 2, end =
   const host = page.getByTestId("cycle-surface");
   await page.getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
   // Create with the library's own placeholder defaults, then set the real
   // name/start/end through the selected-Transaction editor below -- #426
   // gave that editor's Apply a Draft/dirty gate (disabled when the draft
@@ -25,11 +26,11 @@ async function createTransaction(page: Page, name = "DMA Read", start = 2, end =
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   const lane = page.getByTestId("transaction-lanes");
   await lane.locator("[data-transaction-id]").first().click();
-  const editor = page.getByTestId("transaction-editor");
+  const editor = page.locator(".inspector-shell");
   await editor.getByLabel("Transaction name").fill(name);
   await editor.getByLabel("Transaction end").fill(String(end));
   await editor.getByLabel("Transaction start").fill(String(start));
-  await editor.getByRole("button", { name: "Apply Transaction" }).click();
+  await editor.getByTestId("apply-inspector-transaction").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 }
 
