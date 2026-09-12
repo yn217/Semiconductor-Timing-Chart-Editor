@@ -1093,12 +1093,14 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const groupId = command.clearGroupId ? undefined : command.groupId === undefined ? transaction.groupId : command.groupId;
       const color = command.clearColor ? undefined : command.color === undefined ? transaction.color : command.color;
       const description = command.clearDescription ? undefined : command.description === undefined ? transaction.description : command.description;
-      if (transaction.name === name && transaction.start === command.start && transaction.end === command.end && (transaction.laneId ?? undefined) === (lane ?? undefined) && (transaction.groupId ?? undefined) === (groupId ?? undefined) && transaction.color === color && transaction.description === description && semanticEqual(transaction.phases ?? [], phases ?? [])) return fail("no-op", "NO_OP", "$", "Transaction is unchanged.");
-      const next: Transaction = { ...transaction, name, start: command.start, end: command.end, ...(lane === undefined ? {} : { laneId: lane }), ...(groupId === undefined ? {} : { groupId }), ...(color === undefined ? {} : { color }), ...(description === undefined ? {} : { description }), ...(phases && phases.length > 0 ? { phases } : {}) };
+      const visible = command.clearVisible ? undefined : command.visible === undefined ? transaction.visible : command.visible;
+      if (transaction.name === name && transaction.start === command.start && transaction.end === command.end && (transaction.laneId ?? undefined) === (lane ?? undefined) && (transaction.groupId ?? undefined) === (groupId ?? undefined) && transaction.color === color && transaction.description === description && (transaction.visible ?? true) === (visible ?? true) && semanticEqual(transaction.phases ?? [], phases ?? [])) return fail("no-op", "NO_OP", "$", "Transaction is unchanged.");
+      const next: Transaction = { ...transaction, name, start: command.start, end: command.end, ...(lane === undefined ? {} : { laneId: lane }), ...(groupId === undefined ? {} : { groupId }), ...(color === undefined ? {} : { color }), ...(description === undefined ? {} : { description }), ...(visible === undefined ? {} : { visible }), ...(phases && phases.length > 0 ? { phases } : {}) };
       if (lane === undefined) delete (next as { laneId?: string }).laneId;
       if (groupId === undefined) delete (next as { groupId?: string }).groupId;
       if (color === undefined) delete (next as { color?: string }).color;
       if (description === undefined) delete (next as { description?: string }).description;
+      if (visible === undefined) delete (next as { visible?: boolean }).visible;
       if (phases === undefined || phases.length === 0) delete (next as { phases?: readonly TransactionPhase[] }).phases;
       const transactions = [...document.transactions]; transactions[index] = next;
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };

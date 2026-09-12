@@ -122,6 +122,7 @@
       "properties": {
         "subtitle": { "type": "string" },
         "description": { "type": "string" },
+        "visible": { "type": "boolean" },
         "notes": { "type": "string" },
         "preconditions": { "type": "array", "items": { "type": "string" } },
         "constraints": { "type": "array", "items": { "type": "string" } },

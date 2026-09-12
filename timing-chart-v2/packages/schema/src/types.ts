@@ -298,6 +298,8 @@ export interface Transaction {
   readonly groupId?: TransactionGroupId;
   readonly color?: string;
   readonly description?: string;
+  /** Transaction visibility; omitted is the legacy visible state. */
+  readonly visible?: boolean;
   readonly category?: string;
   readonly style?: JsonObject;
   readonly metadata?: JsonObject;
