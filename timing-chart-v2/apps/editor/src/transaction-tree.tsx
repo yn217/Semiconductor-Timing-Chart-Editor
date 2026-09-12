@@ -73,7 +73,7 @@ export function TransactionTree({ document, documentEpoch, filter, filterMode = 
     };
     globalThis.document.addEventListener("click", onGroupMultiSelect);
     return () => { globalThis.document.removeEventListener("keydown", onKeyDown); globalThis.document.removeEventListener("dblclick", onDoubleClick); globalThis.document.removeEventListener("keydown", onArrow); globalThis.document.removeEventListener("click", onGroupMultiSelect); };
-  }, [document, groups, onDelete, onSelect]);
+  }, [collapsed, document, groups, onDelete, onSelect]);
   const matches = (transaction: Transaction) => {
     if (filterMode === "grouped" && transaction.groupId === undefined) return false;
     if (filterMode === "ungrouped" && transaction.groupId !== undefined) return false;
