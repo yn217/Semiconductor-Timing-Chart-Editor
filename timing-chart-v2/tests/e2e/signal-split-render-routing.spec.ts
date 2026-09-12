@@ -28,3 +28,17 @@ test("Signal Split remains view-only when a legacy assignment is present", async
   await expect(page.getByTestId("cycle-surface-lower")).toBeVisible();
   await expect(page.getByLabel("Inspector signal split pane")).toHaveCount(0);
 });
+
+test("Signal Split is available only in Cycle View", async ({ page }) => {
+  await page.goto("/");
+  const viewTab = page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true });
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await viewTab.click();
+  await expect(page.getByTestId("view-panel-signal-split")).toHaveCount(0);
+  await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+  await viewTab.click();
+  await expect(page.getByTestId("view-panel-signal-split")).toHaveCount(0);
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await viewTab.click();
+  await expect(page.getByTestId("view-panel-signal-split")).toHaveCount(1);
+});
