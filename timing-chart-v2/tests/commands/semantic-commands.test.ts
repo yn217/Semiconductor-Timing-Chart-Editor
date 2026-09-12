@@ -209,18 +209,19 @@ describe("pure Semantic Command planning", () => {
     expect(session.historyState().undoDepth).toBe(0);
   });
 
-  it("rejects End-edge Phase clipping and keeps a valid resize as one undoable change", () => {
+  it("follows an edge-attached Phase and keeps the resize as one undoable change", () => {
     const document = canonicalFixture();
     document.timeline = { ...document.timeline, end: 20, cycleCount: 20 };
     document.transactions = [{ id: "txn_phase_resize_end" as TransactionId, name: "Read", start: 2, end: 18, laneId: "lane_0", phases: [{ name: "Address", start: 2, end: 5 }, { name: "Data", start: 5, end: 15 }, { name: "Response", start: 15, end: 18 }] }];
     const session = new CommandHistorySession(document);
-    const rejected = session.execute({ id: commandId("cmd_resize_phase_end_reject"), type: "transaction.resize", transactionId: "txn_phase_resize_end" as TransactionId, edge: "end", value: 16 });
-    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_TRANSACTION_PHASE" }] });
-    expect(session.getSnapshot().document).toEqual(document);
-    expect(session.historyState().undoDepth).toBe(0);
+    const acceptedEnd = session.execute({ id: commandId("cmd_resize_phase_end_follow"), type: "transaction.resize", transactionId: "txn_phase_resize_end" as TransactionId, edge: "end", value: 16 });
+    expect(acceptedEnd.ok).toBe(true);
+    expect(session.getSnapshot().document.transactions[0]).toMatchObject({ end: 16, phases: [{ name: "Address", start: 2, end: 5 }, { name: "Data", start: 5, end: 15 }, { name: "Response", start: 15, end: 16 }] });
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
     const accepted = session.execute({ id: commandId("cmd_resize_phase_expand"), type: "transaction.resize", transactionId: "txn_phase_resize_end" as TransactionId, edge: "start", value: 0 });
     expect(accepted.ok).toBe(true);
-    expect(session.getSnapshot().document.transactions[0]).toMatchObject({ start: 0, end: 18, phases: document.transactions[0]!.phases });
+    expect(session.getSnapshot().document.transactions[0]).toMatchObject({ start: 0, end: 18, phases: [{ name: "Address", start: 0, end: 5 }, { name: "Data", start: 5, end: 15 }, { name: "Response", start: 15, end: 18 }] });
     expect(session.historyState().undoDepth).toBe(1);
     expect(session.undo().ok).toBe(true);
     expect(session.getSnapshot().document.transactions[0]).toEqual(document.transactions[0]);

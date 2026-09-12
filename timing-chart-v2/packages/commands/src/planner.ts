@@ -1127,13 +1127,25 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const end = command.edge === "end" ? command.value : transaction.end;
       if (!Number.isInteger(command.value) || start < 0 || start >= end || end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.value", "Resized Transaction must remain a non-empty half-open range.");
       if (start === transaction.start && end === transaction.end) return fail("no-op", "NO_OP", "$", "Transaction edge is unchanged.");
-      // Phase resize policy (Issue #551): a resize must not silently clip or
-      // delete semantic Phase ranges. Reject the gesture atomically; callers
-      // retain the original Transaction, History, Dirty and selection state.
-      if (transaction.phases?.some((phase) => phase.start < start || phase.end > end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.value", "Transaction resize would clip a Phase; resize the Phase explicitly first.");
-      const phases = transaction.phases?.map((phase) => ({ ...phase, start: Math.max(start, phase.start), end: Math.min(end, phase.end) })).filter((phase) => phase.start < phase.end);
-      const { phases: _phases, ...base } = transaction;
-      const next = phases?.length ? { ...base, start, end, phases } : { ...base, start, end };
+      // Phase resize policy (Issue #551): preserve the authored Phase
+      // structure. Only an edge-attached Phase may follow the corresponding
+      // Transaction edge; a gap may absorb the resize, while crossing an
+      // interior Phase boundary is rejected atomically.
+      let phases = transaction.phases;
+      if (phases && phases.length > 0) {
+        const first = phases[0];
+        const last = phases[phases.length - 1];
+        if (command.edge === "start") {
+          if (start >= first.end) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.value", "Transaction start cannot cross the first Phase boundary.");
+          if (first.start === transaction.start) phases = phases.map((phase, phaseIndex) => phaseIndex === 0 ? { ...phase, start } : phase);
+          else if (first.start < start) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.value", "Transaction resize would clip a Phase; resize the Phase explicitly first.");
+        } else {
+          if (end <= last.start) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.value", "Transaction end cannot cross the last Phase boundary.");
+          if (last.end === transaction.end) phases = phases.map((phase, phaseIndex) => phaseIndex === phases.length - 1 ? { ...phase, end } : phase);
+          else if (last.end > end) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.value", "Transaction resize would clip a Phase; resize the Phase explicitly first.");
+        }
+      }
+      const next = phases === undefined ? { ...transaction, start, end } : { ...transaction, start, end, phases };
       const transactions = [...document.transactions]; transactions[index] = next;
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
