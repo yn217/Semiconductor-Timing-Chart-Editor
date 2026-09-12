@@ -475,7 +475,7 @@
    Target/X/Y -- would force a horizontal scrollbar inside an already-
    narrow column. min-width: 0 + a compact 7-column template (see
    annotation-list.tsx for which columns) fits it instead. */
-.annotation-list { min-width: 0; min-height: 0; flex: 1 1 0; overflow: hidden auto; border-bottom: 1px solid #dce3eb; background: #fbfcfe; }
+.annotation-list { min-width: 0; overflow: hidden auto; border-bottom: 1px solid #dce3eb; background: #fbfcfe; }
 .annotation-list-row { display: grid; grid-template-columns: 18px 20px 46px minmax(0, 1fr) 52px 52px 18px; align-items: center; gap: 4px; min-height: 27px; padding: 3px 6px; color: #304761; text-align: left; font-size: 10px; }
 .annotation-list-color { width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(0,0,0,.15); }
 .annotation-list-header { min-height: 25px; border-bottom: 1px solid #cbd6e2; background: #f0f4f8; color: #607188; font-size: 9px; font-weight: 700; }
