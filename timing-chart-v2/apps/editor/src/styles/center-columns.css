@@ -310,6 +310,7 @@
   border-right: 1px solid #cbd4df;
   background: #f8fafc;
 }
+.cycle-panel.mode-transaction:has([data-testid="transaction-signal-tree"]) .transaction-left-tree { display: none; }
 .cycle-panel.mode-transaction .transaction-lane-labels {
   left: var(--gui-left-width);
   width: var(--gui-frozen-width, 210px);
