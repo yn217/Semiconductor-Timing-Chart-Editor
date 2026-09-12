@@ -162,7 +162,8 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     onOpenTimeline: () => workspace.setRibbonTab("Timeline"),
     setRuntimeDiagnostics: input.setRuntimeDiagnostics,
   });
-  const openTransactionContextMenu = (event: MouseEvent<HTMLButtonElement>) => {
+  const openTransactionContextMenu = (event: MouseEvent<HTMLButtonElement>, transactionId?: TransactionId) => {
+    if (transactionId !== undefined) input.actions.selectTransaction(transactionId);
     refs.menuOriginRef.current = event.currentTarget;
     dialog.setContextMenu({ x: event.clientX, y: event.clientY, target: "transaction" });
   };
@@ -277,7 +278,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     : <TransactionLanes document={input.document} documentEpoch={input.documentEpoch} presentationRevision={input.transactionPresentationRevision} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={transactionBoundaryX} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(clientX)} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />);
   const workspaceViewportLegend = <LegendView document={input.document} commands={surfaceCommands} />;
   const workspaceTransactionTree = workspace.viewMode === "Transaction"
-    ? <TransactionTree document={input.document} filter={workspace.transactionTreeFilter} {...(selected.transactionId === undefined ? {} : { selectedId: selected.transactionId })} onSelect={input.actions.selectTransaction} onRenameGroup={input.actions.renameTransactionGroup} onMoveToGroup={(transactionId, groupId) => { surfaceCommands.moveTransactionToGroup(transactionId, groupId); }} />
+    ? <TransactionTree document={input.document} filter={workspace.transactionTreeFilter} {...(selected.transactionId === undefined ? {} : { selectedId: selected.transactionId })} onSelect={input.actions.selectTransaction} onRenameGroup={input.actions.renameTransactionGroup} onMoveToGroup={(transactionId, groupId) => { surfaceCommands.moveTransactionToGroup(transactionId, groupId); }} onContextMenu={openTransactionContextMenu} />
     : null;
   const workspaceBottom = <BottomEditorPanel
     tabs={workspace.bottomTabs}
