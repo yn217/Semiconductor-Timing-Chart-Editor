@@ -6,6 +6,7 @@
 
 .editor-shell .ribbon-schema-group {
   display: grid;
+  grid-template-columns: max-content;
   grid-template-rows: minmax(0, 1fr) var(--ribbon-caption-height);
   min-width: 0;
   height: 100%;
@@ -19,7 +20,7 @@
    route for commands that no longer fit at compact widths. */
 .editor-shell .ribbon > [data-ribbon-home] {
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   overflow: hidden;
 }
 
@@ -27,19 +28,22 @@
 .editor-shell .ribbon > [data-ribbon-home] > .ribbon-schema-group {
   width: max-content;
   min-width: 0;
-  max-width: 100%;
   overflow: hidden;
 }
 
 .editor-shell .ribbon-schema-group > .ds-ribbon-group {
   min-height: 0;
   height: 100%;
+  width: max-content;
+  max-width: 100%;
   box-sizing: border-box;
   padding-bottom: 0;
 }
 
 .ribbon-schema-group__caption {
   align-self: center;
+  justify-self: center;
+  width: max-content;
   min-width: 0;
   color: #637083;
   font-size: 10px;
