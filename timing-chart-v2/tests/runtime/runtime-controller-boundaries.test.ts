@@ -41,6 +41,34 @@ describe("runtime controller boundaries", () => {
     expect(snapIndex).not.toHaveBeenCalled();
   });
 
+  it("resolves Transaction-only boundaries from semantic local geometry", () => {
+    const local = vi.fn(() => 11);
+    const cycleDomFallback = vi.fn(() => 3);
+    const pointerFallback = vi.fn(() => 4);
+    const screenGeometry = { fromScreen: vi.fn(() => ({ x: 42, y: 0 })) } as never;
+    const cycle = resolveTransactionSnapCycle({
+      clientX: 100,
+      surfaceLeft: 58,
+      host: {} as HTMLElement,
+      projection: { rowLayout: [] } as never,
+      timeAxis: { ownerSignalId: undefined } as never,
+      screenGeometry,
+      zoom: 2,
+      snapEnabled: true,
+      document: canonicalFixture(),
+      currentSnapIndex: vi.fn(),
+      cycleBoundaryAtPointerX: pointerFallback,
+      cycleBoundaryAtX: cycleDomFallback,
+      cycleBoundaryAtLocalX: local,
+      publishState: vi.fn(),
+    });
+
+    expect(cycle).toBe(11);
+    expect(local).toHaveBeenCalledWith(42, 2, true);
+    expect(cycleDomFallback).not.toHaveBeenCalled();
+    expect(pointerFallback).not.toHaveBeenCalled();
+  });
+
   it("publishes the initial refresh only for the current document lifecycle", async () => {
     const host = { isConnected: true, dataset: {} } as unknown as HTMLElement;
     const refresh = {

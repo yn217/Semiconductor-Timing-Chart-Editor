@@ -375,6 +375,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       currentSnapIndex: () => timelineGeometry.currentSnapIndex(),
       cycleBoundaryAtPointerX: cycleBoundaryAtX,
       cycleBoundaryAtX,
+      cycleBoundaryAtLocalX: (localX, zoom, snapEnabled) => timelineGeometry.cycleBoundaryAtLocalX(localX, zoom, snapEnabled),
       publishState,
     });
     publishState();

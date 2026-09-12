@@ -72,6 +72,11 @@ export class TimelineGeometryOwner {
 
   cycleBoundaryAtScreenX(clientX: number, surfaceLeft: number, zoom: number, snapEnabled: boolean): number | undefined {
     const localX = this.screenToLocal({ x: clientX - surfaceLeft, y: 0 }, zoom).x;
+    return this.cycleBoundaryAtLocalX(localX, zoom, snapEnabled);
+  }
+
+  /** Resolve a cycle boundary without consulting any rendered Cycle surface. */
+  cycleBoundaryAtLocalX(localX: number, zoom: number, snapEnabled: boolean): number | undefined {
     const candidates = this.currentSnapIndex().entries().filter((candidate) => candidate.kind === "cycle-boundary");
     if (!snapEnabled) {
       const ordered = [...candidates].sort((left, right) => left.point.x - right.point.x);

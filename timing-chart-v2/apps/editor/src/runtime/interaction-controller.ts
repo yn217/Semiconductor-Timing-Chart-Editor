@@ -35,13 +35,29 @@ export function resolveTransactionSnapCycle(context: {
   readonly currentSnapIndex: () => ImmutableSnapIndex;
   readonly cycleBoundaryAtPointerX: (clientX: number) => number | undefined;
   readonly cycleBoundaryAtX: (clientX: number) => number | undefined;
+  readonly cycleBoundaryAtLocalX: (localX: number, zoom: number, snapEnabled: boolean) => number | undefined;
   readonly publishState: () => void;
 }): number | undefined {
-  if (!context.snapEnabled) return context.cycleBoundaryAtX(context.clientX);
+  if (!context.snapEnabled) {
+    return context.surfaceLeft === undefined
+      ? context.cycleBoundaryAtX(context.clientX)
+      : context.cycleBoundaryAtLocalX(
+        context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: 0, scrollY: 0, zoom: context.zoom }).x,
+        context.zoom,
+        false,
+      );
+  }
   const axisOwner = context.timeAxis.ownerSignalId;
   const axisRow = axisOwner === undefined ? undefined : context.projection.rowLayout.find((row) => row.rowId === axisOwner);
-  if (context.surfaceLeft === undefined || !axisOwner || !axisRow) return context.cycleBoundaryAtPointerX(context.clientX);
+  if (context.surfaceLeft === undefined) return context.cycleBoundaryAtPointerX(context.clientX);
+  if (!axisOwner || !axisRow) {
+    return context.cycleBoundaryAtLocalX(
+      context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: 0, scrollY: 0, zoom: context.zoom }).x,
+      context.zoom,
+      true,
+    );
+  }
   const localPointer = context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: 0, scrollY: 0, zoom: context.zoom });
   const snap = context.currentSnapIndex().nearest({ x: localPointer.x, y: axisRow.y + context.document.layout.rowHeight / 2 }, 14 / context.zoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
-  return snap?.anchor.cycle ?? context.cycleBoundaryAtPointerX(context.clientX);
+  return snap?.anchor.cycle ?? context.cycleBoundaryAtLocalX(localPointer.x, context.zoom, true);
 }
