@@ -84,6 +84,19 @@ test("Combined routes a real Transaction bar drag to the Transaction pane only",
   await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Transaction");
 });
 
+test("Transaction to Combined and back preserves Transaction ownership", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+  const viewport = page.getByTestId("cycle-viewport");
+  await expect(viewport).toHaveAttribute("data-active-pane", "transaction");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(viewport).toHaveAttribute("data-active-pane", "");
+  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id='demo_txn_read']")).toBeVisible();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});
+
 test("Combined routes a Signal waveform range drag to the Signal pane only", async ({ page }) => {
   await page.goto("/?transaction-demo");
   const host = page.getByTestId("cycle-surface");
