@@ -85,30 +85,6 @@ test("Bottom editors cancel transient drafts and preserve canonical counters", a
   await expect(transactions.locator(".transaction-list")).toBeVisible();
   await expect(transactions.getByTestId("apply-transaction-properties")).toHaveCount(0);
   await expect(transactions.getByText("Editing:")).toHaveCount(0);
-  return;
-  await transactions.getByLabel("New Transaction name").fill("Cancel Transaction");
-  await transactions.getByRole("button", { name: "Create Transaction", exact: true }).click();
-  const created = transactions.getByRole("button", { name: /Cancel Transaction/ }).last();
-  await created.click();
-  const transactionName = transactions.getByLabel("Transaction name");
-  const originalTransactionName = await transactionName.inputValue();
-  const afterCreate = {
-    revision: await host.getAttribute("data-canonical-revision"),
-    history: await page.getByTestId("history-status").textContent(),
-    dirty: await page.getByTestId("dirty-status").textContent(),
-  };
-  await transactions.getByLabel("Transaction end").fill("0");
-  await transactions.getByTestId("apply-transaction-properties").click();
-  await expect(host).toHaveAttribute("data-canonical-revision", afterCreate.revision!);
-  await expect(page.getByTestId("history-status")).toHaveText(afterCreate.history!);
-  await expect(page.getByTestId("dirty-status")).toHaveText(afterCreate.dirty!);
-  await expect(transactions.getByLabel("Transaction end")).toHaveValue("0");
-  await transactionName.fill("TRANSACTION_TRANSIENT");
-  await transactionName.press("Escape");
-  await expect(page.getByTestId("transaction-editor").getByLabel("Transaction name")).toHaveValue(originalTransactionName);
-  await expect(host).toHaveAttribute("data-canonical-revision", afterCreate.revision!);
-  await expect(page.getByTestId("history-status")).toHaveText(afterCreate.history!);
-  await expect(page.getByTestId("dirty-status")).toHaveText(afterCreate.dirty!);
 });
 
 test("Transaction Bottom table keeps selection while Inspector owns edits", async ({ page }) => {
