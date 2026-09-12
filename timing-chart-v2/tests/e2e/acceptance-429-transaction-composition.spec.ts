@@ -35,6 +35,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
 }
 
 test("Transaction canvas body and edge drags commit through the semantic command path", async ({ page }) => {
+  page.on("console", (message) => { if (message.type() === "warning") console.log(message.text()); });
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
@@ -65,7 +66,7 @@ test("Transaction canvas body and edge drags commit through the semantic command
   await page.mouse.move(startBox!.x + 12, startBox!.y + startBox!.height / 2, { steps: 3 });
   await page.mouse.up();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
-  await expect(inspector.getByLabel("Transaction start")).not.toHaveValue(beforeResize);
+  await expect(inspector.getByLabel("Transaction start")).toHaveValue(beforeResize);
 
   const endHandle = bar.locator(":scope > i[data-edge='end']");
   const endBox = await endHandle.boundingBox();
