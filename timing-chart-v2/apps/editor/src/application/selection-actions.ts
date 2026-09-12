@@ -11,7 +11,7 @@ export interface SelectionActionsInput {
 
 export interface SelectionActions {
   readonly selectAnnotation: (id: AnnotationId) => void;
-  readonly selectTransaction: (id: TransactionId) => void;
+  readonly selectTransaction: (id: TransactionId, additive?: boolean) => void;
   readonly clearSelection: () => void;
   readonly selectAllSignals: () => void;
   readonly selectAllTransactions: () => void;
@@ -22,7 +22,7 @@ export interface SelectionActions {
 /** Owns selection-only operations shared by Ribbon, tree, Inspector and Bottom routes. */
 export function createSelectionActions(input: SelectionActionsInput): SelectionActions {
   const selectAnnotation = (id: AnnotationId) => input.selection.selectAnnotation(id);
-  const selectTransaction = (id: TransactionId) => input.selection.selectTransaction(id);
+  const selectTransaction = (id: TransactionId, additive = false) => input.selection.selectTransaction(id, additive);
   const clearSelection = () => input.selection.clear();
   const selectAllSignals = () => {
     const ids = input.document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);

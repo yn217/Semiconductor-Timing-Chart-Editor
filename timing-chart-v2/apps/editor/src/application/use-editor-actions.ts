@@ -93,7 +93,7 @@ export interface EditorActions {
   readonly deleteBottomSignal: () => void;
   readonly deleteBottomAnnotation: () => void;
   readonly deleteBottomTransaction: () => void;
-  readonly selectTransaction: (id: TransactionId) => void;
+  readonly selectTransaction: (id: TransactionId, additive?: boolean) => void;
   readonly toggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => CommandResult;
   readonly createTransaction: () => void;
   readonly createTransactionGroup: () => void;

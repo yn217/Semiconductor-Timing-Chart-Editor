@@ -104,7 +104,7 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
   readonly getBoundaryX: (cycle: number) => number | undefined;
   readonly boundaryXByCycle: ReadonlyMap<number, number>;
   readonly onSnap: (clientX: number, surfaceLeft?: number) => number | undefined;
-  readonly onSelect: (id: TransactionId) => void;
+  readonly onSelect: (id: TransactionId, additive?: boolean) => void;
   readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize">;
   readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void;
 }) {
