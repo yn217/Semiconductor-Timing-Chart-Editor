@@ -219,7 +219,6 @@ test("Transaction Tree Group menu selects all children", async ({ page }) => {
   await expect(page.getByTestId("transaction-left-tree-row-demo_txn_write")).toHaveAttribute("data-selected", "true");
   await expect(page.getByTestId("transaction-left-tree-row-demo_txn_fetch")).toHaveAttribute("data-selected", "false");
 });
-
 test("Transaction Tree visibility control hides only the selected transaction projection", async ({ page }) => {
   await page.goto("/?transaction-demo");
   const row = page.getByTestId("transaction-left-tree-row-demo_txn_read");
