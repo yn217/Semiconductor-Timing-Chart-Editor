@@ -3,11 +3,12 @@ import type { CanonicalDocument, Transaction, TransactionGroup, TransactionId } 
 import { EditorIcon } from "./editor-icon.js";
 import { InlineNameInput } from "./inline-name-input.js";
 
-export function TransactionTree({ document, filter, filterMode = "all", selectedId, onSelect, onRenameGroup, onMoveToGroup, onContextMenu, onCreateTransaction, onFocusTransaction }: { readonly document: CanonicalDocument; readonly filter: string; readonly filterMode?: "all" | "grouped" | "ungrouped" | "phases" | "linked"; readonly selectedId?: TransactionId; readonly onSelect: (id: TransactionId) => void; readonly onRenameGroup?: (id: TransactionGroup["id"], name: string) => void; readonly onMoveToGroup?: (transactionId: TransactionId, groupId: TransactionGroup["id"] | undefined) => void; readonly onContextMenu?: (event: React.MouseEvent<HTMLButtonElement>, transactionId: TransactionId) => void; readonly onCreateTransaction?: () => void; readonly onFocusTransaction?: (transactionId: TransactionId) => void }) {
+export function TransactionTree({ document, documentEpoch, filter, filterMode = "all", selectedId, onSelect, onRenameGroup, onMoveToGroup, onContextMenu, onCreateTransaction, onFocusTransaction }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly filter: string; readonly filterMode?: "all" | "grouped" | "ungrouped" | "phases" | "linked"; readonly selectedId?: TransactionId; readonly onSelect: (id: TransactionId) => void; readonly onRenameGroup?: (id: TransactionGroup["id"], name: string) => void; readonly onMoveToGroup?: (transactionId: TransactionId, groupId: TransactionGroup["id"] | undefined) => void; readonly onContextMenu?: (event: React.MouseEvent<HTMLButtonElement>, transactionId: TransactionId) => void; readonly onCreateTransaction?: () => void; readonly onFocusTransaction?: (transactionId: TransactionId) => void }) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [dragOverGroup, setDragOverGroup] = useState<string>();
   const [editingGroupId, setEditingGroupId] = useState<string>();
   const [openGroupMenuId, setOpenGroupMenuId] = useState<string>();
+  useEffect(() => { setCollapsed(new Set()); setDragOverGroup(undefined); setEditingGroupId(undefined); setOpenGroupMenuId(undefined); }, [documentEpoch]);
   const groups = useMemo(() => [...(document.transactionGroups ?? [])].sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)), [document.transactionGroups]);
   const needle = filter.trim().toLocaleLowerCase();
   const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
