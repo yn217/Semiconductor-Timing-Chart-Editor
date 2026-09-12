@@ -4,7 +4,7 @@ import { canonicalFixture } from "../fixtures/canonical";
 test("large Annotation lists keep mounted rows bounded through End navigation", async ({ page }) => {
   const document = canonicalFixture();
   const signalId = document.signals[0]!.id;
-  document.annotations = Array.from({ length: 5_000 }, (_, index) => ({ id: `annotation-scale-${index}`, type: "text" as const, label: `Annotation ${index}`, visible: true, anchor: { signalId, cycle: index % document.timeline.cycleCount, point: "cycle-start" as const } }));
+  document.annotations = Array.from({ length: 20_000 }, (_, index) => ({ id: `annotation-scale-${index}`, type: "text" as const, label: `Annotation ${index}`, visible: true, anchor: { signalId, cycle: index % document.timeline.cycleCount, point: "cycle-start" as const } }));
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -18,6 +18,6 @@ test("large Annotation lists keep mounted rows bounded through End navigation", 
   expect(await list.locator("[data-annotation-list-id]").count()).toBeLessThan(100);
   await list.locator("[data-annotation-list-id]").first().focus();
   await page.keyboard.press("End");
-  await expect(list.locator("[data-annotation-list-id='annotation-scale-4999']")).toHaveAttribute("data-selected", "true");
+  await expect(list.locator("[data-annotation-list-id='annotation-scale-19999']")).toHaveAttribute("data-selected", "true");
   expect(await list.locator("[data-annotation-list-id]").count()).toBeLessThan(100);
 });
