@@ -16,6 +16,12 @@ function signalTypeLabel(type: string | undefined): string {
   return type ?? "Signal";
 }
 
+function signalPresentationLabel(kind: RowLayoutEntry["kind"], role: RowLayoutEntry["role"], signalType: string | undefined): string {
+  if (kind === "comment") return "";
+  if (signalType === undefined || signalType === "binary") return role === "input" ? "i" : role === "output" ? "o" : "wire";
+  return signalTypeLabel(signalType);
+}
+
 function nextBrowserFrame(): Promise<void> {
   return new Promise((resolve) => {
     if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(() => resolve());
@@ -1007,7 +1013,7 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     const role = createRoleBadge(document, row.kind, row.role, "tree-signal-role");
     role.title = row.kind === "comment" ? "Comment Row" : row.role ?? "internal";
     if (row.signalType !== undefined) {
-      role.textContent = signalTypeLabel(row.signalType);
+      role.textContent = signalPresentationLabel(row.kind, row.role, row.signalType);
       role.dataset.signalType = row.signalType;
       role.title = `${signalTypeLabel(row.signalType)} · ${row.role ?? "internal"}`;
     }
@@ -1029,6 +1035,11 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     return;
   }
   const role = createRoleBadge(document, row.kind, row.role, "signal-role");
+  if (row.signalType !== undefined) {
+    role.textContent = signalPresentationLabel(row.kind, row.role, row.signalType);
+    role.dataset.signalType = row.signalType;
+    role.title = `${signalTypeLabel(row.signalType)} · ${row.role ?? "internal"}`;
+  }
   const name = document.createElement("span");
   name.dataset.role = "frozen-signal-name";
   name.textContent = row.name;
