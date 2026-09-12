@@ -482,7 +482,10 @@
 /* #397: explicit margin:0 -- the UA default checkbox margin (commonly
    ~3-4px) otherwise silently offsets the button/header alignment below by
    that same amount, since flex item outer size includes margin. */
-.transaction-list-row > input[type="checkbox"] { flex: 0 0 16px; width: 16px; min-width: 16px; height: 16px; min-height: 16px; aspect-ratio: 1 / 1; margin: 0 6px; align-self: center; }
+.transaction-list-row > input[type="checkbox"] { appearance: none; box-sizing: border-box; flex: 0 0 16px; display: block; width: 16px; min-width: 16px; max-width: 16px; height: 16px; min-height: 16px; max-height: 16px; aspect-ratio: 1 / 1; margin: 0 6px; align-self: center; border: 1px solid #9aaabd; border-radius: 2px; background: #fff; }
+.transaction-list-row > input[type="checkbox"]:checked { border-color: var(--ds-focus-color, #2678bc); background: var(--ds-focus-color, #2678bc) center / 10px 10px no-repeat; clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); }
+.transaction-list-row > input[type="checkbox"]:checked::after { content: ""; display: block; width: 5px; height: 9px; margin: 1px 0 0 5px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.transaction-list-row > input[type="checkbox"]:focus-visible { outline: 2px solid var(--ds-focus-color, #2678bc); outline-offset: 1px; }
 .transaction-left-tree-rename { margin-left: auto; padding: 0 4px; border: 0; background: transparent; color: #6d7d91; cursor: pointer; }
 /* #397: fixed pixel widths (not `auto`) for every trailing column -- each
    row's button is its own independent grid formatting context, so `auto`
