@@ -348,6 +348,13 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         this.#overlayOwners.set(primitive.id, owner);
         layers.overlays.append(owner);
       }
+      // The Canonical Annotation ID is the sole identity authority. Keep
+      // semantic identity and the accessible root contract synchronized on
+      // every projection pass, before the signature fast-path: an overlay
+      // owner may be recycled by the renderer/DOM without being recreated.
+      owner.dataset.annotationId = primitive.id;
+      owner.setAttribute("role", "button");
+      owner.tabIndex = 0;
       if (this.#overlaySignatures.get(primitive.id) === signature) continue;
       this.#overlaySignatures.set(primitive.id, signature);
       renderOverlay(owner, primitive);
