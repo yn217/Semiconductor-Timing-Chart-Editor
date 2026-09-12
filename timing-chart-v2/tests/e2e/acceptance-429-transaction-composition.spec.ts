@@ -76,7 +76,13 @@ test("Bookmark inside a collapsed TimeGroup is identified in the Bookmarks panel
   await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
   await page.getByTestId("bookmark-row-bookmark-inside-fold").click();
   await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Fold");
-  await expect(page.getByTestId("bookmark-expand-and-jump")).toBeVisible();
+  const expandAndJump = page.getByTestId("bookmark-expand-and-jump");
+  await expect(expandAndJump).toBeVisible();
+  await expandAndJump.click();
+  await expect(page.getByTestId("bookmark-inside-collapsed")).toBeHidden();
+  await expect(page.getByTestId("bookmark-row-bookmark-inside-fold")).toContainText("25");
+  await page.getByRole("button", { name: "Undo", exact: true }).last().click();
+  await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Fold");
 });
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
