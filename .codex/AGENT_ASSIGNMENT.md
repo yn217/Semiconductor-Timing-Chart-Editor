@@ -1,9 +1,9 @@
 # Claude / Codex Issue Ownership
 
-Last reconciled: 2026-09-12 07:45 JST
+Last reconciled: 2026-09-12 11:45 JST
 Repository: `yn217/Semiconductor-Timing-Chart-Editor`
 Current product branch: `main`
-Observed main: `45661c7e56511df7ca2de68687c055ebacb67a95`
+Observed main: `cc2cc157467e0cf948b28c04f4d08d98d7df9d4c`
 Authoritative queue: `codex-control:.codex/ISSUE_ORDER.txt`
 
 Claude is currently unavailable. Codex is authorized to execute GUI / UX / QA / product work as well as Core / Runtime / Performance work. One Issue has one active implementation owner at a time.
@@ -19,37 +19,62 @@ Claude is currently unavailable. Codex is authorized to execute GUI / UX / QA / 
 
 ## Current Codex task list
 
-1. **#555 — P0 Transaction Group Journey blocker**
-   - Fresh-document GUI must support Transaction -> Group assignment.
-   - Left Tree drag/drop + discoverable `Move to Group` menu.
-   - Bottom/Inspector share the same Semantic Command owner.
-   - Multi-select, Ungroup, cross-surface sync, Undo/Redo, Save/Open.
+1. **#555 — P0 Transaction Group real-user D&D blocker**
+   - User re-tested the Production UI and still cannot move a Transaction between Groups by drag/drop.
+   - This overrides prior focused-E2E/source-wiring claims for D&D acceptance.
+   - Reproduce from a normal/generic document with actual pointer drag.
+   - Audit native `draggable`/drop target hit area, nested child events, selection/gesture ownership and feedback.
+   - Require Group A -> Group B, Ungrouped -> Group, same-group NO_OP, Undo/Redo, Save/Open and all-surface sync.
+   - Context-menu `Move to Group` is useful but does not substitute for working D&D.
 
-2. **#554 — P0 User Journey re-audit**
+2. **#559 — Transaction Left Sidebar parity with Cycle**
+   - #555 D&D is the blocking subset and must work first.
+   - Continue Transaction/Group row menus, filter parity, keyboard navigation, F2/Delete, Timeline focus, multi-select/bulk actions, visibility policy and responsive evidence.
+   - Prefer a shared sidebar interaction shell/grammar rather than two independent Cycle/Transaction UI systems.
+   - Cycle sidebar must remain regression-free.
+
+3. **#561 — Cycle/Transaction interaction-owner boundary**
+   - Scope Cycle and Transaction pointer/gesture owners to pane roots.
+   - Remove cross-mode DOM selector blacklists as the ownership mechanism.
+   - Split arbitration must be explicit; test real pointer mode switches.
+
+4. **#562 — Transaction geometry independence from Cycle DOM/runtime**
+   - Refactor started in `96772ee`: Transaction lane screen-origin is captured at pointerdown.
+   - Finish mode-neutral semantic time/snap geometry and prove Transaction-only operation with Cycle surface unmounted.
+   - Preserve exact Split alignment; no hidden Cycle DOM dependency or new fixed-pitch truth.
+
+5. **#563 — Cycle/Transaction workspace-state isolation**
+   - Bottom-tab normalization/memory has landed; focused Bottom/mode tests are green.
+   - Complete explicit per-mode pane sizing and Pin/Follow/context state ownership per the Issue.
+   - Repeated Cycle -> Transaction -> Cycle and Transaction -> Split -> Transaction must restore correct state without leakage.
+
+6. **#554 — P0 User Journey re-audit / integration gate**
+   - Run after bounded blockers above are implemented enough to retry the journey.
    - Fresh/generic document; no sample-fixture shortcut for authoring proof.
-   - Current Transaction status: Group create/rename progressed, assignment/move is blocked by #555; Lane 3 path still unproven; Phase/Links/selection/persistence/cross-mode journeys remain partially proven.
-   - File bounded P0/P1 bugs when a Journey cannot be completed; do not convert a blocker into an audit-only PASS.
+   - T1/T2 remain blocked until real pointer Transaction Group D&D succeeds.
+   - Lane 3, Phase/Links, selection/persistence and cross-mode journeys remain to be proven.
+   - A focused/fixture PASS cannot override a reproducible user journey failure.
 
-3. **#550 — Transaction Group composite update closure**
+7. **#550 — Transaction Group composite update closure**
    - Planner fix landed in `b5e8e9f`.
    - Remaining: exact Undo/Redo and GUI-path evidence; then close if full acceptance is met.
 
-4. **#551 — Transaction Phase resize closure**
-   - Reject-on-phase-clip policy landed in `ae6faee` / `29c3619`.
+8. **#551 — Transaction Phase resize closure**
+   - Reject-on-phase-clip policy is implemented; latest main adds both-edge tests.
    - Remaining: Production pointer/preview rejection UX, successful non-clipping resize History proof, cross-surface consistency.
 
-5. **#553 — Transaction Bottom bulk checkbox closure**
+9. **#553 — Transaction Bottom bulk checkbox closure**
    - Dedicated checkbox column/Select All/indeterminate landed in `a4316e4`.
    - Remaining: active-vs-bulk selection isolation, checked-ID bulk commands, responsive browser evidence, checkbox-only semantic zero deltas.
 
-6. **#552 — Annotation list virtualization closure**
-   - Core virtualization/model-index keyboard navigation landed in `45661c7`.
+10. **#552 — Annotation list virtualization closure**
+   - Core virtualization/model-index keyboard navigation is on main.
    - Remaining: 1k/5k/20k real-browser scaling and mounted-row/latency/view-only invariants.
 
-7. **#163 — Semantic Command / History / ChangeSet final closure**
+11. **#163 — Semantic Command / History / ChangeSet final closure**
    - Remaining only: History storage scaling decision/evidence, rejected-command adapter transient effects, final cross-adapter/ChangeSet audit.
 
-8. **#549 — Cursor A/B runtime/geometry cleanup**
+12. **#549 — Cursor A/B runtime/geometry cleanup**
    - One gesture owner; no per-pointermove full ruler DOM scan/sort; shared TimeAxis/Snap/DisplayTimeMapping geometry.
 
 ## Explicitly skipped
@@ -59,15 +84,21 @@ Claude is currently unavailable. Codex is authorized to execute GUI / UX / QA / 
 - **#429** Transaction Mode visual/product closure — CLOSED.
 - **#548** Transaction MiniMap incremental correctness — CLOSED.
 - **#463** Transaction large-workspace performance/invalidation — CLOSED.
-- Earlier completed broad GUI foundations should not be reopened merely for another audit; #554 should produce narrow regression Issues when real journeys expose gaps.
+- **#557** Cycle Home Ribbon File/Time dead-space cleanup — CLOSED.
+- **#560** Transaction Group inline rename — CLOSED.
 
 ## Journey policy
 
-Focused tests and fixture rendering are evidence, but not sufficient proof of authoring capability.
+Focused tests and fixture rendering are evidence, but are not sufficient proof of authoring capability.
 
 For user-editable workflows, acceptance should prefer:
 
 `New/generic document -> visible Production GUI operations -> Undo/Redo -> Save/Open -> mode switch -> final state verification`
+
+For drag/drop or pointer workflows specifically:
+- actual Chromium pointer interaction is required;
+- direct Semantic Command calls, synthetic DOM event dispatch, source attributes, or test fixture mutation are not equivalent proof;
+- a current user-visible reproduction of failure keeps the owning Issue open even if a narrower E2E is green.
 
 A closed historical feature Issue does not block fixing a reproducible journey defect. Conversely, do not rebuild Canonical/Semantic Command foundations where the missing piece is only the Production interaction route.
 
