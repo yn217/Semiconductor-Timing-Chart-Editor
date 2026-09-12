@@ -325,6 +325,21 @@ test("Transaction ending inside a fold shows an end-hidden affordance", async ({
   await expect(bar.locator('[data-fold-affordance="end-hidden"]')).toBeVisible();
 });
 
+for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+  test(`Folded Transaction visual evidence at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    const value = JSON.parse(readFileSync(samplePath, "utf8")) as any;
+    value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }];
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "fold-visual.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+    await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+    await expect(page.locator(".transaction-axis-break-gap").first()).toBeVisible();
+    await page.screenshot({ path: `test-results/folded-transaction-${viewport.width}x${viewport.height}.png`, fullPage: true });
+  });
+}
+
 test("Transaction sample is shown after reloading the default browser URL", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
