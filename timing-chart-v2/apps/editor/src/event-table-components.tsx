@@ -81,7 +81,7 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
   const cancel = () => { setStart(change.start); setValue(String(change.value)); setComment(change.comment ?? ""); };
   const startEditing = () => { onSelect(change.start); setIsEditing(true); };
   const stopEditing = () => { cancel(); setIsEditing(false); };
-  return <form className={`event-row${selected ? " selected" : ""}${isEditing ? " editing" : ""}`} role="row" data-event-start={change.start} draggable={draggable} onDragStart={(event) => { event.dataTransfer.setData("text/plain", String(change.start)); event.dataTransfer.effectAllowed = "move"; onDragStart?.(); }} onDragEnter={onDragOver} onDragOver={onDragOver} onDropCapture={onDrop} onDrop={onDrop} onDragEnd={onDragEnd} onClick={() => onSelect(change.start)} onSubmit={(event) => {
+  return <form className={`event-row${selected ? " selected" : ""}${isEditing ? " editing" : ""}`} role="row" data-event-start={change.start} draggable={false} onDragEnter={onDragOver} onDragOver={onDragOver} onDropCapture={onDrop} onDrop={onDrop} onDragEnd={onDragEnd} onClick={() => onSelect(change.start)} onSubmit={(event) => {
     event.preventDefault();
     if (!hasChanges) return;
     const result = commands.replaceValue(signal.id, change.start, start, value, comment);
@@ -95,6 +95,7 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
         the bare cycle number) so the accessible name reads as a sentence,
         matching Section 4's explicit example. */}
     <input type="checkbox" aria-label={`Select transition ${index}`} checked={checked} onClick={(event) => event.stopPropagation()} onChange={onToggleChecked} />
+    <span className="event-row-drag-handle" role="img" aria-label={`Drag transition ${index}`} title="Drag to reorder" draggable={draggable} onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.setData("text/plain", String(change.start)); event.dataTransfer.effectAllowed = "move"; onDragStart?.(); }} onDragEnd={onDragEnd}>⋮⋮</span>
     <span className="event-row-index">{index}</span>
     {/* Every read-only cell keeps a stable `data-testid` (in addition to
         the editing control's own aria-label, unchanged) so a row's
