@@ -103,6 +103,21 @@ test("Combined View keeps the shared fold visible in the Transaction pane", asyn
   await expect(page.locator(".split-transaction-pane [data-transaction-id='txn_read0']")).toBeVisible();
 });
 
+test("Transaction MiniMap marks collapsed source ranges without changing viewport policy", async ({ page }) => {
+  const value = JSON.parse(readFileSync(samplePath, "utf8")) as any;
+  value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }];
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "minimap-fold.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  const minimap = page.getByTestId("minimap");
+  await expect(minimap).toHaveAttribute("data-time-policy", "full-source-overview");
+  await expect(minimap.getByTestId("minimap-fold-fold-20-40")).toBeVisible();
+  await expect(minimap.getByTestId("minimap-viewport")).toBeVisible();
+});
+
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
   test(`Transaction reference composition at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
