@@ -63,6 +63,22 @@ test("Transaction fully inside a collapsed TimeGroup remains selectable", async 
   await expect(page.locator('[data-transaction-row-id="txn_read0"]')).toContainText("35");
 });
 
+test("Bookmark inside a collapsed TimeGroup is identified in the Bookmarks panel", async ({ page }) => {
+  const value = JSON.parse(readFileSync(samplePath, "utf8")) as any;
+  value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }];
+  value.bookmarks = [{ id: "bookmark-inside-fold", name: "Hidden marker", start: 25 }];
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "bookmark-hidden-fold.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
+  await page.getByTestId("bookmark-row-bookmark-inside-fold").click();
+  await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Fold");
+  await expect(page.getByTestId("bookmark-expand-and-jump")).toBeVisible();
+});
+
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
   test(`Transaction reference composition at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
