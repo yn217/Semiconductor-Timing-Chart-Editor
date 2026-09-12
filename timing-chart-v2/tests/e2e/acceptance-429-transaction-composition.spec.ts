@@ -77,3 +77,20 @@ test("Transaction canvas body and edge drags commit through the semantic command
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await expect(inspector.getByLabel("Transaction end")).not.toHaveValue(beforeEndResize);
 });
+
+test("Transaction demo is available after a browser reload", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/?transaction-demo");
+  const surface = page.getByTestId("cycle-surface");
+  await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(page.getByTestId("transaction-left-tree")).toContainText("All Transactions(6)");
+  await expect(page.getByTestId("transaction-left-tree")).toContainText("Memory");
+  await expect(page.locator('[data-transaction-row-id="demo_txn_read"]')).toContainText("Read_0");
+  await expect(page.locator('[data-transaction-row-id="demo_txn_read"]')).toContainText("Memory");
+  await page.reload();
+  await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(page.getByTestId("transaction-left-tree")).toContainText("All Transactions(6)");
+  await expect(page.locator('[data-transaction-row-id="demo_txn_read"]')).toContainText("Read_0");
+  await expect(page.locator(".transaction-list-header-cells")).toContainText("# Phases");
+  await expect(page.locator(".transaction-list-header-cells")).toContainText("Linked Signals");
+});
