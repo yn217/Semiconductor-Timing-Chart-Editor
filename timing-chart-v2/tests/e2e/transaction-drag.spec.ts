@@ -85,7 +85,7 @@ test("resizes a Transaction's start/end edge with snap and keeps start < end", a
   const y = before.y + before.height / 2;
   await transaction.locator("[data-edge='start']").hover();
   await page.mouse.down();
-  await page.mouse.move(cycle2.x, y);
+  await page.mouse.move(cycle2.x + cycle2.width / 2, y);
   await expect(transaction).toHaveAttribute("data-drag-preview", "true");
   expect((await transaction.boundingBox())!.width).toBeGreaterThan(before.width);
   expect(await host.getAttribute("data-canonical-revision")).toBe(revisionBefore);
