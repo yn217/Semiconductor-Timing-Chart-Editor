@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import { cursorDelta, type SemanticCursorState } from "@timing-chart-v2/projection";
 
 export type DensityMode = "compact" | "comfortable";
@@ -204,7 +204,19 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   const [bottomPinned, setBottomPinned] = useState(false);
   const bottomPinnedRef = useRef(false);
   bottomPinnedRef.current = bottomPinned;
-  const [pinnedBottomSelection, setPinnedBottomSelection] = useState<BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId>>();
+  const pinnedBottomSelectionByModeRef = useRef<{ Cycle: BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId> | undefined; Transaction: BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId> | undefined }>({ Cycle: undefined, Transaction: undefined });
+  const [pinnedBottomSelection, setPinnedBottomSelectionState] = useState<BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId> | undefined>();
+  const setPinnedBottomSelection = useCallback((value: SetStateAction<BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId> | undefined>) => {
+    const next = typeof value === "function" ? value(pinnedBottomSelection) : value;
+    if (viewMode === "Cycle" || viewMode === "Transaction") pinnedBottomSelectionByModeRef.current[viewMode] = next;
+    setPinnedBottomSelectionState(next);
+  }, [pinnedBottomSelection, viewMode]);
+  const previousPinnedModeRef = useRef<ViewMode>(viewMode);
+  useEffect(() => {
+    if (viewMode === "Split" || previousPinnedModeRef.current === viewMode) return;
+    previousPinnedModeRef.current = viewMode;
+    setPinnedBottomSelectionState(pinnedBottomSelectionByModeRef.current[viewMode]);
+  }, [viewMode]);
 
   return {
     ribbonTab, setRibbonTab,
