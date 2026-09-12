@@ -51,14 +51,14 @@ export type BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId
  * resize-gesture scratch refs, and the Left Tree filter. None of this is
  * Document/Selection/Timeline canonical state -- every setter here only
  * ever affects layout/chrome, never the .tcd document or command history. */
-export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>(input: { readonly documentEpoch?: number; readonly cycleCount?: number } = {}) {
+export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>(input: { readonly documentEpoch?: number; readonly cycleCount?: number; readonly initialViewMode?: ViewMode } = {}) {
   const [ribbonTab, setRibbonTab] = useState("Home");
   const [bottomTab, setBottomTab] = useState<BottomTab>("Signal");
   const lastBottomTabByModeRef = useRef<{ Cycle: BottomTab; Transaction: BottomTab }>({ Cycle: "Signal", Transaction: "Transaction" });
   const followSelectionByModeRef = useRef<{ Cycle: boolean; Transaction: boolean }>({ Cycle: true, Transaction: true });
   const bottomPinnedByModeRef = useRef<{ Cycle: boolean; Transaction: boolean }>({ Cycle: false, Transaction: false });
-  const [viewMode, setViewModeRaw] = useState<ViewMode>("Cycle");
-  const [activeContext, setActiveContext] = useState<ActiveContext>("Signal");
+  const [viewMode, setViewModeRaw] = useState<ViewMode>(input.initialViewMode ?? "Cycle");
+  const [activeContext, setActiveContext] = useState<ActiveContext>(normalizedActiveContextFor(input.initialViewMode ?? "Cycle", "Signal"));
   // #404: entering Cycle or Transaction normalizes ActiveContext to the one
   // meaningful value for that mode; entering Split preserves whatever
   // ActiveContext was already set (no natural single default there). A

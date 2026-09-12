@@ -40,7 +40,9 @@ import { refreshRendererOverlays } from "./runtime/render-coordinator.js";
 import { applyRendererHostSizing } from "./runtime/renderer-host-sizing.js";
 import { refreshRulerRangeSelection, refreshTransactionLinkedRows } from "./runtime/editor-dom-bridge.js";
 export function MinimalCycleView() {
-  const visualReference = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("visual-reference");
+  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : undefined;
+  const visualReference = searchParams?.has("visual-reference") === true;
+  const transactionDemo = searchParams?.has("transaction-demo") === true;
   const initialDocument = visualReference ? v1ReferenceDocument : transactionDemoDocument;
   const application = useEditorApplicationOwner(initialDocument);
   const documentLifecycle = useDocumentLifecycle({ application, productTemplate: cycleDocument, persistText: downloadText });
@@ -113,7 +115,7 @@ export function MinimalCycleView() {
     applySelectionDecorations,
   } = presentation;
   const zoom = timelineNavigation.zoom;
-  const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>({ documentEpoch, cycleCount: snapshot.document.timeline.cycleCount });
+  const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>({ documentEpoch, cycleCount: snapshot.document.timeline.cycleCount, ...(transactionDemo ? { initialViewMode: "Transaction" as const } : {}) });
   const {
     ribbonTab, setRibbonTab,
     bottomTab, setBottomTab,
