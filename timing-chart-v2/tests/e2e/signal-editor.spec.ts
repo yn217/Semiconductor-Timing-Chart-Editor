@@ -506,3 +506,25 @@ test("Selected transition block moves down as one semantic unit", async ({ page 
   await expect(editor.getByLabel("Select transition 3", { exact: true })).toBeChecked();
   await expect(editor.locator("form.event-row")).toHaveCount(3);
 });
+
+test("Selected transition block moves up and restores through Undo/Redo", async ({ page }) => {
+  await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.getByRole("tab", { name: "Signal", exact: true }).click();
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const editor = page.getByTestId("signal-editor");
+  const before = await editor.locator("form.event-row").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-event-start")));
+  await editor.getByLabel("Select transition 2", { exact: true }).check();
+  await editor.getByLabel("Select transition 3", { exact: true }).check();
+  await editor.getByTestId("event-move-up").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  const moved = await editor.locator("form.event-row").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-event-start")));
+  expect(moved).not.toEqual(before);
+  await editor.getByTestId("editor-undo").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect(editor.locator("form.event-row")).toHaveCount(3);
+  await editor.getByTestId("editor-redo").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});
