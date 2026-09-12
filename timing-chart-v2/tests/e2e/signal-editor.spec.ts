@@ -469,8 +469,10 @@ test("Transitions table Select All is a real tri-state checkbox wired to the sam
 
 test("Transition drag handle reorders rows through one history entry", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByRole("tab", { name: "Signal", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
   const rows = editor.locator("form.event-row");
