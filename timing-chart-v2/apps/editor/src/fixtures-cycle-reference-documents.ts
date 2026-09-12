@@ -68,6 +68,7 @@ export const transactionDemoDocument: CanonicalDocument = {
   transactionGroups: transactionDemoGroups,
   bookmarks: [
     { id: "demo_bookmark_reset" as Bookmark["id"], name: "Reset Release", start: 4, comment: "Initialization complete" },
+    { id: "demo_bookmark_read_start" as Bookmark["id"], name: "Read start", start: 10, comment: "Memory transaction begins" },
     { id: "demo_bookmark_request" as Bookmark["id"], name: "Request Start", start: 12, comment: "Request phase begins" },
     { id: "demo_bookmark_data" as Bookmark["id"], name: "Data Valid", start: 28, comment: "Payload becomes valid" },
     { id: "demo_bookmark_response" as Bookmark["id"], name: "Response Complete", start: 52, comment: "Response accepted" },
