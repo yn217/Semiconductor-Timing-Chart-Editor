@@ -1,4 +1,4 @@
-import type { CanonicalDocument, ClockSignal, CommentRow, SignalRole, SignalId, Transaction, TransactionGroup, ValueSignal } from "@timing-chart-v2/schema";
+import type { Bookmark, CanonicalDocument, ClockSignal, CommentRow, SignalRole, SignalId, Transaction, TransactionGroup, ValueSignal } from "@timing-chart-v2/schema";
 import { groupId, signalId, valueSignal } from "./minimal-cycle-view-fixture-helpers.js";
 
 export const clock: ClockSignal = {
@@ -61,6 +61,7 @@ export const transactionDemoDocument: CanonicalDocument = {
   timeline: { ...cycleDocument.timeline, end: 160, cycleCount: 160 },
   transactionTimeScale: { clockCyclesPerTransactionCycle: 10, majorInterval: 5, minorInterval: 1 },
   transactionGroups: transactionDemoGroups,
+  bookmarks: [{ id: "demo_bookmark_read_start" as Bookmark["id"], name: "Read start", start: 10 }],
   transactions: transactionDemoTransactions,
 };
 
