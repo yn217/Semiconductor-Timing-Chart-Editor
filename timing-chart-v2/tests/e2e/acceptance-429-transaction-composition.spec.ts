@@ -175,3 +175,12 @@ test("focused Transaction Tree row supports Delete shortcut", async ({ page }) =
   await expect(page.locator('[data-transaction-id="demo_txn_other"]')).toHaveCount(0);
   await expect(page.locator('[data-transaction-row-id="demo_txn_other"]')).toHaveCount(0);
 });
+test("Transaction Tree Shift-click selects all visible children in a group", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  const tree = page.getByTestId("transaction-left-tree");
+  const group = tree.locator('[data-transaction-group-id="demo_tgrp_memory"] .transaction-left-tree-group-header');
+  await group.click({ modifiers: ["Shift"] });
+  await expect(tree.locator('[data-transaction-tree-id="demo_txn_read"]')).toHaveAttribute("data-selected", "true");
+  await expect(tree.locator('[data-transaction-tree-id="demo_txn_write"]')).toHaveAttribute("data-selected", "true");
+  await expect(tree.locator('[data-transaction-tree-id="demo_txn_fetch"]')).toHaveAttribute("data-selected", "false");
+});
