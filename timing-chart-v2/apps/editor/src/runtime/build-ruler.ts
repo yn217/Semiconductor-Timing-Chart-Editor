@@ -29,7 +29,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   }
   element.style.height = `${34 + outlineHeight}px`;
   const outlineRows: HTMLElement[] = [];
-  for (let depth = 0; depth <= hierarchy.maxDepth; depth += 1) {
+  for (let depth = 0; document.timeGroups.length > 0 && depth <= hierarchy.maxDepth; depth += 1) {
     const row = element.ownerDocument.createElement("div");
     row.className = "time-outline-row";
     row.dataset.depth = String(depth);
@@ -39,7 +39,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     levelButton.type = "button";
     levelButton.className = "time-outline-level";
     levelButton.dataset.level = String(depth + 1);
-    levelButton.setAttribute("aria-label", `Show outline level ${depth + 1}`);
+    levelButton.setAttribute("aria-label", `Show time-group outline level ${depth + 1}`);
     levelButton.textContent = String(depth + 1);
     levelButton.addEventListener("click", () => {
       for (const candidate of document.timeGroups) {
