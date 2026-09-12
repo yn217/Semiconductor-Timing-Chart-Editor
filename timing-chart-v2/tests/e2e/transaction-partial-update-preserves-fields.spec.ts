@@ -7,8 +7,8 @@ import { expect, test } from "@playwright/test";
 // previously set Group/Color/Description -- real Canonical data loss.
 // This reproduces the issue's own concrete failure scenario and confirms
 // it no longer happens: set Group + Color, then edit Start only via the
-// Bottom Panel's main form, and confirm Group/Color survive.
-test("editing only Start via the Bottom Panel does not silently clear a Transaction's Group or Color", async ({ page }) => {
+// Inspector's primary form, and confirm Group/Color survive.
+test("editing only Start via the Inspector does not silently clear a Transaction's Group or Color", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
@@ -18,27 +18,27 @@ test("editing only Start via the Bottom Panel does not silently clear a Transact
   await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
 
   const bottomEditor = page.getByTestId("transaction-editor");
-  const groupSelect = bottomEditor.getByLabel("Move selected transaction to group");
-  await groupSelect.selectOption({ label: "Group 1" });
-  await bottomEditor.getByLabel("Set selected transaction color").fill("#ff0000");
+  const inspector = page.getByTestId("inspector");
+  const groupSelect = inspector.getByLabel("Transaction group");
+  await groupSelect.selectOption({ index: 1 });
+  await inspector.getByLabel("Transaction color").fill("#ff0000");
+  await inspector.getByTestId("apply-inspector-transaction").click();
 
   const groupValueBefore = await groupSelect.inputValue();
   expect(groupValueBefore).not.toBe("");
-  const inspector = page.getByTestId("inspector");
   await expect(inspector.getByLabel("Transaction group")).toHaveValue(groupValueBefore);
   await expect(inspector.getByLabel("Transaction color")).toHaveValue("#ff0000");
 
-  // Edit Start ONLY through the Bottom Panel's primary Apply -- the exact
+  // Edit Start ONLY through the Inspector's primary Apply -- the exact
   // path the issue describes, which never touched Group/Color/Description.
-  const startInput = bottomEditor.getByLabel("Transaction start", { exact: true });
+  const startInput = inspector.getByLabel("Transaction start", { exact: true });
   const startBefore = Number(await startInput.inputValue());
   await startInput.fill(String(startBefore + 1));
-  await expect(bottomEditor.getByTestId("apply-transaction-properties")).toBeEnabled();
-  await bottomEditor.getByTestId("apply-transaction-properties").click();
+  await inspector.getByTestId("apply-inspector-transaction").click();
 
-  // Group and Color must survive, in both the Bottom Panel and Inspector.
+  // Group and Color must survive in the Inspector and Bottom table row.
   await expect(groupSelect).toHaveValue(groupValueBefore);
-  await expect(bottomEditor.getByLabel("Set selected transaction color")).toHaveValue("#ff0000");
   await expect(inspector.getByLabel("Transaction color")).toHaveValue("#ff0000");
   await expect(inspector.getByLabel("Transaction group")).toHaveValue(groupValueBefore);
+  await expect(bottomEditor.locator(".transaction-list-row").filter({ hasText: "Transaction" }).first()).toBeVisible();
 });
