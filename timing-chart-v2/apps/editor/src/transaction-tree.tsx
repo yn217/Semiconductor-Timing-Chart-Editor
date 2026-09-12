@@ -7,21 +7,23 @@ export function TransactionTree({ document, filter, selectedId, onSelect, onRena
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [dragOverGroup, setDragOverGroup] = useState<string>();
   const [editingGroupId, setEditingGroupId] = useState<string>();
+  const groups = useMemo(() => [...(document.transactionGroups ?? [])].sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)), [document.transactionGroups]);
+  const needle = filter.trim().toLocaleLowerCase();
+  const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "F2" || event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
       const header = event.target instanceof Element ? event.target.closest<HTMLElement>(".transaction-left-tree-group-header") : null;
       const groupId = header?.closest<HTMLElement>("[data-transaction-group-id]")?.dataset.transactionGroupId;
-      if (!groupId || groupId === "ungrouped" || !groupById.has(groupId)) return;
+      if (!groupId || groupId === "ungrouped") return;
+      const group = groups.find((candidate) => candidate.id === groupId);
+      if (!group) return;
       event.preventDefault();
-      setEditingGroupId(groupId);
+      setEditingGroupId(group.id);
     };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [groupById]);
-  const groups = useMemo(() => [...(document.transactionGroups ?? [])].sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)), [document.transactionGroups]);
-  const needle = filter.trim().toLocaleLowerCase();
-  const groupById = useMemo(() => new Map(groups.map((group) => [group.id, group])), [groups]);
+    globalThis.document.addEventListener("keydown", onKeyDown);
+    return () => globalThis.document.removeEventListener("keydown", onKeyDown);
+  }, [groups]);
   const matches = (transaction: Transaction) => {
     if (needle.length === 0) return true;
     const groupName = transaction.groupId === undefined ? "" : groupById.get(transaction.groupId)?.name ?? "";
