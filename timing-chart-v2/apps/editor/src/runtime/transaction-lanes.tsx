@@ -192,7 +192,8 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
   return <button ref={buttonRef} type="button" data-transaction-id={transaction.id} data-selected={String(selected)} data-drag-preview={String(preview !== undefined)} style={{ left: startX, width: endX - startX, top: 4 + row * LANE_ROW_HEIGHT, ...(color ? { "--transaction-color": color } as CSSProperties : {}) }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)} onContextMenu={(event) => { event.preventDefault(); onSelect(transaction.id); onContextMenu?.(event, transaction.id); }} onPointerMove={updatePreview} onPointerUp={finish} onPointerCancel={cancel}><i data-edge="start" onPointerDown={(event) => begin(event, "start")} /><span onPointerDown={(event) => begin(event, "body")}>{transaction.name}</span><div className="transaction-phases" aria-hidden="true">{phases?.map((phase) => { const from = resolveBoundaryX(phase.start); const to = resolveBoundaryX(phase.end); if (from === undefined || to === undefined || endX <= startX) return null; return <small key={`${phase.start}:${phase.end}:${phase.name}`} title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }}>{phase.name}</small>; })}</div><i data-edge="end" onPointerDown={(event) => begin(event, "end")} /></button>;
 }
 
-export function TransactionLanes({ document: rawDocument, documentEpoch, presentationRevision, zoom, selectedId, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly presentationRevision?: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSnap: (clientX: number, surfaceLeft?: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void }) {
+export function TransactionLanes({ document: rawDocument, documentEpoch, presentationRevision, zoom, selectedId, selectedIds, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly presentationRevision?: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly selectedIds?: ReadonlySet<TransactionId>; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSnap: (clientX: number, surfaceLeft?: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void }) {
+  const isTransactionSelected = (id: TransactionId) => selectedId === id || selectedIds?.has(id) === true;
   const mountSerial = useRef(++transactionLanesMountSerial);
   const laneIndexBuilds = useRef(0);
   const stackRowBuilds = useRef(0);
@@ -418,12 +419,12 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
   const bandContainsSelected = (band: LaneBand) => selectedId !== undefined && (laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).some((transaction) => transaction.id === selectedId);
   const visibleLaneBands = laneBands.filter((band) => isVisible(band.labelTop, band.labelHeight) || bandContainsSelected(band));
   const isTreeTransactionVisible = (band: LaneBand, transaction: Transaction) => {
-    if (selectedId === transaction.id) return true;
+    if (isTransactionSelected(transaction.id)) return true;
     const row = band.treeRowOf.get(transaction.id) ?? 0;
     return isVisible(band.labelTop + 4 + row * LANE_ROW_HEIGHT, LANE_ROW_HEIGHT);
   };
   const isTrackTransactionVisible = (band: LaneBand, transaction: Transaction) => {
-    if (selectedId === transaction.id) return true;
+    if (isTransactionSelected(transaction.id)) return true;
     const row = band.rowOf.get(transaction.id) ?? 0;
     return isVisible(band.trackTop + 4 + row * LANE_ROW_HEIGHT, LANE_ROW_HEIGHT);
   };
@@ -462,7 +463,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
               once it was cut off. `title` is the same native-tooltip
               affordance the rest of the app already uses for truncated
               text, not a new pattern. */}
-          {laneTransactions.filter((transaction) => transaction.visible !== false && isTreeTransactionVisible(band, transaction)).map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} title={transaction.name} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
+          {laneTransactions.filter((transaction) => transaction.visible !== false && isTreeTransactionVisible(band, transaction)).map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(isTransactionSelected(transaction.id))} title={transaction.name} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
         </span>;
       })}
     </div>
@@ -486,7 +487,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, present
           // inline style -- the same interaction-priority bug already
           // fixed for Signal rows under #472.
           const resolvedColor = transaction.color ?? (transaction.groupId === undefined ? undefined : transactionGroupById.get(transaction.groupId)?.color);
-          return <TransactionBar key={transaction.id} transaction={transaction} documentEpoch={documentEpoch} row={row} color={resolvedColor} selected={selectedId === transaction.id} cycleCount={document.timeline.cycleCount} getBoundaryX={getBoundaryX} boundaryXByCycle={boundaryXByCycle} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
+          return <TransactionBar key={transaction.id} transaction={transaction} documentEpoch={documentEpoch} row={row} color={resolvedColor} selected={isTransactionSelected(transaction.id)} cycleCount={document.timeline.cycleCount} getBoundaryX={getBoundaryX} boundaryXByCycle={boundaryXByCycle} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
         })}
       </div>)}
     </div>

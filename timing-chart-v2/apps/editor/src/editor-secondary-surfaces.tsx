@@ -62,6 +62,7 @@ export interface EditorSecondarySurfacesInput {
     readonly group: SignalGroup | undefined;
     readonly annotation: Annotation | undefined;
     readonly transaction: Transaction | undefined;
+    readonly transactionIds: ReadonlySet<TransactionId>;
     readonly bookmark: Bookmark | undefined;
     readonly transactionId: TransactionId | undefined;
   };
@@ -278,7 +279,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
   const transactionBoundaryX = useCallback((cycle: number) => refs.transactionBoundaryX.current(cycle), [refs.transactionBoundaryX]);
   const workspaceViewportContent = workspace.viewMode !== "Cycle" && (workspace.viewMode === "Transaction" && workspace.transactionTreeTab === "signals"
     ? <TransactionSignalTree document={input.document} selectedSignalId={selected.signal?.id} onSelectSignal={input.actions.selectHierarchySignal} />
-    : <TransactionLanes document={input.document} documentEpoch={input.documentEpoch} presentationRevision={input.transactionPresentationRevision} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={transactionBoundaryX} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(clientX)} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />);
+    : <TransactionLanes document={input.document} documentEpoch={input.documentEpoch} presentationRevision={input.transactionPresentationRevision} zoom={input.zoom} selectedId={selected.transactionId} selectedIds={selected.transactionIds} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={transactionBoundaryX} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(clientX)} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />);
   const workspaceViewportLegend = <LegendView document={input.document} commands={surfaceCommands} />;
   const workspaceTransactionTree = workspace.viewMode === "Transaction"
     ? <TransactionTree document={input.document} documentEpoch={input.documentEpoch} filter={workspace.transactionTreeFilter} filterMode={workspace.transactionTreeFilterMode} {...(selected.transactionId === undefined ? {} : { selectedId: selected.transactionId })} onSelect={input.actions.selectTransaction} onRenameGroup={input.actions.renameTransactionGroup} onMoveToGroup={(transactionId, groupId) => { surfaceCommands.moveTransactionToGroup(transactionId, groupId); }} onContextMenu={openTransactionContextMenu} onCreateTransaction={input.actions.createTransaction} onFocusTransaction={(transactionId) => refs.viewport.current?.querySelector<HTMLElement>(`[data-transaction-id="${CSS.escape(transactionId)}"]`)?.scrollIntoView({ block: "nearest", inline: "center" })} />
