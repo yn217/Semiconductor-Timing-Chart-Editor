@@ -93,6 +93,8 @@ export interface EditorSecondarySurfacesInput {
     readonly setTreeTypeFilter: (value: TreeTypeFilter) => void;
     readonly transactionTreeFilter: string;
     readonly setTransactionTreeFilter: (value: string) => void;
+    readonly transactionTreeFilterMode: "all" | "grouped" | "ungrouped" | "phases" | "linked";
+    readonly setTransactionTreeFilterMode: (value: "all" | "grouped" | "ungrouped" | "phases" | "linked") => void;
     readonly transactionTreeTab: "transactions" | "signals";
     readonly setTransactionTreeTab: (tab: "transactions" | "signals") => void;
     readonly setRibbonTab: (tab: string) => void;
@@ -265,7 +267,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
           return `Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = ${perTc} Cycle${perTc === 1 ? "" : "s"})`;
         })()
       : input.document.timeline.referenceClock ? `Time Scale: Cycle    Reference: ${input.referenceClockName ?? input.document.timeline.referenceClock}` : "Time Scale: Cycle    Axis: Time"}
-    transactionMode={workspace.viewMode === "Transaction" ? { filter: workspace.transactionTreeFilter, onFilterChange: workspace.setTransactionTreeFilter, onAdd: input.actions.createTransaction, onAddGroup: input.actions.createTransactionGroup, tab: workspace.transactionTreeTab, onTabChange: workspace.setTransactionTreeTab } : undefined}
+    transactionMode={workspace.viewMode === "Transaction" ? { filter: workspace.transactionTreeFilter, onFilterChange: workspace.setTransactionTreeFilter, filterMode: workspace.transactionTreeFilterMode, onFilterModeChange: workspace.setTransactionTreeFilterMode, onAdd: input.actions.createTransaction, onAddGroup: input.actions.createTransactionGroup, tab: workspace.transactionTreeTab, onTabChange: workspace.setTransactionTreeTab } : undefined}
   />;
   // #429/#397 P0-2: Transaction Mode's "Transactions | Signals" tabs -- the
   // Signals tab swaps in a real, separate Signal browse/select list (never
@@ -278,7 +280,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     : <TransactionLanes document={input.document} documentEpoch={input.documentEpoch} presentationRevision={input.transactionPresentationRevision} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={transactionBoundaryX} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(clientX)} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />);
   const workspaceViewportLegend = <LegendView document={input.document} commands={surfaceCommands} />;
   const workspaceTransactionTree = workspace.viewMode === "Transaction"
-    ? <TransactionTree document={input.document} filter={workspace.transactionTreeFilter} {...(selected.transactionId === undefined ? {} : { selectedId: selected.transactionId })} onSelect={input.actions.selectTransaction} onRenameGroup={input.actions.renameTransactionGroup} onMoveToGroup={(transactionId, groupId) => { surfaceCommands.moveTransactionToGroup(transactionId, groupId); }} onContextMenu={openTransactionContextMenu} onCreateTransaction={input.actions.createTransaction} />
+    ? <TransactionTree document={input.document} filter={workspace.transactionTreeFilter} filterMode={workspace.transactionTreeFilterMode} {...(selected.transactionId === undefined ? {} : { selectedId: selected.transactionId })} onSelect={input.actions.selectTransaction} onRenameGroup={input.actions.renameTransactionGroup} onMoveToGroup={(transactionId, groupId) => { surfaceCommands.moveTransactionToGroup(transactionId, groupId); }} onContextMenu={openTransactionContextMenu} onCreateTransaction={input.actions.createTransaction} />
     : null;
   const workspaceBottom = <BottomEditorPanel
     tabs={workspace.bottomTabs}

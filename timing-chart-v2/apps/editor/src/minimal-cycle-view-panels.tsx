@@ -98,7 +98,7 @@ export type SignalTreeColumnHeaderProps = {
   // tab pair -- pure presentation of `transactionTreeTab` state, decided by
   // the caller (`use-workspace-ui-state.ts`), same pattern as every other
   // field here.
-  readonly transactionMode?: { readonly filter: string; readonly onFilterChange: (value: string) => void; readonly onAdd: () => void; readonly onAddGroup: () => void; readonly tab: "transactions" | "signals"; readonly onTabChange: (tab: "transactions" | "signals") => void } | undefined;
+  readonly transactionMode?: { readonly filter: string; readonly onFilterChange: (value: string) => void; readonly filterMode: "all" | "grouped" | "ungrouped" | "phases" | "linked"; readonly onFilterModeChange: (value: "all" | "grouped" | "ungrouped" | "phases" | "linked") => void; readonly onAdd: () => void; readonly onAddGroup: () => void; readonly tab: "transactions" | "signals"; readonly onTabChange: (tab: "transactions" | "signals") => void } | undefined;
 };
 
 /** The Signal/Group tree's column header: type/text filter, the Add and
@@ -120,6 +120,7 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
         <input data-testid="transaction-tree-search" aria-label="Transaction tree filter" value={transactionMode.filter} onChange={(event) => transactionMode.onFilterChange(event.target.value)} placeholder="Search transactions..." />
         {transactionMode.filter && <button type="button" aria-label="Clear transaction tree filter" onMouseDown={(event) => event.preventDefault()} onClick={() => transactionMode.onFilterChange("")}><EditorIcon name="close" /></button>}
       </label>}
+      {onTransactions && <select aria-label="Transaction filter mode" value={transactionMode.filterMode} onChange={(event) => transactionMode.onFilterModeChange(event.target.value as typeof transactionMode.filterMode)}><option value="all">All</option><option value="grouped">Grouped</option><option value="ungrouped">Ungrouped</option><option value="phases">Has Phases</option><option value="linked">Has Linked Signals</option></select>}
       {onTransactions && <span className="left-column-actions">
         <button type="button" className="tree-add-button" aria-label="Add Transaction" data-testid="add-transaction-tree" onClick={transactionMode.onAdd}><EditorIcon name="plus" /></button>
         <button type="button" className="tree-more-button" aria-label="Add Transaction Group" title="Add Transaction Group" data-testid="add-transaction-group-tree" onClick={transactionMode.onAddGroup}><EditorIcon name="plus" /></button>

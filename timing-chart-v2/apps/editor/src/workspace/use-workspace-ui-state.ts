@@ -137,6 +137,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
 
   const [treeFilter, setTreeFilter] = useState("");
   const [transactionTreeFilter, setTransactionTreeFilter] = useState("");
+  const [transactionTreeFilterMode, setTransactionTreeFilterMode] = useState<"all" | "grouped" | "ungrouped" | "phases" | "linked">("all");
   const [treeTypeFilter, setTreeTypeFilter] = useState<TreeTypeFilter>("all");
   // #429/#397 Transaction Mode Product Closure P0-2: which tree the Left
   // panel shows while `viewMode === "Transaction"` -- "transactions" (the
@@ -179,7 +180,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     frozenPaneWidth, setFrozenPaneWidth, frozenPaneResizeRef,
     inspectorWidth, setInspectorWidth, inspectorResizeRef,
     bottomHeight, setBottomHeight, bottomResizeRef,
-    treeFilter, setTreeFilter, transactionTreeFilter, setTransactionTreeFilter,
+    treeFilter, setTreeFilter, transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode,
     treeTypeFilter, setTreeTypeFilter,
     transactionTreeTab, setTransactionTreeTab,
     followSelection, setFollowSelection, followSelectionRef,
