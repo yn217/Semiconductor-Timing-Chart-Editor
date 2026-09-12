@@ -184,3 +184,14 @@ test("Transaction Tree Shift-click selects all visible children in a group", asy
   await expect(tree.locator('[data-transaction-tree-id="demo_txn_write"]')).toHaveAttribute("data-selected", "true");
   await expect(tree.locator('[data-transaction-tree-id="demo_txn_fetch"]')).toHaveAttribute("data-selected", "false");
 });
+
+test("Transaction Tree group header supports left and right collapse navigation", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  const group = page.locator('[data-transaction-group-id="demo_tgrp_memory"]');
+  const toggle = group.locator(".transaction-left-tree-group-header > button");
+  await toggle.focus();
+  await toggle.press("ArrowLeft");
+  await expect(group.locator('[data-transaction-tree-id="demo_txn_read"]')).toHaveCount(0);
+  await toggle.press("ArrowRight");
+  await expect(group.locator('[data-transaction-tree-id="demo_txn_read"]')).toHaveCount(1);
+});
