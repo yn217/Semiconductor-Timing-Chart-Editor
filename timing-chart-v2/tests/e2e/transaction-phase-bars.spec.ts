@@ -8,6 +8,19 @@ async function openTransactionSample(page: import("@playwright/test").Page) {
   await expect(page.getByTestId("transaction-left-tree-row-demo_txn_read")).toBeVisible();
 }
 
+test("Transaction mode keeps the inspection sample available after reload", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await openTransactionSample(page);
+  await expect(page.getByTestId("transaction-left-tree-row-demo_txn_read")).toBeVisible();
+  await expect(page.locator(".transaction-list-row[data-transaction-row-id]")).toHaveCount(6);
+  await page.reload();
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.getByTestId("transaction-left-tree-row-demo_txn_read")).toBeVisible();
+  await expect(page.locator(".transaction-list-row[data-transaction-row-id]")).toHaveCount(6);
+  await expect(page.locator("[data-transaction-id='demo_txn_read'] .transaction-phases small")).toHaveCount(3);
+});
+
 for (const width of [1280, 1672]) test(`Transaction phases follow semantic durations at ${width}`, async ({ page }) => {
   await page.setViewportSize({ width, height: width === 1280 ? 720 : 941 });
   await page.goto("/");
