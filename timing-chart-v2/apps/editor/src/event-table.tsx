@@ -152,13 +152,13 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     const to = ordered.findIndex((change) => change.start === targetStart);
     if (from < 0 || to < 0 || selectedIndexes.length !== last - from + 1) { setActiveDragStarts(undefined); return; }
     const block = ordered.splice(from, selectedIndexes.length);
-    ordered.splice(from < to ? to - selectedIndexes.length : to, 0, ...block);
+    ordered.splice(from < to ? to + 1 - selectedIndexes.length : to, 0, ...block);
     const durationValues = [...signal.values].sort((left, right) => left.start - right.start);
     const durationByStart = new Map(durationValues.map((change, valueIndex, values) => [change.start, (values[valueIndex + 1]?.start ?? cycleCount) - change.start]));
     let nextStart = ordered[0]!.start;
     const reordered = ordered.map((change) => { const next = { ...change, start: nextStart }; nextStart += durationByStart.get(change.start) ?? 0; return next; });
     const result = commands.replaceValues(signal.id, reordered);
-    if (result.ok) { const nextFirst = from < to ? to - selectedIndexes.length : to; setCheckedStarts(new Set(reordered.slice(nextFirst, nextFirst + block.length).map((change) => change.start))); }
+    if (result.ok) { const nextFirst = from < to ? to + 1 - selectedIndexes.length : to; setCheckedStarts(new Set(reordered.slice(nextFirst, nextFirst + block.length).map((change) => change.start))); }
     setActiveDragStarts(undefined);
   };
   // Visual Quality Closure pass (#402/#426), Section 4: the checkbox column
