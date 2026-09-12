@@ -113,13 +113,20 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   const soleChecked = soleCheckedStart === undefined ? undefined : signal.values.find((change) => change.start === soleCheckedStart);
   const moveBy = (delta: -1 | 1) => {
     if (!soleChecked) return;
-    const target = soleChecked.start + delta;
-    if (target < 0 || target >= cycleCount || signal.values.some((change) => change.start === target)) return;
-    commands.replaceValue(signal.id, soleChecked.start, target, String(soleChecked.value), soleChecked.comment);
-    setCheckedStarts(new Set([target]));
+    const ordered = [...signal.values].sort((left, right) => left.start - right.start);
+    const index = ordered.findIndex((change) => change.start === soleChecked.start);
+    const targetIndex = index + delta;
+    if (index < 0 || targetIndex < 0 || targetIndex >= ordered.length) return;
+    [ordered[index], ordered[targetIndex]] = [ordered[targetIndex]!, ordered[index]!];
+    const durationByStart = new Map(signal.values.map((change, valueIndex, values) => [change.start, (values[valueIndex + 1]?.start ?? cycleCount) - change.start]));
+    let nextStart = ordered[0]!.start;
+    const reordered = ordered.map((change) => { const next = { ...change, start: nextStart }; nextStart += durationByStart.get(change.start) ?? 0; return next; });
+    const result = commands.replaceValues(signal.id, reordered);
+    if (result.ok) setCheckedStarts(new Set([reordered[targetIndex]!.start]));
   };
-  const canMoveUp = soleChecked !== undefined && soleChecked.start > 0 && !signal.values.some((change) => change.start === soleChecked.start - 1);
-  const canMoveDown = soleChecked !== undefined && soleChecked.start < cycleCount - 1 && !signal.values.some((change) => change.start === soleChecked.start + 1);
+  const sortedValueIndex = soleChecked === undefined ? -1 : [...signal.values].sort((left, right) => left.start - right.start).findIndex((change) => change.start === soleChecked.start);
+  const canMoveUp = sortedValueIndex > 0;
+  const canMoveDown = sortedValueIndex >= 0 && sortedValueIndex < signal.values.length - 1;
   // Visual Quality Closure pass (#402/#426), Section 4: the checkbox column
   // only ever meant "this row feeds the footer's bulk actions below" -- but
   // nothing on screen said so. A header Select All checkbox (tri-state:
