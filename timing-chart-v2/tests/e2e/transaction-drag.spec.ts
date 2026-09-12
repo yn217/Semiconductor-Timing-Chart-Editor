@@ -202,7 +202,8 @@ test("Transaction context menu exposes only transaction-supported capabilities",
   for (const label of ["Copy", "Cut", "Duplicate", "Rename", "Delete"]) {
     await expect(menu.getByRole("menuitem", { name: label, exact: true })).toBeEnabled();
   }
-  for (const label of ["Move Up", "Move Down", "Show", "Hide"]) {
+  for (const label of ["Move Up", "Move Down"]) {
     await expect(menu.getByRole("menuitem", { name: label, exact: true })).toBeDisabled();
   }
+  await expect(menu.getByRole("menuitem", { name: "Hide", exact: true })).toBeEnabled();
 });
