@@ -461,6 +461,11 @@
 /* Transaction presentation belongs to the center timing surface. */
 .transaction-track { position: absolute; z-index: 3; top: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); width: var(--wave-width, 640px); height: 100%; transform-origin: 0 0; scale: var(--transaction-zoom) 1; }
 .transaction-geometry-line { position: absolute; top: 0; bottom: 0; width: 1px; border-left: 1px solid #dce4ed; pointer-events: none; }
+.transaction-left-tree-group-header { position: relative; }
+.transaction-left-tree-more { margin-left: auto; width: 20px; min-width: 20px; padding: 0; border: 0; background: transparent; color: #52677f; font-size: 15px; line-height: 20px; cursor: pointer; }
+.transaction-left-tree-group-menu { position: absolute; z-index: 20; top: calc(100% - 1px); right: 2px; display: grid; min-width: 132px; padding: 3px; border: 1px solid #b8c7d8; border-radius: 3px; background: #fff; box-shadow: 0 4px 12px rgb(30 55 80 / 18%); }
+.transaction-left-tree-group-menu button { padding: 5px 8px; border: 0; background: transparent; color: #29425e; text-align: left; font-size: 11px; cursor: pointer; }
+.transaction-left-tree-group-menu button:hover { background: #e7f1fb; }
 /* #397 Transaction Mode GUI Closure Section 6: single full-width column
    (was a wrapping `repeat(auto-fill,minmax(340px,1fr))` card grid) -- the
    Reference treats this list as a table using the panel's whole width,
