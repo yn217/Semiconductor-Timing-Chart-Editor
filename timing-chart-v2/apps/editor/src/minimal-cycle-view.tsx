@@ -89,7 +89,7 @@ export function MinimalCycleView() {
   const timelineRuntimeRef = useRef<TimelineViewportRuntime | null>(null);
   const armArrowPick = useRef<(annotationType: "arrow" | "dependency") => void>(() => undefined);
   const selectAllRef = useRef<() => void>(() => undefined);
-  const snapTransactionCycle = useRef<(clientX: number) => number | undefined>(() => undefined);
+  const snapTransactionCycle = useRef<(clientX: number, surfaceLeft?: number) => number | undefined>(() => undefined);
   const transactionBoundaryX = useRef<(cycle: number) => number | undefined>(() => undefined);
   const fileInput = useRef<HTMLInputElement>(null);
   const selection = useSelectionOwner(visualReference ? signalId("sig_cycle_clock") : undefined);

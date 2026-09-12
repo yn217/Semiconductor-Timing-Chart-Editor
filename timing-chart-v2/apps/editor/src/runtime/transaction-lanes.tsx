@@ -103,12 +103,12 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
   readonly cycleCount: number;
   readonly getBoundaryX: (cycle: number) => number | undefined;
   readonly boundaryXByCycle: ReadonlyMap<number, number>;
-  readonly onSnap: (clientX: number) => number | undefined;
+  readonly onSnap: (clientX: number, surfaceLeft?: number) => number | undefined;
   readonly onSelect: (id: TransactionId) => void;
   readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize">;
   readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void;
 }) {
-  const [drag, setDrag] = useState<{ edge: TransactionDragEdge; documentEpoch: number }>();
+  const [drag, setDrag] = useState<{ edge: TransactionDragEdge; documentEpoch: number; surfaceLeft: number | undefined }>();
   const [preview, setPreview] = useState<TransactionPreview>();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const pendingPreviewClientX = useRef<number | undefined>(undefined);
@@ -154,7 +154,7 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
       const clientX = pendingPreviewClientX.current;
       pendingPreviewClientX.current = undefined;
       if (clientX === undefined || !drag || drag.documentEpoch !== documentEpoch) return;
-      const cycle = onSnap(clientX);
+      const cycle = onSnap(clientX, drag.surfaceLeft);
       if (cycle === undefined) return;
       setPreview(previewTransaction(transaction, drag.edge, cycle, cycleCount));
     });
@@ -163,7 +163,7 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
     event.preventDefault();
     event.stopPropagation();
     buttonRef.current?.setPointerCapture(event.pointerId);
-    setDrag({ edge, documentEpoch });
+    setDrag({ edge, documentEpoch, surfaceLeft: buttonRef.current?.closest<HTMLElement>(".transaction-lanes")?.getBoundingClientRect().left });
     setPreview({ start: transaction.start, end: transaction.end });
   };
   const cancel = (event?: ReactPointerEvent<HTMLButtonElement>) => {
@@ -180,7 +180,7 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
     if (previewFrame.current !== undefined) cancelAnimationFrame(previewFrame.current);
     previewFrame.current = undefined;
     pendingPreviewClientX.current = undefined;
-    const cycle = onSnap(event.clientX);
+    const cycle = onSnap(event.clientX, drag.surfaceLeft);
     const final = cycle === undefined ? preview : previewTransaction(transaction, drag.edge, cycle, cycleCount);
     setDrag(undefined);
     setPreview(undefined);
@@ -192,7 +192,7 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
   return <button ref={buttonRef} type="button" data-transaction-id={transaction.id} data-selected={String(selected)} data-drag-preview={String(preview !== undefined)} style={{ left: startX, width: endX - startX, top: 4 + row * LANE_ROW_HEIGHT, ...(color ? { "--transaction-color": color } as CSSProperties : {}) }} onClick={() => onSelect(transaction.id)} onContextMenu={(event) => { event.preventDefault(); onSelect(transaction.id); onContextMenu?.(event, transaction.id); }} onPointerMove={updatePreview} onPointerUp={finish} onPointerCancel={cancel}><i data-edge="start" onPointerDown={(event) => begin(event, "start")} /><span onPointerDown={(event) => begin(event, "body")}>{transaction.name}</span><div className="transaction-phases" aria-hidden="true">{phases?.map((phase) => { const from = resolveBoundaryX(phase.start); const to = resolveBoundaryX(phase.end); if (from === undefined || to === undefined || endX <= startX) return null; return <small key={`${phase.start}:${phase.end}:${phase.name}`} title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }}>{phase.name}</small>; })}</div><i data-edge="end" onPointerDown={(event) => begin(event, "end")} /></button>;
 }
 
-export function TransactionLanes({ document: rawDocument, documentEpoch, presentationRevision, zoom, selectedId, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly presentationRevision?: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId) => void; readonly onSnap: (clientX: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void }) {
+export function TransactionLanes({ document: rawDocument, documentEpoch, presentationRevision, zoom, selectedId, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly presentationRevision?: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId) => void; readonly onSnap: (clientX: number, surfaceLeft?: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void }) {
   const mountSerial = useRef(++transactionLanesMountSerial);
   const laneIndexBuilds = useRef(0);
   const stackRowBuilds = useRef(0);

@@ -31,7 +31,7 @@ export interface MinimalCycleTimelineSource {
   readonly navigateToCycle: (cycle: number) => void;
 
   readonly transactionBoundaryX: (cycle: number) => number | undefined;
-  readonly snapTransactionCycle: (clientX: number) => number | undefined;
+    readonly snapTransactionCycle: (clientX: number, surfaceLeft?: number) => number | undefined;
 
   readonly executeTimelineCommand: (command: SemanticCommand) => unknown;
 }
@@ -64,7 +64,7 @@ export interface MinimalCycleTimelinePort {
 
   readonly geometry: Readonly<{
     transactionBoundaryX: (cycle: number) => number | undefined;
-    snapTransactionCycle: (clientX: number) => number | undefined;
+      snapTransactionCycle: (clientX: number, surfaceLeft?: number) => number | undefined;
   }>;
 
   readonly execute: (command: SemanticCommand) => unknown;
@@ -105,4 +105,3 @@ export function createMinimalCycleTimelinePort(
     execute: source.executeTimelineCommand,
   };
 }
-

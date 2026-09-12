@@ -61,7 +61,7 @@ export interface TimelineSurfacePresentationPort {
   readonly lowerCanvasClickRef: MutableRefObject<(event: MouseEvent, targetHost: HTMLElement, targetViewport: HTMLElement) => void>;
   readonly timelineRuntimeRef: MutableRefObject<TimelineViewportRuntime | null>;
   readonly armArrowPick: MutableRefObject<(annotationType: "arrow" | "dependency") => void>;
-  readonly snapTransactionCycle: MutableRefObject<(clientX: number) => number | undefined>;
+  readonly snapTransactionCycle: MutableRefObject<(clientX: number, surfaceLeft?: number) => number | undefined>;
   readonly transactionBoundaryX: MutableRefObject<(cycle: number) => number | undefined>;
   readonly refreshPlayhead: MutableRefObject<() => void>;
   readonly refreshRangeSelectionBand: MutableRefObject<() => void>;
@@ -362,8 +362,9 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     });
     syncFrozenColumnScroll(viewportElement, rendererHost, viewMetricsOwner.snapshot().leftPaneWidth);
     const cycleBoundaryAtX = createTimelineCycleBoundaryResolver({ rendererHost, timelineGeometry, getZoom: timelineNavigation.getZoom, isSnapEnabled: () => snapEnabledRef.current });
-    snapTransactionCycle.current = (clientX) => resolveTransactionSnapCycle({
+    snapTransactionCycle.current = (clientX, surfaceLeft) => resolveTransactionSnapCycle({
       clientX,
+      surfaceLeft,
       host: rendererHost,
       projection,
       timeAxis: timelineGeometry.timeAxis,
