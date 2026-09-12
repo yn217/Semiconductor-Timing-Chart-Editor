@@ -157,7 +157,7 @@ test("A Transaction built with phases and Linked Signals survives Save/Open exac
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
-  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(6);
+  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(7);
   await expect(page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`)).toContainText("Read Request v2");
 });
 
