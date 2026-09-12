@@ -35,6 +35,7 @@ test("Transaction crossing a collapsed TimeGroup renders an Axis Break gap", asy
   const gap = bar.locator(".transaction-axis-break-gap");
   await expect(gap).toBeVisible();
   await expect(gap).toHaveCount(1);
+  await expect(bar.locator("[data-transaction-segment='true']")).toHaveCount(2);
   await expect(bar.locator("[data-phase-segment='true']")).toHaveCount(2);
   const barBox = await bar.boundingBox();
   const gapBox = await gap.boundingBox();
