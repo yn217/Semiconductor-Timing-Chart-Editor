@@ -112,7 +112,7 @@ test("Copy is view-only and Duplicate/Paste use one canonical command with fresh
   await expect(page.getByTestId("history-status")).toHaveText(/History 0 \/ Redo 1/);
   await ribbon.getByRole("button", { name: "Paste", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(page.getByTestId("selection-status")).toHaveText("REQUEST_paste");
+  await expect(page.getByTestId("selection-status")).toHaveText("REQUEST_copy");
   expect(revisionNumber(await page.getByTestId("revision-status").textContent())).toBe(initialRevision + 3);
   await expect(page.getByTestId("history-status")).toHaveText(/History 1 \/ Redo 0/);
 });

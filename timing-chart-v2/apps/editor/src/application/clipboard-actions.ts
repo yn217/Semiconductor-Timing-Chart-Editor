@@ -156,7 +156,7 @@ export function useClipboardActions({ application, selection }: { application: E
       if (!target) continue;
       const id = signalId(nextEntityId(source.signal.type === "commentRow" ? "commentRow" : "signal", { ...current, signals: [...current.signals, ...created] }));
       const copyOrdinal = created.length + 1;
-      const name = `${source.signal.display.name}_copy${input.length > 1 ? `_${copyOrdinal}` : ""}`;
+      const name = `${source.signal.display.name}_${operation === "duplicate" ? "duplicate" : "copy"}${input.length > 1 ? `_${copyOrdinal}` : ""}`;
       const signal: Signal = { ...source.signal, id, name, display: { ...source.signal.display, name } };
       created.push(signal);
       const index = target.rows.length + (insertedByGroup.get(target.id) ?? 0);
