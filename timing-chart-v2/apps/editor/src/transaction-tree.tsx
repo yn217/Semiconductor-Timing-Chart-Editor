@@ -52,8 +52,20 @@ export function TransactionTree({ document, documentEpoch, filter, filterMode = 
     };
     globalThis.document.addEventListener("dblclick", onDoubleClick);
     globalThis.document.addEventListener("keydown", onArrow);
-    return () => { globalThis.document.removeEventListener("keydown", onKeyDown); globalThis.document.removeEventListener("dblclick", onDoubleClick); globalThis.document.removeEventListener("keydown", onArrow); };
-  }, [groups, onDelete, onSelect]);
+    const onGroupMultiSelect = (event: MouseEvent) => {
+      if (!event.shiftKey) return;
+      const target = event.target instanceof Element ? event.target : null;
+      const header = target?.closest<HTMLElement>(".transaction-left-tree-group-header");
+      const groupId = header?.closest<HTMLElement>("[data-transaction-group-id]")?.dataset.transactionGroupId;
+      if (!groupId || groupId === "ungrouped") return;
+      const children = document.transactions.filter((transaction) => transaction.groupId === groupId && matches(transaction)).sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+      if (children.length === 0) return;
+      event.preventDefault();
+      children.forEach((transaction) => onSelect(transaction.id, true));
+    };
+    globalThis.document.addEventListener("click", onGroupMultiSelect);
+    return () => { globalThis.document.removeEventListener("keydown", onKeyDown); globalThis.document.removeEventListener("dblclick", onDoubleClick); globalThis.document.removeEventListener("keydown", onArrow); globalThis.document.removeEventListener("click", onGroupMultiSelect); };
+  }, [document, groups, onDelete, onSelect]);
   const matches = (transaction: Transaction) => {
     if (filterMode === "grouped" && transaction.groupId === undefined) return false;
     if (filterMode === "ungrouped" && transaction.groupId !== undefined) return false;
