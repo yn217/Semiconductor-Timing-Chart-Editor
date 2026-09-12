@@ -38,6 +38,14 @@ export function TransactionTree({ document, documentEpoch, filter, filterMode = 
         if (current && onDelete) { event.preventDefault(); const id = current.dataset.transactionTreeId as TransactionId | undefined; if (id) { onSelect(id); queueMicrotask(onDelete); } }
         return;
       }
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        const groupHeader = event.target instanceof Element ? event.target.closest<HTMLElement>(".transaction-left-tree-group-header") : null;
+        const groupId = groupHeader?.closest<HTMLElement>("[data-transaction-group-id]")?.dataset.transactionGroupId;
+        if (!groupHeader || !groupId || groupId === "ungrouped") return;
+        const collapsedNow = collapsed.has(groupId);
+        if ((event.key === "ArrowLeft" && !collapsedNow) || (event.key === "ArrowRight" && collapsedNow)) { event.preventDefault(); toggle(groupId); }
+        return;
+      }
       if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
       const current = event.target instanceof Element ? event.target.closest<HTMLElement>(".transaction-left-tree-row") : null;
