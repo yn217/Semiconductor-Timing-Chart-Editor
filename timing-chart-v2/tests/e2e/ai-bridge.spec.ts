@@ -110,6 +110,7 @@ test("propose_edit builds a Preview only -- it never auto-validates or auto-appl
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
 
   await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
