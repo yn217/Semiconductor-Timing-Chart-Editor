@@ -231,7 +231,8 @@ test("Transaction canvas body and edge drags commit through the semantic command
   await page.mouse.move(startBox!.x + 12, startBox!.y + startBox!.height / 2, { steps: 3 });
   await page.mouse.up();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
-  await expect(inspector.getByLabel("Transaction start")).toHaveValue(beforeResize);
+  // #551: an edge-attached first Phase follows a valid Transaction start resize.
+  await expect(inspector.getByLabel("Transaction start")).not.toHaveValue(beforeResize);
 
   const endHandle = bar.locator(":scope > i[data-edge='end']");
   const endBox = await endHandle.boundingBox();
