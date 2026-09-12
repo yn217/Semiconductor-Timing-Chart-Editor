@@ -487,3 +487,22 @@ test("Transition drag handle reorders rows through one history entry", async ({ 
   await expect(editor.locator("form.event-row").first().locator("[data-testid^='event-row-value-']")).toHaveText("1");
   await expect(editor.locator("form.event-row").nth(1).locator("[data-testid^='event-row-value-']")).toHaveText("0");
 });
+
+test("Selected transition block moves down as one semantic unit", async ({ page }) => {
+  await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.getByRole("tab", { name: "Signal", exact: true }).click();
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const editor = page.getByTestId("signal-editor");
+  await editor.getByLabel("Select transition 1", { exact: true }).check();
+  await editor.getByLabel("Select transition 2", { exact: true }).check();
+  const historyBefore = await page.getByTestId("history-status").textContent();
+  await expect(editor.getByTestId("event-move-down")).toBeEnabled();
+  await editor.getByTestId("event-move-down").click();
+  await expect(page.getByTestId("history-status")).not.toHaveText(historyBefore!);
+  await expect(editor.getByLabel("Select transition 2", { exact: true })).toBeChecked();
+  await expect(editor.getByLabel("Select transition 3", { exact: true })).toBeChecked();
+  await expect(editor.locator("form.event-row")).toHaveCount(3);
+});
