@@ -124,9 +124,12 @@ test("creates a geometry-backed 30/70 threshold Measurement and preserves it thr
   await page.getByLabel("Annotation type").selectOption("measurement");
   await page.getByLabel("Measurement threshold").selectOption("30-70");
   const beforeRevision = await host.getAttribute("data-canonical-revision");
-  await page.getByRole("button", { name: "Add annotation" }).click();
+  const beforeIds = await host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-id")));
+  await page.getByTestId("annotation-toolbar").getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  const measurement = host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']").last();
+  const measurementId = await host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items, previous) => items.map((item) => item.getAttribute("data-annotation-id")).find((id) => id && !previous.includes(id)), beforeIds);
+  expect(measurementId).toBeTruthy();
+  const measurement = host.locator(`[data-role='annotation-owner'][data-annotation-id='${measurementId}']`);
   await expect(measurement).toHaveAttribute("aria-label", /30%→70%/);
   await expect(measurement.locator("[data-role='annotation-handle'][data-anchor-threshold='0.3']")).toHaveCount(1);
   await expect(measurement.locator("[data-role='annotation-handle'][data-anchor-threshold='0.7']")).toHaveCount(1);
