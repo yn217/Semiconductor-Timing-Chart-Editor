@@ -80,6 +80,12 @@ test("Bookmark inside a collapsed TimeGroup is identified in the Bookmarks panel
   await expect(page.getByTestId("bookmark-inside-collapsed")).toContainText("Fold");
   const expandAndJump = page.getByTestId("bookmark-expand-and-jump");
   await expect(expandAndJump).toBeVisible();
+  const host = page.getByTestId("cycle-surface");
+  const beforeReveal = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+  await page.getByRole("button", { name: "Reveal", exact: true }).click();
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeReveal.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeReveal.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(beforeReveal.dirty!);
   await expandAndJump.click();
   await expect(page.getByTestId("bookmark-inside-collapsed")).toBeHidden();
   await expect(page.locator(".transaction-axis-break-gap")).toHaveCount(0);
