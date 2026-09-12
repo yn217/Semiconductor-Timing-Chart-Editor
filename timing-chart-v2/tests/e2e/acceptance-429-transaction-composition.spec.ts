@@ -5,6 +5,26 @@ import { expect, test } from "@playwright/test";
 
 const samplePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../samples/acceptance-429/sample-transaction-mode-closure.tcd.json");
 
+test("reload showcase exposes canonical annotations, bookmarks, and cross-mode data", async ({ page }) => {
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  await expect(page.getByTestId("transaction-left-tree")).toContainText("Read_0");
+  await expect(page.locator("[data-transaction-row-id]")).toHaveCount(6);
+  await expect.poll(async () => new Set(await page.locator("[data-bookmark-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-bookmark-id")))).size).toBe(5);
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  const surface = page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']");
+  await expect(surface.locator("[data-role='annotation-owner']")).toHaveCount(16);
+  for (const type of ["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency", "timingRegion", "ghostTrace", "rectangle", "ellipse", "connector", "textbox"]) {
+    await expect(surface.locator(`[data-annotation-type='${type}']`)).toHaveCount(1);
+  }
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+  await expect(page.locator(".split-transaction-pane [data-transaction-id='demo_txn_read']")).toBeVisible();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  expect(pageErrors).toEqual([]);
+});
+
 test("default browser startup opens the built-in Transaction sample", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
