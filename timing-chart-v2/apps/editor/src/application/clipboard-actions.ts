@@ -20,6 +20,7 @@ export function useClipboardActions({ application, selection }: { application: E
   const annotationRef = useRef<Annotation | undefined>(undefined);
   const transactionsRef = useRef<readonly Transaction[]>([]);
   const spacerRef = useRef<SpacerClipboardItem | undefined>(undefined);
+  const cutSignalsRef = useRef(false);
   const sourceDocumentEpochRef = useRef<number | undefined>(undefined);
   const document = () => application.runtime.session.current().getSnapshot().document;
 
@@ -41,12 +42,13 @@ export function useClipboardActions({ application, selection }: { application: E
       }),
     };
   };
-  const setClipboard = ({ signals = [], group, annotation, transactions = [], spacer }: { signals?: readonly SignalClipboardItem[]; group?: GroupClipboardItem; annotation?: Annotation; transactions?: readonly Transaction[]; spacer?: SpacerClipboardItem }) => {
+  const setClipboard = ({ signals = [], group, annotation, transactions = [], spacer, cutSignals = false }: { signals?: readonly SignalClipboardItem[]; group?: GroupClipboardItem; annotation?: Annotation; transactions?: readonly Transaction[]; spacer?: SpacerClipboardItem; cutSignals?: boolean }) => {
     signalsRef.current = signals;
     groupRef.current = group;
     annotationRef.current = annotation;
     transactionsRef.current = transactions;
     spacerRef.current = spacer;
+    cutSignalsRef.current = cutSignals;
     sourceDocumentEpochRef.current = application.runtime.documentEpoch.current();
     setAvailable(true);
   };
@@ -122,9 +124,23 @@ export function useClipboardActions({ application, selection }: { application: E
       return;
     }
     if (value.signals.length === 0) { setStatus("Select a signal, Comment Row, Annotation, or Transaction to cut"); return; }
-    setClipboard({ signals: value.signals });
-    const result = application.executeBatch(nextCommandId("cut"), value.signals.map(({ signal }) => ({ id: nextCommandId("cut_item"), type: "signal.delete", signalId: signal.id })));
+    setClipboard({ signals: value.signals, cutSignals: true });
+    const result = application.executeBatch(nextCommandId("cut"), value.signals.map(({ signal }) => ({ id: nextCommandId("cut_item"), type: "signal.delete" as const, signalId: signal.id })));
     if (result.ok) { selection.clear(); setStatus(value.signals.length === 1 ? `Cut ${value.signals[0]!.signal.display.name}` : `Cut ${value.signals.length} signals`); }
+  };
+
+  const moveCutSignals = () => {
+    const input = signalsRef.current;
+    const current = document();
+    const selectedSignalId = selection.refs.signalId.current;
+    const selectedGroupId = selection.refs.state.current.groupId;
+    const target = current.signalGroups.find((group) => group.id === selectedGroupId) ?? current.signalGroups.find((group) => selectedSignalId !== undefined && group.rows.includes(selectedSignalId)) ?? current.signalGroups.find((group) => group.id === input[0]?.groupId) ?? current.signalGroups.at(-1);
+    if (!target || input.length === 0) return;
+    const commands: SemanticCommand[] = input.map(({ signal }, offset) => (signal.type === "commentRow"
+      ? { id: nextCommandId("paste_cut_signal"), type: "commentRow.create" as const, commentRow: signal, targetGroupId: target.id, index: target.rows.length + offset }
+      : { id: nextCommandId("paste_cut_signal"), type: "signal.create" as const, signal, targetGroupId: target.id, index: target.rows.length + offset }));
+    const result = application.executeBatch(nextCommandId("cut_paste_move"), commands);
+    if (result.ok) { cutSignalsRef.current = false; selection.selectSignals(new Set(input.map(({ signal }) => signal.id)), input[0]!.signal.id); setStatus(`Moved ${input.length} signal${input.length === 1 ? "" : "s"}`); }
   };
 
   const createSignals = (input: readonly SignalClipboardItem[], operation: "paste" | "duplicate", placement: "current-selection" | "source-group" = "current-selection") => {
@@ -211,6 +227,7 @@ export function useClipboardActions({ application, selection }: { application: E
     else if (annotationRef.current) createAnnotation(annotationRef.current, "paste");
     else if (transactionsRef.current.length > 0) createTransactions(transactionsRef.current, "paste");
     else if (spacerRef.current) createSpacer(spacerRef.current, "paste");
+    else if (cutSignalsRef.current) moveCutSignals();
     else createSignals(signalsRef.current, "paste");
   };
   const duplicate = () => {

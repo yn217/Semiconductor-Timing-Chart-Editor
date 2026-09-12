@@ -99,6 +99,7 @@ test("Transaction demo is available after a browser reload", async ({ page }) =>
 test("Transaction sample is shown after reloading the default browser URL", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(page.getByTestId("transaction-left-tree")).toContainText("All Transactions(6)");
   await expect(page.locator('[data-transaction-row-id="demo_txn_read"]')).toContainText("Read_0");
   await page.reload();
