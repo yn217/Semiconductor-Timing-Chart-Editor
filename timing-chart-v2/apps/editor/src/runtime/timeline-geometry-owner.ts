@@ -21,6 +21,7 @@ export class TimelineGeometryOwner {
   #timeAxis: TimeAxisGeometry = { mode: "clockless" };
   #presentationScale = 1;
   #snapIndex: ImmutableSnapIndex | undefined;
+  #cycleBoundaryCandidates: ReturnType<ImmutableSnapIndex["entries"]> = [];
 
   constructor(private readonly context: TimelineGeometryOwnerContext) {
     this.mappingCache = context.mappingCache;
@@ -77,12 +78,12 @@ export class TimelineGeometryOwner {
 
   /** Resolve a cycle boundary without consulting any rendered Cycle surface. */
   cycleBoundaryAtLocalX(localX: number, zoom: number, snapEnabled: boolean): number | undefined {
-    const candidates = this.currentSnapIndex().entries().filter((candidate) => candidate.kind === "cycle-boundary");
+    this.currentSnapIndex();
+    const candidates = this.#cycleBoundaryCandidates;
     if (!snapEnabled) {
-      const ordered = [...candidates].sort((left, right) => left.point.x - right.point.x);
-      const terminal = ordered.at(-1);
+      const terminal = candidates.at(-1);
       if (terminal && localX >= terminal.point.x - 32 / zoom) return terminal.anchor.cycle;
-      return ordered.filter((candidate) => candidate.point.x <= localX).at(-1)?.anchor.cycle ?? ordered[0]?.anchor.cycle;
+      return candidates.filter((candidate) => candidate.point.x <= localX).at(-1)?.anchor.cycle ?? candidates[0]?.anchor.cycle;
     }
     let nearest: { cycle: number; distance: number } | undefined;
     for (const candidate of candidates) {
@@ -96,10 +97,11 @@ export class TimelineGeometryOwner {
     if (!this.#snapIndex) {
       const document = this.context.getDocument();
       this.#snapIndex = buildSnapIndex(document, this.context.getProjection(), this.geometryMaps, this.mappingCache.get(document.timeline, document.timeGroups), this.snapService, this.#presentationScale);
+      this.#cycleBoundaryCandidates = this.#snapIndex.entries().filter((candidate) => candidate.kind === "cycle-boundary").sort((left, right) => left.point.x - right.point.x);
       this.context.onSnapIndexBuilt();
     }
     return this.#snapIndex;
   }
 
-  invalidateSnapIndex(): void { this.#snapIndex = undefined; }
+  invalidateSnapIndex(): void { this.#snapIndex = undefined; this.#cycleBoundaryCandidates = []; }
 }
