@@ -110,25 +110,29 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     emitValue(signal.values.filter((change) => !checkedStarts.has(change.start)));
     setCheckedStarts(new Set());
   };
-  const soleCheckedStart = checkedCount === 1 ? [...checkedStarts][0] : undefined;
-  const soleChecked = soleCheckedStart === undefined ? undefined : signal.values.find((change) => change.start === soleCheckedStart);
   const moveBy = (delta: -1 | 1) => {
-    if (!soleChecked) return;
     const ordered = [...signal.values].sort((left, right) => left.start - right.start);
-    const index = ordered.findIndex((change) => change.start === soleChecked.start);
-    const targetIndex = index + delta;
-    if (index < 0 || targetIndex < 0 || targetIndex >= ordered.length) return;
-    [ordered[index], ordered[targetIndex]] = [ordered[targetIndex]!, ordered[index]!];
+    const selectedIndexes = ordered.map((change, index) => checkedStarts.has(change.start) ? index : -1).filter((index) => index >= 0);
+    if (selectedIndexes.length === 0) return;
+    const first = selectedIndexes[0]!;
+    const last = selectedIndexes[selectedIndexes.length - 1]!;
+    if (selectedIndexes.length !== last - first + 1) return;
+    const targetIndex = delta < 0 ? first - 1 : last + 1;
+    if (targetIndex < 0 || targetIndex >= ordered.length || checkedStarts.has(ordered[targetIndex]!.start)) return;
+    const block = ordered.splice(first, selectedIndexes.length);
+    ordered.splice(delta < 0 ? first - 1 : first + 1, 0, ...block);
     const durationValues = [...signal.values].sort((left, right) => left.start - right.start);
     const durationByStart = new Map(durationValues.map((change, valueIndex, values) => [change.start, (values[valueIndex + 1]?.start ?? cycleCount) - change.start]));
     let nextStart = ordered[0]!.start;
     const reordered = ordered.map((change) => { const next = { ...change, start: nextStart }; nextStart += durationByStart.get(change.start) ?? 0; return next; });
     const result = commands.replaceValues(signal.id, reordered);
-    if (result.ok) setCheckedStarts(new Set([reordered[targetIndex]!.start]));
+    if (result.ok) { const nextFirst = delta < 0 ? first - 1 : first + 1; setCheckedStarts(new Set(reordered.slice(nextFirst, nextFirst + block.length).map((change) => change.start))); }
   };
-  const sortedValueIndex = soleChecked === undefined ? -1 : [...signal.values].sort((left, right) => left.start - right.start).findIndex((change) => change.start === soleChecked.start);
-  const canMoveUp = sortedValueIndex > 0;
-  const canMoveDown = sortedValueIndex >= 0 && sortedValueIndex < signal.values.length - 1;
+  const orderedStarts = [...signal.values].sort((left, right) => left.start - right.start);
+  const selectedIndexes = orderedStarts.map((change, index) => checkedStarts.has(change.start) ? index : -1).filter((index) => index >= 0);
+  const isContiguous = selectedIndexes.length > 0 && selectedIndexes.length === selectedIndexes.at(-1)! - selectedIndexes[0]! + 1;
+  const canMoveUp = isContiguous && selectedIndexes[0]! > 0;
+  const canMoveDown = isContiguous && selectedIndexes.at(-1)! < orderedStarts.length - 1;
   const [dragStart, setDragStart] = useState<number | undefined>();
   useEffect(() => {
     if (dragStart === undefined) return undefined;
