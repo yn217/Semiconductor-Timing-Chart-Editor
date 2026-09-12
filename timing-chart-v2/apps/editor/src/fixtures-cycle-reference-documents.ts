@@ -58,7 +58,7 @@ const transactionDemoTransactions = [
 const showcaseAnnotations: readonly Annotation[] = [
   { id: "demo_ann_request" as Annotation["id"], type: "text", label: "Request accepted", visible: true, color: "#155ca0", anchor: { signalId: signalId("sig_cycle_request"), cycle: 12, point: "cycle-start" } },
   { id: "demo_ann_data" as Annotation["id"], type: "range", label: "Data transfer window", visible: true, color: "#b45309", start: { signalId: signalId("sig_cycle_data"), cycle: 24, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_data"), cycle: 40, point: "cycle-start" } },
-  { id: "demo_ann_response" as Annotation["id"], type: "arrow", label: "Response", visible: true, color: "#15803d", start: { signalId: signalId("sig_cycle_valid"), cycle: 44, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_result"), cycle: 52, point: "cycle-start" }, arrowhead: "end" },
+  { id: "demo_ann_response" as Annotation["id"], type: "arrow", label: "Response", visible: true, color: "#15803d", from: { signalId: signalId("sig_cycle_valid"), cycle: 44, point: "cycle-start" }, to: { signalId: signalId("sig_cycle_result"), cycle: 52, point: "cycle-start" }, arrowhead: "end" },
 ];
 export const transactionDemoDocument: CanonicalDocument = {
   ...cycleDocument,
