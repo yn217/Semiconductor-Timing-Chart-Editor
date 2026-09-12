@@ -95,6 +95,7 @@ export function buildMiniMapTransactionOverview(document: Pick<CanonicalDocument
   type LaneBucket = { readonly groupId: Transaction["groupId"]; readonly laneId: string; readonly transactions: Transaction[] };
   const byLane = new Map<string, LaneBucket>();
   for (const transaction of document.transactions) {
+    if (transaction.visible === false) continue;
     const laneId = transaction.laneId ?? "lane_0";
     // Keep the builder's row identity identical to the incremental updater.
     // A mismatch here makes every first incremental update reconstruct rows
@@ -129,13 +130,14 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
   if (previous.cycleCount !== Math.max(1, document.timeline.cycleCount) || previousGroups !== document.transactionGroups) return buildMiniMapTransactionOverview(document);
   const laneKey = (transaction: Transaction) => `${transaction.groupId ?? "ungrouped"}:${transaction.laneId ?? "lane_0"}`;
   const previousById = new Map(previousTransactions.map((transaction) => [transaction.id, transaction] as const));
-  const nextById = new Map(document.transactions.map((transaction) => [transaction.id, transaction] as const));
+  const nextById = new Map(document.transactions.filter((transaction) => transaction.visible !== false).map((transaction) => [transaction.id, transaction] as const));
   const changedLanes = new Set<string>();
   for (const transaction of previousTransactions) {
     const next = nextById.get(transaction.id);
     if (!next) changedLanes.add(laneKey(transaction));
   }
   for (const transaction of document.transactions) {
+    if (transaction.visible === false) continue;
     const before = previousById.get(transaction.id);
     if (before !== transaction) {
       // A move invalidates both buckets: the old bucket must lose the
@@ -148,6 +150,7 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
   const colorByGroupId = new Map((document.transactionGroups ?? []).map((group) => [group.id, group.color ?? DEFAULT_TRANSACTION_COLOR]));
   const transactionsByLane = new Map<string, Transaction[]>();
   for (const transaction of document.transactions) {
+    if (transaction.visible === false) continue;
     const key = laneKey(transaction);
     const lane = transactionsByLane.get(key);
     if (lane) lane.push(transaction);
