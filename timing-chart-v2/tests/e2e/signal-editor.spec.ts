@@ -320,6 +320,7 @@ test("Bottom Clock context toolbar exposes real preset, duplicate, import, expor
 
 test("moves the rendered waveform transition to the edited Start cycle, not just the DOM identity", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const surface = host.locator("[data-role='timing-chart-surface']");
@@ -364,6 +365,7 @@ test("moves the rendered waveform transition to the edited Start cycle, not just
 
 test("#402: Event row Save stays disabled until the Draft differs, and Cancel discards it back to canonical", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
@@ -421,6 +423,7 @@ test("#402: Event row Save stays disabled until the Draft differs, and Cancel di
 // next to the bulk actions.
 test("Transitions table Select All is a real tri-state checkbox wired to the same selection the footer bulk actions use", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
