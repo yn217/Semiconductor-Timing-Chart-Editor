@@ -54,6 +54,7 @@ export type BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId
 export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>(input: { readonly documentEpoch?: number; readonly cycleCount?: number } = {}) {
   const [ribbonTab, setRibbonTab] = useState("Home");
   const [bottomTab, setBottomTab] = useState<BottomTab>("Signal");
+  const lastBottomTabByModeRef = useRef<{ Cycle: BottomTab; Transaction: BottomTab }>({ Cycle: "Signal", Transaction: "Transaction" });
   const [viewMode, setViewModeRaw] = useState<ViewMode>("Cycle");
   const [activeContext, setActiveContext] = useState<ActiveContext>("Signal");
   // #404: entering Cycle or Transaction normalizes ActiveContext to the one
@@ -69,8 +70,13 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
       setBottomTab((current) => {
         const transactionTabs: readonly BottomTab[] = ["Transaction", "Phases", "Linked Signals", "Bookmarks", "AI", "Problems", "JSON"];
         const cycleTabs: readonly BottomTab[] = ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"];
+        const currentTabs = viewMode === "Transaction" ? transactionTabs : cycleTabs;
+        if (viewMode === "Cycle" || viewMode === "Transaction") {
+          if (currentTabs.includes(current)) lastBottomTabByModeRef.current[viewMode] = current;
+        }
         const valid = next === "Transaction" ? transactionTabs : cycleTabs;
-        return valid.includes(current) ? current : valid[0]!;
+        const remembered = lastBottomTabByModeRef.current[next];
+        return valid.includes(remembered) ? remembered : valid[0]!;
       });
     }
   };
