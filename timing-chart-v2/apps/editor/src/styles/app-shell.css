@@ -139,4 +139,6 @@ button, input, select { font: inherit; font-size: var(--ds-font-size); }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] > .frozen-pane-heading-gutter { display: none; }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] > .left-column-heading { flex-wrap: wrap; align-content: center; gap: 2px; overflow: hidden; }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] .transaction-tree-tabs { flex: 0 0 100%; }
+.editor-shell .column-headings[data-testid="transaction-tree-header"] { z-index: 30; }
+.editor-shell .column-headings[data-testid="transaction-tree-header"] .transaction-tree-tabs { position: relative; z-index: 1; }
 .editor-shell .cycle-viewport { height: calc(100% - 37px); }
