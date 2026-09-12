@@ -163,7 +163,7 @@ function TransactionBar({ transaction, documentEpoch, row, color, selected, cycl
     event.preventDefault();
     event.stopPropagation();
     buttonRef.current?.setPointerCapture(event.pointerId);
-    setDrag({ edge, documentEpoch, surfaceLeft: buttonRef.current?.closest<HTMLElement>(".transaction-lanes")?.getBoundingClientRect().left });
+    setDrag({ edge, documentEpoch, surfaceLeft: buttonRef.current?.closest<HTMLElement>(".transaction-track")?.getBoundingClientRect().left });
     setPreview({ start: transaction.start, end: transaction.end });
   };
   const cancel = (event?: ReactPointerEvent<HTMLButtonElement>) => {
