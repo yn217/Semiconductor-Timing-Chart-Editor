@@ -53,7 +53,7 @@ export type BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId
  * ever affects layout/chrome, never the .tcd document or command history. */
 export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>(input: { readonly documentEpoch?: number; readonly cycleCount?: number; readonly initialViewMode?: ViewMode } = {}) {
   const [ribbonTab, setRibbonTab] = useState("Home");
-  const [bottomTab, setBottomTab] = useState<BottomTab>("Signal");
+  const [bottomTab, setBottomTab] = useState<BottomTab>(input.initialViewMode === "Transaction" ? "Transaction" : "Signal");
   const lastBottomTabByModeRef = useRef<{ Cycle: BottomTab; Transaction: BottomTab }>({ Cycle: "Signal", Transaction: "Transaction" });
   const followSelectionByModeRef = useRef<{ Cycle: boolean; Transaction: boolean }>({ Cycle: true, Transaction: true });
   const bottomPinnedByModeRef = useRef<{ Cycle: boolean; Transaction: boolean }>({ Cycle: false, Transaction: false });
