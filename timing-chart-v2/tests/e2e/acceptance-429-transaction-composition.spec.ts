@@ -94,3 +94,13 @@ test("Transaction demo is available after a browser reload", async ({ page }) =>
   await expect(page.locator(".transaction-list-header-cells")).toContainText("# Phases");
   await expect(page.locator(".transaction-list-header-cells")).toContainText("Linked Signals");
 });
+
+test("Transaction Tree drag moves a transaction into another group", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const source = page.getByTestId("transaction-left-tree-row-demo_txn_read");
+  const target = page.locator('[data-transaction-group-id="demo_tgrp_cpu"] .transaction-left-tree-group-header');
+  await source.dragTo(target);
+  await expect(page.locator('.transaction-left-tree-group[data-transaction-group-id="demo_tgrp_cpu"]')).toContainText("Read_0");
+  await expect(page.locator('.transaction-left-tree-group[data-transaction-group-id="demo_tgrp_memory"]')).not.toContainText("Read_0");
+});
