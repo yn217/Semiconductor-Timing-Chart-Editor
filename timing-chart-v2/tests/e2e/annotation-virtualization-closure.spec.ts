@@ -21,8 +21,11 @@ for (const count of [1_000, 5_000, 20_000]) test(`${count} Annotation rows stay 
   const dirty = await page.getByTestId("dirty-status").textContent();
   expect(await list.locator("[data-annotation-list-id]").count()).toBeLessThan(100);
   await list.locator("[data-annotation-list-id]").first().focus();
+  const navigationStarted = await page.evaluate(() => performance.now());
   await page.keyboard.press("End");
   await expect(list.locator(`[data-annotation-list-id='annotation-scale-${count - 1}']`)).toHaveAttribute("data-selected", "true");
+  const navigationDuration = await page.evaluate((started) => performance.now() - started, navigationStarted);
+  expect(navigationDuration).toBeLessThan(5_000);
   expect(await list.locator("[data-annotation-list-id]").count()).toBeLessThan(100);
   await expect(host).toHaveAttribute("data-canonical-revision", revision!);
   await expect(page.getByTestId("history-status")).toHaveText(history!);
