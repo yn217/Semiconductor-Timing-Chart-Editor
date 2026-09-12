@@ -291,7 +291,7 @@
    table), so this column width must stay an identical fixed value on
    every row -- an `auto`-sized column here would size itself per-row and
    break the very column alignment Section 2 asks for. */
-.event-row { display: grid; grid-template-columns: 20px 24px 82px 56px 64px minmax(0, 1fr) minmax(160px, 1.4fr) 132px; align-items: center; min-height: var(--table-row-height); border-bottom: 1px solid #e1e6ed; }
+.event-row { display: grid; grid-template-columns: 20px 18px 24px 82px 56px 64px minmax(0, 1fr) minmax(160px, 1.4fr) 132px; align-items: center; min-height: var(--table-row-height); border-bottom: 1px solid #e1e6ed; }
 
 .event-row.selected:not(.event-columns) { background: #eaf3fb; box-shadow: inset 3px 0 #2c78bb; }
 /* Visual Quality Closure follow-up, Section 7: a row reads as plain text
@@ -311,6 +311,7 @@
 .event-row-index { color: #7b8999; font-size: 10px; text-align: center; }
 
 .event-columns { min-height: 25px; background: #f0f4f8; color: #526177; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+.event-columns > span:first-of-type { grid-column: 3; }
 
 .event-row output { overflow: hidden; text-overflow: ellipsis; font: 11px Consolas, monospace; color: #4f5e73; }
 /* A read-only row's Comment is prose, not data -- proportional type reads
