@@ -75,7 +75,9 @@ export function auditPreviewControls(source, file = "fixture.tsx") {
   for (const tag of openingButtonTags(source)) {
     const close = closingButtonTagIndex(source, tag.offset + tag.text.length);
     const element = source.slice(tag.offset, close);
-    if (!/preview/i.test(element)) continue;
+    const openingTag = element.slice(0, element.indexOf(">") + 1);
+    const content = element.slice(openingTag.length);
+    if (!/preview/i.test(content) && !/aria-label\s*=\s*["'][^"']*preview/i.test(openingTag)) continue;
     errors.push(`${file}:${lineNumber(source, tag.offset)} Preview-labeled <button> has no delegated effect (onXxx(...)) anywhere in its source -- looks like a status-text-only placeholder`);
   }
   return errors;
