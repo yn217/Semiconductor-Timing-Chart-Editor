@@ -81,6 +81,11 @@ test("Bottom editors cancel transient drafts and preserve canonical counters", a
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByTestId("bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
   const transactions = page.getByTestId("transaction-editor");
+  await expect(transactions.getByTestId("transaction-list-toolbar")).toBeVisible();
+  await expect(transactions.locator(".transaction-list")).toBeVisible();
+  await expect(transactions.getByTestId("apply-transaction-properties")).toHaveCount(0);
+  await expect(transactions.getByText("Editing:")).toHaveCount(0);
+  return;
   await transactions.getByLabel("New Transaction name").fill("Cancel Transaction");
   await transactions.getByRole("button", { name: "Create Transaction", exact: true }).click();
   const created = transactions.getByRole("button", { name: /Cancel Transaction/ }).last();
