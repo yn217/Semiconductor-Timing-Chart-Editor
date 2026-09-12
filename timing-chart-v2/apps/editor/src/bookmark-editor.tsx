@@ -12,7 +12,7 @@ import { DraftStatus } from "./draft-status.js";
  * TransactionEditor already uses. Reuses the canonical `bookmark.create/
  * update/delete` SemanticCommands as its only mutation path -- no second
  * Bookmark list/store. */
-export function BookmarkEditor({ bookmark, document, history, range, onSelect, onReveal, onNavigateBookmark, commands, onUndo, onRedo, onDelete, onCancel }: { readonly bookmark: Bookmark | undefined; readonly document: CanonicalDocument; readonly history: HistoryState; readonly range: { readonly start: number; readonly end: number }; readonly onSelect: (id: BookmarkId) => void; readonly onReveal: (start: number) => void; readonly onNavigateBookmark: (cycle: number, bookmarkId?: BookmarkId) => void; readonly commands: Pick<EditorSurfaceCommandController, "createBookmark" | "updateBookmark">; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
+export function BookmarkEditor({ bookmark, document, history, range, onSelect, onReveal, onNavigateBookmark, commands, onUndo, onRedo, onDelete, onCancel }: { readonly bookmark: Bookmark | undefined; readonly document: CanonicalDocument; readonly history: HistoryState; readonly range: { readonly start: number; readonly end: number }; readonly onSelect: (id: BookmarkId) => void; readonly onReveal: (start: number) => void; readonly onNavigateBookmark: (cycle: number, bookmarkId?: BookmarkId) => void; readonly commands: Pick<EditorSurfaceCommandController, "createBookmark" | "updateBookmark" | "updateTimeGroupPresentation">; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
   const [name, setName] = useState("Bookmark");
   const [start, setStart] = useState(0);
   const [comment, setComment] = useState("");
@@ -49,12 +49,14 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
   // Apply when the draft is byte-for-byte identical to the committed
   // Bookmark, so a no-op Apply can't manufacture an empty History entry.
   const hasChanges = bookmark !== undefined && (editName !== bookmark.name || editStart !== bookmark.start || editComment !== (bookmark.comment ?? ""));
+  const containingGroups = bookmark === undefined ? [] : document.timeGroups.filter((group) => group.presentation?.collapsed && bookmark.start >= group.start && bookmark.start < group.end);
+  const expandAndJump = () => { for (const group of containingGroups) commands.updateTimeGroupPresentation(group.id, { ...(group.presentation ?? {}), collapsed: false, foldStyle: "none", foldLabel: group.presentation?.foldLabel || group.name }); onReveal(bookmark!.start); };
   const createHasChanges = name !== "Bookmark" || start !== 0 || comment !== "";
   return <section className="bookmark-editor-panel" data-testid="bookmark-editor-panel" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <header>
       <button type="button" aria-label="Previous bookmark" disabled={document.bookmarks.length === 0} onClick={() => navigate(-1)}>Previous</button>
       <button type="button" aria-label="Next bookmark" disabled={document.bookmarks.length === 0} onClick={() => navigate(1)}>Next</button>
-      <strong>{bookmark ? `Editing: ${bookmark.name}` : "Bookmark Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{bookmark && <><button type="button" onClick={() => onReveal(bookmark.start)}>Reveal</button><button type="button" onClick={duplicate}>Duplicate</button><button type="button" className="danger" data-testid="delete-bottom-bookmark" onClick={onDelete}>Delete Bookmark</button></>}</header>
+      <strong>{bookmark ? `Editing: ${bookmark.name}` : "Bookmark Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{bookmark && <><button type="button" onClick={() => onReveal(bookmark.start)}>Reveal</button>{containingGroups.length > 0 && <button type="button" data-testid="bookmark-expand-and-jump" onClick={expandAndJump}>Expand and Jump</button>}<button type="button" onClick={duplicate}>Duplicate</button><button type="button" className="danger" data-testid="delete-bottom-bookmark" onClick={onDelete}>Delete Bookmark</button></>}</header>
     {bookmark
       ? <>
           <form id="bookmark-properties-form" onSubmit={(event) => { event.preventDefault(); if (!hasChanges) return; commands.updateBookmark({ bookmarkId: bookmark.id, name: editName.trim() || "Bookmark", start: editStart, comment: editComment }); }}>
