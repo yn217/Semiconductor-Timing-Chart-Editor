@@ -83,3 +83,28 @@ test("Combined routes a real Transaction bar drag to the Transaction pane only",
   await expect(viewport).toHaveAttribute("data-active-pane", "transaction");
   await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Transaction");
 });
+
+test("Combined routes a Signal waveform range drag to the Signal pane only", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const wave = host.locator("[data-role='stable-waveform-surface'] [data-signal-id='sig_cycle_request']");
+  const ruler = page.getByTestId("cycle-ruler");
+  const waveBox = await wave.boundingBox();
+  const start = await ruler.locator("[data-cycle='2']").boundingBox();
+  const end = await ruler.locator("[data-cycle='6']").boundingBox();
+  expect(waveBox).not.toBeNull();
+  expect(start).not.toBeNull();
+  expect(end).not.toBeNull();
+  const before = await page.getByTestId("history-status").textContent();
+  await page.mouse.move(start!.x + 1, waveBox!.y + waveBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(end!.x + 1, waveBox!.y + waveBox!.height / 2);
+  await page.mouse.up();
+  await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Signal");
+  await expect(page.getByTestId("history-status")).toHaveText(before!);
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("2");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("6");
+});
