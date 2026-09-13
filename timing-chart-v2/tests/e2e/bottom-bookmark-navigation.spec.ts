@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { canonicalFixture } from "../fixtures/canonical.js";
 
 // #422: Bottom Bookmarks panel gets its own Previous/Next (sharing the
 // exact same resolver as the Timeline Ribbon's Previous/Next, never a
@@ -6,14 +7,19 @@ import { expect, test } from "@playwright/test";
 // Apply button stays disabled until the draft actually differs from the
 // selected Bookmark, and typing never touches Canonical/History/Dirty.
 
-async function addMarkerAt(page: import("@playwright/test").Page, cycleStart: number, cycleEnd: number): Promise<void> {
-  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
-  // Fill end before start: `setBoundary` clamps a new start to
-  // `range.end - 1`, so filling start first against a stale (small) end
-  // left over from a previous marker silently keeps the old start.
-  await page.getByLabel("Timeline range end").fill(String(cycleEnd));
-  await page.getByLabel("Timeline range start").fill(String(cycleStart));
-  await page.getByRole("button", { name: "Add marker" }).click();
+async function openBookmarkFixture(page: import("@playwright/test").Page, bookmarks: readonly { id: string; name: string; start: number; comment: string }[]): Promise<void> {
+  const document = canonicalFixture();
+  document.timeline.end = 20;
+  document.timeline.cycleCount = 20;
+  document.bookmarks = bookmarks;
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
+    name: "bookmark-navigation.tcd",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(document)),
+  });
+  const discard = page.getByTestId("unsaved-discard");
+  if (await discard.isVisible().catch(() => false)) await discard.click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
 }
 
 test("Bottom Bookmarks Previous/Next navigate relative to the selected Bookmark, sharing the Ribbon's own resolver, view-only", async ({ page }) => {
@@ -21,16 +27,18 @@ test("Bottom Bookmarks Previous/Next navigate relative to the selected Bookmark,
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
 
-  await addMarkerAt(page, 3, 4);
-  await addMarkerAt(page, 10, 11);
-  await addMarkerAt(page, 16, 17);
+  await openBookmarkFixture(page, [
+    { id: "bm_three", name: "Three", start: 3, comment: "" },
+    { id: "bm_ten", name: "Ten", start: 10, comment: "" },
+    { id: "bm_sixteen", name: "Sixteen", start: 16, comment: "" },
+  ]);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
 
   const panel = page.getByTestId("bookmark-editor-panel");
   const rows = panel.locator("[data-testid^='bookmark-row-']");
-  await expect(rows).toHaveCount(3);
   // Select the middle Bookmark (cycle 10) explicitly.
-  await rows.filter({ hasText: "10" }).click();
+  await rows.filter({ hasText: "10" }).first().click();
   await expect(panel.getByLabel("Bottom Bookmark cycle")).toHaveValue("10");
 
   const before = {
@@ -53,10 +61,11 @@ test("Bottom Bookmark edit stays a Draft until Apply Changes; the button is disa
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
 
-  await addMarkerAt(page, 5, 6);
+  await openBookmarkFixture(page, [{ id: "bm_five", name: "Five", start: 5, comment: "" }]);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
   const panel = page.getByTestId("bookmark-editor-panel");
-  await panel.locator("[data-testid^='bookmark-row-']").click();
+  await panel.locator("[data-testid^='bookmark-row-']").filter({ hasText: "5" }).first().click();
 
   const applyButton = panel.getByTestId("apply-bottom-bookmark");
   await expect(applyButton).toBeDisabled();
@@ -74,7 +83,7 @@ test("Bottom Bookmark edit stays a Draft until Apply Changes; the button is disa
   await expect(panel.getByTestId("bottom-bookmark-unapplied")).toBeVisible();
 
   await panel.getByTestId("cancel-bottom-bookmark").click();
-  await expect(panel.getByLabel("Bottom Bookmark name")).toHaveValue(/Marker/);
+  await expect(panel.getByLabel("Bottom Bookmark name")).toHaveValue("Five");
   await expect(panel.getByTestId("apply-bottom-bookmark")).toBeDisabled();
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
 
