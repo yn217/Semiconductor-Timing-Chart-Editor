@@ -4,7 +4,7 @@ test.use({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 
 async function ready(page: Page): Promise<void> {
   await page.goto("/");
-  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
 }
 
 function longReferenceClockDocument() {
@@ -76,6 +76,8 @@ test("keeps Grid and Ruler on the actual WaveDrom X geometry across scale and sc
   const fileInput = page.locator("input[type='file'][accept='.json,.tcd']");
   await fileInput.setInputFiles({ name: "geometry-closure.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(longReferenceClockDocument())) });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(page.locator("[data-view-mode='Cycle']")).toBeVisible();
   await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='128']")).toHaveCount(1);
   await waitForPresentation(page);
   const cycles = [0, 12, 24] as const;
@@ -91,29 +93,29 @@ test("keeps Grid and Ruler on the actual WaveDrom X geometry across scale and sc
     await page.getByLabel("Zoom preset").selectOption(preset);
     await expect(page.getByTestId("zoom-status")).toHaveText(`${preset}%`);
     await waitForPresentation(page);
-    assertAligned(await boundaries(page, [0, 1, 10, 32, 64, 128]));
+    assertAligned(await boundaries(page, [0, 2, 10, 32, 64, 128]));
   }
 
   const viewport = page.getByTestId("cycle-viewport");
   await viewport.evaluate((element) => { element.scrollLeft = Math.min(220, element.scrollWidth); });
   await waitForPresentation(page);
-  assertAligned(await boundaries(page, [0, 1, 10, 32, 64, 128]));
+  assertAligned(await boundaries(page, [0, 2, 10, 32, 64, 128]));
 
   await page.setViewportSize({ width: 1280, height: 720 });
   await waitForPresentation(page);
-  assertAligned(await boundaries(page, [0, 1, 10, 32, 64, 128]));
+  assertAligned(await boundaries(page, [0, 2, 10, 32, 64, 128]));
 
   await page.getByTestId("cycle-ruler").locator("[data-cycle='8']").click();
   await expect(page.getByTestId("range-status")).toHaveText("Range: [8, 9)");
   await page.getByTestId("ribbon").getByRole("button", { name: "Fit Selection", exact: true }).click();
   await expect(page.getByTestId("zoom-status")).toHaveText("800%");
   await waitForPresentation(page);
-  assertAligned(await boundaries(page, [0, 1, 8, 10, 32, 64, 128]));
+  assertAligned(await boundaries(page, [0, 2, 8, 10, 32, 64, 128]));
 
   await page.getByTestId("ribbon").getByRole("button", { name: "Fit All", exact: true }).click();
   await expect(page.getByTestId("zoom-status")).not.toHaveText("800%");
   await waitForPresentation(page);
-  assertAligned(await boundaries(page, [0, 1, 10, 32, 64, 128]));
+  assertAligned(await boundaries(page, [0, 2, 10, 32, 64, 128]));
 
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
