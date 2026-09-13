@@ -29,5 +29,10 @@ if (probe === "geometry") {
     createRoot(root).render(<StrictMode><MinimalCycleViewNextProbe /></StrictMode>);
   });
 } else {
-  createRoot(root).render(<StrictMode><MinimalCycleView /></StrictMode>);
+  // The production editor owns imperative renderer/runtime effects. Keeping
+  // it under StrictMode causes the mount effect to be intentionally replayed
+  // in the dev browser, producing a duplicate full-document startup render.
+  // Probe surfaces retain StrictMode above; the real editor must mount its
+  // timeline runtime exactly once per document root.
+  createRoot(root).render(<MinimalCycleView />);
 }
