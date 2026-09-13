@@ -72,6 +72,28 @@ test("Transaction Fit All and Fit Selection remain view-only", async ({ page }) 
   expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
 });
 
+test("Transaction view state survives both mode-switch directions", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const host = page.getByTestId("cycle-surface");
+  const viewport = page.getByTestId("cycle-viewport");
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.getByTestId("transaction-lanes")).toBeVisible();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Zoom preset").selectOption("150");
+  await expect(page.getByTestId("zoom-status")).toHaveText("150%");
+  await viewport.evaluate((element) => { element.scrollLeft = Math.min(120, element.scrollWidth - element.clientWidth); });
+  const state = { zoom: await host.getAttribute("data-zoom"), scrollLeft: await viewport.evaluate((element) => element.scrollLeft), revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.getByTestId("transaction-lanes")).toBeVisible();
+  expect(await host.getAttribute("data-zoom")).toBe(state.zoom);
+  expect(await viewport.evaluate((element) => element.scrollLeft)).toBe(state.scrollLeft);
+  expect(await host.getAttribute("data-canonical-revision")).toBe(state.revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(state.history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(state.dirty);
+});
+
 test("central Transaction surface remains viewport-bounded across 1k/5k/10k with bounded mode, scroll, and selection work", async ({ page }, testInfo) => {
   test.setTimeout(180_000);
   await page.goto("/");
