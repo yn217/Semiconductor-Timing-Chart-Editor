@@ -39,7 +39,7 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
   }));
   const geometry = await page.evaluate(() => {
     const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
-    const wave = document.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
+    const wave = document.querySelector<HTMLElement>(".wave-owner[data-signal-id]");
     const svg = wave?.querySelector("svg");
     const marks = svg ? [...svg.querySelectorAll<SVGLineElement>("[id^='gmark_']")] : [];
     const boundaryGeometry = wave?.getAttribute("data-cycle-boundary-geometry");
