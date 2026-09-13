@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("Ctrl+D duplicates the selected Signal as one canonical command with a fresh stable ID", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const surface = host.locator("[data-role='timing-chart-surface']");
@@ -29,6 +30,7 @@ test("Ctrl+D duplicates the selected Signal as one canonical command with a fres
 
 test("Ctrl+A selects every Signal without mutating the document", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const surface = host.locator("[data-role='timing-chart-surface']");
@@ -48,6 +50,7 @@ test("Ctrl+A selects every Signal without mutating the document", async ({ page 
 
 test("Ctrl+A inside a text input performs native select-all instead of the app shortcut", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const surface = host.locator("[data-role='timing-chart-surface']");
@@ -68,6 +71,7 @@ test("Ctrl+A inside a text input performs native select-all instead of the app s
 
 test("Escape cancels an in-progress Annotation drag, closes the context menu, and resets dependency-arrow pick", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
