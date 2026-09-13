@@ -193,6 +193,16 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   const eventFirst = Math.max(0, Math.floor(eventScrollTop / EVENT_ROW_HEIGHT) - EVENT_OVERSCAN);
   const eventLast = Math.min(indexed.ordered.length, Math.ceil((eventScrollTop + (eventViewportRef.current?.clientHeight ?? 300)) / EVENT_ROW_HEIGHT) + EVENT_OVERSCAN);
   const renderedEvents = indexed.ordered.slice(eventFirst, eventLast);
+  useEffect(() => {
+    if (selectedKey === undefined || !eventViewportRef.current) return;
+    const index = indexed.ordered.findIndex((change) => transitionIdentity(change) === selectedKey);
+    if (index < 0) return;
+    const top = index * EVENT_ROW_HEIGHT;
+    const bottom = top + EVENT_ROW_HEIGHT;
+    const viewport = eventViewportRef.current;
+    if (top < viewport.scrollTop) viewport.scrollTop = top;
+    else if (bottom > viewport.scrollTop + viewport.clientHeight) viewport.scrollTop = bottom - viewport.clientHeight;
+  }, [indexed.ordered, selectedKey]);
   return <div className="event-editor">
     {/* Bottom Panel Visual Reference pass: Add/Edit Transition, Value
         Helper and (for a binary Signal) Generate Waveform render side by
