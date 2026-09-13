@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { DragEvent } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
@@ -40,12 +40,19 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   const [checkedStarts, setCheckedStarts] = useState<ReadonlySet<number>>(new Set());
   const [importStatus, setImportStatus] = useState("Import signal events");
   const fileInput = useRef<HTMLInputElement>(null);
-  const selected = signal.values.find((change) => transitionIdentity(change) === selectedKey);
+  const indexed = useMemo(() => {
+    const ordered = [...signal.values].sort((left, right) => left.start - right.start);
+    const occupied = new Set(ordered.map((change) => change.start));
+    const firstFree = (extra?: number) => { for (let cycle = 0; cycle < cycleCount; cycle += 1) if (!occupied.has(cycle) && cycle !== extra) return cycle; return undefined; };
+    const nextEnd = (startValue: number) => ordered.find((change) => change.start > startValue)?.start ?? cycleCount;
+    return { ordered, occupied, firstFree, nextEnd };
+  }, [signal.values, cycleCount]);
+  const selected = indexed.ordered.find((change) => transitionIdentity(change) === selectedKey);
   const selectTransition = (startValue: number) => {
-    const change = signal.values.find((item) => item.start === startValue);
+    const change = indexed.ordered.find((item) => item.start === startValue);
     setSelectedKey(change === undefined ? undefined : transitionIdentity(change));
   };
-  const nextStart = Array.from({ length: cycleCount }, (_, cycle) => cycle).find((cycle) => !signal.values.some((item) => item.start === cycle)) ?? Math.max(0, cycleCount - 1);
+  const nextStart = indexed.firstFree() ?? Math.max(0, cycleCount - 1);
   const emitValue = (nextValues: readonly ValueSignal["values"][number][]): CommandResult => commands.replaceValues(signal.id, nextValues);
   const addRow = () => commands.updateValue(signal.id, nextStart, value);
   // Row Actions compaction follow-up: the toolbar's Duplicate (targets
@@ -54,7 +61,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   // is the source -- one function, not two copies of "find a free cycle
   // and copy value/comment onto it".
   const duplicateChange = (source: ValueSignal["values"][number]) => {
-    const duplicateStart = Array.from({ length: cycleCount }, (_, cycle) => cycle).find((cycle) => !signal.values.some((item) => item.start === cycle));
+    const duplicateStart = indexed.firstFree();
     if (duplicateStart === undefined) return;
     commands.updateValue(signal.id, duplicateStart, source.value, source.comment);
   };
@@ -96,15 +103,14 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   // is display-only: it is never itself a semantic/geometry source of
   // truth, and Add still dispatches through the one existing
   // `signal.updateValue` command path.
-  const previewEnd = signal.values.filter((change) => change.start > start).map((change) => change.start).sort((a, b) => a - b)[0] ?? cycleCount;
+  const previewEnd = indexed.nextEnd(start);
   const addAndContinue = () => {
     commands.updateValue(signal.id, start, value, comment);
     // Auto-advance Start to the next free cycle (excluding the one just
     // committed) so continuous entry doesn't need manual arithmetic each
     // time -- Value is kept (commonly the next transition reuses it),
     // Comment is cleared (a per-transition annotation, not one to repeat).
-    const taken = new Set([...signal.values.map((change) => change.start), start]);
-    const next = Array.from({ length: cycleCount }, (_, cycle) => cycle).find((cycle) => !taken.has(cycle));
+    const next = indexed.firstFree(start);
     if (next !== undefined) setStart(next);
     setComment("");
   };
@@ -119,7 +125,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     setCheckedStarts(new Set());
   };
   const moveBy = (delta: -1 | 1) => {
-    const ordered = [...signal.values].sort((left, right) => left.start - right.start);
+    const ordered = [...indexed.ordered];
     const selectedIndexes = ordered.map((change, index) => checkedStarts.has(change.start) ? index : -1).filter((index) => index >= 0);
     if (selectedIndexes.length === 0) return;
     const first = selectedIndexes[0]!;
@@ -129,14 +135,14 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     if (targetIndex < 0 || targetIndex >= ordered.length || checkedStarts.has(ordered[targetIndex]!.start)) return;
     const block = ordered.splice(first, selectedIndexes.length);
     ordered.splice(delta < 0 ? first - 1 : first + 1, 0, ...block);
-    const durationValues = [...signal.values].sort((left, right) => left.start - right.start);
-    const durationByStart = new Map(durationValues.map((change, valueIndex, values) => [change.start, (values[valueIndex + 1]?.start ?? cycleCount) - change.start]));
+    const durationValues = indexed.ordered;
+    const durationByStart = new Map(durationValues.map((change) => [change.start, indexed.nextEnd(change.start) - change.start]));
     let nextStart = durationValues[0]?.start ?? 0;
     const reordered = ordered.map((change) => { const next = { ...change, start: nextStart }; nextStart += durationByStart.get(change.start) ?? 0; return next; });
     const result = commands.replaceValues(signal.id, reordered);
     if (result.ok) { const nextFirst = delta < 0 ? first - 1 : first + 1; setCheckedStarts(new Set(reordered.slice(nextFirst, nextFirst + block.length).map((change) => change.start))); }
   };
-  const orderedStarts = [...signal.values].sort((left, right) => left.start - right.start);
+  const orderedStarts = indexed.ordered;
   const selectedIndexes = orderedStarts.map((change, index) => checkedStarts.has(change.start) ? index : -1).filter((index) => index >= 0);
   const isContiguous = selectedIndexes.length > 0 && selectedIndexes.length === selectedIndexes.at(-1)! - selectedIndexes[0]! + 1;
   const canMoveUp = isContiguous && selectedIndexes[0]! > 0;
@@ -153,7 +159,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   const reorderDrop = (targetStart: number) => {
     const activeDragStarts = dragStartsRef.current;
     if (activeDragStarts === undefined || activeDragStarts.has(targetStart)) return;
-    const ordered = [...signal.values].sort((left, right) => left.start - right.start);
+    const ordered = [...indexed.ordered];
     const selectedIndexes = ordered.map((change, index) => activeDragStarts.has(change.start) ? index : -1).filter((index) => index >= 0);
     const from = selectedIndexes[0] ?? -1;
     const last = selectedIndexes.at(-1) ?? -1;
@@ -161,8 +167,8 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     if (from < 0 || to < 0 || selectedIndexes.length !== last - from + 1) { setActiveDragStarts(undefined); return; }
     const block = ordered.splice(from, selectedIndexes.length);
     ordered.splice(from < to ? to + 1 - selectedIndexes.length : to, 0, ...block);
-    const durationValues = [...signal.values].sort((left, right) => left.start - right.start);
-    const durationByStart = new Map(durationValues.map((change, valueIndex, values) => [change.start, (values[valueIndex + 1]?.start ?? cycleCount) - change.start]));
+    const durationValues = indexed.ordered;
+    const durationByStart = new Map(durationValues.map((change) => [change.start, indexed.nextEnd(change.start) - change.start]));
     let nextStart = durationValues[0]?.start ?? 0;
     const reordered = ordered.map((change) => { const next = { ...change, start: nextStart }; nextStart += durationByStart.get(change.start) ?? 0; return next; });
     const result = commands.replaceValues(signal.id, reordered);
