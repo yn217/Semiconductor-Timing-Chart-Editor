@@ -129,6 +129,7 @@ test("creates a geometry-backed 30/70 threshold Measurement and preserves it thr
   await page.getByLabel("Annotation type").selectOption("measurement");
   await page.getByLabel("Measurement threshold").selectOption("30-70");
   const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const measurementCountBeforeCreate = await host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']").count();
   const beforeIds = await host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-id")));
   await page.getByTestId("annotation-toolbar").getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
@@ -145,8 +146,8 @@ test("creates a geometry-backed 30/70 threshold Measurement and preserves it thr
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
   const download = await downloadPromise;
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles((await download.path())!);
-  await expect(host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']")).toHaveCount(1);
-  await expect(host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']")).toHaveAttribute("aria-label", /30%→70%/);
+  await expect(host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']")).toHaveCount(measurementCountBeforeCreate + 1);
+  await expect(host.locator(`[data-role='annotation-owner'][data-annotation-id='${measurementId}']`)).toHaveAttribute("aria-label", /30%→70%/);
 });
 
 test("updates Annotation style and label offset without waveform regeneration", async ({ page }) => {
@@ -341,6 +342,7 @@ test("creates standard and Custom Measurement profiles with explicit transition 
   await page.getByLabel("Annotation type").selectOption("measurement");
   const toolbar = page.getByTestId("annotation-toolbar");
   const profile = toolbar.getByTestId("measurement-profile");
+  const measurementCountBeforeProfiles = await host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']").count();
   for (const [index, [value, start, end]] of [["10-90", "0.1", "0.9"], ["20-80", "0.2", "0.8"], ["50%", "0.5", "0.5"]].entries()) {
     await profile.selectOption(value);
     await expect(profile).toHaveValue(value);
@@ -372,7 +374,7 @@ test("creates standard and Custom Measurement profiles with explicit transition 
   await toolbar.getByLabel("Custom measurement start").fill("90");
   await toolbar.getByLabel("Custom measurement end").fill("10");
   await expect(page.getByRole("button", { name: "Add annotation" })).toBeDisabled();
-  await expect(host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']")).toHaveCount(4);
+  await expect(host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']")).toHaveCount(measurementCountBeforeProfiles + 4);
 });
 
 test("edits Measurement semantics with one history step and preserves them through Undo/Redo and Save/Open", async ({ page }) => {
