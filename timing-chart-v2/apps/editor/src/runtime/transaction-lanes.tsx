@@ -477,7 +477,10 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const [virtualWindow, setVirtualWindow] = useState({ top: 0, height: 900 });
   useEffect(() => {
     const laneRoot = owner.current;
-    const viewport = laneRoot?.closest<HTMLElement>(".cycle-viewport");
+    // Combined mode owns a nested vertical scroller for the transaction pane;
+    // the outer cycle viewport only owns the shared horizontal surface there.
+    // Keep the standalone Transaction mode fallback on its cycle viewport.
+    const viewport = laneRoot?.closest<HTMLElement>(".split-transaction-pane, .cycle-viewport");
     if (!viewport) return;
     const update = () => setVirtualWindow({ top: viewport.scrollTop, height: viewport.clientHeight || 900 });
     update();
@@ -487,7 +490,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       viewport.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
     };
-  }, [documentEpoch, totalHeight, document.transactions.length, filter]);
+  }, [documentEpoch, totalHeight, document.transactions.length, filter, viewMode]);
   const virtualTop = Math.max(0, virtualWindow.top - 480);
   const virtualBottom = Math.min(totalHeight, virtualWindow.top + virtualWindow.height + 480);
   const isVisible = (top: number, height: number) => top < virtualBottom && top + height > virtualTop;
