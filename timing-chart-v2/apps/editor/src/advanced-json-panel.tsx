@@ -52,6 +52,10 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
       return undefined;
     }
   };
+  const validateDocumentValue = (value: CanonicalDocument): readonly DocumentProblem[] => [
+    ...validateCanonicalDocument(value),
+    ...validateDocumentResourceBudget(value),
+  ];
   const format = () => {
     const value = parseDraft();
     if (value !== undefined) { setDraft(JSON.stringify(value, null, 2)); setStatus("Formatted"); }
@@ -59,11 +63,11 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
   const validate = () => {
     const value = parseDraft();
     if (value === undefined) return;
-    if (scope === "document") { const problems = validateCanonicalDocument(value as CanonicalDocument); if (problems.length === 0) { onDiagnostic(undefined); setStatus("Valid"); } else { const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported path and validate again.", detail: `advanced-json:validate:${index}` })); const problem = problems[0]!; onDiagnostic(diagnostics); setStatus(`Invalid: ${problem.code} · ${problem.path}`); } }
+    if (scope === "document") { const problems = validateDocumentValue(value as CanonicalDocument); if (problems.length === 0) { onDiagnostic(undefined); setStatus("Valid"); } else { const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported path and validate again.", detail: `advanced-json:validate:${index}` })); const problem = problems[0]!; onDiagnostic(diagnostics); setStatus(`Invalid: ${problem.code} · ${problem.path}`); } }
     else if (!selected) { onDiagnostic(selectedJsonProblem("SELECTED_OBJECT_REQUIRED", "$", "Select an object before validating selected JSON.")); setStatus("No selected object"); }
     else if (typeof value !== "object" || value === null || Array.isArray(value)) { onDiagnostic(selectedJsonProblem("SELECTED_OBJECT_SHAPE", "$", "Selected JSON must be an object.")); setStatus("Invalid selected object"); }
     else if ((value as { id?: unknown }).id !== selected.id) { onDiagnostic(selectedJsonProblem("SELECTED_OBJECT_ID_MISMATCH", "$.id", "Selected object ID cannot change.")); setStatus("Invalid selected object ID"); }
-    else { const problems = validateCanonicalDocument(replaceSelectedJsonObject(document, value, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction)); if (problems.length === 0) { onDiagnostic(undefined); setStatus("Valid"); } else { const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported path and validate again.", detail: `advanced-json:validate:${index}` })); const problem = problems[0]!; onDiagnostic(diagnostics); setStatus(`Invalid: ${problem.code} · ${problem.path}`); } }
+    else { const problems = validateDocumentValue(replaceSelectedJsonObject(document, value, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction)); if (problems.length === 0) { onDiagnostic(undefined); setStatus("Valid"); } else { const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported path and validate again.", detail: `advanced-json:validate:${index}` })); const problem = problems[0]!; onDiagnostic(diagnostics); setStatus(`Invalid: ${problem.code} · ${problem.path}`); } }
   };
   const copy = async () => {
     const reportFailure = (reason: string) => {
@@ -89,10 +93,9 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
       if ((value as { id?: unknown }).id !== selected.id) { setStatus("Selected object ID cannot change"); return; }
       next = replaceSelectedJsonObject(document, value, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction);
     }
-    const problems = validateCanonicalDocument(next);
-    const resourceProblems = problems.length === 0 ? validateDocumentResourceBudget(next) : [];
-    if (problems.length > 0 || resourceProblems.length > 0) {
-      const diagnostics = [...problems, ...resourceProblems].map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported document or resource limits, then apply again.", detail: `advanced-json:validate:${index}` }));
+    const problems = validateDocumentValue(next);
+    if (problems.length > 0) {
+      const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported document or resource limits, then apply again.", detail: `advanced-json:validate:${index}` }));
       const problem = diagnostics[0]!;
       onDiagnostic(diagnostics);
       setStatus(`Invalid: ${problem.code} · ${problem.path}`);
