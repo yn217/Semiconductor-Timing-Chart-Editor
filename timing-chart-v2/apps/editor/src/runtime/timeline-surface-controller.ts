@@ -168,6 +168,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     // startup latency is observable without changing the render path.
     beginOpenMeasurement();
     let projection!: RenderProjection;
+    let referenceGeometryReprojected = false;
     let publishState: () => void = () => undefined;
     const timelineGeometry = new TimelineGeometryOwner({
       mappingCache,
@@ -197,7 +198,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         // StableTimingChartRenderer can observe the authoritative window and
         // queue the bounded semantic render instead of retaining the initial
         // presentation-thinned WaveDrom artifact.
-        if (active && projection !== undefined) {
+        if (active && projection !== undefined && !referenceGeometryReprojected) {
+          referenceGeometryReprojected = true;
           const reproject = () => { if (active && projection !== undefined) renderCoordinator.renderer.update(projection); };
           if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(reproject);
           else globalThis.setTimeout(reproject, 0);
@@ -541,6 +543,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       treeFocusRowIdRef.current = undefined;
       geometryRegistry.clear();
       timelineGeometry.reset();
+      referenceGeometryReprojected = false;
       rulerInitialized = false;
       // Open/New owns a deterministic viewport policy. Apply it before the
       // first projection so the previous document cannot seed stale rows.
