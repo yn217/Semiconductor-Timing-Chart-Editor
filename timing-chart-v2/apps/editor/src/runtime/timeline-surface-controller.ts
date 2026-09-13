@@ -188,6 +188,12 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
           timelineRuntimeRef.current?.refreshRuler();
           timelineRuntimeRef.current?.refreshGrid();
         }
+        // The first bounded source window is selected before reference
+        // geometry exists. Once that geometry arrives, re-run projection so
+        // StableTimingChartRenderer can observe the authoritative window and
+        // queue the bounded semantic render instead of retaining the initial
+        // presentation-thinned WaveDrom artifact.
+        if (active && projection !== undefined) renderCoordinator.renderer.update(projection);
       },
       invalidateSnapIndex: () => timelineGeometry.invalidateSnapIndex(),
       getSourceWindow: (owner) => {
