@@ -79,10 +79,24 @@ export class TimelineGeometryOwner {
   }
 
   viewportForLocalRange(localStart: number, localEnd: number, rowStart: number, rowEnd: number, generation: number, pinnedIds: readonly string[] = []): DisplayTimeViewport {
-    const candidates = this.currentSnapIndex().entries().filter((candidate) => candidate.kind === "cycle-boundary").sort((a, b) => a.point.x - b.point.x);
-    const before = candidates.filter((candidate) => candidate.point.x <= localStart).at(-1)?.anchor.cycle ?? 0;
-    const after = candidates.find((candidate) => candidate.point.x >= localEnd)?.anchor.cycle ?? this.context.getDocument().timeline.cycleCount;
+    const document = this.context.getDocument();
+    const axis = this.resolveTimeAxis(document);
     const mapping = this.displayMapping;
+    // This query must remain independent of the annotation snap index: building
+    // that index resolves every annotation and defeats viewport-bounded overlay
+    // projection. Cycle boundaries are cheap semantic geometry owned by the axis.
+    let before = 0;
+    let after = document.timeline.cycleCount;
+    if (axis.geometry && axis.ownerSignalId !== undefined) {
+      for (let cycle = 0; cycle <= document.timeline.cycleCount; cycle += 1) {
+        const displayCycle = mapping.sourceToDisplay[cycle];
+        if (displayCycle === undefined) continue;
+        const x = axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point.x;
+        if (x === undefined) continue;
+        if (x <= localStart) before = cycle;
+        if (x >= localEnd) { after = cycle; break; }
+      }
+    }
     return createDisplayTimeViewport(mapping, mapping.sourceToDisplay[before] ?? 0, mapping.sourceToDisplay[after] ?? mapping.displayCycleCount, 2, rowStart, rowEnd, generation, pinnedIds);
   }
 
