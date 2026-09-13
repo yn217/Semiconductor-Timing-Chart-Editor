@@ -11,9 +11,9 @@ test("restores V1 Transaction and Check Ribbon labels without view mutation", as
     counters: await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters"),
   };
   const tabs = page.locator(".ribbon-tabs");
-  const ribbonButtons = tabs.locator(":scope > button");
-  await expect(ribbonButtons.filter({ hasText: "Transaction" })).toBeVisible();
-  await expect(ribbonButtons.filter({ hasText: "Check" })).toBeVisible();
+  const viewMode = page.locator(".view-mode");
+  await expect(viewMode.getByRole("button", { name: "Transaction", exact: true })).toBeVisible();
+  await expect(tabs.getByRole("button", { name: "Review", exact: true })).toBeVisible();
   await tabs.getByRole("button", { name: "Timeline", exact: true }).click();
   await expect(page.getByTestId("timeline-editor")).toBeVisible();
   await tabs.getByRole("button", { name: "Review", exact: true }).click();
