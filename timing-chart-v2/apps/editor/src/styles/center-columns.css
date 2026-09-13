@@ -423,6 +423,29 @@
   overflow: visible;
 }
 .cycle-panel.mode-split .split-signal-pane .surface-host { padding-top: 34px; }
+/* Combined left column, upper: the same production Transaction Tree used
+   standalone -- sticky (not absolute) so it stays put during the shared
+   horizontal scroll exactly like `.transaction-lane-labels` already does,
+   spanning the full left+frozen width (one unified tree column, not the
+   left-width/frozen-width split standalone Transaction Mode uses alongside
+   its own narrower `.transaction-lane-labels` strip). Sits above that strip
+   (which stays mounted for lane-bar row math but has its own label rows
+   hidden below) via a higher local z-index within the pane's own stacking
+   context. */
+.cycle-panel.mode-split .split-transaction-pane .transaction-left-tree {
+  position: absolute;
+  /* Above `.transaction-lanes` (z-index: 17) and its own group headers,
+     which otherwise intercept pointer events meant for this tree. */
+  z-index: 21;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px));
+  overflow: auto;
+  border-right: 1px solid #cbd4df;
+  background: #f8fafc;
+}
+.cycle-panel.mode-split .transaction-lane-label-row { display: none; }
 /* #407: Split active pane indicator -- `cycle-viewport[data-active-pane]`
    is set imperatively (minimal-cycle-view.tsx; the element itself is
    editor-workspace-view.tsx's JSX, not this file's), one 2px inset border
