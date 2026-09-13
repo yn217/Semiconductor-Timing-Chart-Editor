@@ -22,6 +22,7 @@ export type WaveformProviderContext = Readonly<{
   markOpenPhase: (phase: string, phaseTimestamp?: number) => void;
   onReferenceGeometryReady?: () => void;
   invalidateSnapIndex: () => void;
+  getSourceWindow?: (owner: HTMLElement) => Readonly<{ start: number; end: number }> | undefined;
 }>;
 
 export function createWaveformSurfaceProvider(context: WaveformProviderContext): WaveformSurfaceProvider {
@@ -29,6 +30,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
   let signalIndexRevision = -1;
   let signalById = new Map<SignalId, Signal>();
   return {
+    getSourceWindow: context.getSourceWindow,
     async mountWaveBatch(requests) {
       const requestEpoch = requests[0]?.documentEpoch;
       const isCurrent = (request: { readonly documentEpoch?: number }): boolean => request.documentEpoch === undefined || context.getDocumentEpoch() === request.documentEpoch;

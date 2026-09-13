@@ -25,6 +25,7 @@ export interface WaveMountBatchItem {
 }
 
 export interface WaveformSurfaceProvider {
+  getSourceWindow?(owner: HTMLElement): Readonly<{ start: number; end: number }> | undefined;
   mountWave(signalId: WaveSignalId, owner: HTMLElement): Promise<WaveMountResult>;
   /** Optional two-phase hook: all requested mounts must complete before any geometry reads. */
   mountWaveBatch?(requests: readonly WaveMountRequest[]): Promise<readonly WaveMountBatchItem[]>;

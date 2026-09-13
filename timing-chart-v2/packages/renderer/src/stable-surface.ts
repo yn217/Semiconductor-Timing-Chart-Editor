@@ -507,8 +507,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
 
   async #flushWaveBatch(): Promise<void> {
     const queued = [...this.#waveQueue.entries()].slice(0, WAVE_BATCH_LIMIT).map(([signalId, item]) => {
-      const start = Number(item.owner.dataset.sourceWindowStart);
-      const end = Number(item.owner.dataset.sourceWindowEnd);
+      const configured = this.#provider.getSourceWindow?.(item.owner);
+      const start = configured?.start ?? Number(item.owner.dataset.sourceWindowStart);
+      const end = configured?.end ?? Number(item.owner.dataset.sourceWindowEnd);
       return { signalId, owner: item.owner, version: item.version, documentEpoch: item.documentEpoch,
         ...(Number.isInteger(start) && Number.isInteger(end) && end > start ? { sourceWindow: { start, end } } : {}) };
     });

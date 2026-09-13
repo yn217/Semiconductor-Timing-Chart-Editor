@@ -190,6 +190,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         }
       },
       invalidateSnapIndex: () => timelineGeometry.invalidateSnapIndex(),
+      getSourceWindow: (owner) => {
+        const viewport = owner.closest<HTMLElement>(".cycle-viewport") ?? viewportElement;
+        return timelineGeometry.sourceWindowForLocalRange(sessionController.snapshot().document, viewport.scrollLeft / timelineGeometry.presentationScale, (viewport.scrollLeft + viewport.clientWidth) / timelineGeometry.presentationScale);
+      },
     });
     const renderCoordinator = runtime.createRenderer(provider);
     const renderer = renderCoordinator.renderer;
