@@ -67,7 +67,7 @@ test("shares source-time mapping, Snap Service, zoom and scroll in Split View", 
   const surface = page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']");
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await page.getByRole("button", { name: "Combined", exact: true }).click();
-  const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first();
+  const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]").filter({ hasText: "Packet" });
   await expect(transaction).toBeVisible();
   const rulerCycle2 = page.getByTestId("cycle-ruler").locator("[data-cycle='2']");
   const transactionPane = page.locator(".split-transaction-pane");
