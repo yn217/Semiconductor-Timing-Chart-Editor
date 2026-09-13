@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { planCommand } from "@timing-chart-v2/commands";
 import { validateCanonicalDocument, type CanonicalDocument, type DocumentProblem, type GroupId, type SignalId } from "@timing-chart-v2/schema";
@@ -111,9 +111,15 @@ export function AIOperationPanel({ document, revision, selectedSignalId, selecte
   const [scope, setScope] = useState<AIScope>("document");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activityLog, setActivityLog] = useState<readonly ActivityEntry[]>([]);
+  // Activity entries outlive the retention window: the retained array is a
+  // view, not an identity allocator.  Keeping the sequence outside the
+  // trimmed state prevents the first 50-entry boundary from reusing a live
+  // React/audit ID.
+  const nextActivityId = useRef(0);
   const providerName = provider === deterministicMockAIProposalProvider ? "Local deterministic (offline)" : "Custom provider";
   const logActivity = (kind: ActivityEntry["kind"], summary: string, result: string, actor: ActivityEntry["actor"] = "user") => {
-    setActivityLog((log) => [{ id: log.length, timestamp: new Date().toISOString(), provider: providerName, actor, kind, summary, result }, ...log].slice(0, 50));
+    const id = nextActivityId.current++;
+    setActivityLog((log) => [{ id, timestamp: new Date().toISOString(), provider: providerName, actor, kind, summary, result }, ...log].slice(0, 50));
   };
   const buildPreview = (queryOverride?: string, actor: ActivityEntry["actor"] = "user") => {
     const effectiveQuery = queryOverride ?? query;
