@@ -7,6 +7,7 @@ import { DOCUMENT_RESOURCE_BUDGET, parseJsonInput } from "@timing-chart-v2/schem
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./event-table-components.js";
 import { buildEventTableIndex } from "./runtime/event-table-index.js";
+import { registerActiveGestureCancel } from "./runtime/active-gesture-cancellation.js";
 
 // Signal transitions have no separately persisted row ID; within the
 // canonical value list, the start boundary is the unique row identity.
@@ -163,9 +164,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   const setActiveDragStarts = (starts: ReadonlySet<number> | undefined) => { dragStartsRef.current = starts; setDragStarts(starts); };
   useEffect(() => {
     if (dragStarts === undefined) return undefined;
-    const cancelDrag = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); setActiveDragStarts(undefined); } };
-    window.addEventListener("keydown", cancelDrag);
-    return () => window.removeEventListener("keydown", cancelDrag);
+    return registerActiveGestureCancel(() => setActiveDragStarts(undefined));
   }, [dragStarts]);
   const reorderDrop = (targetStart: number) => {
     const activeDragStarts = dragStartsRef.current;

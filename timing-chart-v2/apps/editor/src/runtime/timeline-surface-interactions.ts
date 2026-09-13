@@ -16,6 +16,7 @@ import { TreeDragInteractionOwner } from "./tree-drag-interaction-owner.js";
 import type { TimelineGeometryOwner } from "./timeline-geometry-owner.js";
 import { attachEditorEventBindings } from "./interaction-controller.js";
 import { routeGlobalShortcut } from "./keyboard-shortcut-router.js";
+import { cancelActiveGesture } from "./active-gesture-cancellation.js";
 import { nextCommandId } from "../command-id.js";
 
 type Session = ReturnType<EditorApplicationOwner["runtime"]["session"]["current"]>;
@@ -234,6 +235,7 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
       execute: (name) => commandRegistry.current.execute(name),
       cancel: () => {
         closeContextMenu();
+        cancelActiveGesture();
         annotationInteraction.cancel();
         clearPendingArrow();
         setArrowPickStatus("idle");
