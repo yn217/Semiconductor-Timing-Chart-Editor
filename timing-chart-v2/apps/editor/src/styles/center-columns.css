@@ -375,7 +375,8 @@
 }
 .cycle-panel.mode-split .split-transaction-pane {
   position: relative;
-  min-width: 0;
+  width: max-content;
+  min-width: 100%;
   min-height: 0;
   /* Combined's horizontal splitter uses the same view-only ratio owner as
      the workspace resize actions. Keep the actual pane allocation driven by
@@ -388,7 +389,8 @@
 }
 .cycle-panel.mode-split .split-signal-content {
   position: relative;
-  min-width: 0;
+  width: max-content;
+  min-width: 100%;
   min-height: 0;
   flex: 1 1 auto;
   min-height: 220px;
