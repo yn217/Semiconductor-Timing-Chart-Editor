@@ -2,7 +2,7 @@ import type { Annotation, AnnotationId, CanonicalDocument, ClockSignal, GroupId,
 
 export interface PerformanceCounterExpectation { readonly counter: "waveDromRenders" | "localGeometryBuilds" | "rowPositionUpdates" | "overlayUpdates"; readonly delta: number }
 export type PerformanceProfile = "standard" | "clock-heavy" | "bus-heavy" | "annotation-heavy" | "transaction-heavy" | "mixed";
-export interface PerformanceFixtureSpec { readonly signalCount: 50 | 100 | 500 | 1000; readonly cycleCount: 100 | 500 | 1000; readonly profile?: PerformanceProfile }
+export interface PerformanceFixtureSpec { readonly signalCount: 50 | 100 | 500 | 1000; readonly cycleCount: 100 | 500 | 1000; readonly profile?: PerformanceProfile; readonly transitionCount?: number }
 
 const signalId = (index: number) => `sig_perf_${index}` as SignalId;
 
@@ -10,13 +10,14 @@ function clock(index: number): ClockSignal {
   return { id: signalId(index), name: `CLK_${index}`, type: "clock", role: "input", source: { instancePath: ["perf"], signalName: `clk_${index}` }, display: { name: `CLK_${index}` }, generator: { start: 0, period: 2, duty: 0.5, phase: index % 2 ? 0.5 : 0, initial: 0, polarity: "positive" }, edgeCounter: { show: false, mode: "rising", startNumber: 1, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: -6 } } };
 }
 
-function valueSignal(index: number, cycleCount: number, bus: boolean, hidden = false): ValueSignal {
-  return { id: signalId(index), name: `${bus ? "BUS" : "SIG"}_${index}`, type: bus ? "bus" : "binary", role: index % 3 === 0 ? "input" : index % 3 === 1 ? "output" : "internal", source: { instancePath: ["perf"], signalName: `signal_${index}` }, display: { name: `${bus ? "BUS" : "SIG"}_${index}`, ...(hidden ? { visible: false } : {}) }, ...(bus ? { width: 32, displayFormat: "hex" as const } : {}), values: [{ start: 0, value: bus ? "00000000" : 0 }, { start: Math.min(cycleCount - 1, Math.max(1, Math.floor(cycleCount / 2) + index % 7)), value: bus ? index.toString(16).padStart(8, "0") : 1 }] };
+function valueSignal(index: number, cycleCount: number, bus: boolean, hidden = false, transitionCount = 2): ValueSignal {
+  const values = Array.from({ length: Math.max(2, transitionCount) }, (_, valueIndex) => ({ start: Math.min(cycleCount - 1, Math.floor(valueIndex * cycleCount / Math.max(1, transitionCount))), value: bus ? ((index + valueIndex) % 256).toString(16).padStart(8, "0") : valueIndex % 2 })) as ValueSignal["values"];
+  return { id: signalId(index), name: `${bus ? "BUS" : "SIG"}_${index}`, type: bus ? "bus" : "binary", role: index % 3 === 0 ? "input" : index % 3 === 1 ? "output" : "internal", source: { instancePath: ["perf"], signalName: `signal_${index}` }, display: { name: `${bus ? "BUS" : "SIG"}_${index}`, ...(hidden ? { visible: false } : {}) }, ...(bus ? { width: 32, displayFormat: "hex" as const } : {}), values };
 }
 
 export function generatePerformanceDocument(spec: PerformanceFixtureSpec): CanonicalDocument {
   const profile = spec.profile ?? "standard";
-  const signals: Signal[] = Array.from({ length: spec.signalCount }, (_, index) => index === 0 || (profile === "clock-heavy" && index % 3 === 0) ? clock(index) : valueSignal(index, spec.cycleCount, profile === "bus-heavy" || index % 5 === 0, profile === "mixed" && index % 17 === 0));
+  const signals: Signal[] = Array.from({ length: spec.signalCount }, (_, index) => index === 0 || (profile === "clock-heavy" && index % 3 === 0) ? clock(index) : valueSignal(index, spec.cycleCount, profile === "bus-heavy" || index % 5 === 0, profile === "mixed" && index % 17 === 0, spec.transitionCount));
   const signalGroups = Array.from({ length: Math.ceil(signals.length / 25) }, (_, index) => ({ id: `grp_perf_${index}` as GroupId, name: `Group ${index}`, rows: signals.slice(index * 25, index * 25 + 25).map((signal) => signal.id), spacingAfter: index % 2 ? 4 : 0 }));
   const annotationCount = profile === "annotation-heavy" ? spec.signalCount * 2 : Math.min(12, Math.floor(spec.signalCount / 10));
   const annotations: Annotation[] = Array.from({ length: annotationCount }, (_, index) => ({ id: `ann_perf_${index}` as AnnotationId, type: "measurement", label: `M${index}`, visible: true, start: { signalId: signalId(index % spec.signalCount), cycle: index % Math.max(1, spec.cycleCount - 2), point: "cycle-start" }, end: { signalId: signalId((index + 1) % spec.signalCount), cycle: Math.min(spec.cycleCount - 1, index % Math.max(1, spec.cycleCount - 2) + 2), point: "cycle-start" } }));
