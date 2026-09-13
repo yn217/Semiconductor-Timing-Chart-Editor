@@ -17,6 +17,7 @@ export type TimelineViewportRuntimeContext = {
     readonly sourceCycleToLocalX: (cycle: number) => number | undefined;
     readonly sourceBoundaryToLocalX: (document: unknown, cycle: number) => number | undefined;
     readonly requestSourceCycle: (cycle: number) => void;
+    readonly clearRequestedSourceCycle: () => void;
     readonly localXToScreenX: (localX: number) => number;
   };
   readonly viewport: {
@@ -149,7 +150,7 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
       if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(applyScroll);
       else applyScroll();
     },
-    navigateToCycle: (cycle) => { assertActive(); if (!attached) return; const document = context.document.getSnapshot(); const move = () => { const localX = context.geometry.sourceBoundaryToLocalX(document, cycle); if (localX === undefined) return; context.viewport.setScrollState({ left: Math.max(0, Math.round(context.geometry.localXToScreenX(localX) * context.viewport.getZoom() - context.viewport.getMetrics().width * 0.35)) }); render("navigate-cycle"); }; if (context.geometry.sourceBoundaryToLocalX(document, cycle) !== undefined) { move(); return; } context.geometry.requestSourceCycle(cycle); render("navigate-cycle"); void context.render.waitForRendererIdle().then(move); },
+    navigateToCycle: (cycle) => { assertActive(); if (!attached) return; const document = context.document.getSnapshot(); const move = () => { const localX = context.geometry.sourceBoundaryToLocalX(document, cycle); if (localX === undefined) return; context.viewport.setScrollState({ left: Math.max(0, Math.round(context.geometry.localXToScreenX(localX) * context.viewport.getZoom() - context.viewport.getMetrics().width * 0.35)) }); context.geometry.clearRequestedSourceCycle(); render("navigate-cycle"); }; if (context.geometry.sourceBoundaryToLocalX(document, cycle) !== undefined) { move(); return; } context.geometry.requestSourceCycle(cycle); render("navigate-cycle"); void context.render.waitForRendererIdle().then(move); },
     sourceBoundaryToLocalX: (document, cycle) => { assertActive(); return context.geometry.sourceBoundaryToLocalX(document, cycle); },
     screenXToSourceCycle: (screenX) => { assertActive(); const zoom = context.viewport.getZoom(); if (!Number.isFinite(zoom) || zoom <= 0) return undefined; const localX = screenX / zoom; const mapping = context.geometry.getDisplayTimeMapping(); return typeof mapping === "object" && mapping !== null && "displayToSourceCycle" in mapping && typeof mapping.displayToSourceCycle === "function" ? (mapping.displayToSourceCycle as (x: number) => number | undefined)(localX) : undefined; },
     refreshRuler: () => { render("ruler"); },

@@ -72,6 +72,8 @@ export class TimelineGeometryOwner {
     if (Number.isInteger(cycle) && cycle >= 0 && cycle <= document.timeline.cycleCount) this.#requestedSourceCycle = cycle;
   }
 
+  clearRequestedSourceCycle(): void { this.#requestedSourceCycle = undefined; }
+
   resolveTimeAxis(document: CanonicalDocument = this.context.getDocument()): TimeAxisGeometry {
     return resolveTimeAxisGeometry(document, this.geometryMaps);
   }
