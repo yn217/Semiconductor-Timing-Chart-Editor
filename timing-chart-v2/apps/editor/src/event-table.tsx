@@ -48,7 +48,17 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     const ordered = [...signal.values].sort((left, right) => left.start - right.start);
     const occupied = new Set(ordered.map((change) => change.start));
     const endByStart = new Map(ordered.map((change, index) => [change.start, ordered[index + 1]?.start ?? cycleCount]));
-    const firstFree = (extra?: number) => { for (let cycle = 0; cycle < cycleCount; cycle += 1) if (!occupied.has(cycle) && cycle !== extra) return cycle; return undefined; };
+    const firstFree = (extra?: number) => {
+      let candidate = 0;
+      for (const change of ordered) {
+        while (candidate === extra) candidate += 1;
+        if (change.start < candidate) continue;
+        if (change.start > candidate) break;
+        candidate += 1;
+      }
+      while (candidate === extra) candidate += 1;
+      return candidate < cycleCount ? candidate : undefined;
+    };
     const nextEnd = (startValue: number) => {
       const known = endByStart.get(startValue);
       if (known !== undefined) return known;
