@@ -86,6 +86,9 @@ test("keeps canonical state unchanged during a dense Transaction preview drag", 
   await page.mouse.down();
   for (let index = 0; index < 120; index += 1) await page.mouse.move(box.x + 20 + (index % 12), box.y + box.height / 2);
   await expect(transaction).toHaveAttribute("data-drag-preview", "true");
+  expect(Number(await transaction.getAttribute("data-drag-pointer-moves"))).toBeGreaterThanOrEqual(120);
+  expect(Number(await transaction.getAttribute("data-drag-preview-frames"))).toBeGreaterThan(0);
+  expect(Number(await transaction.getAttribute("data-drag-preview-updates"))).toBeLessThanOrEqual(Number(await transaction.getAttribute("data-drag-preview-frames")));
   expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(history);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(dirty);
