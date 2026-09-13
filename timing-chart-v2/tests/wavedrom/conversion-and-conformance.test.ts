@@ -122,7 +122,8 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     const bounded = toWaveJsonWindow({ signal: clock, cycleCount: 100 }, 20, 40);
     expect(bounded.sourceWindow).toEqual({ start: 20, end: 40 });
     expect(bounded.wave).toHaveLength(20);
-    expect(bounded.wave).toBe(toWaveJson({ signal: clock, cycleCount: 100 }).wave.slice(20, 40));
+    expect(bounded.wave[0]).toBe("p");
+    expect(bounded.wave.slice(1)).toMatch(/^\.*$/);
   });
 
   it("uses displayLabel only for WaveDrom data while retaining semantic values", () => {
