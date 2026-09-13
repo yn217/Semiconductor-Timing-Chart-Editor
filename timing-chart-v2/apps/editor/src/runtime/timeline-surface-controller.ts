@@ -208,7 +208,19 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       invalidateSnapIndex: () => timelineGeometry.invalidateSnapIndex(),
       getSourceWindow: (owner) => {
         const viewport = owner.closest<HTMLElement>(".cycle-viewport") ?? viewportElement;
-        return timelineGeometry.sourceWindowForLocalRange(sessionController.snapshot().document, viewport.scrollLeft / timelineGeometry.presentationScale, (viewport.scrollLeft + viewport.clientWidth) / timelineGeometry.presentationScale);
+        const document = sessionController.snapshot().document;
+        const window = timelineGeometry.sourceWindowForLocalRange(document, viewport.scrollLeft / timelineGeometry.presentationScale, (viewport.scrollLeft + viewport.clientWidth) / timelineGeometry.presentationScale);
+        // Transaction bars are projected from the same Cycle geometry. For a
+        // small/medium document, retain boundaries covering the canonical
+        // transaction span so a Transaction view can render bars outside the
+        // currently visible Cycle viewport without inventing a second mapper.
+        // Large timelines keep the bounded viewport path owned by geometry.
+        if (document.transactions.length > 0) {
+          const transactionStart = Math.min(...document.transactions.map((transaction) => transaction.start));
+          const transactionEnd = Math.max(...document.transactions.map((transaction) => transaction.end));
+          if (transactionEnd - transactionStart <= 4096) return { start: Math.min(window.start, transactionStart), end: Math.max(window.end, transactionEnd) };
+        }
+        return window;
       },
     });
     const renderCoordinator = runtime.createRenderer(provider);
