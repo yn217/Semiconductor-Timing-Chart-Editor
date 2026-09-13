@@ -4,13 +4,18 @@ import { DefaultProjectionService, type ProjectionRequest, type RenderProjection
 export class ProjectionCoordinator {
   private readonly service: DefaultProjectionService;
   private documentEpoch = 0;
+  private projectionCalls = 0;
+  private projectionDurationMs = 0;
 
   constructor(options: { readonly pane?: "upper" | "lower" } = {}) {
     this.service = new DefaultProjectionService(options);
   }
 
   project(request: ProjectionRequest): RenderProjection {
+    const startedAt = globalThis.performance?.now?.() ?? Date.now();
     const projection = this.service.project(request);
+    this.projectionCalls += 1;
+    this.projectionDurationMs += (globalThis.performance?.now?.() ?? Date.now()) - startedAt;
     this.documentEpoch = projection.documentEpoch;
     return projection;
   }
@@ -29,7 +34,7 @@ export class ProjectionCoordinator {
     this.service.setPane(pane);
   }
 
-  diagnostics(): ReturnType<DefaultProjectionService["diagnostics"]> {
-    return this.service.diagnostics();
+  diagnostics(): ReturnType<DefaultProjectionService["diagnostics"]> & Readonly<{ projectionCalls: number; projectionDurationMs: number }> {
+    return { ...this.service.diagnostics(), projectionCalls: this.projectionCalls, projectionDurationMs: this.projectionDurationMs };
   }
 }
