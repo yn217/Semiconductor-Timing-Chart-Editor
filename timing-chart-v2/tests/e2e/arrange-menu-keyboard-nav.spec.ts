@@ -12,6 +12,7 @@ import { expect, test } from "@playwright/test";
 // only, skipping disabled ones and separators.
 test("Arrange dropdown supports Arrow/Home/End keyboard navigation and focuses its first item on open", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
