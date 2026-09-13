@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
-test("standalone Transaction mode exposes horizontal overflow for a long time domain", async ({ page }) => {
+for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) test(`standalone Transaction mode exposes horizontal overflow at ${viewportSize.width}x${viewportSize.height}`, async ({ page }) => {
+  await page.setViewportSize(viewportSize);
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   const document = generatePerformanceDocument({ signalCount: 40, cycleCount: 1000, profile: "transaction-heavy" });
