@@ -89,6 +89,9 @@ test("keeps canonical state unchanged during a dense Transaction preview drag", 
   expect(Number(await transaction.getAttribute("data-drag-pointer-moves"))).toBeGreaterThanOrEqual(120);
   expect(Number(await transaction.getAttribute("data-drag-preview-frames"))).toBeGreaterThan(0);
   expect(Number(await transaction.getAttribute("data-drag-preview-updates"))).toBeLessThanOrEqual(Number(await transaction.getAttribute("data-drag-preview-frames")));
+  expect(Number(await transaction.getAttribute("data-drag-snap-queries"))).toBeGreaterThan(0);
+  expect(await transaction.getAttribute("data-drag-snap-dom-queries")).toBe("0");
+  expect(await transaction.getAttribute("data-drag-snap-layout-reads")).toBe("0");
   expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(history);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(dirty);
