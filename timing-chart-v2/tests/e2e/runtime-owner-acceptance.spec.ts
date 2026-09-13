@@ -17,6 +17,7 @@ async function openDocument(page: import("@playwright/test").Page, title: string
 
 test("Open then Annotation drag uses the current document geometry", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await openDocument(page, "Opened Annotation Document");
@@ -30,13 +31,13 @@ test("Open then Annotation drag uses the current document geometry", async ({ pa
   const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='arrow']").last();
   const handle = owner.locator("[data-role='annotation-handle'][data-annotation-field='from']");
   const handleBox = await handle.boundingBox();
-  const x0 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='0']").evaluate((element) => (element as HTMLElement).style.left));
+  const x2 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='2']").evaluate((element) => (element as HTMLElement).style.left));
   const x5 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='5']").evaluate((element) => (element as HTMLElement).style.left));
   expect(handleBox).not.toBeNull();
 
   await page.mouse.move(handleBox!.x + 4, handleBox!.y + 4);
   await page.mouse.down();
-  await page.mouse.move(handleBox!.x + 4 + (x5 - x0), handleBox!.y + 4);
+  await page.mouse.move(handleBox!.x + 4 + (x5 - x2), handleBox!.y + 4);
   await expect(host).toHaveAttribute("data-snap-kind", "cycle-boundary");
   await expect(host).toHaveAttribute("data-snap-cycle", "5");
   await page.mouse.up();
@@ -47,6 +48,7 @@ test("Open then Annotation drag uses the current document geometry", async ({ pa
 test("resize then edit then zoom reads current ViewMetrics and keeps semantics coherent", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const surface = host.locator("[data-role='timing-chart-surface']");
