@@ -58,9 +58,21 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         const sourceWindow = request.sourceWindow;
         const displayStart = sourceWindow === undefined ? undefined : displayBoundaryForSource(mapping, sourceWindow.start, document.timeline.cycleCount);
         const displayEnd = sourceWindow === undefined ? undefined : displayBoundaryForSource(mapping, sourceWindow.end, document.timeline.cycleCount);
-        const waveJson = sourceWindow === undefined || displayStart === undefined || displayEnd === undefined || displayEnd <= displayStart
+        const clockPeriod = displaySignal.type === "clock" ? displaySignal.generator.period : undefined;
+        // WaveDrom's clock encoder requires its local window to start/end on
+        // period boundaries.  DisplayTimeMapping can place a semantic window
+        // edge between those boundaries (for example around a fold), so align
+        // only the renderer window; keep `sourceWindow` as the canonical
+        // semantic range used for rebasing and geometry.
+        const rendererStart = displayStart === undefined || clockPeriod === undefined
+          ? displayStart
+          : Math.max(0, Math.floor(displayStart / clockPeriod) * clockPeriod);
+        const rendererEnd = displayEnd === undefined || clockPeriod === undefined
+          ? displayEnd
+          : Math.min(mapping.displayCycleCount, Math.ceil(displayEnd / clockPeriod) * clockPeriod);
+        const waveJson = sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
           ? context.adapter.toWaveJson(source)
-          : toWaveJsonWindow(source, displayStart, displayEnd, sourceWindow);
+          : toWaveJsonWindow(source, rendererStart, rendererEnd, sourceWindow);
         return { request, waveJson, semanticValues, error: undefined };
       });
       const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean }> = [];
