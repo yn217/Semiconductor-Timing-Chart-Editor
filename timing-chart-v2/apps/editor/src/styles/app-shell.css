@@ -149,3 +149,11 @@ button, input, select { font: inherit; font-size: var(--ds-font-size); }
 .editor-shell .cycle-panel.mode-transaction .transaction-signal-tree { height: calc(100% - 58px); }
 .editor-shell:has([data-testid="transaction-tree-header"]) .left-pane-resize-handle { pointer-events: none; }
 .editor-shell .cycle-viewport { height: calc(100% - 37px); }
+/* Transaction mode's tree header is 58px tall (line 140), not the plain
+   37px `.column-headings` height every other mode uses -- `.cycle-viewport`
+   kept the flat 37px offset, so its bottom 21px (exactly enough to swallow
+   the horizontal scrollbar) sat past `.cycle-panel`'s own `overflow: hidden`
+   bottom edge and was clipped, leaving Transaction mode with no visible
+   horizontal scrollbar despite `.transaction-lanes` being far wider than the
+   viewport. Mirrors the `.transaction-signal-tree` override two lines up. */
+.editor-shell .cycle-panel.mode-transaction .cycle-viewport { height: calc(100% - 58px); }

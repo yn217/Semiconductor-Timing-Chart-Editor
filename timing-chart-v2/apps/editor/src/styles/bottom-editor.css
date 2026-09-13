@@ -241,6 +241,14 @@
 
 .event-toolbar button { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 8px; font-size: 10px; font-weight: 650; }
 
+/* RibbonIcon's <svg> carries no width/height/viewBox of its own (see
+   ribbon.css's note on this) -- `.bottom-action` (clock-generator-editor.tsx's
+   Presets/Duplicate/Import/Export/Preview toolbar buttons) never sized it,
+   so the icon rendered at the browser's unstyled default SVG size instead
+   of a small inline glyph next to its label. */
+.event-toolbar button.bottom-action { display: inline-flex; align-items: center; gap: 4px; }
+.event-toolbar button.bottom-action svg { width: 12px; height: 12px; flex: 0 0 auto; }
+
 .event-toolbar button:hover:not(:disabled) { border-color: #2c78bb; background: #eaf3fb; }
 
 .event-toolbar button:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; }
