@@ -115,12 +115,20 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   const buttonRef = useRef<HTMLButtonElement>(null);
   const pendingPreviewClientX = useRef<number | undefined>(undefined);
   const previewFrame = useRef<number | undefined>(undefined);
+  const previewBoundaryCache = useRef(new Map(boundaryXByCycle));
   const current = preview ?? { start: transaction.start, end: transaction.end };
   const containingFold = foldRanges.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.end <= toCycle);
   const startHiddenFold = foldRanges.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.start < toCycle && transaction.end > toCycle);
   const endHiddenFold = foldRanges.find(([fromCycle, toCycle]) => transaction.end > fromCycle && transaction.end <= toCycle && transaction.start < fromCycle);
-  const resolveBoundaryX = (cycle: number) => preview === undefined ? boundaryXByCycle.get(cycle) : getBoundaryX(cycle);
-  const resolveVisibleBoundary = (cycle: number, direction: -1 | 1) => { for (let candidate = cycle; candidate >= 0 && candidate <= cycleCount; candidate += direction) { const value = getBoundaryX(candidate); if (value !== undefined) return value; } return undefined; };
+  const resolveCachedBoundaryX = (cycle: number) => {
+    const cached = previewBoundaryCache.current.get(cycle);
+    if (cached !== undefined) return cached;
+    const resolved = getBoundaryX(cycle);
+    if (resolved !== undefined) previewBoundaryCache.current.set(cycle, resolved);
+    return resolved;
+  };
+  const resolveBoundaryX = (cycle: number) => preview === undefined ? boundaryXByCycle.get(cycle) : resolveCachedBoundaryX(cycle);
+  const resolveVisibleBoundary = (cycle: number, direction: -1 | 1) => { for (let candidate = cycle; candidate >= 0 && candidate <= cycleCount; candidate += direction) { const value = resolveCachedBoundaryX(candidate); if (value !== undefined) return value; } return undefined; };
   const startX = resolveBoundaryX(current.start) ?? (startHiddenFold ? resolveVisibleBoundary(startHiddenFold[1], 1) : undefined);
   const endX = resolveBoundaryX(current.end) ?? (endHiddenFold ? resolveVisibleBoundary(endHiddenFold[0], -1) : undefined);
   const phases = preview === undefined ? transaction.phases : previewPhases(transaction, preview, drag?.edge ?? "body");
@@ -133,6 +141,7 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   }, []);
 
   useEffect(() => { setDrag(undefined); setPreview(undefined); }, [viewMode]);
+  useEffect(() => { previewBoundaryCache.current = new Map(boundaryXByCycle); }, [boundaryXByCycle]);
 
   useEffect(() => {
     if (!drag) return undefined;
