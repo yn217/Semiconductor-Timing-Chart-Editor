@@ -60,7 +60,10 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
   });
   expect(geometry.rulerTicks).toBe(512);
   expect(geometry.hasUnsampledTick).toBe(false);
-  expect(geometry.marks).toBe(100_001);
+  // The production path must render only the bootstrap/viewport window, not
+  // one WaveDrom grid mark per canonical cycle.
+  expect(geometry.marks).toBeGreaterThan(1_000);
+  expect(geometry.marks).toBeLessThan(10_000);
 
   await page.mouse.move(geometry.startX + 1, geometry.y);
   await page.mouse.down();
