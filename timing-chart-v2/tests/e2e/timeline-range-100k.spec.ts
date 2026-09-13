@@ -47,19 +47,21 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
     const boundaries = boundaryGeometry ? JSON.parse(boundaryGeometry) as Record<string, number> : {};
     const viewportBox = viewport?.getBoundingClientRect();
     const waveBox = wave?.getBoundingClientRect();
-    const startX = waveBox?.x + (boundaries["980"] ?? NaN);
-    const endX = waveBox?.x + (boundaries["1000"] ?? NaN);
     const ruler = document.querySelector<HTMLElement>("[data-testid='cycle-ruler']");
-    if (!viewport || !Number.isFinite(startX) || !Number.isFinite(endX) || !viewportBox || !waveBox) throw new Error("100k semantic geometry unavailable");
+    if (!viewport || !viewportBox || !waveBox) throw new Error("100k semantic geometry unavailable");
+    const endX = waveBox.x + (boundaries["1000"] ?? NaN);
+    if (!Number.isFinite(endX)) throw new Error("100k semantic geometry unavailable");
     viewport.scrollLeft = Math.max(0, endX - 1400);
     viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+    const scrolledWaveBox = wave?.getBoundingClientRect();
+    if (!scrolledWaveBox) throw new Error("100k semantic geometry unavailable after scroll");
     return {
       rulerTicks: ruler?.querySelectorAll("[data-cycle]").length ?? 0,
       hasUnsampledTick: Boolean(ruler?.querySelector("[data-cycle='1000']")),
       marks: marks.length,
-      startX,
-      endX,
-      y: waveBox.y + waveBox.height / 2,
+      startX: scrolledWaveBox.x + (boundaries["980"] ?? NaN),
+      endX: scrolledWaveBox.x + (boundaries["1000"] ?? NaN),
+      y: scrolledWaveBox.y + scrolledWaveBox.height / 2,
     };
   });
   expect(geometry.rulerTicks).toBe(512);

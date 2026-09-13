@@ -37,4 +37,12 @@ describe("presentationCycles", () => {
     expect(cycles[0]).toBe(0);
     expect(cycles.at(-1)).toBe(20);
   });
+
+  it("bounds visual ticks without reducing semantic cycle coverage", () => {
+    const cycles = presentationCycles(2048, 1, 512);
+    expect(cycles).toHaveLength(512);
+    expect(cycles[0]).toBe(0);
+    expect(cycles.at(-1)).toBe(2048);
+    expect(new Set(cycles).size).toBe(512);
+  });
 });

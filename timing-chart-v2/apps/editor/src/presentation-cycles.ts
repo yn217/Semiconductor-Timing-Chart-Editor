@@ -7,7 +7,10 @@
 // cycle for waveform and interaction coordinates.
 const MIN_TICK_PITCH_PX = 28;
 
-export function presentationCycles(cycleCount: number, pixelsPerCycle = Infinity): number[] {
+export function presentationCycles(cycleCount: number, pixelsPerCycle = Infinity, maxTicks = Infinity): number[] {
+  if (Number.isFinite(maxTicks) && maxTicks > 1 && cycleCount + 1 > maxTicks) {
+    return Array.from({ length: maxTicks }, (_, index) => Math.round(index * cycleCount / (maxTicks - 1)));
+  }
   const stride = Number.isFinite(pixelsPerCycle) && pixelsPerCycle > 0 ? Math.max(1, Math.ceil(MIN_TICK_PITCH_PX / pixelsPerCycle)) : 1;
   if (stride <= 1) return Array.from({ length: cycleCount + 1 }, (_, cycle) => cycle);
   const cycles: number[] = [0];

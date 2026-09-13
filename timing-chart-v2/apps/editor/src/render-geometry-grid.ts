@@ -14,7 +14,9 @@ export function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometry
   const cycleZeroPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: 0, point: "cycle-start" })?.point;
   const cycleOnePoint = mapping.displayCycleCount > 0 ? geometry.find({ signalId: axisOwnerSignalId, cycle: 1, point: "cycle-start" })?.point : undefined;
   const pixelsPerCycle = cycleZeroPoint && cycleOnePoint ? (cycleOnePoint.x - cycleZeroPoint.x) * scale : Infinity;
-  for (const displayCycle of presentationCycles(mapping.displayCycleCount, pixelsPerCycle)) {
+  const semanticDisplayCycleCount = geometry.cycleBoundaryEntries?.().at(-1)?.cycle ?? mapping.displayCycleCount;
+  const gridTickBudget = semanticDisplayCycleCount > 4096 ? 512 : Infinity;
+  for (const displayCycle of presentationCycles(semanticDisplayCycleCount, pixelsPerCycle, gridTickBudget)) {
     const anchor = geometry.find({ signalId: axisOwnerSignalId, cycle: displayCycle, point: "cycle-start" });
     if (!anchor) continue;
     const line = element.ownerDocument.createElement("span");
