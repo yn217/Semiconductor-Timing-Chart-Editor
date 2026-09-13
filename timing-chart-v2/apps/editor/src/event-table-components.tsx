@@ -81,7 +81,7 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
   const cancel = () => { setStart(change.start); setValue(String(change.value)); setComment(change.comment ?? ""); };
   const startEditing = () => { onSelect(change.start); setIsEditing(true); };
   const stopEditing = () => { cancel(); setIsEditing(false); };
-  return <form className={`event-row${selected ? " selected" : ""}${isEditing ? " editing" : ""}`} role="row" data-event-start={change.start} draggable={false} onDragEnter={onDragOver} onDragOver={onDragOver} onDropCapture={onDrop} onDrop={onDrop} onDragEnd={onDragEnd} onClick={() => onSelect(change.start)} onSubmit={(event) => {
+  return <form className={`event-row${selected ? " selected" : ""}${isEditing ? " editing" : ""}`} role="row" data-event-id={change.id ?? `start-${change.start}`} data-event-start={change.start} draggable={false} onDragEnter={onDragOver} onDragOver={onDragOver} onDropCapture={onDrop} onDrop={onDrop} onDragEnd={onDragEnd} onClick={() => onSelect(change.start)} onSubmit={(event) => {
     event.preventDefault();
     if (!hasChanges) return;
     const result = commands.replaceValue(signal.id, change.start, start, value, comment);
