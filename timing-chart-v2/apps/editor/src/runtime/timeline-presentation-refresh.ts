@@ -6,12 +6,32 @@ import type { ViewMetricsOwner } from "./view-metrics.js";
 import { buildRuler } from "./build-ruler.js";
 import { referenceSvgScreenScale } from "./screen-scale.js";
 
+// #572: a legitimate reference-SVG screen-scale reading corrects only for
+// browser sub-pixel/DPI rounding around build-ruler.ts's own declared
+// default (1 local-geometry unit = 1px at 100% zoom) -- it must never
+// silently redefine Cycle Mode's pitch. Fit All/Fit Selection already
+// express "shrink to fit" through `zoom` itself (viewport-controller.ts's
+// `createTimelineZoomController`), so `screenGeometryScale` should stay
+// close to 1 regardless of zoom level. A measurement this far from 1 can
+// only mean the reference SVG was sampled while its container was still
+// constrained by an unrelated pass (e.g. `applyRendererHostSizing`'s resize
+// handler, which sizes the renderer host to the viewport's own width and
+// can run before the zoom controller has applied the document's real
+// unzoomed width) -- not a genuine screen-DPI effect. Reject it rather than
+// let Cycle Mode's default 100% pitch permanently compress to fit whatever
+// width happened to be measured first.
+const PLAUSIBLE_SCREEN_SCALE_MIN = 0.9;
+const PLAUSIBLE_SCREEN_SCALE_MAX = 1.1;
+function plausibleScreenScale(candidate: number | undefined): number | undefined {
+  return candidate !== undefined && candidate >= PLAUSIBLE_SCREEN_SCALE_MIN && candidate <= PLAUSIBLE_SCREEN_SCALE_MAX ? candidate : undefined;
+}
+
 export function rebuildRulerPresentation(ruler: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, previousScale: number | undefined, referenceSvg: SVGSVGElement | undefined, zoom: number, minimumWaveWidth = 0, viewportElement?: HTMLElement, measureCurrentScale = true): { readonly timeAxis: TimeAxisGeometry; readonly scale: number } {
   const timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
   const mapping = mappingCache.get(document.timeline, document.timeGroups);
   const referenceViewBoxWidth = referenceSvg?.viewBox.baseVal.width;
-  let scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, previousScale, measureCurrentScale ? referenceSvgScreenScale(referenceSvg, zoom) : undefined, timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth);
-  const settledScale = measureCurrentScale ? referenceSvgScreenScale(referenceSvg, zoom) : undefined;
+  let scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, previousScale, measureCurrentScale ? plausibleScreenScale(referenceSvgScreenScale(referenceSvg, zoom)) : undefined, timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth);
+  const settledScale = measureCurrentScale ? plausibleScreenScale(referenceSvgScreenScale(referenceSvg, zoom)) : undefined;
   if (settledScale !== undefined && Math.abs(settledScale - scale) > 0.0001) scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, undefined, settledScale, timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth);
   return { timeAxis, scale };
 }
