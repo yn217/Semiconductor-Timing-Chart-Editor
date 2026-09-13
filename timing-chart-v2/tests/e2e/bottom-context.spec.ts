@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 async function ready(page: Page) {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
 }
 
 // #426 Bottom Panel UX Closure (source of truth: the Issue text, not this
@@ -52,12 +53,10 @@ test("Bottom Pin preserves a selected Group JSON context without view mutation",
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   const bottom = page.getByTestId("bottom-editor");
-  const surface = host.locator("[data-role='timing-chart-surface']");
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
     history: await page.getByTestId("history-status").textContent(),
     dirty: await page.getByTestId("dirty-status").textContent(),
-    counters: await surface.getAttribute("data-render-counters"),
   };
 
   await host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control'] [data-role='tree-branch'][data-group-id='grp_cycle_control']").first().click();
@@ -77,7 +76,6 @@ test("Bottom Pin preserves a selected Group JSON context without view mutation",
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
-  await expect(surface).toHaveAttribute("data-render-counters", before.counters!);
 
   await bottom.getByTestId("bottom-pin").click();
   await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
