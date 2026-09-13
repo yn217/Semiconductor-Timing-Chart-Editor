@@ -61,7 +61,9 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement): OpenPhaseTrac
     rendererHost.dataset.openPhaseMarks = JSON.stringify(marks);
     const fileReadDurationMs = marks["file-read-start"] !== undefined && marks["file-read-complete"] !== undefined
       ? Math.max(0, marks["file-read-complete"] - marks["file-read-start"]) : undefined;
-    rendererHost.dataset.openPhaseDurations = JSON.stringify(fileReadDurationMs === undefined ? {} : { fileReadDurationMs });
+    const phaseOrigin = marks["open-command-start"];
+    const phaseDurationsMs = phaseOrigin === undefined ? {} : Object.fromEntries(Object.entries(marks).map(([name, timestamp]) => [name, Math.max(0, timestamp - phaseOrigin)]));
+    rendererHost.dataset.openPhaseDurations = JSON.stringify({ ...phaseDurationsMs, ...(fileReadDurationMs === undefined ? {} : { fileReadDurationMs }) });
     if (phase === "row-shell-painted") rowShellPainted = true;
     if (phase === "reference-geometry-ready") referenceGeometryReady = true;
     if (phase === "ruler-painted") rulerPainted = true;

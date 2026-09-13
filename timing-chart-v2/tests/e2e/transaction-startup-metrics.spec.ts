@@ -22,9 +22,10 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
       const lane = surface.ownerDocument.querySelector<HTMLElement>("[data-testid='transaction-lanes']");
       const readyAt = Number(lane?.dataset.transactionFirstReadyAt ?? NaN);
       const phaseMarks = JSON.parse(surface.getAttribute("data-open-phase-marks") ?? "{}") as Record<string, number>;
+      const publishedPhaseDurations = JSON.parse(surface.getAttribute("data-open-phase-durations") ?? "{}") as Record<string, number>;
       const phaseOrigin = phaseMarks["open-command-start"] ?? phaseMarks["open-start"] ?? 0;
       const phaseDurationsMs = Object.fromEntries(Object.entries(phaseMarks).map(([phase, timestamp]) => [phase, timestamp - phaseOrigin]));
-      return { readyMs: readyAt - navigationStart, projectionCalls: counters.projectionCalls ?? 0, projectionDurationMs: counters.projectionDurationMs ?? 0, fullReplaceCalls: counters.fullReplaceCalls ?? 0, viewportOnlyCalls: counters.viewportOnlyCalls ?? 0, changeCalls: counters.changeCalls ?? 0, idle: surface.getAttribute("data-editor-idle") === "true", phaseMarks, phaseDurationsMs };
+      return { readyMs: readyAt - navigationStart, projectionCalls: counters.projectionCalls ?? 0, projectionDurationMs: counters.projectionDurationMs ?? 0, fullReplaceCalls: counters.fullReplaceCalls ?? 0, viewportOnlyCalls: counters.viewportOnlyCalls ?? 0, changeCalls: counters.changeCalls ?? 0, idle: surface.getAttribute("data-editor-idle") === "true", phaseMarks, phaseDurationsMs, publishedPhaseDurations };
     }, navigationStartedAt);
     expect(sample.readyMs).toBeGreaterThanOrEqual(0);
     expect(sample.projectionCalls).toBeGreaterThan(0);
@@ -39,4 +40,5 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     const durations = requiredPhases.map((phase) => sample.phaseDurationsMs[phase]!);
     return durations.every((duration) => Number.isFinite(duration) && duration >= 0);
   })).toBe(true);
+  expect(samples.every((sample) => requiredPhases.every((phase) => sample.publishedPhaseDurations[phase] === sample.phaseDurationsMs[phase]))).toBe(true);
 });
