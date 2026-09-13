@@ -5,6 +5,7 @@ import type { CommandResult } from "@timing-chart-v2/commands";
 import type { ValueSignal } from "@timing-chart-v2/schema";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./event-table-components.js";
+import { buildEventTableIndex } from "./runtime/event-table-index.js";
 
 // Start is derived during reorder, so it cannot identify a semantic row.
 // Keep the editor identity on the transition's stable payload instead.
@@ -44,30 +45,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   const eventViewportRef = useRef<HTMLDivElement>(null);
   const [importStatus, setImportStatus] = useState("Import signal events");
   const fileInput = useRef<HTMLInputElement>(null);
-  const indexed = useMemo(() => {
-    const ordered = [...signal.values].sort((left, right) => left.start - right.start);
-    const occupied = new Set(ordered.map((change) => change.start));
-    const endByStart = new Map(ordered.map((change, index) => [change.start, ordered[index + 1]?.start ?? cycleCount]));
-    const firstFree = (extra?: number) => {
-      let candidate = 0;
-      for (const change of ordered) {
-        while (candidate === extra) candidate += 1;
-        if (change.start < candidate) continue;
-        if (change.start > candidate) break;
-        candidate += 1;
-      }
-      while (candidate === extra) candidate += 1;
-      return candidate < cycleCount ? candidate : undefined;
-    };
-    const nextEnd = (startValue: number) => {
-      const known = endByStart.get(startValue);
-      if (known !== undefined) return known;
-      let low = 0; let high = ordered.length;
-      while (low < high) { const middle = (low + high) >>> 1; if (ordered[middle]!.start <= startValue) low = middle + 1; else high = middle; }
-      return ordered[low]?.start ?? cycleCount;
-    };
-    return { ordered, occupied, endByStart, firstFree, nextEnd };
-  }, [signal.values, cycleCount]);
+  const indexed = useMemo(() => buildEventTableIndex(signal.values, cycleCount), [signal.values, cycleCount]);
   const selected = indexed.ordered.find((change) => transitionIdentity(change) === selectedKey);
   const selectTransition = (startValue: number) => {
     const change = indexed.ordered.find((item) => item.start === startValue);
