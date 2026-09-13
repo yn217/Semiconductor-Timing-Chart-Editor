@@ -28,6 +28,10 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(page.locator(".split-transaction-pane")).toBeVisible();
     await expect(page.locator(".split-signal-content")).toBeVisible();
     await expect(page.getByTestId("combined-split-divider")).toBeVisible();
+    await page.screenshot({
+      path: `artifacts/qa-cross-mode-${viewport.width}x${viewport.height}.png`,
+      fullPage: true,
+    });
 
     await expect.poll(() => host.getAttribute("data-canonical-revision")).toBe(before.revision);
     await expect(page.getByTestId("history-status")).toHaveText(before.history!);
