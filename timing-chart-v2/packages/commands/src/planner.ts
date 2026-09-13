@@ -32,7 +32,10 @@ const timingSignalIds = (document: CanonicalDocument) => document.signals.filter
 const annotationIds = (document: CanonicalDocument) => document.annotations.map((annotation) => annotation.id);
 
 function freshValueChangeId(document: CanonicalDocument, signalId: SignalId): string {
-  const used = new Set(document.signals.flatMap((signal) => signal.type === "commentRow" ? [] : (signal.values ?? []).flatMap((change) => change.id ? [change.id] : [])));
+  const used = new Set<string>();
+  for (const signal of document.signals) {
+    if ("values" in signal) for (const change of signal.values) if (change.id) used.add(change.id);
+  }
   let sequence = 0;
   let id = `value_${signalId}_${sequence}`;
   while (used.has(id)) id = `value_${signalId}_${++sequence}`;
