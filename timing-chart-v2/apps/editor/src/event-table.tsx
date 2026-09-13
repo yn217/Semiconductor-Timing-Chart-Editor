@@ -7,9 +7,11 @@ import type { SignalEditorCommandActions } from "./application/editor-surface-co
 import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./event-table-components.js";
 import { buildEventTableIndex } from "./runtime/event-table-index.js";
 
-// Start is derived during reorder, so it cannot identify a semantic row.
-// Keep the editor identity on the transition's stable payload instead.
-const transitionIdentity = (change: ValueSignal["values"][number]): string => JSON.stringify([change.value, change.comment ?? "", change.displayLabel ?? ""]);
+// Signal transitions have no separately persisted row ID; within the
+// canonical value list, the start boundary is the unique row identity.
+// Content-based keys can collide for identical adjacent transitions and
+// make React reuse the wrong virtualized row/editor state.
+const transitionIdentity = (change: ValueSignal["values"][number]): string => String(change.start);
 const EVENT_ROW_HEIGHT = 30;
 const EVENT_OVERSCAN = 8;
 
