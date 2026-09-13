@@ -141,6 +141,7 @@ button, input, select { font: inherit; font-size: var(--ds-font-size); }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] > .left-column-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 28px 28px; align-items: center; gap: 0 4px; overflow: hidden; padding: 0 8px; }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] .transaction-tree-tabs { grid-column: 1 / -1; display: flex; min-width: 0; padding: 0; border: 0; }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] .tree-filter-controls { min-width: 0; padding: 0; border: 0; }
+.editor-shell .column-headings[data-testid="transaction-tree-header"] > .left-column-heading > .tree-filter-controls { position: static; inset: auto; z-index: auto; height: auto; background: transparent; }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] > .left-column-heading > select { min-width: 0; width: 96px; height: 24px; }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] { z-index: 30; }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] .transaction-tree-tabs { position: relative; z-index: 1; }
