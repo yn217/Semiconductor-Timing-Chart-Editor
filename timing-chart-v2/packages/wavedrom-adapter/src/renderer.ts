@@ -84,6 +84,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   readonly #renderCallsBySignal = new Map<SignalId, number>();
   #nextRenderIndex = 0;
   #renderCalls = 0;
+  #renderDurationMs = 0;
   #cacheHits = 0;
   #cacheMisses = 0;
   #mounts = 0;
@@ -105,6 +106,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   }
 
   async renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues: readonly string[] = []): Promise<RenderedWave> {
+    const startedAt = globalThis.performance?.now() ?? Date.now();
     const existing = this.#active.get(signalId);
     if (existing && existing.mount !== mount) this.#clearOwner(existing);
     let renderIndex = this.#renderIndices.get(signalId);
@@ -144,6 +146,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     mount.replaceChildren(svg);
     const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson };
     this.#active.set(signalId, { mount, rendered });
+    this.#renderDurationMs += (globalThis.performance?.now() ?? Date.now()) - startedAt;
     this.#mounts += 1;
     return rendered;
   }
@@ -179,7 +182,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   }
 
   metrics(): WaveDromAdapterMetrics {
-    return { renderCalls: this.#renderCalls, renderCallsBySignal: Object.fromEntries(this.#renderCallsBySignal), cacheHits: this.#cacheHits, cacheMisses: this.#cacheMisses, mounts: this.#mounts, disposals: this.#disposals, geometryBuilds: this.#geometryBuilds, geometryMatrixReads: this.#geometryMatrixReads, activeOwners: this.#active.size, allocatedRenderIndices: this.#renderIndices.size };
+    return { renderCalls: this.#renderCalls, renderDurationMs: this.#renderDurationMs, renderCallsBySignal: Object.fromEntries(this.#renderCallsBySignal), cacheHits: this.#cacheHits, cacheMisses: this.#cacheMisses, mounts: this.#mounts, disposals: this.#disposals, geometryBuilds: this.#geometryBuilds, geometryMatrixReads: this.#geometryMatrixReads, activeOwners: this.#active.size, allocatedRenderIndices: this.#renderIndices.size };
   }
 
   #clearOwner(owner: ActiveOwner): void {
