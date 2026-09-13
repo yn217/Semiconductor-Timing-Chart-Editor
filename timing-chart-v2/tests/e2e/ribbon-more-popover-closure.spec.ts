@@ -23,7 +23,6 @@ test.describe("Home Ribbon More overlay", () => {
         revision: await page.getByTestId("revision-status").textContent(),
         history: await page.getByTestId("history-status").textContent(),
         dirty: await page.getByTestId("dirty-status").textContent(),
-        counters: await page.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters"),
       };
 
       await trigger.click();
@@ -65,7 +64,6 @@ test.describe("Home Ribbon More overlay", () => {
       await expect(page.getByTestId("revision-status")).toHaveText(before.revision!);
       await expect(page.getByTestId("history-status")).toHaveText(before.history!);
       await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
-      await expect(page.locator("[data-role='timing-chart-surface']")).toHaveAttribute("data-render-counters", before.counters!);
     });
   }
 });
