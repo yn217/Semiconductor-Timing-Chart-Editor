@@ -10,6 +10,9 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(page.getByTestId("cycle-viewport")).toBeVisible();
     const frozen = page.locator("[data-role='frozen-row'][data-kind='timing']").first();
     await expect(frozen).toBeVisible();
+    await frozen.click();
+    await expect(page.getByTestId("inspector-shell")).toBeVisible();
+    await expect(page.getByTestId("bottom-resizer")).toBeVisible();
     const viewportEl = page.getByTestId("cycle-viewport");
     const before = await frozen.boundingBox();
     expect(before).not.toBeNull();
