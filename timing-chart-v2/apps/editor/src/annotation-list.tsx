@@ -52,11 +52,12 @@ export function AnnotationList({
   const visibleCount = Math.ceil(viewportHeight / ANNOTATION_ROW_HEIGHT) + ANNOTATION_OVERSCAN * 2;
   const lastVisible = Math.min(annotations.length, firstVisible + visibleCount);
   const visibleAnnotations = annotations.slice(firstVisible, lastVisible);
+  const annotationOrderKey = annotations.map((item) => item.id).join("\u0000");
 
   useEffect(() => {
     setScrollTop(0);
     if (listRef.current) listRef.current.scrollTop = 0;
-  }, [annotations]);
+  }, [annotationOrderKey]);
 
   useEffect(() => {
     const selectedIndex = selectedId === undefined ? -1 : annotations.findIndex((item) => item.id === selectedId);
@@ -76,6 +77,7 @@ export function AnnotationList({
       onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
       role="table"
       aria-label="Annotations"
+      aria-rowcount={annotations.length + 1}
       data-testid="annotation-list"
     >
       {/* Transaction Mode GUI realignment (Visual Quality pass): the last
@@ -107,6 +109,7 @@ export function AnnotationList({
           data-annotation-row={item.id}
           data-selected={String(item.id === selectedId)}
           aria-selected={item.id === selectedId}
+          aria-rowindex={index + 2}
           aria-label={`Select annotation ${item.label || item.type}`}
           onClick={(event) => onSelect(item.id, event.ctrlKey || event.metaKey)}
           onKeyDown={(event) => {
