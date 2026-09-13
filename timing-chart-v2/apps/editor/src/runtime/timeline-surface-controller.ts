@@ -170,7 +170,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       geometryMaps,
       getDocument: () => sessionController.snapshot().document,
       getProjection: () => projection,
-      onSnapIndexBuilt: () => publishState(),
+      // Building the cached SnapIndex may happen on the first drag preview
+      // query. Diagnostics are observational and must not synchronously
+      // publish from that pointermove hot path; later lifecycle/interaction
+      // refreshes publish the updated snapshot when appropriate.
+      onSnapIndexBuilt: () => undefined,
     });
     const provider = createWaveformSurfaceProvider({
       sessionController,
