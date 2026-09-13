@@ -449,6 +449,7 @@ export function useEditorSecondarySurfaces(
       <TransactionLanes
         document={input.document}
         documentEpoch={input.documentEpoch}
+        viewMode={workspace.viewMode}
         presentationRevision={input.transactionPresentationRevision}
         zoom={input.zoom}
         selectedId={selected.transactionId}
