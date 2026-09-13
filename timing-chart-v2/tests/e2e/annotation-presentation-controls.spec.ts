@@ -30,11 +30,16 @@ async function exportSvgText(page: import("@playwright/test").Page): Promise<str
   return text;
 }
 
+async function selectRequestSignal(page: import("@playwright/test").Page, host: import("@playwright/test").Locator) {
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+}
+
 test("Range Stroke/Fill controls have real canonical + rendered + exported effect", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(page, host);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
 
   const range = await addAnnotation(page, "range");
@@ -77,7 +82,7 @@ test("Vertical Line exports a full-height dashed line, not an invisible zero-len
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(page, host);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
 
   const verticalLine = await addAnnotation(page, "verticalLine");
@@ -97,7 +102,7 @@ test("Text has no Stroke/Fill controls enabled -- disabled with a truthful reaso
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(page, host);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await addAnnotation(page, "text");
   const editor = page.getByTestId("annotation-editor");
@@ -110,7 +115,7 @@ test("Lock shows a real visible indicator, blocks drag, and Unlock restores it -
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(page, host);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
 
   const first = await addAnnotation(page, "text");
@@ -176,7 +181,7 @@ test("Lock state survives a real Save/Open round trip", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(page, host);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
 
   const annotation = await addAnnotation(page, "text");
@@ -256,7 +261,7 @@ test("Annotation Ribbon groups show one label each, readable-but-disabled with t
 
   // Selecting a Signal enables Shapes and inserting a Text annotation
   // enables Font/Paragraph, each with a real, observable effect.
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await selectRequestSignal(page, host);
   await expect(arrowShape).toBeEnabled();
   await page.getByLabel("Annotation type").selectOption("text");
   await page.getByRole("button", { name: "Add annotation" }).click();
