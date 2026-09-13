@@ -6,6 +6,10 @@ import type { ValueSignal } from "@timing-chart-v2/schema";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./event-table-components.js";
 
+// Start is derived during reorder, so it cannot identify a semantic row.
+// Keep the editor identity on the transition's stable payload instead.
+const transitionIdentity = (change: ValueSignal["values"][number]): string => JSON.stringify([change.value, change.comment ?? "", change.displayLabel ?? ""]);
+
 // #426: Value Helper's own label/hint were hardcoded to "(Signal)" / the
 // binary 0-1-X-Z blurb regardless of the actually-selected Signal's real
 // type -- a Bus or State Signal showed the right quick-value buttons
@@ -27,7 +31,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   const [start, setStart] = useState(0);
   const [value, setValue] = useState(defaultEventValue(signal));
   const [comment, setComment] = useState("");
-  const [selectedStart, setSelectedStart] = useState<number | undefined>(signal.values[0]?.start);
+  const [selectedKey, setSelectedKey] = useState<string | undefined>(() => signal.values[0] === undefined ? undefined : transitionIdentity(signal.values[0]));
   // Bottom Panel Visual Reference pass: bulk row selection (checkbox column)
   // is a separate concept from `selectedStart` (single-row click-highlight,
   // used by the per-row inline Draft/Apply/Cancel and by the toolbar's
@@ -36,7 +40,11 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   const [checkedStarts, setCheckedStarts] = useState<ReadonlySet<number>>(new Set());
   const [importStatus, setImportStatus] = useState("Import signal events");
   const fileInput = useRef<HTMLInputElement>(null);
-  const selected = signal.values.find((change) => change.start === selectedStart);
+  const selected = signal.values.find((change) => transitionIdentity(change) === selectedKey);
+  const selectTransition = (startValue: number) => {
+    const change = signal.values.find((item) => item.start === startValue);
+    setSelectedKey(change === undefined ? undefined : transitionIdentity(change));
+  };
   const nextStart = Array.from({ length: cycleCount }, (_, cycle) => cycle).find((cycle) => !signal.values.some((item) => item.start === cycle)) ?? Math.max(0, cycleCount - 1);
   const emitValue = (nextValues: readonly ValueSignal["values"][number][]): CommandResult => commands.replaceValues(signal.id, nextValues);
   const addRow = () => commands.updateValue(signal.id, nextStart, value);
@@ -246,7 +254,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
             exact same `checkedStarts` set each row's own checkbox feeds --
             not a decorative header cell. */}
         <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span>End</span><span>Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
-        {signal.values.map((change, index) => <EventRow key={change.start} index={index + 1} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} checked={checkedStarts.has(change.start)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change.start)} onSelect={setSelectedStart} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedStarts.has(change.start) && checkedCount > 1 ? checkedStarts : [change.start]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />)}
+        {signal.values.map((change, index) => <EventRow key={transitionIdentity(change)} index={index + 1} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={transitionIdentity(change) === selectedKey} checked={checkedStarts.has(change.start)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change.start)} onSelect={selectTransition} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedStarts.has(change.start) && checkedCount > 1 ? checkedStarts : [change.start]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />)}
       </div>
     </div>
     <div className="event-table-footer">
