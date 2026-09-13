@@ -1,7 +1,7 @@
 import { anchorTransitionFraction, anchorTransitionKind } from "@timing-chart-v2/schema";
 import type { Annotation, CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { allocateMeasurementLanes, type LocalGeometryMap, type Point } from "@timing-chart-v2/geometry";
-import type { DisplayTimeMapping, RenderProjection } from "@timing-chart-v2/projection";
+import type { DisplayTimeMapping, DisplayTimeViewport, RenderProjection } from "@timing-chart-v2/projection";
 import type { AnnotationOverlayPrimitive } from "@timing-chart-v2/renderer";
 import { resolveAnchorPoint } from "../resolve-anchor-point.js";
 
@@ -17,8 +17,19 @@ function measurementAnchorLabel(annotation: Pick<Annotation, "label" | "measurem
   return `${annotation.label} · ${range} · ${annotation.measurement?.anchorKind ?? "threshold"} · Δ ${Math.abs(annotation.end.cycle - annotation.start.cycle)} cycles`;
 }
 
-export function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1): AnnotationOverlayPrimitive[] {
-  const measurementSpans = document.annotations.flatMap((annotation) => {
+export function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1, viewport?: DisplayTimeViewport): AnnotationOverlayPrimitive[] {
+  const rowIds = new Set(projection.rowLayout.filter((row) => row.visible && (!viewport || (row.y + row.height >= viewport.rowStart && row.y <= viewport.rowEnd))).map((row) => row.rowId));
+  const pinned = new Set(viewport?.pinnedIds ?? []);
+  const candidate = (annotation: Annotation): boolean => {
+    if (!viewport || pinned.has(annotation.id)) return true;
+    const anchors = annotationFields.map((field) => annotation[field]).filter((anchor): anchor is NonNullable<typeof anchor> => Boolean(anchor));
+    const timeHit = anchors.some((anchor) => anchor.cycle >= viewport.sourceStart && anchor.cycle <= viewport.sourceEnd)
+      || Boolean(annotation.start && annotation.end && Math.min(annotation.start.cycle, annotation.end.cycle) <= viewport.sourceEnd && Math.max(annotation.start.cycle, annotation.end.cycle) >= viewport.sourceStart);
+    const rowHit = anchors.some((anchor) => anchor.signalId !== undefined && rowIds.has(anchor.signalId)) || (annotation.sourceSignalId !== undefined && rowIds.has(annotation.sourceSignalId));
+    return timeHit && rowHit;
+  };
+  const candidates = document.annotations.filter(candidate);
+  const measurementSpans = candidates.flatMap((annotation) => {
     if (annotation.type !== "measurement" || !annotation.start || !annotation.end) return [];
     const continuous = annotation.positionMode === "free";
     const first = resolveAnchorPoint(annotation.start, document, projection, maps, mapping, xScale, continuous);
@@ -26,7 +37,7 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
     return first && second ? [{ id: annotation.id, firstX: first.x, secondX: second.x, ...(annotation.measurementLayout?.lane === undefined ? {} : { explicitLane: annotation.measurementLayout.lane }) }] : [];
   });
   const measurementLaneById = allocateMeasurementLanes(measurementSpans);
-  return document.annotations.flatMap((annotation) => {
+  return candidates.flatMap((annotation) => {
     const anchors = annotationFields.flatMap((field) => {
       const point = resolveAnchorPoint(annotation[field], document, projection, maps, mapping, xScale, annotation.positionMode === "free");
       const fraction = anchorTransitionFraction(annotation[field]);

@@ -1,5 +1,5 @@
 import { DefaultScreenGeometryProjector, resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
-import { DisplayTimeMappingCache, type DisplayTimeMapping, type RenderProjection } from "@timing-chart-v2/projection";
+import { createDisplayTimeViewport, DisplayTimeMappingCache, type DisplayTimeMapping, type DisplayTimeViewport, type RenderProjection } from "@timing-chart-v2/projection";
 import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { displayBoundaryForSource } from "./display-boundary.js";
 import { buildSnapIndex } from "./snap-index.js";
@@ -76,6 +76,14 @@ export class TimelineGeometryOwner {
     if (displayCycle === undefined) return undefined;
     const point = axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
     return point === undefined ? undefined : point.x * this.#presentationScale;
+  }
+
+  viewportForLocalRange(localStart: number, localEnd: number, rowStart: number, rowEnd: number, generation: number, pinnedIds: readonly string[] = []): DisplayTimeViewport {
+    const candidates = this.currentSnapIndex().entries().filter((candidate) => candidate.kind === "cycle-boundary").sort((a, b) => a.point.x - b.point.x);
+    const before = candidates.filter((candidate) => candidate.point.x <= localStart).at(-1)?.anchor.cycle ?? 0;
+    const after = candidates.find((candidate) => candidate.point.x >= localEnd)?.anchor.cycle ?? this.context.getDocument().timeline.cycleCount;
+    const mapping = this.displayMapping;
+    return createDisplayTimeViewport(mapping, mapping.sourceToDisplay[before] ?? 0, mapping.sourceToDisplay[after] ?? mapping.displayCycleCount, 2, rowStart, rowEnd, generation, pinnedIds);
   }
 
   screenToLocal(point: Point, zoom: number, scrollX = 0, scrollY = 0): Point {
