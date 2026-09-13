@@ -37,9 +37,11 @@ export type TimelineNavigationOwner = Readonly<{
   attach: (context: TimelineNavigationAttachment) => () => void;
 }>;
 
-export function useTimelineNavigationOwner(): TimelineNavigationOwner {
+export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "Split" = "Cycle"): TimelineNavigationOwner {
   const [zoom, setZoomState] = useState(1);
   const zoomRef = useRef(1);
+  const zoomByModeRef = useRef<Record<"Cycle" | "Transaction", number>>({ Cycle: 1, Transaction: 1 });
+  const previousModeRef = useRef<"Cycle" | "Transaction" | "Split">(viewMode);
   const zoomStateFrameRef = useRef<number | undefined>(undefined);
   const applyZoomRef = useRef<(zoom: number) => void>(() => undefined);
   const fitSelectionRef = useRef<() => void>(() => undefined);
@@ -49,6 +51,20 @@ export function useTimelineNavigationOwner(): TimelineNavigationOwner {
   useEffect(() => () => {
     if (zoomStateFrameRef.current !== undefined) cancelAnimationFrame(zoomStateFrameRef.current);
   }, []);
+
+  useEffect(() => {
+    const previous = previousModeRef.current;
+    if (previous !== viewMode) {
+      if (previous === "Cycle" || previous === "Transaction") zoomByModeRef.current[previous] = zoomRef.current;
+      if (viewMode === "Cycle" || viewMode === "Transaction") {
+        const next = zoomByModeRef.current[viewMode];
+        zoomRef.current = next;
+        setZoomState(next);
+        applyZoomRef.current(next);
+      }
+      previousModeRef.current = viewMode;
+    }
+  }, [viewMode]);
 
   return useMemo(() => ({
     zoom,
@@ -74,6 +90,7 @@ export function useTimelineNavigationOwner(): TimelineNavigationOwner {
         onSyncFrozenColumns: context.syncFrozenColumns,
         onZoom: (nextZoom) => {
           zoomRef.current = nextZoom;
+          if (viewMode === "Cycle" || viewMode === "Transaction") zoomByModeRef.current[viewMode] = nextZoom;
           context.viewMetrics.update({ zoom: nextZoom, viewportWidth: context.viewport.clientWidth });
           // The DOM presentation is already updated synchronously by the
           // zoom controller. Defer the non-critical React status/ribbon state

@@ -96,7 +96,6 @@ export function MinimalCycleView() {
   const selection = useSelectionOwner(visualReference ? signalId("sig_cycle_clock") : undefined);
   const editActions = useClipboardActions({ application, selection });
   const documentEpoch = application.runtime.documentEpoch.current();
-  const timelineNavigation = useTimelineNavigationOwner();
   const { signalId: selectedId, signalIds: selectedSignalIds, groupId: selectedGroupId, annotationId: selectedAnnotationId, transactionId: selectedTransactionId, transactionIds: selectedTransactionIds } = selection.state;
   const { signalId: selectedSignalRef, signalIds: selectedSignalIdsRef, groupId: selectedGroupRef, spacerId: selectedSpacerRef, annotationId: selectedAnnotationRef, transactionId: selectedTransactionRef } = selection.refs;
   const presentation = useEditorPresentationState({ hostRef: host });
@@ -113,7 +112,6 @@ export function MinimalCycleView() {
     showGroupBackground, setShowGroupBackground,
     applySelectionDecorations,
   } = presentation;
-  const zoom = timelineNavigation.zoom;
   // The normal preview starts on the built-in Transaction sample so a browser
   // refresh immediately shows the populated reference surface. The dedicated
   // visual-reference fixture remains a Cycle-oriented inspection entry point.
@@ -150,6 +148,10 @@ export function MinimalCycleView() {
     cursorA, cursorB, cursorDelta, setCursor, clearCursor, moveCursor, swapCursors,
     activePane, setActivePane,
   } = workspace;
+  // Keep standalone Cycle and Transaction presentation zoom independent while
+  // Combined continues to use the shared time viewport zoom.
+  const timelineNavigation = useTimelineNavigationOwner(viewMode);
+  const zoom = timelineNavigation.zoom;
   useEffect(() => {
     if (typeof window !== "undefined" && viewMode !== "Split") window.localStorage.setItem("timing-chart-v2.view-mode", viewMode);
   }, [viewMode]);
