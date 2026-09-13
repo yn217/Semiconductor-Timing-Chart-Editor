@@ -513,6 +513,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       renderer.update(projection);
       signalSplitRuntimeRef.current?.onDocumentReplaced();
       markOpenPhase("canonical-replaced");
+      markOpenPhase("renderer-updated");
       requestAnimationFrame(() => { if (active) markOpenPhase("row-shell-painted"); });
       rulerElement.replaceChildren();
       publishState();
