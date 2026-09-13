@@ -172,6 +172,35 @@ function clockToWaveJson(signal: ClockSignal, cycleCount: number, gaps: readonly
   };
 }
 
+function clockToWaveJsonWindow(source: CanonicalSignalSource, start: number, end: number): WaveJsonSignal {
+  const signal = source.signal as ClockSignal;
+  const { generator } = signal;
+  if (start % generator.period !== 0 || end % generator.period !== 0) {
+    throw new WaveDromAdapterError("UNALIGNED_CLOCK_WINDOW", "Bounded clock windows must align to the clock period.");
+  }
+  const inactive = generator.polarity === "positive" ? 0 : 1;
+  const active = generator.polarity === "positive" ? 1 : 0;
+  const enableAt = createEnableReader(signal.enable);
+  const localPulse = Math.floor((start - generator.start) / generator.period);
+  const suppressed = new Set(generator.suppressedPeriods ?? []);
+  const started = start >= generator.start;
+  const firstActive = started && enableAt(start) && !suppressed.has(localPulse);
+  const localEnable = (signal.enable ?? [])
+    .filter((change) => change.start >= start && change.start < end)
+    .map((change) => ({ ...change, start: change.start - start }));
+  const localSignal: ClockSignal = {
+    ...signal,
+    enable: localEnable.length > 0 ? localEnable : undefined,
+    generator: {
+      ...generator,
+      start: 0,
+      initial: firstActive ? active : inactive,
+      suppressedPeriods: started ? [...suppressed].filter((period) => period >= localPulse).map((period) => period - localPulse) : [...suppressed],
+    },
+  };
+  return { ...clockToWaveJson(localSignal, end - start, (source.gapCycles ?? []).filter((cycle) => cycle > start && cycle < end).map((cycle) => cycle - start)), sourceWindow: { start, end } };
+}
+
 export function toWaveJson(source: CanonicalSignalSource): WaveJsonSignal {
   validateSource(source);
   if (source.signal.type === "commentRow") {
@@ -189,7 +218,7 @@ export function toWaveJsonWindow(source: CanonicalSignalSource, start: number, e
     throw new WaveDromAdapterError("INVALID_CYCLE_WINDOW", "WaveDrom conversion requires a non-empty in-bounds source window.");
   }
   if (source.signal.type === "commentRow") throw new WaveDromAdapterError("NON_WAVEFORM_SIGNAL", `Comment row '${source.signal.id}' has no WaveDrom waveform.`);
-  if (source.signal.type === "clock") throw new WaveDromAdapterError("UNSUPPORTED_CLOCK_WINDOW", "Bounded clock conversion requires a window-state contract.");
+  if (source.signal.type === "clock") return clockToWaveJsonWindow(source, start, end);
   const changes = source.signal.values;
   let current = changes[0];
   for (const change of changes) { if (change.start > start) break; current = change; }

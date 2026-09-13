@@ -117,6 +117,14 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(toWaveJsonWindow({ signal, cycleCount: 100 }, 60, 80)).toEqual({ wave: "1..............0....", sourceWindow: { start: 60, end: 80 } });
   });
 
+  it("reconstructs a bounded clock window from canonical phase", () => {
+    const clock = canonicalFixture().signals[0] as ClockSignal;
+    const bounded = toWaveJsonWindow({ signal: clock, cycleCount: 100 }, 20, 40);
+    expect(bounded.sourceWindow).toEqual({ start: 20, end: 40 });
+    expect(bounded.wave).toHaveLength(20);
+    expect(bounded.wave).toBe(toWaveJson({ signal: clock, cycleCount: 100 }).wave.slice(20, 40));
+  });
+
   it("uses displayLabel only for WaveDrom data while retaining semantic values", () => {
     const bus = { ...canonicalFixture().signals[1]!, values: [{ start: 0, value: "0x12345678", displayLabel: "READY" }] } as ValueSignal;
     expect(bus.values[0]?.value).toBe("0x12345678");
