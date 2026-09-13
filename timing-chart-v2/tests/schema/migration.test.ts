@@ -165,4 +165,12 @@ describe("migrateV1", () => {
     expect(first).toEqual(second);
     expect(validateCanonicalDocument(first)).toHaveLength(0);
   });
+
+  it("repairs duplicate value-change IDs during migration", () => {
+    const document = migrateV1(v1Document({ signals: [{ id: "sig_data", name: "DATA", type: "binary", role: "input", values: [{ id: "change_same", start: 0, value: 0 }, { id: "change_same", start: 3, value: 1 }] }] })).document;
+    const values = (document.signals[0] as { values: readonly { id?: string }[] }).values;
+    expect(values.map((change) => change.id)).toHaveLength(2);
+    expect(new Set(values.map((change) => change.id)).size).toBe(2);
+    expect(migrateV1(v1Document({ signals: [{ id: "sig_data", name: "DATA", type: "binary", role: "input", values: [{ id: "change_same", start: 0, value: 0 }, { id: "change_same", start: 3, value: 1 }] }] })).warnings.some((warning) => warning.code === "MIGRATION_DUPLICATE_CHANGE_ID_REPAIRED")).toBe(true);
+  });
 });

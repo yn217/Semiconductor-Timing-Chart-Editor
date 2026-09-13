@@ -84,11 +84,17 @@ function roundHalfCycle(value: unknown, fallback: number, warnings: MigrationWar
   return rounded;
 }
 
-function normalizeChanges(value: unknown, fallback: string | number, warnings: MigrationWarning[], basePath: string): SignalValueChange[] {
+function normalizeChanges(value: unknown, fallback: string | number, warnings: MigrationWarning[], basePath: string, usedIds: Set<string>): SignalValueChange[] {
+  const claimedIds = new Set<string>();
   const changes = list(value).map((entry, index) => {
     const source = record(entry);
+    const explicitId = typeof source.id === "string" && source.id.length > 0 ? source.id : undefined;
+    const id = explicitId !== undefined && !claimedIds.has(explicitId)
+      ? (claimedIds.add(explicitId), explicitId)
+      : allocateMigrationId(`${basePath.replace(/[^a-zA-Z0-9]+/g, "_")}_value`, index, usedIds);
+    if (explicitId !== undefined && id !== explicitId) warnings.push({ code: "MIGRATION_DUPLICATE_CHANGE_ID_REPAIRED", path: `${basePath}[${index}].id`, message: `Duplicate change-point ID '${explicitId}' was replaced with '${id}'.` });
     const result: MutableRecord = {
-      id: typeof source.id === "string" && source.id.length > 0 ? source.id : `${basePath.replace(/[^a-zA-Z0-9]+/g, "_")}_${index}`,
+      id,
       start: roundCycle(source.start, index === 0 ? 0 : index, warnings, `${basePath}[${index}].start`),
       value: typeof source.value === "string" || typeof source.value === "number" ? source.value : fallback,
     };
@@ -180,11 +186,11 @@ function normalizeSignal(value: unknown, index: number, warnings: MigrationWarni
       offset: { x: number(edgeOffset.x, 0), y: number(edgeOffset.y, -6) },
       ...(typeof edgeCounter.anchorId === "string" ? { anchorId: edgeCounter.anchorId } : {}),
     };
-    if (Array.isArray(source.enable)) common.enable = normalizeChanges(source.enable, 1, warnings, `$.signals[${index}].enable`);
+    if (Array.isArray(source.enable)) common.enable = normalizeChanges(source.enable, 1, warnings, `$.signals[${index}].enable`, usedIds);
     return common as unknown as ClockSignal;
   }
 
-  common.values = normalizeChanges(source.values, type === "state" ? "IDLE" : type === "bus" ? "X" : 0, warnings, `$.signals[${index}].values`);
+  common.values = normalizeChanges(source.values, type === "state" ? "IDLE" : type === "bus" ? "X" : 0, warnings, `$.signals[${index}].values`, usedIds);
   optionalNumber(common, "width", source.width);
   if (["hex", "binary", "decimal", "signed", "unsigned", "symbolic"].includes(text(source.displayFormat))) common.displayFormat = source.displayFormat;
   return common as unknown as Signal;
