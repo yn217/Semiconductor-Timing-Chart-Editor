@@ -79,6 +79,23 @@ export class TimelineGeometryOwner {
     return point === undefined ? undefined : point.x * this.#presentationScale;
   }
 
+  /** Resolve a local time viewport to canonical source cycles using semantic geometry. */
+  sourceWindowForLocalRange(document: CanonicalDocument, localStart: number, localEnd: number, overscan = 2): Readonly<{ start: number; end: number }> {
+    const axis = this.resolveTimeAxis(document);
+    const mapping = this.displayMapping;
+    const owner = axis.geometry && axis.ownerSignalId !== undefined ? axis.geometry : this.geometryMaps.values().next().value;
+    const signalId = axis.ownerSignalId ?? owner?.signalId;
+    if (!owner || signalId === undefined) return { start: 0, end: document.timeline.cycleCount };
+    const entries = this.viewportBoundaryEntries(owner, signalId, mapping, document.timeline.cycleCount);
+    let start = 0;
+    let end = document.timeline.cycleCount;
+    for (const entry of entries) {
+      if (entry.x <= localStart) start = entry.cycle;
+      if (entry.x >= localEnd) { end = entry.cycle; break; }
+    }
+    return { start: Math.max(0, start - overscan), end: Math.min(document.timeline.cycleCount, end + overscan) };
+  }
+
   viewportForLocalRange(localStart: number, localEnd: number, rowStart: number, rowEnd: number, generation: number, pinnedIds: readonly string[] = []): DisplayTimeViewport {
     const document = this.context.getDocument();
     const axis = this.resolveTimeAxis(document);
@@ -86,19 +103,9 @@ export class TimelineGeometryOwner {
     // This query must remain independent of the annotation snap index: building
     // that index resolves every annotation and defeats viewport-bounded overlay
     // projection. Cycle boundaries are cheap semantic geometry owned by the axis.
-    let before = 0;
-    let after = 0;
-    const fallbackOwner = axis.geometry && axis.ownerSignalId !== undefined
-      ? axis.geometry
-      : this.geometryMaps.values().next().value;
-    const fallbackSignalId = axis.ownerSignalId ?? fallbackOwner?.signalId;
-    if (fallbackOwner && fallbackSignalId !== undefined) {
-      const entries = this.viewportBoundaryEntries(fallbackOwner, fallbackSignalId, mapping, document.timeline.cycleCount);
-      for (const entry of entries) {
-        if (entry.x <= localStart) before = entry.cycle;
-        if (entry.x >= localEnd) { after = entry.cycle; break; }
-      }
-    }
+    const sourceWindow = this.sourceWindowForLocalRange(document, localStart, localEnd, 2);
+    const before = sourceWindow.start;
+    const after = sourceWindow.end;
     return createDisplayTimeViewport(mapping, mapping.sourceToDisplay[before] ?? 0, mapping.sourceToDisplay[after] ?? 0, 2, rowStart, rowEnd, generation, pinnedIds);
   }
 
