@@ -194,11 +194,14 @@ test("snaps a dragged endpoint to exact rendered cycle geometry", async ({ page 
   const handle = owner.locator("[data-role='annotation-handle'][data-annotation-field='from']");
   const fromBox = await handle.boundingBox();
   const x2 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='2']").evaluate((element) => (element as HTMLElement).style.left));
-  const x5 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='5']").evaluate((element) => (element as HTMLElement).style.left));
+  // Ruler labels are a presentation subset on long timelines; use a
+  // currently rendered semantic checkpoint rather than requiring a thinned
+  // label to be mounted.
+  const x4 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='4']").evaluate((element) => (element as HTMLElement).style.left));
   expect(fromBox).not.toBeNull();
   await page.mouse.move(fromBox!.x + 4, fromBox!.y + 4);
   await page.mouse.down();
-  await page.mouse.move(fromBox!.x + 4 + (x5 - x2), fromBox!.y + 4);
+  await page.mouse.move(fromBox!.x + 4 + (x4 - x2), fromBox!.y + 4);
   await expect(host.locator("[data-role='snap-point']")).toHaveCount(1);
   await expect(host.locator("[data-role='snap-vertical-guide']")).toHaveCount(1);
   await expect(host.locator("[data-role='snap-signal-highlight']")).toHaveCount(1);
@@ -209,7 +212,7 @@ test("snaps a dragged endpoint to exact rendered cycle geometry", async ({ page 
   await expect(host).toHaveAttribute("data-snap-kind", "cycle-boundary");
   await expect(host).toHaveAttribute("data-snap-distance", "0");
   const movedTransform = await owner.locator("[data-role='annotation-handle'][data-annotation-field='from']").evaluate((element) => (element as HTMLElement).style.transform);
-  expect(movedTransform).toContain(`${x5}px`);
+  expect(movedTransform).toContain(`${x4}px`);
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 });
 
