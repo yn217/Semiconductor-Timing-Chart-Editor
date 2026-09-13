@@ -121,7 +121,19 @@ export class TimelineGeometryOwner {
       if (entry.x <= localStart) start = entry.cycle;
       if (entry.x >= localEnd) { end = entry.cycle; break; }
     }
-    return { start: Math.max(0, start - overscan), end: Math.min(document.timeline.cycleCount, end + overscan) };
+    const boundedStart = Math.max(0, start - overscan);
+    const boundedEnd = Math.min(document.timeline.cycleCount, end + overscan);
+    // Keep a useful semantic window for large documents.  The visible
+    // viewport may contain only ~28 cycles, but allowing that presentation
+    // subset to replace the bounded geometry window would discard offscreen
+    // navigation boundaries on the next render.  DOM remains virtualized;
+    // this minimum applies only to the source-time geometry artifact.
+    if (document.timeline.cycleCount > 4096 && boundedEnd - boundedStart < 2048) {
+      const span = Math.min(2048, document.timeline.cycleCount);
+      const centered = Math.max(0, Math.min(boundedStart, document.timeline.cycleCount - span));
+      return { start: centered, end: centered + span };
+    }
+    return { start: boundedStart, end: boundedEnd };
   }
 
   viewportForLocalRange(localStart: number, localEnd: number, rowStart: number, rowEnd: number, generation: number, pinnedIds: readonly string[] = []): DisplayTimeViewport {
