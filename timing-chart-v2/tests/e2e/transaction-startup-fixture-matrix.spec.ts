@@ -1,13 +1,13 @@
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 import { expect, test } from "@playwright/test";
 
-for (const fixture of [
+for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] as const) for (const fixture of [
   { label: "small", signalCount: 10, cycleCount: 100 },
   { label: "medium", signalCount: 50, cycleCount: 200 },
 ] as const) {
-  test(`Transaction Open reaches first useful paint for ${fixture.label} fixture`, async ({ page }) => {
+  test(`Transaction Open reaches first useful paint for ${fixture.label} fixture at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     test.setTimeout(60_000);
-    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.setViewportSize(viewport);
     await page.goto("/");
     const surface = page.getByTestId("cycle-surface");
     await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
