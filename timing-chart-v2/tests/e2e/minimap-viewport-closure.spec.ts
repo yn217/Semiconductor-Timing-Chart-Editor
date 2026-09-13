@@ -53,6 +53,7 @@ function metricError(metrics: Awaited<ReturnType<typeof readMetrics>>) {
 
 test("MiniMap viewport indicator follows live scroll, resize, pan and remount state", async ({ page }) => {
   await ready(page);
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
   const viewport = page.getByTestId("cycle-viewport");
   const minimap = page.getByTestId("minimap");
   const indicator = page.getByTestId("minimap-viewport");
@@ -130,6 +131,8 @@ test("MiniMap viewport indicator follows live scroll, resize, pan and remount st
   expectIndicatorInside(afterCornerPan);
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Zoom preset").selectOption("100");
+  await expect(page.getByTestId("zoom-status")).toHaveText("100%");
   const beforeZoom = await readMetrics(page);
   await page.getByLabel("Zoom preset").selectOption("150");
   await expect.poll(async () => (await readMetrics(page)).width).toBeLessThan(beforeZoom.width);

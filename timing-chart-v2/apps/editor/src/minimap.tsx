@@ -121,10 +121,11 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
     if (!element) return undefined;
     sync();
     element.addEventListener("scroll", sync, { passive: true });
+    element.addEventListener("timeline-viewport-resize", sync);
     const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(sync);
     observer?.observe(element);
     for (const child of element.children) observer?.observe(child);
-    return () => { element.removeEventListener("scroll", sync); observer?.disconnect(); };
+    return () => { element.removeEventListener("scroll", sync); element.removeEventListener("timeline-viewport-resize", sync); observer?.disconnect(); };
   // The viewport ref is stable across Canonical commits. Re-registering the
   // scroll listener and ResizeObserver whenever an Inspector property changes
   // adds avoidable main-thread work to the commit path; viewport geometry does

@@ -36,6 +36,10 @@ export function applyTimelineZoom(next: number, context: TimelineZoomSurfaceCont
     context.rendererHost.style.width = `${width}px`;
     context.timingSurface.style.setProperty("width", `${width}px`);
     context.onSyncFrozenColumns();
+    // Scroll width changes are not observable through ResizeObserver on the
+    // viewport itself. Notify view-only consumers such as MiniMap after the
+    // zoom-owned width write has been applied.
+    context.viewport.dispatchEvent(new Event("timeline-viewport-resize"));
   };
   // Scale and width writes can invalidate the whole scroll-layout tree. Keep
   // the controller's value synchronous for input/geometry consumers, but
