@@ -101,7 +101,10 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   // retained value is only a first-paint fallback; keeping it over a valid
   // SVG matrix lets ruler/grid pitch drift after layout or zoom changes.
   let finalX = 0;
-  for (const display of presentationCycles(mapping.displayCycleCount)) {
+  const cycleZeroPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: 0, point: "cycle-start" })?.point;
+  const cycleOnePoint = mapping.displayCycleCount > 0 ? geometry.find({ signalId: axisOwnerSignalId, cycle: 1, point: "cycle-start" })?.point : undefined;
+  const pixelsPerCycle = cycleZeroPoint && cycleOnePoint ? (cycleOnePoint.x - cycleZeroPoint.x) * scale : Infinity;
+  for (const display of presentationCycles(mapping.displayCycleCount, pixelsPerCycle)) {
     const point = geometry.find({ signalId: axisOwnerSignalId, cycle: display, point: "cycle-start" })?.point;
     if (!point) continue;
     const tick = element.ownerDocument.createElement("span");
