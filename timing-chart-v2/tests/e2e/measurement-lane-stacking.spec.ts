@@ -10,6 +10,14 @@ test("two overlapping Measurements with no explicit lane auto-stack onto differe
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // The reload-persisted default document now ships with its own pre-
+  // existing showcase Measurement annotation, which would otherwise be
+  // counted alongside the ones this test adds -- start from a genuinely
+  // blank document via New so "N Measurements added" means exactly that.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
+  await page.getByTestId("unsaved-discard").click({ timeout: 2000 }).catch(() => {});
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
@@ -31,6 +39,14 @@ test("a third Measurement overlapping both stacks onto lane 2, not back onto lan
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // The reload-persisted default document now ships with its own pre-
+  // existing showcase Measurement annotation, which would otherwise be
+  // counted alongside the ones this test adds -- start from a genuinely
+  // blank document via New so "N Measurements added" means exactly that.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
+  await page.getByTestId("unsaved-discard").click({ timeout: 2000 }).catch(() => {});
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
