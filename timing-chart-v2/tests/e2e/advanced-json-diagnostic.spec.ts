@@ -8,6 +8,7 @@ test("Advanced JSON reports deterministic line and column for malformed input", 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const bottom = page.getByTestId("bottom-editor");
   await bottom.getByRole("tab", { name: "JSON", exact: true }).click();
+  await bottom.getByTestId("bottom-pin").click();
   const json = page.getByTestId("json-panel");
   await json.getByTestId("json-advanced-toggle").click();
   const editor = json.getByLabel("Advanced JSON");
@@ -108,6 +109,7 @@ test("Advanced JSON preserves a dirty selected-object draft when selection chang
 
   const bottom = page.getByTestId("bottom-editor");
   await bottom.getByRole("tab", { name: "JSON", exact: true }).click();
+  await bottom.getByTestId("bottom-pin").click();
   const json = page.getByTestId("json-panel");
   await json.getByTestId("json-advanced-toggle").click();
   await json.getByLabel("JSON scope").selectOption("selected");
