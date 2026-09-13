@@ -16,6 +16,15 @@ for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height:
   expect(metrics.scrollWidth).toBeGreaterThan(metrics.clientWidth);
   await viewport.evaluate((element) => { element.scrollLeft = Math.min(120, element.scrollWidth - element.clientWidth); element.dispatchEvent(new Event("scroll")); });
   await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  const revision = await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  const dirty = await page.getByTestId("dirty-status").textContent();
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.getByTestId("transaction-lanes")).toBeVisible();
+  expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).toBe(revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(dirty);
 });
 
 test("10k Transaction fixture keeps mounted lane DOM viewport-bounded", async ({ page }) => {
