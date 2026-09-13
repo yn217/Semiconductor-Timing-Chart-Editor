@@ -1,6 +1,22 @@
 import { expect, test } from "@playwright/test";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
+test("standalone Transaction mode exposes horizontal overflow for a long time domain", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const document = generatePerformanceDocument({ signalCount: 40, cycleCount: 1000, profile: "transaction-heavy" });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-long.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "40", { timeout: 60_000 });
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  const viewport = page.getByTestId("cycle-viewport");
+  await expect(page.getByTestId("transaction-lanes")).toBeVisible();
+  const metrics = await viewport.evaluate((element) => ({ scrollWidth: element.scrollWidth, clientWidth: element.clientWidth, scrollLeft: element.scrollLeft }));
+  console.log(`[transaction-overflow] ${JSON.stringify(metrics)}`);
+  expect(metrics.scrollWidth).toBeGreaterThan(metrics.clientWidth);
+  await viewport.evaluate((element) => { element.scrollLeft = Math.min(120, element.scrollWidth - element.clientWidth); element.dispatchEvent(new Event("scroll")); });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+});
+
 test("10k Transaction fixture keeps mounted lane DOM viewport-bounded", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
