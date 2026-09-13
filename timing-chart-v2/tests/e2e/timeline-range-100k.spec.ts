@@ -16,7 +16,7 @@ const scaleDocument = {
   timeline: { start: 0, end: 100_000, cycleCount: 100_000, timeBase: "cycle", edge: "rising", labelAnchors: [] },
   signalGroups: [{ id: "grp_range_scale", name: "Range Scale", rows: [scaleSignal.id] }],
   signals: [scaleSignal],
-  bookmarks: [], timeGroups: [], annotations: [], transactions: [], constraints: [],
+  bookmarks: [], timeGroups: [], annotations: [], annotationGroups: [], transactions: [], constraints: [],
   legend: { show: false, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
   layout: { roleColumnWidth: 62, signalNameWidth: 178, signalNameAlign: "left", rowHeight: 30, signalSpacing: 4, overflow: "ellipsis" },
   checkSettings: {},
@@ -25,6 +25,7 @@ const scaleDocument = {
 test("selects an unsampled 100k-cycle boundary through shared geometry", async ({ page }) => {
   test.setTimeout(120_000);
   await page.goto("/");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "range-scale-100k.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(scaleDocument)) });
   const host = page.getByTestId("cycle-surface");
