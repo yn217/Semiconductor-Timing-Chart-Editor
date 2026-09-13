@@ -126,6 +126,31 @@ test("Advanced JSON preserves a dirty selected-object draft when selection chang
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
+test("Advanced JSON formats and copies a selected-object scope", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const bottom = page.getByTestId("bottom-editor");
+  await bottom.getByRole("tab", { name: "JSON", exact: true }).click();
+  const json = page.getByTestId("json-panel");
+  await json.getByTestId("json-advanced-toggle").click();
+  await json.getByLabel("JSON scope").selectOption("selected");
+  const editor = json.getByLabel("Advanced JSON");
+  await editor.fill(JSON.stringify(JSON.parse(await editor.inputValue())));
+  await json.getByRole("button", { name: "Format", exact: true }).click();
+  await expect(editor).toHaveValue(/\n  "id": "sig_cycle_request"/);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async () => undefined },
+    });
+  });
+  await json.getByRole("button", { name: "Copy", exact: true }).click();
+  await expect(json).toContainText("Copied");
+});
+
 test("Advanced JSON reports clipboard rejection without mutating the document", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
