@@ -387,6 +387,25 @@ describe("pure Semantic Command planning", () => {
     expect(plan.changeSet.rowOrder).toBeUndefined();
   });
 
+  it("allocates value-change identity independently of mutable Start", () => {
+    const source = canonicalFixture();
+    const created = planCommand(source, { id: commandId("cmd_create_value_identity"), type: "signal.updateValue", signalId: "sig_data" as SignalId, start: 2, value: "1F" });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const createdValues = (created.document.signals.find((signal) => signal.id === "sig_data") as ValueSignal).values;
+    const createdId = createdValues.find((change) => change.start === 2)?.id;
+    expect(createdId).toMatch(/^value_sig_data_/);
+    const moved = planCommand(created.document, { id: commandId("cmd_move_value_identity"), type: "signal.replaceValue", signalId: "sig_data" as SignalId, fromStart: 2, start: 5, value: "1F" });
+    expect(moved.ok).toBe(true);
+    if (!moved.ok) return;
+    const recreated = planCommand(moved.document, { id: commandId("cmd_recreate_value_identity"), type: "signal.updateValue", signalId: "sig_data" as SignalId, start: 2, value: "0F" });
+    expect(recreated.ok).toBe(true);
+    if (!recreated.ok) return;
+    const finalValues = (recreated.document.signals.find((signal) => signal.id === "sig_data") as ValueSignal).values;
+    expect(finalValues.find((change) => change.start === 5)?.id).toBe(createdId);
+    expect(finalValues.find((change) => change.start === 2)?.id).not.toBe(createdId);
+  });
+
   it("keeps reorder and visibility out of WaveDrom and Local Geometry domains", () => {
     const source = canonicalFixture();
     const reorder = planCommand(source, { id: commandId("cmd_move"), type: "signal.move", signalId: "sig_data" as SignalId, targetGroupId: "grp_main" as GroupId, index: 0 });
@@ -416,7 +435,7 @@ describe("pure Semantic Command planning", () => {
     }
     const replaced = planCommand(source, { id: commandId("cmd_replace_value"), type: "signal.replaceValue", signalId: "sig_data" as SignalId, fromStart: 4, start: 3, value: "0F", comment: "edited" });
     expect(replaced.ok).toBe(true);
-    if (replaced.ok) expect((replaced.document.signals[1] as Extract<Signal, { values: unknown }>).values[1]).toEqual({ start: 3, value: "0F", comment: "edited" });
+    if (replaced.ok) expect((replaced.document.signals[1] as Extract<Signal, { values: unknown }>).values[1]).toMatchObject({ start: 3, value: "0F", comment: "edited", id: expect.any(String) });
     const formatted = planCommand(source, { id: commandId("cmd_format"), type: "signal.updateProperties", signalId: "sig_data" as SignalId, name: "DATA_OUT", role: "output", displayFormat: "binary" });
     expect(formatted.ok).toBe(true);
     if (formatted.ok) {
