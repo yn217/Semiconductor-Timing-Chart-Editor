@@ -35,4 +35,8 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
   expect(samples.every((sample) => sample.idle && sample.projectionCalls > 0)).toBe(true);
   const requiredPhases = ["open-command-start", "canonical-replaced", "renderer-updated", "row-shell-painted", "ruler-painted", "reference-geometry-ready", "first-correct-paint"];
   expect(samples.every((sample) => requiredPhases.every((phase) => Number.isFinite(sample.phaseMarks[phase])))).toBe(true);
+  expect(samples.every((sample) => {
+    const durations = requiredPhases.map((phase) => sample.phaseDurationsMs[phase]!);
+    return durations.every((duration) => Number.isFinite(duration) && duration >= 0);
+  })).toBe(true);
 });
