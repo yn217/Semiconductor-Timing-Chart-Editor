@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import type { Annotation, CanonicalDocument, DocumentProblem, Signal, SignalGroup, Transaction } from "@timing-chart-v2/schema";
-import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
+import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentInputBytes, validateDocumentInputComplexity, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
 import { replaceSelectedJsonObject } from "./json-selection.js";
 import { selectedJsonProblem } from "./json-problems.js";
 
@@ -34,7 +34,16 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
   }, [sourceText, draftChanged]);
   const cancel = () => { setDraft(sourceText); onDiagnostic(undefined); setStatus("Draft cancelled"); };
   const parseDraft = (): unknown => {
-    try { const value = JSON.parse(draft); onDiagnostic(undefined); return value; } catch (error) {
+    try {
+      const value = JSON.parse(draft);
+      const budgetProblem = [...validateDocumentInputBytes(new TextEncoder().encode(draft).byteLength), ...validateDocumentInputComplexity(value)][0];
+      if (budgetProblem) {
+        onDiagnostic({ ...budgetProblem, severity: "error", operation: "document.json.parse", operationLabel: "Parse Advanced JSON", source: "validation", stage: "parse", recommendation: "Reduce the JSON input size or nesting/complexity, then retry.", detail: "advanced-json:resource-budget" });
+        setStatus(`Invalid: ${budgetProblem.code} · ${budgetProblem.path}`);
+        return undefined;
+      }
+      onDiagnostic(undefined); return value;
+    } catch (error) {
       const diagnostic = scanJsonSyntax(draft);
       const detail = error instanceof Error ? error.message : "Invalid JSON.";
       const parserDetail = diagnostic ? `${detail}; excerpt: ${diagnostic.excerpt}; caret: ${diagnostic.caret}` : detail;
