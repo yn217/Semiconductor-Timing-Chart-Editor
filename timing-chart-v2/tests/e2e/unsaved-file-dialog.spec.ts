@@ -14,6 +14,7 @@ async function makeDirty(page: import("@playwright/test").Page) {
 
 test("dirty New uses Cancel and Discard without losing the current document", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
   await makeDirty(page);
   const host = page.getByTestId("cycle-surface");
   const beforeRevision = await host.getAttribute("data-canonical-revision");
@@ -47,6 +48,7 @@ test("dirty New uses Cancel and Discard without losing the current document", as
 // not just close the dialog and leave focus stranded.
 test("Escape on the unsaved-changes dialog behaves exactly like Cancel", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
   await makeDirty(page);
   const host = page.getByTestId("cycle-surface");
   const beforeRevision = await host.getAttribute("data-canonical-revision");
