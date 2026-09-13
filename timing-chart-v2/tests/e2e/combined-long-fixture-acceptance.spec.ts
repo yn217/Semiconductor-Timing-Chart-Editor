@@ -14,9 +14,9 @@ async function openLong(page: Page) {
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(100);
 }
 
-test("#573 performance fixture enables horizontal and independent vertical scroll", async ({ page }) => {
-  test.setTimeout(60000);
-  await page.setViewportSize({ width: 1672, height: 941 });
+for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) test(`#573 performance fixture enables horizontal and independent vertical scroll at ${viewportSize.width}x${viewportSize.height}`, async ({ page }) => {
+  test.setTimeout(90000);
+  await page.setViewportSize(viewportSize);
   await openLong(page);
   const viewport = page.getByTestId("cycle-viewport");
   const tx = page.locator(".split-transaction-pane");
@@ -27,6 +27,8 @@ test("#573 performance fixture enables horizontal and independent vertical scrol
   const horizontalTarget = Math.min(40, size.scrollWidth - size.clientWidth);
   await viewport.evaluate((el, target) => { el.scrollLeft = target; el.dispatchEvent(new Event("scroll", { bubbles: true })); }, horizontalTarget);
   await expect.poll(() => viewport.evaluate((el) => el.scrollLeft)).toBe(horizontalTarget);
+  await viewport.evaluate((el) => { el.scrollLeft = 0; el.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await expect.poll(() => viewport.evaluate((el) => el.scrollLeft)).toBe(0);
   const txMax = await tx.evaluate((el) => el.scrollHeight - el.clientHeight);
   const txTarget = Math.min(60, txMax);
   expect(txTarget).toBeGreaterThan(0);
