@@ -12,13 +12,18 @@ test("reload showcase exposes canonical annotations, bookmarks, and cross-mode d
   await page.goto("/");
   await expect(page.getByTestId("transaction-left-tree")).toContainText("Read_0");
   await expect(page.locator("[data-transaction-row-id]")).toHaveCount(6);
-  await expect.poll(async () => new Set(await page.locator("[data-bookmark-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-bookmark-id")))).size).toBe(5);
+  // Overlay nodes are viewport-virtualized. Assert canonical showcase
+  // inventory through the non-virtualized Bottom lists, not mounted overlays.
+  await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
+  await expect(page.locator("[data-testid^='bookmark-row-']")).toHaveCount(5);
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.getByRole("tab", { name: "Annotation", exact: true }).click();
+  await expect(page.locator("[data-annotation-row]")).toHaveCount(16);
   const surface = page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']");
-  await expect(surface.locator("[data-role='annotation-owner']")).toHaveCount(16);
-  for (const type of ["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency", "timingRegion", "ghostTrace", "rectangle", "ellipse", "connector", "textbox"]) {
-    await expect(surface.locator(`[data-annotation-type='${type}']`)).toHaveCount(1);
-  }
+  await expect(page.getByTestId("wavedrom-status")).toHaveText("WaveDrom: Ready");
+  await expect(surface.locator("[data-role='annotation-owner']").first()).toBeVisible();
+  const mountedAnnotationIds = await surface.locator("[data-role='annotation-owner']").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-id")).filter((id): id is string => id !== null));
+  expect(new Set(mountedAnnotationIds).size).toBe(mountedAnnotationIds.length);
   await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.locator(".split-transaction-pane [data-transaction-id='demo_txn_read']")).toBeVisible();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
