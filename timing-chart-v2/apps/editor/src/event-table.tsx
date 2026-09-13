@@ -44,7 +44,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   // used by the per-row inline Draft/Apply/Cancel and by the toolbar's
   // Duplicate/Delete) -- checking rows only ever feeds the table footer's
   // bulk actions below.
-  const [checkedStarts, setCheckedStarts] = useState<ReadonlySet<number>>(new Set());
+  const [checkedKeys, setCheckedKeys] = useState<ReadonlySet<string>>(new Set());
   const [eventScrollTop, setEventScrollTop] = useState(0);
   const eventViewportRef = useRef<HTMLDivElement>(null);
   const [importStatus, setImportStatus] = useState("Import signal events");
@@ -129,22 +129,22 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   // Bulk footer actions (Bottom Panel Visual Reference pass): additive to
   // the existing per-row Draft/Apply/Cancel + toolbar Duplicate/Delete --
   // checking rows only ever feeds these, never the per-row editing above.
-  const checkedCount = checkedStarts.size;
-  const toggleChecked = (rowStart: number) => setCheckedStarts((current) => { const next = new Set(current); if (next.has(rowStart)) next.delete(rowStart); else next.add(rowStart); return next; });
+  const checkedCount = checkedKeys.size;
+  const toggleChecked = (change: ValueSignal["values"][number]) => setCheckedKeys((current) => { const key = transitionIdentity(change); const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   const deleteSelected = () => {
     if (checkedCount === 0 || checkedCount >= signal.values.length) return;
-    emitValue(signal.values.filter((change) => !checkedStarts.has(change.start)));
-    setCheckedStarts(new Set());
+    emitValue(signal.values.filter((change) => !checkedKeys.has(transitionIdentity(change))));
+    setCheckedKeys(new Set());
   };
   const moveBy = (delta: -1 | 1) => {
     const ordered = [...indexed.ordered];
-    const selectedIndexes = ordered.map((change, index) => checkedStarts.has(change.start) ? index : -1).filter((index) => index >= 0);
+    const selectedIndexes = ordered.map((change, index) => checkedKeys.has(transitionIdentity(change)) ? index : -1).filter((index) => index >= 0);
     if (selectedIndexes.length === 0) return;
     const first = selectedIndexes[0]!;
     const last = selectedIndexes[selectedIndexes.length - 1]!;
     if (selectedIndexes.length !== last - first + 1) return;
     const targetIndex = delta < 0 ? first - 1 : last + 1;
-    if (targetIndex < 0 || targetIndex >= ordered.length || checkedStarts.has(ordered[targetIndex]!.start)) return;
+    if (targetIndex < 0 || targetIndex >= ordered.length || checkedKeys.has(transitionIdentity(ordered[targetIndex]!))) return;
     const block = ordered.splice(first, selectedIndexes.length);
     ordered.splice(delta < 0 ? first - 1 : first + 1, 0, ...block);
     const durationValues = indexed.ordered;
@@ -152,25 +152,26 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     let nextStart = durationValues[0]?.start ?? 0;
     const reordered = ordered.map((change) => { const next = { ...change, start: nextStart }; nextStart += durationByStart.get(change.start) ?? 0; return next; });
     const result = commands.replaceValues(signal.id, reordered);
-    if (result.ok) { const nextFirst = delta < 0 ? first - 1 : first + 1; setCheckedStarts(new Set(reordered.slice(nextFirst, nextFirst + block.length).map((change) => change.start))); }
+    if (result.ok) { const nextFirst = delta < 0 ? first - 1 : first + 1; setCheckedKeys(new Set(reordered.slice(nextFirst, nextFirst + block.length).map(transitionIdentity))); }
   };
   const orderedStarts = indexed.ordered;
-  const selectedIndexes = orderedStarts.map((change, index) => checkedStarts.has(change.start) ? index : -1).filter((index) => index >= 0);
+  const selectedIndexes = orderedStarts.map((change, index) => checkedKeys.has(transitionIdentity(change)) ? index : -1).filter((index) => index >= 0);
   const isContiguous = selectedIndexes.length > 0 && selectedIndexes.length === selectedIndexes.at(-1)! - selectedIndexes[0]! + 1;
   const canMoveUp = isContiguous && selectedIndexes[0]! > 0;
   const canMoveDown = isContiguous && selectedIndexes.at(-1)! < orderedStarts.length - 1;
-  const [dragStarts, setDragStarts] = useState<ReadonlySet<number>>();
-  const dragStartsRef = useRef<ReadonlySet<number> | undefined>(undefined);
-  const setActiveDragStarts = (starts: ReadonlySet<number> | undefined) => { dragStartsRef.current = starts; setDragStarts(starts); };
+  const [dragStarts, setDragStarts] = useState<ReadonlySet<string>>();
+  const dragStartsRef = useRef<ReadonlySet<string> | undefined>(undefined);
+  const setActiveDragStarts = (starts: ReadonlySet<string> | undefined) => { dragStartsRef.current = starts; setDragStarts(starts); };
   useEffect(() => {
     if (dragStarts === undefined) return undefined;
     return registerActiveGestureCancel(() => setActiveDragStarts(undefined));
   }, [dragStarts]);
   const reorderDrop = (targetStart: number) => {
     const activeDragStarts = dragStartsRef.current;
-    if (activeDragStarts === undefined || activeDragStarts.has(targetStart)) return;
+    const target = indexed.ordered.find((change) => change.start === targetStart);
+    if (activeDragStarts === undefined || target === undefined || activeDragStarts.has(transitionIdentity(target))) return;
     const ordered = [...indexed.ordered];
-    const selectedIndexes = ordered.map((change, index) => activeDragStarts.has(change.start) ? index : -1).filter((index) => index >= 0);
+    const selectedIndexes = ordered.map((change, index) => activeDragStarts.has(transitionIdentity(change)) ? index : -1).filter((index) => index >= 0);
     const from = selectedIndexes[0] ?? -1;
     const last = selectedIndexes.at(-1) ?? -1;
     const to = ordered.findIndex((change) => change.start === targetStart);
@@ -182,7 +183,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     let nextStart = durationValues[0]?.start ?? 0;
     const reordered = ordered.map((change) => { const next = { ...change, start: nextStart }; nextStart += durationByStart.get(change.start) ?? 0; return next; });
     const result = commands.replaceValues(signal.id, reordered);
-    if (result.ok) { const nextFirst = from < to ? to + 1 - selectedIndexes.length : to; setCheckedStarts(new Set(reordered.slice(nextFirst, nextFirst + block.length).map((change) => change.start))); }
+    if (result.ok) { const nextFirst = from < to ? to + 1 - selectedIndexes.length : to; setCheckedKeys(new Set(reordered.slice(nextFirst, nextFirst + block.length).map(transitionIdentity))); }
     setActiveDragStarts(undefined);
   };
   // Visual Quality Closure pass (#402/#426), Section 4: the checkbox column
@@ -192,10 +193,10 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   // "N selected" count next to the section title make that relationship
   // explicit without relying on the reader to infer it from the footer
   // alone.
-  const allChecked = signal.values.length > 0 && checkedCount === signal.values.length;
+  const allChecked = signal.values.length > 0 && signal.values.every((change) => checkedKeys.has(transitionIdentity(change)));
   const selectAllRef = useRef<HTMLInputElement>(null);
   useEffect(() => { if (selectAllRef.current) selectAllRef.current.indeterminate = checkedCount > 0 && !allChecked; }, [checkedCount, allChecked]);
-  const toggleAll = () => setCheckedStarts(allChecked ? new Set() : new Set(signal.values.map((change) => change.start)));
+  const toggleAll = () => setCheckedKeys(allChecked ? new Set() : new Set(signal.values.map(transitionIdentity)));
   const eventFirst = Math.max(0, Math.floor(eventScrollTop / EVENT_ROW_HEIGHT) - EVENT_OVERSCAN);
   const eventLast = Math.min(indexed.ordered.length, Math.ceil((eventScrollTop + (eventViewportRef.current?.clientHeight ?? 300)) / EVENT_ROW_HEIGHT) + EVENT_OVERSCAN);
   const renderedEvents = indexed.ordered.slice(eventFirst, eventLast);
@@ -284,7 +285,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
             not a decorative header cell. */}
         <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span>End</span><span>Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
         <div aria-hidden="true" style={{ height: eventFirst * EVENT_ROW_HEIGHT }} />
-        {renderedEvents.map((change, offset) => { const index = eventFirst + offset; return <EventRow key={transitionIdentity(change)} index={index + 1} signal={signal} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={transitionIdentity(change) === selectedKey} checked={checkedStarts.has(change.start)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change.start)} onSelect={selectTransition} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedStarts.has(change.start) && checkedCount > 1 ? checkedStarts : [change.start]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
+        {renderedEvents.map((change, offset) => { const index = eventFirst + offset; const key = transitionIdentity(change); return <EventRow key={key} index={index + 1} signal={signal} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={key === selectedKey} checked={checkedKeys.has(key)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change)} onSelect={selectTransition} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedKeys.has(key) && checkedCount > 1 ? checkedKeys : [key]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
         <div aria-hidden="true" style={{ height: Math.max(0, indexed.ordered.length - eventLast) * EVENT_ROW_HEIGHT }} />
       </div>
     </div>
