@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-type StartupSample = Readonly<{ readyMs: number; projectionCalls: number; projectionDurationMs: number; fullReplaceCalls: number; viewportOnlyCalls: number; changeCalls: number; idle: boolean }>;
+type StartupSample = Readonly<{ readyMs: number; projectionCalls: number; projectionDurationMs: number; fullReplaceCalls: number; viewportOnlyCalls: number; changeCalls: number; idle: boolean; phaseMarks: Readonly<Record<string, number>> }>;
 
 function percentile(values: readonly number[], fraction: number): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -21,7 +21,8 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
       const counters = JSON.parse(surface.getAttribute("data-session-counters") ?? "{}") as { projectionCalls?: number; projectionDurationMs?: number; fullReplaceCalls?: number; viewportOnlyCalls?: number; changeCalls?: number };
       const lane = surface.ownerDocument.querySelector<HTMLElement>("[data-testid='transaction-lanes']");
       const readyAt = Number(lane?.dataset.transactionFirstReadyAt ?? NaN);
-      return { readyMs: readyAt - navigationStart, projectionCalls: counters.projectionCalls ?? 0, projectionDurationMs: counters.projectionDurationMs ?? 0, fullReplaceCalls: counters.fullReplaceCalls ?? 0, viewportOnlyCalls: counters.viewportOnlyCalls ?? 0, changeCalls: counters.changeCalls ?? 0, idle: surface.getAttribute("data-editor-idle") === "true" };
+      const phaseMarks = JSON.parse(surface.getAttribute("data-open-phase-marks") ?? "{}") as Record<string, number>;
+      return { readyMs: readyAt - navigationStart, projectionCalls: counters.projectionCalls ?? 0, projectionDurationMs: counters.projectionDurationMs ?? 0, fullReplaceCalls: counters.fullReplaceCalls ?? 0, viewportOnlyCalls: counters.viewportOnlyCalls ?? 0, changeCalls: counters.changeCalls ?? 0, idle: surface.getAttribute("data-editor-idle") === "true", phaseMarks };
     }, navigationStartedAt);
     expect(sample.readyMs).toBeGreaterThanOrEqual(0);
     expect(sample.projectionCalls).toBeGreaterThan(0);
@@ -30,4 +31,6 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
   const ready = samples.map((sample) => sample.readyMs);
   console.log(JSON.stringify({ samples, medianReadyMs: percentile(ready, 0.5), p95ReadyMs: percentile(ready, 0.95) }));
   expect(samples.every((sample) => sample.idle && sample.projectionCalls > 0)).toBe(true);
+  const requiredPhases = ["open-command-start", "canonical-replaced", "renderer-updated", "row-shell-painted", "ruler-painted", "reference-geometry-ready", "first-correct-paint"];
+  expect(samples.every((sample) => requiredPhases.every((phase) => Number.isFinite(sample.phaseMarks[phase])))).toBe(true);
 });

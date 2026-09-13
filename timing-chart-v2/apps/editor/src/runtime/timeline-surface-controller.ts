@@ -163,6 +163,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     const openPhaseTracker = createOpenPhaseTracker(rendererHost);
     const markOpenPhase = openPhaseTracker.mark;
     const beginOpenMeasurement = openPhaseTracker.begin;
+    // Direct reload/startup has no File Open command to begin the phase
+    // tracker. Start the same measurement contract for the initial mount so
+    // startup latency is observable without changing the render path.
+    beginOpenMeasurement();
     let projection!: RenderProjection;
     let publishState: () => void = () => undefined;
     const timelineGeometry = new TimelineGeometryOwner({
@@ -219,6 +223,9 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     });
     let window: VirtualizationWindow = initialProjection.window;
     projection = initialProjection.projection;
+    markOpenPhase("canonical-replaced");
+    markOpenPhase("renderer-updated");
+    requestAnimationFrame(() => { if (active) markOpenPhase("row-shell-painted"); });
     // The Cycle surface is mounted and has a valid initial projection. Keep
     // this readiness contract distinct from editorIdle, which waits for the
     // asynchronous waveform batch and is intentionally later.
