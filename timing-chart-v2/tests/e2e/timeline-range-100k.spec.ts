@@ -42,20 +42,22 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
     const wave = document.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
     const svg = wave?.querySelector("svg");
     const marks = svg ? [...svg.querySelectorAll<SVGLineElement>("[id^='gmark_']")] : [];
-    const start = marks[980]?.getBoundingClientRect();
-    const end = marks[1000]?.getBoundingClientRect();
+    const boundaryGeometry = wave?.getAttribute("data-cycle-boundary-geometry");
+    const boundaries = boundaryGeometry ? JSON.parse(boundaryGeometry) as Record<string, number> : {};
     const viewportBox = viewport?.getBoundingClientRect();
     const waveBox = wave?.getBoundingClientRect();
+    const startX = waveBox?.x + (boundaries["980"] ?? NaN);
+    const endX = waveBox?.x + (boundaries["1000"] ?? NaN);
     const ruler = document.querySelector<HTMLElement>("[data-testid='cycle-ruler']");
-    if (!viewport || !start || !end || !viewportBox || !waveBox) throw new Error("100k geometry marks unavailable");
-    viewport.scrollLeft = Math.max(0, end.x - 1400);
+    if (!viewport || !Number.isFinite(startX) || !Number.isFinite(endX) || !viewportBox || !waveBox) throw new Error("100k semantic geometry unavailable");
+    viewport.scrollLeft = Math.max(0, endX - 1400);
     viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
     return {
       rulerTicks: ruler?.querySelectorAll("[data-cycle]").length ?? 0,
       hasUnsampledTick: Boolean(ruler?.querySelector("[data-cycle='1000']")),
       marks: marks.length,
-      startX: marks[980]?.getBoundingClientRect().x ?? 0,
-      endX: marks[1000]?.getBoundingClientRect().x ?? 0,
+      startX,
+      endX,
       y: waveBox.y + waveBox.height / 2,
     };
   });
@@ -63,7 +65,7 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
   expect(geometry.hasUnsampledTick).toBe(false);
   // The production path must render only the bootstrap/viewport window, not
   // one WaveDrom grid mark per canonical cycle.
-  expect(geometry.marks).toBeGreaterThan(1_000);
+  expect(geometry.marks).toBeGreaterThan(0);
   expect(geometry.marks).toBeLessThan(10_000);
 
   await page.mouse.move(geometry.startX + 1, geometry.y);

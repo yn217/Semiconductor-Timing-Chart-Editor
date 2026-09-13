@@ -79,6 +79,12 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
           context.geometryRegistry.maps.set(item.request.signalId, geometry);
           context.geometryRegistry.svgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
+          const boundaryGeometry = geometry.cycleBoundaryEntries?.();
+          if (boundaryGeometry && boundaryGeometry.length > 0) {
+            item.request.owner.dataset.cycleBoundaryGeometry = JSON.stringify(Object.fromEntries(boundaryGeometry.map((entry) => [entry.cycle, entry.position.x])));
+          } else {
+            delete item.request.owner.dataset.cycleBoundaryGeometry;
+          }
           if (item.request.signalId === document.timeline.referenceClock) { context.markOpenPhase("reference-geometry-ready"); referenceGeometryReady = true; }
           context.markOpenPhase("first-visible-wave-painted");
           context.invalidateSnapIndex();
