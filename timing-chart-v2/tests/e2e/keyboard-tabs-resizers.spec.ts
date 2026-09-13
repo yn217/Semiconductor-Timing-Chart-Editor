@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("Bottom tabs support keyboard roving focus and correct tabpanel semantics", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   const tablist = page.getByRole("tablist", { name: "Bottom context panels" });
   const before = await host.getAttribute("data-canonical-revision");
@@ -24,6 +25,7 @@ test("Bottom tabs support keyboard roving focus and correct tabpanel semantics",
 test("Focusable separators resize by keyboard within bounds without canonical mutation", async ({ page }) => {
   test.setTimeout(60000);
   await page.goto("/");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
