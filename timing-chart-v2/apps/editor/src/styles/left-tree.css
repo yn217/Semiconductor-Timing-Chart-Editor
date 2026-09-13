@@ -54,7 +54,7 @@
 
 .surface-host [data-role="left-tree-rows"], .surface-host [data-role="frozen-label-rows"], .surface-host [data-role="timing-semantic-rows"], .surface-host [data-role="stable-waveform-surface"], .surface-host [data-role="annotation-overlay-surface"], .surface-host [data-role="interactive-overlay-surface"] { position: relative !important; top: auto !important; left: auto !important; min-height: 100%; }
 
-.surface-host [data-role="left-tree-rows"] { grid-column: 1; grid-row: 1; position: sticky !important; left: 0 !important; z-index: 14; background: #f8fafc; border-right: 1px solid #cbd4df; }
+.surface-host [data-role="left-tree-rows"] { grid-column: 1; grid-row: 1; position: sticky !important; left: 0 !important; z-index: 14; overflow: hidden; background: #f8fafc; border-right: 1px solid #cbd4df; }
 
 .surface-host [data-role="left-group-header"] { z-index: 16; justify-content: space-between; padding: 0 8px 0 10px; }
 
