@@ -32,6 +32,8 @@ export interface WaveJsonSignal {
     readonly initial: 0 | 1;
   }>;
   readonly sourceWindow?: Readonly<{ readonly start: number; readonly end: number }>;
+  /** Display-domain interval actually handed to WaveDrom. */
+  readonly displayWindow?: Readonly<{ readonly start: number; readonly end: number }>;
 }
 
 export interface RenderedWave {

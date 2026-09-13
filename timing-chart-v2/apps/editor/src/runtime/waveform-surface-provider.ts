@@ -5,6 +5,7 @@ import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { toWaveJsonWindow, type RenderedWave, type WaveDromAdapter, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 import type { DisplayTimeMappingCache } from "@timing-chart-v2/projection";
 import type { GeometryRegistry } from "./geometry-registry.js";
+import { displayBoundaryForSource } from "./display-boundary.js";
 
 function nextBrowserFrame(): Promise<void> {
   return new Promise((resolve) => {
@@ -54,9 +55,12 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           : (remappedValues = context.mappingCache.remapValueChanges(signal.values, mapping), { ...signal, values: remappedValues });
         const semanticValues = remappedValues !== undefined && signal.type !== "clock" && signal.type !== "commentRow" && valueSignalWaveDomain(signal.type) === "data" ? remappedValues.map((change: { readonly value: string | number }) => String(change.value)) : undefined;
         const source = { signal: displaySignal, cycleCount: mapping.displayCycleCount };
-        const waveJson = request.sourceWindow === undefined
+        const sourceWindow = request.sourceWindow;
+        const displayStart = sourceWindow === undefined ? undefined : displayBoundaryForSource(mapping, sourceWindow.start, document.timeline.cycleCount);
+        const displayEnd = sourceWindow === undefined ? undefined : displayBoundaryForSource(mapping, sourceWindow.end, document.timeline.cycleCount);
+        const waveJson = sourceWindow === undefined || displayStart === undefined || displayEnd === undefined || displayEnd <= displayStart
           ? context.adapter.toWaveJson(source)
-          : toWaveJsonWindow(source, request.sourceWindow.start, request.sourceWindow.end);
+          : toWaveJsonWindow(source, displayStart, displayEnd, sourceWindow);
         return { request, waveJson, semanticValues, error: undefined };
       });
       const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean }> = [];

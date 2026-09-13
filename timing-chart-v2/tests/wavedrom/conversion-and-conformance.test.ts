@@ -114,7 +114,7 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
 
   it("preserves the left-edge value when converting a bounded source window", () => {
     const signal = logicSignal([{ start: 0, value: 0 }, { start: 50, value: 1 }, { start: 75, value: 0 }]);
-    expect(toWaveJsonWindow({ signal, cycleCount: 100 }, 60, 80)).toEqual({ wave: "1..............0....", sourceWindow: { start: 60, end: 80 } });
+    expect(toWaveJsonWindow({ signal, cycleCount: 100 }, 60, 80)).toEqual({ wave: "1..............0....", sourceWindow: { start: 60, end: 80 }, displayWindow: { start: 60, end: 80 } });
   });
 
   it("reconstructs a bounded clock window from canonical phase", () => {
