@@ -234,7 +234,7 @@ export function useEditorSecondarySurfaces(
   };
   const signalEditor = (
     <SignalEditor
-      key={`${input.documentEpoch}:${bottom.signal?.id ?? "none"}:${dialog.bottomResetToken}`}
+      key={`${input.documentEpoch}:${input.revision}:${bottom.signal?.id ?? "none"}:${dialog.bottomResetToken}`}
       signal={bottom.signal}
       cycleCount={input.document.timeline.cycleCount}
       bookmarks={input.document.bookmarks}
