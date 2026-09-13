@@ -12,6 +12,7 @@ for (const count of [1_000, 5_000, 20_000]) test(`${count} Annotation rows stay 
   const epoch = Number((JSON.parse(await host.getAttribute("data-session-counters") ?? "{}")).projectionDocumentEpoch ?? 0);
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "annotation-scale.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect.poll(async () => Number((JSON.parse(await host.getAttribute("data-session-counters") ?? "{}")).projectionDocumentEpoch ?? 0), { timeout: 120_000 }).toBeGreaterThan(epoch);
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator("[data-bottom-tab='Annotation']").click();
   const list = page.getByTestId("annotation-list");
   await expect(list).toBeVisible();
