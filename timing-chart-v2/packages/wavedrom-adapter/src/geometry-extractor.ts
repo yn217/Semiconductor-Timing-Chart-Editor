@@ -265,14 +265,15 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
     const use = uses[visibleIndex];
     if (!use) continue;
     const originalHalfBrick = visibleIndex + clippedHalfBricks;
-    const cycle = Math.floor(originalHalfBrick / 2) + sourceStart;
-    if (cycle < 0 || cycle >= boundaries.length - 1) continue;
+    const localCycle = Math.floor(originalHalfBrick / 2);
+    if (localCycle < 0 || localCycle >= boundaries.length - 1) continue;
+    const sourceCycle = localCycle + sourceStart;
     const href = hrefOf(use);
     const translated = useTranslation(use);
     const origin = transformPoint(drawMatrix, translated);
     if (!waveJson.clock?.expanded) {
-      if (href === "pclk" || href === "Pclk") add(cycle, "rising-edge", point(origin.x, rowY));
-      if (href === "nclk" || href === "Nclk") add(cycle, "falling-edge", point(origin.x, rowY));
+      if (href === "pclk" || href === "Pclk") add(sourceCycle, "rising-edge", point(origin.x, rowY));
+      if (href === "nclk" || href === "Nclk") add(sourceCycle, "falling-edge", point(origin.x, rowY));
     }
   }
 
@@ -283,7 +284,8 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
       const [startLevel, endLevel] = clockLevel(token, previousLevel);
       const boundary = boundaries[slot];
       if (!boundary) continue;
-      if (startLevel !== previousLevel) add(slot, startLevel === 1 ? "rising-edge" : "falling-edge", boundary);
+      const sourceCycle = slot + sourceStart;
+      if (startLevel !== previousLevel) add(sourceCycle, startLevel === 1 ? "rising-edge" : "falling-edge", boundary);
       if (startLevel !== endLevel) {
         const slotUses = usesByClockSlot?.get(slot) ?? [];
         const targetHref = startLevel === 1 ? "pclk" : "nclk";
@@ -291,14 +293,14 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
         if (edgeUse) {
           const translated = useTranslation(edgeUse);
           const edgePoint = transformPoint(drawMatrix, translated);
-          add(slot, startLevel === 1 ? "rising-edge" : "falling-edge", point(edgePoint.x, rowY));
+          add(sourceCycle, startLevel === 1 ? "rising-edge" : "falling-edge", point(edgePoint.x, rowY));
         }
         const endHref = endLevel === 1 ? "pclk" : "nclk";
         const endUse = slotUses.find((use) => hrefOf(use) === endHref && use !== edgeUse);
         if (endUse) {
           const translated = useTranslation(endUse);
           const edgePoint = transformPoint(drawMatrix, translated);
-          add(slot, endLevel === 1 ? "rising-edge" : "falling-edge", point(edgePoint.x, rowY));
+          add(sourceCycle, endLevel === 1 ? "rising-edge" : "falling-edge", point(edgePoint.x, rowY));
         }
       }
       previousLevel = endLevel;
@@ -310,10 +312,11 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
   for (let slot = 0; slot < waveJson.wave.length; slot += 1) {
     const token = waveJson.wave[slot];
     if (!token || token === "." || token === "|") continue;
-    const cycle = slot * period;
-    const boundary = boundaries[cycle];
+    const localCycle = slot * period;
+    const boundary = boundaries[localCycle];
     if (!boundary) continue;
-    const originalHalfBrick = cycle * 2;
+    const sourceCycle = localCycle + sourceStart;
+    const originalHalfBrick = localCycle * 2;
     const visibleIndex = originalHalfBrick - clippedHalfBricks;
     const use = uses[visibleIndex];
     let valueStart = boundary;
@@ -326,26 +329,26 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
         const start = transformPoint(drawMatrix, point(translated.x + interval.start, translated.y));
         const end = transformPoint(drawMatrix, point(translated.x + interval.end, translated.y));
         const center = point((start.x + end.x) / 2, rowY);
-        add(cycle, "transition-start", point(start.x, rowY));
-        add(cycle, "transition-center", center);
-        add(cycle, "transition-end", point(end.x, rowY));
+        add(sourceCycle, "transition-start", point(start.x, rowY));
+        add(sourceCycle, "transition-center", center);
+        add(sourceCycle, "transition-end", point(end.x, rowY));
         for (const threshold of [0.3, 0.7]) {
           const thresholdPoint = interpolateSegment(segment, threshold);
           const transformed = transformPoint(drawMatrix, point(translated.x + thresholdPoint.x, translated.y + thresholdPoint.y));
-          add(cycle, "transition-center", transformed, threshold);
+          add(sourceCycle, "transition-center", transformed, threshold);
         }
-        transitionResolvers.push({ cycle, point: "transition-center", resolve: (fraction) => {
+        transitionResolvers.push({ cycle: sourceCycle, point: "transition-center", resolve: (fraction) => {
           const thresholdPoint = interpolateSegment(segment, fraction);
           return transformPoint(drawMatrix, point(translated.x + thresholdPoint.x, translated.y + thresholdPoint.y));
         } });
         valueStart = point(end.x, rowY);
         if (!waveJson.clock?.expanded) {
-          if (previousToken === "0" && token === "1") add(cycle, "rising-edge", center);
-          if (previousToken === "1" && token === "0") add(cycle, "falling-edge", center);
+          if (previousToken === "0" && token === "1") add(sourceCycle, "rising-edge", center);
+          if (previousToken === "1" && token === "0") add(sourceCycle, "falling-edge", center);
         }
       }
     }
-    add(cycle, "value-start", valueStart);
+    add(sourceCycle, "value-start", valueStart);
     previousToken = token;
   }
   if (metrics) {
