@@ -13,10 +13,10 @@ test("restores V1 Transaction and Check Ribbon labels without view mutation", as
   const tabs = page.locator(".ribbon-tabs");
   const viewMode = page.locator(".view-mode");
   await expect(viewMode.getByRole("button", { name: "Transaction", exact: true })).toBeVisible();
-  await expect(tabs.getByRole("button", { name: "Review", exact: true })).toBeVisible();
+  await expect(tabs.getByRole("button", { name: "Check", exact: true })).toBeVisible();
   await tabs.getByRole("button", { name: "Timeline", exact: true }).click();
   await expect(page.getByTestId("timeline-editor")).toBeVisible();
-  await tabs.getByRole("button", { name: "Review", exact: true }).click();
+  await tabs.getByRole("button", { name: "Check", exact: true }).click();
   await expect(page.getByTestId("ribbon").getByRole("button", { name: "Problems", exact: true })).toBeVisible();
   await expect(page.getByTestId("revision-status")).toHaveText(before.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
