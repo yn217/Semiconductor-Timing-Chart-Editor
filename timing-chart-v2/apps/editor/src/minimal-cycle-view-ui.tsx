@@ -98,8 +98,17 @@ export function MinimalCycleViewSignalTreeCanvas({ document, selectedSignalId, o
 
 export function MinimalCycleViewBottomEditor({ tab, onTabChange, followSelection, onFollowSelectionChange, pinned, onPinnedChange }: { readonly tab: string; readonly onTabChange: (tab: string) => void; readonly followSelection: boolean; readonly onFollowSelectionChange: (value: boolean) => void; readonly pinned: boolean; readonly onPinnedChange: (value: boolean) => void }) {
   const tabs = ["Signal", "Annotation", "Transaction", "Problems", "JSON"];
+  const onTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, current: string) => {
+    const index = tabs.indexOf(current);
+    const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : event.key === "ArrowRight" ? (index + 1) % tabs.length : event.key === "ArrowLeft" ? (index - 1 + tabs.length) % tabs.length : -1;
+    if (nextIndex < 0) return;
+    event.preventDefault();
+    const next = tabs[nextIndex]!;
+    onTabChange(next);
+    requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-testid='next-bottom-editor'] [data-bottom-tab='${next}']`)?.focus());
+  };
   return <section className="bottom-editor" data-testid="next-bottom-editor">
-    <nav className="bottom-tabs" role="tablist" aria-label="Next bottom context panels">{tabs.map((item) => <button type="button" role="tab" key={item} aria-selected={tab === item} className={tab === item ? "active" : ""} onClick={() => onTabChange(item)}>{item}</button>)}<span /><label><input data-testid="next-follow-selection" type="checkbox" checked={followSelection} onChange={(event) => onFollowSelectionChange(event.target.checked)} /> Follow Selection</label><button type="button" data-testid="next-bottom-pin" aria-pressed={pinned} onClick={() => onPinnedChange(!pinned)}>{pinned ? "Unpin" : "Pin"}</button></nav>
+    <nav className="bottom-tabs" role="tablist" aria-label="Next bottom context panels">{tabs.map((item) => <button type="button" role="tab" key={item} data-bottom-tab={item} tabIndex={tab === item ? 0 : -1} aria-selected={tab === item} className={tab === item ? "active" : ""} onClick={() => onTabChange(item)} onKeyDown={(event) => onTabKeyDown(event, item)}>{item}</button>)}<span /><label><input data-testid="next-follow-selection" type="checkbox" checked={followSelection} onChange={(event) => onFollowSelectionChange(event.target.checked)} /> Follow Selection</label><button type="button" data-testid="next-bottom-pin" aria-pressed={pinned} onClick={() => onPinnedChange(!pinned)}>{pinned ? "Unpin" : "Pin"}</button></nav>
     <div className="bottom-content" role="tabpanel" data-testid="next-bottom-content"><strong>{tab}</strong> context</div>
   </section>;
 }
