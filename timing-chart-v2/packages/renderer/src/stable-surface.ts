@@ -593,7 +593,18 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         request.owner.dataset.waveError = item?.error instanceof Error ? item.error.message : "Unknown waveform render failure";
       }
       if (this.#wavePending.get(request.signalId) === request.documentEpoch) this.#wavePending.delete(request.signalId);
-      if (request.owner.isConnected && this.#dirtyWaves.has(request.signalId) && (this.#waveVersions.get(request.signalId) ?? 0) !== request.version) this.#queueWave(request.signalId, request.owner);
+      const currentWindow = request.owner.isConnected ? this.#provider.getSourceWindow?.(request.owner) : undefined;
+      const windowStillStale = currentWindow !== undefined &&
+        (request.owner.dataset.renderedSourceWindowStart !== String(currentWindow.start) ||
+          request.owner.dataset.renderedSourceWindowEnd !== String(currentWindow.end));
+      if (request.owner.isConnected &&
+        ((this.#dirtyWaves.has(request.signalId) && (this.#waveVersions.get(request.signalId) ?? 0) !== request.version) || windowStillStale)) {
+        // A viewport change can arrive while this batch is rendering. The
+        // earlier queue attempt is intentionally coalesced by #wavePending;
+        // re-check the authoritative window after completion so the new
+        // bounded artifact is never stranded behind the old one.
+        this.#queueWave(request.signalId, request.owner);
+      }
     }
     this.#diagnostics = { ...this.#diagnostics, waveBatchPending: this.#waveQueue.size };
     this.#publishCounters();
