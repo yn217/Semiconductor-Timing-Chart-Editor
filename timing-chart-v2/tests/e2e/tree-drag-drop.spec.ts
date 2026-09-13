@@ -38,6 +38,7 @@ test("an invalid drop (dropping a Signal on itself) commits no command and leave
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const surface = host.locator("[data-role='timing-chart-surface']");
   const before = await leftRowOrder(surface);
   const historyBefore = await page.getByTestId("history-status").textContent();
