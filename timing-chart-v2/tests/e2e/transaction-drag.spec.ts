@@ -80,6 +80,8 @@ test("keeps canonical state unchanged during a dense Transaction preview drag", 
   const revision = await host.getAttribute("data-canonical-revision");
   const history = await page.getByTestId("history-status").textContent();
   const dirty = await page.getByTestId("dirty-status").textContent();
+  await page.getByTestId("home-snap-toggle").click();
+  await expect(page.getByTestId("snap-status")).toHaveText("Snap: Off");
   await transaction.locator("span").hover();
   await page.mouse.down();
   for (let index = 0; index < 120; index += 1) await page.mouse.move(box.x + 20 + (index % 12), box.y + box.height / 2);
