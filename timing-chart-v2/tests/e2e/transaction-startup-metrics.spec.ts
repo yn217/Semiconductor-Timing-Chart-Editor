@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-type StartupSample = Readonly<{ readyMs: number; projectionCalls: number; projectionDurationMs: number; idle: boolean }>;
+type StartupSample = Readonly<{ readyMs: number; projectionCalls: number; projectionDurationMs: number; fullReplaceCalls: number; viewportOnlyCalls: number; changeCalls: number; idle: boolean }>;
 
 function percentile(values: readonly number[], fraction: number): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -18,10 +18,10 @@ test("Transaction reload startup exposes focused timing and projection metrics",
     await expect(lanes).toBeVisible();
     await expect(page.getByTestId("transaction-left-tree")).toContainText("Read_0");
     const sample = await page.getByTestId("cycle-surface").evaluate((surface, navigationStart) => {
-      const counters = JSON.parse(surface.getAttribute("data-session-counters") ?? "{}") as { projectionCalls?: number; projectionDurationMs?: number };
+      const counters = JSON.parse(surface.getAttribute("data-session-counters") ?? "{}") as { projectionCalls?: number; projectionDurationMs?: number; fullReplaceCalls?: number; viewportOnlyCalls?: number; changeCalls?: number };
       const lane = surface.ownerDocument.querySelector<HTMLElement>("[data-testid='transaction-lanes']");
       const readyAt = Number(lane?.dataset.transactionFirstReadyAt ?? NaN);
-      return { readyMs: readyAt - navigationStart, projectionCalls: counters.projectionCalls ?? 0, projectionDurationMs: counters.projectionDurationMs ?? 0, idle: surface.getAttribute("data-editor-idle") === "true" };
+      return { readyMs: readyAt - navigationStart, projectionCalls: counters.projectionCalls ?? 0, projectionDurationMs: counters.projectionDurationMs ?? 0, fullReplaceCalls: counters.fullReplaceCalls ?? 0, viewportOnlyCalls: counters.viewportOnlyCalls ?? 0, changeCalls: counters.changeCalls ?? 0, idle: surface.getAttribute("data-editor-idle") === "true" };
     }, navigationStartedAt);
     expect(sample.readyMs).toBeGreaterThanOrEqual(0);
     expect(sample.projectionCalls).toBeGreaterThan(0);
