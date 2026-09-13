@@ -382,6 +382,7 @@ test("creates standard and Custom Measurement profiles with explicit transition 
 
 test("edits Measurement semantics with one history step and preserves them through Undo/Redo and Save/Open", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await selectRequestSignal(host);
