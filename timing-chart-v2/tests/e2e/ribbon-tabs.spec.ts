@@ -128,8 +128,8 @@ test("AI preview cancels and rejects stale revision without mutation", async ({ 
   await expect(ai.getByTestId("ai-status")).toHaveText("Preview cancelled · no document mutation");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await ai.getByRole("button", { name: "Preview" }).click();
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
-  await page.keyboard.press("Delete");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").locator(".home-timeline-group").getByRole("button", { name: "Insert one cycle", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(ai.getByRole("button", { name: "Apply Preview" })).toHaveCount(1);
   await ai.getByRole("button", { name: "Apply Preview" }).click();
