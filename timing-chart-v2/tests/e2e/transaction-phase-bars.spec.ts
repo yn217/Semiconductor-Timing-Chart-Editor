@@ -51,7 +51,9 @@ test("Phase-protected Transaction edge resize is rejected without a canonical ch
   expect(box).not.toBeNull();
   await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box!.x + 120, box!.y + box!.height / 2, { steps: 4 });
+  // Move past the first authored phase boundary (10 -> 20). Resizing
+  // within the edge-attached phase is valid; crossing its boundary is not.
+  await page.mouse.move(box!.x + 420, box!.y + box!.height / 2, { steps: 4 });
   await page.mouse.up();
   await expect(inspector.getByLabel("Transaction start")).toHaveValue(beforeStart);
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
@@ -62,7 +64,8 @@ test("Phase-protected Transaction edge resize is rejected without a canonical ch
   expect(endBox).not.toBeNull();
   await page.mouse.move(endBox!.x + endBox!.width / 2, endBox!.y + endBox!.height / 2);
   await page.mouse.down();
-  await page.mouse.move(endBox!.x - 120, endBox!.y + endBox!.height / 2, { steps: 4 });
+  // Move past the last authored phase boundary (50 -> 60).
+  await page.mouse.move(endBox!.x - 420, endBox!.y + endBox!.height / 2, { steps: 4 });
   await page.mouse.up();
   await expect(inspector.getByLabel("Transaction end")).toHaveValue(beforeEnd);
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
