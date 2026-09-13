@@ -86,7 +86,7 @@ export class TimelineGeometryOwner {
     // that index resolves every annotation and defeats viewport-bounded overlay
     // projection. Cycle boundaries are cheap semantic geometry owned by the axis.
     let before = 0;
-    let after = document.timeline.cycleCount;
+    let after = 0;
     const fallbackOwner = axis.geometry && axis.ownerSignalId !== undefined
       ? axis.geometry
       : this.geometryMaps.values().next().value;
@@ -101,7 +101,7 @@ export class TimelineGeometryOwner {
         if (x >= localEnd) { after = cycle; break; }
       }
     }
-    return createDisplayTimeViewport(mapping, mapping.sourceToDisplay[before] ?? 0, mapping.sourceToDisplay[after] ?? mapping.displayCycleCount, 2, rowStart, rowEnd, generation, pinnedIds);
+    return createDisplayTimeViewport(mapping, mapping.sourceToDisplay[before] ?? 0, mapping.sourceToDisplay[after] ?? 0, 2, rowStart, rowEnd, generation, pinnedIds);
   }
 
   screenToLocal(point: Point, zoom: number, scrollX = 0, scrollY = 0): Point {
