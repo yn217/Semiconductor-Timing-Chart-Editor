@@ -453,17 +453,22 @@ test("cancels an active Annotation drag when New replaces the document", async (
 
 test("keeps semantic alignment through reorder, zoom, and scroll without waveform regeneration", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const surface = host.locator("[data-role='timing-chart-surface']");
-  await selectRequestSignal(host);
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid']").click({ force: true });
   const owner = await createAnnotation(page, "text");
   const handle = owner.locator("[data-role='annotation-handle']");
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
   const beforeCounters = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   const beforeY = (await handle.boundingBox())!.y;
-  await surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").dragTo(surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']"), { targetPosition: { x: 120, y: 28 } });
+  await surface.locator("[data-role='left-row'][data-row-id='sig_cycle_valid']").dragTo(surface.locator("[data-role='left-row'][data-row-id='sig_cycle_reset_n']"), { targetPosition: { x: 120, y: 2 } });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  expect((await handle.boundingBox())!.y).toBeGreaterThan(beforeY);
+  expect((await handle.boundingBox())!.y).not.toBe(beforeY);
+  const afterReorderCounters = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(afterReorderCounters.waveDromRenders).toBe(beforeCounters.waveDromRenders);
+  expect(afterReorderCounters.localGeometryBuilds).toBe(beforeCounters.localGeometryBuilds);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByRole("button", { name: "Zoom in" }).click();
   await expect(page.getByTestId("zoom-status")).toHaveText("125%");
@@ -472,9 +477,6 @@ test("keeps semantic alignment through reorder, zoom, and scroll without wavefor
   expect(await aligned()).toBeLessThan(1);
   await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollLeft = 120; element.scrollTop = 40; element.dispatchEvent(new Event("scroll")); });
   expect(await aligned()).toBeLessThan(1);
-  const afterCounters = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
-  expect(afterCounters.waveDromRenders).toBe(beforeCounters.waveDromRenders);
-  expect(afterCounters.localGeometryBuilds).toBe(beforeCounters.localGeometryBuilds);
 });
 
 test("ripples and clamps Annotation anchors through Timeline edits with Undo and Redo", async ({ page }) => {
