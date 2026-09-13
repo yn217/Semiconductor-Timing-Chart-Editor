@@ -1,3 +1,6 @@
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -92,6 +95,13 @@ test("annotation import is rejected at the resource boundary without replacing t
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // The reload-persisted default document ships its own pre-existing
+  // showcase annotations, which would otherwise inflate the "Annotations: 1"
+  // count assertion below -- start from a genuinely blank document.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
+  await page.getByTestId("unsaved-discard").click({ timeout: 2000 }).catch(() => {});
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByTestId("annotation-toolbar").getByRole("button", { name: "Add annotation", exact: true }).click();
@@ -123,6 +133,7 @@ test("annotation import rejects deeply nested JSON before migration or replaceme
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByTestId("annotation-toolbar").getByRole("button", { name: "Add annotation", exact: true }).click();
@@ -133,6 +144,48 @@ test("annotation import rejects deeply nested JSON before migration or replaceme
   const editor = page.getByTestId("annotation-editor");
   await expect(editor.getByTestId("annotation-import-status")).toContainText("Document JSON nesting depth exceeds the import limit.");
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+});
+
+// #434 follow-up: Signal Event Import (`event-table.tsx`'s `importValues`)
+// read the whole file and called raw `JSON.parse` before any byte/depth
+// gate, reintroducing the same unbounded-recursion class of bug the shared
+// `parseJsonInput()` boundary already closed for Annotation Import above.
+test("Signal Event Import rejects deeply nested JSON before values are replaced", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const editor = page.getByTestId("signal-editor");
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  let nested: unknown = {};
+  for (let index = 0; index < 140; index += 1) nested = { nested };
+  await editor.getByTestId("event-import-action").click();
+  await editor.getByLabel("Import signal events").setInputFiles({ name: "deep-events.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(nested)) });
+  await expect(editor.getByTestId("event-import-status")).toContainText("nesting depth exceeds");
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});
+
+test("Signal Event Import rejects an oversized file before it is read as JSON", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const editor = page.getByTestId("signal-editor");
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  // Playwright's inline `buffer` input caps out at 50MB; a real over-budget
+  // file must be written to disk and referenced by path instead.
+  const oversized = { values: [{ start: 0, value: "0", comment: "x".repeat(51 * 1024 * 1024) }] };
+  const tempDir = mkdtempSync(join(tmpdir(), "signal-event-import-"));
+  const tempFile = join(tempDir, "oversized-events.json");
+  writeFileSync(tempFile, JSON.stringify(oversized));
+  await editor.getByTestId("event-import-action").click();
+  await editor.getByLabel("Import signal events").setInputFiles(tempFile);
+  await expect(editor.getByTestId("event-import-status")).toContainText("exceeds");
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
 test("Advanced JSON rejects a resource overflow before document replacement", async ({ page }) => {
