@@ -39,7 +39,7 @@ export function AnnotationList({
 }: {
   readonly annotations: readonly Annotation[];
   readonly selectedId: AnnotationId | undefined;
-  readonly onSelect: (id: AnnotationId) => void;
+  readonly onSelect: (id: AnnotationId, additive?: boolean) => void;
   readonly commands: Pick<
     EditorSurfaceCommandController,
     "updateAnnotationProperties"
@@ -108,7 +108,7 @@ export function AnnotationList({
           data-selected={String(item.id === selectedId)}
           aria-selected={item.id === selectedId}
           aria-label={`Select annotation ${item.label || item.type}`}
-          onClick={() => onSelect(item.id)}
+          onClick={(event) => onSelect(item.id, event.ctrlKey || event.metaKey)}
           onKeyDown={(event) => {
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
