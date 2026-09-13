@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-test("standalone Cycle and Transaction zoom state does not leak across modes", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 720 });
+for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) test(`standalone Cycle and Transaction zoom state does not leak at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  await page.setViewportSize(viewport);
   await page.goto("/");
   const zoom = page.getByTestId("zoom-status");
   await page.getByRole("button", { name: "Cycle", exact: true }).click();
