@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { DragEvent } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import type { ValueSignal } from "@timing-chart-v2/schema";
+import { DOCUMENT_RESOURCE_BUDGET, parseJsonInput } from "@timing-chart-v2/schema";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./event-table-components.js";
 import { buildEventTableIndex } from "./runtime/event-table-index.js";
@@ -78,10 +79,19 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     URL.revokeObjectURL(url);
   };
   const importValues = (file: File) => {
+    if (file.size > DOCUMENT_RESOURCE_BUDGET.inputBytes) {
+      setImportStatus(`Import rejected: file exceeds ${DOCUMENT_RESOURCE_BUDGET.inputBytes.toLocaleString()} bytes.`);
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const parsed: unknown = JSON.parse(String(reader.result));
+        const parsedResult = parseJsonInput(String(reader.result));
+        if (!parsedResult.ok) {
+          setImportStatus(`Import rejected: ${parsedResult.problems[0]?.code ?? "invalid JSON"} · ${parsedResult.problems[0]?.path ?? "$"}`);
+          return;
+        }
+        const parsed: unknown = parsedResult.value;
         const values = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === "object" && "values" in parsed ? (parsed as { values: unknown }).values : undefined);
         if (!Array.isArray(values) || values.length === 0 || values.some((item) => !item || typeof item !== "object" || !Number.isInteger((item as { start?: unknown }).start) || !((item as { value?: unknown }).value === undefined || typeof (item as { value?: unknown }).value === "string" || typeof (item as { value?: unknown }).value === "number"))) {
           setImportStatus("Import rejected: expected a non-empty event values array.");
