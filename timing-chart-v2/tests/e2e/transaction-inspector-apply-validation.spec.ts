@@ -14,7 +14,9 @@ test("a rejected Transaction Apply surfaces its reason instead of silently no-op
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 
   const inspector = page.getByTestId("inspector");
-  await inspector.getByLabel("Transaction end").fill("30");
+  const end = inspector.getByLabel("Transaction end");
+  const cycleCount = Number(await end.getAttribute("max"));
+  await end.fill(String(cycleCount + 1));
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(inspector.getByRole("status")).toHaveText(/half-open|range|cycle/i);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
