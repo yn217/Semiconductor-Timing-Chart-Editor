@@ -191,5 +191,14 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   // caller.
   const widthOwner = viewportElement ?? element.closest<HTMLElement>("[data-testid='cycle-viewport']") ?? element.parentElement;
   widthOwner?.style.setProperty("--wave-width", `${targetWidth}px`);
+  // Renderer host sizing may have left a viewport-width inline value behind
+  // before this ruler pass established the authoritative shared wave width.
+  // Clear that stale override so the host and its timing surface consume the
+  // same width owner as the ruler; the SVG itself remains window-bounded.
+  const surfaceHost = widthOwner?.querySelector<HTMLElement>("[data-testid='cycle-surface']");
+  if (surfaceHost) {
+    surfaceHost.style.removeProperty("width");
+    surfaceHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']")?.style.removeProperty("width");
+  }
   return scale;
 }
