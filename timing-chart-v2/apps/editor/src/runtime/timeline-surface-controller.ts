@@ -219,6 +219,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     });
     let window: VirtualizationWindow = initialProjection.window;
     projection = initialProjection.projection;
+    // The Cycle surface is mounted and has a valid initial projection. Keep
+    // this readiness contract distinct from editorIdle, which waits for the
+    // asynchronous waveform batch and is intentionally later.
+    rendererHost.dataset.cycleViewReady = "true";
     // Signal Split View (#200): lets the signalSplitEnabled effect force
     // Upper to reproject/re-render immediately after flipping
     // `projectionCoordinator.setPane()`, using the CURRENT document (not a
@@ -421,6 +425,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
 
     const detachApplicationHandler = application.attachAcceptedHandler((result) => {
       delete rendererHost.dataset.editorIdle;
+      delete rendererHost.dataset.cycleViewReady;
       projection = projectionCoordinator.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       const changed = result.changeSet;
       if (changed.fullDocumentReplace === true || changed.rowOrder !== undefined || changed.rowPresentation !== undefined || changed.addedSignals !== undefined || changed.removedSignals !== undefined || changed.addedGroups !== undefined || changed.removedGroups !== undefined) {
@@ -499,6 +504,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       pendingArrowAnnotationType = "arrow";
       delete rendererHost.dataset.arrowPick;
       delete rendererHost.dataset.editorIdle;
+      delete rendererHost.dataset.cycleViewReady;
       setBottomPinned(false);
       setPinnedBottomSelection(undefined);
       setRangeSelectionActive(false);
