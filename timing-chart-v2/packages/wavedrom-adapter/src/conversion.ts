@@ -190,7 +190,7 @@ function clockToWaveJsonWindow(source: CanonicalSignalSource, start: number, end
     .map((change) => ({ ...change, start: change.start - start }));
   const localSignal: ClockSignal = {
     ...signal,
-    enable: localEnable.length > 0 ? localEnable : undefined,
+    ...(localEnable.length > 0 ? { enable: localEnable } : {}),
     generator: {
       ...generator,
       start: 0,
