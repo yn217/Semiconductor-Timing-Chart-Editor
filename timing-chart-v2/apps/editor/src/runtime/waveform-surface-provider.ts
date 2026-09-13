@@ -30,7 +30,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
   let signalIndexRevision = -1;
   let signalById = new Map<SignalId, Signal>();
   return {
-    getSourceWindow: context.getSourceWindow,
+    ...(context.getSourceWindow ? { getSourceWindow: context.getSourceWindow } : {}),
     async mountWaveBatch(requests) {
       const requestEpoch = requests[0]?.documentEpoch;
       const isCurrent = (request: { readonly documentEpoch?: number }): boolean => request.documentEpoch === undefined || context.getDocumentEpoch() === request.documentEpoch;
