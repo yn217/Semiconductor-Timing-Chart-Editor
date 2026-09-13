@@ -291,7 +291,13 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         // style through the wave-mount queue/provider contract.
         if (waveformStyle.color) owner.dataset.waveformStyleColor = waveformStyle.color; else delete owner.dataset.waveformStyleColor;
       }
-      if (isNew || this.#dirtyWaves.has(signalId)) this.#queueWave(signalId, owner);
+      // A bounded waveform is presentation-local: scrolling can keep the
+      // same owner mounted while changing the source window it must display.
+      const sourceWindow = this.#provider.getSourceWindow?.(owner);
+      const sourceWindowChanged = sourceWindow !== undefined &&
+        (owner.dataset.renderedSourceWindowStart !== String(sourceWindow.start) ||
+          owner.dataset.renderedSourceWindowEnd !== String(sourceWindow.end));
+      if (isNew || this.#dirtyWaves.has(signalId) || sourceWindowChanged) this.#queueWave(signalId, owner);
     }
     const waveOwnerCacheLimit = Math.max(32, mounted.size * 4);
     for (const [signalId, owner] of this.#waveOwners) {
@@ -570,6 +576,13 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         this.#localGeometryBuildsBySignal.set(request.signalId, (this.#localGeometryBuildsBySignal.get(request.signalId) ?? 0) + delta.localGeometryBuilds);
         this.#diagnostics = { ...this.#diagnostics, waveRendersBySignalCount: this.#diagnostics.waveRendersBySignalCount + (firstWaveRenderForSignal ? 1 : 0), localGeometryBuildsBySignalCount: this.#diagnostics.localGeometryBuildsBySignalCount + (firstGeometryBuildForSignal ? 1 : 0) };
         request.owner.removeAttribute("data-wave-error");
+        if (request.sourceWindow) {
+          request.owner.dataset.renderedSourceWindowStart = String(request.sourceWindow.start);
+          request.owner.dataset.renderedSourceWindowEnd = String(request.sourceWindow.end);
+        } else {
+          delete request.owner.dataset.renderedSourceWindowStart;
+          delete request.owner.dataset.renderedSourceWindowEnd;
+        }
         // #472: the fresh SVG this mount just installed has no knowledge of
         // any waveform color override -- reapply from the stashed value set
         // by the main per-row loop above (see its own comment).
