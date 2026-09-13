@@ -474,7 +474,11 @@ export function useEditorSecondarySurfaces(
     <LegendView document={input.document} commands={surfaceCommands} />
   );
   const workspaceTransactionTree =
-    workspace.viewMode === "Transaction" ? (
+    // Combined ("Split") reuses the exact same production Transaction Tree
+    // component as standalone Transaction Mode -- see #598-adjacent mockup
+    // review: the left column becomes Transaction Tree (upper) stacked over
+    // the Cycle Signal Tree (lower), never a second tree implementation.
+    (workspace.viewMode === "Transaction" || workspace.viewMode === "Split") ? (
       <TransactionTree
         document={input.document}
         documentEpoch={input.documentEpoch}
