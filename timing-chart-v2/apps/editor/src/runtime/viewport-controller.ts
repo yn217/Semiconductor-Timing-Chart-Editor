@@ -93,7 +93,6 @@ export function createTimelineNavigationController(context: {
     navigateToCycle(cycle) {
       const document = context.getDocument();
       if (!Number.isInteger(cycle) || cycle < 0 || cycle > document.timeline.cycleCount) return;
-      if (context.runtime.sourceBoundaryToLocalX(document, cycle) === undefined) return;
       context.setSelectedCycle(cycle);
       context.host.dataset.selectedCycle = String(cycle);
       context.setRange(cycle === document.timeline.cycleCount ? { start: Math.max(0, cycle - 1), end: cycle } : { start: cycle, end: cycle + 1 });

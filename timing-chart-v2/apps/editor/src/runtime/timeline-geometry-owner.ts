@@ -34,6 +34,7 @@ export class TimelineGeometryOwner {
   #snapIndex: ImmutableSnapIndex | undefined;
   #cycleBoundaryCandidates: ReturnType<ImmutableSnapIndex["entries"]> = [];
   #viewportBoundaryCache: { readonly geometry: LocalGeometryMap; readonly mapping: DisplayTimeMapping; readonly entries: readonly { readonly cycle: number; readonly x: number }[] } | undefined;
+  #requestedSourceCycle: number | undefined;
 
   constructor(private readonly context: TimelineGeometryOwnerContext) {
     this.mappingCache = context.mappingCache;
@@ -63,6 +64,12 @@ export class TimelineGeometryOwner {
     this.#timeAxis = { mode: "clockless" };
     this.#presentationScale = 1;
     this.invalidateSnapIndex();
+    this.#requestedSourceCycle = undefined;
+  }
+
+  requestSourceCycle(cycle: number): void {
+    const document = this.context.getDocument();
+    if (Number.isInteger(cycle) && cycle >= 0 && cycle <= document.timeline.cycleCount) this.#requestedSourceCycle = cycle;
   }
 
   resolveTimeAxis(document: CanonicalDocument = this.context.getDocument()): TimeAxisGeometry {
@@ -81,6 +88,11 @@ export class TimelineGeometryOwner {
 
   /** Resolve a local time viewport to canonical source cycles using semantic geometry. */
   sourceWindowForLocalRange(document: CanonicalDocument, localStart: number, localEnd: number, overscan = 2): Readonly<{ start: number; end: number }> {
+    if (this.#requestedSourceCycle !== undefined) {
+      const span = Math.min(2048, document.timeline.cycleCount);
+      const start = Math.max(0, Math.min(this.#requestedSourceCycle - Math.floor(span / 2), document.timeline.cycleCount - span));
+      return { start, end: Math.min(document.timeline.cycleCount, start + span) };
+    }
     const axis = this.resolveTimeAxis(document);
     const mapping = this.displayMapping;
     const owner = axis.geometry && axis.ownerSignalId !== undefined ? axis.geometry : this.geometryMaps.values().next().value;
