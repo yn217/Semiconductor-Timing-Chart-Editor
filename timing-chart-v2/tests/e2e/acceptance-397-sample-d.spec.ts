@@ -18,6 +18,11 @@ async function openSampleD(page: Page) {
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(samplePath);
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  // File import restores the document but not the view-mode intent of this
+  // Cycle-only acceptance fixture. Select Cycle explicitly before opening
+  // the View ribbon so Signal Split is exercised through its real product
+  // entry point rather than depending on the previous workspace mode.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
 }
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) test(`Signal Split ON usable with both panes visible and non-overlapping, no clipping, at ${viewport.width}x${viewport.height}`, async ({ page }) => {
