@@ -12,7 +12,7 @@ import { buildEventTableIndex } from "./runtime/event-table-index.js";
 // canonical value list, the start boundary is the unique row identity.
 // Content-based keys can collide for identical adjacent transitions and
 // make React reuse the wrong virtualized row/editor state.
-const transitionIdentity = (change: ValueSignal["values"][number]): string => String(change.start);
+const transitionIdentity = (change: ValueSignal["values"][number]): string => change.id ?? String(change.start);
 const EVENT_ROW_HEIGHT = 30;
 const EVENT_OVERSCAN = 8;
 

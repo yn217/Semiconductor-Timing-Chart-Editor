@@ -88,6 +88,7 @@ function normalizeChanges(value: unknown, fallback: string | number, warnings: M
   const changes = list(value).map((entry, index) => {
     const source = record(entry);
     const result: MutableRecord = {
+      id: typeof source.id === "string" && source.id.length > 0 ? source.id : `${basePath.replace(/[^a-zA-Z0-9]+/g, "_")}_${index}`,
       start: roundCycle(source.start, index === 0 ? 0 : index, warnings, `${basePath}[${index}].start`),
       value: typeof source.value === "string" || typeof source.value === "number" ? source.value : fallback,
     };

@@ -227,6 +227,7 @@
       "additionalProperties": false,
       "required": ["start", "value"],
       "properties": {
+        "id": { "type": "string", "minLength": 1 },
         "start": { "type": "number", "minimum": 0 },
         "value": { "type": ["string", "number"] },
         "displayLabel": { "type": "string" },

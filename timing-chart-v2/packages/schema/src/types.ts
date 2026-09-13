@@ -89,6 +89,8 @@ export interface EnumDefinition { readonly id: string; readonly name: string; re
 export interface ResetSemantics { readonly polarity: "active-high" | "active-low"; readonly synchronization: "synchronous" | "asynchronous"; readonly assertCycle?: number; readonly deassertCycle?: number }
 
 export interface SignalValueChange {
+  /** Stable semantic identity for editor selection/reorder; start is mutable. */
+  readonly id?: string;
   readonly start: number;
   readonly value: string | number;
   /** Optional presentation label; semantic value remains authoritative. */
