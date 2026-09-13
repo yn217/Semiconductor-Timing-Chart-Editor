@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-type StartupSample = Readonly<{ readyMs: number; projectionCalls: number; projectionDurationMs: number; fullReplaceCalls: number; viewportOnlyCalls: number; changeCalls: number; idle: boolean; phaseMarks: Readonly<Record<string, number>> }>;
+type StartupSample = Readonly<{ readyMs: number; projectionCalls: number; projectionDurationMs: number; fullReplaceCalls: number; viewportOnlyCalls: number; changeCalls: number; idle: boolean; phaseMarks: Readonly<Record<string, number>>; phaseDurationsMs: Readonly<Record<string, number>> }>;
 
 function percentile(values: readonly number[], fraction: number): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -22,7 +22,9 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
       const lane = surface.ownerDocument.querySelector<HTMLElement>("[data-testid='transaction-lanes']");
       const readyAt = Number(lane?.dataset.transactionFirstReadyAt ?? NaN);
       const phaseMarks = JSON.parse(surface.getAttribute("data-open-phase-marks") ?? "{}") as Record<string, number>;
-      return { readyMs: readyAt - navigationStart, projectionCalls: counters.projectionCalls ?? 0, projectionDurationMs: counters.projectionDurationMs ?? 0, fullReplaceCalls: counters.fullReplaceCalls ?? 0, viewportOnlyCalls: counters.viewportOnlyCalls ?? 0, changeCalls: counters.changeCalls ?? 0, idle: surface.getAttribute("data-editor-idle") === "true", phaseMarks };
+      const phaseOrigin = phaseMarks["open-command-start"] ?? phaseMarks["open-start"] ?? 0;
+      const phaseDurationsMs = Object.fromEntries(Object.entries(phaseMarks).map(([phase, timestamp]) => [phase, timestamp - phaseOrigin]));
+      return { readyMs: readyAt - navigationStart, projectionCalls: counters.projectionCalls ?? 0, projectionDurationMs: counters.projectionDurationMs ?? 0, fullReplaceCalls: counters.fullReplaceCalls ?? 0, viewportOnlyCalls: counters.viewportOnlyCalls ?? 0, changeCalls: counters.changeCalls ?? 0, idle: surface.getAttribute("data-editor-idle") === "true", phaseMarks, phaseDurationsMs };
     }, navigationStartedAt);
     expect(sample.readyMs).toBeGreaterThanOrEqual(0);
     expect(sample.projectionCalls).toBeGreaterThan(0);
