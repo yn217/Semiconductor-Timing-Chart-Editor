@@ -25,7 +25,8 @@ test("reload showcase exposes canonical annotations, bookmarks, and cross-mode d
   const mountedAnnotationIds = await surface.locator("[data-role='annotation-owner']").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-id")).filter((id): id is string => id !== null));
   expect(new Set(mountedAnnotationIds).size).toBe(mountedAnnotationIds.length);
   await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
-  await expect(page.locator(".split-transaction-pane [data-transaction-id='demo_txn_read']")).toBeVisible();
+  await expect(page.getByTestId("transaction-lanes")).toBeVisible();
+  await expect(page.getByTestId("transaction-lanes").locator("[data-testid='transaction-group-header']").first()).toBeVisible();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   expect(pageErrors).toEqual([]);
 });
