@@ -273,7 +273,7 @@
    wrapper (a scrolled `overflow-x` context still clips its own border-
    radius corners on the *unscrolled* axis, so the top/bottom corners stay
    visibly rounded even when a horizontal scrollbar is present). */
-.event-table-scroll { overflow-x: auto; overflow-y: hidden; border-radius: 4px; }
+.event-table-scroll { max-height: 320px; overflow: auto; border-radius: 4px; }
 .event-table { min-width: 850px; border: 1px solid #d0d8e2; border-radius: 4px; }
 
 /* Visual Quality Closure pass, Section 1 (P0): Actions was a fixed 150px

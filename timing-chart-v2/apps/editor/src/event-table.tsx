@@ -9,6 +9,8 @@ import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./
 // Start is derived during reorder, so it cannot identify a semantic row.
 // Keep the editor identity on the transition's stable payload instead.
 const transitionIdentity = (change: ValueSignal["values"][number]): string => JSON.stringify([change.value, change.comment ?? "", change.displayLabel ?? ""]);
+const EVENT_ROW_HEIGHT = 30;
+const EVENT_OVERSCAN = 8;
 
 // #426: Value Helper's own label/hint were hardcoded to "(Signal)" / the
 // binary 0-1-X-Z blurb regardless of the actually-selected Signal's real
@@ -38,6 +40,8 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   // Duplicate/Delete) -- checking rows only ever feeds the table footer's
   // bulk actions below.
   const [checkedStarts, setCheckedStarts] = useState<ReadonlySet<number>>(new Set());
+  const [eventScrollTop, setEventScrollTop] = useState(0);
+  const eventViewportRef = useRef<HTMLDivElement>(null);
   const [importStatus, setImportStatus] = useState("Import signal events");
   const fileInput = useRef<HTMLInputElement>(null);
   const indexed = useMemo(() => {
@@ -186,6 +190,9 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   const selectAllRef = useRef<HTMLInputElement>(null);
   useEffect(() => { if (selectAllRef.current) selectAllRef.current.indeterminate = checkedCount > 0 && !allChecked; }, [checkedCount, allChecked]);
   const toggleAll = () => setCheckedStarts(allChecked ? new Set() : new Set(signal.values.map((change) => change.start)));
+  const eventFirst = Math.max(0, Math.floor(eventScrollTop / EVENT_ROW_HEIGHT) - EVENT_OVERSCAN);
+  const eventLast = Math.min(indexed.ordered.length, Math.ceil((eventScrollTop + (eventViewportRef.current?.clientHeight ?? 300)) / EVENT_ROW_HEIGHT) + EVENT_OVERSCAN);
+  const renderedEvents = indexed.ordered.slice(eventFirst, eventLast);
   return <div className="event-editor">
     {/* Bottom Panel Visual Reference pass: Add/Edit Transition, Value
         Helper and (for a binary Signal) Generate Waveform render side by
@@ -253,14 +260,16 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
       <button type="button" onClick={addRow} data-testid="event-add-row">Add Row</button>
       <button type="button" className="danger" onClick={() => selected && commands.removeValue(signal.id, selected.start)} disabled={!selected || signal.values.length === 1} data-testid="event-delete-row">Delete</button>
     </div>
-    <div className="event-table-scroll">
+    <div ref={eventViewportRef} className="event-table-scroll" onScroll={(event) => setEventScrollTop(event.currentTarget.scrollTop)}>
       <div className="event-table" role="table" aria-label="Signal events">
         {/* Visual Quality Closure pass, Section 4: Select All is a real
             tri-state checkbox (checked/indeterminate/unchecked) driving the
             exact same `checkedStarts` set each row's own checkbox feeds --
             not a decorative header cell. */}
         <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span>End</span><span>Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
-        {signal.values.map((change, index) => <EventRow key={transitionIdentity(change)} index={index + 1} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={transitionIdentity(change) === selectedKey} checked={checkedStarts.has(change.start)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change.start)} onSelect={selectTransition} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedStarts.has(change.start) && checkedCount > 1 ? checkedStarts : [change.start]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />)}
+        <div aria-hidden="true" style={{ height: eventFirst * EVENT_ROW_HEIGHT }} />
+        {renderedEvents.map((change, offset) => { const index = eventFirst + offset; return <EventRow key={transitionIdentity(change)} index={index + 1} signal={signal} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={transitionIdentity(change) === selectedKey} checked={checkedStarts.has(change.start)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change.start)} onSelect={selectTransition} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedStarts.has(change.start) && checkedCount > 1 ? checkedStarts : [change.start]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
+        <div aria-hidden="true" style={{ height: Math.max(0, indexed.ordered.length - eventLast) * EVENT_ROW_HEIGHT }} />
       </div>
     </div>
     <div className="event-table-footer">
