@@ -220,13 +220,14 @@ export function toWaveJson(source: CanonicalSignalSource): WaveJsonSignal {
 }
 
 /** Convert a bounded source interval, reconstructing the value at its left edge. */
-export function toWaveJsonWindow(source: CanonicalSignalSource, start: number, end: number, semanticWindow: Readonly<{ start: number; end: number }> = { start, end }): WaveJsonSignal {
+export function toWaveJsonWindow(source: CanonicalSignalSource, start: number, end: number, semanticWindow: Readonly<{ start: number; end: number }> = { start, end }, geometryWindow: Readonly<{ start: number; end: number }> = semanticWindow): WaveJsonSignal {
   validateSource(source);
   if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end <= start || end > source.cycleCount) {
     throw new WaveDromAdapterError("INVALID_CYCLE_WINDOW", "WaveDrom conversion requires a non-empty in-bounds source window.");
   }
   if (source.signal.type === "commentRow") throw new WaveDromAdapterError("NON_WAVEFORM_SIGNAL", `Comment row '${source.signal.id}' has no WaveDrom waveform.`);
-  if (source.signal.type === "clock") return { ...clockToWaveJsonWindow(source, start, end), sourceWindow: semanticWindow, displayWindow: { start, end } };
+  const geometryMetadata = geometryWindow.start === semanticWindow.start && geometryWindow.end === semanticWindow.end ? {} : { geometryWindow };
+  if (source.signal.type === "clock") return { ...clockToWaveJsonWindow(source, start, end), sourceWindow: semanticWindow, ...geometryMetadata, displayWindow: { start, end } };
   const changes = source.signal.values;
   let current = changes[0];
   for (const change of changes) { if (change.start > start) break; current = change; }
@@ -238,5 +239,5 @@ export function toWaveJsonWindow(source: CanonicalSignalSource, start: number, e
   }
   const localSignal = { ...source.signal, values: localChanges };
   const localGaps = (source.gapCycles ?? []).filter((cycle) => cycle > start && cycle < end).map((cycle) => cycle - start);
-  return { ...valueSignalToWaveJson(localSignal, end - start, localGaps), sourceWindow: semanticWindow, displayWindow: { start, end } };
+  return { ...valueSignalToWaveJson(localSignal, end - start, localGaps), sourceWindow: semanticWindow, ...geometryMetadata, displayWindow: { start, end } };
 }

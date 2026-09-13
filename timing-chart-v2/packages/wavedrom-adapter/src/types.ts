@@ -32,6 +32,9 @@ export interface WaveJsonSignal {
     readonly initial: 0 | 1;
   }>;
   readonly sourceWindow?: Readonly<{ readonly start: number; readonly end: number }>;
+  /** Source-domain interval represented by local geometry when the renderer
+   * window was expanded/aligned beyond sourceWindow. */
+  readonly geometryWindow?: Readonly<{ readonly start: number; readonly end: number }>;
   /** Display-domain interval actually handed to WaveDrom. */
   readonly displayWindow?: Readonly<{ readonly start: number; readonly end: number }>;
 }

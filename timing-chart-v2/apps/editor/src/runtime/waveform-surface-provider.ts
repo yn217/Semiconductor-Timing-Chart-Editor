@@ -73,7 +73,10 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           : Math.min(mapping.displayCycleCount, Math.ceil(displayEnd / clockPeriod) * clockPeriod);
         const waveJson = sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
           ? context.adapter.toWaveJson(source)
-          : toWaveJsonWindow(source, rendererStart, rendererEnd, sourceWindow);
+          : toWaveJsonWindow(source, rendererStart, rendererEnd, sourceWindow, {
+            start: rendererStart === 0 ? 0 : (mapping.displayToSource[rendererStart] ?? sourceWindow.start),
+            end: rendererEnd === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[rendererEnd] ?? sourceWindow.end),
+          });
         return { request, waveJson, semanticValues, error: undefined };
       });
       const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean }> = [];

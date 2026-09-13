@@ -192,7 +192,7 @@ function interpolateSegment(segment: Segment, fraction: number): Point {
 export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readonly [K in keyof GeometryExtractionMetrics]: GeometryExtractionMetrics[K] }): ImmutableLocalGeometryMap {
   const startedAt = globalThis.performance?.now() ?? Date.now();
   const { svg, renderIndex, waveJson } = rendered;
-  const sourceStart = waveJson.sourceWindow?.start ?? 0;
+  const sourceStart = waveJson.geometryWindow?.start ?? waveJson.sourceWindow?.start ?? 0;
   const lanes = groupById<SVGGElement>(svg, `lanes_${renderIndex}`);
   const draw = groupById<SVGGElement>(svg, `wavelane_draw_0_${renderIndex}`);
   const laneMatrix = matrixOf(svg as SVGGraphicsElement, lanes);
@@ -210,7 +210,7 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
   // actual rendered domain endpoints and the window length.  This keeps the
   // expansion bounded by the current source window rather than the canonical
   // document length.
-  const sourceWindowLength = waveJson.sourceWindow === undefined ? undefined : waveJson.sourceWindow.end - waveJson.sourceWindow.start;
+  const sourceWindowLength = waveJson.geometryWindow === undefined ? (waveJson.sourceWindow === undefined ? undefined : waveJson.sourceWindow.end - waveJson.sourceWindow.start) : waveJson.geometryWindow.end - waveJson.geometryWindow.start;
   const boundaries = sourceWindowLength !== undefined && renderedBoundaries.length >= 2 && renderedBoundaries.length !== sourceWindowLength + 1
     ? Array.from({ length: sourceWindowLength + 1 }, (_, index) => {
       const first = renderedBoundaries[0]!;
