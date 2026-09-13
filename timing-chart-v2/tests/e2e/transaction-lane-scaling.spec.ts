@@ -49,6 +49,29 @@ test("10k Transaction fixture keeps mounted lane DOM viewport-bounded", async ({
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
+test("Transaction Fit All and Fit Selection remain view-only", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  const host = page.getByTestId("cycle-surface");
+  const bar = page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first();
+  await expect(bar).toBeVisible();
+  await bar.click();
+  const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Zoom preset").selectOption("200");
+  await expect(page.getByTestId("zoom-status")).toHaveText("200%");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Fit Selection", exact: true }).click();
+  await expect.poll(() => page.getByTestId("zoom-status").textContent()).not.toBe("200%");
+  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollLeft = element.scrollWidth; });
+  await expect.poll(() => page.getByTestId("cycle-viewport").evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Fit All", exact: true }).click();
+  await expect.poll(() => page.getByTestId("cycle-viewport").evaluate((element) => element.scrollLeft)).toBe(0);
+  expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
+});
+
 test("central Transaction surface remains viewport-bounded across 1k/5k/10k with bounded mode, scroll, and selection work", async ({ page }, testInfo) => {
   test.setTimeout(180_000);
   await page.goto("/");
