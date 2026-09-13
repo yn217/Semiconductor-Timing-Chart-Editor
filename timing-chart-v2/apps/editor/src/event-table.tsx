@@ -47,9 +47,16 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   const indexed = useMemo(() => {
     const ordered = [...signal.values].sort((left, right) => left.start - right.start);
     const occupied = new Set(ordered.map((change) => change.start));
+    const endByStart = new Map(ordered.map((change, index) => [change.start, ordered[index + 1]?.start ?? cycleCount]));
     const firstFree = (extra?: number) => { for (let cycle = 0; cycle < cycleCount; cycle += 1) if (!occupied.has(cycle) && cycle !== extra) return cycle; return undefined; };
-    const nextEnd = (startValue: number) => ordered.find((change) => change.start > startValue)?.start ?? cycleCount;
-    return { ordered, occupied, firstFree, nextEnd };
+    const nextEnd = (startValue: number) => {
+      const known = endByStart.get(startValue);
+      if (known !== undefined) return known;
+      let low = 0; let high = ordered.length;
+      while (low < high) { const middle = (low + high) >>> 1; if (ordered[middle]!.start <= startValue) low = middle + 1; else high = middle; }
+      return ordered[low]?.start ?? cycleCount;
+    };
+    return { ordered, occupied, endByStart, firstFree, nextEnd };
   }, [signal.values, cycleCount]);
   const selected = indexed.ordered.find((change) => transitionIdentity(change) === selectedKey);
   const selectTransition = (startValue: number) => {
@@ -140,7 +147,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     const block = ordered.splice(first, selectedIndexes.length);
     ordered.splice(delta < 0 ? first - 1 : first + 1, 0, ...block);
     const durationValues = indexed.ordered;
-    const durationByStart = new Map(durationValues.map((change) => [change.start, indexed.nextEnd(change.start) - change.start]));
+    const durationByStart = new Map(durationValues.map((change) => [change.start, indexed.endByStart.get(change.start)! - change.start]));
     let nextStart = durationValues[0]?.start ?? 0;
     const reordered = ordered.map((change) => { const next = { ...change, start: nextStart }; nextStart += durationByStart.get(change.start) ?? 0; return next; });
     const result = commands.replaceValues(signal.id, reordered);
@@ -172,7 +179,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     const block = ordered.splice(from, selectedIndexes.length);
     ordered.splice(from < to ? to + 1 - selectedIndexes.length : to, 0, ...block);
     const durationValues = indexed.ordered;
-    const durationByStart = new Map(durationValues.map((change) => [change.start, indexed.nextEnd(change.start) - change.start]));
+    const durationByStart = new Map(durationValues.map((change) => [change.start, indexed.endByStart.get(change.start)! - change.start]));
     let nextStart = durationValues[0]?.start ?? 0;
     const reordered = ordered.map((change) => { const next = { ...change, start: nextStart }; nextStart += durationByStart.get(change.start) ?? 0; return next; });
     const result = commands.replaceValues(signal.id, reordered);
