@@ -196,6 +196,7 @@ test("keeps the Split View surface contract and view mode changes view-only", as
     counters: await surface.getAttribute("data-session-counters"),
   };
 
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(panel).toHaveAttribute("data-view-mode", "Cycle");
   await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true })).toHaveCount(1);
   await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true })).toHaveCount(0);
