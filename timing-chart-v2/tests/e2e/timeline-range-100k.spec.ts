@@ -31,7 +31,7 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
-  await expect.poll(async () => page.locator(".wave-owner[data-signal-id]").first().getAttribute("data-cycle-boundary-geometry"), { timeout: 120_000 }).toContain("\"1000\"");
+  await expect.poll(async () => page.locator("[data-role='wave-owner'][data-signal-id]").first().getAttribute("data-cycle-boundary-geometry"), { timeout: 120_000 }).toContain("\"1000\"");
 
   const before = await host.evaluate((element) => ({
     revision: element.getAttribute("data-canonical-revision"),
@@ -40,7 +40,7 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
   }));
   const geometry = await page.evaluate(() => {
     const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
-    const wave = document.querySelector<HTMLElement>(".wave-owner[data-signal-id]");
+    const wave = document.querySelector<HTMLElement>("[data-role='wave-owner'][data-signal-id]");
     const svg = wave?.querySelector("svg");
     const marks = svg ? [...svg.querySelectorAll<SVGLineElement>("[id^='gmark_']")] : [];
     const boundaryGeometry = wave?.getAttribute("data-cycle-boundary-geometry");
