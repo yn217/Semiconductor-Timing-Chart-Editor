@@ -17,7 +17,10 @@ function measurementAnchorLabel(annotation: Pick<Annotation, "label" | "measurem
   return `${annotation.label} · ${range} · ${annotation.measurement?.anchorKind ?? "threshold"} · Δ ${Math.abs(annotation.end.cycle - annotation.start.cycle)} cycles`;
 }
 
-export function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1, viewport?: DisplayTimeViewport): AnnotationOverlayPrimitive[] {
+export type AnnotationOverlayProjectionMetrics = Readonly<{ canonicalCount: number; candidateCount: number; resolvedCount: number; durationMs: number }>;
+
+export function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1, viewport?: DisplayTimeViewport, onMetrics?: (metrics: AnnotationOverlayProjectionMetrics) => void): AnnotationOverlayPrimitive[] {
+  const startedAt = performance.now();
   const rowIds = new Set(projection.rowLayout.filter((row) => row.visible && (!viewport || (row.y + row.height >= viewport.rowStart && row.y <= viewport.rowEnd))).map((row) => row.rowId));
   const pinned = new Set(viewport?.pinnedIds ?? []);
   const candidate = (annotation: Annotation): boolean => {
@@ -37,7 +40,7 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
     return first && second ? [{ id: annotation.id, firstX: first.x, secondX: second.x, ...(annotation.measurementLayout?.lane === undefined ? {} : { explicitLane: annotation.measurementLayout.lane }) }] : [];
   });
   const measurementLaneById = allocateMeasurementLanes(measurementSpans);
-  return candidates.flatMap((annotation) => {
+  const overlays = candidates.flatMap((annotation) => {
     const anchors = annotationFields.flatMap((field) => {
       const point = resolveAnchorPoint(annotation[field], document, projection, maps, mapping, xScale, annotation.positionMode === "free");
       const fraction = anchorTransitionFraction(annotation[field]);
@@ -115,4 +118,6 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
       surfaceHeight: projection.totalHeight,
     }];
   });
+  onMetrics?.({ canonicalCount: document.annotations.length, candidateCount: candidates.length, resolvedCount: overlays.length, durationMs: performance.now() - startedAt });
+  return overlays;
 }
