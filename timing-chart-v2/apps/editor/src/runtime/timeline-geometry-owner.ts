@@ -145,10 +145,13 @@ export class TimelineGeometryOwner {
     const cached = this.#viewportBoundaryCache;
     if (cached?.geometry === owner && cached.mapping === mapping) return cached.entries;
     const entries: { cycle: number; x: number }[] = [];
+    const boundaryByDisplayCycle = owner.cycleBoundaryEntries === undefined
+      ? undefined
+      : new Map(owner.cycleBoundaryEntries().map((entry) => [entry.cycle, entry.position.x]));
     for (let cycle = 0; cycle <= cycleCount; cycle += 1) {
       const displayCycle = mapping.sourceToDisplay[cycle];
       if (displayCycle === undefined) continue;
-      const x = owner.find({ signalId, cycle: displayCycle, point: "cycle-start" })?.point.x;
+      const x = boundaryByDisplayCycle?.get(displayCycle) ?? owner.find({ signalId, cycle: displayCycle, point: "cycle-start" })?.point.x;
       if (x !== undefined) entries.push({ cycle, x });
     }
     this.#viewportBoundaryCache = { geometry: owner, mapping, entries };

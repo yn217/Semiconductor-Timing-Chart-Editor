@@ -53,6 +53,8 @@ export interface LocalAnchorGeometry {
 export interface LocalGeometryMap {
   readonly signalId: SignalId;
   find(anchor: SemanticAnchor): LocalAnchorGeometry | undefined;
+  /** Semantic cycle boundaries owned by this geometry map. */
+  cycleBoundaryEntries?(): readonly LocalGeometryEntry[];
   /**
    * Directly exposes the immutable geometry entries that represent actual
    * clock edges.  Consumers that need an edge index can use this optional
@@ -108,6 +110,7 @@ export class ImmutableLocalGeometryMap implements LocalGeometryMap {
   readonly signalId: SignalId;
   readonly #entries: ReadonlyMap<string, Point>;
   readonly #edgeEntries: readonly LocalGeometryEntry[];
+  readonly #cycleBoundaryEntries: readonly LocalGeometryEntry[];
   readonly #transitionResolvers: ReadonlyMap<string, (fraction: number) => Point>;
 
   constructor(signalId: SignalId, entries: readonly LocalGeometryEntry[], transitionResolvers: readonly TransitionGeometryResolver[] = []) {
@@ -115,11 +118,16 @@ export class ImmutableLocalGeometryMap implements LocalGeometryMap {
     const frozenEntries = entries.map((entry) => Object.freeze({ ...entry, position: Object.freeze({ ...entry.position }) }));
     this.#entries = new Map(frozenEntries.map((entry) => [keyOf(entry.cycle, entry.point, entry.threshold), entry.position]));
     this.#edgeEntries = Object.freeze(frozenEntries.filter((entry) => entry.point === "rising-edge" || entry.point === "falling-edge"));
+    this.#cycleBoundaryEntries = Object.freeze(frozenEntries.filter((entry) => entry.point === "cycle-start"));
     this.#transitionResolvers = new Map(transitionResolvers.map((entry) => [keyOf(entry.cycle, entry.point), entry.resolve]));
   }
 
   edgeEntries(): readonly LocalGeometryEntry[] {
     return this.#edgeEntries;
+  }
+
+  cycleBoundaryEntries(): readonly LocalGeometryEntry[] {
+    return this.#cycleBoundaryEntries;
   }
 
   find(anchor: SemanticAnchor): LocalAnchorGeometry | undefined {
