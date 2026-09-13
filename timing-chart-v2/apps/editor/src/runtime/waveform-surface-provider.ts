@@ -5,7 +5,7 @@ import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { toWaveJsonWindow, type RenderedWave, type WaveDromAdapter, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 import type { DisplayTimeMappingCache } from "@timing-chart-v2/projection";
 import type { GeometryRegistry } from "./geometry-registry.js";
-import { displayBoundaryForSource } from "./display-boundary.js";
+import { displayWindowForSource } from "./display-boundary.js";
 
 function nextBrowserFrame(): Promise<void> {
   return new Promise((resolve) => {
@@ -56,8 +56,9 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         const semanticValues = remappedValues !== undefined && signal.type !== "clock" && signal.type !== "commentRow" && valueSignalWaveDomain(signal.type) === "data" ? remappedValues.map((change: { readonly value: string | number }) => String(change.value)) : undefined;
         const source = { signal: displaySignal, cycleCount: mapping.displayCycleCount };
         const sourceWindow = request.sourceWindow;
-        const displayStart = sourceWindow === undefined ? undefined : displayBoundaryForSource(mapping, sourceWindow.start, document.timeline.cycleCount);
-        const displayEnd = sourceWindow === undefined ? undefined : displayBoundaryForSource(mapping, sourceWindow.end, document.timeline.cycleCount);
+        const displayWindow = sourceWindow === undefined ? undefined : displayWindowForSource(mapping, { sourceStart: sourceWindow.start, sourceEnd: sourceWindow.end }, document.timeline.cycleCount);
+        const displayStart = displayWindow?.displayStart;
+        const displayEnd = displayWindow?.displayEnd;
         const clockPeriod = displaySignal.type === "clock" ? displaySignal.generator.period : undefined;
         // WaveDrom's clock encoder requires its local window to start/end on
         // period boundaries.  DisplayTimeMapping can place a semantic window
