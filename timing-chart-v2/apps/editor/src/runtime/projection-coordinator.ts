@@ -6,6 +6,9 @@ export class ProjectionCoordinator {
   private documentEpoch = 0;
   private projectionCalls = 0;
   private projectionDurationMs = 0;
+  private fullReplaceCalls = 0;
+  private viewportOnlyCalls = 0;
+  private changeCalls = 0;
 
   constructor(options: { readonly pane?: "upper" | "lower" } = {}) {
     this.service = new DefaultProjectionService(options);
@@ -16,6 +19,9 @@ export class ProjectionCoordinator {
     const projection = this.service.project(request);
     this.projectionCalls += 1;
     this.projectionDurationMs += (globalThis.performance?.now?.() ?? Date.now()) - startedAt;
+    if (request.changeSet.fullDocumentReplace) this.fullReplaceCalls += 1;
+    else if (request.previous && Object.keys(request.changeSet).length === 0 && request.snapshot.revision === request.previous.revision) this.viewportOnlyCalls += 1;
+    else this.changeCalls += 1;
     this.documentEpoch = projection.documentEpoch;
     return projection;
   }
@@ -34,7 +40,7 @@ export class ProjectionCoordinator {
     this.service.setPane(pane);
   }
 
-  diagnostics(): ReturnType<DefaultProjectionService["diagnostics"]> & Readonly<{ projectionCalls: number; projectionDurationMs: number }> {
-    return { ...this.service.diagnostics(), projectionCalls: this.projectionCalls, projectionDurationMs: this.projectionDurationMs };
+  diagnostics(): ReturnType<DefaultProjectionService["diagnostics"]> & Readonly<{ projectionCalls: number; projectionDurationMs: number; fullReplaceCalls: number; viewportOnlyCalls: number; changeCalls: number }> {
+    return { ...this.service.diagnostics(), projectionCalls: this.projectionCalls, projectionDurationMs: this.projectionDurationMs, fullReplaceCalls: this.fullReplaceCalls, viewportOnlyCalls: this.viewportOnlyCalls, changeCalls: this.changeCalls };
   }
 }
