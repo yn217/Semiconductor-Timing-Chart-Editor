@@ -42,6 +42,8 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
   const zoomRef = useRef(1);
   const zoomByModeRef = useRef<Record<"Cycle" | "Transaction", number>>({ Cycle: 1, Transaction: 1 });
   const previousModeRef = useRef<"Cycle" | "Transaction" | "Split">(viewMode);
+  const activeModeRef = useRef(viewMode);
+  activeModeRef.current = viewMode;
   const zoomStateFrameRef = useRef<number | undefined>(undefined);
   const applyZoomRef = useRef<(zoom: number) => void>(() => undefined);
   const fitSelectionRef = useRef<() => void>(() => undefined);
@@ -90,7 +92,8 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
         onSyncFrozenColumns: context.syncFrozenColumns,
         onZoom: (nextZoom) => {
           zoomRef.current = nextZoom;
-          if (viewMode === "Cycle" || viewMode === "Transaction") zoomByModeRef.current[viewMode] = nextZoom;
+          const activeMode = activeModeRef.current;
+          if (activeMode === "Cycle" || activeMode === "Transaction") zoomByModeRef.current[activeMode] = nextZoom;
           context.viewMetrics.update({ zoom: nextZoom, viewportWidth: context.viewport.clientWidth });
           // The DOM presentation is already updated synchronously by the
           // zoom controller. Defer the non-critical React status/ribbon state
