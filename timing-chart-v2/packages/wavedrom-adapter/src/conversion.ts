@@ -185,15 +185,23 @@ function clockToWaveJsonWindow(source: CanonicalSignalSource, start: number, end
   const suppressed = new Set(generator.suppressedPeriods ?? []);
   const started = start >= generator.start;
   const firstActive = started && enableAt(start) && !suppressed.has(localPulse);
-  const localEnable = (signal.enable ?? [])
+  const localEnableChanges = (signal.enable ?? [])
     .filter((change) => change.start >= start && change.start < end)
     .map((change) => ({ ...change, start: change.start - start }));
+  // Preserve the canonical enable state at the bounded window's left edge.
+  // An omitted local change must not be interpreted by createEnableReader as
+  // the default HIGH state.
+  const enableAtLeftEdge = enableAt(start) ? 1 : 0;
+  const localEnable = localEnableChanges[0]?.start === 0
+    ? localEnableChanges
+    : [{ start: 0, value: enableAtLeftEdge }, ...localEnableChanges];
+  const localGeneratorStart = started ? 0 : generator.start - start;
   const localSignal: ClockSignal = {
     ...signal,
-    ...(localEnable.length > 0 ? { enable: localEnable } : {}),
+    enable: localEnable,
     generator: {
       ...generator,
-      start: 0,
+      start: localGeneratorStart,
       initial: firstActive ? active : inactive,
       suppressedPeriods: started ? [...suppressed].filter((period) => period >= localPulse).map((period) => period - localPulse) : [...suppressed],
     },
