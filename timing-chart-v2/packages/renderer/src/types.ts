@@ -12,6 +12,8 @@ export interface WaveMountRequest {
   readonly owner: HTMLElement;
   /** Document generation that produced this owner/request pair. */
   readonly documentEpoch?: number;
+  /** Optional canonical source interval for bounded WaveDrom rendering. */
+  readonly sourceWindow?: Readonly<{ readonly start: number; readonly end: number }>;
 }
 
 export interface WaveMountBatchItem {
