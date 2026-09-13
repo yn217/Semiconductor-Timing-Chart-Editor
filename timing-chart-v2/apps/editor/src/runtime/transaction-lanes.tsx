@@ -119,6 +119,7 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   const dragPointerMoves = useRef(0);
   const dragPreviewFrames = useRef(0);
   const dragPreviewUpdates = useRef(0);
+  const dragSnapQueries = useRef(0);
   const current = preview ?? { start: transaction.start, end: transaction.end };
   const containingFold = foldRanges.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.end <= toCycle);
   const startHiddenFold = foldRanges.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.start < toCycle && transaction.end > toCycle);
@@ -180,6 +181,8 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
       const clientX = pendingPreviewClientX.current;
       pendingPreviewClientX.current = undefined;
       if (clientX === undefined || !drag || drag.documentEpoch !== documentEpoch) return;
+      dragSnapQueries.current += 1;
+      buttonRef.current?.setAttribute("data-drag-snap-queries", String(dragSnapQueries.current));
       const cycle = onSnap(clientX, drag.surfaceLeft);
       if (cycle === undefined) return;
       const nextPreview = previewTransaction(transaction, drag.edge, cycle, cycleCount);
@@ -198,11 +201,15 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
     dragPointerMoves.current = 0;
     dragPreviewFrames.current = 0;
     dragPreviewUpdates.current = 0;
+    dragSnapQueries.current = 0;
     const button = buttonRef.current;
     if (button) {
       button.dataset.dragPointerMoves = "0";
       button.dataset.dragPreviewFrames = "0";
       button.dataset.dragPreviewUpdates = "0";
+      button.dataset.dragSnapQueries = "0";
+      button.dataset.dragSnapDomQueries = "0";
+      button.dataset.dragSnapLayoutReads = "0";
     }
     setDrag({ edge, documentEpoch, surfaceLeft: buttonRef.current?.closest<HTMLElement>(".transaction-track")?.getBoundingClientRect().left });
     setPreview({ start: transaction.start, end: transaction.end });
