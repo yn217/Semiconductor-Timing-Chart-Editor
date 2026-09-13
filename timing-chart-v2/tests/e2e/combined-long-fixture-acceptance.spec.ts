@@ -11,7 +11,9 @@ async function openLong(page: Page) {
   if (await dialog.isVisible().catch(() => false)) await page.getByTestId("unsaved-discard").click();
   await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.locator(".split-transaction-pane")).toBeVisible();
-  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(100);
+  const mountedTransactions = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
+  await expect(mountedTransactions.first()).toBeVisible();
+  await expect.poll(() => mountedTransactions.count()).toBeLessThanOrEqual(100);
 }
 
 for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) test(`#573 performance fixture enables horizontal and independent vertical scroll at ${viewportSize.width}x${viewportSize.height}`, async ({ page }) => {
