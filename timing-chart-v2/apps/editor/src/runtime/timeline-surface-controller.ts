@@ -193,7 +193,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         // StableTimingChartRenderer can observe the authoritative window and
         // queue the bounded semantic render instead of retaining the initial
         // presentation-thinned WaveDrom artifact.
-        if (active && projection !== undefined) renderCoordinator.renderer.update(projection);
+        if (active && projection !== undefined) {
+          const reproject = () => { if (active && projection !== undefined) renderCoordinator.renderer.update(projection); };
+          if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(reproject);
+          else globalThis.setTimeout(reproject, 0);
+        }
       },
       invalidateSnapIndex: () => timelineGeometry.invalidateSnapIndex(),
       getSourceWindow: (owner) => {
