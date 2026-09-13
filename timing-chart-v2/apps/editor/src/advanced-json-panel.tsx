@@ -14,7 +14,16 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
   const selected = selectedSignal ?? selectedGroup ?? selectedAnnotation ?? selectedTransaction;
   const sourceText = scope === "selected" ? JSON.stringify(selected ?? {}, null, 2) : text;
   const draftChanged = advanced && draft !== sourceText;
-  useEffect(() => { setDraft(sourceText); }, [sourceText]);
+  useEffect(() => {
+    // Never replace an unapplied user draft when the live selection/document
+    // changes. The draft remains visible until the user explicitly Cancels,
+    // validates/applies it, or returns to the current source object.
+    if (draftChanged) {
+      setStatus("Unapplied changes — review or cancel before switching source");
+      return;
+    }
+    setDraft(sourceText);
+  }, [sourceText, draftChanged]);
   const cancel = () => { setDraft(sourceText); onDiagnostic(undefined); setStatus("Draft cancelled"); };
   const parseDraft = (): unknown => {
     try { const value = JSON.parse(draft); onDiagnostic(undefined); return value; } catch (error) {
