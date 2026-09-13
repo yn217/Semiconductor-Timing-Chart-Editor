@@ -181,3 +181,25 @@ export function toWaveJson(source: CanonicalSignalSource): WaveJsonSignal {
     ? clockToWaveJson(source.signal, source.cycleCount, source.gapCycles)
     : valueSignalToWaveJson(source.signal, source.cycleCount, source.gapCycles);
 }
+
+/** Convert a bounded source interval, reconstructing the value at its left edge. */
+export function toWaveJsonWindow(source: CanonicalSignalSource, start: number, end: number): WaveJsonSignal {
+  validateSource(source);
+  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end <= start || end > source.cycleCount) {
+    throw new WaveDromAdapterError("INVALID_CYCLE_WINDOW", "WaveDrom conversion requires a non-empty in-bounds source window.");
+  }
+  if (source.signal.type === "commentRow") throw new WaveDromAdapterError("NON_WAVEFORM_SIGNAL", `Comment row '${source.signal.id}' has no WaveDrom waveform.`);
+  if (source.signal.type === "clock") throw new WaveDromAdapterError("UNSUPPORTED_CLOCK_WINDOW", "Bounded clock conversion requires a window-state contract.");
+  const changes = source.signal.values;
+  let current = changes[0];
+  for (const change of changes) { if (change.start > start) break; current = change; }
+  if (!current) throw new WaveDromAdapterError("EMPTY_SIGNAL_VALUES", "Bounded value conversion requires at least one canonical value.");
+  const localChanges = [{ start: 0, value: current.value, ...(current.displayLabel === undefined ? {} : { displayLabel: current.displayLabel }) }];
+  for (const change of changes) {
+    if (change.start <= start || change.start >= end) continue;
+    localChanges.push({ start: change.start - start, value: change.value, ...(change.displayLabel === undefined ? {} : { displayLabel: change.displayLabel }) });
+  }
+  const localSignal = { ...source.signal, values: localChanges };
+  const localGaps = (source.gapCycles ?? []).filter((cycle) => cycle > start && cycle < end).map((cycle) => cycle - start);
+  return { ...valueSignalToWaveJson(localSignal, end - start, localGaps), sourceWindow: { start, end } };
+}

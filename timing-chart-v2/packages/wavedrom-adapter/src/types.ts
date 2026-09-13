@@ -31,6 +31,7 @@ export interface WaveJsonSignal {
     readonly polarity: "positive" | "negative";
     readonly initial: 0 | 1;
   }>;
+  readonly sourceWindow?: Readonly<{ readonly start: number; readonly end: number }>;
 }
 
 export interface RenderedWave {

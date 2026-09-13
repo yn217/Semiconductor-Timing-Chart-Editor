@@ -8,6 +8,7 @@ import {
   assertSafeWaveDromMarkup,
   renderWaveJsonMarkup,
   toWaveJson,
+  toWaveJsonWindow,
   VALUE_LABEL_LAYOUT_POLICY,
   type WaveJsonSignal,
 } from "@timing-chart-v2/wavedrom-adapter";
@@ -109,6 +110,11 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
   it("pins the production and test renderer to one WaveDrom version", () => {
     expect(WaveDrom.version).toBe(WAVEDROM_VERSION);
     expect(new ProductionWaveDromAdapter().metrics()).toEqual({ renderCalls: 0, waveJsonDurationMs: 0, renderDurationMs: 0, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 });
+  });
+
+  it("preserves the left-edge value when converting a bounded source window", () => {
+    const signal = logicSignal([{ start: 0, value: 0 }, { start: 50, value: 1 }, { start: 75, value: 0 }]);
+    expect(toWaveJsonWindow({ signal, cycleCount: 100 }, 60, 80)).toEqual({ wave: "1..............0....", sourceWindow: { start: 60, end: 80 } });
   });
 
   it("uses displayLabel only for WaveDrom data while retaining semantic values", () => {
