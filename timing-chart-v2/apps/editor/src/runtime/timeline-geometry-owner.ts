@@ -94,6 +94,13 @@ export class TimelineGeometryOwner {
       return { start: 0, end: bootstrapEnd };
     }
     const entries = this.viewportBoundaryEntries(owner, signalId, mapping, document.timeline.cycleCount);
+    // A first WaveDrom paint may expose only presentation-thinned marks. Do
+    // not let that partial map become the navigation source for a large
+    // document; request the bounded bootstrap window until a windowed render
+    // replaces it with semantic boundaries.
+    if (document.timeline.cycleCount > 4096 && entries.length < 512) {
+      return { start: 0, end: Math.min(document.timeline.cycleCount, 2048) };
+    }
     let start = 0;
     let end = document.timeline.cycleCount;
     for (const entry of entries) {
