@@ -91,8 +91,11 @@ test("edits a linked Ghost Trace and Timing Region without WaveDrom regeneration
   await page.getByLabel("Annotation type").selectOption("timingRegion");
   await page.getByRole("button", { name: "Add annotation" }).click();
   await page.getByLabel("Annotation type").selectOption("ghostTrace");
+  const ghostIdsBeforeCreate = new Set(await host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-id"))));
   await page.getByRole("button", { name: "Add annotation" }).click();
-  const ghost = host.locator("[data-role='annotation-owner'][data-annotation-type='ghostTrace']");
+  const ghostId = await host.locator("[data-role='annotation-owner'][data-annotation-type='ghostTrace']").evaluateAll((items, previous) => items.map((item) => item.getAttribute("data-annotation-id")).find((id) => id && !previous.includes(id)), [...ghostIdsBeforeCreate]);
+  expect(ghostId).toBeTruthy();
+  const ghost = host.locator(`[data-role='annotation-owner'][data-annotation-id='${ghostId}']`);
   await expect(ghost.locator("[data-role='ghost-trace-path']")).toHaveCount(1);
   await ghost.locator("[data-role='annotation-label']").click({ force: true });
   const editor = page.getByTestId("annotation-editor");
@@ -111,7 +114,7 @@ test("edits a linked Ghost Trace and Timing Region without WaveDrom regeneration
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles((await (await save).path())!);
-  const reopenedGhost = host.locator("[data-role='annotation-owner'][data-annotation-type='ghostTrace']");
+  const reopenedGhost = host.locator(`[data-role='annotation-owner'][data-annotation-id='${ghostId}']`);
   await expect(reopenedGhost).toHaveAttribute("data-source-signal-id", sourceSignalId!);
   await expect(reopenedGhost).toHaveAttribute("data-trace-offset-cycles", "2");
 });
