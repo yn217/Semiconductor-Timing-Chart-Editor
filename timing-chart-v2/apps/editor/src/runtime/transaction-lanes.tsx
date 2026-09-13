@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { Bookmark, BookmarkId, CanonicalDocument, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { EditorIcon } from "../editor-icon.js";
 import type { TransactionLaneCommandActions } from "../application/editor-surface-command-controller.js";
@@ -504,6 +504,12 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     const row = band.rowOf.get(transaction.id) ?? 0;
     return isVisible(band.trackTop + 4 + row * LANE_ROW_HEIGHT, LANE_ROW_HEIGHT);
   };
+
+  useLayoutEffect(() => {
+    const element = owner.current;
+    if (!element || element.dataset.transactionFirstReadyAt !== undefined) return;
+    element.dataset.transactionFirstReadyAt = String(globalThis.performance?.now?.() ?? Date.now());
+  });
 
   return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-tree-row-builds={treeRowBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
