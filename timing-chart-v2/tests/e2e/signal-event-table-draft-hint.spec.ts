@@ -12,6 +12,7 @@ import { expect, test } from "@playwright/test";
 test("Signal event table explains its immediate-commit model and Add still produces one History entry", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
 
   await page.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.getByRole("tab", { name: "Signal", exact: true }).click();
