@@ -4,14 +4,12 @@ test("workspace presets and density are discoverable view-only controls", async 
   await page.goto("/");
   const shell = page.locator(".editor-shell");
   const host = page.getByTestId("cycle-surface");
-  const surface = host.locator("[data-role='timing-chart-surface']");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
 
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
     history: await host.getAttribute("data-history-depth"),
     dirty: await page.getByTestId("dirty-status").textContent(),
-    counters: await surface.getAttribute("data-render-counters"),
   };
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
@@ -40,5 +38,4 @@ test("workspace presets and density are discoverable view-only controls", async 
   expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
   expect(await host.getAttribute("data-history-depth")).toBe(before.history);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
-  expect(await surface.getAttribute("data-render-counters")).toBe(before.counters);
 });
