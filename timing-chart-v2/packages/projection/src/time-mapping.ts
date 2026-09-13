@@ -8,6 +8,29 @@ export interface DisplayTimeMapping {
   readonly labelFor: (displayCycle: number) => number;
 }
 
+/** Shared viewport query result consumed by time-based projections.  Bounds
+ * are supplied in display space by the owning timeline geometry/viewport;
+ * source bounds are derived here so consumers cannot invent a second mapper.
+ */
+export interface DisplayTimeViewport {
+  readonly sourceStart: number;
+  readonly sourceEnd: number;
+  readonly displayStart: number;
+  readonly displayEnd: number;
+  readonly overscanCycles: number;
+  readonly rowStart: number;
+  readonly rowEnd: number;
+  readonly generation: number;
+  readonly pinnedIds: readonly string[];
+}
+
+export function createDisplayTimeViewport(mapping: DisplayTimeMapping, displayStart: number, displayEnd: number, overscanCycles: number, rowStart: number, rowEnd: number, generation: number, pinnedIds: readonly string[] = []): DisplayTimeViewport {
+  const start = Math.max(0, Math.floor(displayStart - overscanCycles));
+  const end = Math.min(mapping.displayCycleCount, Math.ceil(displayEnd + overscanCycles));
+  const sources = mapping.displayToSource.slice(start, end);
+  return { displayStart: start, displayEnd: end, sourceStart: sources[0] ?? 0, sourceEnd: (sources.at(-1) ?? 0) + 1, overscanCycles, rowStart, rowEnd, generation, pinnedIds: [...pinnedIds] };
+}
+
 export type HiddenSourcePositionPolicy = "floor" | "ceil" | "interpolate" | "omit";
 
 /** Resolve a source position without inventing display-cycle zero for folded input. */
