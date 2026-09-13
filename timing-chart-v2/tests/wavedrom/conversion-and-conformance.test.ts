@@ -126,6 +126,14 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(bounded.wave.slice(1)).toMatch(/^\.*$/);
   });
 
+  it("keeps renderer-aligned geometry origin separate from the requested source window", () => {
+    const clock = canonicalFixture().signals[0] as ClockSignal;
+    const bounded = toWaveJsonWindow({ signal: clock, cycleCount: 100 }, 4, 20, { start: 5, end: 20 }, { start: 4, end: 20 });
+    expect(bounded.sourceWindow).toEqual({ start: 5, end: 20 });
+    expect(bounded.geometryWindow).toEqual({ start: 4, end: 20 });
+    expect(bounded.displayWindow).toEqual({ start: 4, end: 20 });
+  });
+
   it("uses displayLabel only for WaveDrom data while retaining semantic values", () => {
     const bus = { ...canonicalFixture().signals[1]!, values: [{ start: 0, value: "0x12345678", displayLabel: "READY" }] } as ValueSignal;
     expect(bus.values[0]?.value).toBe("0x12345678");
