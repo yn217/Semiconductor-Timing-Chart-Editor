@@ -469,7 +469,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       publishState();
       void renderer.whenIdle().then(() => {
         if (!active || !rendererHost.isConnected) return;
-        if (refreshRuler && (!changed.fullDocumentReplace || !rulerInitialized)) {
+        // Accepted timeline-semantic changes must rebuild the ruler even after
+        // its first paint.  The previous guard only refreshed during the
+        // initialisation window, leaving Time Group collapse/expand controls
+        // with the old ticks and aria-label until an unrelated render.
+        if (refreshRuler) {
           timelineRuntime.refreshRuler();
           timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end);
         }
