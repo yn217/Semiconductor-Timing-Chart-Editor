@@ -116,6 +116,9 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   const pendingPreviewClientX = useRef<number | undefined>(undefined);
   const previewFrame = useRef<number | undefined>(undefined);
   const previewBoundaryCache = useRef(new Map(boundaryXByCycle));
+  const dragPointerMoves = useRef(0);
+  const dragPreviewFrames = useRef(0);
+  const dragPreviewUpdates = useRef(0);
   const current = preview ?? { start: transaction.start, end: transaction.end };
   const containingFold = foldRanges.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.end <= toCycle);
   const startHiddenFold = foldRanges.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.start < toCycle && transaction.end > toCycle);
@@ -166,23 +169,41 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   if (startX === undefined || endX === undefined) return null;
   const updatePreview = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!drag || drag.documentEpoch !== documentEpoch) return;
+    dragPointerMoves.current += 1;
+    event.currentTarget.dataset.dragPointerMoves = String(dragPointerMoves.current);
     pendingPreviewClientX.current = event.clientX;
     if (previewFrame.current !== undefined) return;
     previewFrame.current = requestAnimationFrame(() => {
       previewFrame.current = undefined;
+      dragPreviewFrames.current += 1;
+      buttonRef.current?.setAttribute("data-drag-preview-frames", String(dragPreviewFrames.current));
       const clientX = pendingPreviewClientX.current;
       pendingPreviewClientX.current = undefined;
       if (clientX === undefined || !drag || drag.documentEpoch !== documentEpoch) return;
       const cycle = onSnap(clientX, drag.surfaceLeft);
       if (cycle === undefined) return;
       const nextPreview = previewTransaction(transaction, drag.edge, cycle, cycleCount);
-      setPreview((current) => current !== undefined && current.start === nextPreview.start && current.end === nextPreview.end ? current : nextPreview);
+      setPreview((current) => {
+        if (current !== undefined && current.start === nextPreview.start && current.end === nextPreview.end) return current;
+        dragPreviewUpdates.current += 1;
+        buttonRef.current?.setAttribute("data-drag-preview-updates", String(dragPreviewUpdates.current));
+        return nextPreview;
+      });
     });
   };
   const begin = (event: ReactPointerEvent<HTMLElement>, edge: TransactionDragEdge) => {
     event.preventDefault();
     event.stopPropagation();
     buttonRef.current?.setPointerCapture(event.pointerId);
+    dragPointerMoves.current = 0;
+    dragPreviewFrames.current = 0;
+    dragPreviewUpdates.current = 0;
+    const button = buttonRef.current;
+    if (button) {
+      button.dataset.dragPointerMoves = "0";
+      button.dataset.dragPreviewFrames = "0";
+      button.dataset.dragPreviewUpdates = "0";
+    }
     setDrag({ edge, documentEpoch, surfaceLeft: buttonRef.current?.closest<HTMLElement>(".transaction-track")?.getBoundingClientRect().left });
     setPreview({ start: transaction.start, end: transaction.end });
   };
