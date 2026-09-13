@@ -33,6 +33,7 @@ export class TimelineGeometryOwner {
   #presentationScale = 1;
   #snapIndex: ImmutableSnapIndex | undefined;
   #cycleBoundaryCandidates: ReturnType<ImmutableSnapIndex["entries"]> = [];
+  #viewportBoundaryCache: { readonly geometry: LocalGeometryMap; readonly mapping: DisplayTimeMapping; readonly entries: readonly { readonly cycle: number; readonly x: number }[] } | undefined;
 
   constructor(private readonly context: TimelineGeometryOwnerContext) {
     this.mappingCache = context.mappingCache;
@@ -92,13 +93,10 @@ export class TimelineGeometryOwner {
       : this.geometryMaps.values().next().value;
     const fallbackSignalId = axis.ownerSignalId ?? fallbackOwner?.signalId;
     if (fallbackOwner && fallbackSignalId !== undefined) {
-      for (let cycle = 0; cycle <= document.timeline.cycleCount; cycle += 1) {
-        const displayCycle = mapping.sourceToDisplay[cycle];
-        if (displayCycle === undefined) continue;
-        const x = fallbackOwner.find({ signalId: fallbackSignalId, cycle: displayCycle, point: "cycle-start" })?.point.x;
-        if (x === undefined) continue;
-        if (x <= localStart) before = cycle;
-        if (x >= localEnd) { after = cycle; break; }
+      const entries = this.viewportBoundaryEntries(fallbackOwner, fallbackSignalId, mapping, document.timeline.cycleCount);
+      for (const entry of entries) {
+        if (entry.x <= localStart) before = entry.cycle;
+        if (entry.x >= localEnd) { after = entry.cycle; break; }
       }
     }
     return createDisplayTimeViewport(mapping, mapping.sourceToDisplay[before] ?? 0, mapping.sourceToDisplay[after] ?? 0, 2, rowStart, rowEnd, generation, pinnedIds);
@@ -141,5 +139,19 @@ export class TimelineGeometryOwner {
     return this.#snapIndex;
   }
 
-  invalidateSnapIndex(): void { this.#snapIndex = undefined; this.#cycleBoundaryCandidates = []; }
+  invalidateSnapIndex(): void { this.#snapIndex = undefined; this.#cycleBoundaryCandidates = []; this.#viewportBoundaryCache = undefined; }
+
+  private viewportBoundaryEntries(owner: LocalGeometryMap, signalId: SignalId, mapping: DisplayTimeMapping, cycleCount: number): readonly { readonly cycle: number; readonly x: number }[] {
+    const cached = this.#viewportBoundaryCache;
+    if (cached?.geometry === owner && cached.mapping === mapping) return cached.entries;
+    const entries: { cycle: number; x: number }[] = [];
+    for (let cycle = 0; cycle <= cycleCount; cycle += 1) {
+      const displayCycle = mapping.sourceToDisplay[cycle];
+      if (displayCycle === undefined) continue;
+      const x = owner.find({ signalId, cycle: displayCycle, point: "cycle-start" })?.point.x;
+      if (x !== undefined) entries.push({ cycle, x });
+    }
+    this.#viewportBoundaryCache = { geometry: owner, mapping, entries };
+    return entries;
+  }
 }
