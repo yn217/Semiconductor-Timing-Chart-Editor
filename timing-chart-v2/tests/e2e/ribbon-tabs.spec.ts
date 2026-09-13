@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 async function ready(page: Page) {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
 }
 
 const tabGroups: Record<string, string> = {
@@ -89,12 +90,13 @@ test("Review tab Problems button navigates to the Problems panel", async ({ page
 });
 
 test("AI query previews and applies one scoped SemanticCommand", async ({ page }) => {
-  await page.goto("/");
+  await ready(page);
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const beforeRevision = await host.getAttribute("data-canonical-revision");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("tab", { name: "AI", exact: true }).click();
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByLabel("AI semantic query").fill("rename selected signal to AI_REQ");
   await ai.getByRole("button", { name: "Preview" }).click();
@@ -102,10 +104,12 @@ test("AI query previews and applies one scoped SemanticCommand", async ({ page }
   await expect(ai.getByTestId("ai-preview")).toContainText("Rename");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await ai.getByRole("button", { name: "Validate Proposal" }).click();
+  await expect(ai.getByTestId("ai-status")).toHaveText("Validated · deterministic local checks passed");
   await ai.getByRole("button", { name: "Apply Preview" }).click();
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request'] [data-role='frozen-signal-name']")).toHaveText("AI_REQ");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  await expect(ai.getByTestId("ai-status")).toHaveText("Applied · one SemanticCommand");
+  await expect(ai.getByTestId("ai-status")).toHaveText("Applied · one atomic SemanticCommand transaction");
   await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 1));
 });
 
@@ -113,8 +117,10 @@ test("AI preview cancels and rejects stale revision without mutation", async ({ 
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("tab", { name: "AI", exact: true }).click();
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByLabel("AI semantic query").fill("hide selected signal");
   await ai.getByRole("button", { name: "Preview" }).click();
