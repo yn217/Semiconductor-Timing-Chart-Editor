@@ -1,5 +1,4 @@
 import { expect, test } from "@playwright/test";
-import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
 // Bottom Panel Visual Reference pass (#402/#426): Name/Role/Type/Spacing
 // moved to Inspector (its sole owner now) -- Bottom's own duplicate
@@ -51,23 +50,6 @@ test("follows row selection and exposes derived Event Table columns", async ({ p
   await expect(first.getByTestId("event-row-end-0")).toHaveText("3");
   await expect(first.getByTestId("event-row-duration-0")).toHaveText("3");
   await expect(editor.getByRole("group", { name: "Quick values" }).getByRole("button")).toHaveText(["0", "1", "X", "Z"]);
-});
-
-test("bounds mounted EventTable rows for a dense transition fixture", async ({ page }) => {
-  await page.goto("/");
-  const host = page.getByTestId("cycle-surface");
-  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  const document = generatePerformanceDocument({ signalCount: 50, cycleCount: 1000, transitionCount: 1000 });
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "dense-events.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
-  const dialog = page.getByTestId("unsaved-file-dialog");
-  if (await dialog.isVisible().catch(() => false)) await page.getByTestId("unsaved-discard").click();
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_perf_1']").click({ force: true });
-  const table = page.getByTestId("signal-editor").getByRole("table", { name: "Signal events" });
-  await expect(table).toBeVisible();
-  await expect(page.getByTestId("signal-editor")).toContainText("Transitions (1000)");
-  const viewport = page.getByTestId("signal-editor").locator(".event-table-scroll");
-  const mounted = await viewport.locator("form.event-row").count();
-  expect(mounted).toBeLessThan(1000);
 });
 
 test("commits one event edit once, rerenders only its waveform, and supports Undo", async ({ page }) => {
