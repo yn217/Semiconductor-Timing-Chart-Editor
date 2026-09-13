@@ -84,7 +84,10 @@ export class TimelineGeometryOwner {
     const mapping = this.mappingCache.get(document.timeline, document.timeGroups);
     const displayCycle = displayBoundaryForSource(mapping, cycle, document.timeline.cycleCount);
     if (displayCycle === undefined) return undefined;
-    const point = axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
+    // Bounded folded geometry is rebased with canonical source identities.
+    // Keep the display-cycle lookup as the identity/no-fold fallback.
+    const point = axis.geometry.find({ signalId: axis.ownerSignalId, cycle, point: "cycle-start" })?.point
+      ?? axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
     return point === undefined ? undefined : point.x * this.#presentationScale;
   }
 
