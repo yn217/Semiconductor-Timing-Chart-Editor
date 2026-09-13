@@ -210,8 +210,8 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
   // actual rendered domain endpoints and the window length.  This keeps the
   // expansion bounded by the current source window rather than the canonical
   // document length.
-  const sourceWindowLength = waveJson.geometryWindow === undefined ? (waveJson.sourceWindow === undefined ? undefined : waveJson.sourceWindow.end - waveJson.sourceWindow.start) : waveJson.geometryWindow.end - waveJson.geometryWindow.start;
-  const boundaries = sourceWindowLength !== undefined && renderedBoundaries.length >= 2 && renderedBoundaries.length !== sourceWindowLength + 1
+  const sourceWindowLength = waveJson.geometrySourceCycles !== undefined ? waveJson.geometrySourceCycles.length - 1 : waveJson.geometryWindow === undefined ? (waveJson.sourceWindow === undefined ? undefined : waveJson.sourceWindow.end - waveJson.sourceWindow.start) : waveJson.geometryWindow.end - waveJson.geometryWindow.start;
+  const boundaries = waveJson.geometrySourceCycles !== undefined ? renderedBoundaries : sourceWindowLength !== undefined && renderedBoundaries.length >= 2 && renderedBoundaries.length !== sourceWindowLength + 1
     ? Array.from({ length: sourceWindowLength + 1 }, (_, index) => {
       const first = renderedBoundaries[0]!;
       const last = renderedBoundaries[renderedBoundaries.length - 1]!;
@@ -226,7 +226,7 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
     const start = boundaries[cycle];
     const end = boundaries[cycle + 1];
     if (!start || !end) continue;
-    const sourceCycle = cycle + sourceStart;
+    const sourceCycle = waveJson.geometrySourceCycles?.[cycle] ?? cycle + sourceStart;
     add(sourceCycle, "cycle-start", start);
     add(sourceCycle, "cycle-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
     add(sourceCycle, "value-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
