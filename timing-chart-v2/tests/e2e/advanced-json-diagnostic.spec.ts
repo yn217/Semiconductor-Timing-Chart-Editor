@@ -54,6 +54,7 @@ test("Advanced JSON validates a selected object against the canonical document c
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const bottom = page.getByTestId("bottom-editor");
   await bottom.getByRole("tab", { name: "JSON", exact: true }).click();
