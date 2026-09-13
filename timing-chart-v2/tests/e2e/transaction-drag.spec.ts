@@ -80,6 +80,8 @@ test("keeps canonical state unchanged during a dense Transaction preview drag", 
   const revision = await host.getAttribute("data-canonical-revision");
   const history = await page.getByTestId("history-status").textContent();
   const dirty = await page.getByTestId("dirty-status").textContent();
+  const countersBefore = JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, number>;
+  const minimapBefore = await page.getByTestId("minimap").getAttribute("data-transaction-overview-builds");
   await page.getByTestId("home-snap-toggle").click();
   await expect(page.getByTestId("snap-status")).toHaveText("Snap: Off");
   await transaction.locator("span").hover();
@@ -95,6 +97,10 @@ test("keeps canonical state unchanged during a dense Transaction preview drag", 
   expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(history);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(dirty);
+  const countersDuring = JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, number>;
+  expect(countersDuring.annotationResolvePasses).toBe(countersBefore.annotationResolvePasses);
+  expect(countersDuring.edgeCounterResolvePasses).toBe(countersBefore.edgeCounterResolvePasses);
+  expect(await page.getByTestId("minimap").getAttribute("data-transaction-overview-builds")).toBe(minimapBefore);
   await page.mouse.up();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 });
