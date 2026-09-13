@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { clockFrequency, type Bookmark, type ClockGenerator, type ClockSignal, type EdgeCounterSettings, type SignalId } from "@timing-chart-v2/schema";
+import { clockFrequency, DOCUMENT_RESOURCE_BUDGET, parseJsonInput, type Bookmark, type ClockGenerator, type ClockSignal, type EdgeCounterSettings, type SignalId } from "@timing-chart-v2/schema";
 import { parseSuppressedPeriods } from "../runtime/clock-input.js";
 import { serializeClockSettings } from "../runtime/clock-settings.js";
 import { RibbonIcon } from "../ribbon-icon.js";
@@ -33,7 +33,21 @@ export function ClockGeneratorEditor({ signal, bookmarks, commands, onDuplicate,
   }, [preview, generator, onPreview]);
   const number = (key: "start" | "period" | "duty" | "phase", value: string) => setGenerator({ ...generator, [key]: Number(value) });
   const exportSettings = () => { const blob = new Blob([serializeClockSettings(signal.id, signal.name, generator, edgeCounter)], { type: "application/json" }); const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${signal.name || signal.id}-clock.json`; anchor.click(); URL.revokeObjectURL(url); };
-  const importSettings = (file: File) => { const reader = new FileReader(); reader.onload = () => { try { const parsed = JSON.parse(String(reader.result)) as { generator?: ClockGenerator; edgeCounter?: EdgeCounterSettings }; if (parsed.generator) setGenerator(parsed.generator); if (parsed.edgeCounter) setEdgeCounter(parsed.edgeCounter); } catch { /* Invalid imports remain transient and do not enter the command path. */ } }; reader.readAsText(file); };
+  const importSettings = async (file: File) => {
+    setGeneratorError("");
+    if (file.size > DOCUMENT_RESOURCE_BUDGET.inputBytes) {
+      setGeneratorError(`Import rejected: input exceeds ${DOCUMENT_RESOURCE_BUDGET.inputBytes.toLocaleString()} bytes.`);
+      return;
+    }
+    const result = parseJsonInput(await file.text());
+    if (!result.ok) {
+      setGeneratorError(`Import rejected: ${result.problems[0]?.message ?? "Invalid JSON."}`);
+      return;
+    }
+    const parsed = result.value as { generator?: ClockGenerator; edgeCounter?: EdgeCounterSettings };
+    if (parsed.generator) setGenerator(parsed.generator);
+    if (parsed.edgeCounter) setEdgeCounter(parsed.edgeCounter);
+  };
   const setCountFrom = (countFrom: EdgeCounterSettings["countFrom"]) => setEdgeCounter((current) => {
     const anchorId = countFrom === "marker" ? current.anchorId ?? bookmarks[0]?.id : current.anchorId;
     if (anchorId === undefined) {
