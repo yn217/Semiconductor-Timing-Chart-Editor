@@ -84,6 +84,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   readonly #renderCallsBySignal = new Map<SignalId, number>();
   #nextRenderIndex = 0;
   #renderCalls = 0;
+  #waveJsonDurationMs = 0;
   #renderDurationMs = 0;
   #cacheHits = 0;
   #cacheMisses = 0;
@@ -102,7 +103,10 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   #matrixReads = 0;
 
   toWaveJson(source: CanonicalSignalSource): WaveJsonSignal {
-    return toWaveJson(source);
+    const startedAt = globalThis.performance?.now() ?? Date.now();
+    const result = toWaveJson(source);
+    this.#waveJsonDurationMs += (globalThis.performance?.now() ?? Date.now()) - startedAt;
+    return result;
   }
 
   async renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues: readonly string[] = []): Promise<RenderedWave> {
@@ -182,7 +186,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   }
 
   metrics(): WaveDromAdapterMetrics {
-    return { renderCalls: this.#renderCalls, renderDurationMs: this.#renderDurationMs, renderCallsBySignal: Object.fromEntries(this.#renderCallsBySignal), cacheHits: this.#cacheHits, cacheMisses: this.#cacheMisses, mounts: this.#mounts, disposals: this.#disposals, geometryBuilds: this.#geometryBuilds, geometryMatrixReads: this.#geometryMatrixReads, activeOwners: this.#active.size, allocatedRenderIndices: this.#renderIndices.size };
+    return { renderCalls: this.#renderCalls, waveJsonDurationMs: this.#waveJsonDurationMs, renderDurationMs: this.#renderDurationMs, renderCallsBySignal: Object.fromEntries(this.#renderCallsBySignal), cacheHits: this.#cacheHits, cacheMisses: this.#cacheMisses, mounts: this.#mounts, disposals: this.#disposals, geometryBuilds: this.#geometryBuilds, geometryMatrixReads: this.#geometryMatrixReads, activeOwners: this.#active.size, allocatedRenderIndices: this.#renderIndices.size };
   }
 
   #clearOwner(owner: ActiveOwner): void {

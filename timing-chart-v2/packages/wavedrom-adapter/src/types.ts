@@ -55,6 +55,7 @@ export interface GeometryExtractionMetrics {
 
 export interface WaveDromAdapterMetrics {
   readonly renderCalls: number;
+  readonly waveJsonDurationMs: number;
   readonly renderDurationMs: number;
   readonly renderCallsBySignal: Readonly<Record<string, number>>;
   readonly cacheHits: number;
