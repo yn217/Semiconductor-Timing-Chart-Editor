@@ -174,7 +174,7 @@ test("updates Annotation style and label offset without waveform regeneration", 
   const labelBefore = await owner.locator("[data-role='annotation-label']").evaluate((element) => (element as HTMLElement).style.transform);
   await editor.getByLabel("Annotation label X").fill("12");
   await editor.getByLabel("Annotation label Y").fill("-20");
-  await editor.getByRole("button", { name: "Move label" }).click();
+  await editor.locator(".annotation-label-offset-row").getByRole("button", { name: "Apply Annotation", exact: true }).click();
   const labelAfter = await owner.locator("[data-role='annotation-label']").evaluate((element) => (element as HTMLElement).style.transform);
   const x = (value: string) => Number.parseFloat(value.match(/translate\(([-\d.]+)px/)?.[1] ?? "NaN");
   expect(x(labelAfter) - x(labelBefore)).toBe(12);
