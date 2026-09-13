@@ -32,6 +32,17 @@ describe("Immutable Local Geometry Map", () => {
     expect(map.find({ signalId, cycle: 2, point: "transition-center", threshold: 0.7 })?.point).toEqual({ x: 50, y: 26 });
   });
 
+  it("exposes every semantic cycle boundary independently of edge entries", () => {
+    const map = new ImmutableLocalGeometryMap(signalId, [
+      { cycle: 0, point: "cycle-start", position: { x: 0, y: 0 } },
+      { cycle: 1, point: "cycle-start", position: { x: 12, y: 0 } },
+      { cycle: 2, point: "cycle-start", position: { x: 27, y: 0 } },
+      { cycle: 2, point: "rising-edge", position: { x: 27, y: 4 } },
+    ]);
+    expect(map.cycleBoundaryEntries?.().map((entry) => [entry.cycle, entry.position.x])).toEqual([[0, 0], [1, 12], [2, 27]]);
+    expect(map.edgeEntries?.()).toHaveLength(1);
+  });
+
   it("resolves arbitrary explicit transition values through the geometry-owned resolver", () => {
     const map = new ImmutableLocalGeometryMap(signalId, [], [{ cycle: 2, point: "transition-center", resolve: (fraction) => ({ x: fraction * 100, y: 20 + fraction * 10 }) }]);
     expect(map.find({ signalId, cycle: 2, point: "transition-center", transition: { kind: "ratio", value: 0.17 } })?.point).toEqual({ x: 17, y: 21.7 });
