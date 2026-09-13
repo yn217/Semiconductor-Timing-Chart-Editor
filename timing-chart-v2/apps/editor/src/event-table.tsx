@@ -88,7 +88,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
       try {
         const parsedResult = parseJsonInput(String(reader.result));
         if (!parsedResult.ok) {
-          setImportStatus(`Import rejected: ${parsedResult.problems[0]?.code ?? "invalid JSON"} · ${parsedResult.problems[0]?.path ?? "$"}`);
+          setImportStatus(parsedResult.problems[0]?.message ?? "Import rejected: invalid JSON.");
           return;
         }
         const parsed: unknown = parsedResult.value;
