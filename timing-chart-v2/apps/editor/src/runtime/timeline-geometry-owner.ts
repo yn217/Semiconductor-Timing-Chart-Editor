@@ -85,7 +85,14 @@ export class TimelineGeometryOwner {
     const mapping = this.displayMapping;
     const owner = axis.geometry && axis.ownerSignalId !== undefined ? axis.geometry : this.geometryMaps.values().next().value;
     const signalId = axis.ownerSignalId ?? owner?.signalId;
-    if (!owner || signalId === undefined) return { start: 0, end: document.timeline.cycleCount };
+    if (!owner || signalId === undefined) {
+      // Bootstrap only: before the first authoritative WaveDrom geometry exists,
+      // render a bounded prefix so large documents can reach the viewport. This
+      // is presentation bootstrap, never semantic time/X truth; the first SVG
+      // geometry replaces it and is rebased through sourceWindow.start.
+      const bootstrapEnd = Math.min(document.timeline.cycleCount, 2048);
+      return { start: 0, end: bootstrapEnd };
+    }
     const entries = this.viewportBoundaryEntries(owner, signalId, mapping, document.timeline.cycleCount);
     let start = 0;
     let end = document.timeline.cycleCount;
