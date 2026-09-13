@@ -82,6 +82,7 @@ test("keeps canonical state unchanged during a dense Transaction preview drag", 
   const dirty = await page.getByTestId("dirty-status").textContent();
   const countersBefore = JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, number>;
   const minimapBefore = await page.getByTestId("minimap").getAttribute("data-transaction-overview-builds");
+  const diagnosticsBefore = await host.getAttribute("data-renderer-diagnostic-publishes");
   await page.getByTestId("home-snap-toggle").click();
   await expect(page.getByTestId("snap-status")).toHaveText("Snap: Off");
   await transaction.locator("span").hover();
@@ -101,6 +102,7 @@ test("keeps canonical state unchanged during a dense Transaction preview drag", 
   expect(countersDuring.annotationResolvePasses).toBe(countersBefore.annotationResolvePasses);
   expect(countersDuring.edgeCounterResolvePasses).toBe(countersBefore.edgeCounterResolvePasses);
   expect(await page.getByTestId("minimap").getAttribute("data-transaction-overview-builds")).toBe(minimapBefore);
+  expect(await host.getAttribute("data-renderer-diagnostic-publishes")).toBe(diagnosticsBefore);
   await page.mouse.up();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 });

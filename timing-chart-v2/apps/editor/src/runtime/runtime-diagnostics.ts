@@ -25,6 +25,7 @@ export function collectWaveRenderErrors(host: HTMLElement): readonly DocumentPro
 }
 
 export function publishRendererState(host: HTMLElement, session: Pick<CommandHistorySession, "getSnapshot" | "historyState" | "metrics" | "historyMetrics">, viewMetricsOwner: Pick<ViewMetricsOwner, "snapshot">, adapter: WaveDromAdapter, geometryCache: unknown, projectionCoordinator: Pick<ProjectionCoordinator, "currentDocumentEpoch" | "diagnostics">, renderer: Pick<TimingChartRenderer, "diagnosticSummary">, mappingCache: Pick<DisplayTimeMappingCache, "metrics">, snapService: Pick<SemanticSnapCandidateService, "metrics">, snapIndex: ImmutableSnapIndex | undefined, rulerBuilds: number, edgeCounterResolvePasses: number, zoom: number, validatorInvocations: number, edgeCounterMetrics?: EdgeCounterProjectionMetrics): void {
+  host.dataset.rendererDiagnosticPublishes = String(Number(host.dataset.rendererDiagnosticPublishes ?? "0") + 1);
   host.dataset.canonicalRevision = String(session.getSnapshot().revision);
   host.dataset.historyDepth = String(session.historyState().undoDepth);
   const metrics = viewMetricsOwner.snapshot();
