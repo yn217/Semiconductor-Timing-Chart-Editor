@@ -71,6 +71,26 @@ test("moves a whole Transaction by dragging its body to a snapped cycle with one
   expect(Math.abs(undone.x - before.x)).toBeLessThanOrEqual(1);
 });
 
+test("keeps canonical state unchanged during a dense Transaction preview drag", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await createTransaction(page, "Dense preview", 2, 6);
+  const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
+  const box = (await transaction.boundingBox())!;
+  const revision = await host.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  const dirty = await page.getByTestId("dirty-status").textContent();
+  await transaction.locator("span").hover();
+  await page.mouse.down();
+  for (let index = 0; index < 120; index += 1) await page.mouse.move(box.x + 20 + (index % 12), box.y + box.height / 2);
+  await expect(transaction).toHaveAttribute("data-drag-preview", "true");
+  expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(dirty);
+  await page.mouse.up();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+});
+
 test("resizes a Transaction's start/end edge with snap and keeps start < end", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
