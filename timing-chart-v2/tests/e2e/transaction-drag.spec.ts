@@ -69,6 +69,10 @@ test("moves a whole Transaction by dragging its body to a snapped cycle with one
   expect(await page.getByTestId("history-status").textContent()).toBe(historyBefore!.replace("Redo 0", "Redo 1"));
   const undone = (await transaction.boundingBox())!;
   expect(Math.abs(undone.x - before.x)).toBeLessThanOrEqual(1);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo" }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const redone = (await transaction.boundingBox())!;
+  expect(Math.abs(redone.x - cycle10.x)).toBeLessThanOrEqual(2);
 });
 
 test("keeps canonical state unchanged during a dense Transaction preview drag", async ({ page }) => {
