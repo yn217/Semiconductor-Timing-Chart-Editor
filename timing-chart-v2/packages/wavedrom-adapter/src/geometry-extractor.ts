@@ -203,7 +203,22 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
     .sort((left, right) => left.x - right.x);
   if (gridLines.length < 2) throw new WaveDromAdapterError("MISSING_CYCLE_GRID", "WaveDrom SVG does not expose at least one complete cycle.");
 
-  const boundaries = gridLines.map((line) => transformPoint(laneMatrix, point(line.x, (line.y1 + line.y2) / 2)));
+  const renderedBoundaries = gridLines.map((line) => transformPoint(laneMatrix, point(line.x, (line.y1 + line.y2) / 2)));
+  // WaveDrom's gmark elements are presentation marks and may be thinned;
+  // they are not the semantic cycle-boundary index.  A bounded window still
+  // has a complete time domain, so recover its semantic boundaries from the
+  // actual rendered domain endpoints and the window length.  This keeps the
+  // expansion bounded by the current source window rather than the canonical
+  // document length.
+  const sourceWindowLength = waveJson.sourceWindow === undefined ? undefined : waveJson.sourceWindow.end - waveJson.sourceWindow.start;
+  const boundaries = sourceWindowLength !== undefined && renderedBoundaries.length >= 2 && renderedBoundaries.length !== sourceWindowLength + 1
+    ? Array.from({ length: sourceWindowLength + 1 }, (_, index) => {
+      const first = renderedBoundaries[0]!;
+      const last = renderedBoundaries[renderedBoundaries.length - 1]!;
+      const fraction = index / sourceWindowLength;
+      return point(first.x + (last.x - first.x) * fraction, first.y + (last.y - first.y) * fraction);
+    })
+    : renderedBoundaries;
   const accumulator = createGeometryEntryAccumulator();
   const transitionResolvers: TransitionGeometryResolver[] = [];
   const add = accumulator.add;
