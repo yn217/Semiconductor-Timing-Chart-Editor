@@ -11,7 +11,10 @@ export function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometry
   const terminal = geometry.find({ signalId: axisOwnerSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point.x ?? 0;
   const scale = scaleOverride ?? (screenWidth === undefined || terminal <= 0 ? 1 : screenWidth / Math.max(1, terminal + 24));
   const lines: HTMLElement[] = [];
-  for (const displayCycle of presentationCycles(mapping.displayCycleCount)) {
+  const cycleZeroPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: 0, point: "cycle-start" })?.point;
+  const cycleOnePoint = mapping.displayCycleCount > 0 ? geometry.find({ signalId: axisOwnerSignalId, cycle: 1, point: "cycle-start" })?.point : undefined;
+  const pixelsPerCycle = cycleZeroPoint && cycleOnePoint ? (cycleOnePoint.x - cycleZeroPoint.x) * scale : Infinity;
+  for (const displayCycle of presentationCycles(mapping.displayCycleCount, pixelsPerCycle)) {
     const anchor = geometry.find({ signalId: axisOwnerSignalId, cycle: displayCycle, point: "cycle-start" });
     if (!anchor) continue;
     const line = element.ownerDocument.createElement("span");
