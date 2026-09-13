@@ -7,9 +7,9 @@ function percentile(values: readonly number[], fraction: number): number {
   return sorted[Math.min(sorted.length - 1, Math.floor((sorted.length - 1) * fraction))]!;
 }
 
-test("Transaction reload startup exposes focused timing and projection metrics", async ({ page }) => {
+for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) test(`Transaction reload startup exposes focused timing and projection metrics at ${viewport.width}x${viewport.height}`, async ({ page }) => {
   test.setTimeout(90000);
-  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.setViewportSize(viewport);
   const samples: StartupSample[] = [];
   for (let trial = 0; trial < 3; trial += 1) {
     const navigationStartedAt = Date.now();
