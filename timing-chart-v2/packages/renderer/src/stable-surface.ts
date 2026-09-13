@@ -122,6 +122,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #waveVersions = new Map<WaveSignalId, number>();
   readonly #wavePending = new Map<WaveSignalId, number>();
   readonly #waveQueue = new Map<WaveSignalId, { readonly owner: HTMLElement; readonly version: number; readonly documentEpoch: number }>();
+  readonly #waveWindowRetryKeys = new Set<string>();
   readonly #waveRendersBySignal = new Map<WaveSignalId, number>();
   readonly #localGeometryBuildsBySignal = new Map<WaveSignalId, number>();
   #waveBatchScheduled = false;
@@ -228,6 +229,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       // result can update counters, errors, or derived geometry state.
       this.#waveQueue.clear();
       this.#wavePending.clear();
+      this.#waveWindowRetryKeys.clear();
       this.#diagnostics = { ...this.#diagnostics, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, diagnosticMapPrunePasses: this.#diagnosticMapPrunePasses };
       for (const [signalId, owner] of this.#waveOwners) {
         owner.remove();
@@ -446,6 +448,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#waveVersions.clear();
     this.#wavePending.clear();
     this.#waveQueue.clear();
+    this.#waveWindowRetryKeys.clear();
     this.#waveRendersBySignal.clear();
     this.#localGeometryBuildsBySignal.clear();
     this.#waveBatchScheduled = false;
@@ -597,7 +600,10 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       const windowStillStale = currentWindow !== undefined &&
         (request.owner.dataset.renderedSourceWindowStart !== String(currentWindow.start) ||
           request.owner.dataset.renderedSourceWindowEnd !== String(currentWindow.end));
-      if (request.owner.isConnected &&
+      const retryKey = currentWindow === undefined ? undefined : `${request.documentEpoch}:${request.signalId}:${currentWindow.start}:${currentWindow.end}`;
+      const canRetryWindow = retryKey === undefined || !this.#waveWindowRetryKeys.has(retryKey);
+      if (retryKey !== undefined && canRetryWindow) this.#waveWindowRetryKeys.add(retryKey);
+      if (request.owner.isConnected && canRetryWindow &&
         ((this.#dirtyWaves.has(request.signalId) && (this.#waveVersions.get(request.signalId) ?? 0) !== request.version) || windowStillStale)) {
         // A viewport change can arrive while this batch is rendering. The
         // earlier queue attempt is intentionally coalesced by #wavePending;
