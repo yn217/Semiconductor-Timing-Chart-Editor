@@ -192,6 +192,7 @@ function interpolateSegment(segment: Segment, fraction: number): Point {
 export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readonly [K in keyof GeometryExtractionMetrics]: GeometryExtractionMetrics[K] }): ImmutableLocalGeometryMap {
   const startedAt = globalThis.performance?.now() ?? Date.now();
   const { svg, renderIndex, waveJson } = rendered;
+  const sourceStart = waveJson.sourceWindow?.start ?? 0;
   const lanes = groupById<SVGGElement>(svg, `lanes_${renderIndex}`);
   const draw = groupById<SVGGElement>(svg, `wavelane_draw_0_${renderIndex}`);
   const laneMatrix = matrixOf(svg as SVGGraphicsElement, lanes);
@@ -210,11 +211,12 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
     const start = boundaries[cycle];
     const end = boundaries[cycle + 1];
     if (!start || !end) continue;
-    add(cycle, "cycle-start", start);
-    add(cycle, "cycle-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
-    add(cycle, "value-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
-    add(cycle, "row-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
-    add(cycle, "cycle-end", end);
+    const sourceCycle = cycle + sourceStart;
+    add(sourceCycle, "cycle-start", start);
+    add(sourceCycle, "cycle-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
+    add(sourceCycle, "value-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
+    add(sourceCycle, "row-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
+    add(sourceCycle, "cycle-end", end);
   }
   // The terminal timeline boundary (cycle == cycleCount, i.e. the half-open range's exclusive end)
   // has no per-cycle slot of its own - it's only ever the "cycle-end" of the last cycle. Store it as
@@ -222,7 +224,7 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
   // or TimeGroup ending exactly at cycleCount) can resolve it directly instead of extrapolating.
   const terminalCycle = boundaries.length - 1;
   const terminalBoundary = boundaries[terminalCycle];
-  if (terminalBoundary) add(terminalCycle, "cycle-start", terminalBoundary);
+  if (terminalBoundary) add(terminalCycle + sourceStart, "cycle-start", terminalBoundary);
 
   const phaseHalfBricks = (waveJson.phase ?? 0) * 2;
   if (!Number.isInteger(phaseHalfBricks)) throw new WaveDromAdapterError("UNSUPPORTED_GEOMETRY_PHASE", "Geometry extraction requires half-cycle-aligned WaveDrom phase.");
@@ -248,7 +250,7 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
     const use = uses[visibleIndex];
     if (!use) continue;
     const originalHalfBrick = visibleIndex + clippedHalfBricks;
-    const cycle = Math.floor(originalHalfBrick / 2);
+    const cycle = Math.floor(originalHalfBrick / 2) + sourceStart;
     if (cycle < 0 || cycle >= boundaries.length - 1) continue;
     const href = hrefOf(use);
     const translated = useTranslation(use);
