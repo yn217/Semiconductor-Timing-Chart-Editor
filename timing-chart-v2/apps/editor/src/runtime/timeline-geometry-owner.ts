@@ -87,11 +87,15 @@ export class TimelineGeometryOwner {
     // projection. Cycle boundaries are cheap semantic geometry owned by the axis.
     let before = 0;
     let after = document.timeline.cycleCount;
-    if (axis.geometry && axis.ownerSignalId !== undefined) {
+    const fallbackOwner = axis.geometry && axis.ownerSignalId !== undefined
+      ? axis.geometry
+      : this.geometryMaps.values().next().value;
+    const fallbackSignalId = axis.ownerSignalId ?? fallbackOwner?.signalId;
+    if (fallbackOwner && fallbackSignalId !== undefined) {
       for (let cycle = 0; cycle <= document.timeline.cycleCount; cycle += 1) {
         const displayCycle = mapping.sourceToDisplay[cycle];
         if (displayCycle === undefined) continue;
-        const x = axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point.x;
+        const x = fallbackOwner.find({ signalId: fallbackSignalId, cycle: displayCycle, point: "cycle-start" })?.point.x;
         if (x === undefined) continue;
         if (x <= localStart) before = cycle;
         if (x >= localEnd) { after = cycle; break; }
