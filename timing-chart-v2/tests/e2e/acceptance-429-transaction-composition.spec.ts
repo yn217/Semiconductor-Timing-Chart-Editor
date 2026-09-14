@@ -366,9 +366,16 @@ test("Resizing a folded Transaction preserves the opposite source boundary and u
   const startHandle = bar.locator(":scope > i[data-edge='start']");
   const box = await startHandle.boundingBox();
   expect(box).not.toBeNull();
+  const barBox = await bar.boundingBox();
+  expect(barBox).not.toBeNull();
   await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box!.x + 18, box!.y + box!.height / 2, { steps: 3 });
+  // Move across a real source boundary. A fixed pixel delta can remain in
+  // the same cycle at different viewport/zoom configurations and would make
+  // this acceptance assert a resize that the geometry never requested.
+  const nextBoundary = await page.getByTestId("cycle-ruler").locator("[data-source-cycle='9']").boundingBox();
+  expect(nextBoundary).not.toBeNull();
+  await page.mouse.move(nextBoundary!.x + 1, barBox!.y + barBox!.height / 2, { steps: 3 });
   await page.mouse.up();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await expect(inspector.getByLabel("Transaction end")).toHaveValue("60");
