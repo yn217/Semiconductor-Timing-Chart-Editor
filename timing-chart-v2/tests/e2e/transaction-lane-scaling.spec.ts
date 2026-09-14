@@ -49,6 +49,23 @@ test("10k Transaction fixture keeps mounted lane DOM viewport-bounded", async ({
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
+test("standalone Transaction tree scroll drives the virtualized lane surface", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const base = generatePerformanceDocument({ signalCount: 40, cycleCount: 500, profile: "transaction-heavy" });
+  const document = { ...base, transactions: Array.from({ length: 2_000 }, (_, index) => ({ id: `txn_scroll_${index}`, name: `Transaction ${index}`, start: (index * 3) % 490, end: ((index * 3) % 490) + 4, laneId: `lane_${index % 16}`, linkedSignals: [base.signals[index % base.signals.length]!.id] })) };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-scroll.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "2000", { timeout: 60_000 });
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  const tree = page.getByTestId("transaction-left-tree");
+  const lanes = page.getByTestId("transaction-lanes");
+  await expect(tree).toBeVisible();
+  const beforeTop = Number.parseFloat(await lanes.evaluate((element) => getComputedStyle(element).top));
+  await tree.evaluate((element) => { element.scrollTop = Math.min(240, element.scrollHeight - element.clientHeight); element.dispatchEvent(new Event("scroll")); });
+  await expect.poll(() => tree.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await expect.poll(() => lanes.evaluate((element) => Number.parseFloat(getComputedStyle(element).top))).toBeLessThan(beforeTop);
+});
+
 test("Transaction Fit All and Fit Selection remain view-only", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
