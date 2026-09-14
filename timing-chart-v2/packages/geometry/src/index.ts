@@ -284,7 +284,11 @@ export class SemanticSnapCandidateService {
       if (!input.rowY.has(signalId)) return undefined;
       const renderedCycle = anchor.cycle === input.document.timeline.cycleCount ? renderedCycleCount : renderedCycleForSourceCycle(anchor.cycle);
       if (renderedCycle === undefined) return undefined;
-      const local = input.geometryMaps.get(signalId)?.find({ ...anchor, signalId, cycle: renderedCycle });
+      // Local geometry maps retain canonical source-cycle keys even when the
+      // display mapping compresses folded cycles. The display cycle is only
+      // used to select the rendered boundary; feeding it back into the map
+      // would resolve a later source boundary to an earlier one after a fold.
+      const local = input.geometryMaps.get(signalId)?.find({ ...anchor, signalId, cycle: anchor.cycle });
       return local ? { x: local.point.x, y: (input.rowY.get(signalId) ?? 0) + local.point.y } : undefined;
     };
     for (const signal of input.document.signals) {
@@ -303,7 +307,7 @@ export class SemanticSnapCandidateService {
         ];
         for (const item of points) {
           const anchor: SemanticAnchor = { signalId: signal.id, cycle, point: item.point };
-          const local = map.find({ ...anchor, cycle: renderedCycle });
+          const local = map.find({ ...anchor, cycle });
           if (local) candidates.push({ kind: item.kind, anchor, point: { x: local.point.x, y: y + local.point.y }, ownerId: signal.id });
         }
       }

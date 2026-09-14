@@ -201,7 +201,11 @@ export class TimelineGeometryOwner {
     for (let cycle = 0; cycle <= cycleCount; cycle += 1) {
       const displayCycle = mapping.sourceToDisplay[cycle];
       if (displayCycle === undefined) continue;
-      const x = boundaryByDisplayCycle?.get(displayCycle) ?? owner.find({ signalId, cycle: displayCycle, point: "cycle-start" })?.point.x;
+      // Geometry boundaries are source-keyed even when the display mapping
+      // compresses folded cycles. Do not feed a display cycle back into the
+      // source geometry map: after a fold, source 60 would otherwise resolve
+      // through display 40 and acquire source 40's X position.
+      const x = boundaryByDisplayCycle?.get(cycle) ?? owner.find({ signalId, cycle, point: "cycle-start" })?.point.x;
       if (x !== undefined) entries.push({ cycle, x });
     }
     this.#viewportBoundaryCache = { geometry: owner, mapping, entries };
