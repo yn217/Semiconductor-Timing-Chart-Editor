@@ -232,7 +232,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
             transactionExtent = undefined;
           }
         }
-        if (transactionExtent && transactionExtent.end - transactionExtent.start <= 4096) {
+        const activeViewMode = owner.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode;
+        // Cycle-only rendering does not consume Transaction bar geometry.
+        // Keep its WaveDrom window viewport-bounded; Transaction and Combined
+        // retain the shared canonical transaction extent for bar alignment.
+        if (activeViewMode !== "Cycle" && transactionExtent && transactionExtent.end - transactionExtent.start <= 4096) {
           return { start: Math.min(window.start, transactionExtent.start), end: Math.max(window.end, transactionExtent.end) };
         }
         return window;
