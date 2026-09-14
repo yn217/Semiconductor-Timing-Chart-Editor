@@ -116,6 +116,28 @@ test("Home overflow uses the shared menu keyboard behavior and restores its invo
   await expect(trigger).toBeFocused();
 });
 
+test("floating Find and Time Scale dialogs trap focus and restore their triggers", async ({ page }) => {
+  await page.goto("/");
+  const findTrigger = page.getByTestId("find-replace-trigger");
+  await findTrigger.click();
+  const findDialog = page.getByRole("dialog", { name: "Find and Replace" });
+  await expect(findDialog).toBeVisible();
+  await expectTabLoop(findDialog);
+  await page.keyboard.press("Escape");
+  await expect(findDialog).toBeHidden();
+  await expect(findTrigger).toBeFocused();
+
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  const scaleTrigger = page.getByTestId("transaction-time-scale-trigger");
+  await scaleTrigger.click();
+  const scaleDialog = page.getByRole("dialog", { name: "Transaction Time Scale" });
+  await expect(scaleDialog).toBeVisible();
+  await expectTabLoop(scaleDialog);
+  await page.keyboard.press("Escape");
+  await expect(scaleDialog).toBeHidden();
+  await expect(scaleTrigger).toBeFocused();
+});
+
 test("Tree menus close on Escape or outside click without selecting the canvas", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Cycle", exact: true }).click();
