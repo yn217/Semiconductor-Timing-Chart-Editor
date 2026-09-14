@@ -11,6 +11,7 @@ async function state(locator: import("@playwright/test").Locator): Promise<MenuS
 
 test("Left Tree menus keep readable normal, hover, focus, and disabled states", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
   const surface = page.getByTestId("cycle-surface");
   await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
 
