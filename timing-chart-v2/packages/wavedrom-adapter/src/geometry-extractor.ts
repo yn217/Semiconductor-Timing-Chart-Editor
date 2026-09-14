@@ -211,7 +211,12 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
   // expansion bounded by the current source window rather than the canonical
   // document length.
   const sourceWindowLength = waveJson.geometrySourceCycles !== undefined ? waveJson.geometrySourceCycles.length - 1 : waveJson.geometryWindow === undefined ? (waveJson.sourceWindow === undefined ? undefined : waveJson.sourceWindow.end - waveJson.sourceWindow.start) : waveJson.geometryWindow.end - waveJson.geometryWindow.start;
-  const boundaries = waveJson.geometrySourceCycles !== undefined ? renderedBoundaries : sourceWindowLength !== undefined && renderedBoundaries.length >= 2 && renderedBoundaries.length !== sourceWindowLength + 1
+  const boundaries = waveJson.geometrySourceCycles !== undefined && renderedBoundaries.length + 1 === waveJson.geometrySourceCycles.length && renderedBoundaries.length >= 2
+    ? [...renderedBoundaries, point(
+      renderedBoundaries.at(-1)!.x + (renderedBoundaries.at(-1)!.x - renderedBoundaries.at(-2)!.x),
+      renderedBoundaries.at(-1)!.y + (renderedBoundaries.at(-1)!.y - renderedBoundaries.at(-2)!.y),
+    )]
+    : waveJson.geometrySourceCycles !== undefined ? renderedBoundaries : sourceWindowLength !== undefined && renderedBoundaries.length >= 2 && renderedBoundaries.length !== sourceWindowLength + 1
     ? Array.from({ length: sourceWindowLength + 1 }, (_, index) => {
       const first = renderedBoundaries[0]!;
       const last = renderedBoundaries[renderedBoundaries.length - 1]!;
