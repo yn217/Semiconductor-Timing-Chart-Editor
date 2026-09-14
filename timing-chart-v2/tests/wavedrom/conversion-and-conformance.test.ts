@@ -134,6 +134,30 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(bounded.displayWindow).toEqual({ start: 4, end: 20 });
   });
 
+  it("preserves a delayed Clock start when the bounded window begins before it", () => {
+    const base = canonicalFixture().signals[0] as ClockSignal;
+    const clock = { ...base, generator: { ...base.generator, start: 10, period: 2 } } as ClockSignal;
+    const bounded = toWaveJsonWindow({ signal: clock, cycleCount: 20 }, 4, 8);
+    expect(bounded.wave).toBe("0.");
+    expect(bounded.sourceWindow).toEqual({ start: 4, end: 8 });
+  });
+
+  it("carries the canonical LOW enable state into a bounded Clock window", () => {
+    const base = canonicalFixture().signals[0] as ClockSignal;
+    const clock = { ...base, enable: [{ start: 0, value: 1 }, { start: 4, value: 0 }, { start: 12, value: 1 }] } as ClockSignal;
+    const bounded = toWaveJsonWindow({ signal: clock, cycleCount: 20 }, 6, 12);
+    expect(bounded.wave).toBe("0.....");
+    expect(bounded.sourceWindow).toEqual({ start: 6, end: 12 });
+  });
+
+  it("retains an enable transition that occurs inside a bounded Clock window", () => {
+    const base = canonicalFixture().signals[0] as ClockSignal;
+    const clock = { ...base, enable: [{ start: 0, value: 0 }, { start: 8, value: 1 }] } as ClockSignal;
+    const bounded = toWaveJsonWindow({ signal: clock, cycleCount: 20 }, 4, 12);
+    expect(bounded.wave).toBe("0...p...");
+    expect(bounded.sourceWindow).toEqual({ start: 4, end: 12 });
+  });
+
   it("uses displayLabel only for WaveDrom data while retaining semantic values", () => {
     const bus = { ...canonicalFixture().signals[1]!, values: [{ start: 0, value: "0x12345678", displayLabel: "READY" }] } as ValueSignal;
     expect(bus.values[0]?.value).toBe("0x12345678");
