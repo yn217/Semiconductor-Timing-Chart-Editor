@@ -97,7 +97,10 @@ describe("Screen Geometry and snapping", () => {
       sourceCycleForRenderedCycle: (cycle) => sourceByRendered[cycle],
       renderedCycleForSourceCycle: (cycle) => renderedBySource.get(cycle),
     });
-    expect(index.nearest({ x: 20, y: 0 }, 1, ["cycle-boundary"])).toMatchObject({ anchor: { cycle: 4, point: "cycle-start" } });
+    // The map is source-keyed: folded display cycle 2 still resolves through
+    // source boundary 4, whose authoritative X is 40 rather than source 2's
+    // X of 20.
+    expect(index.nearest({ x: 40, y: 0 }, 1, ["cycle-boundary"])).toMatchObject({ anchor: { cycle: 4, point: "cycle-start" }, point: { x: 40 } });
     expect(index.entries().some((candidate) => candidate.anchor.cycle === 2 || candidate.anchor.cycle === 3)).toBe(false);
   });
 
