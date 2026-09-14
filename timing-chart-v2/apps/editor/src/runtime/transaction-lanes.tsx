@@ -3,6 +3,7 @@ import type { Bookmark, BookmarkId, CanonicalDocument, Transaction, TransactionI
 import { EditorIcon } from "../editor-icon.js";
 import type { TransactionLaneCommandActions } from "../application/editor-surface-command-controller.js";
 import { InlineNameInput } from "../inline-name-input.js";
+import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
 
 const LANE_ROW_HEIGHT = 40;
 const GROUP_HEADER_HEIGHT = 24;
@@ -164,18 +165,13 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   useEffect(() => {
     if (!drag) return undefined;
     if (drag.documentEpoch !== documentEpoch) { setDrag(undefined); setPreview(undefined); return undefined; }
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        if (previewFrame.current !== undefined) cancelAnimationFrame(previewFrame.current);
-        previewFrame.current = undefined;
-        pendingPreviewClientX.current = undefined;
-        setDrag(undefined);
-        setPreview(undefined);
-      }
-    };
-    window.document.addEventListener("keydown", onKeyDown);
-    return () => window.document.removeEventListener("keydown", onKeyDown);
+    return registerActiveGestureCancel(() => {
+      if (previewFrame.current !== undefined) cancelAnimationFrame(previewFrame.current);
+      previewFrame.current = undefined;
+      pendingPreviewClientX.current = undefined;
+      setDrag(undefined);
+      setPreview(undefined);
+    });
   }, [drag, documentEpoch]);
 
   if (containingFold) {
