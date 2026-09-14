@@ -504,8 +504,13 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       window.removeEventListener("resize", update);
     };
   }, [documentEpoch, totalHeight, document.transactions.length, filter, viewMode]);
-  const virtualTop = Math.max(0, virtualWindow.top - 480);
-  const virtualBottom = Math.min(totalHeight, virtualWindow.top + virtualWindow.height + 480);
+  // Keep a small interaction cushion while bounding the number of mounted
+  // Transaction rows. A 480px cushion mounted thousands of bars when many
+  // lanes share the same viewport; 120px still covers several row heights
+  // without making DOM size scale with the document.
+  const virtualOverscan = 120;
+  const virtualTop = Math.max(0, virtualWindow.top - virtualOverscan);
+  const virtualBottom = Math.min(totalHeight, virtualWindow.top + virtualWindow.height + virtualOverscan);
   const isVisible = (top: number, height: number) => top < virtualBottom && top + height > virtualTop;
   const visibleGroupHeaders = groupHeaders.filter((header) => isVisible(header.labelTop, GROUP_HEADER_HEIGHT));
   const bandContainsSelected = (band: LaneBand) => selectedId !== undefined && (laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).some((transaction) => transaction.id === selectedId);
