@@ -60,6 +60,21 @@ describe("migrateV1", () => {
     expect(validateCanonicalDocument(document)).toHaveLength(0);
   });
 
+  it("repairs duplicate explicit change IDs across Signal values and Clock enable lists", () => {
+    const { document, warnings } = migrateV1(v1Document({
+      signals: [
+        { id: "sig_clk", name: "CLK", type: "clock", generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0, polarity: "positive" }, enable: [{ id: "change_shared", start: 0, value: 1 }] },
+        { id: "sig_data", name: "DATA", type: "binary", role: "input", values: [{ id: "change_shared", start: 0, value: 0 }] },
+      ],
+    }));
+    const clock = document.signals.find((signal) => signal.id === "sig_clk")!;
+    const data = document.signals.find((signal) => signal.id === "sig_data")!;
+    const ids = [clock.type === "clock" ? clock.enable?.[0]?.id : undefined, data.type !== "clock" && data.type !== "commentRow" ? data.values[0]?.id : undefined];
+    expect(new Set(ids).size).toBe(2);
+    expect(ids).toContain("change_shared");
+    expect(warnings.some((warning) => warning.code === "MIGRATION_DUPLICATE_CHANGE_ID_REPAIRED")).toBe(true);
+  });
+
   it("falls back to the real clock signal (with a warning) when the legacy referenceClock names a non-clock or missing ID", () => {
     const source = v1Document({
       timeline: { cycleCount: 10, referenceClock: "sig_data" }, // sig_data is a binary signal, not a clock
