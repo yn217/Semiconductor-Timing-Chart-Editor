@@ -354,6 +354,11 @@
 .transaction-left-tree-row:hover, .transaction-left-tree-row[data-selected="true"] { background: #dcecff; color: #155ca0; }
 .cycle-panel.mode-transaction .transaction-lanes { min-height: calc(100% - 34px); }
 .cycle-panel.mode-transaction .transaction-signal-tree { height: calc(100% - 34px); }
+/* The standalone Transaction lane height is the vertical scroll extent.  It
+   must participate in the viewport's flow; an absolutely positioned lane is
+   painted but contributes nothing to scrollHeight for large transaction
+   sets.  Split keeps its nested pane/positioning contract below. */
+.cycle-panel.mode-transaction:not(.mode-split) .transaction-lanes { position: relative; top: 0; }
 /* #397: `.surface-host`'s padding-top must clear `.transaction-lanes`'s own
    bottom edge (its `top` from the base rule above + this max-height) or a
    multi-Group/multi-lane Transaction set (more content than one lane needs)
