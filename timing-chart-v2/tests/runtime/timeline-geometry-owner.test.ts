@@ -58,4 +58,29 @@ describe("TimelineGeometryOwner", () => {
     expect(owner.sourceBoundaryToLocalX(cycleDocument, 1)).toBe(56);
     expect(owner.screenToLocal({ x: 40, y: 12 }, 2)).toEqual({ x: 20, y: 6 });
   });
+
+  it("uses retained geometry boundaries instead of scanning a large source timeline", () => {
+    const clockId = signalId("sig_cycle_clock");
+    let findCalls = 0;
+    const geometry = {
+      signalId: clockId,
+      find: () => { findCalls += 1; return undefined; },
+      cycleBoundaryEntries: () => [
+        { cycle: 0, point: "cycle-start" as const, position: { x: 0, y: 0 } },
+        { cycle: 2_048, point: "cycle-start" as const, position: { x: 2_048, y: 0 } },
+      ],
+    };
+    const document = { ...cycleDocument, timeline: { ...cycleDocument.timeline, cycleCount: 100_000, end: 100_000 } };
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => document,
+      getProjection: () => ({ rowLayout: [{ rowId: clockId, kind: "timing", visible: true, y: 0 }] } as never),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
+    const sourceWindow = owner.sourceWindowForLocalRange(document, 0, 100);
+    expect(sourceWindow).toEqual({ start: 0, end: 2_048 });
+    expect(findCalls).toBe(0);
+  });
 });
