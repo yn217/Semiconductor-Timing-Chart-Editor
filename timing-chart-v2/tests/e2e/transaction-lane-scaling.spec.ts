@@ -144,7 +144,9 @@ test("central Transaction surface remains viewport-bounded across 1k/5k/10k with
     await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
     await expect(page.getByTestId("transaction-lanes")).toBeVisible({ timeout: 60_000 });
     const modeReady = await page.evaluate((startedAt) => performance.now() - startedAt, started);
-    const viewport = page.getByTestId("cycle-viewport");
+    // Standalone Transaction mode owns vertical virtualization through the
+    // left transaction tree; cycle-viewport is the shared horizontal owner.
+    const viewport = page.getByTestId("transaction-left-tree");
     const metrics = await page.getByTestId("transaction-lanes").evaluate((element) => ({
       totalHeight: Number.parseFloat((element as HTMLElement).style.height),
       mountedBars: element.querySelectorAll("[data-transaction-id]").length,
