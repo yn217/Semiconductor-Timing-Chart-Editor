@@ -7,13 +7,13 @@ import { DOCUMENT_RESOURCE_BUDGET, parseJsonInput } from "@timing-chart-v2/schem
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./event-table-components.js";
 import { buildEventTableIndex } from "./runtime/event-table-index.js";
+import { reorderTransitionBlock, transitionIdentity } from "./runtime/transition-reorder.js";
 import { registerActiveGestureCancel } from "./runtime/active-gesture-cancellation.js";
 
 // Signal transitions have no separately persisted row ID; within the
 // canonical value list, the start boundary is the unique row identity.
 // Content-based keys can collide for identical adjacent transitions and
 // make React reuse the wrong virtualized row/editor state.
-const transitionIdentity = (change: ValueSignal["values"][number]): string => change.id ?? String(change.start);
 const EVENT_ROW_HEIGHT = 30;
 const EVENT_OVERSCAN = 8;
 
@@ -145,14 +145,10 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     if (selectedIndexes.length !== last - first + 1) return;
     const targetIndex = delta < 0 ? first - 1 : last + 1;
     if (targetIndex < 0 || targetIndex >= ordered.length || checkedKeys.has(transitionIdentity(ordered[targetIndex]!))) return;
-    const block = ordered.splice(first, selectedIndexes.length);
-    ordered.splice(delta < 0 ? first - 1 : first + 1, 0, ...block);
-    const durationValues = indexed.ordered;
-    const durationByStart = new Map(durationValues.map((change) => [change.start, indexed.endByStart.get(change.start)! - change.start]));
-    let nextStart = durationValues[0]?.start ?? 0;
-    const reordered = ordered.map((change) => { const next = { ...change, start: nextStart }; nextStart += durationByStart.get(change.start) ?? 0; return next; });
-    const result = commands.replaceValues(signal.id, reordered);
-    if (result.ok) { const nextFirst = delta < 0 ? first - 1 : first + 1; setCheckedKeys(new Set(reordered.slice(nextFirst, nextFirst + block.length).map(transitionIdentity))); }
+    const result = reorderTransitionBlock(ordered, checkedKeys, delta < 0 ? first - 1 : last + 1);
+    if (!result) return;
+    const commandResult = commands.replaceValues(signal.id, result.values);
+    if (commandResult.ok) setCheckedKeys(new Set(result.values.slice(result.firstIndex, result.firstIndex + result.blockSize).map(transitionIdentity)));
   };
   const orderedStarts = indexed.ordered;
   const selectedIndexes = orderedStarts.map((change, index) => checkedKeys.has(transitionIdentity(change)) ? index : -1).filter((index) => index >= 0);
@@ -176,14 +172,8 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     const last = selectedIndexes.at(-1) ?? -1;
     const to = ordered.findIndex((change) => change.start === targetStart);
     if (from < 0 || to < 0 || selectedIndexes.length !== last - from + 1) { setActiveDragStarts(undefined); return; }
-    const block = ordered.splice(from, selectedIndexes.length);
-    ordered.splice(from < to ? to + 1 - selectedIndexes.length : to, 0, ...block);
-    const durationValues = indexed.ordered;
-    const durationByStart = new Map(durationValues.map((change) => [change.start, indexed.endByStart.get(change.start)! - change.start]));
-    let nextStart = durationValues[0]?.start ?? 0;
-    const reordered = ordered.map((change) => { const next = { ...change, start: nextStart }; nextStart += durationByStart.get(change.start) ?? 0; return next; });
-    const result = commands.replaceValues(signal.id, reordered);
-    if (result.ok) { const nextFirst = from < to ? to + 1 - selectedIndexes.length : to; setCheckedKeys(new Set(reordered.slice(nextFirst, nextFirst + block.length).map(transitionIdentity))); }
+    const result = reorderTransitionBlock(ordered, activeDragStarts, to);
+    if (result) { const commandResult = commands.replaceValues(signal.id, result.values); if (commandResult.ok) setCheckedKeys(new Set(result.values.slice(result.firstIndex, result.firstIndex + result.blockSize).map(transitionIdentity))); }
     setActiveDragStarts(undefined);
   };
   // Visual Quality Closure pass (#402/#426), Section 4: the checkbox column
