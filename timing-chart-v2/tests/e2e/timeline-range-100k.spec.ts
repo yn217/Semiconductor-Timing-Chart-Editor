@@ -16,7 +16,7 @@ const scaleDocument = {
   timeline: { start: 0, end: 100_000, cycleCount: 100_000, timeBase: "cycle", edge: "rising", labelAnchors: [] },
   signalGroups: [{ id: "grp_range_scale", name: "Range Scale", rows: [scaleSignal.id] }],
   signals: [scaleSignal],
-  bookmarks: [], timeGroups: [], annotations: [], annotationGroups: [], transactions: [], constraints: [],
+  bookmarks: [{ id: "bookmark-50k", name: "Cycle 50k", start: 50_000 }, { id: "bookmark-99k", name: "Cycle 99k", start: 99_000 }], timeGroups: [], annotations: [], annotationGroups: [], transactions: [], constraints: [],
   legend: { show: false, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
   layout: { roleColumnWidth: 62, signalNameWidth: 178, signalNameAlign: "left", rowHeight: 30, signalSpacing: 4, overflow: "ellipsis" },
   checkSettings: {},
@@ -85,4 +85,20 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
     dirty: document.querySelector("[data-testid='dirty-status']")?.textContent,
   }));
   expect(after).toEqual(before);
+});
+
+test("reveals offscreen 50k and 99k cycles through the production bookmark path", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "range-scale-100k-bookmarks.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(scaleDocument)) });
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
+  await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
+  const rows = page.getByTestId("bookmark-list").getByRole("row");
+  await expect(rows).toHaveCount(3); // header + two bookmark rows
+  await rows.filter({ hasText: "Cycle 50k" }).dblclick();
+  await expect(host).toHaveAttribute("data-selected-cycle", "50000", { timeout: 30_000 });
+  await rows.filter({ hasText: "Cycle 99k" }).dblclick();
+  await expect(host).toHaveAttribute("data-selected-cycle", "99000", { timeout: 30_000 });
 });
