@@ -21,6 +21,21 @@ describe("Screen Geometry and snapping", () => {
     const map = new ImmutableLocalGeometryMap(owner.id, [{ cycle: 0, point: "cycle-start", position: { x: 0, y: 0 } }]);
     expect(resolveTimeAxisGeometry(document, new Map([[owner.id, map]]))).toMatchObject({ mode: "clockless", ownerSignalId: owner.id, geometry: map });
   });
+
+  it("resolves the reference Clock by stable signal ID, independent of row order or deletion", () => {
+    const source = canonicalFixture();
+    const clock = source.signals.find((signal) => signal.type === "clock")!;
+    const data = source.signals.find((signal) => signal.id !== clock.id)!;
+    const clockMap = new ImmutableLocalGeometryMap(clock.id, [{ cycle: 0, point: "cycle-start", position: { x: 0, y: 0 } }]);
+    const dataMap = new ImmutableLocalGeometryMap(data.id, [{ cycle: 0, point: "cycle-start", position: { x: 100, y: 0 } }]);
+    const maps = new Map([[clock.id, clockMap], [data.id, dataMap]]);
+    const reordered = { ...source, signals: [data, clock], signalGroups: source.signalGroups.map((group) => ({ ...group, rows: [data.id, clock.id] })), timeline: { ...source.timeline, referenceClock: clock.id } };
+
+    expect(resolveTimeAxisGeometry(reordered, maps)).toMatchObject({ mode: "reference-clock", ownerSignalId: clock.id, geometry: clockMap });
+
+    const deleted = { ...reordered, signals: [data], signalGroups: reordered.signalGroups.map((group) => ({ ...group, rows: [data.id] })), timeline: (() => { const { referenceClock: _removed, ...timeline } = reordered.timeline; return timeline; })() };
+    expect(resolveTimeAxisGeometry(deleted, new Map([[data.id, dataMap]])).ownerSignalId).toBe(data.id);
+  });
   it("applies scroll and zoom only at the Screen Geometry boundary", () => {
     const projector = new DefaultScreenGeometryProjector();
     const point = projector.toScreen({ signalId, anchor: { signalId, cycle: 2, point: "rising-edge" }, point: { x: 120, y: 35 } }, { scrollX: 20, scrollY: 5, zoom: 1.5 });
