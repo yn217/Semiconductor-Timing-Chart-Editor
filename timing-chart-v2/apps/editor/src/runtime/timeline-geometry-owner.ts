@@ -198,14 +198,18 @@ export class TimelineGeometryOwner {
     const boundaryByDisplayCycle = owner.cycleBoundaryEntries === undefined
       ? undefined
       : new Map(owner.cycleBoundaryEntries().map((entry) => [entry.cycle, entry.position.x]));
-    for (let cycle = 0; cycle <= cycleCount; cycle += 1) {
-      const displayCycle = mapping.sourceToDisplay[cycle];
-      if (displayCycle === undefined) continue;
+    // The geometry map already owns the bounded semantic boundary index.
+    // Iterating canonical 0..cycleCount here defeats bounded rendering for
+    // large timelines and is repeated once per waveform owner. Filter the
+    // retained entries through the shared mapping instead.
+    for (const boundary of owner.cycleBoundaryEntries?.() ?? []) {
+      const cycle = boundary.cycle;
+      if (cycle < 0 || cycle > cycleCount || mapping.sourceToDisplay[cycle] === undefined) continue;
       // Geometry boundaries are source-keyed even when the display mapping
       // compresses folded cycles. Do not feed a display cycle back into the
       // source geometry map: after a fold, source 60 would otherwise resolve
       // through display 40 and acquire source 40's X position.
-      const x = boundaryByDisplayCycle?.get(cycle) ?? owner.find({ signalId, cycle, point: "cycle-start" })?.point.x;
+      const x = boundaryByDisplayCycle?.get(cycle) ?? boundary.position.x;
       if (x !== undefined) entries.push({ cycle, x });
     }
     this.#viewportBoundaryCache = { geometry: owner, mapping, entries };

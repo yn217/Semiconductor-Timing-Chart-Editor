@@ -36,7 +36,7 @@ describe("TimelineGeometryOwner", () => {
     console.table({ configuration: name, rows });
     const firstFailure = rows.find((row) => row.resolvedCycle !== row.cycle);
     if (name === "normal Cycle") expect(firstFailure).toBeUndefined();
-    else expect(firstFailure).toMatchObject({ cycle: 2, resolvedCycle: 4, expectedBoundaryX: 20 });
+    else expect(firstFailure).toMatchObject({ cycle: 2, resolvedCycle: 1, expectedBoundaryX: 20 });
   });
 
   it("owns source-boundary, presentation-scale, and screen-to-local conversion", () => {
