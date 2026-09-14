@@ -991,11 +991,13 @@ test("renders multiple independent Axis Breaks through the shared mapping", asyn
   await start.fill("2");
   await end.fill("4");
   await axisBreak.click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await expect(ruler.locator("[data-time-group-id]")).toHaveCount(1);
 
   await end.fill("10");
   await start.fill("8");
   await axisBreak.click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await expect(ruler.locator("[data-time-group-id]")).toHaveCount(2);
   const breakIds = await ruler.locator("[data-time-group-id]").evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset.timeGroupId));
   expect(breakIds.every(Boolean)).toBe(true);

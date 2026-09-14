@@ -127,8 +127,8 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     const containingFold = displayCycle === undefined ? document.timeGroups.find((group) => group.presentation?.collapsed && bookmark.start >= group.start && bookmark.start < group.end) : undefined;
     const anchorCycle = containingFold === undefined ? displayCycle : (containingFold.end < document.timeline.cycleCount ? containingFold.end : Math.max(0, containingFold.start - 1));
     const anchorDisplay = anchorCycle === undefined ? undefined : mapping.sourceToDisplay[anchorCycle];
-    if (anchorDisplay === undefined) continue;
-    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: anchorDisplay, point: "cycle-start" })?.point;
+    if (anchorCycle === undefined || anchorDisplay === undefined) continue;
+    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: anchorCycle, point: "cycle-start" })?.point;
     if (!point) continue;
     const marker = element.ownerDocument.createElement("span");
     marker.className = containingFold === undefined ? "timeline-marker" : "timeline-marker timeline-marker-hidden";
@@ -142,10 +142,10 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     overlays.push(marker);
   }
   for (const group of document.timeGroups.filter((item) => item.presentation?.collapsed)) {
-    const anchorDisplay = (group.end < document.timeline.cycleCount ? mapping.sourceToDisplay[group.end] : undefined)
-      ?? (group.start > 0 ? mapping.sourceToDisplay[group.start - 1] : undefined);
-    if (anchorDisplay === undefined) continue;
-    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: anchorDisplay, point: "cycle-start" })?.point;
+    const anchorCycle = group.end < document.timeline.cycleCount ? group.end : (group.start > 0 ? group.start - 1 : undefined);
+    const anchorDisplay = anchorCycle === undefined ? undefined : mapping.sourceToDisplay[anchorCycle];
+    if (anchorCycle === undefined || anchorDisplay === undefined) continue;
+    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: anchorCycle, point: "cycle-start" })?.point;
     if (!point) continue;
     const gap = element.ownerDocument.createElement("span");
     gap.className = "timeline-gap";
