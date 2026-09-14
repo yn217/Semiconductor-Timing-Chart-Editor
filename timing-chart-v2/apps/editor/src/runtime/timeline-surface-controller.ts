@@ -461,6 +461,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       delete rendererHost.dataset.cycleViewReady;
       projection = projectionCoordinator.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       const changed = result.changeSet;
+      const transactionOnlyChange = changed.transactionSemantics !== undefined
+        && Object.keys(changed).every((key) => key === "transactionSemantics");
       if (changed.fullDocumentReplace === true || changed.rowOrder !== undefined || changed.rowPresentation !== undefined || changed.addedSignals !== undefined || changed.removedSignals !== undefined || changed.addedGroups !== undefined || changed.removedGroups !== undefined) {
         setTreePresentationRevision((value) => value + 1);
       }
@@ -489,7 +491,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       if (rangePresentationAffected) setRangePresentationRevision((value) => value + 1);
       const refreshPlayheadNow = changed.fullDocumentReplace === true || changed.geometryScreenX === true || refreshRuler;
       if (refreshPlayheadNow) setPlayheadPresentationRevision((value) => value + 1);
-      renderer.update(projection);
+      // Transaction edits are rendered by TransactionLanes. They do not
+      // change WaveDrom signal geometry, so avoid rebuilding the waveform
+      // renderer on every inspector/bottom-table commit in large documents.
+      if (!transactionOnlyChange) renderer.update(projection);
       signalSplitRuntimeRef.current?.onDocumentChanged(result);
       setTimelineRange((range) => {
         const start = Math.min(range.start, result.snapshot.document.timeline.cycleCount - 1);
