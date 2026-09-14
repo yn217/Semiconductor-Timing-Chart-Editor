@@ -79,7 +79,11 @@ export interface TimeAxisGeometry {
 export function resolveTimeAxisGeometry(document: Pick<CanonicalDocument, "signals" | "timeline">, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>): TimeAxisGeometry {
   const referenceClock = document.timeline.referenceClock;
   if (referenceClock !== undefined) {
-    const referenceGeometry = geometryMaps.get(referenceClock);
+    // The canonical signal identity is authoritative.  A renderer may still
+    // have a stale extracted map for one frame after delete/restore, but that
+    // map must never keep a deleted or converted signal as the time-axis owner.
+    const referenceSignal = document.signals.find((signal) => signal.id === referenceClock);
+    const referenceGeometry = referenceSignal?.type === "clock" ? geometryMaps.get(referenceClock) : undefined;
     if (referenceGeometry) return Object.freeze({ mode: "reference-clock", ownerSignalId: referenceClock, geometry: referenceGeometry });
   }
   const timingSignals = document.signals.filter((signal) => signal.type !== "commentRow");

@@ -49,6 +49,20 @@ describe("Screen Geometry and snapping", () => {
     };
     expect(resolveTimeAxisGeometry(moved, new Map([[clock.id, clockMap]]))).toEqual({ mode: "reference-clock", ownerSignalId: clock.id, geometry: clockMap });
   });
+  it("does not resurrect a deleted reference Clock from a stale geometry map", () => {
+    const source = canonicalFixture();
+    const clock = source.signals.find((signal) => signal.type === "clock")!;
+    const data = source.signals.find((signal) => signal.id !== clock.id)!;
+    const staleClockMap = new ImmutableLocalGeometryMap(clock.id, [{ cycle: 0, point: "cycle-start", position: { x: 0, y: 0 } }]);
+    const deleted = {
+      ...source,
+      signals: [data],
+      timeline: { ...source.timeline, referenceClock: clock.id },
+    };
+    const resolved = resolveTimeAxisGeometry(deleted, new Map([[clock.id, staleClockMap], [data.id, new ImmutableLocalGeometryMap(data.id, [{ cycle: 0, point: "cycle-start", position: { x: 100, y: 0 } }])]]));
+    expect(resolved.ownerSignalId).toBe(data.id);
+    expect(resolved.mode).toBe("clockless");
+  });
   it("applies scroll and zoom only at the Screen Geometry boundary", () => {
     const projector = new DefaultScreenGeometryProjector();
     const point = projector.toScreen({ signalId, anchor: { signalId, cycle: 2, point: "rising-edge" }, point: { x: 120, y: 35 } }, { scrollX: 20, scrollY: 5, zoom: 1.5 });
