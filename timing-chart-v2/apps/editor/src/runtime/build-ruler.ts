@@ -107,7 +107,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   const semanticDisplayCycleCount = geometry.cycleBoundaryEntries?.().at(-1)?.cycle ?? mapping.displayCycleCount;
   const rulerTickBudget = document.timeline.cycleCount > 4096 ? 512 : Infinity;
   for (const display of presentationCycles(semanticDisplayCycleCount, pixelsPerCycle, rulerTickBudget)) {
-    const sourceCycle = display === semanticDisplayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[display] ?? display);
+    const sourceCycle = display === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[display] ?? display);
     const point = geometry.find({ signalId: axisOwnerSignalId, cycle: sourceCycle, point: "cycle-start" })?.point;
     if (!point) continue;
     const tick = element.ownerDocument.createElement("span");
