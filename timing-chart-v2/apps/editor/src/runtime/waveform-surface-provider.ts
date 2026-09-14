@@ -103,9 +103,15 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           // A semantic delete can occur without advancing documentEpoch. Do
           // not let an in-flight render for the removed signal repopulate the
           // geometry registry after the canonical identity disappeared.
-          const currentSignal = context.sessionController.snapshot().document.signals.find((signal) => signal.id === item.request.signalId);
+          const latestSnapshot = context.sessionController.snapshot();
+          const currentSignal = latestSnapshot.document.signals.find((signal) => signal.id === item.request.signalId);
           if (!currentSignal) return { signalId: item.request.signalId, stale: true };
-          if (item.request.signalId === document.timeline.referenceClock) context.markOpenPhase("reference-clock-painted");
+          // Reference-clock readiness belongs to the current stable SignalId,
+          // not to the document snapshot captured when this async render began.
+          // A same-epoch reference-clock switch must not let the old owner
+          // satisfy the readiness gate or trigger a stale refresh.
+          const currentReferenceClock = latestSnapshot.document.timeline.referenceClock;
+          if (item.request.signalId === currentReferenceClock) context.markOpenPhase("reference-clock-painted");
           const geometry = context.adapter.extractLocalGeometry(item.rendered);
           if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
           context.geometryRegistry.maps.set(item.request.signalId, geometry);
@@ -116,7 +122,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           } else {
             delete item.request.owner.dataset.cycleBoundaryGeometry;
           }
-          if (item.request.signalId === document.timeline.referenceClock) { context.markOpenPhase("reference-geometry-ready"); referenceGeometryReady = true; }
+          if (item.request.signalId === currentReferenceClock) { context.markOpenPhase("reference-geometry-ready"); referenceGeometryReady = true; }
           context.markOpenPhase("first-visible-wave-painted");
           context.invalidateSnapIndex();
           return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
