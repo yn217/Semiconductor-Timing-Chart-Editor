@@ -219,6 +219,11 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
       return point(first.x + (last.x - first.x) * fraction, first.y + (last.y - first.y) * fraction);
     })
     : renderedBoundaries;
+  // Every local/display boundary emitted by WaveDrom must use the same
+  // source-domain identity.  With folds, local cycle N is not necessarily
+  // sourceStart + N; geometrySourceCycles is the shared mapping's authoritative
+  // boundary index.  Keep arithmetic only as the identity/no-fold fallback.
+  const sourceCycleAt = (localBoundary: number): number => waveJson.geometrySourceCycles?.[localBoundary] ?? localBoundary + sourceStart;
   const accumulator = createGeometryEntryAccumulator();
   const transitionResolvers: TransitionGeometryResolver[] = [];
   const add = accumulator.add;
@@ -226,7 +231,7 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
     const start = boundaries[cycle];
     const end = boundaries[cycle + 1];
     if (!start || !end) continue;
-    const sourceCycle = waveJson.geometrySourceCycles?.[cycle] ?? cycle + sourceStart;
+    const sourceCycle = sourceCycleAt(cycle);
     add(sourceCycle, "cycle-start", start);
     add(sourceCycle, "cycle-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
     add(sourceCycle, "value-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
@@ -239,7 +244,7 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
   // or TimeGroup ending exactly at cycleCount) can resolve it directly instead of extrapolating.
   const terminalCycle = boundaries.length - 1;
   const terminalBoundary = boundaries[terminalCycle];
-  if (terminalBoundary) add(terminalCycle + sourceStart, "cycle-start", terminalBoundary);
+  if (terminalBoundary) add(sourceCycleAt(terminalCycle), "cycle-start", terminalBoundary);
 
   const phaseHalfBricks = (waveJson.phase ?? 0) * 2;
   if (!Number.isInteger(phaseHalfBricks)) throw new WaveDromAdapterError("UNSUPPORTED_GEOMETRY_PHASE", "Geometry extraction requires half-cycle-aligned WaveDrom phase.");
@@ -267,7 +272,7 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
     const originalHalfBrick = visibleIndex + clippedHalfBricks;
     const localCycle = Math.floor(originalHalfBrick / 2);
     if (localCycle < 0 || localCycle >= boundaries.length - 1) continue;
-    const sourceCycle = localCycle + sourceStart;
+    const sourceCycle = sourceCycleAt(localCycle);
     const href = hrefOf(use);
     const translated = useTranslation(use);
     const origin = transformPoint(drawMatrix, translated);
@@ -284,7 +289,7 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
       const [startLevel, endLevel] = clockLevel(token, previousLevel);
       const boundary = boundaries[slot];
       if (!boundary) continue;
-      const sourceCycle = slot + sourceStart;
+      const sourceCycle = sourceCycleAt(slot);
       if (startLevel !== previousLevel) add(sourceCycle, startLevel === 1 ? "rising-edge" : "falling-edge", boundary);
       if (startLevel !== endLevel) {
         const slotUses = usesByClockSlot?.get(slot) ?? [];
@@ -315,7 +320,7 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
     const localCycle = slot * period;
     const boundary = boundaries[localCycle];
     if (!boundary) continue;
-    const sourceCycle = localCycle + sourceStart;
+    const sourceCycle = sourceCycleAt(localCycle);
     const originalHalfBrick = localCycle * 2;
     const visibleIndex = originalHalfBrick - clippedHalfBricks;
     const use = uses[visibleIndex];
