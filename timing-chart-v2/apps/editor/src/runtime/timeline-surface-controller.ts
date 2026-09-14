@@ -32,6 +32,7 @@ import { nextEntityId } from "../entity-id.js";
 import type { BottomPinnedSelection, TreeTypeFilter } from "../workspace/use-workspace-ui-state.js";
 import type { ContextMenuState } from "../workspace/use-dialog-menu-state.js";
 import { resetInspectorAccordionState } from "../inspector-accordion.js";
+import { deriveTransactionExtent } from "./transaction-extent.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type TimelineRange = Readonly<{ start: number; end: number }>;
@@ -219,18 +220,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         // Large timelines keep the bounded viewport path owned by geometry.
         if (document.transactions !== transactionExtentSource) {
           transactionExtentSource = document.transactions;
-          if (document.transactions.length > 0) {
-            let start = document.transactions[0]!.start;
-            let end = document.transactions[0]!.end;
-            for (let index = 1; index < document.transactions.length; index += 1) {
-              const transaction = document.transactions[index]!;
-              start = Math.min(start, transaction.start);
-              end = Math.max(end, transaction.end);
-            }
-            transactionExtent = { start, end };
-          } else {
-            transactionExtent = undefined;
-          }
+          transactionExtent = deriveTransactionExtent(document.transactions);
         }
         const activeViewMode = owner.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode;
         // Cycle-only rendering does not consume Transaction bar geometry.
