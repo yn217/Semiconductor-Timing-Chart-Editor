@@ -9,13 +9,23 @@ const scaleSignal = {
   display: { name: "RANGE_SCALE" },
   values: [{ start: 0, value: 0 }, { start: 99_999, value: 1 }],
 };
+const scaleClock = {
+  id: "sig_range_clock",
+  name: "RANGE_CLOCK",
+  type: "clock",
+  role: "input",
+  source: { instancePath: [], signalName: "range_clock" },
+  display: { name: "RANGE_CLOCK" },
+  generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0, polarity: "positive" },
+  edgeCounter: { show: false, mode: "both", startNumber: 1, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: -6 } },
+};
 
 const scaleDocument = {
   formatVersion: 2,
   document: { id: "range-scale-100k", title: "Range Scale", header: { subtitle: "", description: "", notes: "", preconditions: [], constraints: [], exceptions: [] }, footer: { figureNumber: "", revision: "V2", text: "" } },
-  timeline: { start: 0, end: 100_000, cycleCount: 100_000, timeBase: "cycle", edge: "rising", labelAnchors: [] },
-  signalGroups: [{ id: "grp_range_scale", name: "Range Scale", rows: [scaleSignal.id] }],
-  signals: [scaleSignal],
+  timeline: { start: 0, end: 100_000, cycleCount: 100_000, timeBase: "cycle", referenceClock: scaleClock.id, edge: "rising", labelAnchors: [] },
+  signalGroups: [{ id: "grp_range_scale", name: "Range Scale", rows: [scaleClock.id, scaleSignal.id] }],
+  signals: [scaleClock, scaleSignal],
   bookmarks: [{ id: "bookmark-50k", name: "Cycle 50k", start: 50_000 }, { id: "bookmark-99k", name: "Cycle 99k", start: 99_000 }], timeGroups: [], annotations: [], annotationGroups: [], transactions: [], constraints: [],
   legend: { show: false, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
   layout: { roleColumnWidth: 62, signalNameWidth: 178, signalNameAlign: "left", rowHeight: 30, signalSpacing: 4, overflow: "ellipsis" },
@@ -102,6 +112,13 @@ test("reveals offscreen 50k and 99k cycles through the production bookmark path"
   await rows.filter({ hasText: "Cycle 99k" }).dblclick();
   await expect(host).toHaveAttribute("data-selected-cycle", "99000", { timeout: 30_000 });
   await page.getByRole("tab", { name: "Signal", exact: true }).click();
+  await host.locator("[data-role='left-row'][data-row-id='sig_range_clock']").click();
+  const clockOwner = host.locator("[data-role='wave-owner'][data-signal-id='sig_range_clock']");
+  await expect(clockOwner).not.toHaveAttribute("data-wave-error", /.+/, { timeout: 30_000 });
+  await expect.poll(async () => {
+    const raw = await clockOwner.getAttribute("data-cycle-boundary-geometry");
+    return raw ? Object.keys(JSON.parse(raw)).length : 0;
+  }, { timeout: 30_000 }).toBeGreaterThan(0);
   await host.locator("[data-role='left-row'][data-row-id='sig_range_scale']").click();
   await expect(page.getByRole("table", { name: "Signal events" })).toBeVisible({ timeout: 30_000 });
 });
