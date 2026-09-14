@@ -21,6 +21,7 @@ async function expectTabLoop(dialog: Locator) {
 
 test("non-Home dialog close actions use the shared SVG close primitive", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
   await page.getByRole("button", { name: "More tree actions" }).click();
   await page.getByTestId("hierarchy-open").click();
   await expectCloseIcon(page, "Close hierarchy");
@@ -40,6 +41,7 @@ test("non-Home dialog close actions use the shared SVG close primitive", async (
 
 test("app-owned dialogs close with Escape without changing the document", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
   const revision = await page.getByTestId("revision-status").textContent();
   const history = await page.getByTestId("history-status").textContent();
 
@@ -116,6 +118,7 @@ test("Home overflow uses the shared menu keyboard behavior and restores its invo
 
 test("Tree menus close on Escape or outside click without selecting the canvas", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
   const revision = await page.getByTestId("revision-status").textContent();
   const history = await page.getByTestId("history-status").textContent();
   const addTrigger = page.getByRole("button", { name: "Add signal or group", exact: true });
