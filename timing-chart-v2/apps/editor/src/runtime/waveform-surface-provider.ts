@@ -100,6 +100,11 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         if (item.error || !item.rendered) return { signalId: item.request.signalId, error: item.error ?? new Error("Waveform render did not produce an SVG.") };
         try {
           if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
+          // A semantic delete can occur without advancing documentEpoch. Do
+          // not let an in-flight render for the removed signal repopulate the
+          // geometry registry after the canonical identity disappeared.
+          const currentSignal = context.sessionController.snapshot().document.signals.find((signal) => signal.id === item.request.signalId);
+          if (!currentSignal) return { signalId: item.request.signalId, stale: true };
           if (item.request.signalId === document.timeline.referenceClock) context.markOpenPhase("reference-clock-painted");
           const geometry = context.adapter.extractLocalGeometry(item.rendered);
           if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
