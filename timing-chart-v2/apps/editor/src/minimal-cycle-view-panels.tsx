@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import type { RefObject } from "react";
 import type { GroupId, SignalGroup, SpacerId } from "@timing-chart-v2/schema";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -108,6 +108,16 @@ export type SignalTreeColumnHeaderProps = {
  * `use-dialog-menu-state.ts` (menu open flags) -- every state transition is
  * still decided by the caller via these callbacks. */
 export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange, treeFilter, onTreeFilterChange, onClearTreeFilter, addMenuOpen, onToggleAddMenu, moreMenuOpen, onToggleMoreMenu, onAddEntity, onCloseAddMenu, onOpenBulkRegistration, onCollapseAllGroups, onExpandAllGroups, onOpenHierarchy, onCloseMoreMenu, timeScaleLabel, transactionMode }: SignalTreeColumnHeaderProps) {
+  useEffect(() => {
+    if (!addMenuOpen && !moreMenuOpen) return;
+    const frame = requestAnimationFrame(() => {
+      const menu = document.querySelector<HTMLElement>(
+        addMenuOpen ? "[role='menu'][aria-label='Add signal or group']" : "[role='menu'][aria-label='More tree actions']",
+      );
+      menu?.querySelector<HTMLButtonElement>("button[role='menuitem']:not(:disabled)")?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [addMenuOpen, moreMenuOpen]);
   if (transactionMode) {
     const onTransactions = transactionMode.tab === "transactions";
     return <div className="column-headings" data-testid="transaction-tree-header">
