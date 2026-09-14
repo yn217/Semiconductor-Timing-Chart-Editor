@@ -411,22 +411,25 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   // every newly-created Transaction.
   const hasGroups = groups.length > 0;
   type Section = { readonly groupId: string | undefined; readonly label: string | undefined; readonly color: string | undefined; readonly lanes: readonly string[] };
-  const sections: readonly Section[] = useMemo(() => hasGroups
-    ? (() => {
-        const lanesByGroup = new Map<string | undefined, Set<string>>();
-        for (const transaction of document.transactions) {
-          const key = transaction.groupId;
-          const lane = transaction.laneId ?? "lane_0";
-          if (!lanesByGroup.has(key)) lanesByGroup.set(key, new Set());
-          lanesByGroup.get(key)!.add(lane);
-        }
-        const ordered = [...groups].sort((left, right) => left.order - right.order);
-        const result: Section[] = ordered.map((group) => ({ groupId: group.id, label: group.name, color: group.color, lanes: [...(lanesByGroup.get(group.id) ?? [])].sort() }));
-        const ungroupedLanes = [...(lanesByGroup.get(undefined) ?? [])].sort();
-        if (ungroupedLanes.length > 0) result.push({ groupId: undefined, label: "Ungrouped", color: undefined, lanes: ungroupedLanes });
-        return result;
-      })()
-    : [{ groupId: undefined, label: undefined, color: undefined, lanes: [...new Set(["lane_0", ...document.transactions.map((transaction) => transaction.laneId ?? "lane_0")])].sort() }], [document.transactions, groups, hasGroups]);
+  const sections: readonly Section[] = useMemo(() => {
+    const lanesByGroup = new Map<string | undefined, Set<string>>();
+    // laneTransactionsByKey is retained incrementally above. Deriving the
+    // section structure from its small bucket map avoids rescanning every
+    // Transaction on a start/end-only edit in large documents.
+    for (const key of laneTransactionsByKey.keys()) {
+      const separator = key.indexOf("\u0000");
+      const groupId = separator < 0 || key.slice(0, separator) === "ungrouped" ? undefined : key.slice(0, separator);
+      const lane = separator < 0 ? key : key.slice(separator + 1);
+      if (!lanesByGroup.has(groupId)) lanesByGroup.set(groupId, new Set());
+      lanesByGroup.get(groupId)!.add(lane);
+    }
+    if (!hasGroups) return [{ groupId: undefined, label: undefined, color: undefined, lanes: [...(lanesByGroup.get(undefined) ?? new Set(["lane_0"]))].sort() }];
+    const ordered = [...groups].sort((left, right) => left.order - right.order);
+    const result: Section[] = ordered.map((group) => ({ groupId: group.id, label: group.name, color: group.color, lanes: [...(lanesByGroup.get(group.id) ?? [])].sort() }));
+    const ungroupedLanes = [...(lanesByGroup.get(undefined) ?? [])].sort();
+    if (ungroupedLanes.length > 0) result.push({ groupId: undefined, label: "Ungrouped", color: undefined, lanes: ungroupedLanes });
+    return result;
+  }, [groups, hasGroups, laneTransactionsByKey]);
 
   const { groupHeaders, laneBands, totalHeight } = useMemo(() => {
     const groupHeaders: GroupHeaderBand[] = [];
