@@ -85,11 +85,13 @@ export function TransactionTree({
     setEditingTransactionId(undefined);
   }, [documentEpoch]);
   useEffect(() => {
-    if (openTransactionMenuId === undefined) return;
+    if (openTransactionMenuId === undefined && openGroupMenuId === undefined) return;
     const frame = requestAnimationFrame(() => {
       globalThis.document
         .querySelector<HTMLElement>(
-          `.transaction-left-tree-transaction-menu[role='menu']`,
+          openTransactionMenuId === undefined
+            ? `.transaction-left-tree-group-menu[role='menu']:not(.transaction-left-tree-transaction-menu)`
+            : `.transaction-left-tree-transaction-menu[role='menu']`,
         )
         ?.querySelector<HTMLButtonElement>(
           "button[role='menuitem']:not(:disabled)",
@@ -97,7 +99,7 @@ export function TransactionTree({
         ?.focus();
     });
     return () => cancelAnimationFrame(frame);
-  }, [openTransactionMenuId]);
+  }, [openGroupMenuId, openTransactionMenuId]);
   const groups = useMemo(
     () =>
       [...(document.transactionGroups ?? [])].sort(
