@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import type { CanonicalDocument, Signal, SignalId, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { RibbonIcon } from "./ribbon-icon.js";
+import { useDialogFocusLoop } from "./dialog-focus-loop.js";
 
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -23,6 +24,7 @@ export function FindReplacePanel({ document, mode = "signals", onRenameSignals, 
   const [position, setPosition] = useState<{ readonly left: number; readonly top: number; readonly maxHeight: number }>();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocusLoop(panelRef, triggerRef, open);
 
   useLayoutEffect(() => {
     if (!open) { setPosition(undefined); return; }

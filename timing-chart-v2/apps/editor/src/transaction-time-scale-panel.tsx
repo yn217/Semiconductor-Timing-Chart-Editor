@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CanonicalDocument, TransactionTimeScale } from "@timing-chart-v2/schema";
 import { RibbonIcon } from "./ribbon-icon.js";
+import { useDialogFocusLoop } from "./dialog-focus-loop.js";
 
 const DEFAULT_SCALE: TransactionTimeScale = { clockCyclesPerTransactionCycle: 1, majorInterval: 5, minorInterval: 1 };
 
@@ -22,6 +23,7 @@ export function TransactionTimeScalePanel({ document, onSetScale }: { readonly d
   const [position, setPosition] = useState<{ readonly left: number; readonly top: number; readonly maxHeight: number }>();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  useDialogFocusLoop(panelRef, triggerRef, open);
 
   useEffect(() => {
     if (!open) return;
