@@ -67,7 +67,13 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement): OpenPhaseTrac
     if (phase === "row-shell-painted") rowShellPainted = true;
     if (phase === "reference-geometry-ready") referenceGeometryReady = true;
     if (phase === "ruler-painted") rulerPainted = true;
-    if (rowShellPainted && referenceGeometryReady && rulerPainted) mark("first-correct-paint");
+    if (rowShellPainted && referenceGeometryReady && rulerPainted) {
+      mark("first-correct-paint");
+      // Preserve the existing browser readiness contract used by the focused
+      // acceptance suites. This is set only after the first correct paint,
+      // never merely after a React mount or partial waveform render.
+      rendererHost.dataset.cycleViewReady = "true";
+    }
   };
   return {
     mark,
@@ -79,6 +85,7 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement): OpenPhaseTrac
       for (const key of Object.keys(marks)) delete marks[key];
       delete rendererHost.dataset.openPhaseMarks;
       delete rendererHost.dataset.openPhaseDurations;
+      delete rendererHost.dataset.cycleViewReady;
       mark("open-command-start", commandStartedAt);
       mark("open-start", commandStartedAt);
       if (fileReadStartedAt !== undefined) mark("file-read-start", fileReadStartedAt);
