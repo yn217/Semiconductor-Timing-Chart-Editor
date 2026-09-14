@@ -145,7 +145,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     if (selectedIndexes.length !== last - first + 1) return;
     const targetIndex = delta < 0 ? first - 1 : last + 1;
     if (targetIndex < 0 || targetIndex >= ordered.length || checkedKeys.has(transitionIdentity(ordered[targetIndex]!))) return;
-    const result = reorderTransitionBlock(ordered, checkedKeys, delta < 0 ? first - 1 : last + 1);
+    const result = reorderTransitionBlock(ordered, checkedKeys, delta < 0 ? first - 1 : last + 1, cycleCount);
     if (!result) return;
     const commandResult = commands.replaceValues(signal.id, result.values);
     if (commandResult.ok) setCheckedKeys(new Set(result.values.slice(result.firstIndex, result.firstIndex + result.blockSize).map(transitionIdentity)));
@@ -172,7 +172,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     const last = selectedIndexes.at(-1) ?? -1;
     const to = ordered.findIndex((change) => change.start === targetStart);
     if (from < 0 || to < 0 || selectedIndexes.length !== last - from + 1) { setActiveDragStarts(undefined); return; }
-    const result = reorderTransitionBlock(ordered, activeDragStarts, to);
+    const result = reorderTransitionBlock(ordered, activeDragStarts, to, cycleCount);
     if (result) { const commandResult = commands.replaceValues(signal.id, result.values); if (commandResult.ok) setCheckedKeys(new Set(result.values.slice(result.firstIndex, result.firstIndex + result.blockSize).map(transitionIdentity))); }
     setActiveDragStarts(undefined);
   };
