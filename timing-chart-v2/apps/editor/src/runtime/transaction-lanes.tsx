@@ -94,7 +94,7 @@ function previewPhases(transaction: Transaction, preview: TransactionPreview, ed
   return transaction.phases;
 }
 
-function TransactionBar({ transaction, documentEpoch, viewMode, row, color, selected, cycleCount, getBoundaryX, boundaryXByCycle, foldRanges, onSnap, onSelect, commands, onContextMenu }: {
+function TransactionBar({ transaction, documentEpoch, viewMode, row, color, selected, cycleCount, getBoundaryX, boundaryXByCycle, visibleBoundaryXs, foldRanges, onSnap, onSelect, commands, onContextMenu }: {
   readonly transaction: Transaction;
   readonly documentEpoch: number;
   readonly viewMode: "Cycle" | "Transaction" | "Split";
@@ -104,6 +104,7 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   readonly cycleCount: number;
   readonly getBoundaryX: (cycle: number) => number | undefined;
   readonly boundaryXByCycle: ReadonlyMap<number, number>;
+  readonly visibleBoundaryXs: readonly { readonly cycle: number; readonly x: number }[];
   readonly foldRanges: readonly (readonly [number, number])[];
   readonly onSnap: (clientX: number, surfaceLeft?: number) => number | undefined;
   readonly onSelect: (id: TransactionId, additive?: boolean) => void;
@@ -139,7 +140,12 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
     // fold segments do not disappear permanently.
     return boundaryXByCycle.get(cycle) ?? resolveCachedBoundaryX(cycle);
   };
-  const resolveVisibleBoundary = (cycle: number, direction: -1 | 1) => { for (let candidate = cycle; candidate >= 0 && candidate <= cycleCount; candidate += direction) { const value = resolveCachedBoundaryX(candidate); if (value !== undefined) return value; } return undefined; };
+  const resolveVisibleBoundary = (cycle: number, direction: -1 | 1) => {
+    let low = 0; let high = visibleBoundaryXs.length;
+    while (low < high) { const middle = low + Math.floor((high - low) / 2); if (visibleBoundaryXs[middle]!.cycle < cycle) low = middle + 1; else high = middle; }
+    const index = direction < 0 ? low - 1 : low;
+    return visibleBoundaryXs[Math.max(0, Math.min(visibleBoundaryXs.length - 1, index))]?.x;
+  };
   const resolveSegmentBoundary = (cycle: number, direction: -1 | 1) => resolveBoundaryX(cycle) ?? resolveVisibleBoundary(cycle, direction);
   const startX = resolveBoundaryX(current.start) ?? (startHiddenFold ? resolveVisibleBoundary(startHiddenFold[1], 1) : undefined);
   const endX = resolveBoundaryX(current.end) ?? (endHiddenFold ? resolveVisibleBoundary(endHiddenFold[0], -1) : undefined);
@@ -314,7 +320,8 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const toggleGroupCollapsed = (key: string) => setCollapsedGroups((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   const owner = useRef<HTMLElement>(null);
   const { cycleXs, boundaryXByCycle } = useMemo(() => {
-    const relevantCycles = [...new Set([...document.transactions.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).flatMap(phase => [phase.start, phase.end])]), ...bookmarks.map((bookmark) => bookmark.start)])].sort((left, right) => left - right);
+    const foldBoundaryCycles = (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).flatMap((group) => [group.start, group.end]);
+    const relevantCycles = [...new Set([...document.transactions.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).flatMap(phase => [phase.start, phase.end])]), ...bookmarks.map((bookmark) => bookmark.start), ...foldBoundaryCycles])].sort((left, right) => left - right);
     const cycleXs = relevantCycles.flatMap((cycle) => { const x = getBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
     return { cycleXs, boundaryXByCycle: new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const)) };
   }, [bookmarks, document.transactions, getBoundaryX, presentationRevision]);
@@ -584,7 +591,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
           // inline style -- the same interaction-priority bug already
           // fixed for Signal rows under #472.
           const resolvedColor = transaction.color ?? (transaction.groupId === undefined ? undefined : transactionGroupById.get(transaction.groupId)?.color);
-          return <TransactionBar key={transaction.id} transaction={transaction} documentEpoch={documentEpoch} viewMode={viewMode} row={row} color={resolvedColor} selected={isTransactionSelected(transaction.id)} cycleCount={document.timeline.cycleCount} getBoundaryX={getBoundaryX} boundaryXByCycle={boundaryXByCycle} foldRanges={foldRanges} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
+          return <TransactionBar key={transaction.id} transaction={transaction} documentEpoch={documentEpoch} viewMode={viewMode} row={row} color={resolvedColor} selected={isTransactionSelected(transaction.id)} cycleCount={document.timeline.cycleCount} getBoundaryX={getBoundaryX} boundaryXByCycle={boundaryXByCycle} visibleBoundaryXs={cycleXs} foldRanges={foldRanges} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
         })}
       </div>)}
     </div>
