@@ -34,7 +34,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
     ...(context.getSourceWindow ? { getSourceWindow: context.getSourceWindow } : {}),
     async mountWaveBatch(requests) {
       const requestEpoch = requests[0]?.documentEpoch;
-      const isCurrent = (request: { readonly documentEpoch?: number }): boolean => request.documentEpoch === undefined || context.getDocumentEpoch() === request.documentEpoch;
+      const isCurrent = (request: { readonly documentEpoch?: number; readonly isFresh?: () => boolean }): boolean => (request.documentEpoch === undefined || context.getDocumentEpoch() === request.documentEpoch) && (request.isFresh?.() ?? true);
       if (requestEpoch !== undefined && (requestEpoch !== context.getDocumentEpoch() || requests.some((request) => request.documentEpoch !== requestEpoch))) return requests.map(({ signalId }) => ({ signalId, stale: true }));
       const currentSnapshot = context.sessionController.snapshot();
       const document = currentSnapshot.document;

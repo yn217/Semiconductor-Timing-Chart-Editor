@@ -14,6 +14,10 @@ export interface WaveMountRequest {
   readonly documentEpoch?: number;
   /** Optional canonical source interval for bounded WaveDrom rendering. */
   readonly sourceWindow?: Readonly<{ readonly start: number; readonly end: number }>;
+  /** Signal-scoped freshness check evaluated immediately before publication.
+   * Unlike documentEpoch, this also rejects an older render of the same
+   * Signal after a newer semantic revision has been queued. */
+  readonly isFresh?: () => boolean;
 }
 
 export interface WaveMountBatchItem {

@@ -1,6 +1,10 @@
 import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
 
+export function isWaveMountRequestFresh(request: Pick<WaveMountRequest, "documentEpoch" | "isFresh">, currentDocumentEpoch: number): boolean {
+  return (request.documentEpoch === undefined || request.documentEpoch === currentDocumentEpoch) && (request.isFresh?.() ?? true);
+}
+
 const WAVE_BATCH_LIMIT = 8;
 const diagnosticEncoder = new TextEncoder();
 
@@ -520,7 +524,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       const start = configured?.start ?? Number(item.owner.dataset.sourceWindowStart);
       const end = configured?.end ?? Number(item.owner.dataset.sourceWindowEnd);
       return { signalId, owner: item.owner, version: item.version, documentEpoch: item.documentEpoch,
-        ...(Number.isInteger(start) && Number.isInteger(end) && end > start ? { sourceWindow: { start, end } } : {}) };
+        ...(Number.isInteger(start) && Number.isInteger(end) && end > start ? { sourceWindow: { start, end } } : {}),
+        isFresh: () => this.#documentEpoch === item.documentEpoch && this.#waveVersions.get(signalId) === item.version && this.#waveOwners.get(signalId) === item.owner,
+      };
     });
     for (const request of queued) this.#waveQueue.delete(request.signalId);
     const requests = queued.filter((request) => {
@@ -560,7 +566,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     const bySignal = new Map(results.map((item) => [item.signalId, item]));
     for (const request of requests) {
       const item = bySignal.get(request.signalId);
-      const stale = request.documentEpoch !== this.#documentEpoch || item?.stale === true;
+      const stale = !isWaveMountRequestFresh(request, this.#documentEpoch) || item?.stale === true;
       if (stale) {
         this.#diagnostics = { ...this.#diagnostics, staleWaveResultsDropped: this.#diagnostics.staleWaveResultsDropped + 1 };
         if (this.#wavePending.get(request.signalId) === request.documentEpoch) this.#wavePending.delete(request.signalId);
