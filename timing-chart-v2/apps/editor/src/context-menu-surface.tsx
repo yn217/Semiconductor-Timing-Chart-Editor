@@ -24,6 +24,16 @@ export function ContextMenuSurface({ anchor, children, label, target }: { readon
     return () => cancelAnimationFrame(frame);
   }, [anchor.x, anchor.y]);
   useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      menuRef.current
+        ?.querySelector<HTMLButtonElement>(
+          "button[role='menuitem']:not(:disabled)",
+        )
+        ?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [anchor.x, anchor.y]);
+  useEffect(() => {
     const onViewportChange = () => position();
     globalThis.addEventListener("resize", onViewportChange);
     globalThis.addEventListener("scroll", onViewportChange, true);
