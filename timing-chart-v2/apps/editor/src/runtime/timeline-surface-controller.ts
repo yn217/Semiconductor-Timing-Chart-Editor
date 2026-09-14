@@ -169,7 +169,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     beginOpenMeasurement();
     let projection!: RenderProjection;
     let referenceGeometryReprojected = false;
-    let transactionExtentDocument: CanonicalDocument | undefined;
+    let transactionExtentSource: CanonicalDocument["transactions"] | undefined;
     let transactionExtent: Readonly<{ start: number; end: number }> | undefined;
     let publishState: () => void = () => undefined;
     const timelineGeometry = new TimelineGeometryOwner({
@@ -217,8 +217,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         // transaction span so a Transaction view can render bars outside the
         // currently visible Cycle viewport without inventing a second mapper.
         // Large timelines keep the bounded viewport path owned by geometry.
-        if (document !== transactionExtentDocument) {
-          transactionExtentDocument = document;
+        if (document.transactions !== transactionExtentSource) {
+          transactionExtentSource = document.transactions;
           if (document.transactions.length > 0) {
             let start = document.transactions[0]!.start;
             let end = document.transactions[0]!.end;
