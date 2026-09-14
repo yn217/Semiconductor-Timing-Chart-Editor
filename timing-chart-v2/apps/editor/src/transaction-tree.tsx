@@ -84,6 +84,20 @@ export function TransactionTree({
     setOpenTransactionMenuId(undefined);
     setEditingTransactionId(undefined);
   }, [documentEpoch]);
+  useEffect(() => {
+    if (openTransactionMenuId === undefined) return;
+    const frame = requestAnimationFrame(() => {
+      globalThis.document
+        .querySelector<HTMLElement>(
+          `.transaction-left-tree-transaction-menu[role='menu']`,
+        )
+        ?.querySelector<HTMLButtonElement>(
+          "button[role='menuitem']:not(:disabled)",
+        )
+        ?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [openTransactionMenuId]);
   const groups = useMemo(
     () =>
       [...(document.transactionGroups ?? [])].sort(
