@@ -48,9 +48,13 @@ test("Focusable separators resize by keyboard within bounds without canonical mu
     expect(Number(await separator.getAttribute("aria-valuenow"))).toBe(Math.min(maximum, initial + 10));
     await separator.press("Shift+" + growKey);
     expect(Number(await separator.getAttribute("aria-valuenow"))).toBeLessThanOrEqual(maximum);
-    while (Number(await separator.getAttribute("aria-valuenow")) < maximum) await page.keyboard.press(growKey);
+    for (let step = 0; step < 300 && Number(await separator.getAttribute("aria-valuenow")) < maximum; step += 1) {
+      await page.keyboard.press(growKey);
+    }
     expect(Number(await separator.getAttribute("aria-valuenow"))).toBe(maximum);
-    while (Number(await separator.getAttribute("aria-valuenow")) > minimum) await page.keyboard.press(shrinkKey);
+    for (let step = 0; step < 300 && Number(await separator.getAttribute("aria-valuenow")) > minimum; step += 1) {
+      await page.keyboard.press(shrinkKey);
+    }
     expect(Number(await separator.getAttribute("aria-valuenow"))).toBe(minimum);
   }
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
