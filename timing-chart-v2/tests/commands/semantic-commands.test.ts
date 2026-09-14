@@ -364,6 +364,31 @@ describe("pure Semantic Command planning", () => {
     expect(session.getSnapshot().document.signals.some((signal) => signal.id === "sig_clk")).toBe(false);
   });
 
+  it("keeps the reference Clock identity when moving it between Groups", () => {
+    const source = canonicalFixture();
+    const targetGroupId = "grp_clock_target" as GroupId;
+    const document = {
+      ...source,
+      signalGroups: [
+        { ...source.signalGroups[0]!, rows: ["sig_clk" as SignalId, "sig_data" as SignalId] },
+        { id: targetGroupId, name: "Clock Group", rows: [] },
+      ],
+    };
+    const session = new CommandHistorySession(document);
+
+    expect(session.execute({ id: commandId("cmd_move_reference_clock"), type: "signal.move", signalId: "sig_clk" as SignalId, targetGroupId, index: 0 }).ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.referenceClock).toBe("sig_clk");
+    expect(session.getSnapshot().document.signalGroups[1]?.rows).toEqual(["sig_clk"]);
+    expect(session.historyState()).toMatchObject({ undoDepth: 1, redoDepth: 0 });
+
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.referenceClock).toBe("sig_clk");
+    expect(session.getSnapshot().document.signalGroups[0]?.rows).toEqual(["sig_clk", "sig_data"]);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.referenceClock).toBe("sig_clk");
+    expect(session.getSnapshot().document.signalGroups[1]?.rows).toEqual(["sig_clk"]);
+  });
+
   it("switches or clears the optional reference Clock through a semantic command", () => {
     const source = canonicalFixture();
     const second = { ...source.signals[0]!, id: "sig_clk_b" as SignalId, name: "CLK_B", source: { ...source.signals[0]!.source, signalName: "CLK_B" }, display: { name: "CLK_B" } };
