@@ -101,4 +101,7 @@ test("reveals offscreen 50k and 99k cycles through the production bookmark path"
   await expect(host).toHaveAttribute("data-selected-cycle", "50000", { timeout: 30_000 });
   await rows.filter({ hasText: "Cycle 99k" }).dblclick();
   await expect(host).toHaveAttribute("data-selected-cycle", "99000", { timeout: 30_000 });
+  await page.getByRole("tab", { name: "Signal", exact: true }).click();
+  await host.locator("[data-role='left-row'][data-row-id='sig_range_scale']").click();
+  await expect(page.getByRole("table", { name: "Signal events" })).toBeVisible({ timeout: 30_000 });
 });
