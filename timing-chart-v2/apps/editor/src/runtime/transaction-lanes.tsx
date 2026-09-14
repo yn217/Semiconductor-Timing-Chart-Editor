@@ -495,7 +495,9 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     // Combined mode owns a nested vertical scroller for the transaction pane;
     // the outer cycle viewport only owns the shared horizontal surface there.
     // Keep the standalone Transaction mode fallback on its cycle viewport.
-    const viewport = laneRoot?.closest<HTMLElement>(".split-transaction-pane, .cycle-viewport");
+    const viewport = laneRoot?.closest<HTMLElement>(".split-transaction-pane")
+      ?? laneRoot?.parentElement?.closest<HTMLElement>(".cycle-viewport")?.querySelector<HTMLElement>(".transaction-left-tree")
+      ?? laneRoot?.closest<HTMLElement>(".cycle-viewport");
     if (!viewport) return;
     const update = () => setVirtualWindow({ top: viewport.scrollTop, height: viewport.clientHeight || 900 });
     update();
@@ -532,7 +534,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     element.dataset.transactionFirstReadyAt = String(Date.now());
   });
 
-  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-tree-row-builds={treeRowBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
+  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-tree-row-builds={treeRowBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight, top: viewMode === "Transaction" ? 34 - virtualWindow.top : undefined } as React.CSSProperties}>
     <div className="transaction-lane-labels">
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
