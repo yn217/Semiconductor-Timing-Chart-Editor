@@ -107,12 +107,13 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   const semanticDisplayCycleCount = geometry.cycleBoundaryEntries?.().at(-1)?.cycle ?? mapping.displayCycleCount;
   const rulerTickBudget = document.timeline.cycleCount > 4096 ? 512 : Infinity;
   for (const display of presentationCycles(semanticDisplayCycleCount, pixelsPerCycle, rulerTickBudget)) {
-    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: display, point: "cycle-start" })?.point;
+    const sourceCycle = display === semanticDisplayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[display] ?? display);
+    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: sourceCycle, point: "cycle-start" })?.point;
     if (!point) continue;
     const tick = element.ownerDocument.createElement("span");
     tick.dataset.cycle = String(mapping.labelFor(display));
     tick.dataset.displayCycle = String(display);
-    tick.dataset.sourceCycle = String(display === semanticDisplayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[display] ?? display));
+    tick.dataset.sourceCycle = String(sourceCycle);
     tick.className = "cycle-tick";
     tick.style.left = `${point.x * scale}px`;
     tick.style.top = `${outlineHeight}px`;
