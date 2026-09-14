@@ -84,8 +84,7 @@ function roundHalfCycle(value: unknown, fallback: number, warnings: MigrationWar
   return rounded;
 }
 
-function normalizeChanges(value: unknown, fallback: string | number, warnings: MigrationWarning[], basePath: string, usedIds: Set<string>): SignalValueChange[] {
-  const claimedIds = new Set<string>();
+function normalizeChanges(value: unknown, fallback: string | number, warnings: MigrationWarning[], basePath: string, usedIds: Set<string>, claimedIds: Set<string>): SignalValueChange[] {
   const changes = list(value).map((entry, index) => {
     const source = record(entry);
     const explicitId = typeof source.id === "string" && source.id.length > 0 ? source.id : undefined;
@@ -119,7 +118,7 @@ function normalizeChanges(value: unknown, fallback: string | number, warnings: M
   return merged.length > 0 ? merged : [{ start: 0, value: fallback }];
 }
 
-function normalizeSignal(value: unknown, index: number, warnings: MigrationWarning[], usedIds: Set<string>): Signal {
+function normalizeSignal(value: unknown, index: number, warnings: MigrationWarning[], usedIds: Set<string>, claimedChangeIds: Set<string>): Signal {
   const source = record(value);
   const id = (typeof source.id === "string" ? source.id : allocateMigrationId("signal", index, usedIds)) as SignalId;
   const type = ["binary", "bus", "state", "logic", "event", "pulse", "clock", "commentRow"].includes(text(source.type))
@@ -186,11 +185,11 @@ function normalizeSignal(value: unknown, index: number, warnings: MigrationWarni
       offset: { x: number(edgeOffset.x, 0), y: number(edgeOffset.y, -6) },
       ...(typeof edgeCounter.anchorId === "string" ? { anchorId: edgeCounter.anchorId } : {}),
     };
-    if (Array.isArray(source.enable)) common.enable = normalizeChanges(source.enable, 1, warnings, `$.signals[${index}].enable`, usedIds);
+    if (Array.isArray(source.enable)) common.enable = normalizeChanges(source.enable, 1, warnings, `$.signals[${index}].enable`, usedIds, claimedChangeIds);
     return common as unknown as ClockSignal;
   }
 
-  common.values = normalizeChanges(source.values, type === "state" ? "IDLE" : type === "bus" ? "X" : 0, warnings, `$.signals[${index}].values`, usedIds);
+  common.values = normalizeChanges(source.values, type === "state" ? "IDLE" : type === "bus" ? "X" : 0, warnings, `$.signals[${index}].values`, usedIds, claimedChangeIds);
   optionalNumber(common, "width", source.width);
   if (["hex", "binary", "decimal", "signed", "unsigned", "symbolic"].includes(text(source.displayFormat))) common.displayFormat = source.displayFormat;
   return common as unknown as Signal;
@@ -302,6 +301,7 @@ function normalizeTransaction(value: unknown, index: number, warnings: Migration
 export function migrateV1(input: unknown): { document: CanonicalDocument; warnings: MigrationWarning[] } {
   const source = record(input);
   const usedIds = new Set<string>();
+  const claimedChangeIds = new Set<string>();
   collectExplicitIds(source, usedIds);
   const warnings: MigrationWarning[] = [{ code: "MIGRATED_V1_TO_V2", path: "$.formatVersion", message: "Format version 1 was deterministically migrated to version 2." }];
   const sourceDocument = record(source.document);
@@ -311,7 +311,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
   const timebase = { ...record(sourceDocument.timebase), ...sourceTimeline };
   const cycleCount = Math.max(1, Math.trunc(number(timebase.cycleCount, number(sourceDocument.cycleCount, 10))));
   const legacySignals = list(source.signals ?? cycleView.signals);
-  const signals = legacySignals.map((value, index) => normalizeSignal(value, index, warnings, usedIds));
+  const signals = legacySignals.map((value, index) => normalizeSignal(value, index, warnings, usedIds, claimedChangeIds));
   const signalIds = new Set(signals.map((signal) => signal.id));
   const fallbackSignal = signals.find((signal) => signal.type === "clock")?.id ?? signals[0]?.id;
   const referenceClockSignal = signals.find((signal) => signal.type === "clock")?.id;
