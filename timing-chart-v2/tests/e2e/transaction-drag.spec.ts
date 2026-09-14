@@ -300,7 +300,14 @@ test("persists a valid Transaction resize and its Phases through Save/Open", asy
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
   const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id='txn_read0']");
   const before = (await transaction.boundingBox())!;
-  const target = (await page.getByTestId("cycle-ruler").locator("[data-cycle='70']").boundingBox())!;
+  const targetLocator = page.getByTestId("cycle-ruler").locator("[data-cycle='70']");
+  const targetBeforeScroll = (await targetLocator.boundingBox())!;
+  const viewport = page.getByTestId("cycle-viewport");
+  await viewport.evaluate((element, targetX) => {
+    element.scrollLeft = Math.max(0, targetX - element.clientWidth * 0.7);
+    element.dispatchEvent(new Event("scroll", { bubbles: true }));
+  }, targetBeforeScroll.x);
+  const target = (await targetLocator.boundingBox())!;
   await transaction.locator("[data-edge='end']").hover();
   await page.mouse.down();
   await page.mouse.move(target.x, before.y + before.height / 2);
