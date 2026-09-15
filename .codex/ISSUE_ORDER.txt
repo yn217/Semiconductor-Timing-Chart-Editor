@@ -3,88 +3,103 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-13 JST
-# Observed main: b9b7d0d0e1a677752a2fca2e09d021ea5542f564
+# Last reconciled by ChatGPT: 2026-09-16 JST
+# Observed main: 830432de6fe6db021289651ecccd29046618a6b5
 #
 # Codex implements on main and only READS codex-control.
 # Never merge/cherry-pick codex-control into main.
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line.
 #
-# Claude is available again. See .codex/AGENT_ASSIGNMENT.md for ownership split.
+# Claude ownership/review queue is documented in .codex/AGENT_ASSIGNMENT.md.
 # Do NOT execute Issues currently assigned to Claude.
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
 #
-# 1) #561 — Cycle/Transaction interaction-owner boundary.
-#    Scope pointer/gesture ownership to pane roots, remove cross-mode selector-blacklist ownership,
-#    and keep Combined/Split arbitration explicit. Real pointer mode-switch acceptance is required.
-#    This is a foundation for Claude-owned #573, so land bounded changes promptly.
-561
+# 1) #614 — P0 Cycle waveform per-signal horizontal-scale mismatch.
+#    Current main has a measured viewBox/native-width mismatch between signals in a bounded/windowed
+#    source range. Fix the shared per-cycle presentation geometry without making DOM pixels semantic
+#    authority or disabling bounded rendering. Real browser acceptance must cover cycle 0 and scrolled
+#    windows where CLOCK/data previously diverged.
+614
 #
-# 2) #565 — Cycle Transition semantic reorder + drag/drop.
-#    Correct Move Up/Down semantics, preserve Transition Value/Duration/Comment, recompute Start/End,
-#    unify buttons and D&D through one semantic reorder path, support approved multi-select block move,
-#    one History unit, Undo/Redo, Save/Open and actual browser drag acceptance.
-565
+# 2) #615 — GUI interaction architecture: Passive View + hierarchical Mediator/state machine.
+#    Audit first; do NOT big-bang rewrite. Preserve Canonical -> Semantic Commands / History ->
+#    Projection -> Renderer -> DOM, then make typed UI-event ownership explicit for proven high-risk
+#    paths. Views render + emit intent; cross-surface/mode behavior is arbitrated by bounded owners;
+#    high-risk interactions use explicit transitions; async publication validates owner/state/generation.
+615
 #
-# 3) #556 — Transaction drag local-preview performance closure.
-#    Pointermove must remain preview-only: no Canonical/History/MiniMap/diagnostic publish per move,
-#    cache geometry at drag start, RAF-coalesce, avoid repeated DOM/layout reads, and provide measured
-#    browser counters/traces. Coordinate with #561 before editing overlapping pointer-owner code.
-556
+# 3) #612 — Separate shared time geometry from hidden Cycle waveform paint at Transaction startup.
+#    Transaction startup must retain shared geometry authority without blocking first-useful paint on
+#    hidden Cycle SVG work. Consume #615 ownership rules where useful; do not create a second geometry
+#    truth. Verify lazy Cycle/Combined entry after deferral.
+612
 #
-# 4) #163 — Semantic Command / History / ChangeSet final closure.
-#    Finish only remaining measured History/storage/rejected-command/cross-adapter evidence. Do not
-#    rebuild already-proven foundations.
-163
+# 4) #593 — Isolate Cycle / Transaction / Combined workspace presentation owners.
+#    Continue the explicit mode-owner split using #615's interaction ownership contract. Standalone
+#    presentation state must not leak across modes; Combined keeps one shared horizontal semantic-time
+#    owner and independent vertical state. Preserve view-only Canonical/History/Dirty = 0.
+593
 #
-# 5) #549 — Cursor A/B drag runtime/geometry cleanup.
-#    One gesture owner; no per-pointermove full-ruler DOM scan/sort; shared TimeAxis/Snap/
-#    DisplayTimeMapping geometry and bounded browser/performance evidence.
-549
-#
-# ============================================================================
-# CLAUDE-OWNED — DO NOT EXECUTE IN CODEX QUEUE
-# ============================================================================
-# #572 Cycle ruler / readable 100% default pitch / cycle labels — Claude ACTIVE FIRST.
-# #573 Combined stacked Transaction-over-Cycle with Cycle-master shared time axis — Claude after #572,
-#      coordinating with Codex-owned #561 for shared pointer/pane ownership.
-# #554 Independent User Journey re-audit — Claude after bounded blockers progress.
-# #568 Broad visual/exploratory QA — Claude discovery/review pass; production changes forbidden there.
+# 5) #599 — Transaction reload/startup performance closure.
+#    Re-measure after #612. Remove only measured duplicate/avoidable startup work; report phase order,
+#    build counters, median/p95 where practical, Save/Open and mode-switch acceptance. Do not optimize
+#    by weakening required readiness or hidden correctness.
+599
 #
 # ============================================================================
-# HOLD / DEPENDENCY / REFERENCE
+# CLAUDE-OWNED / REVIEW — DO NOT IMPLEMENT IN CODEX QUEUE
 # ============================================================================
-# #571 Transaction Bookmark + TimeGroup/Axis Break integration is OPEN, but #415 remains explicitly
-# skipped by user. Do not silently reactivate #415 or build a Transaction-local fold mapper. If #571
-# needs #415 for completion, report the dependency.
+# #613 Cycle-only v8 Inspector acceptance setup — Claude owns the Production-UI mode-selection fix.
+# #554 Independent fresh-document User Journey audit — Claude adversarial browser reviewer.
+# #431 Broad GUI/UX exploratory review — Claude; create bounded child Issues for concrete defects.
+# #426 Bottom Panel UX/interaction review — Claude owns product/GUI review and bounded child triage.
+# #441 Ribbon adaptive/high-density UX review — Claude owns visual/product review and acceptance.
+# #611 Role-column 28px vs 44px contract — PRODUCT DECISION HOLD. Claude may collect visual evidence,
+#      but neither agent changes the contract/Golden without explicit product approval.
 #
+# After Codex lands #614, Claude should independently verify the waveform alignment at cycle 0 and
+# scrolled bounded windows; this is review evidence, not parallel implementation ownership.
+#
+# ============================================================================
+# HOLD / REFERENCE / EXTERNAL
+# ============================================================================
 # #570 Product spec is authority/reference, not a parallel implementation owner.
-#
-# #205 Annotation acceptance remains incomplete. Standard/Custom Measurement acceptance is blocked by
-# virtualized overlay stable-identity/selection. Do not loop on `last()`/DOM-order test workarounds;
-# use/create a bounded overlay identity owner before retrying #205 closure.
-#
-# ============================================================================
-# CLOSED / PRESERVE
-# ============================================================================
-# #555 Transaction Group GUI assignment/D&D — CLOSED.
-# #559 Transaction Left Sidebar parity — CLOSED.
-# #562 Transaction geometry independence — CLOSED.
-# #563 Per-mode workspace state isolation — CLOSED.
-# #557 Cycle Home Ribbon File/Time dead-space cleanup — CLOSED.
-# #560 Transaction Group inline rename — CLOSED.
-# #429 Transaction visual/product closure — CLOSED.
-# #548 Transaction MiniMap correctness — CLOSED.
-# #463 Transaction large-workspace performance — CLOSED.
+# #569 AI subscription/external-agent policy remains product authority; run local policy/runtime
+#      acceptance where possible, but external-agent E2E is not a reason to block unrelated work.
+# #272 GitHub Actions runner allocation/billing/policy remains EXTERNAL_BLOCK. Do not loop on it.
+# #415 Nested collapse/shared DisplayTimeMapping remains explicitly SKIPPED by user.
+# #411 TimeGroup Epic may be reviewed/tested without silently re-enabling #415.
 #
 # ============================================================================
-# EXPLICITLY SKIPPED
+# RECENTLY CLOSED / PRESERVE
 # ============================================================================
-# #415 Nested collapse + shared DisplayTimeMapping / Axis Break remains explicitly skipped by user.
-# Do not auto-promote #415 until a later explicit user/task-list instruction.
+# #604 Transaction fold/large geometry closure.
+# #556 Transaction drag local-preview/performance closure.
+# #606 stale same-epoch waveform result rejection.
+# #607 Cycle horizontal scroll pitch regression.
+# #608 terminal ruler-tick off-by-one.
+# #609 Bookmark panel count/test mismatch.
+# #587/#573/#552 large-browser acceptance closures already recorded.
+#
+# ============================================================================
+# GUI INTERACTION ARCHITECTURE RULES — APPLY TO NEW WORK
+# ============================================================================
+# - Views/components are passive renderers of explicit app/workspace state plus local ephemeral visual
+#   state only. A View must not directly mutate a peer View or become a second semantic owner.
+# - User input becomes a typed UI intent/event and is handled by one authoritative bounded owner.
+# - Cross-surface behavior (mode, selection/focus, drag/resize/connect lifecycle, modal/overlay
+#   conflicts, visibility) is arbitrated through hierarchical Mediator/Controller ownership.
+# - High-risk interaction flows should use explicit states/transitions rather than distributed
+#   booleans/timers when evidence justifies it.
+# - Do NOT create one giant Root god-object. Local owners consume/delegate/bubble to higher owners.
+# - Document-changing events continue through Semantic Commands / History.
+# - View-only operations keep Canonical/History/Dirty delta = 0.
+# - Async work publishes only if owner/state/generation/semantic freshness is still current.
+# - Stable opaque IDs; no array-index/name identity or DOM-order semantic identity.
+# - DOM/ruler pixels are not semantic authority.
 #
 # ============================================================================
 # EXECUTION / COLLISION POLICY
@@ -92,21 +107,19 @@
 # - Read latest origin/main and live Issue/comments before editing.
 # - One active implementation owner per Issue.
 # - Do not execute Claude-owned Issues unless AGENT_ASSIGNMENT is explicitly changed first.
-# - Before editing a shared owner/module, check whether Claude's active Issue is likely touching the
-#   same file/hunk. Genuine same-hunk dependency owner lands first; do not overwrite parallel work.
-# - Commit/push bounded logical changes frequently so the other agent can consume them.
-# - User-visible real-browser reproduction overrides a narrower automated PASS when they conflict.
-# - For drag/drop/pointer workflows, require actual browser pointer interaction; direct commands,
-#   synthetic event dispatch, DOM markers or source wiring alone are not acceptance.
-# - Use fresh-document GUI journeys where editing capability is being proven.
+# - Do not stop the overall autonomous run merely because one Issue is acceptance-only/blocked; move
+#   to the next independent executable Issue.
+# - Before editing shared modules, check for other-agent work likely touching the same file/hunk.
+# - Commit/push bounded logical changes frequently; update owning Issue with evidence.
+# - User-visible real-browser reproduction overrides narrower automated PASS when they conflict.
+# - Pointer/D&D workflows require actual browser pointer interaction for acceptance.
 # - Never weaken Golden/reference/threshold/mask merely to pass.
 # - Never reset/stash/clean/delete unrelated user/agent work.
 #
 # ============================================================================
-# GLOBAL ARCHITECTURE / SAFETY
+# GLOBAL SEMANTIC / TIME ARCHITECTURE
 # ============================================================================
 # Canonical -> Semantic Commands / History -> Projection -> Renderer -> DOM.
-# Stable opaque IDs; no array-index/name identity.
-# View-only operations keep Canonical/History/Dirty delta = 0.
+# One logical mutation = one semantic operation = one History unit.
 # Canonical source time -> DisplayTimeMapping -> TimeAxisGeometry/LocalGeometry -> screen.
-# DOM/ruler pixels are not semantic authority.
+# Shared semantic time may be reused; mode-specific presentation ownership must remain explicit.
