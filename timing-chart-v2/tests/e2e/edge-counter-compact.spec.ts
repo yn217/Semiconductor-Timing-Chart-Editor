@@ -163,6 +163,7 @@ test.describe("Edge Counter compact layout", () => {
     expect(before.edgeCounterGeometryLookups).toBe(0);
     expect(before.edgeCounterEdgeIndexBuilds).toBeGreaterThanOrEqual(1);
 
+    await page.getByRole("button", { name: "Cycle", exact: true }).click();
     await host.locator("[data-role='frozen-row'][data-row-id='sig_clk']").click();
     const editor = page.getByTestId("signal-editor");
     await editor.getByLabel("Clock edge counter every").fill("99999");
