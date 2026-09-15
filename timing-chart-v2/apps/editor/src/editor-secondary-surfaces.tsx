@@ -202,6 +202,7 @@ export function useEditorSecondarySurfaces(
   const { selected, bottom, workspace, dialog, refs } = input;
   const { aiBridgeStatus, ...aiAssistantPanel } = useEditorAiAssistantModel({
     document: input.document,
+    documentEpoch: input.documentEpoch,
     revision: input.revision,
     selectedSignalId: input.annotationTargetSignalId,
     selectedGroupId: selected.group?.id,
