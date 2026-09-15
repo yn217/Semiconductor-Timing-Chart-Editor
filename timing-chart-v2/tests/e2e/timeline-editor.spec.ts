@@ -37,6 +37,10 @@ async function selectTimelineTransformRange(page: Page): Promise<void> {
 test("selects a cycle from Canvas geometry and the exclusive terminal boundary from shared mapping", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
+  // The normal startup showcase now spans 160 cycles. Load the 24-cycle
+  // Cycle fixture explicitly so data-cycle=24 is the semantic terminal
+  // boundary this test claims to exercise, not an ordinary interior tick.
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "cycle-terminal-boundary.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(cycleDocument)) });
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   // 49f904cd made Transaction the default startup mode; this whole file
   // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
