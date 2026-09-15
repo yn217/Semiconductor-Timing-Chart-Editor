@@ -24,6 +24,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "visual:acceptance": "playwright test tests/e2e/gui-visual-acceptance.spec.ts",
+    "test:visual-regression": "playwright test tests/e2e/visual-regression-modes.spec.ts",
     "harness:capture": "playwright test tests/e2e/gui-visual-acceptance.spec.ts",
     "harness:diff": "node scripts/check-golden-diff.mjs",
     "harness:check": "npm run check:production-presentation && node scripts/check-golden-integrity.mjs && node scripts/check-golden-provenance.mjs",
