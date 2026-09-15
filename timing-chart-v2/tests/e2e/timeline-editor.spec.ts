@@ -23,6 +23,10 @@ async function openPeriodOneClockDocument(page: Page): Promise<void> {
   await page.goto("/");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "timeline-period-one.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(periodOneClockDocument)) });
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
 }
 
 async function selectTimelineTransformRange(page: Page): Promise<void> {
@@ -34,6 +38,10 @@ test("selects a cycle from Canvas geometry and the exclusive terminal boundary f
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const surface = host.locator("[data-role='timing-chart-surface']");
   const wave = host.locator("[data-role='stable-waveform-surface']");
@@ -61,6 +69,10 @@ test("keeps ruler click suppression scoped to ruler-originated gestures", async 
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const ruler = page.getByTestId("cycle-ruler");
   const wave = host.locator("[data-role='stable-waveform-surface']");
@@ -127,6 +139,10 @@ test("selects Cycle 0 and the terminal boundary from the rendered waveform", asy
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const wave = host.locator("[data-role='stable-waveform-surface']");
   const owner = wave.locator("[data-signal-id='sig_cycle_request']");
@@ -166,6 +182,10 @@ test("selects a half-open range directly on the geometry-derived ruler", async (
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const ruler = page.getByTestId("cycle-ruler");
   await ruler.locator("[data-cycle='5']").click();
@@ -182,6 +202,10 @@ test("drag-selects a half-open Canvas range with preview-only movement and Escap
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const surface = host.locator("[data-role='timing-chart-surface']");
   const wave = host.locator("[data-role='stable-waveform-surface']");
@@ -238,6 +262,10 @@ test("positions a transaction ending at cycleCount on the actual terminal ruler 
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByLabel("New Transaction name").fill("Terminal transfer");
   await page.getByLabel("New Transaction start").fill("20");
@@ -255,6 +283,10 @@ test("keeps transaction source-cycle edges aligned after a collapsed TimeGroup",
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByRole("button", { name: "Axis Break", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
@@ -279,6 +311,10 @@ test("drag-selects a geometry-backed half-open range directly on the cycle ruler
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const ruler = page.getByTestId("cycle-ruler");
   const start = await ruler.locator("[data-cycle='2']").boundingBox();
@@ -433,6 +469,10 @@ test("allows ordinary timeline insertion with the default uncontrolled periodic 
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline range end").fill("3");
   await page.getByLabel("Timeline range start").fill("2");
@@ -455,6 +495,7 @@ test("allows all ordinary timeline transforms with the default uncontrolled peri
     await page.goto("/");
     const host = page.getByTestId("cycle-surface");
     await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+    await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
     await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
     await page.getByLabel("Timeline range end").fill("3");
     await page.getByLabel("Timeline range start").fill("2");
@@ -472,6 +513,10 @@ test("moves an uncontrolled Clock generator start with its source-time range", a
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline range start").fill("0");
   await page.getByLabel("Timeline range end").fill("2");
@@ -555,6 +600,10 @@ test("creates geometry-positioned Marker without waveform regeneration and a Gap
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const surface = host.locator("[data-role='timing-chart-surface']");
   const countersBefore = await surface.getAttribute("data-render-counters");
@@ -604,6 +653,10 @@ test("edits a Time Group through one semantic editor operation and supports Undo
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByRole("button", { name: "Axis Break", exact: true }).click();
   await page.getByTestId(/time-group-edit-/).click();
@@ -633,6 +686,10 @@ test("Previous/Next Bookmark navigation jumps to its geometry-backed cycle witho
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline range end").fill("7");
   await page.getByLabel("Timeline range start").fill("6");
@@ -661,6 +718,10 @@ test("creates a Bookmark from the Ruler context menu through shared semantic geo
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const ruler = page.getByTestId("cycle-ruler");
   const cycle4 = ruler.locator("[data-source-cycle='4']");
   await expect(cycle4).toHaveCount(1);
@@ -693,6 +754,10 @@ test("edits a named Bookmark through the Bottom Bookmarks panel and preserves it
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByRole("button", { name: "Add marker" }).click();
   await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
@@ -729,6 +794,10 @@ test("keeps Bookmark flags aligned with their rendered Ruler cycle through zoom 
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline range start").fill("2");
   await page.getByLabel("Timeline range end").fill("3");
@@ -777,6 +846,7 @@ test("keeps 100 Bookmarks distinct and navigation view-only in a long document",
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "100-bookmarks.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(largeBookmarkDocument)) });
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
   const panel = page.getByTestId("bookmark-editor-panel");
@@ -808,6 +878,10 @@ test("Timeline's History group reuses the global Undo/Redo owner, and the Bookma
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const timeline = page.getByTestId("timeline-editor");
   const bookmarkGroup = timeline.locator("[data-timeline-group='Bookmark']");
@@ -861,6 +935,10 @@ test("creates a standalone Label Anchor that restarts the ruler display without 
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline range end").fill("6");
   await page.getByLabel("Timeline range start").fill("5");
@@ -932,6 +1010,10 @@ test("SVG export reproduces a standalone Label Anchor's displayed ruler numbers,
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // 49f904cd made Transaction the default startup mode; this whole file
+  // exercises Cycle-only ruler/waveform/Timeline mechanics, so every test
+  // must switch explicitly rather than assume Cycle is still the default.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline range end").fill("6");
   await page.getByLabel("Timeline range start").fill("5");
