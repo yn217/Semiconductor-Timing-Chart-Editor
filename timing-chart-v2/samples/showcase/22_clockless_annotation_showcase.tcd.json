@@ -99,7 +99,7 @@
   "timeGroups": [
     {"id":"tg22_idle","name":"Long idle interval","category":"idle","start":56,"end":80,"presentation":{"collapsed":true,"foldStyle":"axis-break","foldLabel":"idle +24 cycles","resumeLabelAnchorId":"la22_resume"}}
   ],
-  "annotations": [
+  "annotationGroups":[],"annotations": [
     {"id":"a22_text","type":"text","label":"Clockless axis","visible":true,"anchor":{"cycle":2,"point":"cycle-center"}},
     {"id":"a22_callout","type":"callout","label":"Request accepted","visible":true,"anchor":{"signalId":"wire_accept","cycle":5,"point":"rising-edge"}},
     {"id":"a22_vline","type":"verticalLine","label":"SW reset","visible":true,"anchor":{"cycle":70,"point":"cycle-start"}},
