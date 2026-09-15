@@ -89,6 +89,36 @@ fields, validates Save/Open with `serializeValidatedCanonicalDocument` and
 `parseDocument`, checks exact document equality after reopen, and checks deterministic
 Save/Open/Save bytes. No production source was changed.
 
+## Audit D follow-up (multi-feature schema specimen)
+
+Existing focused schema tests already covered individual Transaction Group,
+measurement, overlay, Label Anchor, and Time Group cases, but did not assert one
+multi-feature canonical document as a whole. The bounded addition in
+`tests/schema/schema-and-roundtrip.test.ts` constructs one valid specimen containing:
+
+- three Signals in two Groups (fixture `sig_clk`/`sig_data` plus `sig_aux`);
+- one Transaction with two Phases and a linked Signal;
+- Marker and Bracket annotations, including Marker row-span semantics and Bracket
+  style/route fields;
+- a named Bookmark; and
+- a collapsed Axis-Break TimeGroup.
+
+Command:
+
+```text
+npx vitest run tests/schema/schema-and-roundtrip.test.ts
+```
+
+Result: PASS — 1 test file, 36 tests passed in 2.66s. The new test first requires
+`validateCanonicalDocument(document) === []`, then serializes through the current
+canonical schema, parses through `parseDocument`, asserts full document equality, and
+asserts deterministic Save/Open/Save bytes. This is schema-level evidence only; no
+browser lifecycle or production Save/Open claim is made.
+
+Remaining browser/export gaps are unchanged: independent Marker/Bracket browser
+Save/Open acceptance, full SVG/PNG/PDF Golden coverage, full visual parity, and
+export-specific visual/performance matrices remain open.
+
 ## Conclusion
 
 No bounded production defect was proven by this parity audit or follow-up. The parity inventory is
