@@ -69,3 +69,62 @@ test("builds six transactions through normal GUI selection transitions", async (
   await expect(inspector.getByLabel("Phase 3 name")).toHaveValue("Response");
   await expect(inspector.getByTestId("linked-signal-list")).toContainText("REQUEST");
 });
+
+test("authored transaction keeps its stable ID through one edit Undo/Redo, mode roundtrip, and Save/Open", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+
+  const ribbon = page.getByTestId("ribbon");
+  const tree = page.getByTestId("transaction-left-tree");
+  const inspector = page.getByTestId("inspector");
+  const surface = page.getByTestId("cycle-surface");
+  await ribbon.getByRole("button", { name: "Create Transaction", exact: true }).click();
+  await expect(tree.locator("[data-transaction-tree-id]")).toHaveCount(1);
+  const authoredRow = tree.locator("[data-transaction-tree-id]");
+  const authoredId = await authoredRow.getAttribute("data-transaction-tree-id");
+  expect(authoredId).toBeTruthy();
+  await authoredRow.click();
+
+  const historyBeforeEdit = await page.getByTestId("history-status").textContent();
+  const historyDepthBeforeEdit = Number(historyBeforeEdit?.match(/History (\d+)/)?.[1] ?? -1);
+  const originalName = await inspector.getByLabel("Transaction name", { exact: true }).inputValue();
+  const originalLane = await inspector.getByLabel("Transaction lane", { exact: true }).inputValue();
+  await inspector.getByLabel("Transaction name", { exact: true }).fill("Authored_Read");
+  await inspector.getByLabel("Transaction lane", { exact: true }).fill("lane_authored");
+  await inspector.getByTestId("apply-inspector-transaction").click();
+  await expect(page.getByTestId("history-status")).toHaveText(`History ${historyDepthBeforeEdit + 1} / Redo 0`);
+  await expect(tree.locator(`[data-transaction-tree-id="${authoredId}"]`)).toContainText("Authored_Read");
+
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText(`History ${historyDepthBeforeEdit} / Redo 1`);
+  await expect(tree.locator(`[data-transaction-tree-id="${authoredId}"]`)).toHaveCount(1);
+  await expect(inspector.getByLabel("Transaction name", { exact: true })).toHaveValue(originalName);
+  await expect(inspector.getByLabel("Transaction lane", { exact: true })).toHaveValue(originalLane);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText(`History ${historyDepthBeforeEdit + 1} / Redo 0`);
+  await expect(tree.locator(`[data-transaction-tree-id="${authoredId}"]`)).toContainText("Authored_Read");
+  await expect(inspector.getByLabel("Transaction lane", { exact: true })).toHaveValue("lane_authored");
+
+  for (const mode of ["Cycle", "Combined", "Transaction"] as const) {
+    await page.locator(".view-mode").getByRole("button", { name: mode, exact: true }).click();
+    await expect(page.locator(".view-mode").getByRole("button", { name: mode, exact: true })).toHaveClass(/active/);
+  }
+  await expect(tree.locator(`[data-transaction-tree-id="${authoredId}"]`)).toHaveCount(1);
+
+  const save = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await ribbon.getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await save).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  const reopenedRow = tree.locator(`[data-transaction-tree-id="${authoredId}"]`);
+  await expect(reopenedRow).toHaveCount(1);
+  await expect(reopenedRow).toContainText("Authored_Read");
+  await reopenedRow.click();
+  await expect(inspector.getByLabel("Transaction lane", { exact: true })).toHaveValue("lane_authored");
+  await expect(surface).toHaveAttribute("data-editor-idle", "true");
+});
