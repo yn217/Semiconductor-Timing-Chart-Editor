@@ -916,12 +916,12 @@ test("Timeline's History group reuses the global Undo/Redo owner, and the Bookma
   // The Bottom Bookmarks panel's own Duplicate creates a fresh stable ID.
   await timeline.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
   const panel = page.getByTestId("bookmark-editor-panel");
-  await expect(panel.getByTestId(/bookmark-row-/)).toHaveCount(5);
+  await expect(panel.getByTestId(/bookmark-row-/)).toHaveCount(10);
   const firstRow = panel.getByTestId(/bookmark-row-/).first();
   const firstId = await firstRow.getAttribute("data-testid");
   await firstRow.click();
   await panel.getByRole("button", { name: "Duplicate", exact: true }).click();
-  await expect(panel.getByTestId(/bookmark-row-/)).toHaveCount(6);
+  await expect(panel.getByTestId(/bookmark-row-/)).toHaveCount(11);
   await expect(page.getByTestId("history-status")).toHaveText("History 6 / Redo 0");
   const duplicatedIds = await panel.getByTestId(/bookmark-row-/).evaluateAll((rows) => rows.map((row) => row.getAttribute("data-testid")));
   expect(new Set(duplicatedIds).size).toBe(duplicatedIds.length);
