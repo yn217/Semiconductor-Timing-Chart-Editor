@@ -39,6 +39,12 @@ function elementWithStyle(style: CSSStyleDeclaration): HTMLElement {
     getBoundingClientRect: () => rect,
     parentElement: null,
     scrollLeft: 0,
+    // d8c45098 (MiniMap resync-after-zoom fix): applyTimelineZoom now
+    // dispatches a "timeline-viewport-resize" event on the viewport after
+    // writing its width, since scroll-width changes aren't observable
+    // through ResizeObserver on the viewport itself. No-op stub for the
+    // same reason as the geometry reads above.
+    dispatchEvent: () => true,
   } as unknown as HTMLElement;
 }
 
