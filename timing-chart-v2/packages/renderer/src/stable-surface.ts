@@ -241,6 +241,11 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         this.#waveOwners.delete(signalId);
         this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
       }
+      // Replacements reset per-signal freshness state. Re-seed the mounted
+      // signals before their first async batch is queued; otherwise a
+      // follow-up projection can leave an owner with no current version and
+      // cause every otherwise-current render to be classified as stale.
+      for (const signalId of projection.mountedSignalIds) this.#waveVersions.set(signalId, 0);
     }
     // A document replacement already clears the old owners and the isNew
     // mounted-owner path below queues the visible Signals. Do not pre-register
