@@ -104,6 +104,28 @@ describe("canonical v2 schema and roundtrip", () => {
     expect(count).toBe(20);
   });
 
+  it("validates and round-trips every non-Golden showcase sample", () => {
+    const repoRoot = resolve(import.meta.dirname, "../..");
+    const directory = resolve(repoRoot, "samples/showcase");
+    const files = [
+      "21_large_feature_showcase.tcd.json",
+      "22_clockless_annotation_showcase.tcd.json",
+      "23_multiclock_cdc_showcase.tcd.json",
+      "24_protocol_transaction_showcase.tcd.json",
+      "25_long_timeline_stress_showcase.tcd.json",
+    ];
+    for (const file of files) {
+      const result = parseDocument(readFileSync(resolve(directory, file), "utf8"));
+      expect(result, `${file}: ${result.ok ? "" : JSON.stringify(result.problems)}`).toMatchObject({ ok: true });
+      if (!result.ok) continue;
+      expect(validateCanonicalDocument(result.document), file).toEqual([]);
+      const saved = serializeCanonicalDocument(result.document);
+      const reopened = parseDocument(saved);
+      expect(reopened.ok, `${file}: reopen`).toBe(true);
+      if (reopened.ok) expect(serializeCanonicalDocument(reopened.document)).toBe(saved);
+    }
+  });
+
   it("migrates a flat canonical v1 document and supplies v2-owned defaults", () => {
     const v1 = clone(canonicalFixture()) as unknown as Record<string, unknown>;
     v1.formatVersion = 1;
