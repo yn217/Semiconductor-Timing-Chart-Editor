@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import type { Annotation, AnnotationId, BookmarkId, ClockSignal, CommandId, CommentRow, GroupId, Signal, SignalId, SpacerId, TransactionGroupId, TransactionId } from "@timing-chart-v2/schema";
+import { parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (id: string) => id as CommandId;
@@ -816,6 +816,61 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.annotations[0]?.to).not.toHaveProperty("offset");
     expect(session.execute({ id: commandId("cmd_ann_delete"), type: "annotation.delete", annotationId: annotation.id }).ok).toBe(true);
     expect(session.getSnapshot().document.annotations).toEqual([]);
+  });
+
+  it("round-trips Marker/Bracket presentation after SemanticCommand edits", () => {
+    const marker: Annotation = {
+      id: "ann_marker_roundtrip" as AnnotationId,
+      type: "marker",
+      label: "Marker",
+      visible: true,
+      color: "#aa2200",
+      comment: "marker note",
+      anchor: { signalId: "sig_data" as SignalId, cycle: 2, point: "cycle-center" },
+      labelOffset: { x: 7, y: -4 },
+      style: { strokeWidth: 3, strokeStyle: "dashed", fillColor: "#ffeeaa", fillOpacity: 0.4 },
+      rotation: 12,
+      align: "center",
+      locked: false,
+      verticalSpan: { mode: "rows", startRowId: "sig_clk" as SignalId, endRowId: "sig_data" as SignalId },
+    };
+    const bracket: Annotation = {
+      id: "ann_bracket_roundtrip" as AnnotationId,
+      type: "bracket",
+      label: "Bracket",
+      visible: true,
+      color: "#004488",
+      start: { signalId: "sig_data" as SignalId, cycle: 1, point: "cycle-start" },
+      end: { signalId: "sig_data" as SignalId, cycle: 5, point: "cycle-end" },
+      labelOffset: { x: -3, y: 9 },
+      style: { strokeWidth: 5, strokeStyle: "dotted", fillColor: "none", fillOpacity: 0 },
+      rotation: -8,
+      align: "right",
+      locked: false,
+    };
+    const session = new CommandHistorySession({ ...canonicalFixture(), annotations: [marker, bracket] });
+
+    expect(session.execute({ id: commandId("marker_presentation"), type: "annotation.updateProperties", annotationId: marker.id, label: "Marker updated", visible: false, color: "#bb3300", labelOffset: { x: 11, y: -6 }, style: { strokeWidth: 4, strokeStyle: "solid", fillColor: "#ddccaa", fillOpacity: 0.6 } }).ok).toBe(true);
+    expect(session.execute({ id: commandId("marker_rotation"), type: "annotation.setRotation", annotationId: marker.id, rotation: 18 }).ok).toBe(true);
+    expect(session.execute({ id: commandId("marker_align"), type: "annotation.setAlign", annotationId: marker.id, align: "left" }).ok).toBe(true);
+    expect(session.execute({ id: commandId("marker_span"), type: "annotation.updateVerticalSpan", annotationId: marker.id, verticalSpan: { mode: "custom", startOffset: 2, endOffset: 5 } }).ok).toBe(true);
+    expect(session.execute({ id: commandId("marker_lock"), type: "annotation.setLocked", annotationId: marker.id, locked: true }).ok).toBe(true);
+    expect(session.execute({ id: commandId("bracket_presentation"), type: "annotation.updateProperties", annotationId: bracket.id, label: "Bracket updated", visible: true, color: "#005599", labelOffset: { x: 2, y: 13 }, style: { strokeWidth: 6, strokeStyle: "dashed", fillColor: "none", fillOpacity: 0.2 } }).ok).toBe(true);
+    expect(session.execute({ id: commandId("bracket_rotation"), type: "annotation.setRotation", annotationId: bracket.id, rotation: 4 }).ok).toBe(true);
+    expect(session.execute({ id: commandId("bracket_align"), type: "annotation.setAlign", annotationId: bracket.id, align: "center" }).ok).toBe(true);
+    expect(session.execute({ id: commandId("bracket_lock"), type: "annotation.setLocked", annotationId: bracket.id, locked: true }).ok).toBe(true);
+
+    const expected = session.getSnapshot().document;
+    expect(expected.annotations).toEqual([
+      expect.objectContaining({ id: marker.id, type: "marker", visible: false, color: "#bb3300", labelOffset: { x: 11, y: -6 }, style: { strokeWidth: 4, strokeStyle: "solid", fillColor: "#ddccaa", fillOpacity: 0.6 }, rotation: 18, align: "left", locked: true, verticalSpan: { mode: "custom", startOffset: 2, endOffset: 5 } }),
+      expect.objectContaining({ id: bracket.id, type: "bracket", visible: true, color: "#005599", labelOffset: { x: 2, y: 13 }, style: { strokeWidth: 6, strokeStyle: "dashed", fillColor: "none", fillOpacity: 0.2 }, rotation: 4, align: "center", locked: true }),
+    ]);
+    const saved = serializeValidatedCanonicalDocument(expected);
+    const reopened = parseDocument(saved);
+    expect(reopened.ok).toBe(true);
+    if (!reopened.ok) return;
+    expect(reopened.document).toEqual(expected);
+    expect(serializeValidatedCanonicalDocument(reopened.document)).toBe(saved);
   });
 
   it("deletes a grouped Annotation and restores exact membership through Undo/Redo", () => {
