@@ -13,6 +13,11 @@ on:
         type: boolean
         required: false
         default: false
+      update_visual_baselines:
+        description: Regenerate visual-regression-modes.spec.ts screenshot baselines on this runner's platform (Linux) and upload them as an artifact instead of running the normal PR gate
+        type: boolean
+        required: false
+        default: false
   schedule:
     - cron: "23 17 * * *"
   push:
@@ -22,8 +27,30 @@ on:
     paths: ["timing-chart-v2/**", ".github/workflows/timing-chart-v2.yml"]
 
 jobs:
+  visual-baseline-bootstrap:
+    if: github.event_name == 'workflow_dispatch' && inputs.update_visual_baselines == true
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: timing-chart-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: timing-chart-v2/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test tests/e2e/visual-regression-modes.spec.ts --update-snapshots
+      - uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-baselines
+          path: timing-chart-v2/tests/e2e/visual-regression-modes.spec.ts-snapshots
+          retention-days: 7
+
   pr-gate:
-    if: github.event_name != 'schedule' && inputs.performance_scale != 'nightly'
+    if: github.event_name != 'schedule' && inputs.performance_scale != 'nightly' && inputs.update_visual_baselines != true
     runs-on: ubuntu-latest
     defaults:
       run:
