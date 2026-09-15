@@ -4,35 +4,28 @@ import { resolveTimeAxisGeometry, type LocalGeometryMap, type TimeAxisGeometry }
 import { renderGeometryGrid } from "../render-geometry-grid.js";
 import type { ViewMetricsOwner } from "./view-metrics.js";
 import { buildRuler } from "./build-ruler.js";
-import { referenceSvgScreenScale } from "./screen-scale.js";
 
-// #572: a legitimate reference-SVG screen-scale reading corrects only for
-// browser sub-pixel/DPI rounding around build-ruler.ts's own declared
-// default (1 local-geometry unit = 1px at 100% zoom) -- it must never
-// silently redefine Cycle Mode's pitch. Fit All/Fit Selection already
-// express "shrink to fit" through `zoom` itself (viewport-controller.ts's
-// `createTimelineZoomController`), so `screenGeometryScale` should stay
-// close to 1 regardless of zoom level. A measurement this far from 1 can
-// only mean the reference SVG was sampled while its container was still
-// constrained by an unrelated pass (e.g. `applyRendererHostSizing`'s resize
-// handler, which sizes the renderer host to the viewport's own width and
-// can run before the zoom controller has applied the document's real
-// unzoomed width) -- not a genuine screen-DPI effect. Reject it rather than
-// let Cycle Mode's default 100% pitch permanently compress to fit whatever
-// width happened to be measured first.
-const PLAUSIBLE_SCREEN_SCALE_MIN = 0.9;
-const PLAUSIBLE_SCREEN_SCALE_MAX = 1.1;
-function plausibleScreenScale(candidate: number | undefined): number | undefined {
-  return candidate !== undefined && candidate >= PLAUSIBLE_SCREEN_SCALE_MIN && candidate <= PLAUSIBLE_SCREEN_SCALE_MAX ? candidate : undefined;
-}
-
-export function rebuildRulerPresentation(ruler: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, previousScale: number | undefined, referenceSvg: SVGSVGElement | undefined, zoom: number, minimumWaveWidth = 0, viewportElement?: HTMLElement, measureCurrentScale = true): { readonly timeAxis: TimeAxisGeometry; readonly scale: number } {
+// #572 introduced a reference-SVG screen-scale measurement meant only to
+// correct browser sub-pixel/DPI rounding around build-ruler.ts's own
+// declared default (1 local-geometry unit = 1px at 100% zoom). In practice
+// that measurement is never exactly 1 (e.g. 1.00106), and while #572 only
+// guarded against it drifting *far* from 1, it applied whatever near-1
+// value it measured to the ruler/grid's per-cycle pixel positions -- but
+// never to the waveform surface itself, which always renders at the
+// undivided 1-unit-per-px default. Because the correction is multiplicative,
+// even a ~0.1% measured error is invisible near cycle 0 but compounds into a
+// visible, growing pixel drift between the grid's vertical guide lines and
+// the actual signal edges the farther right you scroll. Always using the
+// documented default (scale 1) keeps the ruler/grid and the waveform
+// surface reading the exact same coordinates everywhere, eliminating the
+// drift entirely; DPI/sub-pixel rounding this was meant to smooth over is
+// sub-1px and not worth reintroducing a source of unbounded drift for.
+export function rebuildRulerPresentation(ruler: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, previousScale: number | undefined, referenceSvg: SVGSVGElement | undefined, zoom: number, minimumWaveWidth = 0, viewportElement?: HTMLElement): { readonly timeAxis: TimeAxisGeometry; readonly scale: number } {
+  void zoom;
   const timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
   const mapping = mappingCache.get(document.timeline, document.timeGroups);
   const referenceViewBoxWidth = referenceSvg?.viewBox.baseVal.width;
-  let scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, previousScale, measureCurrentScale ? plausibleScreenScale(referenceSvgScreenScale(referenceSvg, zoom)) : undefined, timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth);
-  const settledScale = measureCurrentScale ? plausibleScreenScale(referenceSvgScreenScale(referenceSvg, zoom)) : undefined;
-  if (settledScale !== undefined && Math.abs(settledScale - scale) > 0.0001) scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, undefined, settledScale, timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth);
+  const scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, previousScale, undefined, timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth);
   return { timeAxis, scale };
 }
 
@@ -76,7 +69,7 @@ export function refreshTimelinePresentation(context: {
     const metrics = context.metricsOwner.snapshot();
     const minimumWaveWidth = Math.max(160, metrics.viewportWidth - metrics.leftPaneWidth - metrics.frozenPaneWidth);
     const currentTimeAxis = resolveTimeAxisGeometry(context.document, context.geometryMaps);
-    const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, currentTimeAxis.ownerSignalId ? context.geometrySvgs.get(currentTimeAxis.ownerSignalId) : undefined, metrics.zoom, minimumWaveWidth, context.viewport, context.reason === "resize" || !rulerInitialized);
+    const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, currentTimeAxis.ownerSignalId ? context.geometrySvgs.get(currentTimeAxis.ownerSignalId) : undefined, metrics.zoom, minimumWaveWidth, context.viewport);
     timeAxis = rebuilt.timeAxis; screenGeometryScale = rebuilt.scale; rulerInitialized = true; context.markOpenPhase("ruler-painted"); syncPresentationScale(context.viewport, context.host, context.rulerViewport, context.currentZoom, screenGeometryScale);
   }
   if (context.reason !== "scroll") { context.metricsOwner.update({ viewportWidth: context.viewport.clientWidth }); const metrics = context.metricsOwner.snapshot(); refreshGridPresentation(context.grid, context.document, context.geometryMaps, context.mappingCache, context.gridEnabled, context.totalHeight, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, screenGeometryScale); }
