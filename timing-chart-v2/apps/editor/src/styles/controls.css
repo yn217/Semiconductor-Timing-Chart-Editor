@@ -57,6 +57,23 @@
   opacity: var(--ds-disabled-opacity);
 }
 
+/* Same "never trust the UA default under color-scheme:dark" problem as the
+   checkbox rule below, for plain text-entry fields: several dialogs/panels
+   (Export, Save As, Document Properties, Transaction Phase table, Find &
+   Replace, Transaction Time Scale, Bookmark editor, Comment Row editor,
+   Timeline toolbar) style only border/padding/height on their
+   `<input>`/`<textarea>`/`<select>` and rely on the browser's own default
+   background/text color -- under `color-scheme: dark` (responsive.css,
+   `prefers-color-scheme: dark`) that default is Chromium's native dark
+   form-control palette, not this (entirely light-themed) app's palette.
+   Worst case found (`.export-dialog select`, background:white with no
+   explicit color) renders literally invisible white-on-white text. One
+   shared floor here, at plain-element specificity, matches what every
+   already-patched surface (`.inspector input`, this same file's checkbox
+   rule) sets explicitly -- any component needing a different palette still
+   wins via its own higher-specificity selector. */
+input, textarea, select { background: #fff; color: #24364a; }
+
 /* #429/#397 Transaction Mode Product Closure P0-7: an unstyled
    `<input type="checkbox">` takes its rendered appearance from the UA's
    native widget theme -- under `color-scheme: dark` (responsive.css,
