@@ -1097,7 +1097,7 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     name.title = row.fullPath ?? row.name;
     const role = createRoleBadge(document, row.kind, row.role, "tree-signal-role");
     role.title = row.kind === "comment" ? "Comment Row" : row.role ?? "internal";
-    if (row.signalType !== undefined) {
+    if (row.signalType !== undefined && row.kind !== "comment") {
       role.textContent = signalPresentationLabel(row.kind, row.role, row.signalType);
       role.dataset.signalType = row.signalType;
       role.title = `${signalTypeLabel(row.signalType)} · ${row.role ?? "internal"}`;
@@ -1120,7 +1120,7 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     return;
   }
   const role = createRoleBadge(document, row.kind, row.role, "signal-role");
-  if (row.signalType !== undefined) {
+  if (row.signalType !== undefined && row.kind !== "comment") {
     role.textContent = signalPresentationLabel(row.kind, row.role, row.signalType);
     role.dataset.signalType = row.signalType;
     role.title = `${signalTypeLabel(row.signalType)} · ${row.role ?? "internal"}`;
