@@ -24,6 +24,14 @@ export type WaveformProviderContext = Readonly<{
   onReferenceGeometryReady?: () => void;
   invalidateSnapIndex: () => void;
   getSourceWindow?: (owner: HTMLElement) => Readonly<{ start: number; end: number }> | undefined;
+  /** Document-wide pixels-per-display-cycle, owned by the ruler's authoritative
+   * rebuild (see TimelineGeometryOwner.waveWidthPxPerDisplayCycle / build-ruler.ts).
+   * A pure value read fresh on every call -- never a `--wave-width` CSS custom
+   * property read back out of the DOM, which is not guaranteed to have already
+   * settled to its final value at every moment a wave batch happens to run and
+   * can permanently bake a stale ratio into an owner whose own window does not
+   * happen to change again afterward (#614). */
+  getWaveWidthPxPerDisplayCycle?: () => number | undefined;
   getViewMode?: () => "Cycle" | "Transaction" | "Split";
 }>;
 
@@ -49,16 +57,29 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         signalIndexDocument = document;
         signalIndexRevision = currentSnapshot.revision;
       }
+      // #614: every windowed signal's renderer window must span the exact
+      // same display-cycle range so their WaveDrom SVGs share one
+      // units-per-cycle ratio -- every wave-owner is stretched to a shared
+      // document-wide px-per-cycle (see the width pass below), so a signal
+      // whose window is even one cycle narrower or wider than another's
+      // renders at a visibly different scale despite covering "the same"
+      // screen range. Aligning every signal's window to the *reference
+      // clock's* period (previously done only when the signal being
+      // rendered was itself a clock) keeps that shared ratio intact
+      // regardless of which signal happens to need period-aligned WaveDrom
+      // clock encoding.
+      const referenceClockSignal = document.timeline.referenceClock === undefined ? undefined : signalById.get(document.timeline.referenceClock);
+      const referenceClockPeriod = referenceClockSignal?.type === "clock" ? referenceClockSignal.generator.period : undefined;
       const prepared = requests.map((request) => {
         // Transaction mode owns the shared time geometry and Transaction
         // projection, but does not display Cycle waveforms. Keep the
         // reference clock available for geometry extraction; defer hidden
         // signal paint until Cycle/Combined becomes active.
         if (viewMode === "Transaction" && request.signalId !== referenceClockId) {
-          return { request, waveJson: undefined, semanticValues: undefined, error: undefined, deferred: true };
+          return { request, waveJson: undefined, semanticValues: undefined, error: undefined, deferred: true, rendererStart: undefined, rendererEnd: undefined };
         }
         const signal = signalById.get(request.signalId);
-        if (!signal) return { request, waveJson: undefined, semanticValues: undefined, error: new Error(`Signal '${request.signalId}' is missing.`), deferred: false };
+        if (!signal) return { request, waveJson: undefined, semanticValues: undefined, error: new Error(`Signal '${request.signalId}' is missing.`), deferred: false, rendererStart: undefined, rendererEnd: undefined };
         let remappedValues: readonly SignalValueChange[] | undefined;
         const displaySignal = signal.type === "commentRow" ? signal : signal.type === "clock"
           ? { ...signal, ...(signal.enable ? { enable: context.mappingCache.remapValueChanges(signal.enable, mapping) } : {}) }
@@ -69,7 +90,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         const displayWindow = sourceWindow === undefined ? undefined : displayWindowForSource(mapping, { sourceStart: sourceWindow.start, sourceEnd: sourceWindow.end }, document.timeline.cycleCount);
         const displayStart = displayWindow?.displayStart;
         const displayEnd = displayWindow?.displayEnd;
-        const clockPeriod = displaySignal.type === "clock" ? displaySignal.generator.period : undefined;
+        const clockPeriod = referenceClockPeriod ?? (displaySignal.type === "clock" ? displaySignal.generator.period : undefined);
         // WaveDrom's clock encoder requires its local window to start/end on
         // period boundaries.  DisplayTimeMapping can place a semantic window
         // edge between those boundaries (for example around a fold), so align
@@ -93,8 +114,28 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             const displayCycle = rendererStart + index;
             return displayCycle === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[displayCycle] ?? sourceWindow.end);
           }) };
-        return { request, waveJson: mappedWaveJson, semanticValues, error: undefined, deferred: false };
+        return { request, waveJson: mappedWaveJson, semanticValues, error: undefined, deferred: false, rendererStart, rendererEnd };
       });
+      // #614: every wave-owner is stretched to a shared, document-wide
+      // px-per-cycle (waveform.css sets each owner's CSS width, its child svg
+      // stretches to `width: 100%` of that with `preserveAspectRatio="none"`)
+      // -- correct for a signal whose WaveJson covers the whole document, but
+      // a *windowed* (bounded, #587) signal's own viewBox only covers a
+      // fraction of the document, so stretching it to the full document width
+      // inflates it far past its real size. Give each windowed owner its own
+      // inline width instead, proportional to how much of the document its
+      // window actually covers, using the ruler's pure, already-computed
+      // ratio (never a `--wave-width` CSS read -- see the context field doc).
+      // Non-windowed owners, or when the ratio isn't known yet, fall back to
+      // the shared CSS rule (full document width) as before.
+      const pxPerDisplayCycle = context.getWaveWidthPxPerDisplayCycle?.();
+      for (const item of prepared) {
+        if (pxPerDisplayCycle !== undefined && item.rendererStart !== undefined && item.rendererEnd !== undefined && item.rendererEnd > item.rendererStart) {
+          item.request.owner.style.width = `${(item.rendererEnd - item.rendererStart) * pxPerDisplayCycle}px`;
+        } else {
+          item.request.owner.style.removeProperty("width");
+        }
+      }
       const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean }> = [];
       for (const item of prepared) {
         if (item.deferred) {

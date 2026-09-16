@@ -24,7 +24,16 @@ export function projectViewportWindow({
   readonly onProjection: (projection: RenderProjection, window: VirtualizationWindow, mountedSignalsChanged: boolean) => void;
 }): void {
   const nextWindow = buildViewportWindow(viewport, referenceClock);
-  if (nextWindow.viewportStartY === previous.window.viewportStartY && nextWindow.viewportEndY === previous.window.viewportEndY) return;
+  if (nextWindow.viewportStartY === previous.window.viewportStartY && nextWindow.viewportEndY === previous.window.viewportEndY) {
+    // Vertical row virtualization is unchanged, but a horizontal-only scroll
+    // still moves each wave-owner's bounded source window (see
+    // `getSourceWindow`, keyed off `viewport.scrollLeft`). Re-publish the same
+    // projection so the renderer's per-owner `sourceWindowChanged` check (the
+    // only thing that re-queues a bounded WaveDrom re-render) gets a chance to
+    // run; without this call horizontal scroll never triggers it at all.
+    onProjection(previous.projection, previous.window, false);
+    return;
+  }
   const nextProjection = projectionCoordinator.project({ snapshot, changeSet: {}, viewport: nextWindow, previous: previous.projection, collapsedGroupIds });
   const oldMounted = previous.projection.mountedSignalIds;
   const nextMounted = nextProjection.mountedSignalIds;
