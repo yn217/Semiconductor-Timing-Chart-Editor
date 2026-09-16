@@ -384,7 +384,10 @@
      panes themselves never changed size. */
   flex: 0 0 clamp(160px, calc(var(--gui-signal-split-upper-ratio, 0.5) * 100%), 280px);
   overflow-y: auto;
-  overflow-x: visible;
+  /* `visible` computes to `auto` when the other axis is scrollable, creating
+     a second horizontal owner inside Combined. Clip here so the outer
+     `.cycle-viewport` remains the single shared time-scroll owner. */
+  overflow-x: clip;
   border-bottom: 1px solid var(--ds-border-subtle, #b7c4d2);
 }
 .cycle-panel.mode-split .split-signal-content {
@@ -395,7 +398,9 @@
   flex: 1 1 auto;
   min-height: 220px;
   overflow-y: auto;
-  overflow-x: visible;
+  /* Keep vertical scrolling local while horizontal time remains owned by
+     the outer Combined viewport. */
+  overflow-x: clip;
   overscroll-behavior: contain;
 }
 .cycle-panel.mode-split .split-transaction-pane {

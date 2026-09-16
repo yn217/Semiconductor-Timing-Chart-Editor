@@ -211,7 +211,18 @@ export function EditorWorkspaceView({
           as a stray vertical line bleeding through the Tree's content. */}
       {viewMode === "Cycle" && <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={frozenPaneMinWidth} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onKeyDown={onFrozenPaneKeyDown} onPointerDown={onFrozenPanePointerDown} onPointerMove={onFrozenPanePointerMove} onPointerUp={onFrozenPanePointerUp} onPointerCancel={onFrozenPanePointerUp} />}
       {header}
-      <div className={`cycle-viewport${viewMode === "Split" ? " split-signal-pane" : ""}`} ref={viewport} data-testid="cycle-viewport" data-pane={viewMode === "Split" ? "signal" : undefined} tabIndex={0} aria-label="Timing canvas navigation" onKeyDown={onViewportKeyDown}>
+      <div className={`cycle-viewport${viewMode === "Split" ? " split-signal-pane" : ""}`} ref={viewport} data-testid="cycle-viewport" data-pane={viewMode === "Split" ? "signal" : undefined} tabIndex={0} aria-label="Timing canvas navigation" onKeyDown={onViewportKeyDown} onWheel={(event) => {
+        if (viewMode !== "Split" || event.deltaX === 0) return;
+        // Combined owns one horizontal source-time viewport. The two child
+        // panes remain vertical scrollers, but horizontal wheel input from
+        // either pane is routed to this shared owner (not an inner scroller).
+        event.preventDefault();
+        event.currentTarget.scrollLeft += event.deltaX;
+        if (event.deltaY !== 0 && event.target instanceof Element) {
+          const verticalPane = event.target.closest<HTMLElement>(".split-transaction-pane, .split-signal-content");
+          if (verticalPane) verticalPane.scrollTop += event.deltaY;
+        }
+      }}>
         {viewMode === "Transaction" && transactionTree}
         {viewMode === "Split" && <div className="split-transaction-pane" data-pane="transaction" tabIndex={0} aria-label="Transaction pane">{transactionTree}{viewportContent}</div>}
         {viewMode === "Split" && <div className="combined-split-divider" data-testid="combined-split-divider" role="separator" aria-label="Resize Transaction and Cycle panes" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(signalSplitRatio * 100)} tabIndex={0} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} onPointerCancel={onSignalSplitPointerUp} />}

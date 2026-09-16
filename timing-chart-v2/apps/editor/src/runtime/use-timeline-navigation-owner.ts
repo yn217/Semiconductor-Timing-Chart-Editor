@@ -41,6 +41,8 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
   const [zoom, setZoomState] = useState(1);
   const zoomRef = useRef(1);
   const zoomByModeRef = useRef<Record<"Cycle" | "Transaction", number>>({ Cycle: 1, Transaction: 1 });
+  const horizontalScrollByModeRef = useRef<Record<"Cycle" | "Transaction" | "Split", number>>({ Cycle: 0, Transaction: 0, Split: 0 });
+  const viewportRef = useRef<HTMLElement | undefined>(undefined);
   const previousModeRef = useRef<"Cycle" | "Transaction" | "Split">(viewMode);
   const activeModeRef = useRef(viewMode);
   activeModeRef.current = viewMode;
@@ -57,6 +59,8 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
   useEffect(() => {
     const previous = previousModeRef.current;
     if (previous !== viewMode) {
+      const viewport = viewportRef.current;
+      if (viewport) horizontalScrollByModeRef.current[previous] = viewport.scrollLeft;
       if (previous === "Cycle" || previous === "Transaction") zoomByModeRef.current[previous] = zoomRef.current;
       if (viewMode === "Cycle" || viewMode === "Transaction") {
         const next = zoomByModeRef.current[viewMode];
@@ -64,6 +68,10 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
         setZoomState(next);
         applyZoomRef.current(next);
       }
+      // Standalone workspaces own independent horizontal viewports even
+      // though the current shell reuses one DOM scroller. Combined has its
+      // own saved position and must not overwrite either standalone mode.
+      if (viewport) viewport.scrollLeft = horizontalScrollByModeRef.current[viewMode];
       previousModeRef.current = viewMode;
     }
   }, [viewMode]);
@@ -77,6 +85,12 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
     fitAll: () => fitAllRef.current(),
     navigateToCycle: (cycle) => navigateToCycleRef.current(cycle),
     attach: (context) => {
+      viewportRef.current = context.viewport;
+      horizontalScrollByModeRef.current[activeModeRef.current] = context.viewport.scrollLeft;
+      const rememberHorizontalScroll = () => {
+        horizontalScrollByModeRef.current[activeModeRef.current] = context.viewport.scrollLeft;
+      };
+      context.viewport.addEventListener("scroll", rememberHorizontalScroll, { passive: true });
       const applyZoom = createTimelineZoomController({
         rendererHost: context.rendererHost,
         timingSurface: context.timingSurface,
@@ -122,6 +136,8 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
       navigateToCycleRef.current = navigation.navigateToCycle;
 
       return () => {
+        context.viewport.removeEventListener("scroll", rememberHorizontalScroll);
+        if (viewportRef.current === context.viewport) viewportRef.current = undefined;
         applyZoomRef.current = () => undefined;
         fitSelectionRef.current = () => undefined;
         fitAllRef.current = () => undefined;
