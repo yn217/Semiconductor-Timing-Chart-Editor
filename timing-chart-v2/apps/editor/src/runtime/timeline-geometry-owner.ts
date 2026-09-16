@@ -110,10 +110,10 @@ export class TimelineGeometryOwner {
     // Keep the display-cycle lookup as the identity/no-fold fallback.
     const point = axis.geometry.find({ signalId: axis.ownerSignalId, cycle, point: "cycle-start" })?.point
       ?? axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
-    return point === undefined ? undefined : point.x * this.#presentationScale;
+    return point === undefined ? undefined : (point.x + this.sharedGeometryLocalXOffset(document, mapping)) * this.#presentationScale;
   }
 
-  /** Resolve a local time viewport to canonical source cycles using semantic geometry. */
+  /** Resolve a global time-viewport X interval to canonical source cycles using semantic geometry. */
   sourceWindowForLocalRange(document: CanonicalDocument, localStart: number, localEnd: number, overscan = 2): Readonly<{ start: number; end: number }> {
     if (this.#requestedSourceCycle !== undefined) {
       const span = Math.min(2048, document.timeline.cycleCount);
@@ -132,7 +132,19 @@ export class TimelineGeometryOwner {
       const bootstrapEnd = Math.min(document.timeline.cycleCount, 2048);
       return { start: 0, end: bootstrapEnd };
     }
-    const entries = this.viewportBoundaryEntries(owner, signalId, mapping, document.timeline.cycleCount);
+    const retainedEntries = this.viewportBoundaryEntries(owner, signalId, mapping, document.timeline.cycleCount);
+    // A bounded WaveDrom geometry map stores X relative to its own rendered
+    // window. Re-windowing must translate those points back into the shared
+    // document coordinate system before comparing them with scrollLeft;
+    // otherwise each refresh interprets the current window's local X as a
+    // global X and advances the requested source range by one window again.
+    const pixelsPerDisplayCycle = this.#waveWidthPxPerDisplayCycle;
+    const pixelsPerLocalUnit = pixelsPerDisplayCycle !== undefined && Number.isFinite(pixelsPerDisplayCycle) && pixelsPerDisplayCycle > 0
+      ? pixelsPerDisplayCycle / this.#presentationScale
+      : undefined;
+    const globalOrigin = this.#waveOriginPx === undefined ? 0 : this.#waveOriginPx / this.#presentationScale;
+    const geometryOffset = this.sharedGeometryLocalXOffset(document, mapping);
+    const entries = geometryOffset === 0 ? retainedEntries : retainedEntries.map((entry) => ({ ...entry, x: entry.x + geometryOffset }));
     // A first WaveDrom paint may expose only presentation-thinned marks. Do
     // not let that partial map become the navigation source for a large
     // document; request the bounded bootstrap window until a windowed render
@@ -146,7 +158,8 @@ export class TimelineGeometryOwner {
     // edge as the end of the document. This keeps windowing bounded while
     // allowing scroll/navigation to reach offscreen source time.
     const sourceAtMappedBoundary = (localX: number, fallback: number): number => {
-      const displayCycle = Math.max(0, Math.min(mapping.displayCycleCount, Math.round(localX)));
+      const displayX = pixelsPerLocalUnit === undefined ? localX : (localX - globalOrigin) / pixelsPerLocalUnit;
+      const displayCycle = Math.max(0, Math.min(mapping.displayCycleCount, Math.round(displayX)));
       return mapping.displayToSource[displayCycle] ?? fallback;
     };
     const firstEntry = entries[0];
@@ -219,7 +232,9 @@ export class TimelineGeometryOwner {
   currentSnapIndex(): ImmutableSnapIndex {
     if (!this.#snapIndex) {
       const document = this.context.getDocument();
-      this.#snapIndex = buildSnapIndex(document, this.context.getProjection(), this.geometryMaps, this.mappingCache.get(document.timeline, document.timeGroups), this.snapService, this.#presentationScale);
+      const mapping = this.mappingCache.get(document.timeline, document.timeGroups);
+      const geometryLocalXOffset = this.sharedGeometryLocalXOffset(document, mapping);
+      this.#snapIndex = buildSnapIndex(document, this.context.getProjection(), this.geometryMaps, mapping, this.snapService, this.#presentationScale, geometryLocalXOffset);
       this.#cycleBoundaryCandidates = this.#snapIndex.entries().filter((candidate) => candidate.kind === "cycle-boundary").sort((left, right) => left.point.x - right.point.x);
       this.context.onSnapIndexBuilt();
     }
@@ -251,5 +266,21 @@ export class TimelineGeometryOwner {
     }
     this.#viewportBoundaryCache = { geometry: owner, mapping, entries };
     return entries;
+  }
+
+  /** Translate bounded-window-local geometry X values into shared document X. */
+  private sharedGeometryLocalXOffset(document: CanonicalDocument, mapping: DisplayTimeMapping): number {
+    const axis = this.resolveTimeAxis(document);
+    const geometry = axis.geometry;
+    const pixelsPerDisplayCycle = this.#waveWidthPxPerDisplayCycle;
+    if (!geometry?.cycleBoundaryEntries || pixelsPerDisplayCycle === undefined || !Number.isFinite(pixelsPerDisplayCycle) || pixelsPerDisplayCycle <= 0) return 0;
+    const first = geometry.cycleBoundaryEntries()
+      .map((entry) => ({ entry, display: entry.cycle === document.timeline.cycleCount ? mapping.displayCycleCount : mapping.sourceToDisplay[entry.cycle] }))
+      .filter((item): item is { entry: { readonly cycle: number; readonly point: "cycle-start"; readonly position: Point }; display: number } => item.display !== undefined)
+      .sort((left, right) => left.display - right.display)[0];
+    if (!first) return 0;
+    const pixelsPerLocalUnit = pixelsPerDisplayCycle / this.#presentationScale;
+    const origin = (this.#waveOriginPx ?? 0) / this.#presentationScale;
+    return origin + first.display * pixelsPerLocalUnit - first.entry.position.x;
   }
 }

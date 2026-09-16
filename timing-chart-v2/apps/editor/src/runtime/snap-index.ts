@@ -2,7 +2,7 @@ import type { CanonicalDocument, SemanticAnchor, SignalId } from "@timing-chart-
 import { resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap } from "@timing-chart-v2/geometry";
 import type { DisplayTimeMapping, RenderProjection } from "@timing-chart-v2/projection";
 
-export function buildSnapIndex(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, service = new SemanticSnapCandidateService(), xScale = 1): ImmutableSnapIndex {
+export function buildSnapIndex(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, service = new SemanticSnapCandidateService(), xScale = 1, geometryLocalXOffset = 0): ImmutableSnapIndex {
   const timeAxis = resolveTimeAxisGeometry(document, maps);
   const axisOwnerSignalId = timeAxis.ownerSignalId;
   const referenceMap = timeAxis.geometry;
@@ -12,7 +12,7 @@ export function buildSnapIndex(document: CanonicalDocument, projection: RenderPr
       const local = map.find(anchor);
       if (!local) return undefined;
       const sharedBoundary = anchor.point === "cycle-start" ? referenceMap?.find({ ...anchor, ...(axisOwnerSignalId === undefined ? {} : { signalId: axisOwnerSignalId }) })?.point : undefined;
-      return { ...local, point: { ...local.point, x: (sharedBoundary?.x ?? local.point.x) * xScale } };
+      return { ...local, point: { ...local.point, x: ((sharedBoundary?.x ?? local.point.x) + geometryLocalXOffset) * xScale } };
     },
   }]));
   return service.build({

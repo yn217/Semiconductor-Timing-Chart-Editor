@@ -302,9 +302,11 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
         // windowed owner's horizontal position must reflect where its own
         // window starts within the whole document -- `place()` only ever
         // sets vertical position, so this is the only place it gets set.
-        // `waveOriginPx` carries the ruler's own coordinate-system origin so
-        // this lines up with tick positions exactly, not just proportionally.
-        owner.style.left = `${displayWindow.displayStart * pxPerDisplayCycle + waveOriginPx}px`;
+        // The source window's geometry already carries WaveDrom's fixed left
+        // margin (`waveOriginPx`). Adding that intercept to the positioned
+        // owner would count it twice and shift rendered boundaries away from
+        // the shared semantic X coordinates.
+        owner.style.left = `${displayWindow.displayStart * pxPerDisplayCycle}px`;
       } else {
         owner.style.removeProperty("width");
         owner.style.removeProperty("left");

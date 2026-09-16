@@ -38,7 +38,6 @@ export type WaveformProviderContext = Readonly<{
    * `rendererStart * pxPerDisplayCycle` with an implicit zero intercept, or
    * every owner ends up offset from the ruler by WaveDrom's own fixed left
    * margin (#620). */
-  getWaveOriginPx?: () => number | undefined;
   getViewMode?: () => "Cycle" | "Transaction" | "Split";
 }>;
 
@@ -142,7 +141,6 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       // Non-windowed owners, or when the ratio isn't known yet, fall back to
       // the shared CSS rule (full document width) as before.
       const pxPerDisplayCycle = context.getWaveWidthPxPerDisplayCycle?.();
-      const waveOriginPx = context.getWaveOriginPx?.() ?? 0;
       for (const item of prepared) {
         if (pxPerDisplayCycle !== undefined && item.rendererStart !== undefined && item.rendererEnd !== undefined && item.rendererEnd > item.rendererStart) {
           item.request.owner.style.width = `${(item.rendererEnd - item.rendererStart) * pxPerDisplayCycle}px`;
@@ -156,10 +154,10 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           // i.e. document start) with no offset for where its own window
           // actually begins, so its rendered content appeared at completely
           // the wrong horizontal position once scrolled away from cycle 0.
-          // `waveOriginPx` carries the ruler's own coordinate-system origin
-          // (WaveDrom's fixed left margin) so this lines up with ruler ticks
-          // exactly, not just proportionally (#620).
-          item.request.owner.style.left = `${item.rendererStart * pxPerDisplayCycle + waveOriginPx}px`;
+          // The window's SVG geometry already contains WaveDrom's fixed left
+          // margin. Position the window by its display-cycle offset only;
+          // adding the global ruler origin here would count that margin twice.
+          item.request.owner.style.left = `${item.rendererStart * pxPerDisplayCycle}px`;
         } else {
           item.request.owner.style.removeProperty("width");
           item.request.owner.style.removeProperty("left");
