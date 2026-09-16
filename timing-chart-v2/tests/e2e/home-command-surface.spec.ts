@@ -43,6 +43,9 @@ async function openJson(page: Page, value: unknown) {
 
 test("Home exposes grouped command surfaces and provides stable-ID Select All", async ({ page }) => {
   await ready(page);
+  // The startup document can restore a non-Cycle workspace; Select All
+  // Signals is intentionally scoped to Cycle mode rather than every entity.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   const ribbon = page.getByTestId("ribbon");
   // The former separate History/Clipboard/Selection/Visibility/Arrange
