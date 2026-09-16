@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 async function openLong(page: Page) {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
-  const document = generatePerformanceDocument({ signalCount: 100, cycleCount: 1000, profile: "transaction-heavy" });
+  const document = generatePerformanceDocument({ signalCount: 100, cycleCount: 10000, profile: "transaction-heavy" });
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "combined-long.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   const dialog = page.getByTestId("unsaved-file-dialog");
   await expect(dialog).toBeVisible({ timeout: 2000 }).catch(() => undefined);
