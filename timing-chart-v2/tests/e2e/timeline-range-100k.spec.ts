@@ -31,6 +31,14 @@ const scaleDocument = {
   layout: { roleColumnWidth: 62, signalNameWidth: 178, signalNameAlign: "left", rowHeight: 30, signalSpacing: 4, overflow: "ellipsis" },
   checkSettings: {},
 };
+const scaleDocument160 = {
+  ...scaleDocument,
+  document: { ...scaleDocument.document, id: "range-scale-160", title: "Range Scale 160" },
+  timeline: { ...scaleDocument.timeline, end: 160, cycleCount: 160 },
+  signals: [scaleClock, { ...scaleSignal, values: [{ start: 0, value: 0 }, { start: 159, value: 1 }] }],
+  signalGroups: [{ ...scaleDocument.signalGroups[0]!, rows: [scaleClock.id, scaleSignal.id] }],
+  bookmarks: [],
+};
 
 for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
 test(`selects an unsampled 100k-cycle boundary through shared geometry at ${viewportSize.width}x${viewportSize.height}`, async ({ page }) => {
@@ -127,26 +135,27 @@ test("reveals offscreen 50k and 99k cycles through the production bookmark path"
   await expect(page.getByRole("table", { name: "Signal events" })).toBeVisible({ timeout: 30_000 });
 });
 
-for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
-  test(`re-evaluates mounted waveform source windows at ${viewportSize.width}x${viewportSize.height}`, async ({ page }) => {
+for (const fixture of [{ name: "160-cycle", document: scaleDocument160 }, { name: "100k-cycle", document: scaleDocument }]) {
+  for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+  test(`re-evaluates ${fixture.name} mounted waveform source windows at ${viewportSize.width}x${viewportSize.height}`, async ({ page }) => {
     test.setTimeout(120_000);
     await page.setViewportSize(viewportSize);
     await page.goto("/");
     await page.getByRole("button", { name: "Cycle", exact: true }).click();
-    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "range-scroll-windowed.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(scaleDocument)) });
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: `range-scroll-${fixture.name}.tcd`, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(fixture.document)) });
     const host = page.getByTestId("cycle-surface");
     await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
     const viewport = page.getByTestId("cycle-viewport");
-    const owner = page.locator("[data-role='wave-owner'][data-signal-id]").first();
-    const before = await page.evaluate(() => {
-      const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
-      const owner = document.querySelector<HTMLElement>("[data-role='wave-owner'][data-signal-id]");
-      if (!viewport || !owner) throw new Error("waveform owner unavailable");
-      return { scrollLeft: viewport.scrollLeft, start: owner.dataset.renderedSourceWindowStart, end: owner.dataset.renderedSourceWindowEnd };
-    });
+    const owners = page.locator("[data-role='wave-owner'][data-signal-id]");
+    await expect(owners).toHaveCount(2);
+    const beforeWindows = await owners.evaluateAll((elements) => elements.map((element) => ({
+      signalId: element.getAttribute("data-signal-id"),
+      start: element.getAttribute("data-rendered-source-window-start"),
+      end: element.getAttribute("data-rendered-source-window-end"),
+    })));
     const maxScroll = await viewport.evaluate((element) => element.scrollWidth - element.clientWidth);
     expect(maxScroll).toBeGreaterThan(0);
-    let previousWindow = { start: before.start, end: before.end };
+    let previousWindows = beforeWindows;
     for (const fraction of [0.5, 1]) {
       const previousScroll = await viewport.evaluate((element) => element.scrollLeft);
       await viewport.evaluate((element, ratio) => {
@@ -154,22 +163,34 @@ for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height:
         element.dispatchEvent(new Event("scroll", { bubbles: true }));
       }, fraction);
       await expect.poll(async () => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(previousScroll);
-      await expect.poll(async () => ({ start: await owner.getAttribute("data-rendered-source-window-start"), end: await owner.getAttribute("data-rendered-source-window-end") }), { timeout: 30_000 }).not.toEqual(previousWindow);
-      await expect(owner).not.toHaveAttribute("data-wave-error", /.+/);
-      const windowContent = await owner.evaluate((element) => {
+      await expect.poll(async () => owners.evaluateAll((elements) => elements.map((element) => ({
+        signalId: element.getAttribute("data-signal-id"),
+        start: element.getAttribute("data-rendered-source-window-start"),
+        end: element.getAttribute("data-rendered-source-window-end"),
+      }))), { timeout: 30_000 }).not.toEqual(previousWindows);
+      expect(await owners.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-wave-error")))).toEqual([null, null]);
+      const windowContent = await owners.evaluateAll((elements) => elements.map((element) => {
         const boundaries = JSON.parse(element.getAttribute("data-cycle-boundary-geometry") ?? "{}") as Record<string, number>;
         return {
+          signalId: element.getAttribute("data-signal-id"),
           width: element.getBoundingClientRect().width,
           sourceStart: element.getAttribute("data-rendered-source-window-start"),
           sourceEnd: element.getAttribute("data-rendered-source-window-end"),
           boundaryCount: Object.keys(boundaries).length,
         };
-      });
-      expect(windowContent.width).toBeGreaterThan(0);
-      expect(windowContent.sourceStart).not.toBeNull();
-      expect(windowContent.sourceEnd).not.toBeNull();
-      expect(windowContent.boundaryCount).toBeGreaterThan(0);
-      previousWindow = { start: windowContent.sourceStart ?? undefined, end: windowContent.sourceEnd ?? undefined };
+      }));
+      expect(windowContent).toHaveLength(2);
+      for (const item of windowContent) {
+        const previous = previousWindows.find((candidate) => candidate.signalId === item.signalId);
+        expect(item.width).toBeGreaterThan(0);
+        expect(item.sourceStart).not.toBeNull();
+        expect(item.sourceEnd).not.toBeNull();
+        expect(item.boundaryCount).toBeGreaterThan(0);
+        expect(item.sourceStart).not.toBe(previous?.start);
+        expect(item.sourceEnd).not.toBe(previous?.end);
+      }
+      previousWindows = windowContent.map((item) => ({ signalId: item.signalId, start: item.sourceStart, end: item.sourceEnd }));
     }
   });
+  }
 }
