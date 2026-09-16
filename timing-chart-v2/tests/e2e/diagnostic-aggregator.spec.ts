@@ -108,6 +108,7 @@ test("surfaces a rejected command in the Problems panel and clears it on the nex
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
   // REQUEST has change points at cycles 0, 3, 7. Moving cycle 3's Start onto the existing
