@@ -193,6 +193,8 @@ for (const fixture of [{ name: "160-cycle", document: scaleDocument160 }, { name
         expect(item.sourceStart).not.toBeNull();
         expect(item.sourceEnd).not.toBeNull();
         expect(item.boundaryCount).toBeGreaterThan(0);
+        expect(Number(item.sourceEnd) - Number(item.sourceStart)).toBeLessThan(4_096);
+        expect(item.boundaryCount).toBeLessThan(4_096);
         expect(item.sourceStart).not.toBe(previous?.start);
         expect(item.sourceEnd).not.toBe(previous?.end);
       }
