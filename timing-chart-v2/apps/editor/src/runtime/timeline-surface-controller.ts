@@ -193,6 +193,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       geometryRegistry,
       markOpenPhase,
       getWaveWidthPxPerDisplayCycle: () => timelineGeometry.waveWidthPxPerDisplayCycle,
+      getWaveOriginPx: () => timelineGeometry.waveOriginPx,
       onReferenceGeometryReady: () => {
         if (active && !rulerInitialized) {
           timelineRuntimeRef.current?.refreshRuler();
@@ -373,7 +374,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         onRange: () => refreshRangeSelectionBand.current(),
         onResize: () => applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() }),
       });
-      timelineGeometry.updatePresentation(presentation.timeAxis, presentation.screenGeometryScale, presentation.waveWidthPxPerDisplayCycle);
+      timelineGeometry.updatePresentation(presentation.timeAxis, presentation.screenGeometryScale, presentation.waveWidthPxPerDisplayCycle, presentation.waveOriginPx);
       rulerInitialized = presentation.rulerInitialized;
       // Timeline presentation refreshes are view-only. The canonical command path
       // already submits the changed projection once; replaying that projection for
