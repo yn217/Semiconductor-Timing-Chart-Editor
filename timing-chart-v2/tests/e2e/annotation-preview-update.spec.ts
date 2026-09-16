@@ -9,13 +9,23 @@ test("Annotation Preview Update reflects draft Label/Color on the live overlay w
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByTestId("bottom-tabs").getByRole("tab", { name: "Annotation", exact: true }).click();
+  const annotationList = page.getByTestId("annotation-list");
+  const annotationRows = annotationList.locator("[data-annotation-list-id]");
+  await expect(annotationRows).toHaveCount(16);
+  const priorAnnotationIds = await annotationRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-annotation-list-id")).filter((id): id is string => id !== null));
   await page.getByLabel("Annotation type").selectOption("text");
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
-  const owner = host.locator("[data-role='annotation-owner']").last();
+  await expect(annotationRows).toHaveCount(priorAnnotationIds.length + 1);
+  const annotationIdsAfterAdd = await annotationRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-annotation-list-id")).filter((id): id is string => id !== null));
+  const createdAnnotationId = annotationIdsAfterAdd.find((id) => !priorAnnotationIds.includes(id));
+  expect(createdAnnotationId).toBeTruthy();
+  const owner = host.locator(`[data-role='annotation-owner'][data-annotation-id='${createdAnnotationId}']`);
   const label = owner.locator("[data-role='annotation-label']");
   await expect(label).toHaveText("text 2");
 
@@ -43,13 +53,23 @@ test("Annotation Preview Update reverts even without an explicit Cancel, when se
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByTestId("bottom-tabs").getByRole("tab", { name: "Annotation", exact: true }).click();
+  const annotationList = page.getByTestId("annotation-list");
+  const annotationRows = annotationList.locator("[data-annotation-list-id]");
+  await expect(annotationRows).toHaveCount(16);
+  const priorAnnotationIds = await annotationRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-annotation-list-id")).filter((id): id is string => id !== null));
   await page.getByLabel("Annotation type").selectOption("text");
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
-  const owner = host.locator("[data-role='annotation-owner']").last();
+  await expect(annotationRows).toHaveCount(priorAnnotationIds.length + 1);
+  const annotationIdsAfterAdd = await annotationRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-annotation-list-id")).filter((id): id is string => id !== null));
+  const createdAnnotationId = annotationIdsAfterAdd.find((id) => !priorAnnotationIds.includes(id));
+  expect(createdAnnotationId).toBeTruthy();
+  const owner = host.locator(`[data-role='annotation-owner'][data-annotation-id='${createdAnnotationId}']`);
   const label = owner.locator("[data-role='annotation-label']");
   const editor = page.getByTestId("annotation-editor");
   await editor.getByLabel("Annotation label", { exact: true }).fill("LEAK TEST");
@@ -66,13 +86,23 @@ test("Apply commits the previewed draft as one real SemanticCommand", async ({ p
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByTestId("bottom-tabs").getByRole("tab", { name: "Annotation", exact: true }).click();
+  const annotationList = page.getByTestId("annotation-list");
+  const annotationRows = annotationList.locator("[data-annotation-list-id]");
+  await expect(annotationRows).toHaveCount(16);
+  const priorAnnotationIds = await annotationRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-annotation-list-id")).filter((id): id is string => id !== null));
   await page.getByLabel("Annotation type").selectOption("text");
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
-  const owner = host.locator("[data-role='annotation-owner']").last();
+  await expect(annotationRows).toHaveCount(priorAnnotationIds.length + 1);
+  const annotationIdsAfterAdd = await annotationRows.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-annotation-list-id")).filter((id): id is string => id !== null));
+  const createdAnnotationId = annotationIdsAfterAdd.find((id) => !priorAnnotationIds.includes(id));
+  expect(createdAnnotationId).toBeTruthy();
+  const owner = host.locator(`[data-role='annotation-owner'][data-annotation-id='${createdAnnotationId}']`);
   const label = owner.locator("[data-role='annotation-label']");
   const editor = page.getByTestId("annotation-editor");
   await editor.getByLabel("Annotation label", { exact: true }).fill("COMMITTED LABEL");
