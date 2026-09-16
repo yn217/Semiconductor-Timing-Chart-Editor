@@ -1,7 +1,7 @@
 import type { DisplayTimeMappingCache, RenderProjection } from "@timing-chart-v2/projection";
 import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { resolveTimeAxisGeometry, type LocalGeometryMap, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
-import { renderGeometryGrid } from "../render-geometry-grid.js";
+import { renderGeometryGrid, type GeometryGridVisibleRange } from "../render-geometry-grid.js";
 import type { ViewMetricsOwner } from "./view-metrics.js";
 import { buildRuler } from "./build-ruler.js";
 
@@ -30,9 +30,9 @@ export function rebuildRulerPresentation(ruler: HTMLElement, document: Canonical
   return { timeAxis, scale, waveWidthPxPerDisplayCycle, waveOriginPx };
 }
 
-export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, enabled: boolean, totalHeight: number, viewportWidth: number, screenGeometryScale: number): void {
+export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, enabled: boolean, totalHeight: number, viewportWidth: number, screenGeometryScale: number, visibleRange?: GeometryGridVisibleRange, boundaryToX?: (sourceCycle: number) => number | undefined): void {
   const timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
-  renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, totalHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode);
+  renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, totalHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode, visibleRange, boundaryToX);
 }
 
 export function refreshPlayheadPresentation(ruler: HTMLElement, cycle: number, boundaryToLocalX: (cycle: number) => number | undefined): void {

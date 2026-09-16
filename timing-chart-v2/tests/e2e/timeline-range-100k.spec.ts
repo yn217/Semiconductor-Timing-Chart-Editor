@@ -201,23 +201,36 @@ for (const fixture of [{ name: "160-cycle", document: scaleDocument160 }, { name
       const rulerAlignment = await page.evaluate(() => {
         const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
         const ruler = document.querySelector<HTMLElement>("[data-testid='cycle-ruler']");
+        const grid = document.querySelector<HTMLElement>("[data-testid='geometry-grid']");
         const owners = [...document.querySelectorAll<HTMLElement>("[data-role='wave-owner'][data-signal-id]")];
-        if (!viewport || !ruler || owners.length === 0) return undefined;
-        const ticks = [...ruler.querySelectorAll<HTMLElement>("[data-source-cycle]")];
-        for (const tick of ticks) {
+        if (!viewport || !ruler || !grid || owners.length === 0) return undefined;
+        const viewportRect = viewport.getBoundingClientRect();
+        const isVisibleX = (x: number) => x >= viewportRect.left && x <= viewportRect.right;
+        const ownerXsAt = (cycle: number) => owners.map((owner) => {
+          const points = JSON.parse(owner.getAttribute("data-cycle-boundary-geometry") ?? "{}") as Record<string, number>;
+          const localX = points[String(cycle)];
+          return localX === undefined ? undefined : owner.getBoundingClientRect().left + localX;
+        });
+        let rulerAlignment: { readonly cycle: number; readonly x: number; readonly ownerXs: (number | undefined)[] } | undefined;
+        for (const tick of ruler.querySelectorAll<HTMLElement>("[data-source-cycle]")) {
           const cycle = Number(tick.dataset.sourceCycle);
-          const tickX = tick.getBoundingClientRect().left;
-          const ownerXs = owners.map((owner) => {
-            const points = JSON.parse(owner.getAttribute("data-cycle-boundary-geometry") ?? "{}") as Record<string, number>;
-            const localX = points[String(cycle)];
-            return localX === undefined ? undefined : owner.getBoundingClientRect().left + localX;
-          });
-          if (ownerXs.every((x): x is number => x !== undefined && Number.isFinite(x))) return { cycle, tickX, ownerXs };
+          const x = tick.getBoundingClientRect().left;
+          const ownerXs = ownerXsAt(cycle);
+          if (ownerXs.every((ownerX): ownerX is number => ownerX !== undefined && Number.isFinite(ownerX))) { rulerAlignment = { cycle, x, ownerXs }; break; }
         }
-        return undefined;
+        let gridAlignment: { readonly cycle: number; readonly x: number; readonly ownerXs: (number | undefined)[] } | undefined;
+        for (const line of grid.querySelectorAll<HTMLElement>("[data-role='geometry-grid-line']")) {
+          const cycle = Number(line.dataset.cycle);
+          const x = line.getBoundingClientRect().left;
+          const ownerXs = ownerXsAt(cycle);
+          if (isVisibleX(x) && ownerXs.every((ownerX): ownerX is number => ownerX !== undefined && Number.isFinite(ownerX) && isVisibleX(ownerX))) { gridAlignment = { cycle, x, ownerXs }; break; }
+        }
+        return { rulerAlignment, gridAlignment };
       });
-      expect(rulerAlignment, "expected a visible ruler tick with geometry in every mounted signal owner").toBeDefined();
-      for (const ownerX of rulerAlignment!.ownerXs) expect(Math.abs(ownerX - rulerAlignment!.tickX)).toBeLessThanOrEqual(1);
+      expect(rulerAlignment?.rulerAlignment, "expected a ruler boundary with geometry in every mounted signal owner").toBeDefined();
+      expect(rulerAlignment?.gridAlignment, "expected a grid boundary with geometry in every mounted signal owner").toBeDefined();
+      for (const ownerX of rulerAlignment!.rulerAlignment!.ownerXs) expect(Math.abs(ownerX - rulerAlignment!.rulerAlignment!.x)).toBeLessThanOrEqual(1);
+      for (const ownerX of rulerAlignment!.gridAlignment!.ownerXs) expect(Math.abs(ownerX - rulerAlignment!.gridAlignment!.x)).toBeLessThanOrEqual(1);
       previousWindows = windowContent.map((item) => ({ signalId: item.signalId, start: item.sourceStart, end: item.sourceEnd }));
     }
     const scrollBeforeZoom = await viewport.evaluate((element) => element.scrollLeft);
@@ -244,6 +257,29 @@ for (const fixture of [{ name: "160-cycle", document: scaleDocument160 }, { name
       start: element.getAttribute("data-rendered-source-window-start"),
       end: element.getAttribute("data-rendered-source-window-end"),
     }))), { timeout: 30_000 }).not.toEqual(beforeZoomWindows);
+    await expect.poll(async () => page.evaluate(() => {
+      const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
+      const grid = document.querySelector<HTMLElement>("[data-testid='geometry-grid']");
+      const host = document.querySelector<HTMLElement>("[data-testid='cycle-surface']");
+      const owners = [...document.querySelectorAll<HTMLElement>("[data-role='wave-owner'][data-signal-id]")];
+      if (!viewport || !grid || !host || owners.length === 0) return false;
+      const box = viewport.getBoundingClientRect();
+      const zoom = Number(host.dataset.zoom ?? 1);
+      for (const line of grid.querySelectorAll<HTMLElement>("[data-role='geometry-grid-line']")) {
+        const x = line.getBoundingClientRect().left;
+        if (x < box.left || x > box.right) continue;
+        const cycle = Number(line.dataset.cycle);
+        const ownerXs = owners.map((owner) => {
+          const points = JSON.parse(owner.getAttribute("data-cycle-boundary-geometry") ?? "{}") as Record<string, number>;
+          const localX = points[String(cycle)];
+          return localX === undefined ? undefined : owner.getBoundingClientRect().left + localX * zoom;
+        });
+        if (ownerXs.every((ownerX): ownerX is number => ownerX !== undefined && Number.isFinite(ownerX) && ownerX >= box.left && ownerX <= box.right)) {
+          return ownerXs.every((ownerX) => Math.abs(ownerX - x) <= 1);
+        }
+      }
+      return false;
+    }), { timeout: 30_000 }).toBe(true);
     const semanticStateAfter = await host.evaluate((element) => ({
       revision: element.getAttribute("data-canonical-revision"),
       history: element.getAttribute("data-history-depth"),

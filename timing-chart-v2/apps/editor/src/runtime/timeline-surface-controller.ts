@@ -238,6 +238,23 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     });
     const renderCoordinator = runtime.createRenderer(provider);
     const renderer = renderCoordinator.renderer;
+    const refreshVisibleGrid = () => {
+      if (!active) return;
+      const currentDocument = sessionController.snapshot().document;
+      const metrics = viewMetricsOwner.snapshot();
+      const zoom = Math.max(0.0001, timelineNavigation.getZoom());
+      const scale = Math.max(0.0001, timelineGeometry.presentationScale);
+      const startLocalX = (viewportElement.scrollLeft / zoom - gridElement.offsetLeft) / scale;
+      const endLocalX = ((viewportElement.scrollLeft + viewportElement.clientWidth) / zoom - gridElement.offsetLeft) / scale;
+      const mapping = timelineGeometry.displayMapping;
+      const sourceStart = timelineGeometry.sourceCycleAtLocalX(currentDocument, startLocalX);
+      const sourceEnd = timelineGeometry.sourceCycleAtLocalX(currentDocument, endLocalX);
+      const displayStart = sourceStart === undefined ? undefined : mapping.sourceToDisplay[sourceStart];
+      const displayEnd = sourceEnd === undefined ? undefined : mapping.sourceToDisplay[sourceEnd];
+      const visibleRange = displayStart === undefined || displayEnd === undefined ? undefined : { start: Math.min(displayStart, displayEnd), end: Math.max(displayStart, displayEnd) };
+      refreshGridPresentation(gridElement, currentDocument, geometryMaps, mappingCache, gridEnabledRef.current, projection.totalHeight, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, timelineGeometry.presentationScale, visibleRange, (cycle) => timelineGeometry.sourceBoundaryToLocalX(currentDocument, cycle));
+    };
+    const refreshVisibleGridAfterWaves = () => { void renderer.whenIdle().then(refreshVisibleGrid); };
     const initialProjection = mountInitialTimelineProjection({
       coordinator: renderCoordinator,
       renderer,
@@ -337,7 +354,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
           previous: { window, projection },
           projectionCoordinator,
           collapsedGroupIds: [...collapsedGroupIdsRef.current],
-          onHorizontalViewportChange: () => renderer.refreshWaveWindows(),
+          onHorizontalViewportChange: () => {
+            renderer.refreshWaveWindows();
+            refreshVisibleGridAfterWaves();
+          },
           onProjection: (nextProjection: RenderProjection, nextWindow: VirtualizationWindow, mountedSignalsChanged: boolean) => {
             window = nextWindow;
             projection = nextProjection;
@@ -380,6 +400,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // a horizontal scroll event. Re-evaluate only mounted waveform windows;
       // do not replay the projection or reconcile the row/group surfaces.
       renderer.refreshWaveWindows();
+      refreshVisibleGridAfterWaves();
       rulerInitialized = presentation.rulerInitialized;
       // Timeline presentation refreshes are view-only. The canonical command path
       // already submits the changed projection once; replaying that projection for
@@ -392,7 +413,17 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // grid DOM outright.
       if (reason === "grid" && gridLayerLower.current && signalSplitRuntimeRef.current) {
         const metrics = viewMetricsOwner.snapshot();
-        refreshGridPresentation(gridLayerLower.current, document, geometryMaps, mappingCache, gridEnabledRef.current, signalSplitRuntimeRef.current.getTotalHeight(), globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, presentation.screenGeometryScale);
+        const zoom = Math.max(0.0001, timelineNavigation.getZoom());
+        const scale = Math.max(0.0001, timelineGeometry.presentationScale);
+        const startLocalX = (viewportElement.scrollLeft / zoom - gridLayerLower.current.offsetLeft) / scale;
+        const endLocalX = ((viewportElement.scrollLeft + viewportElement.clientWidth) / zoom - gridLayerLower.current.offsetLeft) / scale;
+        const mapping = timelineGeometry.displayMapping;
+        const sourceStart = timelineGeometry.sourceCycleAtLocalX(document, startLocalX);
+        const sourceEnd = timelineGeometry.sourceCycleAtLocalX(document, endLocalX);
+        const displayStart = sourceStart === undefined ? undefined : mapping.sourceToDisplay[sourceStart];
+        const displayEnd = sourceEnd === undefined ? undefined : mapping.sourceToDisplay[sourceEnd];
+        const visibleRange = displayStart === undefined || displayEnd === undefined ? undefined : { start: Math.min(displayStart, displayEnd), end: Math.max(displayStart, displayEnd) };
+        refreshGridPresentation(gridLayerLower.current, document, geometryMaps, mappingCache, gridEnabledRef.current, signalSplitRuntimeRef.current.getTotalHeight(), globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, presentation.screenGeometryScale, visibleRange, (cycle) => timelineGeometry.sourceBoundaryToLocalX(document, cycle));
       }
     };
     timelineRuntime.attach();
@@ -422,6 +453,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         // through timelineRender. Re-evaluate bounded waveform windows at
         // that same boundary so mounted owners track the newly visible range.
         renderer.refreshWaveWindows();
+        refreshVisibleGridAfterWaves();
       },
       syncFrozenColumns: () => syncFrozenColumnScroll(viewportElement, rendererHost, viewMetricsOwner.snapshot().leftPaneWidth),
       getDocument: () => sessionController.snapshot().document,

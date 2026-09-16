@@ -110,7 +110,23 @@ export class TimelineGeometryOwner {
     // Keep the display-cycle lookup as the identity/no-fold fallback.
     const point = axis.geometry.find({ signalId: axis.ownerSignalId, cycle, point: "cycle-start" })?.point
       ?? axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
-    return point === undefined ? undefined : (point.x + this.sharedGeometryLocalXOffset(document, mapping)) * this.#presentationScale;
+    if (point !== undefined) return (point.x + this.sharedGeometryLocalXOffset(document, mapping)) * this.#presentationScale;
+    const pixelsPerDisplayCycle = this.#waveWidthPxPerDisplayCycle;
+    if (pixelsPerDisplayCycle === undefined || !Number.isFinite(pixelsPerDisplayCycle) || pixelsPerDisplayCycle <= 0) return undefined;
+    const origin = this.#waveOriginPx ?? 0;
+    return origin + displayCycle * pixelsPerDisplayCycle;
+  }
+
+  /** Invert the shared presentation geometry to resolve a viewport X to source time. */
+  sourceCycleAtLocalX(document: CanonicalDocument, localX: number): number | undefined {
+    if (!Number.isFinite(localX) || this.#presentationScale <= 0) return undefined;
+    const mapping = this.mappingCache.get(document.timeline, document.timeGroups);
+    const pixelsPerDisplayCycle = this.#waveWidthPxPerDisplayCycle;
+    if (pixelsPerDisplayCycle === undefined || !Number.isFinite(pixelsPerDisplayCycle) || pixelsPerDisplayCycle <= 0) return undefined;
+    const pixelsPerLocalUnit = pixelsPerDisplayCycle / this.#presentationScale;
+    const origin = (this.#waveOriginPx ?? 0) / this.#presentationScale;
+    const displayCycle = Math.max(0, Math.min(mapping.displayCycleCount, Math.round((localX - origin) / pixelsPerLocalUnit)));
+    return mapping.displayToSource[displayCycle];
   }
 
   /** Resolve a global time-viewport X interval to canonical source cycles using semantic geometry. */

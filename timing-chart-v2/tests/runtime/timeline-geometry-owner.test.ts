@@ -125,4 +125,27 @@ describe("TimelineGeometryOwner", () => {
     expect(owner.sourceBoundaryToLocalX(document, 5_000)).toBe(200_000);
     expect(owner.cycleBoundaryAtLocalX(200_000, 1, true)).toBe(5_000);
   });
+
+  it("projects and inverts off-window cycles through the shared ruler geometry", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const sourceStart = 4_880;
+    const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 2_049 }, (_, index) => ({
+      cycle: sourceStart + index,
+      point: "cycle-start" as const,
+      position: { x: index * 40, y: 0 },
+    })));
+    const document = { ...cycleDocument, timeline: { ...cycleDocument.timeline, cycleCount: 100_000, end: 100_000 } };
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => document,
+      getProjection: () => ({ rowLayout: [{ rowId: clockId, kind: "timing", visible: true, y: 0 }] } as never),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1, 40, 0);
+
+    const x = owner.sourceBoundaryToLocalX(document, 50_000);
+    expect(x).toBe(2_000_000);
+    expect(owner.sourceCycleAtLocalX(document, x!)).toBe(50_000);
+  });
 });
