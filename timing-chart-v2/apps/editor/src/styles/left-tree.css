@@ -274,7 +274,7 @@
 .surface-host [data-role="tree-signal-role"] .comment-icon,
 .surface-host [data-role="signal-role"] .comment-icon { width: 15px; height: 15px; flex: 0 0 15px; }
 
-.editor-shell .surface-host [data-role="tree-signal-role"][data-signal-type] { width: 44px; min-width: 44px; box-sizing: border-box; padding-inline: 2px; }
+.editor-shell .surface-host [data-role="tree-signal-role"][data-signal-type] { width: 28px; min-width: 28px; box-sizing: border-box; padding-inline: 2px; }
 
 .surface-host [data-role="tree-signal-name"],
 .surface-host [data-role="frozen-signal-name"] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
