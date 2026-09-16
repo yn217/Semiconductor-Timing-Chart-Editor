@@ -115,14 +115,29 @@ export class TimelineGeometryOwner {
     // not let that partial map become the navigation source for a large
     // document; request the bounded bootstrap window until a windowed render
     // replaces it with semantic boundaries.
-    if (document.timeline.cycleCount > 4096 && entries.length < 512) {
+    if (document.timeline.cycleCount > 4096 && entries.length < 512 && localEnd <= 2_048) {
       return { start: 0, end: Math.min(document.timeline.cycleCount, 2048) };
     }
-    let start = 0;
-    let end = document.timeline.cycleCount;
-    for (const entry of entries) {
-      if (entry.x <= localStart) start = entry.cycle;
-      if (entry.x >= localEnd) { end = entry.cycle; break; }
+    // Retained geometry is intentionally bounded. When the requested local
+    // range lies outside that retained interval, use the same shared display
+    // mapping to recover source boundaries instead of treating the retained
+    // edge as the end of the document. This keeps windowing bounded while
+    // allowing scroll/navigation to reach offscreen source time.
+    const sourceAtMappedBoundary = (localX: number, fallback: number): number => {
+      const displayCycle = Math.max(0, Math.min(mapping.displayCycleCount, Math.round(localX)));
+      return mapping.displayToSource[displayCycle] ?? fallback;
+    };
+    const firstEntry = entries[0];
+    const lastEntry = entries.at(-1);
+    let start = sourceAtMappedBoundary(localStart, firstEntry?.cycle ?? 0);
+    let end = sourceAtMappedBoundary(localEnd, lastEntry?.cycle ?? document.timeline.cycleCount);
+    if (firstEntry && lastEntry && localStart <= lastEntry.x && localEnd >= firstEntry.x) {
+      start = firstEntry.cycle;
+      end = lastEntry.cycle;
+      for (const entry of entries) {
+        if (entry.x <= localStart) start = entry.cycle;
+        if (entry.x >= localEnd) { end = entry.cycle; break; }
+      }
     }
     const boundedStart = Math.max(0, start - overscan);
     const boundedEnd = Math.min(document.timeline.cycleCount, end + overscan);
