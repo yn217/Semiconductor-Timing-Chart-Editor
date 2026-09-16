@@ -32,6 +32,13 @@ export type WaveformProviderContext = Readonly<{
    * can permanently bake a stale ratio into an owner whose own window does not
    * happen to change again afterward (#614). */
   getWaveWidthPxPerDisplayCycle?: () => number | undefined;
+  /** Screen-space X of display-cycle 0 (see TimelineGeometryOwner.waveOriginPx /
+   * build-ruler.ts). A windowed owner's inline `left` must be computed in this
+   * same coordinate system as the ruler's own ticks, not a naive
+   * `rendererStart * pxPerDisplayCycle` with an implicit zero intercept, or
+   * every owner ends up offset from the ruler by WaveDrom's own fixed left
+   * margin (#620). */
+  getWaveOriginPx?: () => number | undefined;
   getViewMode?: () => "Cycle" | "Transaction" | "Split";
 }>;
 
@@ -129,11 +136,27 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       // Non-windowed owners, or when the ratio isn't known yet, fall back to
       // the shared CSS rule (full document width) as before.
       const pxPerDisplayCycle = context.getWaveWidthPxPerDisplayCycle?.();
+      const waveOriginPx = context.getWaveOriginPx?.() ?? 0;
       for (const item of prepared) {
         if (pxPerDisplayCycle !== undefined && item.rendererStart !== undefined && item.rendererEnd !== undefined && item.rendererEnd > item.rendererStart) {
           item.request.owner.style.width = `${(item.rendererEnd - item.rendererStart) * pxPerDisplayCycle}px`;
+          // The shared wave-owner layer (`stable-waveform-surface`) is one
+          // element as wide as the whole document (`--wave-width`), scrolled
+          // natively; `place()` (stable-surface.ts) only ever sets each
+          // owner's *vertical* position via translateY. A windowed owner
+          // whose SVG covers a cycle range starting partway through the
+          // document -- anything after the first #614 re-windowing fires --
+          // was left at its default horizontal position (effectively x=0,
+          // i.e. document start) with no offset for where its own window
+          // actually begins, so its rendered content appeared at completely
+          // the wrong horizontal position once scrolled away from cycle 0.
+          // `waveOriginPx` carries the ruler's own coordinate-system origin
+          // (WaveDrom's fixed left margin) so this lines up with ruler ticks
+          // exactly, not just proportionally (#620).
+          item.request.owner.style.left = `${item.rendererStart * pxPerDisplayCycle + waveOriginPx}px`;
         } else {
           item.request.owner.style.removeProperty("width");
+          item.request.owner.style.removeProperty("left");
         }
       }
       const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean }> = [];

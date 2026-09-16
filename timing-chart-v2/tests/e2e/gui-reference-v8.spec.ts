@@ -130,6 +130,10 @@ test("applies the v8 Signal Inspector style controls as one semantic operation",
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   const host = page.getByTestId("cycle-surface");
+  // #613: the app defaults to Transaction mode -- sig_cycle_data's Cycle-only
+  // row exists in the DOM but is not visible until Cycle mode is selected.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
   const inspector = page.getByTestId("inspector");
   // "Label Style" is a collapsed accordion section by default -- its fields
