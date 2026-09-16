@@ -336,6 +336,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
           previous: { window, projection },
           projectionCoordinator,
           collapsedGroupIds: [...collapsedGroupIdsRef.current],
+          onHorizontalViewportChange: () => renderer.refreshWaveWindows(),
           onProjection: (nextProjection: RenderProjection, nextWindow: VirtualizationWindow, mountedSignalsChanged: boolean) => {
             window = nextWindow;
             projection = nextProjection;

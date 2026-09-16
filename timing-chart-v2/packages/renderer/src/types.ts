@@ -170,6 +170,8 @@ export interface EdgeCounterOverlayPrimitive {
 export interface TimingChartRenderer {
   mount(host: HTMLElement): void;
   update(projection: RenderProjection): void;
+  /** Re-evaluate bounded windows for mounted wave owners without reconciling rows. */
+  refreshWaveWindows(): void;
   /** Apply row/presentation changes without rebuilding waveform semantics. */
   updatePresentation(projection: RenderProjection): void;
   updateOverlays(primitives: readonly AnnotationOverlayPrimitive[]): void;

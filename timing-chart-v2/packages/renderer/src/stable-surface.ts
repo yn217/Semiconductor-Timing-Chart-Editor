@@ -321,6 +321,18 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#publishCounters();
   }
 
+  refreshWaveWindows(): void {
+    for (const [signalId, owner] of this.#waveOwners) {
+      if (!owner.isConnected) continue;
+      const sourceWindow = this.#provider.getSourceWindow?.(owner);
+      if (!sourceWindow) continue;
+      if (owner.dataset.renderedSourceWindowStart !== String(sourceWindow.start)
+        || owner.dataset.renderedSourceWindowEnd !== String(sourceWindow.end)) {
+        this.#queueWave(signalId, owner);
+      }
+    }
+  }
+
   updatePresentation(projection: RenderProjection): void {
     const layers = this.#layers;
     if (!layers) throw new Error("Timing chart renderer must be mounted before update.");
