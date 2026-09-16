@@ -98,4 +98,31 @@ describe("TimelineGeometryOwner", () => {
     owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
     expect(owner.sourceWindowForLocalRange(document, 50_000, 50_100)).toEqual({ start: 49_998, end: 52_046 });
   });
+
+  it("keeps a bounded geometry window anchored to global scroll X across re-windowing", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const sourceStart = 4_880;
+    const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 2_049 }, (_, index) => ({
+      cycle: sourceStart + index,
+      point: "cycle-start" as const,
+      position: { x: index * 40, y: 0 },
+    })));
+    const document = { ...cycleDocument, timeline: { ...cycleDocument.timeline, cycleCount: 100_000, end: 100_000 } };
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => document,
+      getProjection: () => ({ rowLayout: [{ rowId: clockId, kind: "timing", visible: true, y: 0 }] } as never),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1, 40, 0);
+
+    // scrollLeft 39,146px is near source cycle 978 at 40px/cycle. The map's
+    // retained geometry starts at cycle 4,880 but its X coordinates are local
+    // to that render window; using them as global coordinates would drift the
+    // next source window to roughly 5,860 instead of returning to cycle 978.
+    expect(owner.sourceWindowForLocalRange(document, 39_146, 40_128)).toEqual({ start: 977, end: 3_025 });
+    expect(owner.sourceBoundaryToLocalX(document, 5_000)).toBe(200_000);
+    expect(owner.cycleBoundaryAtLocalX(200_000, 1, true)).toBe(5_000);
+  });
 });
