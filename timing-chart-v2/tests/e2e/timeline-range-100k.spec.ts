@@ -174,9 +174,11 @@ for (const fixture of [{ name: "160-cycle", document: scaleDocument160 }, { name
         return {
           signalId: element.getAttribute("data-signal-id"),
           width: element.getBoundingClientRect().width,
+          left: element.getBoundingClientRect().left,
           sourceStart: element.getAttribute("data-rendered-source-window-start"),
           sourceEnd: element.getAttribute("data-rendered-source-window-end"),
           boundaryCount: Object.keys(boundaries).length,
+          boundaries,
         };
       }));
       expect(windowContent).toHaveLength(2);
@@ -189,6 +191,26 @@ for (const fixture of [{ name: "160-cycle", document: scaleDocument160 }, { name
         expect(item.sourceStart).not.toBe(previous?.start);
         expect(item.sourceEnd).not.toBe(previous?.end);
       }
+      const rulerAlignment = await page.evaluate(() => {
+        const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
+        const ruler = document.querySelector<HTMLElement>("[data-testid='cycle-ruler']");
+        const owners = [...document.querySelectorAll<HTMLElement>("[data-role='wave-owner'][data-signal-id]")];
+        if (!viewport || !ruler || owners.length === 0) return undefined;
+        const ticks = [...ruler.querySelectorAll<HTMLElement>("[data-source-cycle]")];
+        for (const tick of ticks) {
+          const cycle = Number(tick.dataset.sourceCycle);
+          const tickX = tick.getBoundingClientRect().left;
+          const ownerXs = owners.map((owner) => {
+            const points = JSON.parse(owner.getAttribute("data-cycle-boundary-geometry") ?? "{}") as Record<string, number>;
+            const localX = points[String(cycle)];
+            return localX === undefined ? undefined : owner.getBoundingClientRect().left + localX;
+          });
+          if (ownerXs.every((x): x is number => x !== undefined && Number.isFinite(x))) return { cycle, tickX, ownerXs };
+        }
+        return undefined;
+      });
+      expect(rulerAlignment, "expected a visible ruler tick with geometry in every mounted signal owner").toBeDefined();
+      for (const ownerX of rulerAlignment!.ownerXs) expect(Math.abs(ownerX - rulerAlignment!.tickX)).toBeLessThanOrEqual(1);
       previousWindows = windowContent.map((item) => ({ signalId: item.signalId, start: item.sourceStart, end: item.sourceEnd }));
     }
   });
