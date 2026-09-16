@@ -148,6 +148,11 @@ for (const fixture of [{ name: "160-cycle", document: scaleDocument160 }, { name
     const viewport = page.getByTestId("cycle-viewport");
     const owners = page.locator("[data-role='wave-owner'][data-signal-id]");
     await expect(owners).toHaveCount(2);
+    const semanticStateBefore = await host.evaluate((element) => ({
+      revision: element.getAttribute("data-canonical-revision"),
+      history: element.getAttribute("data-history-depth"),
+      dirty: document.querySelector("[data-testid='dirty-status']")?.textContent,
+    }));
     const beforeWindows = await owners.evaluateAll((elements) => elements.map((element) => ({
       signalId: element.getAttribute("data-signal-id"),
       start: element.getAttribute("data-rendered-source-window-start"),
@@ -213,6 +218,36 @@ for (const fixture of [{ name: "160-cycle", document: scaleDocument160 }, { name
       for (const ownerX of rulerAlignment!.ownerXs) expect(Math.abs(ownerX - rulerAlignment!.tickX)).toBeLessThanOrEqual(1);
       previousWindows = windowContent.map((item) => ({ signalId: item.signalId, start: item.sourceStart, end: item.sourceEnd }));
     }
+    const scrollBeforeZoom = await viewport.evaluate((element) => element.scrollLeft);
+    await viewport.evaluate((element) => {
+      element.scrollLeft = Math.round((element.scrollWidth - element.clientWidth) / 2);
+      element.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+    await expect.poll(async () => viewport.evaluate((element) => element.scrollLeft)).toBeLessThan(scrollBeforeZoom);
+    await expect.poll(async () => owners.evaluateAll((elements) => elements.map((element) => ({
+      signalId: element.getAttribute("data-signal-id"),
+      start: element.getAttribute("data-rendered-source-window-start"),
+      end: element.getAttribute("data-rendered-source-window-end"),
+    }))), { timeout: 30_000 }).not.toEqual(previousWindows);
+    const beforeZoomWindows = await owners.evaluateAll((elements) => elements.map((element) => ({
+      signalId: element.getAttribute("data-signal-id"),
+      start: element.getAttribute("data-rendered-source-window-start"),
+      end: element.getAttribute("data-rendered-source-window-end"),
+    })));
+    const zoomBefore = Number(await host.getAttribute("data-zoom"));
+    await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
+    await expect.poll(async () => Number(await host.getAttribute("data-zoom"))).toBeGreaterThan(zoomBefore);
+    await expect.poll(async () => owners.evaluateAll((elements) => elements.map((element) => ({
+      signalId: element.getAttribute("data-signal-id"),
+      start: element.getAttribute("data-rendered-source-window-start"),
+      end: element.getAttribute("data-rendered-source-window-end"),
+    }))), { timeout: 30_000 }).not.toEqual(beforeZoomWindows);
+    const semanticStateAfter = await host.evaluate((element) => ({
+      revision: element.getAttribute("data-canonical-revision"),
+      history: element.getAttribute("data-history-depth"),
+      dirty: document.querySelector("[data-testid='dirty-status']")?.textContent,
+    }));
+    expect(semanticStateAfter).toEqual(semanticStateBefore);
   });
   }
 }

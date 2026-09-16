@@ -215,7 +215,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       getSourceWindow: (owner) => {
         const viewport = owner.closest<HTMLElement>(".cycle-viewport") ?? viewportElement;
         const document = sessionController.snapshot().document;
-        const window = timelineGeometry.sourceWindowForLocalRange(document, viewport.scrollLeft / timelineGeometry.presentationScale, (viewport.scrollLeft + viewport.clientWidth) / timelineGeometry.presentationScale);
+        const totalScale = timelineGeometry.presentationScale * timelineNavigation.getZoom();
+        const window = timelineGeometry.sourceWindowForLocalRange(document, viewport.scrollLeft / totalScale, (viewport.scrollLeft + viewport.clientWidth) / totalScale);
         // Transaction bars are projected from the same Cycle geometry. For a
         // small/medium document, retain boundaries covering the canonical
         // transaction span so a Transaction view can render bars outside the
@@ -375,6 +376,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         onResize: () => applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() }),
       });
       timelineGeometry.updatePresentation(presentation.timeAxis, presentation.screenGeometryScale, presentation.waveWidthPxPerDisplayCycle, presentation.waveOriginPx);
+      // Zoom/resize can change the visible source interval without producing
+      // a horizontal scroll event. Re-evaluate only mounted waveform windows;
+      // do not replay the projection or reconcile the row/group surfaces.
+      renderer.refreshWaveWindows();
       rulerInitialized = presentation.rulerInitialized;
       // Timeline presentation refreshes are view-only. The canonical command path
       // already submits the changed projection once; replaying that projection for
@@ -411,7 +416,13 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       viewMetrics: viewMetricsOwner,
       timelineOffset,
       getPresentationScale: () => timelineGeometry.presentationScale,
-      syncPresentationScale,
+      syncPresentationScale: (viewport, host, rulerViewport, zoom, presentationScale) => {
+        syncPresentationScale(viewport, host, rulerViewport, zoom, presentationScale);
+        // Zoom is applied as a view-only CSS/layout update, without routing
+        // through timelineRender. Re-evaluate bounded waveform windows at
+        // that same boundary so mounted owners track the newly visible range.
+        renderer.refreshWaveWindows();
+      },
       syncFrozenColumns: () => syncFrozenColumnScroll(viewportElement, rendererHost, viewMetricsOwner.snapshot().leftPaneWidth),
       getDocument: () => sessionController.snapshot().document,
       getRange: () => timelineRangeRef.current,
