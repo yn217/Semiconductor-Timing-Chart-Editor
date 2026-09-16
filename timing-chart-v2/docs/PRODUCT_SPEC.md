@@ -6,7 +6,10 @@
 表示モード:
 - Cycle View
 - Transaction View
-- Split View
+- Combined View (Cycle View + Transaction View on one shared time axis)
+
+Signal Split is a Cycle View layout option with two vertically independent
+viewports. It is not a fourth view mode and does not mean Combined View.
 
 初期実装はCycle View優先。
 

@@ -74,9 +74,9 @@ Tabs:
 - Annotation
 - Problems
 - JSON
-- Transaction only in Transaction and Split View
+- Transaction only in Transaction and Combined View
 
-Cycle View must not display a Transaction tab. Transaction View uses Transaction / Annotation / Problems / JSON. Split View may expose Signal / Transaction / Annotation / Problems / JSON.
+Cycle View must not display a Transaction tab. Transaction View uses Transaction / Annotation / Problems / JSON. Combined View may expose Signal / Transaction / Annotation / Problems / JSON. Signal Split remains a Cycle-only layout option and does not change the selected view mode.
 
 The editor is a substantial work area, not a tiny status pane.
 Signal Event Table should be spreadsheet-like and horizontally aligned with the center waveform area.

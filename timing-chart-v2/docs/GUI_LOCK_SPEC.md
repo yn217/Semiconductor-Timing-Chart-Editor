@@ -9,8 +9,9 @@ This specification is normative for the Production GUI.
   the external asset is supplied.
 - The Cycle View bottom editor contains Signal, Annotation, Problems, and JSON only.
 - The Transaction View bottom editor contains Transaction, Annotation, Problems, and JSON.
-- Split View may expose Signal, Transaction, Annotation, Problems, and JSON.
-- The Cycle / Transaction / Split segmented control remains on the right side of the Ribbon tab row.
+- Combined View may expose Signal, Transaction, Annotation, Problems, and JSON.
+- The Cycle / Transaction / Combined segmented control remains on the right side of the Ribbon tab row.
+- Signal Split is a Cycle-only layout option for two independent vertical viewports; it is not a view-mode choice or a signal-to-pane assignment workflow.
 - The Bottom Editor belongs to the center column only.
 - Production waveform traces continue to use WaveDrom/default skin. Placeholder SVGs in the reference are structural examples only.
 

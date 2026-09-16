@@ -43,7 +43,8 @@ Home/Insert等では関連commandをgroup化し、group separator / captionを�
 Ribbonのiconographyは、現行V2でtrackedなsemantic SVG/icon実装を基本とする。外部Replacement Packの`gui-mockup/icons.svg`は、提供された場合の履歴比較入力であり、絵文字や無関係なgeneric iconへ勝手に置換する理由にはならない。
 
 ## 3. View mode and Bottom tabs
-Ribbon右側の同じ位置に`Cycle / Transaction / Split`のView Mode segmented controlを置く。
+Ribbon右側の同じ位置に`Cycle / Transaction / Combined`のView Mode segmented controlを置く。
+`Signal Split`はCycle View内の2つの独立した縦スクロール領域を指し、Combined Viewとは別の概念とする。
 
 表示モードごとのBottom tabは次の通りとする。
 

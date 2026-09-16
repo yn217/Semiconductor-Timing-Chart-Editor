@@ -28,7 +28,7 @@ assignments; an Issue cannot be silently removed from both the inventory and
 its assignment list.
 
 The `independentContracts` section prevents acceptance loss through broad
-grouping. It separately tracks Split View, Hardware Hierarchy/Full Path/Scope,
+grouping. It separately tracks Combined View, Hardware Hierarchy/Full Path/Scope,
 Canvas Cycle Selection, Range Selection, Grid, Snap, Ruler, MiniMap,
 Inspector, Bottom Pin/Follow Selection, Advanced JSON, Header/Footer, Editable
 Legend, Clock Edge Counter, Axis Break, Bookmark, Time Group, Measurement,
@@ -200,11 +200,11 @@ is in `tests/export/deterministic-export.test.ts`; browser coverage is in
 PNG and PDF inherit the same ExportScene path. Full V1 export visual closure
 remains open.
 
-Split View parity was also extended in this batch: Home retains the Signal
+Combined View parity was also extended in this batch: Home retains the Signal
 command groups and exposes Add/Duplicate/Delete Transaction actions while
-Split is active. The actions use the existing SemanticCommand path and are
+Combined is active. The actions use the existing SemanticCommand path and are
 covered by `tests/e2e/transaction-export.spec.ts`; full V1 visual closure
-remains open. The same suite now exports from an active Split View and asserts
+remains open. The same suite now exports from an active Combined View and asserts
 that the canonical ExportScene contains both stable signal and transaction
 layers while Canonical, History, and render counters remain unchanged.
 
