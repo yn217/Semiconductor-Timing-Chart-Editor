@@ -32,8 +32,10 @@ const scaleDocument = {
   checkSettings: {},
 };
 
-test("selects an unsampled 100k-cycle boundary through shared geometry", async ({ page }) => {
+for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+test(`selects an unsampled 100k-cycle boundary through shared geometry at ${viewportSize.width}x${viewportSize.height}`, async ({ page }) => {
   test.setTimeout(120_000);
+  await page.setViewportSize(viewportSize);
   await page.goto("/");
   await page.getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
@@ -61,7 +63,8 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
     if (!viewport || !viewportBox || !waveBox) throw new Error("100k semantic geometry unavailable");
     const endX = waveBox.x + (boundaries["1000"] ?? NaN);
     if (!Number.isFinite(endX)) throw new Error("100k semantic geometry unavailable");
-    viewport.scrollLeft = Math.max(0, endX - 1400);
+    const targetScreenX = Math.min(1400, viewportBox.left + viewport.clientWidth - 64);
+    viewport.scrollLeft = Math.max(0, endX - targetScreenX);
     viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
     const scrolledWaveBox = wave?.getBoundingClientRect();
     if (!scrolledWaveBox) throw new Error("100k semantic geometry unavailable after scroll");
@@ -69,7 +72,7 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
       rulerTicks: ruler?.querySelectorAll("[data-cycle]").length ?? 0,
       hasUnsampledTick: Boolean(ruler?.querySelector("[data-cycle='1000']")),
       marks: marks.length,
-      startX: scrolledWaveBox.x + (boundaries["980"] ?? NaN),
+      startX: scrolledWaveBox.x + (boundaries["990"] ?? NaN),
       endX: scrolledWaveBox.x + (boundaries["1000"] ?? NaN),
       y: scrolledWaveBox.y + scrolledWaveBox.height / 2,
     };
@@ -87,7 +90,7 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
   await expect(host).toHaveAttribute("data-range-preview-cycle", "1000");
   await page.mouse.up();
 
-  await expect(page.getByLabel("Timeline range start")).toHaveValue("980");
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("990");
   await expect(page.getByLabel("Timeline range end")).toHaveValue("1000");
   const after = await host.evaluate((element) => ({
     revision: element.getAttribute("data-canonical-revision"),
@@ -96,6 +99,7 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
   }));
   expect(after).toEqual(before);
 });
+}
 
 test("reveals offscreen 50k and 99k cycles through the production bookmark path", async ({ page }) => {
   test.setTimeout(120_000);
@@ -123,24 +127,49 @@ test("reveals offscreen 50k and 99k cycles through the production bookmark path"
   await expect(page.getByRole("table", { name: "Signal events" })).toBeVisible({ timeout: 30_000 });
 });
 
-test("re-evaluates mounted waveform source windows after horizontal scroll", async ({ page }) => {
-  test.setTimeout(120_000);
-  await page.goto("/");
-  await page.getByRole("button", { name: "Cycle", exact: true }).click();
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "range-scroll-windowed.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(scaleDocument)) });
-  const host = page.getByTestId("cycle-surface");
-  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
-  const viewport = page.getByTestId("cycle-viewport");
-  const owner = page.locator("[data-role='wave-owner'][data-signal-id]").first();
-  const before = await page.evaluate(() => {
-    const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
-    const owner = document.querySelector<HTMLElement>("[data-role='wave-owner'][data-signal-id]");
-    if (!viewport || !owner) throw new Error("waveform owner unavailable");
-    return { scrollLeft: viewport.scrollLeft, start: owner.dataset.renderedSourceWindowStart, end: owner.dataset.renderedSourceWindowEnd };
+for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+  test(`re-evaluates mounted waveform source windows at ${viewportSize.width}x${viewportSize.height}`, async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.setViewportSize(viewportSize);
+    await page.goto("/");
+    await page.getByRole("button", { name: "Cycle", exact: true }).click();
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "range-scroll-windowed.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(scaleDocument)) });
+    const host = page.getByTestId("cycle-surface");
+    await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
+    const viewport = page.getByTestId("cycle-viewport");
+    const owner = page.locator("[data-role='wave-owner'][data-signal-id]").first();
+    const before = await page.evaluate(() => {
+      const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
+      const owner = document.querySelector<HTMLElement>("[data-role='wave-owner'][data-signal-id]");
+      if (!viewport || !owner) throw new Error("waveform owner unavailable");
+      return { scrollLeft: viewport.scrollLeft, start: owner.dataset.renderedSourceWindowStart, end: owner.dataset.renderedSourceWindowEnd };
+    });
+    const maxScroll = await viewport.evaluate((element) => element.scrollWidth - element.clientWidth);
+    expect(maxScroll).toBeGreaterThan(0);
+    let previousWindow = { start: before.start, end: before.end };
+    for (const fraction of [0.5, 1]) {
+      const previousScroll = await viewport.evaluate((element) => element.scrollLeft);
+      await viewport.evaluate((element, ratio) => {
+        element.scrollLeft = Math.round((element.scrollWidth - element.clientWidth) * ratio);
+        element.dispatchEvent(new Event("scroll", { bubbles: true }));
+      }, fraction);
+      await expect.poll(async () => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(previousScroll);
+      await expect.poll(async () => ({ start: await owner.getAttribute("data-rendered-source-window-start"), end: await owner.getAttribute("data-rendered-source-window-end") }), { timeout: 30_000 }).not.toEqual(previousWindow);
+      await expect(owner).not.toHaveAttribute("data-wave-error", /.+/);
+      const windowContent = await owner.evaluate((element) => {
+        const boundaries = JSON.parse(element.getAttribute("data-cycle-boundary-geometry") ?? "{}") as Record<string, number>;
+        return {
+          width: element.getBoundingClientRect().width,
+          sourceStart: element.getAttribute("data-rendered-source-window-start"),
+          sourceEnd: element.getAttribute("data-rendered-source-window-end"),
+          boundaryCount: Object.keys(boundaries).length,
+        };
+      });
+      expect(windowContent.width).toBeGreaterThan(0);
+      expect(windowContent.sourceStart).not.toBeNull();
+      expect(windowContent.sourceEnd).not.toBeNull();
+      expect(windowContent.boundaryCount).toBeGreaterThan(0);
+      previousWindow = { start: windowContent.sourceStart ?? undefined, end: windowContent.sourceEnd ?? undefined };
+    }
   });
-  const maxScroll = await viewport.evaluate((element) => element.scrollWidth - element.clientWidth);
-  expect(maxScroll).toBeGreaterThan(0);
-  await viewport.evaluate((element) => { element.scrollLeft = element.scrollWidth - element.clientWidth; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
-  await expect.poll(async () => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(before.scrollLeft);
-  await expect.poll(async () => ({ start: await owner.getAttribute("data-rendered-source-window-start"), end: await owner.getAttribute("data-rendered-source-window-end") }), { timeout: 30_000 }).not.toEqual({ start: before.start, end: before.end });
-});
+}
