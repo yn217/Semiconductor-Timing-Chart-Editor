@@ -122,3 +122,25 @@ test("reveals offscreen 50k and 99k cycles through the production bookmark path"
   await host.locator("[data-role='left-row'][data-row-id='sig_range_scale']").click();
   await expect(page.getByRole("table", { name: "Signal events" })).toBeVisible({ timeout: 30_000 });
 });
+
+test("re-evaluates mounted waveform source windows after horizontal scroll", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "range-scroll-windowed.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(scaleDocument)) });
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
+  const viewport = page.getByTestId("cycle-viewport");
+  const owner = page.locator("[data-role='wave-owner'][data-signal-id]").first();
+  const before = await page.evaluate(() => {
+    const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
+    const owner = document.querySelector<HTMLElement>("[data-role='wave-owner'][data-signal-id]");
+    if (!viewport || !owner) throw new Error("waveform owner unavailable");
+    return { scrollLeft: viewport.scrollLeft, start: owner.dataset.renderedSourceWindowStart, end: owner.dataset.renderedSourceWindowEnd };
+  });
+  const maxScroll = await viewport.evaluate((element) => element.scrollWidth - element.clientWidth);
+  expect(maxScroll).toBeGreaterThan(0);
+  await viewport.evaluate((element) => { element.scrollLeft = element.scrollWidth - element.clientWidth; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await expect.poll(async () => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(before.scrollLeft);
+  await expect.poll(async () => ({ start: await owner.getAttribute("data-rendered-source-window-start"), end: await owner.getAttribute("data-rendered-source-window-end") }), { timeout: 30_000 }).not.toEqual({ start: before.start, end: before.end });
+});

@@ -170,6 +170,8 @@ export interface EdgeCounterOverlayPrimitive {
 export interface TimingChartRenderer {
   mount(host: HTMLElement): void;
   update(projection: RenderProjection): void;
+  /** Apply row/presentation changes without rebuilding waveform semantics. */
+  updatePresentation(projection: RenderProjection): void;
   updateOverlays(primitives: readonly AnnotationOverlayPrimitive[]): void;
   updateSnapGuide(guide?: SnapGuidePrimitive): void;
   updateEdgeCounters(primitives: readonly EdgeCounterOverlayPrimitive[]): void;

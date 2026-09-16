@@ -321,6 +321,27 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#publishCounters();
   }
 
+  updatePresentation(projection: RenderProjection): void {
+    const layers = this.#layers;
+    if (!layers) throw new Error("Timing chart renderer must be mounted before update.");
+    assertCrossSurfaceInvariant(projection);
+    const rows = this.#indexedRows(projection.rowLayout, false);
+    const navigationRows = this.#indexedRows(projection.navigationRowLayout, true);
+    syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left");
+    syncShellLayer(layers.frozen, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen");
+    syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing");
+    for (const signalId of projection.mountedSignalIds) {
+      const owner = this.#waveOwners.get(signalId);
+      const row = rows.get(signalId);
+      if (!owner || !row) continue;
+      applyWaveformStyle(owner, parseWaveformStyle(row.displayStyle));
+    }
+    this.#rowLayoutSource = projection.rowLayout;
+    this.#rowIndex = new Map(rows);
+    this.#navigationRowLayoutSource = projection.navigationRowLayout;
+    this.#navigationRowIndex = new Map(navigationRows);
+  }
+
   counters(): Readonly<RenderCounters> {
     return Object.freeze({ ...this.#counters });
   }
@@ -1076,7 +1097,7 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     name.title = row.fullPath ?? row.name;
     const role = createRoleBadge(document, row.kind, row.role, "tree-signal-role");
     role.title = row.kind === "comment" ? "Comment Row" : row.role ?? "internal";
-    if (row.signalType !== undefined) {
+    if (row.signalType !== undefined && row.kind !== "comment") {
       role.textContent = signalPresentationLabel(row.kind, row.role, row.signalType);
       role.dataset.signalType = row.signalType;
       role.title = `${signalTypeLabel(row.signalType)} · ${row.role ?? "internal"}`;
@@ -1099,7 +1120,7 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     return;
   }
   const role = createRoleBadge(document, row.kind, row.role, "signal-role");
-  if (row.signalType !== undefined) {
+  if (row.signalType !== undefined && row.kind !== "comment") {
     role.textContent = signalPresentationLabel(row.kind, row.role, row.signalType);
     role.dataset.signalType = row.signalType;
     role.title = `${signalTypeLabel(row.signalType)} · ${row.role ?? "internal"}`;

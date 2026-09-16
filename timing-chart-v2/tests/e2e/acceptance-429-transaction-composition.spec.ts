@@ -45,6 +45,16 @@ test("default browser startup opens the built-in Transaction sample", async ({ p
   await expect(page.getByTestId("bookmark-row-demo_bookmark_read_start")).toHaveAttribute("data-selected", "true");
 });
 
+test("switching from the default Transaction view paints all Cycle waveforms", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  const waveOwners = page.getByTestId("cycle-surface").locator("[data-role='wave-owner'][data-signal-id]");
+  await expect(page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true })).toHaveClass(/active/);
+  await expect.poll(() => waveOwners.count()).toBeGreaterThan(0);
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect.poll(() => waveOwners.count()).toBeGreaterThanOrEqual(6);
+});
+
 test("Transaction crossing a collapsed TimeGroup renders an Axis Break gap", async ({ page }) => {
   const value = JSON.parse(readFileSync(samplePath, "utf8")) as any;
   value.timeGroups = [{ id: "fold-20-40", name: "Fold", start: 20, end: 40, presentation: { collapsed: true } }, { id: "fold-30-50", name: "Nested Fold", start: 30, end: 50, presentation: { collapsed: true } }];

@@ -498,7 +498,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // Transaction edits are rendered by TransactionLanes. They do not
       // change WaveDrom signal geometry, so avoid rebuilding the waveform
       // renderer on every inspector/bottom-table commit in large documents.
-      if (!transactionOnlyChange) renderer.update(projection);
+      const presentationOnlyChange = changed.rowPresentation !== undefined
+        && Object.keys(changed).every((key) => key === "rowPresentation" || key === "minimapOverview");
+      if (presentationOnlyChange) renderer.updatePresentation(projection);
+      else if (!transactionOnlyChange) renderer.update(projection);
       signalSplitRuntimeRef.current?.onDocumentChanged(result);
       setTimelineRange((range) => {
         const start = Math.min(range.start, result.snapshot.document.timeline.cycleCount - 1);

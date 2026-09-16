@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useSignalSplitSurfaceRuntime } from "./use-signal-split-surface-runtime.js";
 import { useSignalSplitPresentationSync } from "./use-signal-split-presentation-sync.js";
 import { createTimelineSurfaceController, type TimelineSurfaceRuntimeInput, type TimelineSurfaceRuntimeOutput } from "./timeline-surface-controller.js";
@@ -12,8 +12,20 @@ export type {
 } from "./timeline-surface-controller.js";
 
 export function useTimelineSurfaceRuntime(input: TimelineSurfaceRuntimeInput): TimelineSurfaceRuntimeOutput {
+  // The surface controller intentionally mounts once, but viewMode is live
+  // presentation state. Keep the one-time controller from retaining the
+  // mode that happened to be active on its first render.
+  const viewModeRef = useRef(input.viewMode);
+  viewModeRef.current = input.viewMode;
+
   useEffect(() => {
-    const controller = createTimelineSurfaceController(input);
+    const liveInput: TimelineSurfaceRuntimeInput = {
+      ...input,
+      get viewMode() {
+        return viewModeRef.current;
+      },
+    };
+    const controller = createTimelineSurfaceController(liveInput);
     return controller.mount();
   }, []);
 
