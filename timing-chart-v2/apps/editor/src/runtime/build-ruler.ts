@@ -3,14 +3,15 @@ import { buildTimeGroupHierarchy, type CanonicalDocument, type SignalId } from "
 import type { DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { presentationCycles } from "../presentation-cycles.js";
+import { displayWindowForSource } from "./display-boundary.js";
 
-export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0, viewportElement?: HTMLElement, referenceViewBoxWidth?: number): number {
+export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0, viewportElement?: HTMLElement, referenceViewBoxWidth?: number): Readonly<{ scale: number; targetWidth: number }> {
   element.dataset.axisMode = axisMode;
   if (!geometry || !axisOwnerSignalId) {
     element.dataset.geometryError = "Time-axis geometry unavailable";
     element.parentElement?.setAttribute("data-geometry-error", "Time-axis geometry unavailable");
     element.replaceChildren();
-    return 1;
+    return { scale: 1, targetWidth: 0 };
   }
   delete element.dataset.geometryError;
   element.parentElement?.removeAttribute("data-geometry-error");
@@ -106,6 +107,18 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   const pixelsPerCycle = cycleZeroPoint && cycleOnePoint ? (cycleOnePoint.x - cycleZeroPoint.x) * scale : Infinity;
   const semanticDisplayCycleCount = geometry.cycleBoundaryEntries?.().at(-1)?.cycle ?? mapping.displayCycleCount;
   const rulerTickBudget = document.timeline.cycleCount > 4096 ? 512 : Infinity;
+  // #614: once bounded/windowed rendering (#587) is active, `geometry` only
+  // has entries for whatever cycle range happens to be currently mounted --
+  // after scrolling away from cycle 0/1, `cycleZeroPoint`/`cycleOnePoint`
+  // above silently go missing. Track the first two ticks this loop actually
+  // finds (guaranteed to be inside the current window, wherever it is) as a
+  // second, always-available source for the per-cycle pitch, used below to
+  // derive the *document's* true total width independent of which window is
+  // currently mounted.
+  let firstFoundPoint: { readonly x: number } | undefined;
+  let firstFoundDisplay: number | undefined;
+  let secondFoundPoint: { readonly x: number } | undefined;
+  let secondFoundDisplay: number | undefined;
   for (const display of presentationCycles(semanticDisplayCycleCount, pixelsPerCycle, rulerTickBudget)) {
     const sourceCycle = display === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[display] ?? display);
     const point = geometry.find({ signalId: axisOwnerSignalId, cycle: sourceCycle, point: "cycle-start" })?.point;
@@ -120,7 +133,12 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     tick.textContent = String(mapping.labelFor(display));
     ticks.push(tick);
     finalX = point.x;
+    if (firstFoundPoint === undefined) { firstFoundPoint = point; firstFoundDisplay = display; }
+    else if (secondFoundPoint === undefined) { secondFoundPoint = point; secondFoundDisplay = display; }
   }
+  const windowLocalPixelsPerCycle = firstFoundPoint && secondFoundPoint && firstFoundDisplay !== undefined && secondFoundDisplay !== undefined && secondFoundDisplay !== firstFoundDisplay
+    ? (secondFoundPoint.x - firstFoundPoint.x) / (secondFoundDisplay - firstFoundDisplay)
+    : undefined;
   const overlays: HTMLElement[] = [];
   for (const bookmark of document.bookmarks) {
     const displayCycle = mapping.sourceToDisplay[bookmark.start];
@@ -169,9 +187,25 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   // viewBox and introduce a different screen scale for the waveform than for
   // the LocalGeometry consumers. Keep the old extent only when no reference
   // SVG measurement is available (for the initial geometry-error fallback).
-  const geometryWidth = Number.isFinite(referenceViewBoxWidth) && (referenceViewBoxWidth ?? 0) > 0
+  //
+  // #614: `referenceViewBoxWidth` is only trustworthy when the reference
+  // signal's own SVG genuinely covers the whole document. Bounded/windowed
+  // rendering (#587) means it usually covers only whatever cycle range is
+  // currently mounted (viewport + a small overscan) -- once scrolled away
+  // from the start, this silently shrinks to a fraction of the true
+  // document width. `windowLocalPixelsPerCycle` above is derived from two
+  // ticks guaranteed to be inside the *current* window wherever it is, so
+  // multiplying by the document's total display-cycle count (a
+  // window-independent, always-global count) gives the true full-document
+  // width regardless of scroll position. Prefer it; fall back to the old
+  // (window-fragile) sources only when it can't be derived at all (e.g. a
+  // 0-1 cycle document).
+  const windowIndependentWidth = windowLocalPixelsPerCycle !== undefined && Number.isFinite(windowLocalPixelsPerCycle) && windowLocalPixelsPerCycle > 0
+    ? windowLocalPixelsPerCycle * mapping.displayCycleCount
+    : undefined;
+  const geometryWidth = windowIndependentWidth ?? (Number.isFinite(referenceViewBoxWidth) && (referenceViewBoxWidth ?? 0) > 0
     ? referenceViewBoxWidth!
-    : finalX + 24;
+    : finalX + 24);
   const targetWidth = Math.max(Math.ceil(geometryWidth * scale), Math.ceil(minimumWidth));
   element.style.width = `${targetWidth}px`;
   // #366: `element` (the ruler content div) is not guaranteed to already be
@@ -201,5 +235,31 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     surfaceHost.style.removeProperty("width");
     surfaceHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']")?.style.removeProperty("width");
   }
-  return scale;
+  // #614: every wave-owner is stretched to the same shared `--wave-width`
+  // (waveform.css), which is only correct for an owner whose SVG covers the
+  // whole document. A *windowed* (bounded, #587) owner's own viewBox only
+  // covers a fraction of the document, so stretching it to the full
+  // `--wave-width` inflates it far past its real size -- give each windowed
+  // owner its own inline width instead, proportional to how much of the
+  // document its window actually covers. This must be reapplied here (the
+  // ruler's one authoritative, synchronous recompute point) rather than
+  // read back out of `--wave-width` by whoever renders a given window: that
+  // CSS custom property is not guaranteed to have already settled to this
+  // pass's value at every moment a wave batch happens to run, so reading it
+  // back can permanently bake in a stale ratio for owners whose own window
+  // does not happen to change again afterward.
+  const pxPerDisplayCycle = mapping.displayCycleCount > 0 ? targetWidth / mapping.displayCycleCount : undefined;
+  if (widthOwner && pxPerDisplayCycle !== undefined) {
+    for (const owner of widthOwner.querySelectorAll<HTMLElement>("[data-wave-owner]")) {
+      if (owner.tagName !== "DIV") continue;
+      const sourceStart = Number(owner.dataset.renderedSourceWindowStart);
+      const sourceEnd = Number(owner.dataset.renderedSourceWindowEnd);
+      const displayWindow = Number.isInteger(sourceStart) && Number.isInteger(sourceEnd) && sourceEnd > sourceStart
+        ? displayWindowForSource(mapping, { sourceStart, sourceEnd }, document.timeline.cycleCount)
+        : undefined;
+      if (displayWindow) owner.style.width = `${(displayWindow.displayEnd - displayWindow.displayStart) * pxPerDisplayCycle}px`;
+      else owner.style.removeProperty("width");
+    }
+  }
+  return { scale, targetWidth };
 }
