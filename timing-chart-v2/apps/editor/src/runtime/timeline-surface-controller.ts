@@ -272,6 +272,14 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // toggle that must be canonical/history/dirty-neutral.
       projection = projectionCoordinator.project({ snapshot: sessionController.snapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);
+      // A mode/pane-only reproject can make previously deferred signal waves
+      // renderable (Transaction mode intentionally keeps non-reference waves
+      // unrendered). Annotation anchors use those signal geometry maps, so
+      // projecting overlays before the wave batch is idle drops valid
+      // annotations until an unrelated edit happens to refresh them.
+      void renderer.whenIdle().then(() => {
+        if (active) timelineRuntimeRef.current?.refreshOverlays();
+      });
     };
     let rulerBuilds = 0;
     let edgeCounterResolvePasses = 0;
