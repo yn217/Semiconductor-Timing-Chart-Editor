@@ -31,6 +31,7 @@ export class TimelineGeometryOwner {
   readonly screen = new DefaultScreenGeometryProjector();
   #timeAxis: TimeAxisGeometry = { mode: "clockless" };
   #presentationScale = 1;
+  #waveWidthPxPerDisplayCycle: number | undefined;
   #snapIndex: ImmutableSnapIndex | undefined;
   #cycleBoundaryCandidates: ReturnType<ImmutableSnapIndex["entries"]> = [];
   #viewportBoundaryCache: { readonly geometry: LocalGeometryMap; readonly mapping: DisplayTimeMapping; readonly entries: readonly { readonly cycle: number; readonly x: number }[] } | undefined;
@@ -49,20 +50,30 @@ export class TimelineGeometryOwner {
   get timeAxis(): TimeAxisGeometry { return this.#timeAxis; }
   get presentationScale(): number { return this.#presentationScale; }
   get snapIndex(): ImmutableSnapIndex | undefined { return this.#snapIndex; }
+  /** Document-wide pixels-per-display-cycle, as of the ruler's last authoritative
+   * rebuild (see build-ruler.ts). Bounded (#587) wave-owner mounts read this --
+   * rather than re-deriving it from their own rendered geometry, or reading the
+   * `--wave-width` CSS custom property back out of the DOM -- so every owner's
+   * proportional width stays in lockstep with the ruler regardless of which
+   * window happens to be currently mounted, or when relative to a ruler rebuild
+   * that owner's own window last changed (#614). */
+  get waveWidthPxPerDisplayCycle(): number | undefined { return this.#waveWidthPxPerDisplayCycle; }
 
-  updatePresentation(timeAxis: TimeAxisGeometry, presentationScale: number): void {
+  updatePresentation(timeAxis: TimeAxisGeometry, presentationScale: number, waveWidthPxPerDisplayCycle?: number): void {
     const geometryChanged = this.#presentationScale !== presentationScale
       || this.#timeAxis.mode !== timeAxis.mode
       || this.#timeAxis.ownerSignalId !== timeAxis.ownerSignalId
       || this.#timeAxis.geometry !== timeAxis.geometry;
     this.#timeAxis = timeAxis;
     this.#presentationScale = presentationScale;
+    if (waveWidthPxPerDisplayCycle !== undefined) this.#waveWidthPxPerDisplayCycle = waveWidthPxPerDisplayCycle;
     if (geometryChanged) this.invalidateSnapIndex();
   }
 
   reset(): void {
     this.#timeAxis = { mode: "clockless" };
     this.#presentationScale = 1;
+    this.#waveWidthPxPerDisplayCycle = undefined;
     this.invalidateSnapIndex();
     this.#requestedSourceCycle = undefined;
   }
