@@ -918,6 +918,7 @@ test("applies Signal Inspector capability fields as one semantic operation", asy
 
 test("#477: Label Style keeps a common dirty/Apply lifecycle across repeated edits and Background actually renders", async ({ page }) => {
   await ready(page);
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
   const inspector = page.getByTestId("inspector");
