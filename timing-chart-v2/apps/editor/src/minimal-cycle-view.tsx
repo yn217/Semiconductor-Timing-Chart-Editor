@@ -423,6 +423,7 @@ export function MinimalCycleView() {
     viewMetricsOwner,
     signalSplitEnabled,
     signalSplitRatio,
+    viewMode,
   });
   useEffect(() => {
     refreshPlayhead.current();

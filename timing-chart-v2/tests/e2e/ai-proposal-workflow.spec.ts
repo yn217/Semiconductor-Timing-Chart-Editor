@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { canonicalFixture } from "../fixtures/canonical";
 
 // #395 PR1: the AI Ribbon tab is now a compact Ask/Edit trigger -- the
 // actual query/preview/apply surface (AIOperationPanel, unchanged
@@ -77,7 +78,7 @@ test("AI proposal rejects a stale revision after an intervening semantic edit", 
   await inspector.getByLabel("Inspector signal name").press("Enter");
   await expect(host).toHaveAttribute("data-canonical-revision", "1");
   await ai.getByTestId("ai-validate").click();
-  await expect(ai.getByTestId("ai-status")).toHaveText(/Conflict · preview revision 0, current revision 1/);
+  await expect(ai.getByTestId("ai-status")).toHaveText("Preview is out of date. Regenerate it.");
   await expect(ai.getByTestId("ai-preview")).toHaveCount(0);
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("INTERVENING_EDIT");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
@@ -100,7 +101,7 @@ test("AI Apply reports a stale proposal through the shared Problems diagnostic p
   await inspector.getByLabel("Inspector signal name").press("Enter");
   await expect(host).toHaveAttribute("data-canonical-revision", "1");
   await ai.getByTestId("ai-apply").click();
-  await expect(ai.getByTestId("ai-status")).toHaveText(/Conflict · preview revision 0, current revision 1/);
+  await expect(ai.getByTestId("ai-status")).toHaveText("Preview is out of date. Regenerate it.");
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("INTERVENING_APPLY_EDIT");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
@@ -108,6 +109,43 @@ test("AI Apply reports a stale proposal through the shared Problems diagnostic p
   await expect(problems).toContainText("AI_PREVIEW_STALE");
   await expect(problems).toContainText("Apply AI proposal");
   await expect(problems).toContainText("Regenerate the preview from the current document before applying it");
+});
+
+test("AI preview cannot cross an Open document epoch when IDs and revision are unchanged", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await selectRequest(page, host);
+
+  const ai = await openAIAssistant(page);
+  await ai.getByLabel("AI semantic query").fill("rename selected signal to STALE_AFTER_OPEN");
+  await ai.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect(ai.getByTestId("ai-preview")).toContainText("Rename REQUEST to STALE_AFTER_OPEN");
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+
+  // The replacement deliberately keeps the same signal IDs and starts at
+  // revision 0, so revision equality alone cannot make the proposal fresh.
+  const replacement = canonicalFixture();
+  replacement.document = { ...replacement.document, id: "opened-document-b", title: "Opened Document B" };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
+    name: "opened-document-b.tcd",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(replacement)),
+  });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+  await expect(page.getByTestId("bottom-editor").getByTestId("ai-operation-panel")).toBeVisible();
+  await expect(ai.getByTestId("ai-preview")).toHaveCount(0);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+
+  // A proposal rebuilt after Open belongs to the new epoch and can apply.
+  await ai.getByLabel("AI semantic query").fill("create group named OPENED_DOCUMENT_GROUP");
+  await ai.getByRole("button", { name: "Preview", exact: true }).click();
+  await ai.getByTestId("ai-validate").click();
+  await ai.getByTestId("ai-apply").click();
+  await expect(ai.getByTestId("ai-status")).toHaveText("Applied · one atomic SemanticCommand transaction");
+  await expect(host).toHaveAttribute("data-canonical-revision", "1");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 
 // #395 PR1: the AI Ribbon tab used to host the entire query/preview/apply

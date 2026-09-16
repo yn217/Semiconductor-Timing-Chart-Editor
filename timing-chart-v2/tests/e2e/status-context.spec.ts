@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 test.describe("status context", () => {
   test("reflects workspace, view mode, zoom and selection scope without mutation", async ({ page }) => {
     await page.goto("/");
+    await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
     const shell = page.locator(".editor-shell");
     const surface = page.locator("[data-role='timing-chart-surface']");
     const revision = await surface.getAttribute("data-canonical-revision");
@@ -33,15 +34,17 @@ test.describe("status context", () => {
     await expect(titleBarView).toHaveText("Transaction View");
     await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
     await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
-      await expect(titleBarView).toHaveText("Combined View");
-    await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Split");
+    await expect(titleBarView).toHaveText("Combined View");
+    await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Combined");
     expect(await surface.getAttribute("data-canonical-revision")).toBe(revision);
     expect(await surface.getAttribute("data-history-depth")).toBe(history);
   });
 
   test("exposes Bottom pin/follow state and selected hierarchy scope", async ({ page }) => {
     await page.goto("/");
+    await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
     const host = page.getByTestId("cycle-surface");
+    await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
     await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
     await expect(page.getByTestId("status-context")).toContainText("Scope: dut");
     await page.getByTestId("follow-selection").uncheck();

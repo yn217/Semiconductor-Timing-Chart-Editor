@@ -9,7 +9,13 @@ import {
   serializeCanonicalDocument,
   validateCanonicalDocument,
   validateDocumentResourceBudget,
+  type AnnotationId,
+  type BookmarkId,
   type CanonicalDocument,
+  type GroupId,
+  type SignalId,
+  type TimeGroupId,
+  type TransactionId,
 } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -23,6 +29,32 @@ describe("canonical v2 schema and roundtrip", () => {
     document.transactions = [{ id: "txn_roundtrip" as never, name: "Read", start: 1, end: 3, groupId: groupId as never, color: "#abcdef", description: "payload" }];
     expect(validateCanonicalDocument(document)).toEqual([]);
     expect(parseDocument(serializeCanonicalDocument(document)).document).toEqual(document);
+  });
+  it("round-trips a multi-feature Save/Open specimen with exact semantic equality", () => {
+    const document = clone(canonicalFixture());
+    const data = document.signals.find((signal) => signal.id === "sig_data");
+    const clock = document.signals.find((signal) => signal.id === "sig_clk");
+    if (!data || !clock) throw new Error("canonical fixture must contain sig_data and sig_clk");
+    const auxiliary = { ...data, id: "sig_aux" as SignalId, name: "AUX", source: { ...data.source, signalName: "AUX" }, display: { ...data.display, name: "AUX" } };
+    document.signals = [...document.signals, auxiliary];
+    document.signalGroups = [...document.signalGroups, { id: "grp_aux" as GroupId, name: "Auxiliary", rows: [auxiliary.id] }];
+    document.bookmarks = [{ id: "bookmark_phase" as BookmarkId, name: "Phase boundary", start: 3, comment: "round-trip specimen" }];
+    document.timeGroups = [{ id: "time_wait" as TimeGroupId, name: "Wait", start: 2, end: 4, comment: "folded interval", presentation: { collapsed: true, foldStyle: "axis-break", foldLabel: "WAIT" } }];
+    document.transactions = [{ id: "transaction_read" as TransactionId, name: "Read", source: "CPU", destination: "Memory", start: 1, end: 6, phases: [{ name: "Address", start: 1, end: 3 }, { name: "Data", start: 3, end: 6 }], linkedSignals: [data.id], color: "#335577", description: "multi-feature specimen", visible: true }];
+    document.annotations = [
+      { id: "annotation_marker" as AnnotationId, type: "marker", label: "Mark", visible: true, color: "#aa2200", anchor: { signalId: data.id, cycle: 3, point: "cycle-center" }, verticalSpan: { mode: "rows", startRowId: clock.id, endRowId: auxiliary.id } },
+      { id: "annotation_bracket" as AnnotationId, type: "bracket", label: "Bracket", visible: true, color: "#004488", start: { signalId: data.id, cycle: 1, point: "cycle-start" }, end: { signalId: data.id, cycle: 5, point: "cycle-end" }, lineType: "orthogonal", style: { strokeWidth: 4, strokeStyle: "dashed" } },
+    ];
+    const groupedRows = document.signalGroups.flatMap((group) => group.rows);
+    expect(new Set(groupedRows).size).toBe(groupedRows.length);
+    expect(new Set(groupedRows)).toEqual(new Set(document.signals.map((signal) => signal.id)));
+    expect(validateCanonicalDocument(document)).toEqual([]);
+    const saved = serializeCanonicalDocument(document);
+    const reopened = parseDocument(saved);
+    expect(reopened.ok).toBe(true);
+    if (!reopened.ok) return;
+    expect(reopened.document).toEqual(document);
+    expect(serializeCanonicalDocument(reopened.document)).toBe(saved);
   });
   it("exposes a compiled Draft 2020-12 schema and deterministic Save/Open/Save", () => {
     expect(canonicalSchema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
@@ -70,6 +102,28 @@ describe("canonical v2 schema and roundtrip", () => {
       }
     }
     expect(count).toBe(20);
+  });
+
+  it("validates and round-trips every non-Golden showcase sample", () => {
+    const repoRoot = resolve(import.meta.dirname, "../..");
+    const directory = resolve(repoRoot, "samples/showcase");
+    const files = [
+      "21_large_feature_showcase.tcd.json",
+      "22_clockless_annotation_showcase.tcd.json",
+      "23_multiclock_cdc_showcase.tcd.json",
+      "24_protocol_transaction_showcase.tcd.json",
+      "25_long_timeline_stress_showcase.tcd.json",
+    ];
+    for (const file of files) {
+      const result = parseDocument(readFileSync(resolve(directory, file), "utf8"));
+      expect(result, `${file}: ${result.ok ? "" : JSON.stringify(result.problems)}`).toMatchObject({ ok: true });
+      if (!result.ok) continue;
+      expect(validateCanonicalDocument(result.document), file).toEqual([]);
+      const saved = serializeCanonicalDocument(result.document);
+      const reopened = parseDocument(saved);
+      expect(reopened.ok, `${file}: reopen`).toBe(true);
+      if (reopened.ok) expect(serializeCanonicalDocument(reopened.document)).toBe(saved);
+    }
   });
 
   it("migrates a flat canonical v1 document and supplies v2-owned defaults", () => {

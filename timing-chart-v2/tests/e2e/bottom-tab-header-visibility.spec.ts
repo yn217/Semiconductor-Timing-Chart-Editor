@@ -14,6 +14,7 @@ const readTabState = async (page: import("@playwright/test").Page) => page.getBy
 
 test("keeps every configured Bottom tab header visible and switchable", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
 

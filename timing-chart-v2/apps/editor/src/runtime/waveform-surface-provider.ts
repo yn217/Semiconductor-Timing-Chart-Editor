@@ -32,6 +32,7 @@ export type WaveformProviderContext = Readonly<{
    * can permanently bake a stale ratio into an owner whose own window does not
    * happen to change again afterward (#614). */
   getWaveWidthPxPerDisplayCycle?: () => number | undefined;
+  getViewMode?: () => "Cycle" | "Transaction" | "Split";
 }>;
 
 export function createWaveformSurfaceProvider(context: WaveformProviderContext): WaveformSurfaceProvider {
@@ -46,6 +47,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       if (requestEpoch !== undefined && (requestEpoch !== context.getDocumentEpoch() || requests.some((request) => request.documentEpoch !== requestEpoch))) return requests.map(({ signalId }) => ({ signalId, stale: true }));
       const currentSnapshot = context.sessionController.snapshot();
       const document = currentSnapshot.document;
+      const viewMode = context.getViewMode?.();
+      const referenceClockId = document.timeline.referenceClock;
       const mapping = context.mappingCache.get(document.timeline, document.timeGroups);
       const yieldBetweenOwners = document.signals.length * mapping.displayCycleCount >= 250_000;
       let referenceGeometryReady = false;
@@ -68,8 +71,15 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const referenceClockSignal = document.timeline.referenceClock === undefined ? undefined : signalById.get(document.timeline.referenceClock);
       const referenceClockPeriod = referenceClockSignal?.type === "clock" ? referenceClockSignal.generator.period : undefined;
       const prepared = requests.map((request) => {
+        // Transaction mode owns the shared time geometry and Transaction
+        // projection, but does not display Cycle waveforms. Keep the
+        // reference clock available for geometry extraction; defer hidden
+        // signal paint until Cycle/Combined becomes active.
+        if (viewMode === "Transaction" && request.signalId !== referenceClockId) {
+          return { request, waveJson: undefined, semanticValues: undefined, error: undefined, deferred: true, rendererStart: undefined, rendererEnd: undefined };
+        }
         const signal = signalById.get(request.signalId);
-        if (!signal) return { request, waveJson: undefined, semanticValues: undefined, error: new Error(`Signal '${request.signalId}' is missing.`) };
+        if (!signal) return { request, waveJson: undefined, semanticValues: undefined, error: new Error(`Signal '${request.signalId}' is missing.`), deferred: false, rendererStart: undefined, rendererEnd: undefined };
         let remappedValues: readonly SignalValueChange[] | undefined;
         const displaySignal = signal.type === "commentRow" ? signal : signal.type === "clock"
           ? { ...signal, ...(signal.enable ? { enable: context.mappingCache.remapValueChanges(signal.enable, mapping) } : {}) }
@@ -104,7 +114,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             const displayCycle = rendererStart + index;
             return displayCycle === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[displayCycle] ?? sourceWindow.end);
           }) };
-        return { request, waveJson: mappedWaveJson, semanticValues, error: undefined, rendererStart, rendererEnd };
+        return { request, waveJson: mappedWaveJson, semanticValues, error: undefined, deferred: false, rendererStart, rendererEnd };
       });
       // #614: every wave-owner is stretched to a shared, document-wide
       // px-per-cycle (waveform.css sets each owner's CSS width, its child svg
@@ -128,6 +138,10 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       }
       const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean }> = [];
       for (const item of prepared) {
+        if (item.deferred) {
+          renderResults.push({ ...item, rendered: undefined });
+          continue;
+        }
         if (!isCurrent(item.request)) renderResults.push({ ...item, rendered: undefined, stale: true });
         else if (item.error || !item.waveJson) renderResults.push({ ...item, rendered: undefined });
         else {
@@ -137,6 +151,9 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         if (yieldBetweenOwners) await nextBrowserFrame();
       }
       const results = renderResults.map((item) => {
+        if (prepared.find((candidate) => candidate.request === item.request)?.deferred) {
+          return { signalId: item.request.signalId, result: { waveDromRenders: 0, localGeometryBuilds: 0 } };
+        }
         if (item.stale === true || !isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
         if (item.error || !item.rendered) return { signalId: item.request.signalId, error: item.error ?? new Error("Waveform render did not produce an SVG.") };
         try {

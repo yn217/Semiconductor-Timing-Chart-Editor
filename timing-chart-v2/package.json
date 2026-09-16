@@ -22,7 +22,7 @@
     "check:performance-architecture": "node scripts/check-performance-architecture.mjs",
     "typecheck": "tsc -b",
     "test": "vitest run",
-    "test:e2e": "playwright test",
+    "test:e2e": "node scripts/run-playwright.mjs",
     "visual:acceptance": "playwright test tests/e2e/gui-visual-acceptance.spec.ts",
     "test:visual-regression": "playwright test tests/e2e/visual-regression-modes.spec.ts",
     "harness:capture": "playwright test tests/e2e/gui-visual-acceptance.spec.ts",

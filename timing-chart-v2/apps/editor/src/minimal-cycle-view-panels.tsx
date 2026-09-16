@@ -273,7 +273,7 @@ export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, anno
     {cursorStatus && <span data-testid="cursor-status">{cursorStatus}</span>}
     {activePaneStatus && <span data-testid="active-pane-status">{activePaneStatus}</span>}
     <span>Selected: <strong data-testid="selection-status">{selectionStatus}</strong></span>
-    <span data-testid="signal-count-status">Signals: {signalCount}</span><span data-testid="annotation-count-status">Annotations: {annotationCount}</span><span data-testid="range-status">{rangeStatus}</span><span data-testid="cycle-status">Cycle {selectedCycle}</span><span data-testid="zoom-status-bar">Zoom: {Math.round(zoom * 100)}%</span><span data-testid="snap-status">Snap: {snapEnabled ? "On" : "Off"}</span><span data-testid="view-mode-status">Mode: {viewMode}</span>
+    <span data-testid="signal-count-status">Signals: {signalCount}</span><span data-testid="annotation-count-status">Annotations: {annotationCount}</span><span data-testid="range-status">{rangeStatus}</span><span data-testid="cycle-status">Cycle {selectedCycle}</span><span data-testid="zoom-status-bar">Zoom: {Math.round(zoom * 100)}%</span><span data-testid="snap-status">Snap: {snapEnabled ? "On" : "Off"}</span><span data-testid="view-mode-status">Mode: {viewMode === "Split" ? "Combined" : viewMode}</span>
     <span className="status-context" data-testid="status-context">{statusContext}</span>
     <span className={hideRevisionDetail ? "status-detail-hidden" : undefined} data-testid="revision-status">Canonical revision {revision}</span>
     <span className={hideRevisionDetail ? "status-detail-hidden" : undefined} data-testid="history-status">History {undoDepth} / Redo {redoDepth}</span>
