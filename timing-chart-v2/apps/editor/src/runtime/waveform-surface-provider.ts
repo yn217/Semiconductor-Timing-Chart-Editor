@@ -24,6 +24,7 @@ export type WaveformProviderContext = Readonly<{
   onReferenceGeometryReady?: () => void;
   invalidateSnapIndex: () => void;
   getSourceWindow?: (owner: HTMLElement) => Readonly<{ start: number; end: number }> | undefined;
+  getViewMode?: () => "Cycle" | "Transaction" | "Split";
 }>;
 
 export function createWaveformSurfaceProvider(context: WaveformProviderContext): WaveformSurfaceProvider {
@@ -38,6 +39,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       if (requestEpoch !== undefined && (requestEpoch !== context.getDocumentEpoch() || requests.some((request) => request.documentEpoch !== requestEpoch))) return requests.map(({ signalId }) => ({ signalId, stale: true }));
       const currentSnapshot = context.sessionController.snapshot();
       const document = currentSnapshot.document;
+      const viewMode = context.getViewMode?.();
+      const referenceClockId = document.timeline.referenceClock;
       const mapping = context.mappingCache.get(document.timeline, document.timeGroups);
       const yieldBetweenOwners = document.signals.length * mapping.displayCycleCount >= 250_000;
       let referenceGeometryReady = false;
@@ -47,8 +50,15 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         signalIndexRevision = currentSnapshot.revision;
       }
       const prepared = requests.map((request) => {
+        // Transaction mode owns the shared time geometry and Transaction
+        // projection, but does not display Cycle waveforms. Keep the
+        // reference clock available for geometry extraction; defer hidden
+        // signal paint until Cycle/Combined becomes active.
+        if (viewMode === "Transaction" && request.signalId !== referenceClockId) {
+          return { request, waveJson: undefined, semanticValues: undefined, error: undefined, deferred: true };
+        }
         const signal = signalById.get(request.signalId);
-        if (!signal) return { request, waveJson: undefined, semanticValues: undefined, error: new Error(`Signal '${request.signalId}' is missing.`) };
+        if (!signal) return { request, waveJson: undefined, semanticValues: undefined, error: new Error(`Signal '${request.signalId}' is missing.`), deferred: false };
         let remappedValues: readonly SignalValueChange[] | undefined;
         const displaySignal = signal.type === "commentRow" ? signal : signal.type === "clock"
           ? { ...signal, ...(signal.enable ? { enable: context.mappingCache.remapValueChanges(signal.enable, mapping) } : {}) }
@@ -83,10 +93,14 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             const displayCycle = rendererStart + index;
             return displayCycle === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[displayCycle] ?? sourceWindow.end);
           }) };
-        return { request, waveJson: mappedWaveJson, semanticValues, error: undefined };
+        return { request, waveJson: mappedWaveJson, semanticValues, error: undefined, deferred: false };
       });
       const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean }> = [];
       for (const item of prepared) {
+        if (item.deferred) {
+          renderResults.push({ ...item, rendered: undefined });
+          continue;
+        }
         if (!isCurrent(item.request)) renderResults.push({ ...item, rendered: undefined, stale: true });
         else if (item.error || !item.waveJson) renderResults.push({ ...item, rendered: undefined });
         else {
@@ -96,6 +110,9 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         if (yieldBetweenOwners) await nextBrowserFrame();
       }
       const results = renderResults.map((item) => {
+        if (prepared.find((candidate) => candidate.request === item.request)?.deferred) {
+          return { signalId: item.request.signalId, result: { waveDromRenders: 0, localGeometryBuilds: 0 } };
+        }
         if (item.stale === true || !isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
         if (item.error || !item.rendered) return { signalId: item.request.signalId, error: item.error ?? new Error("Waveform render did not produce an SVG.") };
         try {

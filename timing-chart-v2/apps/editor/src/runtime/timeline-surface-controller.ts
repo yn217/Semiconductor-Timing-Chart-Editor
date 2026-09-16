@@ -117,6 +117,7 @@ export interface TimelineSurfaceRuntimeInput {
   readonly viewMetricsOwner: ViewMetricsOwner;
   readonly signalSplitEnabled: boolean;
   readonly signalSplitRatio: number;
+  readonly viewMode: "Cycle" | "Transaction" | "Split";
 }
 
 export interface TimelineSurfaceRuntimeOutput {
@@ -209,6 +210,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         }
       },
       invalidateSnapIndex: () => timelineGeometry.invalidateSnapIndex(),
+      getViewMode: () => input.viewMode,
       getSourceWindow: (owner) => {
         const viewport = owner.closest<HTMLElement>(".cycle-viewport") ?? viewportElement;
         const document = sessionController.snapshot().document;
