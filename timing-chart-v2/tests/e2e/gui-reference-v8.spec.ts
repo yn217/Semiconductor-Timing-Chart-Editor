@@ -129,6 +129,7 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
 test("applies the v8 Signal Inspector style controls as one semantic operation", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
   const inspector = page.getByTestId("inspector");
