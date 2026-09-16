@@ -55,7 +55,13 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const currentSnapshot = context.sessionController.snapshot();
       const document = currentSnapshot.document;
       const viewMode = context.getViewMode?.();
-      const referenceClockId = document.timeline.referenceClock;
+      // Transaction mode still needs one rendered timing signal to own the
+      // shared semantic geometry when a document has no explicit reference
+      // clock. This mirrors resolveTimeAxisGeometry's clockless fallback:
+      // prefer the first canonical clock rather than deferring every signal
+      // and leaving Transaction bars without boundary X positions.
+      const referenceClockId = document.timeline.referenceClock
+        ?? document.signals.find((signal) => signal.type === "clock")?.id;
       const mapping = context.mappingCache.get(document.timeline, document.timeGroups);
       const yieldBetweenOwners = document.signals.length * mapping.displayCycleCount >= 250_000;
       let referenceGeometryReady = false;
