@@ -9,9 +9,14 @@ import { expect, test } from "@playwright/test";
 // mixed-selection batch-atomicity fix.
 
 async function addAnnotation(page: import("@playwright/test").Page, type: string) {
+  const owners = page.locator(`[data-role='annotation-owner'][data-annotation-type='${type}']`);
+  const before = new Set(await owners.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-annotation-id"))));
   await page.getByLabel("Annotation type").selectOption(type);
   await page.getByRole("button", { name: "Add annotation" }).click();
-  return page.getByTestId("cycle-surface").locator(`[data-role='annotation-owner'][data-annotation-type='${type}']`).last();
+  const createdIds = (await owners.evaluateAll((elements) => elements.map((element) => element.getAttribute("data-annotation-id"))))
+    .filter((id): id is string => id !== null && !before.has(id));
+  expect(createdIds).toHaveLength(1);
+  return page.getByTestId("cycle-surface").locator(`[data-role='annotation-owner'][data-annotation-id='${createdIds[0]}']`);
 }
 
 async function exportSvgText(page: import("@playwright/test").Page): Promise<string> {
@@ -44,10 +49,12 @@ test("Range Stroke/Fill controls have real canonical + rendered + exported effec
 
   const range = await addAnnotation(page, "range");
   const editor = page.getByTestId("annotation-editor");
-  const strokeWidth = editor.getByTestId("annotation-stroke-fill-stroke-width");
-  const strokeStyle = editor.getByTestId("annotation-stroke-fill-stroke-style");
-  const fillColor = editor.getByTestId("annotation-stroke-fill-fill-color");
-  const fillOpacity = editor.getByTestId("annotation-stroke-fill-fill-opacity");
+  await expect(editor).toHaveAttribute("data-annotation-id", await range.getAttribute("data-annotation-id"));
+  await editor.getByRole("button", { name: "Style", exact: true }).click();
+  const strokeWidth = editor.getByTestId("inspector-stroke-fill-stroke-width");
+  const strokeStyle = editor.getByTestId("inspector-stroke-fill-stroke-style");
+  const fillColor = editor.getByTestId("inspector-stroke-fill-fill-color");
+  const fillOpacity = editor.getByTestId("inspector-stroke-fill-fill-opacity");
   await expect(strokeWidth).toBeEnabled();
   await expect(fillColor).toBeEnabled();
 
@@ -76,6 +83,27 @@ test("Range Stroke/Fill controls have real canonical + rendered + exported effec
   expect(rectMatch![0]).toContain(`stroke-width="6"`);
   expect(rectMatch![0]).toContain(`stroke-dasharray="7 4"`);
   expect(rectMatch![0]).toMatch(/fill-opacity="0\.5"/);
+
+  // The production JSON Save/Open route must preserve each edited style
+  // property independently of the exported SVG representation.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const saveDownload = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await saveDownload).path();
+  expect(savedPath).toBeTruthy();
+  const fs = await import("node:fs");
+  const savedDocument = JSON.parse(fs.readFileSync(savedPath!, "utf-8"));
+  const savedAnnotation = savedDocument.annotations.find((item: { id: string }) => item.id === annotationId);
+  expect(savedAnnotation.style).toMatchObject({ strokeWidth: 6, strokeStyle: "dashed", fillColor: "#00aa00", fillOpacity: 0.5 });
+
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const reopened = host.locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}']`);
+  const reopenedBody = reopened.locator("[data-role='annotation-body']");
+  await expect(reopenedBody).toHaveCSS("border-width", "6px");
+  await expect(reopenedBody).toHaveCSS("border-style", "dashed");
+  const reopenedFill = await reopenedBody.evaluate((element) => getComputedStyle(element).backgroundColor);
+  expect(reopenedFill).toBe(backgroundColor);
 });
 
 test("Vertical Line exports a full-height dashed line, not an invisible zero-length one", async ({ page }) => {
