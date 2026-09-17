@@ -199,11 +199,6 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
           timelineRuntimeRef.current?.refreshRuler();
           timelineRuntimeRef.current?.refreshGrid();
         }
-        // TransactionLanes can mount before the reference Cycle geometry and
-        // memoize an empty boundary projection. Invalidate it at the geometry
-        // owner's readiness boundary, not merely when the renderer reports
-        // idle (which can precede geometry publication).
-        if (active) setTransactionPresentationRevision((value) => value + 1);
         // The first bounded source window is selected before reference
         // geometry exists. Once that geometry arrives, re-run projection so
         // StableTimingChartRenderer can observe the authoritative window and
@@ -211,6 +206,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         // presentation-thinned WaveDrom artifact.
         if (active && projection !== undefined && !referenceGeometryReprojected) {
           referenceGeometryReprojected = true;
+          // TransactionLanes may have memoized an empty shared-boundary
+          // projection before this document's Cycle geometry was published.
+          // Invalidate once at the first geometry-ready boundary; later
+          // virtualized owner remounts must not reproject bars during scroll.
+          setTransactionPresentationRevision((value) => value + 1);
           const reproject = () => { if (active && projection !== undefined) renderCoordinator.renderer.update(projection); };
           if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(reproject);
           else globalThis.setTimeout(reproject, 0);
