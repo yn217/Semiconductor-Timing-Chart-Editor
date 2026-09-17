@@ -43,6 +43,19 @@ export interface EditorDialogRuntimeInput {
   readonly closeTreeMoreMenu: () => void;
 }
 
+function resolveRenameFocusReturnTarget(previous: HTMLElement | null): HTMLElement | null {
+  if (previous?.dataset.treeSignalId) {
+    return document.querySelector<HTMLElement>(`[data-role='tree-more'][data-tree-signal-id='${CSS.escape(previous.dataset.treeSignalId)}']`);
+  }
+  if (previous?.dataset.groupId && previous.matches("[data-role='tree-group-more']")) {
+    return document.querySelector<HTMLElement>(`[data-role='tree-group-more'][data-group-id='${CSS.escape(previous.dataset.groupId)}']`);
+  }
+  if (previous?.classList.contains("home-overflow-trigger")) {
+    return document.querySelector<HTMLElement>("[data-testid='ribbon'] .home-overflow-trigger");
+  }
+  return previous;
+}
+
 /** Owns document-level dialog/menu listeners so the composition root remains listener-free. */
 export function useEditorDialogRuntime(input: EditorDialogRuntimeInput): void {
   const inputRef = useRef(input);
@@ -90,7 +103,7 @@ export function useEditorDialogRuntime(input: EditorDialogRuntimeInput): void {
     return () => document.removeEventListener("keydown", onDialogKeyDown, true);
   }, [input.contextMenu, input.treeAddMenuOpen, input.treeMoreMenuOpen, input.compatibilityPreview, input.pendingFileAction, input.bulkRegistrationVisible, input.hierarchyVisible, input.propertiesVisible, input.exportVisible, input.saveAsVisible]);
 
-  useDialogFocusLoop(input.renameDialogRef, input.renameDialogOriginRef, input.renameDialogOpen);
+  useDialogFocusLoop(input.renameDialogRef, input.renameDialogOriginRef, input.renameDialogOpen, resolveRenameFocusReturnTarget);
   useDialogFocusLoop(input.bulkRegistrationDialogRef, input.dialogOriginRef, input.bulkRegistrationVisible);
   useDialogFocusLoop(input.unsavedFileDialogRef, input.pendingFileOriginRef, input.pendingFileAction !== undefined);
   useDialogFocusLoop(input.compatibilityDialogRef, input.pendingFileOriginRef, input.compatibilityPreview !== undefined);

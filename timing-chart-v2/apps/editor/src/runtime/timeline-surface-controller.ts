@@ -686,6 +686,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       if (signalMore?.dataset.treeSignalId) {
         event.preventDefault();
         event.stopPropagation();
+        menuOriginRef.current = signalMore;
         const signalId = signalMore.dataset.treeSignalId as SignalId;
         selection.selectSignal(signalId);
         setContextMenu({ x: event.clientX, y: event.clientY, target: "signal" });
@@ -695,6 +696,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       if (groupMore?.dataset.groupId) {
         event.preventDefault();
         event.stopPropagation();
+        menuOriginRef.current = groupMore;
         const groupId = groupMore.dataset.groupId as GroupId;
         selection.selectGroup(groupId);
         setContextMenu({ x: event.clientX, y: event.clientY, target: "group" });

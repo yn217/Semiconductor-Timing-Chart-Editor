@@ -273,6 +273,10 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
       ? [...globalThis.document.querySelectorAll<HTMLButtonElement>("[data-testid='ribbon'] button")].find((button) => button.textContent?.trim() === "More") ?? null
       : null;
     input.renameDialogOriginRef.current = input.menuOriginRef.current ?? homeOverflowTrigger ?? active;
+    // Rename replaces the menu with a modal. Transfer focus ownership to
+    // the dialog hook so the closing menu's generic restoration effect does
+    // not steal focus back while the dialog is open.
+    input.menuOriginRef.current = null;
     input.setRenameDraft(current);
     input.setRenameError("");
     input.setRenameDialogOpen(true);

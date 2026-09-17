@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import type { RefObject } from "react";
 
-export function useDialogFocusLoop<T extends HTMLElement>(dialogRef: RefObject<T | null>, restoreFocusRef?: RefObject<HTMLElement | null>, enabled = true) {
+export function useDialogFocusLoop<T extends HTMLElement>(dialogRef: RefObject<T | null>, restoreFocusRef?: RefObject<HTMLElement | null>, enabled = true, resolveRestoreTarget?: (previous: HTMLElement | null) => HTMLElement | null) {
   useEffect(() => {
     if (!enabled) return undefined;
     const dialog = dialogRef.current;
@@ -23,8 +23,9 @@ export function useDialogFocusLoop<T extends HTMLElement>(dialogRef: RefObject<T
     dialog.addEventListener("keydown", onKeyDown);
     return () => {
       dialog.removeEventListener("keydown", onKeyDown);
-      if (previous?.isConnected) requestAnimationFrame(() => previous.focus());
+      const target = resolveRestoreTarget?.(previous) ?? previous;
+      if (target?.isConnected) requestAnimationFrame(() => target.focus({ preventScroll: true }));
       if (restoreFocusRef?.current === previous) restoreFocusRef.current = null;
     };
-  }, [dialogRef, restoreFocusRef, enabled]);
+  }, [dialogRef, restoreFocusRef, enabled, resolveRestoreTarget]);
 }
