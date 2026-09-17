@@ -98,4 +98,30 @@ describe("TimelineGeometryOwner", () => {
     owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
     expect(owner.sourceWindowForLocalRange(document, 50_000, 50_100)).toEqual({ start: 49_998, end: 52_046 });
   });
+
+  it("projects off-window source boundaries from the shared ruler geometry", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 31 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle * 5, y: 0 } })));
+    const document = {
+      ...cycleDocument,
+      timeline: { ...cycleDocument.timeline, cycleCount: 100, end: 100 },
+      timeGroups: [{ id: "off-window-fold" as never, name: "Fold", start: 40, end: 60, presentation: { collapsed: true, foldStyle: "axis-break" as const, foldLabel: "GAP" } }],
+    };
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => document,
+      getProjection: () => ({ rowLayout: [{ rowId: clockId, kind: "timing", visible: true, y: 0 }] } as never),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1, 5, 13);
+
+    const displayCycle = owner.displayMapping.sourceToDisplay[70];
+    expect(displayCycle).toBeDefined();
+    expect(geometry.find({ signalId: clockId, cycle: 70, point: "cycle-start" })).toBeUndefined();
+    expect(owner.sourceBoundaryToLocalX(document, 70)).toBe(13 + displayCycle! * 5);
+    // Folded source cycles use displayBoundaryForSource's established shared
+    // mapping semantics rather than a Transaction-local projection.
+    expect(owner.sourceBoundaryToLocalX(document, 50)).toBe(13 + owner.displayMapping.sourceToDisplay[60]! * 5);
+  });
 });
