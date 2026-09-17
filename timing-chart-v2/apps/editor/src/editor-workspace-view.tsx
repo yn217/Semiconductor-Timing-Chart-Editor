@@ -211,8 +211,13 @@ export function EditorWorkspaceView({
           as a stray vertical line bleeding through the Tree's content. */}
       {viewMode === "Cycle" && <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={frozenPaneMinWidth} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onKeyDown={onFrozenPaneKeyDown} onPointerDown={onFrozenPanePointerDown} onPointerMove={onFrozenPanePointerMove} onPointerUp={onFrozenPanePointerUp} onPointerCancel={onFrozenPanePointerUp} />}
       {header}
+      {/* The standalone Transaction Tree is a fixed sidebar, not scrollable
+          time content. Keep it structurally outside the horizontal viewport
+          so scrolling the ruler/bars cannot move Group and Transaction
+          identity labels away from their tracks. Combined keeps its own
+          nested Tree inside the shared viewport below. */}
+      {viewMode === "Transaction" && transactionTree}
       <div className={`cycle-viewport${viewMode === "Split" ? " split-signal-pane" : ""}`} ref={viewport} data-testid="cycle-viewport" data-pane={viewMode === "Split" ? "signal" : undefined} tabIndex={0} aria-label="Timing canvas navigation" onKeyDown={onViewportKeyDown}>
-        {viewMode === "Transaction" && transactionTree}
         {viewMode === "Split" && <div className="split-transaction-pane" data-pane="transaction" tabIndex={0} aria-label="Transaction pane">{transactionTree}{viewportContent}</div>}
         {viewMode === "Split" && <div className="combined-split-divider" data-testid="combined-split-divider" role="separator" aria-label="Resize Transaction and Cycle panes" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(signalSplitRatio * 100)} tabIndex={0} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} onPointerCancel={onSignalSplitPointerUp} />}
         <div className={`split-signal-content${viewMode === "Split" ? "" : " non-split-signal-content"}`}>
