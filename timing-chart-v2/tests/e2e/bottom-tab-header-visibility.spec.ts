@@ -73,6 +73,10 @@ test("keeps every configured Bottom tab header visible and switchable", async ({
 test("keeps inactive/hover/active Bottom tabs legible under both color schemes (#391)", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/");
+  // Fresh startup defaults to Transaction mode, whose Bottom tabs are
+  // Transaction-specific. This contrast case exercises the Cycle Bottom
+  // tab strip, so select its production View Mode explicitly.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const tabList = page.getByTestId("bottom-tabs");
