@@ -1,300 +1,283 @@
 # Claude / Codex Issue Ownership
 
-Last reconciled: 2026-09-16 JST  
-Repository: `yn217/Semiconductor-Timing-Chart-Editor`  
-Current product branch: `main`  
-Observed main: `830432de6fe6db021289651ecccd29046618a6b5`  
+Last reconciled: 2026-09-18 JST
+Repository: `yn217/Semiconductor-Timing-Chart-Editor`
+Product branch: `main`
+Observed main: `2908001b3c8bc778a7eebf7fffca742e97d445b1`
 Authoritative Codex queue: `codex-control:.codex/ISSUE_ORDER.txt`
 
-Use two-agent development with **one active implementation owner per Issue**. Claude concentrates on visual/product behavior, real-browser journeys and independent review. Codex concentrates on architecture, semantic ownership, geometry/runtime correctness and measured performance.
+Use two-agent development with **one active implementation owner per Issue**.
 
-## Shared semantic architecture
+- **Codex**: architecture, semantic ownership, runtime/geometry correctness, bounded implementation, source tracing, measured performance.
+- **Claude**: independent real-browser QA, visual/product UX, accessibility journeys, adversarial PR verification, test-validity review, Product Decision evidence.
 
-Preserve:
+## Shared architecture contract
 
 ```text
 Canonical
 -> Semantic Commands / History
--> Projection
+-> Projection / Derived Geometry
 -> Renderer
 -> DOM
 ```
 
 Rules:
 - one logical mutation = one semantic operation = one History unit
-- stable opaque IDs; no array-index/name/DOM-order identity
-- view-only operations keep Canonical/History/Dirty delta = 0
-- `source time -> DisplayTimeMapping -> TimeAxisGeometry/LocalGeometry -> screen`
+- stable opaque IDs; no array-index/name/DOM-order semantic identity
+- view-only operations: Canonical/History/Dirty delta = 0
+- source time -> DisplayTimeMapping -> TimeAxisGeometry/LocalGeometry -> screen
 - DOM/ruler pixels are not semantic authority
-- no Golden/reference/threshold/mask weakening merely to pass
-- user-visible real-browser reproduction overrides narrower automated PASS
-- real pointer workflows require real browser pointer acceptance
+- user-visible real-browser repro overrides narrower automated PASS
+- no Golden/reference/threshold/mask weakening
+- real pointer workflows require real browser acceptance
 - do not reset/stash/clean/delete unrelated work
+- PR-branch PASS is not closure until the original journey is re-run on actual main
 
-# New GUI interaction architecture rule
+# CODEX — ACTIVE IMPLEMENTATION QUEUE
 
-The existing semantic pipeline remains authoritative. Add an explicit ownership rule for GUI interaction:
-
-```text
-User input
--> passive View emits typed UI intent/event
--> bounded local Mediator/Controller handles or delegates upward
--> explicit interaction state transition
--> Semantic Command OR workspace/view-state update
--> Projection
--> passive View render
-```
-
-Conceptual hierarchy may look like:
-
-```text
-AppRootMediator
-├─ WorkspaceMediator
-│  ├─ CycleMediator
-│  ├─ TransactionMediator
-│  └─ CombinedMediator
-├─ Selection/Focus owner
-├─ Inspector owner
-├─ Bottom owner
-└─ Modal/Overlay owner
-```
-
-This is a responsibility model, not a required class naming scheme.
-
-## Passive View rule
-A component may render explicit state, emit typed intent, and own purely local ephemeral visual state such as hover/animation/DOM refs. It must not directly mutate a peer View, become a second semantic owner, or control cross-surface mode/visibility/selection outside the owning mediator/controller.
-
-## Event ownership rule
-One event/gesture has one authoritative owner. Local owners may consume or delegate/bubble upward. Avoid unordered peer-to-peer event broadcasts where multiple surfaces independently mutate shared interaction state.
-
-## State-machine rule
-High-risk interactions such as drag/resize/connect/pan/modal/restoring/AI preview should use explicit bounded states/transitions where current evidence shows distributed flags/timers can race. Do not centralize harmless local state into a global god object.
-
-## Async rule
-Async results publish only if the current semantic freshness **and** owner/state/generation are still valid. Preserve #606-style stale-result protection and apply the pattern to analogous proven races.
-
-Authoritative implementation Issue: **#615**.
-
-# CODEX OWNERSHIP
-
-Codex should concentrate on **architecture / semantic command / geometry/runtime ownership / performance / bounded core implementation**.
-
-## X1. #614 — P0 Cycle waveform per-signal scale mismatch — ACTIVE FIRST
+## X1. #639 — Cycle-mode Transaction creation leaves invalid Bottom state — ACTIVE FIRST
 
 Owner: **Codex**
 
-Current evidence shows two signals in the same bounded visible source window can have different native WaveDrom viewBox widths but are stretched into the same shared CSS width, producing different px-per-cycle scales.
+Current main still reproduces the product bug. PR #654/test work does not fix the production route.
 
 Required:
-- shared source-cycle boundaries remain the semantic authority
-- all signals in one visible source window align to the same approved Cycle presentation geometry
-- do not disable bounded rendering
-- do not add a separate fixed `cycle * px` semantic truth
-- test near cycle 0 and scrolled/windowed ranges
-- after implementation, hand off to Claude for independent visual/browser verification
+- reproduce through visible Cycle UI
+- trace mode/context/Bottom-tab ownership
+- fix real behavior, not only test setup
+- view-only context transitions must not mutate Canonical/History/Dirty
+- re-run exact real-browser journey after merge on main
 
-## X2. #615 — Passive View + hierarchical Mediator/state-machine ownership
-
-Owner: **Codex**
-
-Start with an ownership audit; do not big-bang rewrite.
-
-Priorities:
-1. identify direct cross-component/cross-mode state mutation and ambiguous event owners
-2. document/classify ownership
-3. add architecture checks where practical
-4. migrate only proven high-risk paths incrementally
-5. retain the existing Semantic Command/History pipeline
-
-Important:
-- no giant Root god-object
-- no framework rewrite
-- no moving local hover/animation state into global state
-- each bounded migration gets focused tests + browser acceptance where applicable
-
-## X3. #612 — Hidden Cycle paint vs shared geometry at Transaction startup
+## X2. #676 — Annotation Canvas -> Inspector synchronization
 
 Owner: **Codex**
 
-Separate shared time geometry required by Transaction from hidden Cycle SVG paint. Hidden Cycle paint must not block Transaction first-useful paint, while later Cycle/Combined entry still works and shared geometry authority remains single-source.
+Real drag moves the Annotation handle, but Inspector anchor-X remains stale.
 
-Use #615 ownership rules rather than introducing ad-hoc lazy flags/timers.
+Trace:
+```text
+pointer drag
+-> interaction owner
+-> semantic/canonical anchor commit
+-> History
+-> selected stable Annotation ID
+-> Inspector/Bottom projection invalidation
+```
 
-## X4. #593 — Cycle / Transaction / Combined workspace ownership isolation
+Acceptance includes one drag = one semantic operation, Undo/Redo exact, Save/Open exact, no re-selection needed to refresh Inspector.
 
-Owner: **Codex**
-
-Continue explicit presentation-owner separation:
-- standalone Cycle presentation state independent
-- standalone Transaction presentation state independent
-- Combined owns one horizontal semantic-time viewport
-- independent vertical state allowed
-- mode switch remains view-only
-
-Consume #615 architecture rather than duplicating interaction owners.
-
-## X5. #599 — Transaction startup/reload performance closure
+## X3. #651 — Dialog focus restoration
 
 Owner: **Codex**
 
-Re-measure after #612. Remove only proven duplicate/nonessential work. Preserve readiness correctness, Save/Open and later mode entry. Report phase order/build counters and real-browser timings rather than best-case-only claims.
+Important correction: broad focus-visible styling is **not broken**. Real Tab/Shift+Tab shows working focus indicators on sampled controls.
 
-# CLAUDE OWNERSHIP
+Remaining bug only:
+- dialog close should restore focus to the invoking control when still valid
+- otherwise explicit deterministic fallback
+- preserve working dialog focus trap
+- verify Cancel / Apply / Escape, especially Bulk Signal Registration
 
-Claude should concentrate on **GUI / visual-product behavior / real-browser acceptance / adversarial review**.
+Do not add an app-wide focus-ring override for the earlier false-positive observation.
 
-## C1. #613 — Cycle-only v8 Inspector acceptance setup — ACTIVE FIRST
+## X4. #650 — Transaction selection minimal reveal
+
+Owner: **Codex**
+
+Current behavior resets horizontal scroll to 0 irrespective of selected Transaction position.
+
+Implement:
+- already visible -> no scroll
+- off-screen -> minimal reveal from semantic start/end and current viewport
+- no blind reset to 0
+- view-only zero delta
+
+## X5. #624 — Cycle restore/mode-entry projection completeness
+
+Owner: **Codex**
+
+PR #670 is independently verified PASS:
+- 6/6 restored annotations via Transaction -> Cycle
+- 6/6 via Combined -> Cycle
+- mode persists across reload
+- view-only invariants preserved
+
+Coordinate safe rebase/merge; #636 is superseded. Closure only after main re-Acceptance.
+
+## X6. #646 — Transaction fixed Tree during horizontal scroll
+
+Owner: **Codex**
+
+PR #652 independently PASS. Land/rebase, then main re-Acceptance with real scrollbar drag at both target viewports.
+
+Scope:
+- fixed left Tree / timeline-only horizontal movement
+- #647 separately owns Tree/Lane Y correspondence
+- #650 separately owns selection reveal
+
+## X7. #632 — first Signal selection full replace
+
+Owner: **Codex**
+
+QA isolation:
+- idle wait: no flush
+- Bottom/Inspector unrelated interactions: no flush
+- first Signal selection: all visible signals rerender
+- fullReplaceCalls/fullReplaceEpochResets +1
+- cache hits 0 / all visible misses
+- repeat Signal selection: no recurrence
+- public refresh-reason fields do not expose the cause
+
+Source-trace who performs full replace/epoch reset and why first selection triggers it. Fix ownership/invalidation if unnecessary; do not mask with memoization alone.
+
+## X8. #615 — Passive View / Mediator ownership
+
+Owner: **Codex**
+
+Continue incrementally. Use concrete issues #639/#676/#651/#632 as ownership examples. No big-bang framework rewrite or giant root god-object.
+
+## X9. #593 — mode presentation isolation
+
+Owner: **Codex**
+
+Maintain separate standalone Cycle/Transaction presentation ownership; Combined keeps one authoritative horizontal semantic-time owner.
+
+## X10. #599 — startup/reload performance
+
+Owner: **Codex**
+
+Re-measure after correctness work. Optimize only measured avoidable work and preserve readiness correctness, Save/Open and lazy mode entry.
+
+# CLAUDE — ACTIVE REVIEW / DISCOVERY QUEUE
+
+## C1. Main-branch merge monitor — ACTIVE FIRST
+
+Owner: **Claude QA**
+
+At each cycle:
+1. compare main HEAD to previous observation
+2. identify newly merged PRs
+3. re-run the original reported real-browser journey on actual main
+4. close/recommend close only after main evidence
+5. distinguish stale Vite/HMR/long-session artifacts using fresh tab/server restart
+
+Priority merge candidates currently awaiting main confirmation:
+- #670 / #624
+- #652 / #646
+- #668 + #669 integration
+- #660 / #671
+
+## C2. #635 — Signal Bottom UX / Draft-Apply review
+
+Owner: **Claude reviewer/product QA**
+
+Continue table-first workflow review:
+- Add vs Edit clarity
+- Generator disclosure
+- Follow Selection / Pin
+- Delete scope
+- Draft / Apply / Cancel
+- long-list usability at 1280x720
+
+Known sub-fix:
+- PR #668 fixes binary-signal phantom dirty and is independently PASS.
+- PR #669 disclosure/collapse is independently PASS.
+- They overlap in one code path; after reconciliation/merge run one combined acceptance journey.
+
+Claude does not independently implement the semantic fix without handoff.
+
+## C3. #631 — Transaction visual hierarchy
 
 Owner: **Claude**
 
-This is a test/acceptance setup defect: startup can be Transaction mode while the target Cycle-only row exists under a hidden Cycle surface.
+Keep scope visual:
+- Bookmark prominence vs structural Transaction/Phase boundaries
+- default / hover / selected hierarchy
+- do not re-open the disproven global focus-visible theory
+- collect evidence; product/design owner decides final visual policy
 
-Required:
-- enter Cycle through the visible Production selector
-- retain current v8 assertions
-- no production behavior change
-- no force-click / hidden-surface shortcut
-- no Golden/threshold/mask changes
+## C4. #647 — Tree/Lane correspondence Product Decision
 
-Close with focused Chromium evidence.
+Owner: **Claude evidence / product review**
 
-## C2. #614 — independent review after Codex lands the fix
+Current evidence:
+- Tree = Group/Transaction hierarchy
+- Timeline = Lane packing
+- exact 1:1 Y alignment is not structurally true
+- Tree selection already highlights corresponding Lane/bar
 
-Reviewer: **Claude**, implementation owner remains Codex until handoff.
+Gather representative cases (same Lane multiple Transactions, multiple Lanes, groups, collapse/expand). Do not silently choose a model.
 
-After Codex pushes #614:
-- verify CLOCK/data/square-wave alignment at cycle 0
-- scroll into bounded windows (including ~150+ in a long document)
-- check ruler/grid/waveform correspondence
-- test 1672x941 and 1280x720 where practical
-- reproduce user-visible behavior rather than trusting viewBox assertions alone
+## C5. #677 — Pinned Annotation Bottom routing
 
-If failure remains, update #614; do not start a parallel implementation without ownership handoff.
+Owner: **Claude product/GUI review first**
 
-## C3. #554 — Independent fresh-document User Journey re-audit
+PR #664 revealed:
+- Pin itself stays engaged
+- Bottom routes to single-item Annotation editor rather than expected collection/list surface
+- test expects collection Delete action
+
+Clarify intended collection-vs-detail routing and Delete scope under #426. After decision, hand bounded implementation to Codex if needed.
+
+## C6. #431 / #426 / #441 / #554 — continuing exploratory review
 
 Owner: **Claude**
 
-Use Production GUI from New/generic documents; sample fixtures are not authoring proof.
+When implementation queues are waiting:
+- Cycle / Transaction / Combined real-user journeys
+- Bottom/Inspector context synchronization
+- selection/reveal/scroll
+- accessibility with real keyboard input
+- Ribbon density/adaptive behavior
+- MiniMap
+- 1280x720 and 1672x941
+- console/page errors
+- hidden-mode stale state
+- visual settling / first-correct-paint
+- test validity (pre-fix FAIL -> fix PASS where practical)
 
-Priority journeys:
-- build usable Transaction workspace from scratch
-- Group/Lane/Phase/Linked Signal lifecycle
-- Undo/Redo + Save/Open
-- Cycle -> Transaction -> Cycle
-- Transaction -> Combined -> Transaction
-- Combined same-source-time correspondence
+Create bounded child Issues for independent defects rather than expanding epics indefinitely.
 
-When a concrete defect is found:
-- reproduce twice where practical
-- search existing Issue
-- update it or create one bounded child Issue
-- do not bury unrelated implementation inside #554
+# PR / QA COORDINATION NOTES
 
-## C4. #431 — Structured GUI/UX exploratory review
+## Verified PASS
+- PR #668: #635 binary phantom-dirty fix
+- PR #669: Generator disclosure/collapse
+- PR #670: #624 restore/mode persistence
+- PR #660: two-viewport evidence
+- PR #671: geometry manifest
+- PR #652: #646 fixed Transaction Tree
 
-Owner: **Claude for discovery/review**
+## Coordination / blockers
+- #668 and #669 overlap in the same function; rebase/reconcile before second merge and run combined acceptance.
+- PR #667 exposes real product bug #676; test failure is meaningful.
+- PR #664 exposes product/routing gap #677; do not merely rename/fake the expected toolbar.
+- PR #654 does not fix current-main #639 behavior.
+- PR #665 looked logically sound but QA could not find a live production path to verify; confirm reachability before relying on it.
+- PR #673 failures were split correctly: several depend on #670 timing fix, one test-authoring mismatch, one real overlapping-Annotation click-interception observation. Keep causes separate.
 
-Run Cycle / Transaction / Combined at 1672x941 and 1280x720. Exercise actual operations across Ribbon, left tree, center, Bottom, Inspector, MiniMap and Status.
+# RECENTLY CLOSED / CORRECTED RECORD
 
-Important new review lens from #615:
-- does a View directly control another View?
-- does a hidden surface still influence visible state?
-- are conflicting inputs arbitrated by one owner?
-- does rapid input/cancel/mode switch reveal implicit-state races?
+- #627 CLOSED: Add Phase semantic commit fixed and previously re-verified.
+- #628 CLOSED: main re-Acceptance confirms single Annotation Bottom scroll owner, stable list width, Inspector-only detail editing at both target viewports.
+- #629 / #630 CLOSED after main verification.
+- Earlier claim that Grid/MiniMap/Snap/Ruler accessible names were all `"on"` was a tooling artifact; authoritative role/name checks show distinct names.
+- Earlier broad focus-visible claim in #651 was also a methodology artifact: programmatic `.focus()` is not equivalent to real keyboard `:focus-visible`. Real Tab navigation passes on sampled controls.
 
-Create bounded child Issues for concrete findings. Avoid giant catch-all fixes under #431.
+# PRODUCT DECISION / HOLD
 
-## C5. #426 — Bottom Panel UX / interaction review
+- #647: Tree/Lane correspondence model — evidence gathering only until explicit decision.
+- #611: role-column contract conflict — no silent Golden/reference change.
+- #415: explicitly skipped until user re-enables.
+- #272: external CI runner/billing allocation block; do not loop.
 
-Owner: **Claude for product/GUI review and bounded child triage**
-
-Review Signal / Annotation / Bookmarks / Transaction / Problems / JSON workflows and Inspector synchronization.
-
-Apply #615 review rule:
-- Bottom and Inspector must not be peer semantic owners
-- cross-surface selection/draft conflicts must route through explicit ownership
-- local drafts may remain local, but Apply document changes must use Semantic Commands
-
-If implementation-heavy architectural work is found, create a bounded child Issue and assign Codex only after ownership is updated here.
-
-## C6. #441 — Adaptive high-density Ribbon visual/product review
-
-Owner: **Claude for GUI/product review**
-
-Verify high-density Home/View/contextual Ribbon behavior at wide/narrow viewports, overflow/compact behavior, accessibility names, keyboard access and no broken labels.
-
-Ribbon remains presentation/composition owner; it must not become a semantic or cross-surface interaction owner.
-
-# PRODUCT DECISION HOLD
-
-## #611 — v8 role-column width: 28px reference vs 44px production
-
-Current focused evidence reports 28px expected vs 44px production. This requires an explicit product decision.
-
-- Claude may collect side-by-side screenshots/geometry evidence and summarize trade-offs.
-- Neither Claude nor Codex should silently change the approved reference contract or Golden assets.
-- After user/product decision, assign one implementation owner.
-
-# PRODUCT / REFERENCE / EXTERNAL
-
-- **#570** remains the current cross-feature product specification authority.
-- **#569** remains the AI subscription/external-agent product policy. Local/provider-independent policy/runtime acceptance may proceed; unavailable external-agent E2E must not block unrelated work.
-- **#272** remains external GitHub Actions runner allocation/billing/policy block. Do not repeatedly poll/retry it as productive work.
-- **#415** remains explicitly skipped until the user re-enables it.
-- **#411** TimeGroup Epic may receive review/acceptance work that does not silently reactivate #415.
-- **#177** parity remains a closure/audit owner; green `check:parity` alone is not full Product Acceptance.
-
-# RECENTLY CLOSED / PRESERVE
-
-Do not keep these in active queues unless a new regression is reproduced:
-
-- #604 Transaction large/fold geometry
-- #556 Transaction drag local-preview/performance
-- #606 stale same-epoch waveform render rejection
-- #607 Cycle scroll pitch regression
-- #608 terminal ruler click off-by-one
-- #609 Bookmark test mismatch
-- #587 / #573 / #552 recorded large-browser acceptance closures
-
-# COLLISION / HANDOFF POLICY
+# HANDOFF / COLLISION POLICY
 
 1. One Issue = one active implementation owner.
-2. Before starting, read latest `origin/main`, Issue body and latest comments.
-3. Before editing a shared owner/module, check whether the other agent is likely touching the same file/hunk.
-4. If same-hunk collision exists, dependency owner lands first; reviewer works elsewhere.
-5. Commit/push bounded logical changes frequently.
-6. Add implementation/evidence to the owning Issue.
-7. Independent review uses Production GUI and user-visible journeys, not just implementer-authored tests.
-8. A review finding becomes a bounded Issue rather than an untracked side-fix when it crosses ownership/scope.
-9. A blocked/acceptance-only Issue does not end an autonomous run; continue to another independent task.
-
-# Recommended parallel start
-
-```text
-Codex : #614 P0 waveform alignment
-Claude: #613 Cycle-mode GUI-reference acceptance
-```
-
-Then:
-
-```text
-Codex : #615 ownership audit/foundation
-Claude: #554 fresh-document Journey audit + #614 independent visual verification after handoff
-```
-
-Then:
-
-```text
-Codex : #612 -> #593 -> #599
-Claude: #431 exploratory GUI review -> #426 Bottom review -> #441 Ribbon review
-```
-
-# What changed in this reconciliation
-
-- Removed stale queue entries that are now closed.
-- Promoted current P0 #614 to Codex first.
-- Added #615 to turn Passive View / hierarchical Mediator / explicit state-machine guidance into a bounded architecture task rather than a vague refactor mandate.
-- Assigned hidden-surface startup #612 and mode isolation #593 behind that ownership foundation.
-- Recast Claude as the independent GUI/journey reviewer with explicit review lenses for direct View-to-View mutation, hidden-surface ownership and rapid-input state races.
-- Kept #611 on product-decision hold rather than allowing either agent to silently redefine the visual contract.
+2. Read latest main + Issue/comments + open PR before work.
+3. If another agent touches the same file/hunk, coordinate before editing.
+4. Claude may create scratch tests for QA but removes them after evidence gathering unless intentionally committed.
+5. Codex should not convert Claude-owned product questions into implementation decisions.
+6. Claude should not take over Codex implementation Issues without explicit handoff.
+7. Repeated blocker becomes a bounded Issue; do not endlessly rerun the same command.
+8. A merge/green test is not completion without the required main-branch user journey.
