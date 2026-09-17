@@ -89,6 +89,11 @@ function phasesEqual(left: readonly TransactionPhase[], right: readonly Transact
   });
 }
 
+function nextTransactionPhase(phases: readonly { readonly name: string; readonly start: number; readonly end: number }[], start: number, end: number): { readonly name: string; readonly start: number; readonly end: number } | undefined {
+  const nextStart = Math.max(start, ...phases.map((phase) => phase.end));
+  return nextStart < end ? { name: `Phase ${phases.length + 1}`, start: nextStart, end: nextStart + 1 } : undefined;
+}
+
 const spacerId = (value: string) => value as SpacerId;
 
 function InspectorSpacerDraft({ spacer, onApply, onDelete }: { readonly spacer: SpacerRow; readonly onApply: (height: number) => void; readonly onDelete: () => void }) {
@@ -153,6 +158,11 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
   // the separate document-level JSON tab are unaffected; only this one
   // per-Transaction raw-text affordance is gone).
   const [phaseRows, setPhaseRows] = useState<{ name: string; start: number; end: number }[]>(() => (transaction?.phases ?? []).map((phase) => ({ ...phase })));
+  const canAddTransactionPhase = nextTransactionPhase(phaseRows, transactionStart, transactionEnd) !== undefined;
+  const addTransactionPhase = () => setPhaseRows((rows) => {
+    const phase = nextTransactionPhase(rows, transactionStart, transactionEnd);
+    return phase === undefined ? rows : [...rows, phase];
+  });
   const [transactionStatus, setTransactionStatus] = useState("");
   // Keep the draft owner mounted across unrelated commands, but refresh its
   // committed fields only when the selected Transaction itself changes. A
@@ -265,7 +275,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
             identity owner. */}
         <label>Lane<span className="inspector-field-with-help"><input aria-label="Transaction lane" list="transaction-lane-options" value={transactionLane} onChange={(event) => setTransactionLane(event.target.value)} /><datalist id="transaction-lane-options">{[...new Set(document.transactions.map((item) => item.laneId ?? "lane_0"))].sort().map((laneId) => <option key={laneId} value={laneId} />)}</datalist><span className="field-help" tabIndex={0} title="A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track." aria-label="About Lane">ⓘ</span></span></label>
       </InspectorSection>
-      <InspectorSection sectionId="phases" title="Phases" count={phaseRows.length} onAdd={() => setPhaseRows((rows) => { const last = rows.at(-1); const start = last ? last.end : transactionStart; return [...rows, { name: `Phase ${rows.length + 1}`, start, end: Math.min(start + 1, transactionEnd) }]; })} open={transactionSections.phases ?? true} onToggle={() => toggleTransactionSection("phases")}>
+      <InspectorSection sectionId="phases" title="Phases" count={phaseRows.length} onAdd={addTransactionPhase} addDisabled={!canAddTransactionPhase} open={transactionSections.phases ?? true} onToggle={() => toggleTransactionSection("phases")}>
         <div className="transaction-phase-editor" data-testid="transaction-phase-editor"><div className="transaction-phase-table">{phaseRows.length > 0 && <div className="transaction-phase-row transaction-phase-row-header" aria-hidden="true"><span>Phase</span><span>Start</span><span>End</span><span /><span /><span /></div>}{phaseRows.map((phase, index) => <div className="transaction-phase-row" key={index} data-phase-index={index}><input aria-label={`Phase ${index + 1} name`} value={phase.name} onChange={(event) => setPhaseRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, name: event.target.value } : row))} /><input aria-label={`Phase ${index + 1} start`} type="number" value={phase.start} onChange={(event) => setPhaseRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, start: Number(event.target.value) } : row))} /><input aria-label={`Phase ${index + 1} end`} type="number" value={phase.end} onChange={(event) => setPhaseRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, end: Number(event.target.value) } : row))} />
           {/* #454: Phase "Reorder" -- pure local draft-array reordering
               (swaps position only; Start/End values travel with the row),
@@ -275,7 +285,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
               for a fixed, predictable column count. */}
           <button type="button" aria-label={`Move phase ${index + 1} up`} disabled={index === 0} onClick={() => setPhaseRows((rows) => { const next = [...rows]; [next[index - 1], next[index]] = [next[index]!, next[index - 1]!]; return next; })}>↑</button>
           <button type="button" aria-label={`Move phase ${index + 1} down`} disabled={index === phaseRows.length - 1} onClick={() => setPhaseRows((rows) => { const next = [...rows]; [next[index], next[index + 1]] = [next[index + 1]!, next[index]!]; return next; })}>↓</button>
-          <button type="button" aria-label={`Delete phase ${index + 1}`} onClick={() => setPhaseRows((rows) => rows.filter((_, rowIndex) => rowIndex !== index))}>×</button></div>)}{phaseRows.length === 0 && <span className="inspector-note">No phases -- the whole Start..End span is one unnamed phase.</span>}</div><button type="button" data-testid="add-transaction-phase" onClick={() => setPhaseRows((rows) => { const last = rows.at(-1); const start = last ? last.end : transactionStart; return [...rows, { name: `Phase ${rows.length + 1}`, start, end: Math.min(start + 1, transactionEnd) }]; })}>Add Phase</button></div>
+          <button type="button" aria-label={`Delete phase ${index + 1}`} onClick={() => setPhaseRows((rows) => rows.filter((_, rowIndex) => rowIndex !== index))}>×</button></div>)}{phaseRows.length === 0 && <span className="inspector-note">No phases -- the whole Start..End span is one unnamed phase.</span>}</div><button type="button" data-testid="add-transaction-phase" disabled={!canAddTransactionPhase} title={!canAddTransactionPhase ? "No unused cycles remain. Extend the Transaction or shorten a Phase to add another." : undefined} onClick={addTransactionPhase}>Add Phase</button>{!canAddTransactionPhase && <span className="inspector-note" role="note">No unused cycles remain. Extend the Transaction or shorten a Phase to add another.</span>}</div>
       </InspectorSection>
       <InspectorSection sectionId="linked-signals" title="Linked Signals" count={transaction.linkedSignals?.length ?? 0} onAdd={() => {}} open={transactionSections["linked-signals"] ?? true} onToggle={() => toggleTransactionSection("linked-signals")}>
         <TransactionLinkedSignals transaction={transaction} document={document} onToggle={(signalId) => onToggleTransactionSignal(transaction.id, signalId)} renderUnlinkButton={(label, onClick) => <EditorIconButton label={label} icon="close" onClick={onClick} />} />

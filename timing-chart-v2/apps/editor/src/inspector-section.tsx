@@ -9,13 +9,13 @@ import { EditorIcon } from "./editor-icon.js";
  * real vertical space even with nothing in it. Both are optional so
  * every existing `InspectorSection` call site (which has neither) is
  * unaffected. */
-export function InspectorSection({ sectionId, title, open, onToggle, count, onAdd, children }: { readonly sectionId: string; readonly title: string; readonly open: boolean; readonly onToggle: () => void; readonly count?: number; readonly onAdd?: () => void; readonly children: ReactNode }) {
+export function InspectorSection({ sectionId, title, open, onToggle, count, onAdd, addDisabled = false, children }: { readonly sectionId: string; readonly title: string; readonly open: boolean; readonly onToggle: () => void; readonly count?: number; readonly onAdd?: () => void; readonly addDisabled?: boolean; readonly children: ReactNode }) {
   const contentId = `inspector-section-${sectionId}`;
   return <section className={`inspector-section${open ? " is-open" : " is-collapsed"}`} data-section-id={sectionId}>
     <h3 className="inspector-section-heading">
       <button type="button" className="inspector-section-toggle" aria-expanded={open} aria-controls={contentId} onClick={onToggle}><EditorIcon name={open ? "down" : "right"} />{title}</button>
       {count !== undefined && <span className="inspector-section-count" data-testid={`inspector-section-count-${sectionId}`}>{count}</span>}
-      {count !== undefined && !open && onAdd && <button type="button" className="inspector-section-add" aria-label={`Add to ${title}`} onClick={(event) => { event.stopPropagation(); if (!open) onToggle(); onAdd(); }}><EditorIcon name="plus" /></button>}
+      {count !== undefined && !open && onAdd && <button type="button" className="inspector-section-add" aria-label={`Add to ${title}`} disabled={addDisabled} title={addDisabled ? "No unused cycles remain. Extend the Transaction or shorten a Phase to add another." : undefined} onClick={(event) => { event.stopPropagation(); if (!open) onToggle(); onAdd(); }}><EditorIcon name="plus" /></button>}
     </h3>
     {open && <div id={contentId} className="inspector-section-content">{children}</div>}
   </section>;
