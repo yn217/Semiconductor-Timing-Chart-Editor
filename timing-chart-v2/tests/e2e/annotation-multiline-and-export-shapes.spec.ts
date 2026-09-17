@@ -11,9 +11,22 @@ import { expect, test } from "@playwright/test";
 // These tests assert the fixes at both layers: live DOM and exported SVG.
 
 async function addAnnotation(page: import("@playwright/test").Page, type: string) {
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Annotation", exact: true }).click();
+  const list = page.getByTestId("annotation-list");
+  const previousIds = new Set(await list.locator("[data-annotation-list-id]").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-annotation-list-id")).filter((id): id is string => id !== null)));
   await page.getByLabel("Annotation type").selectOption(type);
   await page.getByRole("button", { name: "Add annotation" }).click();
-  return page.getByTestId("cycle-surface").locator(`[data-role='annotation-owner'][data-annotation-type='${type}']`).last();
+  await expect.poll(async () => {
+    const ids = await list.locator("[data-annotation-list-id]").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-annotation-list-id")).filter((id): id is string => id !== null));
+    return ids.filter((id) => !previousIds.has(id)).length;
+  }).toBe(1);
+  const idsAfterCreate = await list.locator("[data-annotation-list-id]").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-annotation-list-id")).filter((id): id is string => id !== null));
+  const createdIds = idsAfterCreate.filter((id) => !previousIds.has(id));
+  expect(createdIds).toHaveLength(1);
+  const createdId = createdIds[0]!;
+  const owner = page.getByTestId("cycle-surface").locator(`[data-role='annotation-owner'][data-annotation-id='${createdId}'][data-annotation-type='${type}']`);
+  await expect(owner).toBeVisible();
+  return owner;
 }
 
 async function exportSvgText(page: import("@playwright/test").Page): Promise<string> {
@@ -33,6 +46,7 @@ test("Callout label holds real multi-line text in the live DOM and exported SVG"
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
 
@@ -64,6 +78,7 @@ test("Bracket's exported SVG carries its own cap marks, not a plain Range line",
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
 
@@ -85,6 +100,7 @@ test("Marker's exported SVG carries a vertical tick glyph, not an invisible zero
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
 
@@ -104,6 +120,57 @@ test("Marker's exported SVG carries a vertical tick glyph, not an invisible zero
   expect(Math.abs(Number(tick![4]) - Number(tick![2]))).toBeCloseTo(28, 0);
 });
 
+test("Marker and Bracket preserve stable identity and semantic anchors through Save/Open", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+
+  const marker = await addAnnotation(page, "marker");
+  const markerId = await marker.getAttribute("data-annotation-id");
+  expect(markerId).toBeTruthy();
+  const bracket = await addAnnotation(page, "bracket");
+  const bracketId = await bracket.getAttribute("data-annotation-id");
+  expect(bracketId).toBeTruthy();
+  expect(bracketId).not.toBe(markerId);
+
+  const save = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await save).path();
+  expect(savedPath).toBeTruthy();
+  const fs = await import("node:fs");
+  type SavedAnnotation = { id: string; type: string; label: string; anchor?: { signalId: string; cycle: number; point: string }; start?: { signalId: string; cycle: number; point: string }; end?: { signalId: string; cycle: number; point: string } };
+  const readSaved = () => JSON.parse(fs.readFileSync(savedPath!, "utf-8")) as { annotations: readonly SavedAnnotation[] };
+  const saved = readSaved();
+  const savedMarker = saved.annotations.find((annotation) => annotation.id === markerId);
+  const savedBracket = saved.annotations.find((annotation) => annotation.id === bracketId);
+  expect(savedMarker).toMatchObject({ id: markerId, type: "marker", anchor: { signalId: "sig_cycle_request" } });
+  expect(savedBracket).toMatchObject({ id: bracketId, type: "bracket", start: { signalId: "sig_cycle_request" }, end: { signalId: "sig_cycle_request" } });
+
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  const reopenedMarker = host.locator(`[data-role='annotation-owner'][data-annotation-id='${markerId}'][data-annotation-type='marker']`);
+  const reopenedBracket = host.locator(`[data-role='annotation-owner'][data-annotation-id='${bracketId}'][data-annotation-type='bracket']`);
+  await expect(reopenedMarker).toBeVisible();
+  await expect(reopenedBracket).toBeVisible();
+  const list = page.getByTestId("annotation-list");
+  await expect(list.locator(`[data-annotation-list-id='${markerId}']`)).toBeVisible();
+  await expect(list.locator(`[data-annotation-list-id='${bracketId}']`)).toBeVisible();
+
+  const saveAgain = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const reopenedPath = await (await saveAgain).path();
+  expect(reopenedPath).toBeTruthy();
+  const reopenedDocument = JSON.parse(fs.readFileSync(reopenedPath!, "utf-8")) as { annotations: readonly SavedAnnotation[] };
+  expect(reopenedDocument.annotations.find((annotation) => annotation.id === markerId)).toEqual(savedMarker);
+  expect(reopenedDocument.annotations.find((annotation) => annotation.id === bracketId)).toEqual(savedBracket);
+});
+
 // #377 parity evidence: the contract's `saveOpen` field said only
 // "primitive lifecycle Save/Open is covered generically" -- there was no
 // test proving a multi-line label (this issue's own headline fix: a plain
@@ -113,6 +180,7 @@ test("Callout's multi-line label survives a real Save/Open round trip, in both t
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
 
