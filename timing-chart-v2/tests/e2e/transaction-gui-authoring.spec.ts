@@ -70,7 +70,8 @@ test("builds six transactions through normal GUI selection transitions", async (
   await expect(inspector.getByTestId("linked-signal-list")).toContainText("REQUEST");
 });
 
-test("authored transaction keeps its stable ID through one edit Undo/Redo, mode roundtrip, and Save/Open", async ({ page }) => {
+test("authored transaction keeps its stable ID through one edit Undo/Redo, mode roundtrip, and Save/Open", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.getByRole("button", { name: "New", exact: true }).click();
@@ -127,4 +128,8 @@ test("authored transaction keeps its stable ID through one edit Undo/Redo, mode 
   await reopenedRow.click();
   await expect(inspector.getByLabel("Transaction lane", { exact: true })).toHaveValue("lane_authored");
   await expect(surface).toHaveAttribute("data-editor-idle", "true");
+  await page.screenshot({ path: testInfo.outputPath("transaction-new-authoring-1672x941.png"), fullPage: true });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await expect(reopenedRow).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("transaction-new-authoring-1280x720.png"), fullPage: true });
 });
