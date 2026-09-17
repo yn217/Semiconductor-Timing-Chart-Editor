@@ -11,12 +11,12 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
 
     const collection = page.getByTestId("annotation-collection");
     const list = page.getByTestId("annotation-list");
+    const bottomContent = page.locator("#bottom-context-content");
     await expect(collection).toBeVisible();
     await expect(list).toHaveAttribute("aria-rowcount", "17");
     await expect(page.getByTestId("create-annotation-preset")).toBeVisible();
-    await expect(page.getByTestId("annotation-editor")).toHaveCount(0);
+    await expect(bottomContent.getByTestId("annotation-editor")).toHaveCount(0);
 
-    const bottomContent = page.locator("#bottom-context-content");
     const initialScroll = await list.evaluate((element) => ({ top: element.scrollTop, height: element.scrollHeight, viewport: element.clientHeight }));
     expect(initialScroll.height).toBeGreaterThan(initialScroll.viewport);
     const listBox = await list.boundingBox();
@@ -49,20 +49,22 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     const dirty = await page.getByTestId("dirty-status").innerText();
     await firstRow.click();
     await expect(firstRow).toHaveAttribute("data-selected", "true");
-    await expect(page.getByRole("textbox", { name: "Inspector annotation label" })).toHaveValue(firstLabel);
+    await expect(page.getByRole("textbox", { name: "Annotation label", exact: true })).toHaveValue(firstLabel);
     const after = await bottomContent.evaluate((element) => {
       const box = element.getBoundingClientRect();
       return { x: box.x, width: box.width, height: box.height };
     });
     expect(after).toEqual(before);
-    await expect(page.getByTestId("annotation-editor")).toHaveCount(0);
+    await expect(bottomContent.getByTestId("annotation-editor")).toHaveCount(0);
 
-    const inspectorLabel = page.getByRole("textbox", { name: "Inspector annotation label" });
+    const inspectorLabel = page.getByRole("textbox", { name: "Annotation label", exact: true });
     await inspectorLabel.fill("unapplied draft from prior selection");
+    await page.getByTestId("annotation-preview-action").click();
+    await expect(page.getByTestId("annotation-preview-status")).toContainText("canonical data unchanged");
     const secondLabel = await secondRow.locator(".annotation-list-label").innerText();
     await secondRow.click();
     await expect(secondRow).toHaveAttribute("data-selected", "true");
-    await expect(page.getByRole("textbox", { name: "Inspector annotation label" })).toHaveValue(secondLabel);
+    await expect(page.getByRole("textbox", { name: "Annotation label", exact: true })).toHaveValue(secondLabel);
     expect(await bottomContent.evaluate((element) => {
       const box = element.getBoundingClientRect();
       return { x: box.x, width: box.width, height: box.height };
@@ -72,8 +74,8 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
 
     await firstRow.click();
-    await page.getByRole("textbox", { name: "Inspector annotation label" }).fill("Inspector-applied label");
-    await page.getByTestId("apply-inspector-annotation").click();
+    await page.getByRole("textbox", { name: "Annotation label", exact: true }).fill("Inspector-applied label");
+    await page.getByTestId("apply-annotation-properties").click();
     await expect(host).toHaveAttribute("data-editor-idle", "true");
     await expect(firstRow.locator(".annotation-list-label")).toHaveText("Inspector-applied label");
     await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
@@ -84,9 +86,9 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
 
     const measurementRow = list.locator('[data-annotation-list-id="demo_ann_measurement"]');
     await measurementRow.click();
-    await expect(page.getByLabel("Inspector measurement profile")).toHaveValue("cycle");
-    await page.getByLabel("Inspector measurement profile").selectOption("30-70");
-    await page.getByTestId("apply-inspector-measurement").click();
+    await expect(page.getByLabel("Measurement profile")).toHaveValue("cycle");
+    await page.getByLabel("Measurement profile").selectOption("30-70");
+    await page.getByTestId("apply-measurement-semantics").click();
     await expect(host).toHaveAttribute("data-editor-idle", "true");
     await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
     await page.keyboard.press("Control+z");

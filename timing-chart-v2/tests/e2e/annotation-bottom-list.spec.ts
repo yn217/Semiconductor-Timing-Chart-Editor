@@ -10,7 +10,7 @@ test("Annotation Bottom keeps a stable collection while selection, import, and S
   const list = page.getByTestId("annotation-list");
   await expect(list).toHaveAttribute("aria-rowcount", "17");
   await expect(page.getByTestId("create-annotation-preset")).toBeVisible();
-  await expect(page.getByTestId("annotation-editor")).toHaveCount(0);
+  await expect(page.locator("#bottom-context-content").getByTestId("annotation-editor")).toHaveCount(0);
   await expect(list.locator(".annotation-list-header")).toContainText("Start");
   await expect(list.locator(".annotation-list-header")).toContainText("End");
   await expect(list.locator(".annotation-list-header")).toContainText("Label / Text");
@@ -33,8 +33,8 @@ test("Annotation Bottom keeps a stable collection while selection, import, and S
   const selectedRow = list.locator("[data-annotation-list-id]").nth(1);
   await selectedRow.click();
   await expect(selectedRow).toHaveAttribute("data-selected", "true");
-  await expect(page.getByRole("textbox", { name: "Inspector annotation label" })).toBeVisible();
-  await expect(page.getByTestId("annotation-editor")).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: "Annotation label", exact: true })).toBeVisible();
+  await expect(page.locator("#bottom-context-content").getByTestId("annotation-editor")).toHaveCount(0);
   await expect(host).toHaveAttribute("data-canonical-revision", revision!);
   await expect(page.getByTestId("history-status")).toHaveText(history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);

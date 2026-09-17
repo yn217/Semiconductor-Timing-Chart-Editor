@@ -568,6 +568,11 @@ export function useEditorSecondarySurfaces(
       }
     />
   );
+  const previewAnnotationDraft = useCallback((annotationId: AnnotationId, draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => {
+    const annotation = input.document.annotations.find((item) => item.id === annotationId);
+    if (!annotation) return;
+    refreshAnnotationPreview(refs.host.current!, annotationId, draft, { label: annotation.label, color: annotation.color, opacity: annotation.opacity });
+  }, [input.document.annotations, refs.host]);
   const workspaceInspector = (
     <InspectorPanel
       key={`${input.documentEpoch}:${selected.signalIds.size > 1 ? `multi:${selected.signalIds.size}` : (selected.signal?.id ?? selected.group?.id ?? selected.annotation?.id ?? selected.transaction?.id ?? selected.bookmark?.id ?? "none")}:${dialog.inspectorResetToken}`}
@@ -612,6 +617,7 @@ export function useEditorSecondarySurfaces(
               ?.style,
         )
       }
+      onAnnotationPreview={previewAnnotationDraft}
       minimapMode={
         workspace.viewMode === "Transaction" ? "transaction" : "signal"
       }
