@@ -303,7 +303,10 @@
   position: absolute;
   z-index: 18;
   top: 58px;
-  bottom: 0;
+  /* Keep the fixed Tree above the scrollable time content, but leave the
+     native horizontal scrollbar strip unobstructed so its thumb remains
+     directly draggable even when it is narrower than the Tree. */
+  bottom: 15px;
   left: 0;
   width: var(--gui-left-width);
   overflow: auto;
