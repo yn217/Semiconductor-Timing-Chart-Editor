@@ -25,6 +25,7 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
   const [suppressedPeriods, setSuppressedPeriods] = useState("");
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  const [generatorOpen, setGeneratorOpen] = useState(false);
   // Density fix (#402/#426 follow-up): a native <details>/<summary> still
   // reserves its own closed-state row even collapsed; a plain toggle button
   // sitting on the same line as the heading below costs nothing extra when
@@ -37,7 +38,7 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
     setStart(0); setInitial(0); setActive(1); setWidthMode("width");
     setWidth(1); setDuty(0.5); setPeriod(4); setRepeatMode("finite");
     setRepeatCount(1); setPhase(0); setSuppressedPeriods("");
-    setError(""); setStatus(""); setAdvancedOpen(false);
+    setError(""); setStatus(""); setAdvancedOpen(false); setGeneratorOpen(false);
   }, [signal.id]);
   const effectiveWidth = widthMode === "duty" ? Math.min(period - 1, Math.max(1, Math.round(duty * period))) : width;
   const resetDraft = () => { setStart(0); setInitial(0); setActive(1); setWidthMode("width"); setWidth(1); setDuty(0.5); setPeriod(4); setRepeatMode("finite"); setRepeatCount(1); setPhase(0); setSuppressedPeriods(""); setError(""); setStatus(""); setAdvancedOpen(false); };
@@ -55,9 +56,13 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
   return <div className="signal-generator">
     <div className="signal-generator-head">
       <h2>Generate Waveform</h2>
+      <button type="button" className="signal-generator-advanced-toggle" aria-expanded={generatorOpen} aria-controls="signal-generator-form" data-testid="signal-generator-disclosure" onClick={() => setGeneratorOpen((open) => !open)}>{generatorOpen ? "Hide Generator" : "Show Generator"}</button>
+    </div>
+    <div hidden={!generatorOpen}>
+    <div className="signal-generator-head">
       <button type="button" className="signal-generator-advanced-toggle" aria-expanded={advancedOpen} data-testid="signal-generator-advanced-toggle" onClick={() => setAdvancedOpen((open) => !open)}>{advancedOpen ? "Hide advanced" : "Advanced"}</button>
     </div>
-    <form className="signal-generator-form" aria-label="Signal Generator" noValidate onSubmit={(event) => {
+    <form id="signal-generator-form" className="signal-generator-form" aria-label="Signal Generator" noValidate onSubmit={(event) => {
       event.preventDefault();
       try {
         const parsedSuppressed = parseSuppressedPeriods(suppressedPeriods);
@@ -125,5 +130,6 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
         <button type="button" data-testid="cancel-signal-generator" onClick={resetDraft} disabled={!hasChanges}>Cancel</button><button type="submit" data-testid="apply-signal-generator" disabled={!hasChanges}>Generate</button>
       </div>
     </form>
+    </div>
   </div>;
 }
