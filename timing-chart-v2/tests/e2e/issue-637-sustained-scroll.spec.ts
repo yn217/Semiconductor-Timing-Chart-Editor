@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import path from "node:path";
 
 test("Cycle waveform stays populated during a real sustained horizontal scrollbar drag", async ({ page }) => {
   test.setTimeout(120_000);
@@ -6,8 +7,13 @@ test("Cycle waveform stays populated during a real sustained horizontal scrollba
   await page.goto("/");
   const surface = page.getByTestId("cycle-surface");
   await expect(surface).toHaveAttribute("data-editor-idle", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path.resolve(process.cwd(), "samples/acceptance-429/sample-transaction-mode-closure.tcd.json"));
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.getByTestId("transaction-left-tree-row-txn_read0")).toBeVisible();
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
-  await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+  const waveOwners = page.getByTestId("cycle-surface").locator("[data-role='wave-owner'][data-signal-id]");
+  await expect.poll(() => waveOwners.count()).toBeGreaterThanOrEqual(8);
+  await expect(page.getByTestId("wavedrom-status")).toHaveText("WaveDrom: Ready");
   await expect(surface).toHaveAttribute("data-editor-idle", "true");
   const baseline = {
     revision: await surface.getAttribute("data-canonical-revision"),
