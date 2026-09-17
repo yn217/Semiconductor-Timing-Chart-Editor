@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useMemo, useRef } from "react";
+import { startTransition, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import type { RefObject } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import { type Point } from "@timing-chart-v2/geometry";
@@ -437,15 +437,34 @@ export function MinimalCycleView() {
   // see timeline-surface-controller.ts) so the window reconciles at the
   // moment View Mode actually changes instead of leaking into later updates.
   const viewModeMounted = useRef(false);
+  const cyclePresentationGeneration = useRef(0);
+  useLayoutEffect(() => {
+    const cycleViewport = viewport.current;
+    if (!cycleViewport) return;
+    if (viewMode === "Transaction") delete cycleViewport.dataset.cyclePresentationReady;
+    else cycleViewport.dataset.cyclePresentationReady = "false";
+  }, [viewMode]);
   useEffect(() => {
-    if (!viewModeMounted.current) { viewModeMounted.current = true; return; }
-    forceUpperReprojectRef.current();
+    const firstView = !viewModeMounted.current;
+    viewModeMounted.current = true;
+    const generation = ++cyclePresentationGeneration.current;
+    if (viewMode === "Transaction") return;
+    if (!firstView) forceUpperReprojectRef.current();
     // #614 taught us the ruler and each wave-owner's window/width must be
     // reconciled together through the ruler's one authoritative rebuild --
     // reprojecting the wave owners alone (above) without also rebuilding the
     // ruler leaves the ruler's cached tick positions stale against the new
     // window, misaligning the grid/ruler from the waveform edges.
-    timelineRuntimeRef.current?.refreshRuler();
+    const runtime = timelineRuntimeRef.current;
+    if (!runtime) return;
+    runtime.refreshRuler();
+    void runtime.whenIdle().then(() => {
+      if (generation !== cyclePresentationGeneration.current || !viewport.current?.isConnected) return;
+      runtime.refreshRuler();
+      if (generation === cyclePresentationGeneration.current) {
+        viewport.current.dataset.cyclePresentationReady = "true";
+      }
+    });
   }, [viewMode]);
   useEffect(() => {
     refreshPlayhead.current();

@@ -62,6 +62,7 @@ export type TimelineViewportRuntime = Readonly<{
   refreshOverlays: () => void;
   onViewportScroll: () => void;
   onViewportResize: () => void;
+  whenIdle: () => Promise<void>;
 }>;
 
 export const MIN_TIMELINE_ZOOM = 0.5;
@@ -185,5 +186,6 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
     refreshOverlays: () => { assertActive(); if (!attached || !context.lifecycle.isCurrentEpoch(documentEpoch)) return; context.render.requestOverlayRefresh("overlays"); },
     onViewportScroll: () => { assertActive(); if (!attached || !context.lifecycle.isCurrentEpoch(documentEpoch)) return; context.render.requestRender("scroll"); },
     onViewportResize: () => { render("resize"); },
+    whenIdle: () => context.render.waitForRendererIdle(),
   };
 }

@@ -9,6 +9,13 @@
 
 .surface-host [data-role="wave-owner"] { width: var(--wave-width, 640px); pointer-events: none; }
 
+/* A Cycle/Combined mode switch can start a bounded waveform render before
+   the shared ruler geometry has finished reconciling every owner width.
+   Keep the previous/full-document SVG out of the visible frame until that
+   render is idle and the authoritative ruler pass has reapplied window
+   widths. This is readiness-gated, not a timed fade or render delay. */
+.cycle-viewport[data-cycle-presentation-ready="false"] [data-role="stable-waveform-surface"] { visibility: hidden; }
+
 .surface-host [data-role="wave-owner"] svg { display: block; overflow: visible; }
 
 .surface-host [data-role="stable-waveform-surface"] svg text { transform-box: fill-box; transform-origin: 50% 50%; scale: calc(1 / var(--presentation-x-scale, 1)) 1; }
