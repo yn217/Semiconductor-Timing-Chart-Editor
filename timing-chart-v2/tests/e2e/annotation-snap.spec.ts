@@ -370,7 +370,7 @@ test("creates standard and Custom Measurement profiles with explicit transition 
   await toolbar.getByLabel("Custom measurement end").fill("83");
   await selectRequestSignal(host);
   await toolbar.getByRole("button", { name: "Add annotation" }).click();
-  const customId = await page.getByTestId("annotation-editor").getAttribute("data-bottom-target-id");
+  const customId = await page.getByTestId("annotation-editor").getAttribute("data-annotation-id");
   expect(customId).toBeTruthy();
   const custom = host.locator(`[data-role='annotation-owner'][data-annotation-id='${customId}']`);
   await expect(custom).toHaveAttribute("aria-label", /17%→83%.*ratio/);
@@ -397,7 +397,7 @@ test("edits Measurement semantics with one history step and preserves them throu
   await toolbar.getByLabel("Annotation type").selectOption("measurement");
   await toolbar.getByTestId("measurement-profile").selectOption("30-70");
   await toolbar.getByRole("button", { name: "Add annotation" }).click();
-  const ownerId = await page.getByTestId("annotation-editor").getAttribute("data-bottom-target-id");
+  const ownerId = await page.getByTestId("annotation-editor").getAttribute("data-annotation-id");
   expect(ownerId).toBeTruthy();
   const owner = host.locator(`[data-role='annotation-owner'][data-annotation-id='${ownerId}']`);
   const editor = page.getByTestId("annotation-editor");

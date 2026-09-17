@@ -203,6 +203,7 @@ export type BottomEditorPanelProps<Tab extends string> = {
   readonly onTogglePinned: () => void;
   readonly summary?: ReactNode;
   readonly content: ReactNode;
+  readonly contentClassName?: string;
 };
 
 /** The Bottom Editor section: its tab strip (Signal/Annotation/Transaction/
@@ -210,7 +211,7 @@ export type BottomEditorPanelProps<Tab extends string> = {
  * the single active-tab content pane. Which editor renders for the active
  * tab is decided by the caller (it depends on the current selection across
  * several owners) and passed in as `content`. */
-export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelectTab, onTabKeyDown, followSelection, onFollowSelectionChange, pinned, onTogglePinned, summary, content }: BottomEditorPanelProps<Tab>) {
+export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelectTab, onTabKeyDown, followSelection, onFollowSelectionChange, pinned, onTogglePinned, summary, content, contentClassName }: BottomEditorPanelProps<Tab>) {
   return <section className="bottom-editor" data-testid="bottom-editor">
     <nav className="bottom-tabs" data-testid="bottom-tabs" role="tablist" aria-label="Bottom context panels">
       {tabs.map((tab) => {
@@ -229,7 +230,7 @@ export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelec
       <label><input data-testid="follow-selection" type="checkbox" checked={followSelection} onChange={(event) => onFollowSelectionChange(event.target.checked)} /> Follow Selection</label>
       <button type="button" data-testid="bottom-pin" aria-label={pinned ? "Unpin" : "Pin"} aria-pressed={pinned} onClick={onTogglePinned}><span className="bottom-pin-label" data-v1-label={pinned ? "Unpin" : "Pin"}>{pinned ? "Unpin" : "Pin"}</span></button>
     </nav>
-    <div className="bottom-content" id="bottom-context-content" role="tabpanel" aria-labelledby={`bottom-tab-${activeTab.toLowerCase()}`}>{content}</div>
+    <div className={`bottom-content${contentClassName ? ` ${contentClassName}` : ""}`} id="bottom-context-content" role="tabpanel" aria-labelledby={`bottom-tab-${activeTab.toLowerCase()}`}>{content}</div>
     {summary}
   </section>;
 }

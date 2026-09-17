@@ -33,10 +33,10 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
 
     await page.locator("[data-testid='cycle-surface'] [data-role='left-tree-rows'] [data-row-id='sig_cycle_request']").click();
-    await expect(inspector.getByLabel("Inspector signal name")).toHaveValue("REQUEST");
+    await expect(inspector.getByLabel("Inspector signal name", { exact: true })).toHaveValue("REQUEST");
     await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
     await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Combined");
-    await expect(inspector.getByLabel("Inspector signal name")).toHaveValue("REQUEST");
+    await expect(inspector.getByLabel("Inspector signal name", { exact: true })).toHaveValue("REQUEST");
 
     await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
     await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
@@ -45,7 +45,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(inspector.getByRole("heading", { name: "Layout" })).toBeVisible();
 
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
-    await expect(inspector.getByLabel("Inspector signal name")).toHaveValue("REQUEST");
+    await expect(inspector.getByLabel("Inspector signal name", { exact: true })).toHaveValue("REQUEST");
     await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
     await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
     await expect(inspector.getByRole("heading", { name: "Layout" })).toBeVisible();

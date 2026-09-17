@@ -27,7 +27,7 @@ test("Annotation and Transaction X positions stay exactly aligned with the Ruler
   await page.getByLabel("Annotation type").selectOption("verticalLine");
   await ribbon.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  const annotationId = await page.getByTestId("annotation-editor").getAttribute("data-bottom-target-id");
+  const annotationId = await page.getByTestId("annotation-editor").getAttribute("data-annotation-id");
   expect(annotationId).toBeTruthy();
   const annotationBody = host.locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}'] [data-role='annotation-body']`);
   const transaction = page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`);
