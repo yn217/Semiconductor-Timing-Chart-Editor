@@ -9,6 +9,7 @@ import {
   WaveDromAdapterError,
   type CanonicalSignalSource,
   type GeometryExtractionMetrics,
+  type OwnerDurationMetrics,
   type RenderedWave,
   type WaveDromAdapter,
   type WaveDromAdapterMetrics,
@@ -82,8 +83,13 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   readonly #active = new Map<SignalId, ActiveOwner>();
   readonly #markupCache = new Map<SignalId, MarkupCacheEntry>();
   readonly #renderCallsBySignal = new Map<SignalId, number>();
+  readonly #renderTimingBySignal = new Map<SignalId, OwnerDurationMetrics>();
+  readonly #svgInstallTimingBySignal = new Map<SignalId, OwnerDurationMetrics>();
+  readonly #waveJsonPreparationBySignal = new Map<SignalId, OwnerDurationMetrics>();
+  readonly #geometryTimingBySignal = new Map<SignalId, OwnerDurationMetrics>();
   #nextRenderIndex = 0;
   #renderCalls = 0;
+  readonly #waveMarkupTimingBySignal = new Map<SignalId, OwnerDurationMetrics>();
   #waveJsonDurationMs = 0;
   #renderDurationMs = 0;
   #cacheHits = 0;
@@ -124,14 +130,19 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const cacheKey = `${WAVEDROM_VERSION}\u0000${JSON.stringify(waveJson)}\u0000${JSON.stringify(semanticValues)}`;
     const cached = this.#markupCache.get(signalId);
     let markup: string;
+    let waveMarkupDurationMs = 0;
     if (cached?.key === cacheKey) {
       markup = cached.markup;
       this.#cacheHits += 1;
     } else {
+      const waveStartedAt = globalThis.performance?.now() ?? Date.now();
       markup = renderWaveJsonMarkup(waveJson, renderIndex, semanticValues);
+      waveMarkupDurationMs = (globalThis.performance?.now() ?? Date.now()) - waveStartedAt;
+      this.#recordOwnerTiming(this.#waveMarkupTimingBySignal, signalId, waveMarkupDurationMs);
       this.#markupCache.set(signalId, { key: cacheKey, markup });
       this.#cacheMisses += 1;
     }
+    const svgInstallStartedAt = globalThis.performance?.now() ?? Date.now();
     const template = mount.ownerDocument.createElement("template");
     template.innerHTML = markup.trim();
     const svg = template.content.firstElementChild;
@@ -150,7 +161,10 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     mount.replaceChildren(svg);
     const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson };
     this.#active.set(signalId, { mount, rendered });
-    this.#renderDurationMs += (globalThis.performance?.now() ?? Date.now()) - startedAt;
+    const durationMs = (globalThis.performance?.now() ?? Date.now()) - startedAt;
+    this.#renderDurationMs += durationMs;
+    this.#recordOwnerTiming(this.#renderTimingBySignal, signalId, durationMs);
+    this.#recordOwnerTiming(this.#svgInstallTimingBySignal, signalId, (globalThis.performance?.now() ?? Date.now()) - svgInstallStartedAt);
     this.#mounts += 1;
     return rendered;
   }
@@ -162,6 +176,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     this.#geometryMatrixReads += 2;
     this.#lastGeometryMetrics = Object.freeze({ ...extractionMetrics });
     this.#geometryDurationMs += extractionMetrics.durationMs;
+    this.#recordOwnerTiming(this.#geometryTimingBySignal, rendered.signalId, extractionMetrics.durationMs);
     this.#geometryUsesVisited += extractionMetrics.usesVisited;
     this.#geometryEntriesEmitted += extractionMetrics.geometryEntriesEmitted;
     this.#duplicateKeyChecks += extractionMetrics.duplicateKeyChecks;
@@ -172,8 +187,12 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     return geometry;
   }
 
+  recordWaveJsonPreparation(signalId: SignalId, durationMs: number): void {
+    this.#recordOwnerTiming(this.#waveJsonPreparationBySignal, signalId, durationMs);
+  }
+
   geometryMetrics() {
-    return Object.freeze({ last: this.#lastGeometryMetrics, totalDurationMs: this.#geometryDurationMs, totalUsesVisited: this.#geometryUsesVisited, totalGeometryEntriesEmitted: this.#geometryEntriesEmitted, totalDuplicateKeyChecks: this.#duplicateKeyChecks, totalDuplicateKeyCollisions: this.#duplicateKeyCollisions, totalTransitionBrickLookups: this.#transitionBrickLookups, totalSkinPathParses: this.#skinPathParses, totalMatrixReads: this.#matrixReads });
+    return Object.freeze({ last: this.#lastGeometryMetrics, timingBySignal: Object.fromEntries(this.#geometryTimingBySignal), totalDurationMs: this.#geometryDurationMs, totalUsesVisited: this.#geometryUsesVisited, totalGeometryEntriesEmitted: this.#geometryEntriesEmitted, totalDuplicateKeyChecks: this.#duplicateKeyChecks, totalDuplicateKeyCollisions: this.#duplicateKeyCollisions, totalTransitionBrickLookups: this.#transitionBrickLookups, totalSkinPathParses: this.#skinPathParses, totalMatrixReads: this.#matrixReads });
   }
 
   dispose(signalId: SignalId): void {
@@ -183,10 +202,25 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     this.#renderIndices.delete(signalId);
     this.#markupCache.delete(signalId);
     this.#renderCallsBySignal.delete(signalId);
+    this.#renderTimingBySignal.delete(signalId);
+    this.#svgInstallTimingBySignal.delete(signalId);
+    this.#waveJsonPreparationBySignal.delete(signalId);
+    this.#geometryTimingBySignal.delete(signalId);
+    this.#waveMarkupTimingBySignal.delete(signalId);
   }
 
   metrics(): WaveDromAdapterMetrics {
-    return { renderCalls: this.#renderCalls, waveJsonDurationMs: this.#waveJsonDurationMs, renderDurationMs: this.#renderDurationMs, renderCallsBySignal: Object.fromEntries(this.#renderCallsBySignal), cacheHits: this.#cacheHits, cacheMisses: this.#cacheMisses, mounts: this.#mounts, disposals: this.#disposals, geometryBuilds: this.#geometryBuilds, geometryMatrixReads: this.#geometryMatrixReads, activeOwners: this.#active.size, allocatedRenderIndices: this.#renderIndices.size };
+    return { renderCalls: this.#renderCalls, waveJsonDurationMs: this.#waveJsonDurationMs, waveMarkupTimingBySignal: Object.fromEntries(this.#waveMarkupTimingBySignal), waveJsonPreparationBySignal: Object.fromEntries(this.#waveJsonPreparationBySignal), renderDurationMs: this.#renderDurationMs, renderCallsBySignal: Object.fromEntries(this.#renderCallsBySignal), renderTimingBySignal: Object.fromEntries(this.#renderTimingBySignal), svgInstallTimingBySignal: Object.fromEntries(this.#svgInstallTimingBySignal), cacheHits: this.#cacheHits, cacheMisses: this.#cacheMisses, mounts: this.#mounts, disposals: this.#disposals, geometryBuilds: this.#geometryBuilds, geometryMatrixReads: this.#geometryMatrixReads, activeOwners: this.#active.size, allocatedRenderIndices: this.#renderIndices.size };
+  }
+
+  #recordOwnerTiming(target: Map<SignalId, OwnerDurationMetrics>, signalId: SignalId, durationMs: number): void {
+    const previous = target.get(signalId);
+    target.set(signalId, {
+      calls: (previous?.calls ?? 0) + 1,
+      totalDurationMs: (previous?.totalDurationMs ?? 0) + durationMs,
+      lastDurationMs: durationMs,
+      maxDurationMs: Math.max(previous?.maxDurationMs ?? 0, durationMs),
+    });
   }
 
   #clearOwner(owner: ActiveOwner): void {

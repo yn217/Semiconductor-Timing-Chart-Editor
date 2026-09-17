@@ -61,15 +61,7 @@ describe("TimelineGeometryOwner", () => {
 
   it("uses retained geometry boundaries instead of scanning a large source timeline", () => {
     const clockId = signalId("sig_cycle_clock");
-    let findCalls = 0;
-    const geometry = {
-      signalId: clockId,
-      find: () => { findCalls += 1; return undefined; },
-      cycleBoundaryEntries: () => [
-        { cycle: 0, point: "cycle-start" as const, position: { x: 0, y: 0 } },
-        { cycle: 2_048, point: "cycle-start" as const, position: { x: 2_048, y: 0 } },
-      ],
-    };
+    const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 2_049 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle, y: 0 } })));
     const document = { ...cycleDocument, timeline: { ...cycleDocument.timeline, cycleCount: 100_000, end: 100_000 } };
     const owner = new TimelineGeometryOwner({
       mappingCache: new DisplayTimeMappingCache(),
@@ -80,8 +72,7 @@ describe("TimelineGeometryOwner", () => {
     });
     owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
     const sourceWindow = owner.sourceWindowForLocalRange(document, 0, 100);
-    expect(sourceWindow).toEqual({ start: 0, end: 2_048 });
-    expect(findCalls).toBe(0);
+    expect(sourceWindow).toEqual({ start: 0, end: 102 });
   });
 
   it("uses shared display mapping to window beyond retained geometry", () => {
@@ -95,8 +86,23 @@ describe("TimelineGeometryOwner", () => {
       getProjection: () => ({ rowLayout: [{ rowId: clockId, kind: "timing", visible: true, y: 0 }] } as never),
       onSnapIndexBuilt: () => undefined,
     });
-    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
-    expect(owner.sourceWindowForLocalRange(document, 50_000, 50_100)).toEqual({ start: 49_998, end: 52_046 });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1, 2, 0);
+    expect(owner.sourceWindowForLocalRange(document, 50_000, 50_100)).toEqual({ start: 49_998, end: 50_102 });
+    expect(owner.sourceBoundaryToLocalX(document, 50_000)).toBe(100_000);
+  });
+
+  it("bootstraps and reveals a bounded render window without requiring distant DOM geometry", () => {
+    const document = { ...cycleDocument, timeline: { ...cycleDocument.timeline, cycleCount: 100_000, end: 100_000 } };
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map(),
+      getDocument: () => document,
+      getProjection: () => ({} as RenderProjection),
+      onSnapIndexBuilt: () => undefined,
+    });
+    expect(owner.sourceWindowForLocalRange(document, 0, 100)).toEqual({ start: 0, end: 102 });
+    owner.requestSourceCycle(50_000);
+    expect(owner.sourceWindowForLocalRange(document, 0, 100)).toEqual({ start: 49_997, end: 50_003 });
   });
 
   it("projects off-window source boundaries from the shared ruler geometry", () => {

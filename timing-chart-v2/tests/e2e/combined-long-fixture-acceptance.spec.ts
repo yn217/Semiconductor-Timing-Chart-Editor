@@ -16,6 +16,30 @@ async function openLong(page: Page) {
   await expect.poll(() => mountedTransactions.count()).toBeLessThanOrEqual(100);
 }
 
+async function assertScrollLeft(page: Page, viewport: import("@playwright/test").Locator, target: number, label: string, width: number) {
+  try {
+    await expect.poll(() => viewport.evaluate((el) => el.scrollLeft)).toBe(target);
+  } catch (error) {
+    const snapshot = await viewport.evaluate((el) => {
+      const host = document.querySelector<HTMLElement>("[data-testid='cycle-surface']");
+      const session = JSON.parse(host?.dataset.sessionCounters ?? "{}");
+      return {
+        scrollLeft: el.scrollLeft,
+        scrollWidth: el.scrollWidth,
+        clientWidth: el.clientWidth,
+        waveBatchPending: session.waveBatchPending,
+        waveBatchCount: session.waveBatchCount,
+        scrollTrace: (window as Window & { __combinedScrollTrace?: unknown[] }).__combinedScrollTrace ?? [],
+        waveAdapter: session.waveAdapter,
+        geometryExtraction: session.geometryExtraction,
+      };
+    });
+    await test.info().attach(`combined-scroll-failure-${width}-${label}`, { body: JSON.stringify({ target, ...snapshot }, null, 2), contentType: "application/json" });
+    console.log(JSON.stringify({ label, target, ...snapshot }));
+    throw error;
+  }
+}
+
 for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) test(`#573 performance fixture enables horizontal and independent vertical scroll at ${viewportSize.width}x${viewportSize.height}`, async ({ page }) => {
   test.setTimeout(90000);
   await page.setViewportSize(viewportSize);
@@ -26,17 +50,52 @@ for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height:
   const revision = await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision");
   const size = await viewport.evaluate((el) => ({ scrollWidth: el.scrollWidth, clientWidth: el.clientWidth }));
   expect(size.scrollWidth).toBeGreaterThan(size.clientWidth);
+  await viewport.evaluate((el) => {
+    const traceWindow = window as Window & { __combinedScrollTrace?: { at: number; scrollLeft: number; scrollWidth: number; clientWidth: number }[] };
+    const trace = traceWindow.__combinedScrollTrace = [];
+    const record = () => {
+      trace.push({ at: performance.now(), scrollLeft: el.scrollLeft, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth });
+      if (trace.length > 256) trace.shift();
+    };
+    const sample = () => { record(); requestAnimationFrame(sample); };
+    el.addEventListener("scroll", record);
+    sample();
+  });
   const horizontalTarget = Math.min(40, size.scrollWidth - size.clientWidth);
   await viewport.evaluate((el, target) => { el.scrollLeft = target; el.dispatchEvent(new Event("scroll", { bubbles: true })); }, horizontalTarget);
-  await expect.poll(() => viewport.evaluate((el) => el.scrollLeft)).toBe(horizontalTarget);
+  await assertScrollLeft(page, viewport, horizontalTarget, "near-scroll", viewportSize.width);
   await viewport.evaluate((el) => { el.scrollLeft = 0; el.dispatchEvent(new Event("scroll", { bubbles: true })); });
-  await expect.poll(() => viewport.evaluate((el) => el.scrollLeft)).toBe(0);
+  await assertScrollLeft(page, viewport, 0, "reset-to-zero", viewportSize.width);
   const farTarget = Math.max(0, size.scrollWidth - size.clientWidth - 8);
   await viewport.evaluate((el, target) => { el.scrollLeft = target; el.dispatchEvent(new Event("scroll", { bubbles: true })); }, farTarget);
-  await expect.poll(() => viewport.evaluate((el) => el.scrollLeft)).toBe(farTarget);
+  await assertScrollLeft(page, viewport, farTarget, "far-scroll", viewportSize.width);
   await expect.poll(() => page.getByTestId("cycle-surface").locator("[data-role='wave-owner'] svg").count()).toBeGreaterThan(0);
+  const host = page.getByTestId("cycle-surface");
+  await expect.poll(() => host.evaluate((el) => JSON.parse(el.dataset.sessionCounters ?? "{}").waveBatchPending)).toBe(0);
+  const sessionCounters = await host.evaluate((el) => JSON.parse(el.dataset.sessionCounters ?? "{}"));
+  const renderTiming = Object.entries(sessionCounters.waveAdapter?.renderTimingBySignal ?? {}) as [string, { calls: number; lastDurationMs: number; maxDurationMs: number; totalDurationMs: number }][];
+  const markupTiming = Object.entries(sessionCounters.waveAdapter?.waveMarkupTimingBySignal ?? {}) as [string, { calls: number; lastDurationMs: number; maxDurationMs: number; totalDurationMs: number }][];
+  const svgInstallTiming = Object.entries(sessionCounters.waveAdapter?.svgInstallTimingBySignal ?? {}) as [string, { calls: number; lastDurationMs: number; maxDurationMs: number; totalDurationMs: number }][];
+  const preparationTiming = Object.entries(sessionCounters.waveAdapter?.waveJsonPreparationBySignal ?? {}) as [string, { calls: number; lastDurationMs: number; maxDurationMs: number; totalDurationMs: number }][];
+  const geometryTiming = Object.entries(sessionCounters.geometryExtraction?.timingBySignal ?? {}) as [string, { calls: number; lastDurationMs: number; maxDurationMs: number; totalDurationMs: number }][];
+  for (const [stage, samples] of [["prepare", preparationTiming], ["WaveDrom-markup", markupTiming], ["render", renderTiming], ["svg-install", svgInstallTiming], ["geometry", geometryTiming]] as const) {
+    expect(samples.length, `${stage} should report per-owner timings`).toBeGreaterThan(0);
+    for (const [signalId, timing] of samples) {
+      expect(signalId).toMatch(/^sig_/);
+      expect(timing.calls).toBeGreaterThan(0);
+      expect(Number.isFinite(timing.lastDurationMs)).toBe(true);
+      expect(Number.isFinite(timing.maxDurationMs)).toBe(true);
+      expect(timing.maxDurationMs).toBeGreaterThanOrEqual(timing.lastDurationMs);
+    }
+  }
+  const summarize = (samples: [string, { maxDurationMs: number }][]) => {
+    const durations = samples.map(([, timing]) => timing.maxDurationMs).sort((a, b) => a - b);
+    return { ownerCount: durations.length, maxOwnerMs: durations.at(-1), p95OwnerMs: durations[Math.max(0, Math.ceil(durations.length * 0.95) - 1)] };
+  };
+  const perOwnerTimingReport = { preparation: summarize(preparationTiming), waveDromMarkup: summarize(markupTiming), render: summarize(renderTiming), svgInstall: summarize(svgInstallTiming), geometry: summarize(geometryTiming) };
+  await test.info().attach(`combined-owner-timing-${viewportSize.width}`, { body: JSON.stringify(perOwnerTimingReport, null, 2), contentType: "application/json" });
   await viewport.evaluate((el) => { el.scrollLeft = 0; el.dispatchEvent(new Event("scroll", { bubbles: true })); });
-  await expect.poll(() => viewport.evaluate((el) => el.scrollLeft)).toBe(0);
+  await assertScrollLeft(page, viewport, 0, "far-reset-to-zero", viewportSize.width);
   const txMax = await tx.evaluate((el) => el.scrollHeight - el.clientHeight);
   const txTarget = Math.min(60, txMax);
   expect(txTarget).toBeGreaterThan(0);

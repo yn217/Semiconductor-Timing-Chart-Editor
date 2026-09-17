@@ -61,11 +61,22 @@ export interface GeometryExtractionMetrics {
   readonly durationMs: number;
 }
 
+export interface OwnerDurationMetrics {
+  readonly calls: number;
+  readonly totalDurationMs: number;
+  readonly lastDurationMs: number;
+  readonly maxDurationMs: number;
+}
+
 export interface WaveDromAdapterMetrics {
   readonly renderCalls: number;
   readonly waveJsonDurationMs: number;
+  readonly waveMarkupTimingBySignal: Readonly<Record<string, OwnerDurationMetrics>>;
+  readonly waveJsonPreparationBySignal: Readonly<Record<string, OwnerDurationMetrics>>;
   readonly renderDurationMs: number;
   readonly renderCallsBySignal: Readonly<Record<string, number>>;
+  readonly renderTimingBySignal: Readonly<Record<string, OwnerDurationMetrics>>;
+  readonly svgInstallTimingBySignal: Readonly<Record<string, OwnerDurationMetrics>>;
   readonly cacheHits: number;
   readonly cacheMisses: number;
   readonly mounts: number;
@@ -80,8 +91,10 @@ export interface WaveDromAdapter {
   toWaveJson(source: CanonicalSignalSource): WaveJsonSignal;
   renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues?: readonly string[]): Promise<RenderedWave>;
   extractLocalGeometry(rendered: RenderedWave): LocalGeometryMap;
+  recordWaveJsonPreparation?(signalId: SignalId, durationMs: number): void;
   geometryMetrics(): Readonly<{
     readonly last: GeometryExtractionMetrics | undefined;
+    readonly timingBySignal: Readonly<Record<string, OwnerDurationMetrics>>;
     readonly totalDurationMs: number;
     readonly totalUsesVisited: number;
     readonly totalGeometryEntriesEmitted: number;

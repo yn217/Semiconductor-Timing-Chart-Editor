@@ -129,22 +129,31 @@ export class TimelineGeometryOwner {
 
   /** Resolve a local time viewport to canonical source cycles using semantic geometry. */
   sourceWindowForLocalRange(document: CanonicalDocument, localStart: number, localEnd: number, overscan = 2): Readonly<{ start: number; end: number }> {
+    const mapping = this.displayMapping;
+    const sourceWindowForDisplayRange = (displayStart: number, displayEnd: number): Readonly<{ start: number; end: number }> => {
+      const startIndex = Math.max(0, Math.floor(displayStart) - overscan);
+      const endIndex = Math.min(mapping.displayCycleCount, Math.ceil(displayEnd) + overscan);
+      let start = mapping.displayToSource[startIndex] ?? 0;
+      let end = mapping.displayToSource[endIndex] ?? document.timeline.cycleCount;
+      if (end <= start && document.timeline.cycleCount > 0) {
+        start = Math.min(start, document.timeline.cycleCount - 1);
+        end = start + 1;
+      }
+      return { start, end };
+    };
     if (this.#requestedSourceCycle !== undefined) {
-      const span = Math.min(2048, document.timeline.cycleCount);
-      const start = Math.max(0, Math.min(this.#requestedSourceCycle - Math.floor(span / 2), document.timeline.cycleCount - span));
-      return { start, end: Math.min(document.timeline.cycleCount, start + span) };
+      const displayCycle = mapping.sourceToDisplay[this.#requestedSourceCycle] ?? this.#requestedSourceCycle;
+      return sourceWindowForDisplayRange(displayCycle - 1, displayCycle + 1);
     }
     const axis = this.resolveTimeAxis(document);
-    const mapping = this.displayMapping;
     const owner = axis.geometry && axis.ownerSignalId !== undefined ? axis.geometry : this.geometryMaps.values().next().value;
     const signalId = axis.ownerSignalId ?? owner?.signalId;
     if (!owner || signalId === undefined) {
       // Bootstrap only: before the first authoritative WaveDrom geometry exists,
-      // render a bounded prefix so large documents can reach the viewport. This
-      // is presentation bootstrap, never semantic time/X truth; the first SVG
-      // geometry replaces it and is rebased through sourceWindow.start.
-      const bootstrapEnd = Math.min(document.timeline.cycleCount, 2048);
-      return { start: 0, end: bootstrapEnd };
+      // use the same visible display window. Shared DisplayTimeMapping already
+      // owns offscreen semantic time, so WaveDrom need not render a large prefix
+      // to make distant cycles navigable.
+      return sourceWindowForDisplayRange(localStart, localEnd);
     }
     const entries = this.viewportBoundaryEntries(owner, signalId, mapping, document.timeline.cycleCount);
     // A first WaveDrom paint may expose only presentation-thinned marks. Do
@@ -177,16 +186,6 @@ export class TimelineGeometryOwner {
     }
     const boundedStart = Math.max(0, start - overscan);
     const boundedEnd = Math.min(document.timeline.cycleCount, end + overscan);
-    // Keep a useful semantic window for large documents.  The visible
-    // viewport may contain only ~28 cycles, but allowing that presentation
-    // subset to replace the bounded geometry window would discard offscreen
-    // navigation boundaries on the next render.  DOM remains virtualized;
-    // this minimum applies only to the source-time geometry artifact.
-    if (document.timeline.cycleCount > 4096 && boundedEnd - boundedStart < 2048) {
-      const span = Math.min(2048, document.timeline.cycleCount);
-      const centered = Math.max(0, Math.min(boundedStart, document.timeline.cycleCount - span));
-      return { start: centered, end: centered + span };
-    }
     return { start: boundedStart, end: boundedEnd };
   }
 

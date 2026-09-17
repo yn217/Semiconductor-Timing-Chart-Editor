@@ -84,6 +84,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const referenceClockSignal = document.timeline.referenceClock === undefined ? undefined : signalById.get(document.timeline.referenceClock);
       const referenceClockPeriod = referenceClockSignal?.type === "clock" ? referenceClockSignal.generator.period : undefined;
       const prepared = requests.map((request) => {
+        const preparationStartedAt = globalThis.performance?.now() ?? Date.now();
         // Transaction mode owns the shared time geometry and Transaction
         // projection, but does not display Cycle waveforms. Keep the
         // reference clock available for geometry extraction; defer hidden
@@ -127,6 +128,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             const displayCycle = rendererStart + index;
             return displayCycle === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[displayCycle] ?? sourceWindow.end);
           }) };
+        context.adapter.recordWaveJsonPreparation?.(request.signalId, (globalThis.performance?.now() ?? Date.now()) - preparationStartedAt);
         return { request, waveJson: mappedWaveJson, semanticValues, error: undefined, deferred: false, rendererStart, rendererEnd };
       });
       // #614: every wave-owner is stretched to a shared, document-wide
