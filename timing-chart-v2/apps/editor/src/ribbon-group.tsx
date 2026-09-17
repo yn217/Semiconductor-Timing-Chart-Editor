@@ -17,7 +17,7 @@ export function RibbonGroup({ spec, available = "large" }: { readonly spec: Ribb
   </div>;
 }
 
-function RibbonSchemaOverflow({ items }: { readonly items: readonly RibbonItemSpec[] }) {
+export function RibbonSchemaOverflow({ items }: { readonly items: readonly RibbonItemSpec[] }) {
   const onMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     const controls = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("[role='menuitem']:not(:disabled)")];
     if (controls.length === 0) return;
@@ -27,7 +27,11 @@ function RibbonSchemaOverflow({ items }: { readonly items: readonly RibbonItemSp
     event.preventDefault();
     controls[next]?.focus();
   };
-  return <details className="ribbon-schema-overflow"><summary aria-label="More ribbon commands">More</summary><div role="menu" aria-label="More ribbon commands" onKeyDown={onMenuKeyDown} onClick={(event) => { if (event.target instanceof HTMLElement && event.target.closest("button")) event.currentTarget.parentElement?.removeAttribute("open"); }}>{items.map((item) => item.kind === "custom" ? item.render() : <button key={item.id} type="button" role="menuitem" data-ribbon-command-id={item.id} disabled={item.kind !== "toggle" && item.disabled} onClick={item.kind === "toggle" ? item.onChange : item.onClick}>{item.label}</button>)}</div></details>;
+  return <details className="ribbon-schema-overflow"><summary aria-label="More ribbon commands">More</summary><div role="menu" aria-label="More ribbon commands" onKeyDown={onMenuKeyDown} onClick={(event) => { if (event.target instanceof HTMLElement && event.target.closest("button")) event.currentTarget.parentElement?.removeAttribute("open"); }}>{items.map((item) => {
+    if (item.kind === "custom") return item.render();
+    const isToggle = item.kind === "toggle";
+    return <button key={item.id} type="button" role={isToggle ? "menuitemcheckbox" : "menuitem"} data-ribbon-command-id={item.id} aria-checked={isToggle ? item.checked : undefined} disabled={item.kind !== "toggle" && item.disabled} onClick={isToggle ? item.onChange : item.onClick}>{item.label}{isToggle && <span aria-hidden="true">{item.checked ? " ✓" : ""}</span>}</button>;
+  })}</div></details>;
 }
 
 function RibbonSchemaItem({ item, available }: { readonly item: RibbonItemSpec; readonly available: RibbonPresentationSize }) {
