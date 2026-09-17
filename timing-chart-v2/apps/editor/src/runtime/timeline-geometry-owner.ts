@@ -110,7 +110,21 @@ export class TimelineGeometryOwner {
     // Keep the display-cycle lookup as the identity/no-fold fallback.
     const point = axis.geometry.find({ signalId: axis.ownerSignalId, cycle, point: "cycle-start" })?.point
       ?? axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
-    return point === undefined ? undefined : point.x * this.#presentationScale;
+    if (point !== undefined) return point.x * this.#presentationScale;
+
+    // A bounded WaveDrom render intentionally retains detailed boundary
+    // geometry only around its current window. Transaction bars can refer to
+    // canonical start/end cycles outside that mounted window, though. Use
+    // the same ruler-owned origin and pixels-per-display-cycle published by
+    // buildRuler to project those boundaries; never infer pitch from Cycle
+    // DOM nodes or build a Transaction-local time mapper. The display mapping
+    // above preserves collapsed TimeGroups and keeps all surfaces on the
+    // shared time axis.
+    const pixelsPerDisplayCycle = this.#waveWidthPxPerDisplayCycle;
+    const waveOriginPx = this.#waveOriginPx;
+    if (pixelsPerDisplayCycle === undefined || !Number.isFinite(pixelsPerDisplayCycle) || pixelsPerDisplayCycle <= 0
+      || waveOriginPx === undefined || !Number.isFinite(waveOriginPx)) return undefined;
+    return waveOriginPx + displayCycle * pixelsPerDisplayCycle;
   }
 
   /** Resolve a local time viewport to canonical source cycles using semantic geometry. */
