@@ -34,7 +34,11 @@ export function ContextMenuPanel({ contextMenu, hasSelectedClipboard, clipboardA
 const VIEW_MODE_TITLE_LABEL: Record<"Cycle" | "Transaction" | "Split", string> = { Cycle: "Cycle View", Transaction: "Transaction View", Split: "Combined View" };
 
 export function MinimalCycleViewTitleBar({ title, dirty, viewMode }: { readonly title: string; readonly dirty: boolean; readonly viewMode: "Cycle" | "Transaction" | "Split" }) {
-  return <header className="app-titlebar"><span className="appmark">∿</span><h1>{title}</h1><span className="save-state">{dirty ? "Modified" : "Saved"}</span><span className="view-title" data-testid="titlebar-view-title">{VIEW_MODE_TITLE_LABEL[viewMode]}</span></header>;
+  // Historical showcase documents may include a view mode in their saved
+  // title. Mode is workspace presentation, so do not let that stale suffix
+  // contradict the live mode label or mutate the Canonical document title.
+  const displayTitle = title.replace(/\s+(?:--|—)\s+(?:Cycle|Transaction|Combined)\s+Mode$/i, "").trim() || title;
+  return <header className="app-titlebar"><span className="appmark">∿</span><h1>{displayTitle}</h1><span className="save-state">{dirty ? "Modified" : "Saved"}</span><span className="view-title" data-testid="titlebar-view-title">{VIEW_MODE_TITLE_LABEL[viewMode]}</span></header>;
 }
 
 export type RenameDialogProps = {
