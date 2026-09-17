@@ -34,7 +34,9 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(page.getByTestId("transaction-left-tree")).toContainText("Peripheral");
     await expect(page.locator("[data-transaction-row-id]")).toHaveCount(6);
     await expect(page.getByTestId("transaction-lanes")).toContainText("Read_0");
-    await expect(page.getByTestId("transaction-lanes")).toContainText("Address");
+    const readTransactionBar = page.getByTestId("transaction-lanes").locator("[data-transaction-id='demo_txn_read']");
+    await expect(readTransactionBar).toBeVisible();
+    await expect(readTransactionBar.locator("[data-phase-segment]")).toHaveCount(3);
 
     await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
     await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Combined");
