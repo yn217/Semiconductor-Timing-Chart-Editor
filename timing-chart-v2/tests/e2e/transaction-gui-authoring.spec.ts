@@ -128,3 +128,73 @@ test("authored transaction keeps its stable ID through one edit Undo/Redo, mode 
   await expect(inspector.getByLabel("Transaction lane", { exact: true })).toHaveValue("lane_authored");
   await expect(surface).toHaveAttribute("data-editor-idle", "true");
 });
+
+test("fresh Production document keeps GUI-authored Transaction and Bookmark across Undo/Redo, modes, and Save/Open", async ({ page }) => {
+  await page.goto("/");
+  const surface = page.getByTestId("cycle-surface");
+  await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByRole("button", { name: "New", exact: true }).click();
+
+  const ribbon = page.getByTestId("ribbon");
+  const tree = page.getByTestId("transaction-left-tree");
+  const inspector = page.getByTestId("inspector");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await ribbon.getByRole("button", { name: "Create Transaction", exact: true }).click();
+  const transactionRow = tree.locator("[data-transaction-tree-id]");
+  await expect(transactionRow).toHaveCount(1);
+  const transactionId = await transactionRow.getAttribute("data-transaction-tree-id");
+  expect(transactionId).toBeTruthy();
+  await transactionRow.click();
+
+  const originalName = await inspector.getByLabel("Transaction name", { exact: true }).inputValue();
+  await inspector.getByLabel("Transaction name", { exact: true }).fill("Journey_Read");
+  await inspector.getByLabel("Transaction lane", { exact: true }).fill("lane_journey");
+  await inspector.getByTestId("apply-inspector-transaction").click();
+  await expect(transactionRow).toContainText("Journey_Read");
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(inspector.getByLabel("Transaction name", { exact: true })).toHaveValue(originalName);
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(transactionRow).toContainText("Journey_Read");
+
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByRole("button", { name: "Add marker", exact: true }).click();
+  const marker = page.getByTestId("cycle-ruler").locator("[data-bookmark-id]");
+  await expect(marker).toHaveCount(1);
+  const bookmarkId = await marker.getAttribute("data-bookmark-id");
+  const bookmarkCycle = await marker.getAttribute("data-source-cycle");
+  expect(bookmarkId).toBeTruthy();
+  expect(bookmarkCycle).toMatch(/^\d+$/);
+  await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
+  const bookmarkPanel = page.getByTestId("bookmark-editor-panel");
+  const bookmarkRow = bookmarkPanel.getByTestId(`bookmark-row-${bookmarkId}`);
+  await expect(bookmarkRow).toBeVisible();
+  await expect(bookmarkRow).toContainText(`Marker ${bookmarkCycle}`);
+  await expect(bookmarkRow).toContainText(bookmarkCycle!);
+
+  for (const mode of ["Cycle", "Combined", "Transaction"] as const) {
+    await page.locator(".view-mode").getByRole("button", { name: mode, exact: true }).click();
+    await expect(page.locator(".view-mode").getByRole("button", { name: mode, exact: true })).toHaveClass(/active/);
+  }
+  await expect(tree.locator(`[data-transaction-tree-id="${transactionId}"]`)).toContainText("Journey_Read");
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await ribbon.getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await downloadPromise).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+
+  const reopenedTransaction = tree.locator(`[data-transaction-tree-id="${transactionId}"]`);
+  await expect(reopenedTransaction).toHaveCount(1);
+  await expect(reopenedTransaction).toContainText("Journey_Read");
+  await reopenedTransaction.click();
+  await expect(inspector.getByLabel("Transaction lane", { exact: true })).toHaveValue("lane_journey");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
+  const reopenedBookmark = bookmarkPanel.getByTestId(`bookmark-row-${bookmarkId}`);
+  await expect(reopenedBookmark).toContainText(`Marker ${bookmarkCycle}`);
+  await expect(reopenedBookmark).toContainText(bookmarkCycle!);
+});
