@@ -41,17 +41,23 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
   }, [signal.id]);
   const effectiveWidth = widthMode === "duty" ? Math.min(period - 1, Math.max(1, Math.round(duty * period))) : width;
   const resetDraft = () => { setStart(0); setInitial(0); setActive(1); setWidthMode("width"); setWidth(1); setDuty(0.5); setPeriod(4); setRepeatMode("finite"); setRepeatCount(1); setPhase(0); setSuppressedPeriods(""); setError(""); setStatus(""); setAdvancedOpen(false); };
-  // #402: Draft->Apply -- Generate must stay disabled once the computed
-  // candidate waveform is byte-for-byte identical to the Signal's current
-  // `values`, so re-submitting an unchanged Draft can't manufacture an
-  // empty History entry. Computed only for the enabled/indicator check;
-  // Generate itself still always recomputes fresh from the live Draft on
-  // submit (this comparison is never itself dispatched as a command).
-  let hasChanges = true;
+  // #402: Generate must stay disabled once the computed candidate waveform
+  // is byte-for-byte identical to the Signal's current `values`, so applying
+  // cannot manufacture an empty History entry. This candidate comparison
+  // controls only Generate eligibility; user-input Draft dirtiness is
+  // tracked separately below. Generate always recomputes from live inputs on
+  // submit (this comparison itself is never dispatched as a command).
+  let candidateDiffers = true;
   try {
     const candidate = generateSignalPulseValues({ start, initial, active, width: effectiveWidth, period, repeat: repeatMode === "infinite" ? "infinite" : repeatCount, phase, suppressedPeriods: parseSuppressedPeriods(suppressedPeriods), cycleCount });
-    hasChanges = JSON.stringify(candidate) !== JSON.stringify(signal.values);
-  } catch { hasChanges = true; } // an invalid Draft is always "changed" -- Apply itself will report the real validation error on submit.
+    candidateDiffers = JSON.stringify(candidate) !== JSON.stringify(signal.values);
+  } catch { candidateDiffers = true; } // an invalid candidate stays submittable so the form can report its validation error.
+  // A default candidate can differ from Canonical without the user having
+  // edited anything. Keep Generate enabled for that intentional operation,
+  // but do not label untouched parameters as an unapplied user Draft or offer
+  // a no-op Cancel. Draft status is only meaningful after parameter edits.
+  const hasParameterDraft = start !== 0 || initial !== 0 || active !== 1 || widthMode !== "width" || width !== 1 || duty !== 0.5 || period !== 4 || repeatMode !== "finite" || repeatCount !== 1 || phase !== 0 || suppressedPeriods !== "";
+  const hasUnappliedDraft = hasParameterDraft && candidateDiffers;
   return <div className="signal-generator">
     <div className="signal-generator-head">
       <h2>Generate Waveform</h2>
@@ -121,8 +127,8 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
             applied) -- distinct from a Transition row's Draft and from
             Inspector's Signal Properties Draft, so its wording says which
             one it is instead of a bare, ambiguous "Unapplied changes". */}
-        {hasChanges && <DraftStatus testId="signal-generator-unapplied" label="Generator: unapplied changes" />}
-        <button type="button" data-testid="cancel-signal-generator" onClick={resetDraft} disabled={!hasChanges}>Cancel</button><button type="submit" data-testid="apply-signal-generator" disabled={!hasChanges}>Generate</button>
+        {hasUnappliedDraft && <DraftStatus testId="signal-generator-unapplied" label="Generator: unapplied changes" />}
+        <button type="button" data-testid="cancel-signal-generator" onClick={resetDraft} disabled={!hasParameterDraft}>Cancel</button><button type="submit" data-testid="apply-signal-generator" disabled={!candidateDiffers}>Generate</button>
       </div>
     </form>
   </div>;
