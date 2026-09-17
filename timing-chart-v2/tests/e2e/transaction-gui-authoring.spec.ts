@@ -129,7 +129,7 @@ test("authored transaction keeps its stable ID through one edit Undo/Redo, mode 
   await expect(surface).toHaveAttribute("data-editor-idle", "true");
 });
 
-test("fresh Production document keeps GUI-authored Transaction and Bookmark across Undo/Redo, modes, and Save/Open", async ({ page }) => {
+test("fresh Production document keeps GUI-authored Transaction and Bookmark across Undo/Redo, modes, and Save/Open", async ({ page }, testInfo) => {
   await page.goto("/");
   const surface = page.getByTestId("cycle-surface");
   await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
@@ -178,6 +178,7 @@ test("fresh Production document keeps GUI-authored Transaction and Bookmark acro
     await expect(page.locator(".view-mode").getByRole("button", { name: mode, exact: true })).toHaveClass(/active/);
   }
   await expect(tree.locator(`[data-transaction-tree-id="${transactionId}"]`)).toContainText("Journey_Read");
+  await page.screenshot({ path: testInfo.outputPath("wp1-transaction-authored.png"), fullPage: true });
 
   const downloadPromise = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
@@ -197,4 +198,5 @@ test("fresh Production document keeps GUI-authored Transaction and Bookmark acro
   const reopenedBookmark = bookmarkPanel.getByTestId(`bookmark-row-${bookmarkId}`);
   await expect(reopenedBookmark).toContainText(`Marker ${bookmarkCycle}`);
   await expect(reopenedBookmark).toContainText(bookmarkCycle!);
+  await page.screenshot({ path: testInfo.outputPath("wp1-bookmark-roundtrip.png"), fullPage: true });
 });
