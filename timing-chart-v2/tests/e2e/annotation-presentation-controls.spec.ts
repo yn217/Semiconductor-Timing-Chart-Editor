@@ -78,6 +78,55 @@ test("Range Stroke/Fill controls have real canonical + rendered + exported effec
   expect(rectMatch![0]).toMatch(/fill-opacity="0\.5"/);
 });
 
+test("Text annotation font and paragraph presentation survive Save/Open by stable ID", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await selectRequestSignal(page, host);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+
+  await page.getByLabel("Annotation type").selectOption("text");
+  await page.getByRole("button", { name: "Add annotation" }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const selectedOwners = host.locator("[data-role='annotation-owner'][data-annotation-type='text'][data-selected='true'][data-annotation-id]");
+  await expect(selectedOwners).toHaveCount(1);
+  const annotationId = await selectedOwners.getAttribute("data-annotation-id");
+  expect(annotationId).toBeTruthy();
+  const owner = host.locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}']`);
+  const fontFamily = page.getByTestId("ribbon-annotation-font-font-family");
+  const fontSize = page.getByTestId("ribbon-annotation-font-font-size");
+  await fontFamily.fill("Georgia");
+  await fontFamily.press("Enter");
+  await fontSize.fill("19");
+  await fontSize.press("Enter");
+  await page.getByTestId("ribbon-annotation-font-bold").click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Align center", exact: true }).click();
+  await expect(owner.locator("[data-role='annotation-label']")).toHaveCSS("font-family", /Georgia/);
+  await expect(owner.locator("[data-role='annotation-label']")).toHaveCSS("font-size", "19px");
+  await expect(owner.locator("[data-role='annotation-label']")).toHaveCSS("font-weight", "700");
+  await expect(owner.locator("[data-role='annotation-label']")).toHaveCSS("text-align", "center");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const download = await downloadPromise;
+  const savedPath = await download.path();
+  expect(savedPath).toBeTruthy();
+  const fs = await import("node:fs");
+  const savedDocument = JSON.parse(fs.readFileSync(savedPath!, "utf-8")) as { annotations: Array<{ id: string; align?: string; style?: Record<string, unknown> }> };
+  const savedAnnotation = savedDocument.annotations.find((annotation) => annotation.id === annotationId);
+  expect(savedAnnotation).toMatchObject({ align: "center", style: { fontFamily: "Georgia", fontSize: 19, fontWeight: "bold" } });
+
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const reopened = host.locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}']`);
+  await expect(reopened).toHaveCount(1);
+  await expect(reopened.locator("[data-role='annotation-label']")).toHaveCSS("font-family", /Georgia/);
+  await expect(reopened.locator("[data-role='annotation-label']")).toHaveCSS("font-size", "19px");
+  await expect(reopened.locator("[data-role='annotation-label']")).toHaveCSS("font-weight", "700");
+  await expect(reopened.locator("[data-role='annotation-label']")).toHaveCSS("text-align", "center");
+});
+
 test("Vertical Line exports a full-height dashed line, not an invisible zero-length one", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
