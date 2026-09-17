@@ -218,9 +218,15 @@ export function MinimalCycleView() {
     decorateSelection: applySelectionDecorations,
     synchronizeContext: (kind) => {
       if (!followSelectionRef.current || bottomPinnedRef.current) return;
-      if (kind === "annotation") setBottomTab("Annotation");
-      else if (kind === "transaction") setBottomTab("Transaction");
-      else if (kind === "signal" || kind === "spacer") setBottomTab("Signal");
+      const preferredTab = kind === "annotation" ? "Annotation"
+        : kind === "transaction" ? "Transaction"
+          : kind === "signal" || kind === "spacer" ? "Signal" : undefined;
+      // Entity creation/selection can originate in a ribbon that is visible
+      // from another View Mode. Keep Follow Selection, but never put the
+      // Bottom panel into a tab that the current mode does not expose; that
+      // would make aria-labelledby point at a nonexistent tab while rendering
+      // the corresponding hidden-mode editor.
+      if (preferredTab !== undefined && bottomTabs.includes(preferredTab)) setBottomTab(preferredTab);
     },
   });
   const viewMetricsOwnerRef = useRef<ViewMetricsOwner | null>(null);
