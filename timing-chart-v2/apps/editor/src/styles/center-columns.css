@@ -302,7 +302,7 @@
 .cycle-panel.mode-transaction .transaction-left-tree {
   position: absolute;
   z-index: 18;
-  top: 0;
+  top: 58px;
   bottom: 0;
   left: 0;
   width: var(--gui-left-width);
