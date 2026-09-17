@@ -199,6 +199,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
           timelineRuntimeRef.current?.refreshRuler();
           timelineRuntimeRef.current?.refreshGrid();
         }
+        // TransactionLanes can mount before the reference Cycle geometry and
+        // memoize an empty boundary projection. Invalidate it at the geometry
+        // owner's readiness boundary, not merely when the renderer reports
+        // idle (which can precede geometry publication).
+        if (active) setTransactionPresentationRevision((value) => value + 1);
         // The first bounded source window is selected before reference
         // geometry exists. Once that geometry arrives, re-run projection so
         // StableTimingChartRenderer can observe the authoritative window and
