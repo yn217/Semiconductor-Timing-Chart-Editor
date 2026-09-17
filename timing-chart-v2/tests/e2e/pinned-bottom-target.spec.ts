@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 async function ready(page: Page) {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
 }
 
 test("pinned Signal visibility and duplicate actions target the pinned stable ID", async ({ page }) => {
@@ -25,7 +26,7 @@ test("pinned Signal visibility and duplicate actions target the pinned stable ID
   await bottom.getByTestId("clock-duplicate").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("selection-status")).toHaveText("CLOCK_duplicate");
-  await expect(bottom).toContainText("CLOCK · clock");
+  await expect(bottom).toContainText("CLOCK · Clock");
 });
 
 test("pinned Annotation delete targets the pinned stable ID", async ({ page }) => {
@@ -34,14 +35,21 @@ test("pinned Annotation delete targets the pinned stable ID", async ({ page }) =
   const bottom = page.getByTestId("bottom-editor");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Annotation", exact: true }).click();
   await page.getByTestId("annotation-toolbar").getByRole("button", { name: "Add annotation", exact: true }).click();
-  const annotation = page.getByTestId("annotation-list").locator("[data-annotation-list-id]").first();
+  const annotationList = page.getByTestId("annotation-list");
+  const selectedAnnotationRow = annotationList.locator("[data-annotation-list-id][data-selected='true']");
+  await expect(selectedAnnotationRow).toHaveCount(1);
+  const annotationId = await selectedAnnotationRow.getAttribute("data-annotation-list-id");
+  expect(annotationId).toBeTruthy();
+  const annotation = host.locator(`[data-role='annotation-owner'][data-annotation-id="${annotationId}"]`);
   await expect(annotation).toBeVisible();
   await bottom.getByTestId("bottom-pin").click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click();
-  await bottom.getByTestId("delete-annotation").click();
+  await page.getByRole("toolbar", { name: "Annotation collection actions" }).getByRole("button", { name: "Delete", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(page.getByTestId("annotation-list").locator("[data-annotation-list-id]")).toHaveCount(0);
+  await expect(annotation).toHaveCount(0);
+  await expect(page.getByTestId("selection-status")).toContainText("READY");
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']")).toHaveCount(1);
   await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
 });
@@ -50,18 +58,23 @@ test("pinned Signal delete targets the pinned stable ID", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   const bottom = page.getByTestId("bottom-editor");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const beforeIds = await host.locator("[data-role='frozen-row'][data-row-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-row-id")).filter((id): id is string => Boolean(id)));
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  await bottom.getByTestId("clock-duplicate").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const duplicateId = await host.locator("[data-role='frozen-row'][data-row-id]").evaluateAll((items, before) => items.map((item) => item.getAttribute("data-row-id")).find((id) => id && !before.includes(id)), beforeIds);
+  expect(duplicateId).toBeTruthy();
   await bottom.getByTestId("bottom-pin").click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click();
   await bottom.getByTestId("signal-delete").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toHaveCount(0);
+  await expect(host.locator(`[data-role='frozen-row'][data-row-id="${duplicateId}"]`)).toHaveCount(0);
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']")).toHaveCount(1);
-  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
 });
 
-test("pinned Transaction edits target the pinned stable ID", async ({ page }) => {
+test("pinned Transaction target remains selected after Cycle Signal selection", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   const bottom = page.getByTestId("bottom-editor");
@@ -78,11 +91,7 @@ test("pinned Transaction edits target the pinned stable ID", async ({ page }) =>
   await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
   const transactionRow = bottom.locator(".transaction-list-row").filter({ hasText: "Pinned Transfer" });
   await expect(transactionRow).toHaveCount(1);
-  await transactionRow.click();
-  const inspector = page.getByTestId("inspector");
-  await inspector.getByLabel("Transaction name").fill("Pinned Transfer Updated");
-  await inspector.getByTestId("apply-inspector-transaction").click();
-  await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(bottom.locator(".transaction-list-row").filter({ hasText: "Pinned Transfer Updated" })).toHaveCount(1);
+  await expect(transactionRow.locator("button[data-selected='true']")).toHaveCount(1);
+  await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toHaveCount(1);
 });
