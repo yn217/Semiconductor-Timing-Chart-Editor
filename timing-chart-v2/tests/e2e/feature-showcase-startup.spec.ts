@@ -43,6 +43,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     const readTransactionBar = page.getByTestId("transaction-lanes").locator("[data-transaction-id='demo_txn_read']");
     await expect(readTransactionBar).toBeVisible();
     await expect(readTransactionBar.locator("[data-phase-segment]")).toHaveCount(3);
+    await expect(readTransactionBar).toContainText("Address");
 
     await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
     await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Combined");
