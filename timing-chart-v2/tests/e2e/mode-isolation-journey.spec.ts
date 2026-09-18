@@ -69,6 +69,14 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   await modes.getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction", { timeout: 5_000 });
   await expect(shell).toHaveAttribute("data-inspector-visible", "true");
+  const transactionPhasesTab = page.getByTestId("bottom-tab-phases");
+  await transactionPhasesTab.click();
+  await expect(transactionPhasesTab).toHaveAttribute("aria-selected", "true");
+  await modes.getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(page.getByTestId("bottom-tab-signal")).toHaveAttribute("aria-selected", "true");
+  await modes.getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(transactionPhasesTab).toHaveAttribute("aria-selected", "true");
+  await assertViewOnly();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Zoom preset").selectOption("200");
   await expect(page.getByTestId("zoom-status")).toHaveText("200%", { timeout: 5_000 });

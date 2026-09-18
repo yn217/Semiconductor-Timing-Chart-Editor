@@ -20,6 +20,11 @@ export function MinimalCycleViewNextProbe() {
   const [ribbonTab, setRibbonTab] = useState("Home");
   const [viewMode, setViewMode] = useState<"Cycle" | "Transaction" | "Split">("Cycle");
   const [bottomTab, setBottomTab] = useState("Signal");
+  const setProbeViewMode = (next: "Cycle" | "Transaction" | "Split") => {
+    setViewMode(next);
+    if (next === "Cycle" && bottomTab === "Transaction") setBottomTab("Signal");
+    if (next === "Transaction" && bottomTab === "Signal") setBottomTab("Transaction");
+  };
   const [zoom, setZoom] = useState(1);
   const [selectedCycle, setSelectedCycle] = useState(0);
   const [nextBottomTab, setNextBottomTab] = useState("Signal");
@@ -70,7 +75,7 @@ export function MinimalCycleViewNextProbe() {
     transactionBoundaryX: (cycle: number) => { const signal = snapshot.document.signals[0]; return signal === undefined ? undefined : localGeometryRef.current?.find({ signalId: signal.id, cycle, point: "cycle-start" })?.point.x; }, snapTransactionCycle: () => undefined,
     executeTimelineCommand: (command: SemanticCommand) => session.execute(command),
     titleBarUi: <MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={session.historyState().dirty} viewMode={viewMode} />,
-    ribbonTabsUi: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />,
+    ribbonTabsUi: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setProbeViewMode} />,
     ribbonUi: null,
     signalTreeAndCanvasUi: <MinimalCycleViewSignalTreeCanvas document={snapshot.document} selectedSignalId={nextSelectedSignalId} onSelect={setNextSelectedSignalId} surfaceHostRef={surfaceHostRef} rulerRef={rulerRef} gridLayerRef={gridLayerRef} />,
     bottomEditorUi: <MinimalCycleViewBottomEditor tab={nextBottomTab} onTabChange={setNextBottomTab} followSelection={followSelection} onFollowSelectionChange={setFollowSelection} pinned={bottomPinned} onPinnedChange={setBottomPinned} />,
