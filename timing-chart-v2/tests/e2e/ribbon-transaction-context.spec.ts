@@ -23,6 +23,9 @@ function undoDepth(status: string): string {
 // transaction-export.spec.ts).
 test("Home Ribbon swaps Time/Layout for Transaction context on ViewMode change, with exact Undo/Redo and no canonical/history/dirty delta from the switch itself", async ({ page }) => {
   await ready(page);
+  // Fresh startup restores Transaction mode, so explicitly establish the
+  // Cycle context before asserting the initial Time/Layout groups.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const ribbon = page.getByTestId("ribbon");
   const ribbonTabs = page.locator(".ribbon-tabs");
 
