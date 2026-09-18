@@ -133,3 +133,62 @@ test("authored transaction keeps its stable ID through one edit Undo/Redo, mode 
   await expect(reopenedRow).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("transaction-new-authoring-1280x720.png"), fullPage: true });
 });
+
+test("deleting a populated Transaction Group ungroups children as one undoable GUI operation", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+
+  const ribbon = page.getByTestId("ribbon");
+  const tree = page.getByTestId("transaction-left-tree");
+  const inspector = page.getByTestId("inspector");
+  const table = page.getByTestId("transaction-editor");
+  for (const [index, name] of ["GroupChild_A", "GroupChild_B"].entries()) {
+    await ribbon.getByRole("button", { name: "Create Transaction", exact: true }).click();
+    await inspector.getByLabel("Transaction name", { exact: true }).fill(name);
+    await inspector.getByTestId("apply-inspector-transaction").click();
+    if (index === 0) await expect(tree.locator("[data-transaction-tree-id]")).toHaveCount(1);
+  }
+  await page.getByTestId("add-transaction-group-tree").click();
+  const groupHeader = tree.locator("[data-transaction-group-id]").filter({ hasText: "Group 1" });
+  const groupId = await groupHeader.getAttribute("data-transaction-group-id");
+  expect(groupId).toBeTruthy();
+  for (const name of ["GroupChild_A", "GroupChild_B"]) {
+    await tree.locator("[data-transaction-tree-id]").filter({ hasText: name }).click();
+    await inspector.getByLabel("Transaction group", { exact: true }).selectOption({ label: "Group 1" });
+    await inspector.getByTestId("apply-inspector-transaction").click();
+  }
+  await expect(groupHeader).toContainText("(2)");
+  await expect(table.locator("[data-transaction-row-id]")).toHaveCount(2);
+  await expect(table).toContainText("Group 1");
+
+  const selectedId = await tree.locator("[data-transaction-tree-id]").filter({ hasText: "GroupChild_B" }).getAttribute("data-transaction-tree-id");
+  const historyBeforeDelete = await page.getByTestId("history-status").textContent();
+  const depthBeforeDelete = Number(historyBeforeDelete?.match(/History (\d+)/)?.[1] ?? -1);
+  await groupHeader.getByRole("button", { name: "Group 1 actions" }).click();
+  await page.getByRole("menuitem", { name: "Delete Group", exact: true }).click();
+
+  await expect(tree.locator(`[data-transaction-tree-id="${selectedId}"]`)).toHaveCount(1);
+  await expect(tree.locator("[data-transaction-group-id]").filter({ hasText: "Group 1" })).toHaveCount(0);
+  const ungrouped = tree.locator('[data-transaction-group-id="ungrouped"]');
+  await expect(ungrouped).toContainText("(2)");
+  await expect(table).not.toContainText("Group 1");
+  await expect(table.locator("[data-transaction-row-id]")).toHaveCount(2);
+  await expect(page.getByTestId("history-status")).toHaveText(`History ${depthBeforeDelete + 1} / Redo 0`);
+
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText(`History ${depthBeforeDelete} / Redo 1`);
+  const restoredGroup = tree.locator(`[data-transaction-group-id="${groupId}"]`);
+  await expect(restoredGroup).toContainText("(2)");
+  await expect(restoredGroup.locator("[data-transaction-tree-id]")).toHaveCount(2);
+  await expect(table).toContainText("Group 1");
+  await expect(tree.locator(`[data-transaction-tree-id="${selectedId}"]`)).toHaveCount(1);
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(tree.locator(`[data-transaction-group-id="${groupId}"]`)).toHaveCount(0);
+  await expect(tree.locator('[data-transaction-group-id="ungrouped"]')).toContainText("(2)");
+  await expect(table.locator("[data-transaction-row-id]")).toHaveCount(2);
+  await expect(tree.locator(`[data-transaction-tree-id="${selectedId}"]`)).toHaveCount(1);
+});
