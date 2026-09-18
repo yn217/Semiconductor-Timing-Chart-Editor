@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
 
 // #378: Stroke/Fill/Lock are the concrete gaps this issue's audit found --
 // LabelOffset/Multiline/Z-order/Visibility were already real, generic,
@@ -10,8 +11,13 @@ import { expect, test } from "@playwright/test";
 
 async function addAnnotation(page: import("@playwright/test").Page, type: string) {
   await page.getByLabel("Annotation type").selectOption(type);
+  const host = page.getByTestId("cycle-surface");
   await page.getByRole("button", { name: "Add annotation" }).click();
-  return page.getByTestId("cycle-surface").locator(`[data-role='annotation-owner'][data-annotation-type='${type}']`).last();
+  const selectedOwner = host.locator(`[data-role='annotation-owner'][data-annotation-type='${type}'][data-selected='true'][data-annotation-id]`);
+  await expect(selectedOwner).toHaveCount(1);
+  const selectedId = await selectedOwner.getAttribute("data-annotation-id");
+  expect(selectedId).toBeTruthy();
+  return host.locator(`[data-role='annotation-owner'][data-annotation-id='${selectedId}']`);
 }
 
 async function exportSvgText(page: import("@playwright/test").Page): Promise<string> {
@@ -43,11 +49,16 @@ test("Range Stroke/Fill controls have real canonical + rendered + exported effec
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
 
   const range = await addAnnotation(page, "range");
+  const annotationId = await range.getAttribute("data-annotation-id");
+  await page.getByTestId("bottom-tabs").getByRole("tab", { name: "Annotation", exact: true }).click();
+  await page.getByTestId("annotation-list").locator(`[data-annotation-list-id='${annotationId}']`).click();
   const editor = page.getByTestId("annotation-editor");
-  const strokeWidth = editor.getByTestId("annotation-stroke-fill-stroke-width");
-  const strokeStyle = editor.getByTestId("annotation-stroke-fill-stroke-style");
-  const fillColor = editor.getByTestId("annotation-stroke-fill-fill-color");
-  const fillOpacity = editor.getByTestId("annotation-stroke-fill-fill-opacity");
+  await expect(editor).toHaveAttribute("data-annotation-id", annotationId!);
+  await editor.locator("[data-section-id='style'] .inspector-section-toggle").click();
+  const strokeWidth = editor.getByTestId("inspector-stroke-fill-stroke-width");
+  const strokeStyle = editor.getByTestId("inspector-stroke-fill-stroke-style");
+  const fillColor = editor.getByTestId("inspector-stroke-fill-fill-color");
+  const fillOpacity = editor.getByTestId("inspector-stroke-fill-fill-opacity");
   await expect(strokeWidth).toBeEnabled();
   await expect(fillColor).toBeEnabled();
 
@@ -67,7 +78,6 @@ test("Range Stroke/Fill controls have real canonical + rendered + exported effec
   // hardcoded 12% default mix any more (a real property-driven change).
   expect(backgroundColor).not.toBe("");
 
-  const annotationId = await range.getAttribute("data-annotation-id");
   const svgText = await exportSvgText(page);
   const groupMatch = svgText.match(new RegExp(`<g data-annotation-id="${annotationId}"[\\s\\S]*?</g>`));
   expect(groupMatch).not.toBeNull();
@@ -76,6 +86,29 @@ test("Range Stroke/Fill controls have real canonical + rendered + exported effec
   expect(rectMatch![0]).toContain(`stroke-width="6"`);
   expect(rectMatch![0]).toContain(`stroke-dasharray="7 4"`);
   expect(rectMatch![0]).toMatch(/fill-opacity="0\.5"/);
+
+  const save = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await save).path();
+  expect(savedPath).toBeTruthy();
+  const saved = JSON.parse(readFileSync(savedPath!, "utf8")) as { annotations: readonly { id: string; style?: { strokeWidth?: number; strokeStyle?: string; fillColor?: string; fillOpacity?: number } }[] };
+  expect(saved.annotations.find((annotation) => annotation.id === annotationId)?.style).toMatchObject({ strokeWidth: 6, strokeStyle: "dashed", fillColor: "#00aa00", fillOpacity: 0.5 });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  const restored = page.getByTestId("cycle-surface").locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}']`);
+  await expect(restored).toBeVisible();
+  await page.getByTestId("bottom-tabs").getByRole("tab", { name: "Annotation", exact: true }).click();
+  await page.getByTestId("annotation-list").locator(`[data-annotation-list-id='${annotationId}']`).click();
+  const restoredEditor = page.getByTestId("annotation-editor");
+  await expect(restoredEditor).toHaveAttribute("data-annotation-id", annotationId!);
+  await restoredEditor.locator("[data-section-id='style'] .inspector-section-toggle").click();
+  await expect(restoredEditor.getByTestId("inspector-stroke-fill-stroke-width")).toHaveValue("6");
+  await expect(restoredEditor.getByTestId("inspector-stroke-fill-stroke-style")).toHaveValue("dashed");
+  await expect(restoredEditor.getByTestId("inspector-stroke-fill-fill-color")).toHaveValue("#00aa00");
+  await expect(restoredEditor.getByTestId("inspector-stroke-fill-fill-opacity")).toHaveValue("0.5");
+  await expect(restored.locator("[data-role='annotation-body']")).toHaveCSS("border-width", "6px");
+  await expect(restored.locator("[data-role='annotation-body']")).toHaveCSS("border-style", "dashed");
 });
 
 test("Vertical Line exports a full-height dashed line, not an invisible zero-length one", async ({ page }) => {
