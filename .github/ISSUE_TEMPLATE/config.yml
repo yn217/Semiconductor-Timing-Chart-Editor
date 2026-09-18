@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and support
+    url: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/discussions
+    about: Use Discussions for questions that are neither bug reports nor feature proposals.
