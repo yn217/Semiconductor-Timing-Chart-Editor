@@ -111,6 +111,58 @@ test("Range Stroke/Fill controls have real canonical + rendered + exported effec
   await expect(restored.locator("[data-role='annotation-body']")).toHaveCSS("border-style", "dashed");
 });
 
+test("Text italic and decorations survive real Save/Open in canonical and rendered label", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await selectRequestSignal(page, host);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+
+  const annotation = await addAnnotation(page, "text");
+  const annotationId = await annotation.getAttribute("data-annotation-id");
+  expect(annotationId).toBeTruthy();
+  const italic = page.getByTestId("ribbon-annotation-font-italic");
+  const underline = page.getByTestId("ribbon-annotation-font-underline");
+  const strikethrough = page.getByTestId("ribbon-annotation-font-strikethrough");
+
+  for (const control of [italic, underline, strikethrough]) {
+    await control.click();
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await expect(control).toHaveAttribute("aria-pressed", "true");
+  }
+  const label = annotation.locator("[data-role='annotation-label']");
+  await expect(label).toHaveCSS("font-style", "italic");
+  await expect(label).toHaveCSS("text-decoration-line", /underline/);
+  await expect(label).toHaveCSS("text-decoration-line", /line-through/);
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const saveDownload = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await saveDownload).path();
+  expect(savedPath).toBeTruthy();
+  const saved = JSON.parse(readFileSync(savedPath!, "utf8")) as {
+    annotations: readonly { id: string; style?: { fontStyle?: string; textDecoration?: string } }[];
+  };
+  expect(saved.annotations.find((item) => item.id === annotationId)?.style).toMatchObject({
+    fontStyle: "italic",
+    textDecoration: "underline line-through",
+  });
+
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const restored = page.getByTestId("cycle-surface").locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}']`);
+  await expect(restored).toBeVisible();
+  const restoredLabel = restored.locator("[data-role='annotation-label']");
+  await expect(restoredLabel).toHaveCSS("font-style", "italic");
+  await expect(restoredLabel).toHaveCSS("text-decoration-line", /underline/);
+  await expect(restoredLabel).toHaveCSS("text-decoration-line", /line-through/);
+  await restoredLabel.click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await expect(page.getByTestId("ribbon-annotation-font-italic")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("ribbon-annotation-font-underline")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("ribbon-annotation-font-strikethrough")).toHaveAttribute("aria-pressed", "true");
+});
+
 test("Vertical Line exports a full-height dashed line, not an invisible zero-length one", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
