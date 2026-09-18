@@ -648,6 +648,10 @@ export function MinimalCycleView() {
     transactionPresentationRevision,
     history,
     problem,
+    registerSelectionChangeGuard: selection.registerSelectionChangeGuard,
+    pendingSelectionChange: selection.pendingSelectionChange,
+    confirmPendingSelectionChange: selection.confirmPendingSelectionChange,
+    cancelPendingSelectionChange: selection.cancelPendingSelectionChange,
     diagnostics,
     refs: { host, viewport, menuOriginRef, transactionBoundaryX, snapTransactionCycle },
     command: {

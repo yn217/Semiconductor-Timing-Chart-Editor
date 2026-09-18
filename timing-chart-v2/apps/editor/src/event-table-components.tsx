@@ -36,7 +36,7 @@ export function ValueEditorControl({ signal, value, onChange, ariaLabel, listId 
   </>;
 }
 
-export function EventRow({ signal, change, end, index, selected, checked, canDuplicate, onToggleChecked, onSelect, onDuplicate, commands, draggable, onDragStart, onDragOver, onDrop, onDragEnd }: {
+export function EventRow({ signal, change, end, index, selected, checked, canDuplicate, onToggleChecked, onSelect, onDuplicate, onDraftDirtyChange, draftKey, commands, draggable, onDragStart, onDragOver, onDrop, onDragEnd }: {
   readonly signal: ValueSignal;
   readonly change: ValueSignal["values"][number];
   readonly end: number;
@@ -53,6 +53,8 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
   readonly onToggleChecked: () => void;
   readonly onSelect: (start: number) => void;
   readonly onDuplicate: () => void;
+  readonly draftKey: string;
+  readonly onDraftDirtyChange: (key: string, dirty: boolean) => void;
   readonly commands: Pick<SignalEditorCommandActions, "replaceValue" | "removeValue">;
   readonly draggable?: boolean;
   readonly onDragStart?: () => void;
@@ -78,7 +80,10 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
   // disturb the selection/Preview surface). `end` is derived and read-only,
   // so it is intentionally excluded from both the Draft and this comparison.
   const hasChanges = start !== change.start || value !== String(change.value) || comment !== (change.comment ?? "");
-  const cancel = () => { setStart(change.start); setValue(String(change.value)); setComment(change.comment ?? ""); };
+  const cancel = () => { setStart(change.start); setValue(String(change.value)); setComment(change.comment ?? ""); onDraftDirtyChange(draftKey, false); };
+  const updateStart = (next: number) => { setStart(next); onDraftDirtyChange(draftKey, next !== change.start || value !== String(change.value) || comment !== (change.comment ?? "")); };
+  const updateValue = (next: string) => { setValue(next); onDraftDirtyChange(draftKey, start !== change.start || next !== String(change.value) || comment !== (change.comment ?? "")); };
+  const updateComment = (next: string) => { setComment(next); onDraftDirtyChange(draftKey, start !== change.start || value !== String(change.value) || next !== (change.comment ?? "")); };
   const startEditing = () => { onSelect(change.start); setIsEditing(true); };
   const stopEditing = () => { cancel(); setIsEditing(false); };
   return <form className={`event-row${selected ? " selected" : ""}${isEditing ? " editing" : ""}`} role="row" data-event-id={change.id ?? `start-${change.start}`} data-event-start={change.start} draggable={false} onDragEnter={onDragOver} onDragOver={onDragOver} onDropCapture={onDrop} onDrop={onDrop} onDragEnd={onDragEnd} onClick={() => onSelect(change.start)} onSubmit={(event) => {
@@ -89,7 +94,7 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
     // a rejected Draft (e.g. a duplicate change point) stays open and
     // editable so the Problems banner's guidance can be acted on directly,
     // instead of silently reverting to read-only with the edit lost.
-    if (result.ok) setIsEditing(false);
+    if (result.ok) { onDraftDirtyChange(draftKey, false); setIsEditing(false); }
   }}>
     {/* Visual Quality Closure pass (#402/#426): "Select transition N" (not
         the bare cycle number) so the accessible name reads as a sentence,
@@ -104,14 +109,14 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
         <output> elements than before (Start/Value/Comment), which would
         otherwise shift any existing "the 2nd <output>" style locator. */}
     {isEditing
-      ? <input aria-label={`Start ${change.start}`} type="number" min="0" step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} />
+      ? <input aria-label={`Start ${change.start}`} type="number" min="0" step="1" value={start} onChange={(event) => updateStart(Number(event.target.value))} />
       : <output data-testid={`event-row-start-${change.start}`}>{change.start}</output>}
     <output data-testid={`event-row-end-${change.start}`}>{end}</output><output data-testid={`event-row-duration-${change.start}`}>{end - change.start}</output>
     {isEditing
-      ? <ValueEditorControl signal={signal} value={value} onChange={setValue} ariaLabel={`Value ${change.start}`} listId={`event-row-value-options-${change.start}`} />
+      ? <ValueEditorControl signal={signal} value={value} onChange={updateValue} ariaLabel={`Value ${change.start}`} listId={`event-row-value-options-${change.start}`} />
       : <output data-testid={`event-row-value-${change.start}`}>{change.displayLabel ?? String(change.value)}</output>}
     {isEditing
-      ? <input aria-label={`Comment ${change.start}`} value={comment} onChange={(event) => setComment(event.target.value)} />
+      ? <input aria-label={`Comment ${change.start}`} value={comment} onChange={(event) => updateComment(event.target.value)} />
       : <output className="event-row-comment" data-testid={`event-row-comment-${change.start}`}>{change.comment ?? ""}</output>}
     {/* Visual Quality Closure pass: Cancel/Save/Remove sitting side by side
         on every row *at all times* is exactly the fixed-width Actions

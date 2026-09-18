@@ -7,6 +7,7 @@ import { EditorIconButton } from "./editor-icon.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonNumberInput } from "./design-system.js";
 import type { EditorSurfaceCommandController, SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
+import type { SelectionChangeGuard } from "./application/use-selection-owner.js";
 
 /** #388/#396: this file's own destination/range-edit summary + tooltip
  * helpers. `destinationSummary` covers the Duplicate/Move sentence shown
@@ -182,4 +183,6 @@ export interface SignalEditorProps {
   readonly onClockPreview: (draft: ClockGenerator | undefined) => void;
   readonly clockCommands: Pick<SignalEditorCommandActions, "updateClockGenerator" | "updateEdgeCounter">;
   readonly signalCommands: SignalEditorCommandActions;
+  readonly registerSelectionChangeGuard: (guard: SelectionChangeGuard) => () => void;
+  readonly selectionFollowsBottom: boolean;
 }

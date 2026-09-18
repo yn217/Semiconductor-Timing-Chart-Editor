@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { createPortal } from "react-dom";
 import type {
   Dispatch,
   KeyboardEvent,
@@ -27,6 +28,7 @@ import type {
 import type { UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { EditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import type { EditorActions } from "./application/use-editor-actions.js";
+import type { PendingSelectionChange, SelectionChangeGuard } from "./application/use-selection-owner.js";
 import type { ClipboardActions } from "./application/clipboard-actions.js";
 import type { TransactionTreeFilterMode } from "./workspace/use-workspace-ui-state.js";
 import { useEditorAiAssistantModel } from "./application/use-editor-ai-assistant-model.js";
@@ -73,6 +75,10 @@ export interface EditorSecondarySurfacesInput {
   readonly transactionPresentationRevision: number;
   readonly history: HistoryState;
   readonly problem: string;
+  readonly registerSelectionChangeGuard: (guard: SelectionChangeGuard) => () => void;
+  readonly pendingSelectionChange: PendingSelectionChange | undefined;
+  readonly confirmPendingSelectionChange: () => void;
+  readonly cancelPendingSelectionChange: () => void;
   readonly diagnostics: readonly DocumentProblem[];
   readonly refs: {
     readonly host: Ref<HTMLDivElement>;
@@ -300,6 +306,8 @@ export function useEditorSecondarySurfaces(
       }}
       clockCommands={surfaceCommands}
       signalCommands={surfaceCommands}
+      registerSelectionChangeGuard={input.registerSelectionChangeGuard}
+      selectionFollowsBottom={input.workspace.followSelection && !input.workspace.bottomPinned}
     />
   );
   const annotationEditor = <AnnotationCollectionPanel
@@ -515,6 +523,7 @@ export function useEditorSecondarySurfaces(
       />
     ) : null;
   const workspaceBottom = (
+    <>
     <BottomEditorPanel
       tabs={workspace.bottomTabs}
       activeTab={workspace.bottomTab}
@@ -585,6 +594,31 @@ export function useEditorSecondarySurfaces(
         )
       }
     />
+    {input.pendingSelectionChange && typeof window !== "undefined" && createPortal(
+      <div className="modal-backdrop" data-testid="selection-change-confirmation">
+        <section
+          className="document-properties"
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="selection-change-confirmation-title"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              input.cancelPendingSelectionChange();
+            }
+          }}
+        >
+          <header><h2 id="selection-change-confirmation-title">Unapplied Transition Edit</h2></header>
+          <p>{input.pendingSelectionChange.message}</p>
+          <footer>
+            <button type="button" autoFocus onClick={input.cancelPendingSelectionChange}>Keep editing</button>
+            <button type="button" data-testid="selection-change-discard" onClick={input.confirmPendingSelectionChange}>Discard and switch</button>
+          </footer>
+        </section>
+      </div>,
+      window.document.body,
+    )}
+    </>
   );
   const previewAnnotationDraft = useCallback((annotationId: AnnotationId, draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => {
     const annotation = input.document.annotations.find((item) => item.id === annotationId);

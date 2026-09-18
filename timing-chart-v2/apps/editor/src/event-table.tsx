@@ -5,6 +5,7 @@ import type { CommandResult } from "@timing-chart-v2/commands";
 import type { ValueSignal } from "@timing-chart-v2/schema";
 import { DOCUMENT_RESOURCE_BUDGET, parseJsonInput } from "@timing-chart-v2/schema";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
+import type { SelectionChangeGuard } from "./application/use-selection-owner.js";
 import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./event-table-components.js";
 import { buildEventTableIndex } from "./runtime/event-table-index.js";
 import { reorderTransitionBlock, transitionIdentity } from "./runtime/transition-reorder.js";
@@ -34,7 +35,7 @@ function valueHelperCopy(signal: ValueSignal): { readonly label: string; readonl
   }
 }
 
-export function EventTable({ signal, cycleCount, commands, generatorSlot }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly commands: Pick<SignalEditorCommandActions, "replaceValues" | "updateValue" | "replaceValue" | "removeValue">; readonly generatorSlot?: ReactNode }) {
+export function EventTable({ signal, cycleCount, commands, generatorSlot, registerSelectionChangeGuard, selectionFollowsBottom }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly commands: Pick<SignalEditorCommandActions, "replaceValues" | "updateValue" | "replaceValue" | "removeValue">; readonly generatorSlot?: ReactNode; readonly registerSelectionChangeGuard?: (guard: SelectionChangeGuard) => () => void; readonly selectionFollowsBottom: boolean }) {
   const [start, setStart] = useState(0);
   const [value, setValue] = useState(defaultEventValue(signal));
   const [comment, setComment] = useState("");
@@ -47,6 +48,24 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   const [checkedKeys, setCheckedKeys] = useState<ReadonlySet<string>>(new Set());
   const [eventScrollTop, setEventScrollTop] = useState(0);
   const eventViewportRef = useRef<HTMLDivElement>(null);
+  const dirtyTransitionDraftKeysRef = useRef(new Set<string>());
+  const unregisterSelectionGuardRef = useRef<(() => void) | undefined>(undefined);
+  const selectionFollowsBottomRef = useRef(selectionFollowsBottom);
+  selectionFollowsBottomRef.current = selectionFollowsBottom;
+  const updateTransitionDraftDirty = (key: string, dirty: boolean) => {
+    if (dirty) dirtyTransitionDraftKeysRef.current.add(key);
+    else dirtyTransitionDraftKeysRef.current.delete(key);
+    if (dirtyTransitionDraftKeysRef.current.size > 0 && !unregisterSelectionGuardRef.current && registerSelectionChangeGuard) {
+      unregisterSelectionGuardRef.current = registerSelectionChangeGuard((next) => {
+        if (!selectionFollowsBottomRef.current || next.signalId === signal.id) return undefined;
+        return `${signal.name} has a Transition with unapplied changes. Discard them and change selection?`;
+      });
+    } else if (dirtyTransitionDraftKeysRef.current.size === 0) {
+      unregisterSelectionGuardRef.current?.();
+      unregisterSelectionGuardRef.current = undefined;
+    }
+  };
+  useEffect(() => () => unregisterSelectionGuardRef.current?.(), []);
   const [importStatus, setImportStatus] = useState("Import signal events");
   const fileInput = useRef<HTMLInputElement>(null);
   const indexed = useMemo(() => buildEventTableIndex(signal.values, cycleCount), [signal.values, cycleCount]);
@@ -275,7 +294,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
             not a decorative header cell. */}
         <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span>End</span><span>Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
         <div aria-hidden="true" style={{ height: eventFirst * EVENT_ROW_HEIGHT }} />
-        {renderedEvents.map((change, offset) => { const index = eventFirst + offset; const key = transitionIdentity(change); return <EventRow key={key} index={index + 1} signal={signal} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={key === selectedKey} checked={checkedKeys.has(key)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change)} onSelect={selectTransition} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedKeys.has(key) && checkedCount > 1 ? checkedKeys : [key]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
+        {renderedEvents.map((change, offset) => { const index = eventFirst + offset; const key = transitionIdentity(change); const draftKey = `${signal.id}:${key}`; return <EventRow key={key} index={index + 1} signal={signal} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={key === selectedKey} checked={checkedKeys.has(key)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change)} onSelect={selectTransition} onDuplicate={() => duplicateChange(change)} draftKey={draftKey} onDraftDirtyChange={updateTransitionDraftDirty} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedKeys.has(key) && checkedCount > 1 ? checkedKeys : [key]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
         <div aria-hidden="true" style={{ height: Math.max(0, indexed.ordered.length - eventLast) * EVENT_ROW_HEIGHT }} />
       </div>
     </div>

@@ -28,6 +28,12 @@ type SelectionEffects = Readonly<{
   decorateSelection: (state: SelectionState) => void;
   synchronizeContext: (kind: SelectionKind) => void;
 }>;
+export type SelectionChangeGuard = (next: SelectionState, current: SelectionState) => string | undefined;
+export type PendingSelectionChange = Readonly<{
+  next: SelectionState;
+  kind: SelectionKind;
+  message: string;
+}>;
 
 function initialState(signalId: SignalId | undefined): SelectionState {
   return {
@@ -79,13 +85,35 @@ export function useSelectionOwner(initialSignalId?: SignalId) {
   const [state, setState] = useState<SelectionState>(() => initialState(initialSignalId));
   const stateRef = useRef(state);
   const effectsRef = useRef<SelectionEffects | undefined>(undefined);
+  const selectionGuardsRef = useRef(new Set<SelectionChangeGuard>());
+  const [pendingSelectionChange, setPendingSelectionChange] = useState<PendingSelectionChange | undefined>();
+  const pendingSelectionChangeRef = useRef<PendingSelectionChange | undefined>(undefined);
+
+  const clearPendingSelectionChange = () => {
+    pendingSelectionChangeRef.current = undefined;
+    setPendingSelectionChange(undefined);
+  };
 
   const replace = (next: SelectionState | ((current: SelectionState) => SelectionState)) => {
     const value = typeof next === "function" ? next(stateRef.current) : next;
     stateRef.current = value;
     setState(value);
   };
-  const commit = (next: SelectionState, kind: SelectionKind) => {
+  const commit = (next: SelectionState, kind: SelectionKind, bypassGuards = false) => {
+    if (pendingSelectionChangeRef.current && !bypassGuards) return;
+    const current = stateRef.current;
+    if (!bypassGuards) {
+      const message = [...selectionGuardsRef.current]
+        .map((guard) => guard(next, current))
+        .find((candidate): candidate is string => candidate !== undefined);
+      if (message !== undefined) {
+        const pending = { next, kind, message } satisfies PendingSelectionChange;
+        pendingSelectionChangeRef.current = pending;
+        setPendingSelectionChange(pending);
+        return;
+      }
+    }
+    clearPendingSelectionChange();
     replace(next);
     effectsRef.current?.decorateSelection(next);
     effectsRef.current?.synchronizeContext(kind);
@@ -103,6 +131,14 @@ export function useSelectionOwner(initialSignalId?: SignalId) {
 
   return {
     state,
+    pendingSelectionChange,
+    cancelPendingSelectionChange: clearPendingSelectionChange,
+    confirmPendingSelectionChange: () => {
+      const pending = pendingSelectionChangeRef.current;
+      if (!pending) return;
+      clearPendingSelectionChange();
+      commit(pending.next, pending.kind, true);
+    },
     refs: {
       state: stateRef,
       signalId: { get current() { return stateRef.current.signalId; } },
@@ -115,6 +151,10 @@ export function useSelectionOwner(initialSignalId?: SignalId) {
       transactionIds: { get current() { return stateRef.current.transactionIds; } },
     },
     configure: (effects: SelectionEffects) => { effectsRef.current = effects; },
+    registerSelectionChangeGuard: (guard: SelectionChangeGuard) => {
+      selectionGuardsRef.current.add(guard);
+      return () => selectionGuardsRef.current.delete(guard);
+    },
     selectSignal: (signalId: SignalId, additive = false) => {
       const ids = additive ? new Set(stateRef.current.signalIds) : new Set<SignalId>();
       if (ids.has(signalId)) ids.delete(signalId); else ids.add(signalId);
