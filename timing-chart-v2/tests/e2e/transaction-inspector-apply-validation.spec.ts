@@ -102,3 +102,44 @@ test("a rejected Transaction Apply surfaces its reason instead of silently no-op
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 });
+
+test("freshly authored invalid Phase Apply reports rejection with no semantic side effects", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+
+  // Start from a normal generic document and use only visible Production UI.
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
+
+  const treeRow = page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]");
+  await expect(treeRow).toHaveCount(1);
+  const transactionId = await treeRow.getAttribute("data-transaction-tree-id");
+  expect(transactionId).toBeTruthy();
+  await treeRow.click();
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByTestId("add-transaction-phase").click();
+  await expect(inspector.locator("[data-phase-index]")).toHaveCount(1);
+  const phaseStart = Number(await inspector.getByLabel("Phase 1 start").inputValue());
+  const phaseEnd = inspector.getByLabel("Phase 1 end");
+
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+  };
+  await phaseEnd.fill(String(phaseStart)); // invalid empty half-open range [start,start)
+  await inspector.getByTestId("apply-inspector-transaction").click();
+
+  await expect(inspector.getByRole("status")).toHaveText("Phases must be named integer-cycle half-open subranges within Start..End.");
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+  await expect(page.getByTestId(`transaction-left-tree-row-${transactionId}`)).toHaveAttribute("data-selected", "true");
+  await expect(phaseEnd).toHaveValue(String(phaseStart)); // rejected draft remains explicit and editable
+
+  await page.getByTestId("bottom-tabs").getByRole("tab", { name: "Phases", exact: true }).click();
+  await expect(page.getByTestId("transaction-bottom-phases")).toContainText("Phases (0)");
+});
