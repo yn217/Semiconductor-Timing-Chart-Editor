@@ -32,26 +32,6 @@ export function EditorWorkspaceView({
   const { header, transactionTree, viewportContent, viewportLegend, bottom, inspector } = viewModel.content;
   const { onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onLeftPaneKeyDown, onLeftPanePointerDown, onLeftPanePointerMove, onLeftPanePointerUp, onFrozenPaneKeyDown, onFrozenPanePointerDown, onFrozenPanePointerMove, onFrozenPanePointerUp, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onSignalSplitKeyDown, onSignalSplitPointerDown, onSignalSplitPointerMove, onSignalSplitPointerUp, onViewportKeyDown, onSetCursorAtCycle, resolveCursorCycleAtClientX } = viewModel.interactions;
   useEffect(() => {
-    const viewportElement = viewMode === "Transaction" ? viewport.current : null;
-    const tree = viewportElement?.querySelector<HTMLElement>(".transaction-left-tree");
-    if (!viewportElement || !tree) return;
-
-    // The Transaction Tree is intentionally an absolute overlay so it does
-    // not shift the shared timeline geometry. Keep that overlay pinned to
-    // the viewport while its parent scrolls horizontally by cancelling the
-    // parent's exact scroll offset (rather than introducing a second layout
-    // column or changing any time-axis coordinates).
-    const syncHorizontalPosition = () => {
-      tree.style.left = `${viewportElement.scrollLeft}px`;
-    };
-    syncHorizontalPosition();
-    viewportElement.addEventListener("scroll", syncHorizontalPosition, { passive: true });
-    return () => {
-      viewportElement.removeEventListener("scroll", syncHorizontalPosition);
-      tree.style.removeProperty("left");
-    };
-  }, [viewMode, viewport]);
-  useEffect(() => {
     // Cursor A/B are workspace-only source-cycle markers. The ruler is the
     // shared display-time owner, so resolve each marker from the rendered
     // source-cycle tick instead of deriving a second x scale in React.
