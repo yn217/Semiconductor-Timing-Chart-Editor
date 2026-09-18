@@ -549,11 +549,11 @@ test("Transaction Tree Group menu shows and hides all child projections", async 
   await page.goto("/?transaction-demo");
   const group = page.locator('[data-transaction-group-id="demo_tgrp_memory"]');
   await group.locator(".transaction-left-tree-group-header .transaction-left-tree-more").click();
-  await group.getByRole("menuitem", { name: "Hide All" }).click();
+  await page.getByTestId("transaction-tree-action-menu").getByRole("menuitem", { name: "Hide All" }).click();
   await expect(page.locator('[data-transaction-id="demo_txn_read"]')).toHaveCount(0);
   await expect(page.locator('[data-transaction-id="demo_txn_write"]')).toHaveCount(0);
   await group.locator(".transaction-left-tree-group-header .transaction-left-tree-more").click();
-  await group.getByRole("menuitem", { name: "Show All" }).click();
+  await page.getByTestId("transaction-tree-action-menu").getByRole("menuitem", { name: "Show All" }).click();
   await expect(page.locator('[data-transaction-id="demo_txn_read"]')).toHaveCount(1);
   await expect(page.locator('[data-transaction-id="demo_txn_write"]')).toHaveCount(1);
 });
@@ -562,7 +562,7 @@ test("Transaction Tree Group menu selects all children", async ({ page }) => {
   await page.goto("/?transaction-demo");
   const group = page.locator('[data-transaction-group-id="demo_tgrp_memory"]');
   await group.locator(".transaction-left-tree-group-header .transaction-left-tree-more").click();
-  await group.getByRole("menuitem", { name: "Select Children" }).click();
+  await page.getByTestId("transaction-tree-action-menu").getByRole("menuitem", { name: "Select Children" }).click();
   await expect(page.getByTestId("transaction-left-tree-row-demo_txn_read")).toHaveAttribute("data-selected", "true");
   await expect(page.getByTestId("transaction-left-tree-row-demo_txn_write")).toHaveAttribute("data-selected", "true");
   await expect(page.getByTestId("transaction-left-tree-row-demo_txn_fetch")).toHaveAttribute("data-selected", "false");
