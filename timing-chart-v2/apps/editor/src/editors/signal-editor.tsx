@@ -79,7 +79,7 @@ export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, p
         // to canonical type `binary` ("Signal") only, matching #400's own
         // scope; every other value-signal type keeps using the Event
         // Table alone exactly as before.
-        : <EventTable signal={signal} cycleCount={cycleCount} commands={signalCommands} generatorSlot={signal.type === "binary" ? <SignalGeneratorEditor signal={signal} cycleCount={cycleCount} commands={signalCommands} /> : undefined} registerSelectionChangeGuard={registerSelectionChangeGuard} selectionFollowsBottom={selectionFollowsBottom} />}
+        : <EventTable key={signal.id} signal={signal} cycleCount={cycleCount} commands={signalCommands} generatorSlot={signal.type === "binary" ? (onDraftDirtyChange) => <SignalGeneratorEditor signal={signal} cycleCount={cycleCount} commands={signalCommands} onDraftDirtyChange={onDraftDirtyChange} /> : undefined} registerSelectionChangeGuard={registerSelectionChangeGuard} selectionFollowsBottom={selectionFollowsBottom} />}
     </>}
   </section>;
 }

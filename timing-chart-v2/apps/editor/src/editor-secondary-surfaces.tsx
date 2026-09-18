@@ -608,7 +608,7 @@ export function useEditorSecondarySurfaces(
             }
           }}
         >
-          <header><h2 id="selection-change-confirmation-title">Unapplied Transition Edit</h2></header>
+          <header><h2 id="selection-change-confirmation-title">Unapplied Signal Draft</h2></header>
           <p>{input.pendingSelectionChange.message}</p>
           <footer>
             <button type="button" autoFocus onClick={input.cancelPendingSelectionChange}>Keep editing</button>

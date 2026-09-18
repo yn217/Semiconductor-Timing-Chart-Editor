@@ -35,7 +35,7 @@ function valueHelperCopy(signal: ValueSignal): { readonly label: string; readonl
   }
 }
 
-export function EventTable({ signal, cycleCount, commands, generatorSlot, registerSelectionChangeGuard, selectionFollowsBottom }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly commands: Pick<SignalEditorCommandActions, "replaceValues" | "updateValue" | "replaceValue" | "removeValue">; readonly generatorSlot?: ReactNode; readonly registerSelectionChangeGuard?: (guard: SelectionChangeGuard) => () => void; readonly selectionFollowsBottom: boolean }) {
+export function EventTable({ signal, cycleCount, commands, generatorSlot, registerSelectionChangeGuard, selectionFollowsBottom }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly commands: Pick<SignalEditorCommandActions, "replaceValues" | "updateValue" | "replaceValue" | "removeValue">; readonly generatorSlot?: ((onDraftDirtyChange: (dirty: boolean) => void) => ReactNode) | undefined; readonly registerSelectionChangeGuard?: (guard: SelectionChangeGuard) => () => void; readonly selectionFollowsBottom: boolean }) {
   const [start, setStart] = useState(0);
   const [value, setValue] = useState(defaultEventValue(signal));
   const [comment, setComment] = useState("");
@@ -48,23 +48,27 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot, regist
   const [checkedKeys, setCheckedKeys] = useState<ReadonlySet<string>>(new Set());
   const [eventScrollTop, setEventScrollTop] = useState(0);
   const eventViewportRef = useRef<HTMLDivElement>(null);
-  const dirtyTransitionDraftKeysRef = useRef(new Set<string>());
+  const dirtyDraftKeysRef = useRef(new Set<string>());
   const unregisterSelectionGuardRef = useRef<(() => void) | undefined>(undefined);
   const selectionFollowsBottomRef = useRef(selectionFollowsBottom);
   selectionFollowsBottomRef.current = selectionFollowsBottom;
-  const updateTransitionDraftDirty = (key: string, dirty: boolean) => {
-    if (dirty) dirtyTransitionDraftKeysRef.current.add(key);
-    else dirtyTransitionDraftKeysRef.current.delete(key);
-    if (dirtyTransitionDraftKeysRef.current.size > 0 && !unregisterSelectionGuardRef.current && registerSelectionChangeGuard) {
+  const updateDraftDirty = (key: string, dirty: boolean) => {
+    if (dirty) dirtyDraftKeysRef.current.add(key);
+    else dirtyDraftKeysRef.current.delete(key);
+    if (dirtyDraftKeysRef.current.size > 0 && !unregisterSelectionGuardRef.current && registerSelectionChangeGuard) {
       unregisterSelectionGuardRef.current = registerSelectionChangeGuard((next) => {
         if (!selectionFollowsBottomRef.current || next.signalId === signal.id) return undefined;
-        return `${signal.name} has a Transition with unapplied changes. Discard them and change selection?`;
+        return `${signal.name} has unapplied Signal editing changes. Discard them and change selection?`;
       });
-    } else if (dirtyTransitionDraftKeysRef.current.size === 0) {
+    } else if (dirtyDraftKeysRef.current.size === 0) {
       unregisterSelectionGuardRef.current?.();
       unregisterSelectionGuardRef.current = undefined;
     }
   };
+  const newTransitionDraftKey = `${signal.id}:new-transition`;
+  const updateNewTransitionStart = (next: number) => { setStart(next); updateDraftDirty(newTransitionDraftKey, true); };
+  const updateNewTransitionValue = (next: string) => { setValue(next); updateDraftDirty(newTransitionDraftKey, true); };
+  const updateNewTransitionComment = (next: string) => { setComment(next); updateDraftDirty(newTransitionDraftKey, true); };
   useEffect(() => () => unregisterSelectionGuardRef.current?.(), []);
   const [importStatus, setImportStatus] = useState("Import signal events");
   const fileInput = useRef<HTMLInputElement>(null);
@@ -136,7 +140,9 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot, regist
   // `signal.updateValue` command path.
   const previewEnd = indexed.nextEnd(start);
   const addAndContinue = () => {
-    commands.updateValue(signal.id, start, value, comment);
+    const result = commands.updateValue(signal.id, start, value, comment);
+    if (!result.ok) return;
+    updateDraftDirty(newTransitionDraftKey, false);
     // Auto-advance Start to the next free cycle (excluding the one just
     // committed) so continuous entry doesn't need manual arithmetic each
     // time -- Value is kept (commonly the next transition reuses it),
@@ -229,7 +235,8 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot, regist
     <div className="event-panels">
       <form className="transition-form-panel" onSubmit={(event) => {
         event.preventDefault();
-        commands.updateValue(signal.id, start, value, comment);
+        const result = commands.updateValue(signal.id, start, value, comment);
+        if (result.ok) updateDraftDirty(newTransitionDraftKey, false);
       }}>
         <h2>Add / Edit Transition</h2>
         {/* Density fix (#402/#426 follow-up): Start/Value/Comment used to
@@ -243,14 +250,14 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot, regist
             `min-width: 0` side. See signal-generator-editor.tsx for the
             fuller root-cause note; the same bug pattern applied here too. */}
         <div className="transition-form-row">
-          <label className="field-inline transition-field-start"><span>Start (cycle)</span><input aria-label="New event start" type="number" min="0" max={cycleCount - 1} step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
+          <label className="field-inline transition-field-start"><span>Start (cycle)</span><input aria-label="New event start" type="number" min="0" max={cycleCount - 1} step="1" value={start} onChange={(event) => updateNewTransitionStart(Number(event.target.value))} /></label>
           {/* Value Editor Policy pass: this Value field is no longer
               unconditionally free text -- `ValueEditorControl` (shared
               with a Transition row's own inline editor) resolves the
               right control from the Signal's type (a closed logic domain
               gets a real <select>; an open one gets a combo). */}
-          <label className="field-inline transition-field-value"><span>Value</span><ValueEditorControl signal={signal} value={value} onChange={setValue} ariaLabel="New event value" listId="add-edit-transition-value-options" /></label>
-          <label className="field-inline transition-field-comment"><span>Comment</span><input aria-label="New event comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
+          <label className="field-inline transition-field-value"><span>Value</span><ValueEditorControl signal={signal} value={value} onChange={updateNewTransitionValue} ariaLabel="New event value" listId="add-edit-transition-value-options" /></label>
+          <label className="field-inline transition-field-comment"><span>Comment</span><input aria-label="New event comment" value={comment} onChange={(event) => updateNewTransitionComment(event.target.value)} /></label>
         </div>
         <span className="event-add-preview">End: {previewEnd} / Duration: {previewEnd - start} cycles</span>
         <div className="transition-form-actions">
@@ -268,10 +275,10 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot, regist
       </form>
       <div className="value-helper-panel">
         <h2>Value Helper <span>({valueHelperCopy(signal).label})</span></h2>
-        <QuickValues signal={signal} setValue={setValue} />
+        <QuickValues signal={signal} setValue={updateNewTransitionValue} />
         <span className="value-helper-hint">{valueHelperCopy(signal).hint}</span>
       </div>
-      {generatorSlot}
+      {generatorSlot?.((dirty) => updateDraftDirty(`${signal.id}:generator`, dirty))}
     </div>
     {/* Visual Quality Closure pass, Section 5: an explicit "Transitions (N)"
         section identity so this table doesn't read as an anonymous list
@@ -294,7 +301,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot, regist
             not a decorative header cell. */}
         <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span>End</span><span>Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
         <div aria-hidden="true" style={{ height: eventFirst * EVENT_ROW_HEIGHT }} />
-        {renderedEvents.map((change, offset) => { const index = eventFirst + offset; const key = transitionIdentity(change); const draftKey = `${signal.id}:${key}`; return <EventRow key={key} index={index + 1} signal={signal} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={key === selectedKey} checked={checkedKeys.has(key)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change)} onSelect={selectTransition} onDuplicate={() => duplicateChange(change)} draftKey={draftKey} onDraftDirtyChange={updateTransitionDraftDirty} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedKeys.has(key) && checkedCount > 1 ? checkedKeys : [key]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
+        {renderedEvents.map((change, offset) => { const index = eventFirst + offset; const key = transitionIdentity(change); const draftKey = `${signal.id}:${key}`; return <EventRow key={key} index={index + 1} signal={signal} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={key === selectedKey} checked={checkedKeys.has(key)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change)} onSelect={selectTransition} onDuplicate={() => duplicateChange(change)} draftKey={draftKey} onDraftDirtyChange={updateDraftDirty} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedKeys.has(key) && checkedCount > 1 ? checkedKeys : [key]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
         <div aria-hidden="true" style={{ height: Math.max(0, indexed.ordered.length - eventLast) * EVENT_ROW_HEIGHT }} />
       </div>
     </div>

@@ -11,7 +11,7 @@ import { DraftStatus } from "./draft-status.js";
 // command the Manual Event Table already uses -- Generate replaces the
 // Signal's entire waveform in one atomic, undoable step, exactly like
 // Import already does.
-export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly commands: Pick<SignalEditorCommandActions, "replaceValues"> }) {
+export function SignalGeneratorEditor({ signal, cycleCount, commands, onDraftDirtyChange }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly commands: Pick<SignalEditorCommandActions, "replaceValues">; readonly onDraftDirtyChange?: (dirty: boolean) => void }) {
   const [start, setStart] = useState(0);
   const [initial, setInitial] = useState<0 | 1>(0);
   const [active, setActive] = useState<0 | 1>(1);
@@ -40,7 +40,7 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
     setError(""); setStatus(""); setAdvancedOpen(false);
   }, [signal.id]);
   const effectiveWidth = widthMode === "duty" ? Math.min(period - 1, Math.max(1, Math.round(duty * period))) : width;
-  const resetDraft = () => { setStart(0); setInitial(0); setActive(1); setWidthMode("width"); setWidth(1); setDuty(0.5); setPeriod(4); setRepeatMode("finite"); setRepeatCount(1); setPhase(0); setSuppressedPeriods(""); setError(""); setStatus(""); setAdvancedOpen(false); };
+  const resetDraft = () => { setStart(0); setInitial(0); setActive(1); setWidthMode("width"); setWidth(1); setDuty(0.5); setPeriod(4); setRepeatMode("finite"); setRepeatCount(1); setPhase(0); setSuppressedPeriods(""); setError(""); setStatus(""); setAdvancedOpen(false); onDraftDirtyChange?.(false); };
   // #402: Draft->Apply -- Generate must stay disabled once the computed
   // candidate waveform is byte-for-byte identical to the Signal's current
   // `values`, so re-submitting an unchanged Draft can't manufacture an
@@ -63,7 +63,7 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
         const parsedSuppressed = parseSuppressedPeriods(suppressedPeriods);
         const values = generateSignalPulseValues({ start, initial, active, width: effectiveWidth, period, repeat: repeatMode === "infinite" ? "infinite" : repeatCount, phase, suppressedPeriods: parsedSuppressed, cycleCount });
         const result = commands.replaceValues(signal.id, values);
-        if (result.ok) { setError(""); setStatus(`Generated ${values.length} change point${values.length === 1 ? "" : "s"}.`); }
+        if (result.ok) { setError(""); setStatus(`Generated ${values.length} change point${values.length === 1 ? "" : "s"}.`); onDraftDirtyChange?.(false); }
         else { setStatus(""); setError(result.problems.map((problem) => `${problem.code}: ${problem.message}`).join(" ") || "Signal Generator rejected."); }
       } catch (thrown) {
         setStatus("");
@@ -98,20 +98,20 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
           select's own options already read "Width"/"Duty", and "Count" is
           read together with the "Repeat" mode select right before it. */}
       <div className="signal-generator-grid">
-        <label><span>Start</span><input aria-label="Signal generator start" type="number" min="0" step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
-        <label><span>Period</span><input aria-label="Signal generator period" type="number" min="1" step="1" value={period} onChange={(event) => setPeriod(Number(event.target.value))} /></label>
-        <label><span>Mode</span><select aria-label="Signal generator width mode" value={widthMode} onChange={(event) => setWidthMode(event.target.value as typeof widthMode)}><option value="width">Width</option><option value="duty">Duty</option></select></label>
+        <label><span>Start</span><input aria-label="Signal generator start" type="number" min="0" step="1" value={start} onChange={(event) => { setStart(Number(event.target.value)); onDraftDirtyChange?.(true); }} /></label>
+        <label><span>Period</span><input aria-label="Signal generator period" type="number" min="1" step="1" value={period} onChange={(event) => { setPeriod(Number(event.target.value)); onDraftDirtyChange?.(true); }} /></label>
+        <label><span>Mode</span><select aria-label="Signal generator width mode" value={widthMode} onChange={(event) => { setWidthMode(event.target.value as typeof widthMode); onDraftDirtyChange?.(true); }}><option value="width">Width</option><option value="duty">Duty</option></select></label>
         {widthMode === "width"
-          ? <label><span>Width</span><input aria-label="Signal generator width" type="number" min="1" step="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label>
-          : <label><span>Duty</span><input aria-label="Signal generator duty" type="number" min="0.01" max="0.99" step="0.01" value={duty} onChange={(event) => setDuty(Number(event.target.value))} /></label>}
-        <label><span>Repeat</span><select aria-label="Signal generator repeat mode" value={repeatMode} onChange={(event) => setRepeatMode(event.target.value as typeof repeatMode)}><option value="finite">Count</option><option value="infinite">Infinite</option></select></label>
-        {repeatMode === "finite" && <label><span>Count</span><input aria-label="Signal generator repeat count" type="number" min="1" step="1" value={repeatCount} onChange={(event) => setRepeatCount(Number(event.target.value))} /></label>}
+          ? <label><span>Width</span><input aria-label="Signal generator width" type="number" min="1" step="1" value={width} onChange={(event) => { setWidth(Number(event.target.value)); onDraftDirtyChange?.(true); }} /></label>
+          : <label><span>Duty</span><input aria-label="Signal generator duty" type="number" min="0.01" max="0.99" step="0.01" value={duty} onChange={(event) => { setDuty(Number(event.target.value)); onDraftDirtyChange?.(true); }} /></label>}
+        <label><span>Repeat</span><select aria-label="Signal generator repeat mode" value={repeatMode} onChange={(event) => { setRepeatMode(event.target.value as typeof repeatMode); onDraftDirtyChange?.(true); }}><option value="finite">Count</option><option value="infinite">Infinite</option></select></label>
+        {repeatMode === "finite" && <label><span>Count</span><input aria-label="Signal generator repeat count" type="number" min="1" step="1" value={repeatCount} onChange={(event) => { setRepeatCount(Number(event.target.value)); onDraftDirtyChange?.(true); }} /></label>}
       </div>
       {advancedOpen && <div className="signal-generator-grid" data-testid="signal-generator-advanced-fields">
-        <label><span>Initial</span><select aria-label="Signal generator initial level" value={initial} onChange={(event) => setInitial(Number(event.target.value) as 0 | 1)}><option value={0}>0</option><option value={1}>1</option></select></label>
-        <label><span>Active</span><select aria-label="Signal generator active level" value={active} onChange={(event) => setActive(Number(event.target.value) as 0 | 1)}><option value={0}>0</option><option value={1}>1</option></select></label>
-        <label><span>Phase</span><input aria-label="Signal generator phase" type="number" step="1" value={phase} onChange={(event) => setPhase(Number(event.target.value))} /></label>
-        <label><span>Suppressed</span><input aria-label="Signal generator suppressed periods" value={suppressedPeriods} placeholder="e.g. 1, 3" onChange={(event) => setSuppressedPeriods(event.target.value)} /></label>
+        <label><span>Initial</span><select aria-label="Signal generator initial level" value={initial} onChange={(event) => { setInitial(Number(event.target.value) as 0 | 1); onDraftDirtyChange?.(true); }}><option value={0}>0</option><option value={1}>1</option></select></label>
+        <label><span>Active</span><select aria-label="Signal generator active level" value={active} onChange={(event) => { setActive(Number(event.target.value) as 0 | 1); onDraftDirtyChange?.(true); }}><option value={0}>0</option><option value={1}>1</option></select></label>
+        <label><span>Phase</span><input aria-label="Signal generator phase" type="number" step="1" value={phase} onChange={(event) => { setPhase(Number(event.target.value)); onDraftDirtyChange?.(true); }} /></label>
+        <label><span>Suppressed</span><input aria-label="Signal generator suppressed periods" value={suppressedPeriods} placeholder="e.g. 1, 3" onChange={(event) => { setSuppressedPeriods(event.target.value); onDraftDirtyChange?.(true); }} /></label>
       </div>}
       <div className="signal-generator-footer">
         {error && <output className="editor-problem" role="alert" data-testid="signal-generator-error">{error}</output>}
