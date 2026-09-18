@@ -303,9 +303,17 @@ export function MinimalCycleView() {
   const previousMenuOpenRef = useRef(false);
   useEffect(() => {
     const menuOpen = contextMenu !== undefined || treeAddMenuOpen || treeMoreMenuOpen;
-    if (previousMenuOpenRef.current && !menuOpen) restoreMenuFocus();
+    if (previousMenuOpenRef.current && !menuOpen) {
+      if (bulkRegistrationVisible || hierarchyVisible) {
+        // The menu item opened a modal. The dialog focus owner now owns focus;
+        // returning to the menu invoker here would steal focus back out of it.
+        menuOriginRef.current = null;
+      } else {
+        restoreMenuFocus();
+      }
+    }
     previousMenuOpenRef.current = menuOpen;
-  }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
+  }, [bulkRegistrationVisible, contextMenu, hierarchyVisible, treeAddMenuOpen, treeMoreMenuOpen]);
   useEffect(() => {
     const selector = contextMenu ? ".context-menu" : treeAddMenuOpen ? ".tree-add-menu" : treeMoreMenuOpen ? ".tree-header-menu" : undefined;
     const menu = selector ? document.querySelector<HTMLElement>(selector) : undefined;

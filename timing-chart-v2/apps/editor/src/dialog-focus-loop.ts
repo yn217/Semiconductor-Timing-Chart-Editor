@@ -23,7 +23,7 @@ export function useDialogFocusLoop<T extends HTMLElement>(dialogRef: RefObject<T
     dialog.addEventListener("keydown", onKeyDown);
     return () => {
       dialog.removeEventListener("keydown", onKeyDown);
-      if (previous?.isConnected) requestAnimationFrame(() => previous.focus());
+      if (previous?.isConnected && !previous.matches(":disabled, [aria-disabled='true']") && previous.tabIndex >= 0 && previous.getClientRects().length > 0) requestAnimationFrame(() => previous.focus({ preventScroll: true }));
       if (restoreFocusRef?.current === previous) restoreFocusRef.current = null;
     };
   }, [dialogRef, restoreFocusRef, enabled]);

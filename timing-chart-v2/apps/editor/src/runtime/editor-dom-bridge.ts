@@ -31,7 +31,22 @@ export function attachDialogOriginCapture(doc: Document, originRef: { current: H
 }
 
 export function scheduleDialogFocusRestore(doc: Document, originRef: { current: HTMLElement | null }, labelRef: { current: string | null }): () => void {
-  const frame = requestAnimationFrame(() => { const label = labelRef.current; const origin = originRef.current?.isConnected ? originRef.current : label === null ? null : label === "Properties" ? [...doc.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === label) ?? null : doc.querySelector<HTMLElement>(`button[aria-label='${label}']`); originRef.current = null; labelRef.current = null; if (origin?.isConnected) origin.focus({ preventScroll: true }); });
+  const frame = requestAnimationFrame(() => {
+    const label = labelRef.current;
+    const isFocusable = (element: HTMLElement | null | undefined): element is HTMLElement => Boolean(element?.isConnected && !element.matches(":disabled, [aria-disabled='true']") && element.tabIndex >= 0 && element.getClientRects().length > 0);
+    const labeledOrigin = label === null ? null : label === "Properties" || label === "Export" || label === "Save As"
+      ? [...doc.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === label && isFocusable(button)) ?? null
+      : [...doc.querySelectorAll<HTMLElement>(`button[aria-label='${CSS.escape(label)}']`)].find(isFocusable) ?? null;
+    const fallbackLabel = label === "Add signal or group" ? "More tree actions" : label === "More tree actions" ? "Add signal or group" : label === "Properties" || label === "Export" || label === "Save As" ? "File" : null;
+    const fallback = fallbackLabel === null ? null
+      : fallbackLabel === "File"
+        ? [...doc.querySelectorAll<HTMLButtonElement>(".ribbon-tabs button, [role='tab']")].find((button) => button.textContent?.trim() === "File" && isFocusable(button)) ?? null
+        : [...doc.querySelectorAll<HTMLElement>(`button[aria-label='${CSS.escape(fallbackLabel)}']`)].find(isFocusable) ?? null;
+    const origin = isFocusable(originRef.current) ? originRef.current : labeledOrigin ?? fallback;
+    originRef.current = null;
+    labelRef.current = null;
+    origin?.focus({ preventScroll: true });
+  });
   return () => cancelAnimationFrame(frame);
 }
 
