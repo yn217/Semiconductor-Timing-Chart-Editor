@@ -1,0 +1,81 @@
+name: Bug or behavior correction
+description: Report a reproducible product behavior correction with an acceptance journey.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the user-visible contract. Do not propose a fix before the failure is reproduced, unless the issue is intermittent; in that case explain the instrumentation needed.
+  - type: textarea
+    id: intent
+    attributes:
+      label: Intent
+      description: Why is the current behavior wrong or harmful?
+      placeholder: As a user, I expect…
+    validations:
+      required: true
+  - type: textarea
+    id: current-failure
+    attributes:
+      label: Current failure
+      description: What actually happens? Include environment/version where relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Exact initial state and production UI steps. For an intermittent issue, list attempts and the last known observable stage.
+      placeholder: |
+        1. Start from…
+        2. Choose…
+        3. Observe…
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: State the observable result and relevant invariant.
+    validations:
+      required: true
+  - type: textarea
+    id: forbidden
+    attributes:
+      label: Forbidden results / non-goals
+      description: List unacceptable workarounds or behaviors. Enter N/A with a reason if none apply.
+    validations:
+      required: true
+  - type: textarea
+    id: invariants
+    attributes:
+      label: Invariants
+      description: Relevant Canonical, History/Undo, Dirty, stable identity, ownership, and geometry invariants. Enter N/A with a reason where appropriate.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Attach screenshots/video/logs and say explicitly what each reference is for and what must not be copied from it.
+      placeholder: |
+        - Reference: …
+          USE FOR: …
+          DO NOT COPY: …
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance-journey
+    attributes:
+      label: Acceptance journey
+      description: Production UI actions that a verifier can execute from fresh state, including relevant interruption/state-transition variants.
+    validations:
+      required: true
+  - type: textarea
+    id: required-evidence
+    attributes:
+      label: Required evidence
+      description: Specify the failing-before evidence, post-fix verification, state deltas, screenshots/geometry, and independent verification needed for closure. Mark genuinely inapplicable evidence N/A with a reason.
+    validations:
+      required: true
