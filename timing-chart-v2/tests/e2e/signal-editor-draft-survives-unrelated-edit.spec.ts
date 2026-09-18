@@ -28,7 +28,7 @@ test("Signal Editor's in-progress Add/Edit Transition draft survives an unrelate
   await expect(page.locator("text=/Selected:/")).toHaveText("Selected: REQUEST");
   await expect(startInput).toHaveValue("7");
   await expect(commentInput).toHaveValue("dirty draft comment");
-  await expect(page.locator(".editor-selection")).toHaveText("REQUEST · Signal");
+  await expect(page.locator(".editor-selection")).toHaveText("REQUEST · Level");
 
   // Cancel still explicitly discards the draft as before.
   await page.getByTestId("cancel-bottom-draft").click();
