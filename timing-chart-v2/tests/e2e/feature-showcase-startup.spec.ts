@@ -21,6 +21,8 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
     await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Cycle");
     await expect(host.locator("[data-role='stable-waveform-surface']").first()).toBeVisible();
+    const requestAnnotation = host.locator("[data-role='annotation-owner'][data-annotation-id='demo_ann_request']");
+    await expect(requestAnnotation).toHaveCount(1);
     for (const label of ["CLOCK", "REQUEST", "DATA[7:0]"]) await expect(host).toContainText(label);
     await page.getByRole("tab", { name: "Annotation", exact: true }).click();
     await expect(page.locator("[data-annotation-row]")).toHaveCount(16);
@@ -29,6 +31,9 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
 
     await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
     await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
+    await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
+    await expect(page.locator("[data-testid^='bookmark-row-']")).toHaveCount(5);
+    await page.getByRole("tab", { name: "Transaction", exact: true }).click();
     await expect(page.getByTestId("transaction-left-tree")).toContainText("Memory");
     await expect(page.getByTestId("transaction-left-tree")).toContainText("CPU");
     await expect(page.getByTestId("transaction-left-tree")).toContainText("Peripheral");
@@ -50,6 +55,11 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(page.locator(".split-transaction-pane")).toBeVisible();
     await expect(page.locator(".split-transaction-pane")).toContainText("Read_0");
     await expect(page.locator(".split-signal-content")).toContainText("REQUEST");
+    await expect(requestAnnotation).toHaveCount(1);
+    await page.getByRole("tab", { name: "Annotation", exact: true }).click();
+    await expect(page.locator("[data-annotation-row]")).toHaveCount(16);
+    await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
+    await expect(page.locator("[data-testid^='bookmark-row-']")).toHaveCount(5);
     await expect(host).toHaveAttribute("data-canonical-revision", "0");
     await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
     await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
@@ -62,7 +72,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     const saved = JSON.parse(await readFile(savedPath!, "utf8")) as {
       formatVersion: number;
       document: { id: string };
-      signals: readonly { id: string }[];
+      signals: readonly { id: string; type: string; values?: readonly { value: string | number }[] }[];
       transactions: readonly { id: string; phases?: readonly unknown[]; linkedSignals?: readonly string[] }[];
       annotations: readonly { id: string }[];
       bookmarks: readonly { id: string; start: number }[];
@@ -70,6 +80,11 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     expect(saved.formatVersion).toBe(2);
     expect(saved.document.id).toBe("transaction-demo");
     expect(saved.signals.map((item) => item.id)).toEqual(expect.arrayContaining(["sig_cycle_clock", "sig_cycle_data", "sig_cycle_state"]));
+    const signalById = new Map(saved.signals.map((item) => [item.id, item]));
+    expect(signalById.get("sig_cycle_reset_n")).toMatchObject({ type: "binary", values: expect.arrayContaining([expect.objectContaining({ value: 0 }), expect.objectContaining({ value: 1 })]) });
+    expect(signalById.get("sig_cycle_request")).toMatchObject({ type: "logic", values: expect.arrayContaining([expect.objectContaining({ value: "d" })]) });
+    expect(signalById.get("sig_cycle_ready")).toMatchObject({ type: "event", values: expect.arrayContaining([expect.objectContaining({ value: "RISE" })]) });
+    expect(signalById.get("sig_cycle_valid")).toMatchObject({ type: "pulse" });
     expect(saved.transactions).toHaveLength(6);
     expect(saved.transactions.map((item) => item.id)).toEqual(expect.arrayContaining(["demo_txn_read", "demo_txn_write", "demo_txn_fetch", "demo_txn_execute", "demo_txn_spi", "demo_txn_other"]));
     expect(saved.transactions.find((item) => item.id === "demo_txn_read")).toMatchObject({ phases: expect.arrayContaining([expect.objectContaining({ name: "Address" })]), linkedSignals: ["sig_cycle_data", "sig_cycle_result"] });

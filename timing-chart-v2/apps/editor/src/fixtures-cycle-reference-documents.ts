@@ -55,17 +55,37 @@ const transactionDemoTransactions = [
   { id: "demo_txn_spi", name: "SPI_0", start: 30, end: 90, laneId: "lane_2", groupId: "demo_tgrp_peripheral", color: "#ef4444", description: "SPI transfer", phases: [{ name: "Command", start: 30, end: 50 }, { name: "Data", start: 50, end: 70 }, { name: "Stop", start: 70, end: 90 }], linkedSignals: ["sig_cycle_ready"] },
   { id: "demo_txn_other", name: "Transaction2", start: 100, end: 140, laneId: "lane_0", color: "#8895a7", description: "Ungrouped transaction" },
 ] as unknown as readonly Transaction[];
+// The normal startup showcase uses the same stable signal identities as the
+// simple New-document template, but exercises every currently insertable
+// value-signal family without increasing the sample's row count. Unknown X/Z
+// values are intentionally omitted because the default unknown-value
+// diagnostic correctly flags them on an otherwise clean startup document.
+const showcaseSignals: readonly (ClockSignal | ValueSignal)[] = [
+  clock,
+  valueSignal("sig_cycle_reset_n", "RESET_N", "input", [{ start: 0, value: 0 }, { start: 2, value: 1 }]),
+  valueSignal("sig_cycle_request", "REQUEST", "input", [{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 5, value: "d" }, { start: 7, value: 0 }], { type: "logic" }),
+  valueSignal("sig_cycle_ready", "READY", "output", [{ start: 0, value: "NONE" }, { start: 5, value: "RISE" }, { start: 8, value: "FALL" }], { type: "event" }),
+  valueSignal("sig_cycle_valid", "VALID", "output", [{ start: 0, value: 0 }, { start: 6, value: 1 }, { start: 9, value: 0 }], { type: "pulse" }),
+  valueSignal("sig_cycle_data", "DATA[7:0]", "input", [{ start: 0, value: "00" }, { start: 3, value: "A5" }, { start: 7, value: "5A" }], { type: "bus", width: 8, displayFormat: "hex" }),
+  valueSignal("sig_cycle_result", "RESULT[7:0]", "output", [{ start: 0, value: "00" }, { start: 6, value: "A5" }, { start: 9, value: "5A" }], { type: "bus", width: 8, displayFormat: "hex" }),
+  valueSignal("sig_cycle_state", "STATE", "internal", [{ start: 0, value: "IDLE" }, { start: 3, value: "WAIT" }, { start: 6, value: "DONE" }], { type: "state" }),
+];
+const showcaseSignalGroups = [
+  { id: groupId("grp_cycle_control"), name: "Control", rows: ["sig_cycle_clock", "sig_cycle_reset_n", "sig_cycle_request", "sig_cycle_ready", "sig_cycle_valid"] as SignalId[], spacingAfter: 8 },
+  { id: groupId("grp_cycle_payload"), name: "Payload", rows: ["sig_cycle_data", "sig_cycle_result", "sig_cycle_state"] as SignalId[], spacingBefore: 4 },
+  { id: groupId("grp_cycle_scratch"), name: "Scratch", rows: [] as SignalId[] },
+];
 const showcaseAnnotations: readonly Annotation[] = [
   { id: "demo_ann_request" as Annotation["id"], type: "text", label: "Request accepted", visible: true, color: "#155ca0", anchor: { signalId: signalId("sig_cycle_request"), cycle: 12, point: "cycle-start" } },
   { id: "demo_ann_data" as Annotation["id"], type: "range", label: "Data transfer window", visible: true, color: "#b45309", start: { signalId: signalId("sig_cycle_data"), cycle: 24, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_data"), cycle: 40, point: "cycle-start" } },
   { id: "demo_ann_response" as Annotation["id"], type: "arrow", label: "Response", visible: true, color: "#15803d", from: { signalId: signalId("sig_cycle_valid"), cycle: 44, point: "cycle-start" }, to: { signalId: signalId("sig_cycle_result"), cycle: 52, point: "cycle-start" }, arrowhead: "end" },
-  { id: "demo_ann_callout" as Annotation["id"], type: "callout", label: "CPU response path", visible: true, color: "#7c3aed", anchor: { signalId: signalId("sig_cycle_ready"), cycle: 16, point: "cycle-start" } },
+  { id: "demo_ann_callout" as Annotation["id"], type: "callout", label: "CPU response path", visible: true, color: "#7c3aed", anchor: { signalId: signalId("sig_cycle_request"), cycle: 16, point: "cycle-start" } },
   { id: "demo_ann_vertical" as Annotation["id"], type: "verticalLine", label: "Request boundary", visible: true, color: "#475569", anchor: { signalId: signalId("sig_cycle_request"), cycle: 12, point: "cycle-start" } },
   { id: "demo_ann_bracket" as Annotation["id"], type: "bracket", label: "Payload latency", visible: true, color: "#be123c", start: { signalId: signalId("sig_cycle_data"), cycle: 24, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_data"), cycle: 40, point: "cycle-start" } },
   { id: "demo_ann_highlight" as Annotation["id"], type: "highlight", label: "Valid window", visible: true, color: "#0f766e", start: { signalId: signalId("sig_cycle_valid"), cycle: 44, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_valid"), cycle: 52, point: "cycle-start" }, opacity: 0.16 } as Annotation,
   { id: "demo_ann_marker" as Annotation["id"], type: "marker", label: "Data marker", visible: true, color: "#ca8a04", anchor: { signalId: signalId("sig_cycle_data"), cycle: 28, point: "cycle-start" }, verticalSpan: { mode: "rows", startRowId: signalId("sig_cycle_request"), endRowId: signalId("sig_cycle_result") } },
   { id: "demo_ann_measurement" as Annotation["id"], type: "measurement", label: "Request to response", visible: true, color: "#0369a1", start: { signalId: signalId("sig_cycle_request"), cycle: 12, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_valid"), cycle: 52, point: "cycle-start" }, measurement: { profile: "cycle", anchorKind: "threshold" } },
-  { id: "demo_ann_dependency" as Annotation["id"], type: "dependency", label: "Ready depends on request", visible: true, color: "#9333ea", from: { signalId: signalId("sig_cycle_request"), cycle: 16, point: "cycle-start" }, to: { signalId: signalId("sig_cycle_ready"), cycle: 20, point: "cycle-start" }, lineType: "orthogonal", arrowhead: "end" },
+  { id: "demo_ann_dependency" as Annotation["id"], type: "dependency", label: "Ready depends on request", visible: true, color: "#9333ea", from: { signalId: signalId("sig_cycle_request"), cycle: 16, point: "cycle-start" }, to: { signalId: signalId("sig_cycle_valid"), cycle: 20, point: "cycle-start" }, lineType: "orthogonal", arrowhead: "end" },
   { id: "demo_ann_region" as Annotation["id"], type: "timingRegion", label: "Memory transfer region", visible: true, color: "#2563eb", start: { signalId: signalId("sig_cycle_data"), cycle: 24, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_data"), cycle: 40, point: "cycle-start" }, opacity: 0.12 },
   { id: "demo_ann_ghost" as Annotation["id"], type: "ghostTrace", label: "Result trace", visible: true, color: "#64748b", sourceSignalId: signalId("sig_cycle_data"), traceOffsetCycles: 4, start: { signalId: signalId("sig_cycle_data"), cycle: 24, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_data"), cycle: 40, point: "cycle-start" }, opacity: 0.35 },
   { id: "demo_ann_rectangle" as Annotation["id"], type: "rectangle", label: "Address field", visible: true, color: "#ea580c", start: { signalId: signalId("sig_cycle_data"), cycle: 10, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_data"), cycle: 20, point: "cycle-start" } },
@@ -77,6 +97,8 @@ export const transactionDemoDocument: CanonicalDocument = {
   ...cycleDocument,
   document: { ...cycleDocument.document, id: "transaction-demo", title: "Sample -- Transaction Mode" },
   timeline: { ...cycleDocument.timeline, end: 160, cycleCount: 160 },
+  signals: showcaseSignals,
+  signalGroups: showcaseSignalGroups,
   transactionTimeScale: { clockCyclesPerTransactionCycle: 10, majorInterval: 5, minorInterval: 1 },
   transactionGroups: transactionDemoGroups,
   bookmarks: [

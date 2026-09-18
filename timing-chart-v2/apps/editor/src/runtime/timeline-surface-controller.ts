@@ -162,6 +162,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     const geometryRegistry = runtime.geometry;
     const geometrySvgs = geometryRegistry.svgs;
     const geometryMaps = geometryRegistry.maps;
+    let refreshVisibleOverlayProjection: () => void = () => undefined;
     const openPhaseTracker = createOpenPhaseTracker(rendererHost);
     const markOpenPhase = openPhaseTracker.mark;
     const beginOpenMeasurement = openPhaseTracker.begin;
@@ -211,7 +212,14 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
           // Invalidate once at the first geometry-ready boundary; later
           // virtualized owner remounts must not reproject bars during scroll.
           setTransactionPresentationRevision((value) => value + 1);
-          const reproject = () => { if (active && projection !== undefined) renderCoordinator.renderer.update(projection); };
+          const reproject = () => {
+            if (!active || projection === undefined) return;
+            renderCoordinator.renderer.update(projection);
+            // Anchor projection depends on each mounted signal's extracted
+            // geometry, not only the reference-clock map. Refresh after this
+            // render batch settles so non-clock signal anchors are resolvable.
+            void renderCoordinator.renderer.whenIdle().then(() => { if (active) refreshVisibleOverlayProjection(); });
+          };
           if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(reproject);
           else globalThis.setTimeout(reproject, 0);
         }
@@ -243,6 +251,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     });
     const renderCoordinator = runtime.createRenderer(provider);
     const renderer = renderCoordinator.renderer;
+    refreshVisibleOverlayProjection = () => {
+      const document = sessionController.snapshot().document;
+      const viewportQuery = timelineGeometry.viewportForLocalRange(viewportElement.scrollLeft / timelineGeometry.presentationScale, (viewportElement.scrollLeft + viewportElement.clientWidth) / timelineGeometry.presentationScale, viewportElement.scrollTop, viewportElement.scrollTop + viewportElement.clientHeight, documentEpoch.current(), selectedAnnotationRef.current ? [selectedAnnotationRef.current] : []);
+      refreshRendererForReason(renderer, host, "view-mode", document, projection, geometryMaps, mappingCache, timelineGeometry.presentationScale, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current, edgeCounterMetrics, viewportQuery);
+    };
     const initialProjection = mountInitialTimelineProjection({
       coordinator: renderCoordinator,
       renderer,
@@ -277,6 +290,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // toggle that must be canonical/history/dirty-neutral.
       projection = projectionCoordinator.project({ snapshot: sessionController.snapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);
+      void renderer.whenIdle().then(() => { if (active) refreshVisibleOverlayProjection(); });
     };
     let rulerBuilds = 0;
     let edgeCounterResolvePasses = 0;
