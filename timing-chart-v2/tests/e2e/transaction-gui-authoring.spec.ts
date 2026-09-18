@@ -219,6 +219,10 @@ test("Transaction Group menu moves and Tree drag/drop keep counts and Undo/Redo 
   await rowA.getByRole("button", { name: "MoveByMenu actions" }).click();
   await page.getByRole("menuitem", { name: "Move to Group 1", exact: true }).click();
   await expect(groupOne).toContainText("(1)");
+  const historyAfterMenuMove = await page.getByTestId("history-status").textContent();
+  await rowA.dragTo(groupOne.locator(".transaction-left-tree-group-header"));
+  await expect(page.getByTestId("history-status")).toHaveText(historyAfterMenuMove!);
+  await expect(groupOne).toContainText("(1)");
   await rowB.dragTo(groupOne.locator(".transaction-left-tree-group-header"));
   await expect(groupOne).toContainText("(2)");
 
