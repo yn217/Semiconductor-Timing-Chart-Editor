@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type DragEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import type {
   CanonicalDocument,
@@ -8,6 +9,13 @@ import type {
 } from "@timing-chart-v2/schema";
 import { EditorIcon } from "./editor-icon.js";
 import { InlineNameInput } from "./inline-name-input.js";
+import { computeViewportSafePosition, currentViewportBounds } from "./viewport-safe-position.js";
+
+type TransactionTreeMenu = Readonly<
+  | { kind: "group"; id: string }
+  | { kind: "transaction"; id: TransactionId }
+>;
+type TransactionTreeMenuItem = Readonly<{ label: string; run: () => void; disabled?: boolean }>;
 
 export function TransactionTree({
   document,
@@ -71,8 +79,10 @@ export function TransactionTree({
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [dragOverGroup, setDragOverGroup] = useState<string>();
   const [editingGroupId, setEditingGroupId] = useState<string>();
-  const [openGroupMenuId, setOpenGroupMenuId] = useState<string>();
-  const [openTransactionMenuId, setOpenTransactionMenuId] = useState<TransactionId>();
+  const [openMenu, setOpenMenu] = useState<TransactionTreeMenu>();
+  const [menuPosition, setMenuPosition] = useState<{ readonly left: number; readonly top: number; readonly maxHeight: number }>();
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
   const [editingTransactionId, setEditingTransactionId] = useState<TransactionId>();
   const isTransactionSelected = (id: TransactionId) =>
     selectedId === id || selectedIds?.has(id) === true;
@@ -80,26 +90,59 @@ export function TransactionTree({
     setCollapsed(new Set());
     setDragOverGroup(undefined);
     setEditingGroupId(undefined);
-    setOpenGroupMenuId(undefined);
-    setOpenTransactionMenuId(undefined);
+    setOpenMenu(undefined);
+    setMenuPosition(undefined);
     setEditingTransactionId(undefined);
   }, [documentEpoch]);
   useEffect(() => {
-    if (openTransactionMenuId === undefined && openGroupMenuId === undefined) return;
-    const frame = requestAnimationFrame(() => {
-      globalThis.document
-        .querySelector<HTMLElement>(
-          openTransactionMenuId === undefined
-            ? `.transaction-left-tree-group-menu[role='menu']:not(.transaction-left-tree-transaction-menu)`
-            : `.transaction-left-tree-transaction-menu[role='menu']`,
-        )
-        ?.querySelector<HTMLButtonElement>(
-          "button[role='menuitem']:not(:disabled)",
-        )
-        ?.focus();
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [openGroupMenuId, openTransactionMenuId]);
+    if (!openMenu) return;
+    const frame = requestAnimationFrame(() => menuRef.current?.querySelector<HTMLButtonElement>("button[role='menuitem']:not(:disabled)")?.focus());
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (menuRef.current?.contains(target) || menuTriggerRef.current?.contains(target)) return;
+      setOpenMenu(undefined);
+      setMenuPosition(undefined);
+      const targetElement = target instanceof Element ? target : null;
+      const clickedFocusable = targetElement?.closest("button, a, input, select, textarea, [tabindex]:not([tabindex='-1'])");
+      const trigger = menuTriggerRef.current;
+      if (!clickedFocusable) requestAnimationFrame(() => { if (trigger?.isConnected) trigger.focus(); });
+    };
+    globalThis.document.addEventListener("pointerdown", onPointerDown, true);
+    return () => {
+      cancelAnimationFrame(frame);
+      globalThis.document.removeEventListener("pointerdown", onPointerDown, true);
+    };
+  }, [openMenu]);
+  useLayoutEffect(() => {
+    if (!openMenu) { setMenuPosition(undefined); return; }
+    const updatePosition = () => {
+      const trigger = menuTriggerRef.current;
+      const menu = menuRef.current;
+      if (!trigger || !menu) return;
+      const bounds = currentViewportBounds();
+      const maxHeight = Math.max(64, bounds.bottom - bounds.top - 16);
+      const rect = trigger.getBoundingClientRect();
+      const height = Math.min(menu.scrollHeight, maxHeight);
+      const position = computeViewportSafePosition(
+        { x: rect.right, y: rect.bottom },
+        { width: menu.getBoundingClientRect().width, height },
+        bounds,
+      );
+      setMenuPosition({ left: position.x, top: position.y, maxHeight });
+    };
+    updatePosition();
+    globalThis.addEventListener("resize", updatePosition);
+    globalThis.addEventListener("scroll", updatePosition, true);
+    globalThis.visualViewport?.addEventListener("resize", updatePosition);
+    globalThis.visualViewport?.addEventListener("scroll", updatePosition);
+    return () => {
+      globalThis.removeEventListener("resize", updatePosition);
+      globalThis.removeEventListener("scroll", updatePosition, true);
+      globalThis.visualViewport?.removeEventListener("resize", updatePosition);
+      globalThis.visualViewport?.removeEventListener("scroll", updatePosition);
+    };
+  }, [openMenu]);
   const groups = useMemo(
     () =>
       [...(document.transactionGroups ?? [])].sort(
@@ -289,6 +332,66 @@ export function TransactionTree({
         (left, right) =>
           left.start - right.start || left.id.localeCompare(right.id),
       );
+  const closeMenu = (restoreFocus = false) => {
+    const trigger = menuTriggerRef.current;
+    setOpenMenu(undefined);
+    setMenuPosition(undefined);
+    if (restoreFocus) requestAnimationFrame(() => { if (trigger?.isConnected) trigger.focus(); });
+  };
+  const toggleMenu = (nextMenu: TransactionTreeMenu, trigger: HTMLButtonElement) => {
+    if (openMenu?.kind === nextMenu.kind && openMenu.id === nextMenu.id) {
+      closeMenu();
+      return;
+    }
+    menuTriggerRef.current = trigger;
+    setMenuPosition(undefined);
+    setOpenMenu(nextMenu);
+  };
+  const invokeMenuItem = (item: TransactionTreeMenuItem) => {
+    closeMenu(true);
+    item.run();
+  };
+  const selectedMenuGroup = openMenu?.kind === "group" ? groups.find((group) => group.id === openMenu.id) : undefined;
+  const selectedMenuTransaction = openMenu?.kind === "transaction" ? document.transactions.find((transaction) => transaction.id === openMenu.id) : undefined;
+  const menuItems: readonly TransactionTreeMenuItem[] = selectedMenuGroup
+    ? [
+        { label: "Rename Group", run: () => rename(selectedMenuGroup) },
+        { label: "New Transaction", run: () => onCreateTransaction?.() },
+        { label: "Select Children", run: () => groupTransactions(selectedMenuGroup.id).forEach((transaction, index) => onSelect(transaction.id, index > 0)) },
+        ...(onDeleteGroup ? [{ label: "Delete Group", run: () => onDeleteGroup(selectedMenuGroup.id) }] : []),
+        ...(onSetGroupVisibility ? [
+          { label: "Show All", run: () => onSetGroupVisibility(selectedMenuGroup.id, true) },
+          { label: "Hide All", run: () => onSetGroupVisibility(selectedMenuGroup.id, false) },
+        ] : []),
+      ]
+    : selectedMenuTransaction
+      ? [
+          { label: "Focus in Timeline", run: () => onFocusTransaction?.(selectedMenuTransaction.id) },
+          ...(onMoveToGroup ? groups.map((group) => ({ label: `Move to ${group.name}`, disabled: selectedMenuTransaction.groupId === group.id, run: () => onMoveToGroup(selectedMenuTransaction.id, group.id) })) : []),
+          ...(onMoveToGroup && selectedMenuTransaction.groupId !== undefined ? [{ label: "Ungroup", run: () => onMoveToGroup(selectedMenuTransaction.id, undefined) }] : []),
+          ...(onDuplicateTransaction ? [{ label: "Duplicate", run: () => { onSelect(selectedMenuTransaction.id); onDuplicateTransaction(selectedMenuTransaction.id); } }] : []),
+          ...(onDelete ? [{ label: "Delete", run: () => { onSelect(selectedMenuTransaction.id); onDelete(); } }] : []),
+        ]
+      : [];
+  const onMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("[role='menuitem']:not(:disabled)")];
+    if (items.length === 0) return;
+    const current = event.target instanceof HTMLElement ? items.indexOf(event.target.closest<HTMLButtonElement>("[role='menuitem']")!) : -1;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeMenu(true);
+      return;
+    }
+    const next = event.key === "ArrowDown" ? (current + 1) % items.length
+      : event.key === "ArrowUp" ? (current - 1 + items.length) % items.length
+        : event.key === "Home" ? 0
+          : event.key === "End" ? items.length - 1
+            : event.key === "Tab" ? (current + (event.shiftKey ? -1 : 1) + items.length) % items.length
+              : undefined;
+    if (next === undefined) return;
+    event.preventDefault();
+    items[next]?.focus();
+  };
   const toggle = (key: string) =>
     setCollapsed((current) => {
       const next = new Set(current);
@@ -364,24 +467,18 @@ export function TransactionTree({
           type="button"
           className="transaction-left-tree-more"
           aria-haspopup="menu"
-          aria-expanded={openTransactionMenuId === transaction.id}
+          aria-expanded={openMenu?.kind === "transaction" && openMenu.id === transaction.id}
+          aria-controls={openMenu?.kind === "transaction" && openMenu.id === transaction.id ? "transaction-tree-action-menu" : undefined}
           aria-label={`More actions for ${transaction.name}`}
           title={`More actions for ${transaction.name}`}
           onClick={(event) => {
             event.stopPropagation();
-            setOpenTransactionMenuId((current) => current === transaction.id ? undefined : transaction.id);
+            toggleMenu({ kind: "transaction", id: transaction.id }, event.currentTarget);
           }}
         >
           <EditorIcon name="more" className="transaction-left-tree-icon" />
         </button>
       </span>
-      {openTransactionMenuId === transaction.id && <div className="transaction-left-tree-group-menu transaction-left-tree-transaction-menu" role="menu" aria-label={`${transaction.name} actions`}>
-        <button type="button" role="menuitem" onClick={() => { setOpenTransactionMenuId(undefined); onFocusTransaction?.(transaction.id); }}>Focus in Timeline</button>
-        {onMoveToGroup && groups.map((group) => <button key={group.id} type="button" role="menuitem" disabled={transaction.groupId === group.id} onClick={() => { setOpenTransactionMenuId(undefined); onMoveToGroup(transaction.id, group.id); }}>Move to {group.name}</button>)}
-        {onMoveToGroup && transaction.groupId !== undefined && <button type="button" role="menuitem" onClick={() => { setOpenTransactionMenuId(undefined); onMoveToGroup(transaction.id, undefined); }}>Ungroup</button>}
-        {onDuplicateTransaction && <button type="button" role="menuitem" onClick={() => { setOpenTransactionMenuId(undefined); onSelect(transaction.id); onDuplicateTransaction(transaction.id); }}>Duplicate</button>}
-        {onDelete && <button type="button" role="menuitem" onClick={() => { setOpenTransactionMenuId(undefined); onSelect(transaction.id); onDelete(); }}>Delete</button>}
-      </div>}
     </div>
   );
   const dropTarget = (groupId: TransactionGroup["id"] | undefined) => {
@@ -412,6 +509,7 @@ export function TransactionTree({
     };
   };
   return (
+    <>
     <div
       className="transaction-left-tree"
       data-testid="transaction-left-tree"
@@ -489,64 +587,14 @@ export function TransactionTree({
                     type="button"
                     className="transaction-left-tree-more"
                     aria-haspopup="menu"
-                    aria-expanded={openGroupMenuId === group.id}
+                    aria-expanded={openMenu?.kind === "group" && openMenu.id === group.id}
+                    aria-controls={openMenu?.kind === "group" && openMenu.id === group.id ? "transaction-tree-action-menu" : undefined}
                     aria-label={`More actions for ${group.name}`}
                     title={`More actions for ${group.name}`}
-                    onClick={() => setOpenGroupMenuId((current) => current === group.id ? undefined : group.id)}
+                    onClick={(event) => toggleMenu({ kind: "group", id: group.id }, event.currentTarget)}
                   >
                     <EditorIcon name="more" className="transaction-left-tree-icon" />
                   </button>
-                  {openGroupMenuId === group.id && (
-                    <div
-                      className="transaction-left-tree-group-menu"
-                      role="menu"
-                      aria-label={`${group.name} actions`}
-                    >
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setOpenGroupMenuId(undefined);
-                          rename(group);
-                        }}
-                      >
-                        Rename Group
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setOpenGroupMenuId(undefined);
-                          onCreateTransaction?.();
-                        }}
-                      >
-                        New Transaction
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setOpenGroupMenuId(undefined);
-                          items.forEach((transaction, index) =>
-                            onSelect(transaction.id, index > 0),
-                          );
-                        }}
-                      >
-                        Select Children
-                      </button>
-                      {onDeleteGroup && (
-                        <button type="button" role="menuitem" onClick={() => { setOpenGroupMenuId(undefined); onDeleteGroup(group.id); }}>
-                          Delete Group
-                        </button>
-                      )}
-                      {onSetGroupVisibility && (
-                        <>
-                          <button type="button" role="menuitem" onClick={() => { setOpenGroupMenuId(undefined); onSetGroupVisibility(group.id, true); }}>Show All</button>
-                          <button type="button" role="menuitem" onClick={() => { setOpenGroupMenuId(undefined); onSetGroupVisibility(group.id, false); }}>Hide All</button>
-                        </>
-                      )}
-                    </div>
-                  )}
                 </div>
                 {!isCollapsed && items.map(renderTransaction)}
               </div>
@@ -587,5 +635,21 @@ export function TransactionTree({
         </div>
       )}
     </div>
+    {openMenu && createPortal(
+      <div
+        ref={menuRef}
+        id="transaction-tree-action-menu"
+        data-testid="transaction-tree-action-menu"
+        className={`transaction-left-tree-group-menu${openMenu.kind === "transaction" ? " transaction-left-tree-transaction-menu" : ""}`}
+        role="menu"
+        aria-label={selectedMenuGroup ? `${selectedMenuGroup.name} actions` : `${selectedMenuTransaction?.name ?? "Transaction"} actions`}
+        onKeyDown={onMenuKeyDown}
+        style={{ left: `${menuPosition?.left ?? 0}px`, top: `${menuPosition?.top ?? 0}px`, maxHeight: `${menuPosition?.maxHeight ?? 200}px`, visibility: menuPosition ? "visible" : "hidden" }}
+      >
+        {menuItems.map((item) => <button key={item.label} type="button" role="menuitem" disabled={item.disabled} onClick={() => invokeMenuItem(item)}>{item.label}</button>)}
+      </div>,
+      globalThis.document.body,
+    )}
+    </>
   );
 }
