@@ -290,3 +290,52 @@ test("Cycle Bottom transition editing remains isolated across Transaction mode r
     await page.screenshot({ path: testInfo.outputPath(`cycle-bottom-after-transaction-${viewportSize.width}.png`), fullPage: true });
   }
 });
+
+test("Transaction workspace survives Combined pane interaction and return", async ({ page }, testInfo) => {
+  for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+    await page.setViewportSize(viewportSize);
+    await page.goto("/");
+    const surface = page.getByTestId("cycle-surface");
+    await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+    await page.getByRole("button", { name: "New", exact: true }).click();
+    const modes = page.locator(".view-mode");
+    await modes.getByRole("button", { name: "Transaction", exact: true }).click();
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+    await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
+    const inspector = page.getByTestId("inspector");
+    await inspector.getByLabel("Transaction name", { exact: true }).fill("CombinedRoundtripTxn");
+    await inspector.getByTestId("apply-inspector-transaction").click();
+    const tree = page.getByTestId("transaction-left-tree");
+    const transactionRow = tree.locator("[data-transaction-tree-id]").filter({ hasText: "CombinedRoundtripTxn" });
+    const transactionId = await transactionRow.getAttribute("data-transaction-tree-id");
+    expect(transactionId).toBeTruthy();
+    const canonicalRevision = await surface.getAttribute("data-canonical-revision");
+    const history = await page.getByTestId("history-status").textContent();
+
+    await modes.getByRole("button", { name: "Combined", exact: true }).click();
+    await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Combined");
+    await expect(page.locator(".split-transaction-pane")).toBeVisible();
+    await expect(page.getByTestId("combined-split-divider")).toBeVisible();
+    await expect(tree.locator(`[data-transaction-tree-id="${transactionId}"]`)).toBeVisible();
+    await expect(surface).toBeVisible();
+    await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+    await expect(page.getByTestId("transaction-editor").locator(`[data-transaction-row-id="${transactionId}"]`)).toBeVisible();
+    await page.getByRole("tab", { name: "Signal", exact: true }).click();
+    await expect(page.getByTestId("signal-editor")).toBeVisible();
+    const divider = page.getByTestId("combined-split-divider");
+    const dividerBefore = Number(await divider.getAttribute("aria-valuenow"));
+    await divider.press("ArrowDown");
+    await expect.poll(() => divider.getAttribute("aria-valuenow").then(Number)).toBeGreaterThan(dividerBefore);
+    await expect(surface).toHaveAttribute("data-canonical-revision", canonicalRevision!);
+    await expect(page.getByTestId("history-status")).toHaveText(history!);
+
+    await modes.getByRole("button", { name: "Transaction", exact: true }).click();
+    await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
+    await expect(tree.locator(`[data-transaction-tree-id="${transactionId}"]`)).toBeVisible();
+    await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+    await expect(page.getByTestId("transaction-editor").locator(`[data-transaction-row-id="${transactionId}"]`)).toBeVisible();
+    await expect(surface).toHaveAttribute("data-canonical-revision", canonicalRevision!);
+    await expect(page.getByTestId("history-status")).toHaveText(history!);
+    await page.screenshot({ path: testInfo.outputPath(`transaction-after-combined-${viewportSize.width}.png`), fullPage: true });
+  }
+});
