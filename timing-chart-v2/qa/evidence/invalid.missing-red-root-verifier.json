@@ -1,0 +1,7 @@
+{
+  "issue": "#683",
+  "commit": "not-a-commit",
+  "changeKind": "bug-fix",
+  "reproduction": { "status": "reproduced", "journey": "" },
+  "verification": { "freshStart": true, "result": "" }
+}

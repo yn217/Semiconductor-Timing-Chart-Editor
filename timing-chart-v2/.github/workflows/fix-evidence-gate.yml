@@ -1,0 +1,29 @@
+name: Fix Evidence Gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fix-evidence-gate:
+    name: Journey and fix-evidence structure
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check contract examples
+        run: |
+          node scripts/check-journey-contracts.mjs qa/journeys/feature-example.valid.json
+          if node scripts/check-journey-contracts.mjs qa/journeys/invalid.missing-fresh-start.json; then exit 1; fi
+          node scripts/check-fix-evidence.mjs qa/evidence/feature-example.valid.json qa/evidence/bug-fix-example.valid.json
+          if node scripts/check-fix-evidence.mjs qa/evidence/invalid.missing-red-root-verifier.json; then exit 1; fi
+      - name: Test required-field failure rules
+        run: npm ci && npm test -- tests/editor/qa-contracts.test.ts
+      - name: Gate scope
+        run: echo "Checks schema/presence only; does not assert semantic correctness, GUI behavior, visual quality, or performance."

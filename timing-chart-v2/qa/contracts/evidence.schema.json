@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/timing-chart/qa/contracts/evidence.schema.json",
+  "title": "Change verification evidence manifest",
+  "type": "object",
+  "required": ["issue", "commit", "changeKind", "verification"],
+  "properties": {
+    "issue": { "type": "string", "pattern": "^#[1-9][0-9]*$" },
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+    "changeKind": { "enum": ["bug-fix", "feature", "maintenance"] },
+    "reproduction": {
+      "type": "object",
+      "required": ["status", "journey"],
+      "properties": {
+        "status": { "enum": ["reproduced", "intermittent", "not-reproduced", "not-applicable"] },
+        "journey": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "failingTest": {
+      "type": "object",
+      "required": ["name", "observedRed"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "observedRed": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "rootCause": {
+      "type": "object",
+      "required": ["bugClass", "violatedInvariant"],
+      "properties": {
+        "bugClass": { "type": "string", "minLength": 1 },
+        "violatedInvariant": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "verification": {
+      "type": "object",
+      "required": ["independent", "freshStart", "productionPath", "result"],
+      "properties": {
+        "independent": { "type": "boolean" },
+        "freshStart": { "type": "boolean" },
+        "productionPath": { "type": "boolean" },
+        "result": { "type": "string", "minLength": 1 },
+        "evidenceRefs": { "type": "array", "items": { "type": "string" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "changeKind": { "const": "bug-fix" } }, "required": ["changeKind"] },
+      "then": {
+        "required": ["reproduction", "failingTest", "rootCause"],
+        "properties": {
+          "verification": {
+            "properties": {
+              "independent": { "const": true },
+              "freshStart": { "const": true },
+              "productionPath": { "const": true }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "additionalProperties": false
+}

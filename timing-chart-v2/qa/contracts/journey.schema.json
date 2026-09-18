@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/timing-chart/qa/contracts/journey.schema.json",
+  "title": "Production UI journey contract",
+  "type": "object",
+  "required": ["id", "preconditions", "actions", "expectedVisibleResult", "invariants", "freshStart", "productionPath", "relatedIssue"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "preconditions": { "type": "array", "items": { "type": "string" } },
+    "actions": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "expectedVisibleResult": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "invariants": {
+      "type": "object",
+      "required": ["canonical", "history", "dirty"],
+      "properties": {
+        "canonical": { "type": "string" },
+        "history": { "type": "string" },
+        "dirty": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "geometryAssertions": { "type": "array", "items": { "$ref": "#/$defs/observableAssertion" } },
+    "domRelations": { "type": "array", "items": { "$ref": "#/$defs/observableAssertion" } },
+    "freshStart": { "const": true },
+    "productionPath": { "const": true },
+    "relatedIssue": { "type": "string", "pattern": "^#[1-9][0-9]*$" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "observableAssertion": {
+      "type": "object",
+      "required": ["description", "evidenceRef"],
+      "properties": {
+        "description": { "type": "string", "minLength": 1 },
+        "evidenceRef": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

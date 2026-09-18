@@ -1,0 +1,9 @@
+{
+  "id": "invalid-example",
+  "preconditions": [],
+  "actions": ["Click a control"],
+  "expectedVisibleResult": ["Something changes"],
+  "invariants": { "canonical": "unknown", "history": "unknown", "dirty": "unknown" },
+  "productionPath": true,
+  "relatedIssue": "#683"
+}

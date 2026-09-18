@@ -1,0 +1,18 @@
+{
+  "id": "view-only-zoom",
+  "preconditions": ["Fresh app state", "Sample document loaded"],
+  "actions": ["Open View tab", "Choose Zoom 100%"],
+  "expectedVisibleResult": ["Zoom indicator reads 100%"],
+  "invariants": {
+    "canonical": "unchanged",
+    "history": "unchanged",
+    "dirty": "unchanged"
+  },
+  "geometryAssertions": [
+    { "description": "Cycle boundary spacing is finite", "evidenceRef": "test-results/zoom/geometry.json#/cycleSpacing" }
+  ],
+  "domRelations": [],
+  "freshStart": true,
+  "productionPath": true,
+  "relatedIssue": "#683"
+}

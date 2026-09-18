@@ -1,0 +1,12 @@
+{
+  "issue": "#683",
+  "commit": "2908001b3c8bc778a7eebf7fffca742e97d445b1",
+  "changeKind": "feature",
+  "verification": {
+    "independent": false,
+    "freshStart": true,
+    "productionPath": true,
+    "result": "Example only; replace with actual verification evidence.",
+    "evidenceRefs": ["qa/journeys/feature-example.valid.json"]
+  }
+}

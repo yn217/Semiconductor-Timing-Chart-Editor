@@ -1,0 +1,15 @@
+{
+  "issue": "#683",
+  "commit": "2908001b3c8bc778a7eebf7fffca742e97d445b1",
+  "changeKind": "bug-fix",
+  "reproduction": { "status": "reproduced", "journey": "qa/journeys/feature-example.valid.json" },
+  "failingTest": { "name": "example regression assertion", "observedRed": true },
+  "rootCause": { "bugClass": "GEOMETRY_DRIFT", "violatedInvariant": "same source cycle retains its time geometry" },
+  "verification": {
+    "independent": true,
+    "freshStart": true,
+    "productionPath": true,
+    "result": "Example only; replace with actual verification evidence.",
+    "evidenceRefs": []
+  }
+}
