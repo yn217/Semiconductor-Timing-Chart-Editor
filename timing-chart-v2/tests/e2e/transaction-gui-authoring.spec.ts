@@ -241,3 +241,52 @@ test("Transaction Group menu moves and Tree drag/drop keep counts and Undo/Redo 
   await expect(groupTwo).toContainText("(1)");
   }
 });
+
+test("Cycle Bottom transition editing remains isolated across Transaction mode roundtrip", async ({ page }, testInfo) => {
+  for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+    await page.setViewportSize(viewportSize);
+    await page.goto("/");
+    const host = page.getByTestId("cycle-surface");
+    await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+    await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+    await expect(page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true })).toHaveClass(/active/);
+    await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+    const cycleEditor = page.getByTestId("signal-editor");
+    const selectedSignal = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']");
+    const selectedSignalId = await selectedSignal.getAttribute("data-row-id");
+    expect(selectedSignalId).toBeTruthy();
+    await expect(selectedSignal).toHaveAttribute("aria-selected", "true");
+    const transition = cycleEditor.locator("form.event-row").nth(1);
+    await transition.getByRole("button", { name: /Edit transition/ }).click();
+    await transition.getByLabel("Start 3").fill("4");
+    await transition.getByLabel("Value 3").selectOption("X");
+    await transition.getByRole("button", { name: "Save" }).click();
+    await expect(cycleEditor.getByTestId("event-row-start-4")).toHaveText("4");
+    await page.getByTestId("editor-undo").click();
+    await expect(cycleEditor.getByTestId("event-row-start-3")).toHaveText("3");
+    await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+    await expect(cycleEditor.getByTestId("event-row-start-4")).toHaveText("4");
+    const revisionAfterCycle = await host.getAttribute("data-canonical-revision");
+    const historyAfterCycle = await page.getByTestId("history-status").textContent();
+
+    await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+    await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
+    await page.getByTestId("inspector").getByLabel("Transaction name", { exact: true }).fill("CrossModeTxn");
+    await page.getByTestId("inspector").getByTestId("apply-inspector-transaction").click();
+    const revisionAfterTransaction = await host.getAttribute("data-canonical-revision");
+    expect(Number(revisionAfterTransaction)).toBe(Number(revisionAfterCycle) + 2);
+
+    await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+    await expect(page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true })).toHaveClass(/active/);
+    await host.locator(`[data-role='frozen-row'][data-row-id="${selectedSignalId}"]`).click();
+    await page.getByRole("tab", { name: "Signal", exact: true }).click();
+    await expect(cycleEditor).toBeVisible();
+    await expect(cycleEditor.getByTestId("event-row-start-4")).toHaveText("4");
+    await expect(host.locator(`[data-role='frozen-row'][data-row-id="${selectedSignalId}"]`)).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId("history-status")).toHaveText(`History ${Number(historyAfterCycle?.match(/History (\d+)/)?.[1] ?? -1) + 2} / Redo 0`);
+    await expect(page.getByTestId("transaction-editor")).toBeHidden();
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await page.screenshot({ path: testInfo.outputPath(`cycle-bottom-after-transaction-${viewportSize.width}.png`), fullPage: true });
+  }
+});
