@@ -143,6 +143,8 @@ export interface EditorSecondarySurfacesInput {
     readonly setTransactionTreeFilterMode: (
       value: TransactionTreeFilterMode,
     ) => void;
+    readonly collapsedTransactionGroupIds: ReadonlySet<string>;
+    readonly toggleCollapsedTransactionGroup: (groupId: string) => void;
     readonly transactionTreeTab: "transactions" | "signals";
     readonly setTransactionTreeTab: (tab: "transactions" | "signals") => void;
     readonly setRibbonTab: (tab: string) => void;
@@ -447,6 +449,8 @@ export function useEditorSecondarySurfaces(
             ? workspace.transactionTreeFilter
             : ""
         }
+        collapsedGroups={workspace.collapsedTransactionGroupIds}
+        onToggleGroupCollapsed={workspace.toggleCollapsedTransactionGroup}
         getBoundaryX={transactionBoundaryX}
         onSelect={input.actions.selectTransaction}
         onSnap={(clientX, surfaceLeft) =>
@@ -472,6 +476,8 @@ export function useEditorSecondarySurfaces(
         documentEpoch={input.documentEpoch}
         filter={workspace.transactionTreeFilter}
         filterMode={workspace.transactionTreeFilterMode}
+        collapsedGroupIds={workspace.collapsedTransactionGroupIds}
+        onToggleGroupCollapsed={workspace.toggleCollapsedTransactionGroup}
         selectedIds={selected.transactionIds}
         {...(selected.transactionId === undefined
           ? {}

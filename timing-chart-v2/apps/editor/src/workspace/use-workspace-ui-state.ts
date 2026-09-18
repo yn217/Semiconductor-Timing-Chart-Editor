@@ -201,6 +201,24 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   const [treeFilter, setTreeFilter] = useState("");
   const [transactionTreeFilter, setTransactionTreeFilter] = useState("");
   const [transactionTreeFilterMode, setTransactionTreeFilterMode] = useState<TransactionTreeFilterMode>("all");
+  // Transaction Tree and center Group headers represent the same groups, so
+  // their disclosure state has one workspace owner. This remains view-only
+  // and is reset when a different document is loaded.
+  const [collapsedTransactionGroupIds, setCollapsedTransactionGroupIds] = useState<ReadonlySet<string>>(new Set());
+  const previousTransactionGroupDocumentEpochRef = useRef(input.documentEpoch);
+  useEffect(() => {
+    if (previousTransactionGroupDocumentEpochRef.current === input.documentEpoch) return;
+    previousTransactionGroupDocumentEpochRef.current = input.documentEpoch;
+    setCollapsedTransactionGroupIds(new Set());
+  }, [input.documentEpoch]);
+  const toggleCollapsedTransactionGroup = useCallback((groupId: string) => {
+    setCollapsedTransactionGroupIds((current) => {
+      const next = new Set(current);
+      if (next.has(groupId)) next.delete(groupId);
+      else next.add(groupId);
+      return next;
+    });
+  }, []);
   const [treeTypeFilter, setTreeTypeFilter] = useState<TreeTypeFilter>("all");
   // #429/#397 Transaction Mode Product Closure P0-2: which tree the Left
   // panel shows while `viewMode === "Transaction"` -- "transactions" (the
@@ -256,6 +274,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     inspectorWidth, setInspectorWidth, inspectorResizeRef,
     bottomHeight, setBottomHeight, bottomResizeRef,
     treeFilter, setTreeFilter, transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode,
+    collapsedTransactionGroupIds, toggleCollapsedTransactionGroup,
     treeTypeFilter, setTreeTypeFilter,
     transactionTreeTab, setTransactionTreeTab,
     followSelection, setFollowSelection, followSelectionRef,

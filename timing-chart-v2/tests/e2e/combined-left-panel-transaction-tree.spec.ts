@@ -61,3 +61,31 @@ test("standalone Transaction Mode and Cycle Mode are unaffected by the Combined 
   await expect(page.locator(".transaction-left-tree")).toHaveCount(0);
   await expect(host.locator("[data-role='frozen-row']").first()).toBeVisible();
 });
+
+test("Transaction Tree and center Group headers share view-only disclosure state", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/?transaction-demo");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+
+  const groupId = "demo_tgrp_memory";
+  const treeGroup = page.locator(`.transaction-left-tree-group[data-transaction-group-id="${groupId}"]`);
+  const centerGroup = page.locator(`.transaction-group-header[data-transaction-group-id="${groupId}"]`);
+  const treeDisclosure = treeGroup.getByRole("button", { name: "Collapse Memory", exact: true });
+  const centerDisclosure = centerGroup.getByRole("button", { name: "Collapse Memory", exact: true });
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+
+  await treeDisclosure.click();
+  await expect(treeGroup.getByRole("button", { name: "Expand Memory", exact: true })).toHaveAttribute("aria-expanded", "false");
+  await expect(centerGroup).toHaveAttribute("data-collapsed", "true");
+  await expect(centerGroup.getByRole("button", { name: "Expand Memory", exact: true })).toHaveAttribute("aria-expanded", "false");
+
+  await centerGroup.getByRole("button", { name: "Expand Memory", exact: true }).click();
+  await expect(treeGroup.getByRole("button", { name: "Collapse Memory", exact: true })).toHaveAttribute("aria-expanded", "true");
+  await expect(centerGroup).toHaveAttribute("data-collapsed", "false");
+
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+});

@@ -14,6 +14,8 @@ export function TransactionTree({
   documentEpoch,
   filter,
   filterMode = "all",
+  collapsedGroupIds,
+  onToggleGroupCollapsed,
   selectedId,
   selectedIds,
   onSelect,
@@ -41,6 +43,8 @@ export function TransactionTree({
     | "visible"
     | "hidden"
     | "no-phases";
+  readonly collapsedGroupIds: ReadonlySet<string>;
+  readonly onToggleGroupCollapsed: (groupId: string) => void;
   readonly selectedId?: TransactionId;
   readonly selectedIds?: ReadonlySet<TransactionId>;
   readonly onSelect: (id: TransactionId, additive?: boolean) => void;
@@ -68,7 +72,7 @@ export function TransactionTree({
   readonly onDuplicateTransaction?: (transactionId: TransactionId) => void;
   readonly onRenameTransaction?: (transactionId: TransactionId, name: string) => CommandResult;
 }) {
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const [allCollapsed, setAllCollapsed] = useState(false);
   const [dragOverGroup, setDragOverGroup] = useState<string>();
   const [editingGroupId, setEditingGroupId] = useState<string>();
   const [openGroupMenuId, setOpenGroupMenuId] = useState<string>();
@@ -77,7 +81,7 @@ export function TransactionTree({
   const isTransactionSelected = (id: TransactionId) =>
     selectedId === id || selectedIds?.has(id) === true;
   useEffect(() => {
-    setCollapsed(new Set());
+    setAllCollapsed(false);
     setDragOverGroup(undefined);
     setEditingGroupId(undefined);
     setOpenGroupMenuId(undefined);
@@ -186,13 +190,13 @@ export function TransactionTree({
           "[data-transaction-group-id]",
         )?.dataset.transactionGroupId;
         if (!groupHeader || !groupId || groupId === "ungrouped") return;
-        const collapsedNow = collapsed.has(groupId);
+        const collapsedNow = collapsedGroupIds.has(groupId);
         if (
           (event.key === "ArrowLeft" && !collapsedNow) ||
           (event.key === "ArrowRight" && collapsedNow)
         ) {
           event.preventDefault();
-          toggle(groupId);
+          onToggleGroupCollapsed(groupId);
         }
         return;
       }
@@ -252,7 +256,7 @@ export function TransactionTree({
       globalThis.document.removeEventListener("keydown", onArrow);
       globalThis.document.removeEventListener("click", onGroupMultiSelect);
     };
-  }, [collapsed, document, groups, onDelete, onRenameTransaction, onSelect]);
+  }, [collapsedGroupIds, document, groups, onDelete, onRenameTransaction, onSelect, onToggleGroupCollapsed]);
   const matches = (transaction: Transaction) => {
     if (filterMode === "grouped" && transaction.groupId === undefined)
       return false;
@@ -289,13 +293,6 @@ export function TransactionTree({
         (left, right) =>
           left.start - right.start || left.id.localeCompare(right.id),
       );
-  const toggle = (key: string) =>
-    setCollapsed((current) => {
-      const next = new Set(current);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
   const rename = (group: TransactionGroup) => setEditingGroupId(group.id);
   const renderTransaction = (transaction: Transaction) => (
     <div className="transaction-left-tree-row-wrap" key={transaction.id}>
@@ -403,20 +400,20 @@ export function TransactionTree({
       <div className="transaction-left-tree-root">
         <button
           type="button"
-          aria-label={`${collapsed.has("__all__") ? "Expand" : "Collapse"} All Transactions`}
-          aria-expanded={!collapsed.has("__all__")}
-          onClick={() => toggle("__all__")}
+          aria-label={`${allCollapsed ? "Expand" : "Collapse"} All Transactions`}
+          aria-expanded={!allCollapsed}
+          onClick={() => setAllCollapsed((current) => !current)}
         >
-          <EditorIcon name={collapsed.has("__all__") ? "right" : "down"} />
+          <EditorIcon name={allCollapsed ? "right" : "down"} />
         </button>
         <strong>All Transactions</strong>
         <span>({document.transactions.length})</span>
       </div>
-      {!collapsed.has("__all__") && (
+      {!allCollapsed && (
         <div className="transaction-left-tree-groups">
           {groups.map((group) => {
             const items = groupTransactions(group.id);
-            const isCollapsed = collapsed.has(group.id);
+            const isCollapsed = collapsedGroupIds.has(group.id);
             const editing = editingGroupId === group.id;
             return (
               <div
@@ -432,7 +429,7 @@ export function TransactionTree({
                     type="button"
                     aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${group.name}`}
                     aria-expanded={!isCollapsed}
-                    onClick={() => toggle(group.id)}
+                    onClick={() => onToggleGroupCollapsed(group.id)}
                   >
                     <EditorIcon name={isCollapsed ? "right" : "down"} />
                   </button>
@@ -549,7 +546,7 @@ export function TransactionTree({
           })}
           {(() => {
             const items = groupTransactions(undefined);
-            const isCollapsed = collapsed.has("__ungrouped__");
+            const isCollapsed = collapsedGroupIds.has("ungrouped");
             return (
               <div
                 className="transaction-left-tree-group"
@@ -563,7 +560,7 @@ export function TransactionTree({
                     type="button"
                     aria-label={`${isCollapsed ? "Expand" : "Collapse"} Ungrouped`}
                     aria-expanded={!isCollapsed}
-                    onClick={() => toggle("__ungrouped__")}
+                    onClick={() => onToggleGroupCollapsed("ungrouped")}
                   >
                     <EditorIcon name={isCollapsed ? "right" : "down"} />
                   </button>
