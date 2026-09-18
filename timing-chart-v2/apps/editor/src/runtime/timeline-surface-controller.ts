@@ -33,6 +33,7 @@ import type { BottomPinnedSelection, TreeTypeFilter } from "../workspace/use-wor
 import type { ContextMenuState } from "../workspace/use-dialog-menu-state.js";
 import { resetInspectorAccordionState } from "../inspector-accordion.js";
 import { deriveTransactionExtent } from "./transaction-extent.js";
+import { projectionForActiveWaveView } from "./view-mode-wave-invalidation.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type TimelineRange = Readonly<{ start: number; end: number }>;
@@ -275,8 +276,16 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // flags. Declaring a fake full-document-replace would incorrectly
       // advance documentEpoch and clear annotation preview state for a
       // toggle that must be canonical/history/dirty-neutral.
-      projection = projectionCoordinator.project({ snapshot: sessionController.snapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+      projection = projectionForActiveWaveView(
+        projectionCoordinator.project({ snapshot: sessionController.snapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] }),
+        input.viewMode,
+      );
       renderer.update(projection);
+      if (input.viewMode !== "Transaction") {
+        void renderer.whenIdle().then(() => {
+          if (active && input.viewMode !== "Transaction") timelineRuntime.refreshOverlays();
+        });
+      }
     };
     let rulerBuilds = 0;
     let edgeCounterResolvePasses = 0;
