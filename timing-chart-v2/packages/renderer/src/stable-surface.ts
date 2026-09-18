@@ -505,10 +505,13 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
 
   #queueWave(signalId: WaveSignalId, owner: HTMLElement): void {
     const documentEpoch = this.#documentEpoch;
+    const version = this.#waveVersions.get(signalId) ?? 0;
+    // Always overwrite the queued slot before checking the in-flight lock.
+    // The map is one coalesced latest-desired request per Signal, so rapid
+    // scroll events cannot accumulate intermediate windows or lose the tail.
+    this.#waveQueue.set(signalId, { owner, version, documentEpoch });
     if (this.#wavePending.get(signalId) === documentEpoch) return;
     this.#wavePending.set(signalId, documentEpoch);
-    const version = this.#waveVersions.get(signalId) ?? 0;
-    this.#waveQueue.set(signalId, { owner, version, documentEpoch });
     this.#scheduleWaveBatch();
   }
 
@@ -598,6 +601,14 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         if (this.#wavePending.get(request.signalId) === request.documentEpoch) this.#wavePending.delete(request.signalId);
         continue;
       }
+      if (item?.deferred === true) {
+        // A mode-specific provider may intentionally skip this Signal (for
+        // example, Transaction mode hides Cycle waveforms). Do not certify an
+        // artifact/window that was never painted: the next projection in a
+        // visible mode must retry it.
+        if (this.#wavePending.get(request.signalId) === request.documentEpoch) this.#wavePending.delete(request.signalId);
+        continue;
+      }
       if (item?.result) {
         const delta = item.result;
         this.#counters = {
@@ -624,7 +635,10 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         if (request.owner.dataset.waveformStyleColor) applyWaveformStyle(request.owner, { color: request.owner.dataset.waveformStyleColor });
         if ((this.#waveVersions.get(request.signalId) ?? 0) === request.version) this.#dirtyWaves.delete(request.signalId);
       } else {
-        request.owner.replaceChildren();
+        // Keep the last committed SVG visible if this was only a failed
+        // replacement for a newer source window. An initially-unpainted
+        // owner may remain empty and surface the normal error state.
+        if (!request.owner.querySelector("svg")) request.owner.replaceChildren();
         request.owner.dataset.waveError = item?.error instanceof Error ? item.error.message : "Unknown waveform render failure";
       }
       if (this.#wavePending.get(request.signalId) === request.documentEpoch) this.#wavePending.delete(request.signalId);

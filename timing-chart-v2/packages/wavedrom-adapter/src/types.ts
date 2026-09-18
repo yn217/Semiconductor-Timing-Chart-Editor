@@ -79,6 +79,8 @@ export interface WaveDromAdapterMetrics {
 export interface WaveDromAdapter {
   toWaveJson(source: CanonicalSignalSource): WaveJsonSignal;
   renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues?: readonly string[]): Promise<RenderedWave>;
+  renderWaveStaged(signalId: SignalId, waveJson: WaveJsonSignal, document: Document, semanticValues?: readonly string[]): Promise<RenderedWave>;
+  commitWave(rendered: RenderedWave, mount: Element): void;
   extractLocalGeometry(rendered: RenderedWave): LocalGeometryMap;
   geometryMetrics(): Readonly<{
     readonly last: GeometryExtractionMetrics | undefined;

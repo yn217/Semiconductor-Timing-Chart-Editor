@@ -24,6 +24,8 @@ export interface WaveMountBatchItem {
   readonly signalId: WaveSignalId;
   readonly result?: WaveMountResult;
   readonly error?: unknown;
+  /** The provider intentionally skipped painting this Signal for the current mode. */
+  readonly deferred?: boolean;
   /** The request became obsolete while an async render was in flight. */
   readonly stale?: boolean;
 }

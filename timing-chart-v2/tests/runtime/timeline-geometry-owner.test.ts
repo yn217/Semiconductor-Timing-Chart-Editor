@@ -84,6 +84,26 @@ describe("TimelineGeometryOwner", () => {
     expect(findCalls).toBe(0);
   });
 
+  it.each([160, 4_096])("keeps the complete source range for small/medium Cycle documents (%i cycles)", (cycleCount) => {
+    const clockId = signalId("sig_cycle_clock");
+    const geometry = new ImmutableLocalGeometryMap(clockId, [
+      { cycle: 0, point: "cycle-start" as const, position: { x: 0, y: 0 } },
+      { cycle: Math.min(cycleCount, 2_048), point: "cycle-start" as const, position: { x: Math.min(cycleCount, 2_048), y: 0 } },
+    ]);
+    const document = { ...cycleDocument, timeline: { ...cycleDocument.timeline, cycleCount, end: cycleCount } };
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => document,
+      getProjection: () => ({ rowLayout: [{ rowId: clockId, kind: "timing", visible: true, y: 0 }] } as never),
+      onSnapIndexBuilt: () => undefined,
+    });
+
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
+    expect(owner.sourceWindowForLocalRange(document, 0, 30)).toEqual({ start: 0, end: cycleCount });
+    expect(owner.sourceWindowForLocalRange(document, cycleCount - 30, cycleCount)).toEqual({ start: 0, end: cycleCount });
+  });
+
   it("uses shared display mapping to window beyond retained geometry", () => {
     const clockId = signalId("sig_cycle_clock");
     const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 2_049 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle, y: 0 } })));
@@ -96,7 +116,32 @@ describe("TimelineGeometryOwner", () => {
       onSnapIndexBuilt: () => undefined,
     });
     owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
-    expect(owner.sourceWindowForLocalRange(document, 50_000, 50_100)).toEqual({ start: 49_998, end: 52_046 });
+    expect(owner.sourceWindowForLocalRange(document, 50_000, 50_100)).toEqual({ start: 49_026, end: 51_074 });
+  });
+
+  it("retains a large-document source window until the visible range leaves its inner region", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const geometry = new ImmutableLocalGeometryMap(clockId, [
+      { cycle: 0, point: "cycle-start", position: { x: 0, y: 0 } },
+      { cycle: 2_048, point: "cycle-start", position: { x: 2_048, y: 0 } },
+    ]);
+    const document = { ...cycleDocument, timeline: { ...cycleDocument.timeline, cycleCount: 100_000, end: 100_000 } };
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => document,
+      getProjection: () => ({ rowLayout: [{ rowId: clockId, kind: "timing", visible: true, y: 0 }] } as never),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1, undefined, undefined, "Cycle");
+
+    const first = owner.sourceWindowForLocalRange(document, 50_000, 50_100);
+    expect(first).toEqual({ start: 49_026, end: 51_074 });
+    expect(owner.sourceWindowForLocalRange(document, 50_010, 50_110)).toBe(first);
+    expect(owner.sourceWindowForLocalRange(document, 60_000, 60_100)).not.toBe(first);
+
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 2, undefined, undefined, "Cycle");
+    expect(owner.sourceWindowForLocalRange(document, 60_010, 60_110)).not.toBe(first);
   });
 
   it("projects off-window source boundaries from the shared ruler geometry", () => {

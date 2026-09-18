@@ -109,10 +109,25 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     return result;
   }
 
-  async renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues: readonly string[] = []): Promise<RenderedWave> {
+  renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues: readonly string[] = []): Promise<RenderedWave> {
+    return this.#renderWave(signalId, waveJson, mount, semanticValues, true);
+  }
+
+  renderWaveStaged(signalId: SignalId, waveJson: WaveJsonSignal, document: Document, semanticValues: readonly string[] = []): Promise<RenderedWave> {
+    return this.#renderWave(signalId, waveJson, document.createElement("div"), semanticValues, false);
+  }
+
+  commitWave(rendered: RenderedWave, mount: Element): void {
+    const existing = this.#active.get(rendered.signalId);
+    mount.replaceChildren(rendered.svg);
+    if (existing && existing.mount !== mount) this.#clearOwner(existing);
+    this.#active.set(rendered.signalId, { mount, rendered });
+  }
+
+  async #renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues: readonly string[], commitAsActive: boolean): Promise<RenderedWave> {
     const startedAt = globalThis.performance?.now() ?? Date.now();
     const existing = this.#active.get(signalId);
-    if (existing && existing.mount !== mount) this.#clearOwner(existing);
+    if (commitAsActive && existing && existing.mount !== mount) this.#clearOwner(existing);
     let renderIndex = this.#renderIndices.get(signalId);
     if (renderIndex === undefined) {
       renderIndex = this.#nextRenderIndex;
@@ -149,7 +164,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     mount.setAttribute("data-wave-owner", signalId);
     mount.replaceChildren(svg);
     const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson };
-    this.#active.set(signalId, { mount, rendered });
+    if (commitAsActive) this.#active.set(signalId, { mount, rendered });
     this.#renderDurationMs += (globalThis.performance?.now() ?? Date.now()) - startedAt;
     this.#mounts += 1;
     return rendered;

@@ -12,6 +12,8 @@ export type TimelineGeometryOwnerContext = Readonly<{
   onSnapIndexBuilt: () => void;
 }>;
 
+const WINDOWED_SOURCE_CYCLE_THRESHOLD = 4_096;
+
 function firstPointAfter(candidates: readonly { readonly point: { readonly x: number } }[], x: number): number {
   let low = 0;
   let high = candidates.length;
@@ -37,6 +39,10 @@ export class TimelineGeometryOwner {
   #cycleBoundaryCandidates: ReturnType<ImmutableSnapIndex["entries"]> = [];
   #viewportBoundaryCache: { readonly geometry: LocalGeometryMap; readonly mapping: DisplayTimeMapping; readonly entries: readonly { readonly cycle: number; readonly x: number }[] } | undefined;
   #requestedSourceCycle: number | undefined;
+  #retainedSourceWindow: Readonly<{ start: number; end: number }> | undefined;
+  #retainedWindowMapping: DisplayTimeMapping | undefined;
+  #retainedWindowCycleCount: number | undefined;
+  #retainedWindowMode: "Cycle" | "Transaction" | "Split" | undefined;
 
   constructor(private readonly context: TimelineGeometryOwnerContext) {
     this.mappingCache = context.mappingCache;
@@ -68,13 +74,15 @@ export class TimelineGeometryOwner {
    * or every owner ends up offset from the ruler by that fixed margin (#620). */
   get waveOriginPx(): number | undefined { return this.#waveOriginPx; }
 
-  updatePresentation(timeAxis: TimeAxisGeometry, presentationScale: number, waveWidthPxPerDisplayCycle?: number, waveOriginPx?: number): void {
+  updatePresentation(timeAxis: TimeAxisGeometry, presentationScale: number, waveWidthPxPerDisplayCycle?: number, waveOriginPx?: number, viewMode?: "Cycle" | "Transaction" | "Split"): void {
     const geometryChanged = this.#presentationScale !== presentationScale
       || this.#timeAxis.mode !== timeAxis.mode
       || this.#timeAxis.ownerSignalId !== timeAxis.ownerSignalId
       || this.#timeAxis.geometry !== timeAxis.geometry;
     this.#timeAxis = timeAxis;
     this.#presentationScale = presentationScale;
+    if (geometryChanged || (viewMode !== undefined && this.#retainedWindowMode !== undefined && viewMode !== this.#retainedWindowMode)) this.#retainedSourceWindow = undefined;
+    if (viewMode !== undefined) this.#retainedWindowMode = viewMode;
     if (waveWidthPxPerDisplayCycle !== undefined) this.#waveWidthPxPerDisplayCycle = waveWidthPxPerDisplayCycle;
     if (waveOriginPx !== undefined) this.#waveOriginPx = waveOriginPx;
     if (geometryChanged) this.invalidateSnapIndex();
@@ -87,6 +95,10 @@ export class TimelineGeometryOwner {
     this.#waveOriginPx = undefined;
     this.invalidateSnapIndex();
     this.#requestedSourceCycle = undefined;
+    this.#retainedSourceWindow = undefined;
+    this.#retainedWindowMapping = undefined;
+    this.#retainedWindowCycleCount = undefined;
+    this.#retainedWindowMode = undefined;
   }
 
   requestSourceCycle(cycle: number): void {
@@ -129,13 +141,25 @@ export class TimelineGeometryOwner {
 
   /** Resolve a local time viewport to canonical source cycles using semantic geometry. */
   sourceWindowForLocalRange(document: CanonicalDocument, localStart: number, localEnd: number, overscan = 2): Readonly<{ start: number; end: number }> {
+    const mapping = this.mappingCache.get(document.timeline, document.timeGroups);
+    if (this.#retainedWindowMapping !== undefined && (this.#retainedWindowMapping !== mapping || this.#retainedWindowCycleCount !== document.timeline.cycleCount)) {
+      this.#retainedSourceWindow = undefined;
+    }
     if (this.#requestedSourceCycle !== undefined) {
       const span = Math.min(2048, document.timeline.cycleCount);
       const start = Math.max(0, Math.min(this.#requestedSourceCycle - Math.floor(span / 2), document.timeline.cycleCount - span));
-      return { start, end: Math.min(document.timeline.cycleCount, start + span) };
+      const requested = { start, end: Math.min(document.timeline.cycleCount, start + span) };
+      this.#retainSourceWindow(requested, mapping, document.timeline.cycleCount);
+      return requested;
+    }
+    // Horizontal scrolling in a small/medium document is viewport-only. Keep
+    // its complete semantic source range mounted so WaveDrom does not replace
+    // the currently visible waveform for every scrollbar movement.
+    if (document.timeline.cycleCount <= WINDOWED_SOURCE_CYCLE_THRESHOLD) {
+      return { start: 0, end: document.timeline.cycleCount };
     }
     const axis = this.resolveTimeAxis(document);
-    const mapping = this.displayMapping;
+    const currentWindow = this.#retainedSourceWindow;
     const owner = axis.geometry && axis.ownerSignalId !== undefined ? axis.geometry : this.geometryMaps.values().next().value;
     const signalId = axis.ownerSignalId ?? owner?.signalId;
     if (!owner || signalId === undefined) {
@@ -151,7 +175,7 @@ export class TimelineGeometryOwner {
     // not let that partial map become the navigation source for a large
     // document; request the bounded bootstrap window until a windowed render
     // replaces it with semantic boundaries.
-    if (document.timeline.cycleCount > 4096 && entries.length < 512 && localEnd <= 2_048) {
+    if (document.timeline.cycleCount > WINDOWED_SOURCE_CYCLE_THRESHOLD && entries.length < 512 && localEnd <= 2_048) {
       return { start: 0, end: Math.min(document.timeline.cycleCount, 2048) };
     }
     // Retained geometry is intentionally bounded. When the requested local
@@ -182,12 +206,32 @@ export class TimelineGeometryOwner {
     // subset to replace the bounded geometry window would discard offscreen
     // navigation boundaries on the next render.  DOM remains virtualized;
     // this minimum applies only to the source-time geometry artifact.
-    if (document.timeline.cycleCount > 4096 && boundedEnd - boundedStart < 2048) {
+    if (document.timeline.cycleCount > WINDOWED_SOURCE_CYCLE_THRESHOLD && boundedEnd - boundedStart < 2048) {
       const span = Math.min(2048, document.timeline.cycleCount);
-      const centered = Math.max(0, Math.min(boundedStart, document.timeline.cycleCount - span));
-      return { start: centered, end: centered + span };
+      const centered = Math.max(0, Math.min(Math.floor((start + end - span) / 2), document.timeline.cycleCount - span));
+      const requested = { start: centered, end: centered + span };
+      return this.#retainOrReuseSourceWindow(requested, currentWindow, localStart, localEnd, mapping, document.timeline.cycleCount);
     }
-    return { start: boundedStart, end: boundedEnd };
+    return this.#retainOrReuseSourceWindow({ start: boundedStart, end: boundedEnd }, currentWindow, localStart, localEnd, mapping, document.timeline.cycleCount);
+  }
+
+  #retainSourceWindow(window: Readonly<{ start: number; end: number }>, mapping: DisplayTimeMapping, cycleCount: number): void {
+    this.#retainedSourceWindow = window;
+    this.#retainedWindowMapping = mapping;
+    this.#retainedWindowCycleCount = cycleCount;
+  }
+
+  #retainOrReuseSourceWindow(requested: Readonly<{ start: number; end: number }>, current: Readonly<{ start: number; end: number }> | undefined, localStart: number, localEnd: number, mapping: DisplayTimeMapping, cycleCount: number): Readonly<{ start: number; end: number }> {
+    if (current && this.#retainedWindowMapping === mapping && this.#retainedWindowCycleCount === cycleCount) {
+      const span = current.end - current.start;
+      const innerStart = current.start + span * 0.25;
+      const innerEnd = current.end - span * 0.25;
+      const visibleStart = mapping.displayToSource[Math.max(0, Math.min(mapping.displayCycleCount, Math.round(localStart)))] ?? current.start;
+      const visibleEnd = mapping.displayToSource[Math.max(0, Math.min(mapping.displayCycleCount, Math.round(localEnd)))] ?? current.end;
+      if (visibleStart >= innerStart && visibleEnd <= innerEnd) return current;
+    }
+    this.#retainSourceWindow(requested, mapping, cycleCount);
+    return requested;
   }
 
   viewportForLocalRange(localStart: number, localEnd: number, rowStart: number, rowEnd: number, generation: number, pinnedIds: readonly string[] = []): DisplayTimeViewport {

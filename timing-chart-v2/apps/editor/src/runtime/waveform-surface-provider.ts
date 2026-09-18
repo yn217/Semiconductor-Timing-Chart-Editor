@@ -174,14 +174,14 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         if (!isCurrent(item.request)) renderResults.push({ ...item, rendered: undefined, stale: true });
         else if (item.error || !item.waveJson) renderResults.push({ ...item, rendered: undefined });
         else {
-          try { renderResults.push({ ...item, rendered: await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues) }); }
+          try { renderResults.push({ ...item, rendered: await context.adapter.renderWaveStaged(item.request.signalId, item.waveJson, item.request.owner.ownerDocument, item.semanticValues) }); }
           catch (error: unknown) { renderResults.push({ ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) }); }
         }
         if (yieldBetweenOwners) await nextBrowserFrame();
       }
       const results = renderResults.map((item) => {
         if (prepared.find((candidate) => candidate.request === item.request)?.deferred) {
-          return { signalId: item.request.signalId, result: { waveDromRenders: 0, localGeometryBuilds: 0 } };
+          return { signalId: item.request.signalId, deferred: true };
         }
         if (item.stale === true || !isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
         if (item.error || !item.rendered) return { signalId: item.request.signalId, error: item.error ?? new Error("Waveform render did not produce an SVG.") };
@@ -201,6 +201,10 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           if (item.request.signalId === currentReferenceClock) context.markOpenPhase("reference-clock-painted");
           const geometry = context.adapter.extractLocalGeometry(item.rendered);
           if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
+          // Publish the staged SVG only after WaveDrom rendering, geometry
+          // extraction, and freshness checks have all succeeded. Until this
+          // point the previously committed SVG remains attached to the owner.
+          context.adapter.commitWave(item.rendered, item.request.owner);
           context.geometryRegistry.maps.set(item.request.signalId, geometry);
           context.geometryRegistry.svgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
           const boundaryGeometry = geometry.cycleBoundaryEntries?.();
@@ -214,7 +218,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           context.invalidateSnapIndex();
           return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
         } catch (error: unknown) {
-          context.geometryRegistry.remove(item.request.signalId);
+          // Keep the last-good geometry with the last-good visible SVG when a
+          // transient replacement render/extraction fails.
           context.invalidateSnapIndex();
           return { signalId: item.request.signalId, error };
         }
