@@ -38,7 +38,7 @@ maintaining a parallel test-only state machine:
 | --- | --- |
 | Fresh -> Cycle / Transaction / Combined; mode loop | `tests/e2e/feature-showcase-startup.spec.ts`, `tests/e2e/mode-isolation-journey.spec.ts` |
 | Select -> edit -> Undo -> Redo; Save/Open | `tests/e2e/transaction-gui-authoring.spec.ts`, `tests/e2e/signal-editor-draft-survives-unrelated-edit.spec.ts` |
-| Annotation create/drag/Escape | `tests/e2e/annotation-snap.spec.ts`, `tests/e2e/transaction-drag.spec.ts` |
+| Annotation create/drag/Escape | `tests/e2e/annotation-snap.spec.ts` |
 | Horizontal far scroll -> select | `tests/e2e/combined-long-fixture-acceptance.spec.ts`, `tests/e2e/feature-showcase-startup.spec.ts` |
 | Vertical scroll / mode-local state | `tests/e2e/mode-isolation-journey.spec.ts` |
 | Bottom Pin -> selection change | `tests/e2e/pinned-bottom-target.spec.ts` |

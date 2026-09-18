@@ -135,11 +135,20 @@ test("concurrent Open requests are latest-request-wins", async ({ page }) => {
   await page.addInitScript(() => {
     const nativeText = Blob.prototype.text;
     const resolvers: Record<string, () => void> = {};
-    Object.assign(globalThis, { __openReadResolvers: resolvers });
+    const settled: Record<string, boolean> = {};
+    Object.assign(globalThis, { __openReadResolvers: resolvers, __openReadSettled: settled });
     File.prototype.text = function () {
       const file = this;
       return new Promise<string>((resolve, reject) => {
-        resolvers[file.name] = () => { void nativeText.call(file).then(resolve, reject); };
+        resolvers[file.name] = () => {
+          void nativeText.call(file).then((text) => {
+            settled[file.name] = true;
+            resolve(text);
+          }, (error: unknown) => {
+            settled[file.name] = true;
+            reject(error);
+          });
+        };
       });
     };
   });
@@ -155,7 +164,7 @@ test("concurrent Open requests are latest-request-wins", async ({ page }) => {
   await page.evaluate(() => (globalThis as typeof globalThis & { __openReadResolvers: Record<string, () => void> }).__openReadResolvers["latest-b.tcd"]?.());
   await expect(page.locator(".app-titlebar h1")).toHaveText("Latest B");
   await page.evaluate(() => (globalThis as typeof globalThis & { __openReadResolvers: Record<string, () => void> }).__openReadResolvers["slow-a.tcd"]?.());
-  await page.waitForTimeout(100);
+  await expect.poll(() => page.evaluate(() => (globalThis as typeof globalThis & { __openReadSettled: Record<string, boolean> }).__openReadSettled["slow-a.tcd"])).toBe(true);
   await expect(page.locator(".app-titlebar h1")).toHaveText("Latest B");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
