@@ -192,3 +192,48 @@ test("deleting a populated Transaction Group ungroups children as one undoable G
   await expect(table.locator("[data-transaction-row-id]")).toHaveCount(2);
   await expect(tree.locator(`[data-transaction-tree-id="${selectedId}"]`)).toHaveCount(1);
 });
+
+test("Transaction Group menu moves and Tree drag/drop keep counts and Undo/Redo synchronized", async ({ page }) => {
+  for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+  await page.setViewportSize(viewportSize);
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByRole("button", { name: "New", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  const ribbon = page.getByTestId("ribbon");
+  const tree = page.getByTestId("transaction-left-tree");
+  const create = ribbon.getByRole("button", { name: "Create Transaction", exact: true });
+  for (const name of ["MoveByMenu", "MoveByDrop"]) {
+    await create.click();
+    await page.getByTestId("inspector").getByLabel("Transaction name", { exact: true }).fill(name);
+    await page.getByTestId("inspector").getByTestId("apply-inspector-transaction").click();
+  }
+  await page.getByTestId("add-transaction-group-tree").click();
+  await page.getByTestId("add-transaction-group-tree").click();
+  const groups = tree.locator("[data-transaction-group-id]").filter({ hasNot: tree.locator('[data-transaction-group-id="ungrouped"]') });
+  const groupOne = groups.filter({ hasText: "Group 1" });
+  const groupTwo = groups.filter({ hasText: "Group 2" });
+  const rowA = tree.locator(".transaction-left-tree-row-wrap").filter({ hasText: "MoveByMenu" });
+  const rowB = tree.locator(".transaction-left-tree-row-wrap").filter({ hasText: "MoveByDrop" });
+  await rowA.getByRole("button", { name: "MoveByMenu actions" }).click();
+  await page.getByRole("menuitem", { name: "Move to Group 1", exact: true }).click();
+  await expect(groupOne).toContainText("(1)");
+  await rowB.dragTo(groupOne.locator(".transaction-left-tree-group-header"));
+  await expect(groupOne).toContainText("(2)");
+
+  await rowB.getByRole("button", { name: "MoveByDrop actions" }).click();
+  const historyBeforeMove = await page.getByTestId("history-status").textContent();
+  const depthBeforeMove = Number(historyBeforeMove?.match(/History (\d+)/)?.[1] ?? -1);
+  await page.getByRole("menuitem", { name: "Move to Group 2", exact: true }).click();
+  await expect(groupOne).toContainText("(1)");
+  await expect(groupTwo).toContainText("(1)");
+  await expect(page.getByTestId("history-status")).toHaveText(`History ${depthBeforeMove + 1} / Redo 0`);
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(groupOne).toContainText("(2)");
+  await expect(groupTwo).toContainText("(0)");
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(groupOne).toContainText("(1)");
+  await expect(groupTwo).toContainText("(1)");
+  }
+});

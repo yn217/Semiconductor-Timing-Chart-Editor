@@ -348,8 +348,8 @@
 .transaction-left-tree-row-wrap { position: relative; display: flex; align-items: center; }
 .transaction-bookmark-markers { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .transaction-bookmark-markers button { position: absolute; top: 0; bottom: 0; width: 6px; margin-left: -2px; padding: 0; border: 0; border-inline: 2px solid #d97706; background: transparent; box-shadow: 0 0 0 1px #fff8; pointer-events: auto; cursor: pointer; }
-.transaction-left-tree-row-wrap .transaction-left-tree-row { padding-right: 30px; }
-.transaction-left-tree-visibility { position: absolute; right: 7px; width: 20px; height: 20px; padding: 0; border: 0; background: transparent; color: #61758c; font-size: 14px; line-height: 20px; cursor: pointer; }
+.transaction-left-tree-row-wrap .transaction-left-tree-row { flex: 1 1 auto; width: auto; min-width: 0; padding-right: 8px; }
+.transaction-left-tree-visibility { position: static; flex: 0 0 20px; width: 20px; height: 20px; padding: 0; border: 0; background: transparent; color: #61758c; font-size: 14px; line-height: 20px; cursor: pointer; }
 .transaction-left-tree-visibility:hover, .transaction-left-tree-visibility:focus-visible { color: #1769aa; }
 .transaction-left-tree-row:hover, .transaction-left-tree-row[data-selected="true"] { background: #dcecff; color: #155ca0; }
 .cycle-panel.mode-transaction .transaction-lanes { min-height: calc(100% - 34px); }
