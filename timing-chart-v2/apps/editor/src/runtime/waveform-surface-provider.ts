@@ -2,6 +2,7 @@ import type { EditorSessionController } from "./editor-session-controller.js";
 import type { CanonicalDocument, Signal, SignalId, SignalValueChange } from "@timing-chart-v2/schema";
 import { valueSignalWaveDomain } from "@timing-chart-v2/schema";
 import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
+import { resolveTimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { toWaveJsonWindow, type RenderedWave, type WaveDromAdapter, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 import type { DisplayTimeMappingCache } from "@timing-chart-v2/projection";
 import type { GeometryRegistry } from "./geometry-registry.js";
@@ -193,10 +194,11 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           const latestSnapshot = context.sessionController.snapshot();
           const currentSignal = latestSnapshot.document.signals.find((signal) => signal.id === item.request.signalId);
           if (!currentSignal) return { signalId: item.request.signalId, stale: true };
-          // Reference-clock readiness belongs to the current stable SignalId,
-          // not to the document snapshot captured when this async render began.
-          // A same-epoch reference-clock switch must not let the old owner
-          // satisfy the readiness gate or trigger a stale refresh.
+          // Readiness follows the current effective time-axis owner. A
+          // document may omit an explicit referenceClock while the shared
+          // geometry contract still resolves an owner from rendered timing
+          // signals; requiring only timeline.referenceClock would leave
+          // first-correct-paint unmarked for those valid documents.
           const currentReferenceClock = latestSnapshot.document.timeline.referenceClock;
           if (item.request.signalId === currentReferenceClock) context.markOpenPhase("reference-clock-painted");
           const geometry = context.adapter.extractLocalGeometry(item.rendered);
@@ -209,7 +211,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           } else {
             delete item.request.owner.dataset.cycleBoundaryGeometry;
           }
-          if (item.request.signalId === currentReferenceClock) { context.markOpenPhase("reference-geometry-ready"); referenceGeometryReady = true; }
+          const effectiveAxisOwnerId = currentReferenceClock ?? resolveTimeAxisGeometry(latestSnapshot.document, context.geometryRegistry.maps).ownerSignalId;
+          if (item.request.signalId === effectiveAxisOwnerId) { context.markOpenPhase("reference-geometry-ready"); referenceGeometryReady = true; }
           context.markOpenPhase("first-visible-wave-painted");
           context.invalidateSnapIndex();
           return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
