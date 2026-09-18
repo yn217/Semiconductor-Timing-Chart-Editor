@@ -491,8 +491,9 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     // Combined mode owns a nested vertical scroller for the transaction pane;
     // the outer cycle viewport only owns the shared horizontal surface there.
     // Keep the standalone Transaction mode fallback on its cycle viewport.
+    const panel = laneRoot?.closest<HTMLElement>(".cycle-panel");
     const viewport = laneRoot?.closest<HTMLElement>(".split-transaction-pane")
-      ?? laneRoot?.parentElement?.closest<HTMLElement>(".cycle-viewport")?.querySelector<HTMLElement>(".transaction-left-tree")
+      ?? panel?.querySelector<HTMLElement>(".transaction-left-tree")
       ?? laneRoot?.closest<HTMLElement>(".cycle-viewport");
     if (!viewport) return;
     const update = () => setVirtualWindow({ top: viewport.scrollTop, height: viewport.clientHeight || 900 });

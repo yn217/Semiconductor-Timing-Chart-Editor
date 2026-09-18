@@ -302,13 +302,24 @@
 .cycle-panel.mode-transaction .transaction-left-tree {
   position: absolute;
   z-index: 18;
-  top: 0;
-  bottom: 0;
+  /* Standalone Transaction tree is a sibling of `.cycle-viewport`, not a
+     child of its horizontally scrolling surface. Keep it fixed below the
+     58px Transaction header while the shared time surface scrolls behind it. */
+  top: 58px;
+  /* Leave the native horizontal scrollbar unobscured; the tree is a fixed
+     overlay sibling and must not cover the scrollbar's starting thumb. */
+  bottom: 16px;
   left: 0;
   width: var(--gui-left-width);
   overflow: auto;
   border-right: 1px solid #cbd4df;
   background: #f8fafc;
+}
+.cycle-panel.mode-transaction .non-split-signal-content {
+  /* Reserve a true, non-scrolling aperture for the sibling Tree. Clipping
+     the time layers (not painting an opaque mask over them) prevents bars,
+     ruler/grid lines, and overlays from ever appearing inside that pane. */
+  clip-path: inset(0 0 0 var(--gui-left-width));
 }
 .cycle-panel.mode-transaction:has([data-testid="transaction-signal-tree"]) .transaction-left-tree { display: none; }
 .cycle-panel.mode-transaction .transaction-lane-labels {
