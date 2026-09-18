@@ -29,11 +29,13 @@ export function validateEvidence(manifest) {
   if (manifest.changeKind === "bug-fix") {
     if (requireObject(manifest.reproduction, "reproduction", errors)) {
       if (!["reproduced", "intermittent", "not-reproduced", "not-applicable"].includes(manifest.reproduction.status)) errors.push("reproduction.status is invalid");
+      else if (!["reproduced", "intermittent"].includes(manifest.reproduction.status)) errors.push("bug-fix reproduction.status must be reproduced or intermittent");
       requireText(manifest.reproduction.journey, "reproduction.journey", errors);
     }
     if (requireObject(manifest.failingTest, "failingTest", errors)) {
       requireText(manifest.failingTest.name, "failingTest.name", errors);
       if (typeof manifest.failingTest.observedRed !== "boolean") errors.push("failingTest.observedRed must be boolean");
+      else if (manifest.failingTest.observedRed !== true) errors.push("bug-fix failingTest.observedRed must be true");
     }
     if (requireObject(manifest.rootCause, "rootCause", errors)) {
       requireText(manifest.rootCause.bugClass, "rootCause.bugClass", errors);

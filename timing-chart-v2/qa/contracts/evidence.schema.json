@@ -54,6 +54,16 @@
       "then": {
         "required": ["reproduction", "failingTest", "rootCause"],
         "properties": {
+          "reproduction": {
+            "properties": {
+              "status": { "enum": ["reproduced", "intermittent"] }
+            }
+          },
+          "failingTest": {
+            "properties": {
+              "observedRed": { "const": true }
+            }
+          },
           "verification": {
             "properties": {
               "independent": { "const": true },

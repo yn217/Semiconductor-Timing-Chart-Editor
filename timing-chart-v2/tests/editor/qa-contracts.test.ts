@@ -13,6 +13,12 @@ describe("QA journey and evidence contracts", () => {
 
   it("requires red-before, root cause, and verifier evidence for bug fixes", async () => {
     expect(validateEvidence(await json("../../qa/evidence/bug-fix-example.valid.json"))).toEqual([]);
+    const noObservedRed = await json("../../qa/evidence/bug-fix-example.valid.json");
+    noObservedRed.failingTest.observedRed = false;
+    expect(validateEvidence(noObservedRed)).toContain("bug-fix failingTest.observedRed must be true");
+    const unreproduced = await json("../../qa/evidence/bug-fix-example.valid.json");
+    unreproduced.reproduction.status = "not-reproduced";
+    expect(validateEvidence(unreproduced)).toContain("bug-fix reproduction.status must be reproduced or intermittent");
     const unverified = await json("../../qa/evidence/bug-fix-example.valid.json");
     unverified.verification.independent = false;
     expect(validateEvidence(unverified)).toContain("bug-fix verification.independent must be true");
