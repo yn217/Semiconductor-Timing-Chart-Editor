@@ -382,7 +382,10 @@
      the workspace resize actions. Keep the actual pane allocation driven by
      that ratio; a fixed 42% made the splitter appear draggable while the
      panes themselves never changed size. */
-  flex: 0 0 clamp(160px, calc(var(--gui-signal-split-upper-ratio, 0.5) * 100%), 280px);
+  /* Keep both Combined panes inside the available center height. The
+     container-derived floor leaves the same minimum for the Cycle pane and
+     the 8px divider, avoiding parent clipping at compact viewport heights. */
+  flex: 0 0 clamp(var(--combined-split-min-pane-height, 80px), calc(var(--gui-signal-split-upper-ratio, 0.5) * 100%), calc(100% - var(--combined-split-min-pane-height, 80px) - 8px));
   overflow-y: auto;
   overflow-x: visible;
   border-bottom: 1px solid var(--ds-border-subtle, #b7c4d2);
@@ -393,7 +396,7 @@
   min-width: 100%;
   min-height: 0;
   flex: 1 1 auto;
-  min-height: 220px;
+  min-height: var(--combined-split-min-pane-height, 80px);
   overflow-y: auto;
   overflow-x: visible;
   overscroll-behavior: contain;

@@ -70,3 +70,60 @@ test("captures the stacked Combined composition with both contexts and zero view
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
   await expect(surface.locator("[data-role='timing-chart-surface']")).toHaveAttribute("data-render-counters", before.counters!);
 });
+
+test("keeps both Combined panes reachable at 1280x720", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  const surface = page.getByTestId("cycle-surface");
+  await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+  const before = {
+    revision: await surface.getAttribute("data-canonical-revision"),
+    history: await surface.getAttribute("data-history-depth"),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+  };
+
+  await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+
+  const viewport = page.getByTestId("cycle-viewport");
+  const transaction = page.locator(".split-transaction-pane");
+  const cycle = page.locator(".split-signal-content");
+  const divider = page.getByTestId("combined-split-divider");
+  const viewportBox = (await viewport.boundingBox())!;
+  const minimum = Number(await divider.getAttribute("aria-valuemin"));
+  const maximum = Number(await divider.getAttribute("aria-valuemax"));
+  expect(minimum).toBe(36);
+  expect(maximum).toBe(60);
+  const expectPanesFit = async () => {
+    const transactionBox = (await transaction.boundingBox())!;
+    const cycleBox = (await cycle.boundingBox())!;
+    expect(transactionBox.height).toBeGreaterThanOrEqual(80);
+    expect(cycleBox.height).toBeGreaterThanOrEqual(80);
+    expect(cycleBox.y).toBeGreaterThanOrEqual(transactionBox.y + transactionBox.height);
+    expect(cycleBox.y + cycleBox.height).toBeLessThanOrEqual(viewportBox.y + viewportBox.height + 1);
+    const outerScroll = await viewport.evaluate((element) => ({ client: element.clientHeight, scroll: element.scrollHeight }));
+    expect(outerScroll.scroll).toBeLessThanOrEqual(outerScroll.client + 1);
+  };
+  await expectPanesFit();
+
+  let dividerBox = (await divider.boundingBox())!;
+  await page.mouse.move(dividerBox.x + dividerBox.width / 2, dividerBox.y + dividerBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(dividerBox.x + dividerBox.width / 2, viewportBox.y);
+  await page.mouse.up();
+  await expect(divider).toHaveAttribute("aria-valuenow", String(minimum));
+  await expectPanesFit();
+
+  dividerBox = (await divider.boundingBox())!;
+  await page.mouse.move(dividerBox.x + dividerBox.width / 2, dividerBox.y + dividerBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(dividerBox.x + dividerBox.width / 2, viewportBox.y + viewportBox.height);
+  await page.mouse.up();
+  await expect(divider).toHaveAttribute("aria-valuenow", String(maximum));
+  await expectPanesFit();
+
+  expect(await cycle.evaluate((element) => element.scrollHeight)).toBeGreaterThan(await cycle.evaluate((element) => element.clientHeight));
+
+  await expect(surface).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(surface).toHaveAttribute("data-history-depth", before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+});

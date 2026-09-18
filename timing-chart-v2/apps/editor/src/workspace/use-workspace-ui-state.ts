@@ -38,7 +38,7 @@ export const LEFT_PANE_MAX_WIDTH = 420;
 
 export type PaneResizeGesture = { readonly startX: number; readonly startWidth: number };
 export type VerticalResizeGesture = { readonly startY: number; readonly startHeight: number };
-export type RatioResizeGesture = { readonly startY: number; readonly startRatio: number; readonly containerHeight: number };
+export type RatioResizeGesture = { readonly startY: number; readonly startRatio: number; readonly containerHeight: number; readonly minRatio?: number; readonly maxRatio?: number };
 
 export type BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId> = {
   readonly signalId?: SignalId;

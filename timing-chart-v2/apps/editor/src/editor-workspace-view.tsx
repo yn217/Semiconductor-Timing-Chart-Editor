@@ -1,5 +1,6 @@
-import { useEffect, type KeyboardEventHandler, type PointerEventHandler, type ReactNode, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useState, type CSSProperties, type KeyboardEventHandler, type PointerEventHandler, type ReactNode, type RefObject } from "react";
 import { LEFT_PANE_MAX_WIDTH, LEFT_PANE_MIN_WIDTH } from "./workspace/use-workspace-ui-state.js";
+import { resolveCombinedSplitConstraints } from "./workspace/combined-split-constraints.js";
 
 export interface EditorWorkspaceViewModel {
   readonly view: { readonly viewMode: string; readonly signalSplitEnabled: boolean; readonly signalSplitRatio: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly zoom?: number; readonly cursorPresentationRevision?: number; readonly cursor: { readonly a?: number; readonly b?: number; readonly deltaCycles?: number } };
@@ -31,6 +32,24 @@ export function EditorWorkspaceView({
   const { viewport, gridLayer, ruler, host, viewportLower, rulerLower, hostLower, gridLayerLower } = viewModel.refs;
   const { header, transactionTree, viewportContent, viewportLegend, bottom, inspector } = viewModel.content;
   const { onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onLeftPaneKeyDown, onLeftPanePointerDown, onLeftPanePointerMove, onLeftPanePointerUp, onFrozenPaneKeyDown, onFrozenPanePointerDown, onFrozenPanePointerMove, onFrozenPanePointerUp, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onSignalSplitKeyDown, onSignalSplitPointerDown, onSignalSplitPointerMove, onSignalSplitPointerUp, onViewportKeyDown, onSetCursorAtCycle, resolveCursorCycleAtClientX } = viewModel.interactions;
+  const [combinedSplitContainerHeight, setCombinedSplitContainerHeight] = useState(0);
+  useLayoutEffect(() => {
+    if (viewMode !== "Split") return;
+    const container = viewport.current;
+    if (!container) return;
+    const updateHeight = () => setCombinedSplitContainerHeight(container.clientHeight);
+    updateHeight();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [viewMode, viewport]);
+  const combinedSplitConstraints = resolveCombinedSplitConstraints(combinedSplitContainerHeight);
+  const effectiveCombinedSplitRatio = Math.max(combinedSplitConstraints.minRatio, Math.min(combinedSplitConstraints.maxRatio, signalSplitRatio));
+  const combinedSplitStyle = viewMode === "Split" ? {
+    "--gui-signal-split-upper-ratio": String(effectiveCombinedSplitRatio),
+    "--combined-split-min-pane-height": `${combinedSplitConstraints.minPaneHeight}px`,
+  } as CSSProperties : undefined;
   useEffect(() => {
     // Cursor A/B are workspace-only source-cycle markers. The ruler is the
     // shared display-time owner, so resolve each marker from the rendered
@@ -198,7 +217,7 @@ export function EditorWorkspaceView({
     };
   }, [ruler, rulerLower, cursor.a, cursor.b, cursorPresentationRevision, zoom, viewport, viewportLower]);
   return <div className="desktop-workspace">
-    <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode === "Split" ? "Combined" : viewMode} View`} data-view-mode={viewMode} data-signal-split={String(signalSplitEnabled && viewMode === "Cycle")}>
+    <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode === "Split" ? "Combined" : viewMode} View`} data-view-mode={viewMode} data-signal-split={String(signalSplitEnabled && viewMode === "Cycle")} style={combinedSplitStyle}>
       <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={LEFT_PANE_MIN_WIDTH} aria-valuemax={LEFT_PANE_MAX_WIDTH} aria-valuenow={leftPaneWidth} tabIndex={0} onKeyDown={onLeftPaneKeyDown} onPointerDown={onLeftPanePointerDown} onPointerMove={onLeftPanePointerMove} onPointerUp={onLeftPanePointerUp} onPointerCancel={onLeftPanePointerUp} />
       {/* Transaction Mode GUI realignment: this splitter's whole purpose is
           separating Cycle Mode's frozen Role/Signal-name columns from the
@@ -214,7 +233,7 @@ export function EditorWorkspaceView({
       <div className={`cycle-viewport${viewMode === "Split" ? " split-signal-pane" : ""}`} ref={viewport} data-testid="cycle-viewport" data-pane={viewMode === "Split" ? "signal" : undefined} tabIndex={0} aria-label="Timing canvas navigation" onKeyDown={onViewportKeyDown}>
         {viewMode === "Transaction" && transactionTree}
         {viewMode === "Split" && <div className="split-transaction-pane" data-pane="transaction" tabIndex={0} aria-label="Transaction pane">{transactionTree}{viewportContent}</div>}
-        {viewMode === "Split" && <div className="combined-split-divider" data-testid="combined-split-divider" role="separator" aria-label="Resize Transaction and Cycle panes" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(signalSplitRatio * 100)} tabIndex={0} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} onPointerCancel={onSignalSplitPointerUp} />}
+        {viewMode === "Split" && <div className="combined-split-divider" data-testid="combined-split-divider" role="separator" aria-label="Resize Transaction and Cycle panes" aria-orientation="horizontal" aria-valuemin={combinedSplitConstraints.minPercent} aria-valuemax={combinedSplitConstraints.maxPercent} aria-valuenow={Math.round(effectiveCombinedSplitRatio * 100)} tabIndex={0} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} onPointerCancel={onSignalSplitPointerUp} />}
         <div className={`split-signal-content${viewMode === "Split" ? "" : " non-split-signal-content"}`}>
           <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
           <div className="cycle-ruler" data-testid="cycle-ruler" aria-label="Cycle ruler" hidden={!rulerEnabled}><div className="cycle-ruler-content" ref={ruler} /></div>

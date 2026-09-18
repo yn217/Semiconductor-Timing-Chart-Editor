@@ -1,6 +1,7 @@
 import type { KeyboardEvent, MutableRefObject, PointerEvent } from "react";
 import type { PaneResizeGesture, RatioResizeGesture, VerticalResizeGesture } from "../workspace/use-workspace-ui-state.js";
 import { LEFT_PANE_MAX_WIDTH, LEFT_PANE_MIN_WIDTH } from "../workspace/use-workspace-ui-state.js";
+import { resolveCombinedSplitConstraints } from "../workspace/combined-split-constraints.js";
 
 export interface EditorResizeActionsInput {
   readonly bottomResizeRef: MutableRefObject<VerticalResizeGesture | undefined>;
@@ -47,13 +48,21 @@ export function useEditorResizeActions(input: EditorResizeActionsInput) {
   const startSignalSplitResize = (event: PointerEvent<HTMLDivElement>) => {
     const container = event.currentTarget.parentElement;
     if (!container) return;
+    const isCombinedSplitter = event.currentTarget.dataset.testid === "combined-split-divider";
+    const containerHeight = isCombinedSplitter ? container.clientHeight : container.getBoundingClientRect().height;
+    const constraints = isCombinedSplitter ? resolveCombinedSplitConstraints(containerHeight) : undefined;
     event.currentTarget.setPointerCapture(event.pointerId);
-    input.signalSplitResizeRef.current = { startY: event.clientY, startRatio: input.signalSplitRatio, containerHeight: container.getBoundingClientRect().height };
+    input.signalSplitResizeRef.current = {
+      startY: event.clientY,
+      startRatio: constraints ? Math.max(constraints.minRatio, Math.min(constraints.maxRatio, input.signalSplitRatio)) : input.signalSplitRatio,
+      containerHeight,
+      ...(constraints ? { minRatio: constraints.minRatio, maxRatio: constraints.maxRatio } : {}),
+    };
   };
   const moveSignalSplitResize = (event: PointerEvent<HTMLDivElement>) => {
     const resize = input.signalSplitResizeRef.current;
     if (!resize || resize.containerHeight <= 0) return;
-    const nextRatio = Math.max(0.15, Math.min(0.85, resize.startRatio + (event.clientY - resize.startY) / resize.containerHeight));
+    const nextRatio = Math.max(resize.minRatio ?? 0.15, Math.min(resize.maxRatio ?? 0.85, resize.startRatio + (event.clientY - resize.startY) / resize.containerHeight));
     if (nextRatio !== input.signalSplitRatio) input.setSignalSplitRatio(nextRatio);
   };
   const finishSignalSplitResize = (event: PointerEvent<HTMLDivElement>) => {
@@ -66,7 +75,11 @@ export function useEditorResizeActions(input: EditorResizeActionsInput) {
     const delta = event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0;
     if (delta === 0) return;
     event.preventDefault();
-    input.setSignalSplitRatio((current) => Math.max(0.15, Math.min(0.85, current + delta)));
+    const isCombinedSplitter = event.currentTarget.dataset.testid === "combined-split-divider";
+    const constraints = isCombinedSplitter && event.currentTarget.parentElement
+      ? resolveCombinedSplitConstraints(event.currentTarget.parentElement.clientHeight)
+      : { minRatio: 0.15, maxRatio: 0.85 };
+    input.setSignalSplitRatio((current) => Math.max(constraints.minRatio, Math.min(constraints.maxRatio, current + delta)));
   };
   const startInspectorResize = (event: PointerEvent<HTMLDivElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
