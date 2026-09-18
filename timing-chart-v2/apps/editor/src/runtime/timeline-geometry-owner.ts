@@ -129,6 +129,11 @@ export class TimelineGeometryOwner {
 
   /** Resolve a local time viewport to canonical source cycles using semantic geometry. */
   sourceWindowForLocalRange(document: CanonicalDocument, localStart: number, localEnd: number, overscan = 2): Readonly<{ start: number; end: number }> {
+    // Small/medium documents already fit comfortably in one WaveDrom artifact.
+    // Keep their geometry stable while the viewport scrolls so a transient
+    // window render cannot replace the currently visible waveform with an
+    // offscreen range. Large documents still use bounded source windows below.
+    if (document.timeline.cycleCount <= 4_096) return { start: 0, end: document.timeline.cycleCount };
     if (this.#requestedSourceCycle !== undefined) {
       const span = Math.min(2048, document.timeline.cycleCount);
       const start = Math.max(0, Math.min(this.#requestedSourceCycle - Math.floor(span / 2), document.timeline.cycleCount - span));
