@@ -1,4 +1,5 @@
 import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
+import { LEFT_TREE_ICON_DOTS, LEFT_TREE_ICON_PATHS, LEFT_TREE_ICON_PUPIL, type LeftTreeIconPathName } from "./left-tree-icon-spec.js";
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
 
 export function isWaveMountRequestFresh(request: Pick<WaveMountRequest, "documentEpoch" | "isFresh">, currentDocumentEpoch: number): boolean {
@@ -33,7 +34,7 @@ function nextBrowserFrame(): Promise<void> {
   });
 }
 
-function createLeftTreeIcon(document: Document, name: "chevron-down" | "chevron-right" | "eye" | "eye-off" | "more" | "comment", className: string): SVGSVGElement {
+function createLeftTreeIcon(document: Document, name: LeftTreeIconPathName | "more" | "comment", className: string): SVGSVGElement {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 24 24");
   svg.setAttribute("class", className);
@@ -44,37 +45,30 @@ function createLeftTreeIcon(document: Document, name: "chevron-down" | "chevron-
     svg.append(element);
     return element;
   };
-  if (name === "chevron-down" || name === "chevron-right") {
+  if (name in LEFT_TREE_ICON_PATHS) {
     const path = append("path");
-    path.setAttribute("d", name === "chevron-down" ? "M6 9l6 6 6-6" : "M9 6l6 6-6 6");
+    const pathName = name as LeftTreeIconPathName;
+    path.setAttribute("d", LEFT_TREE_ICON_PATHS[pathName]);
     path.setAttribute("fill", "none");
     path.setAttribute("stroke", "currentColor");
-    path.setAttribute("stroke-width", "2");
+    path.setAttribute("stroke-width", pathName.startsWith("chevron") ? "2" : "1.6");
     path.setAttribute("stroke-linecap", "round");
     path.setAttribute("stroke-linejoin", "round");
-  } else if (name === "eye" || name === "eye-off") {
-    const path = append("path");
-    path.setAttribute("d", name === "eye" ? "M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12z" : "M3 3l18 18M10.6 6.2A10.8 10.8 0 0 1 12 6c6 0 10 6 10 6a17.6 17.6 0 0 1-3.2 3.5M6.2 7.8C3.6 9.4 2 12 2 12s4 6 10 6a10.8 10.8 0 0 0 2.5-.3");
-    path.setAttribute("fill", "none");
-    path.setAttribute("stroke", "currentColor");
-    path.setAttribute("stroke-width", "1.6");
-    path.setAttribute("stroke-linecap", "round");
-    path.setAttribute("stroke-linejoin", "round");
-    if (name === "eye") {
+    if (pathName === "eye") {
       const pupil = append("circle");
-      pupil.setAttribute("cx", "12");
-      pupil.setAttribute("cy", "12");
-      pupil.setAttribute("r", "2.5");
+      pupil.setAttribute("cx", String(LEFT_TREE_ICON_PUPIL.cx));
+      pupil.setAttribute("cy", String(LEFT_TREE_ICON_PUPIL.cy));
+      pupil.setAttribute("r", String(LEFT_TREE_ICON_PUPIL.r));
       pupil.setAttribute("fill", "none");
       pupil.setAttribute("stroke", "currentColor");
       pupil.setAttribute("stroke-width", "1.6");
     }
   } else if (name === "more") {
-    for (const cy of [5, 12, 19]) {
+    for (const { cx, cy, r } of LEFT_TREE_ICON_DOTS) {
       const dot = append("circle");
-      dot.setAttribute("cx", "12");
+      dot.setAttribute("cx", String(cx));
       dot.setAttribute("cy", String(cy));
-      dot.setAttribute("r", "1.8");
+      dot.setAttribute("r", String(r));
       dot.setAttribute("fill", "currentColor");
     }
   } else if (name === "comment") {

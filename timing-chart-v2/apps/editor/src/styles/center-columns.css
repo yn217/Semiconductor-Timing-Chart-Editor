@@ -316,7 +316,7 @@
   width: var(--gui-frozen-width, 210px);
 }
 .cycle-panel.mode-transaction .transaction-lane-label-row { display: none; }
-.transaction-left-tree-root, .transaction-left-tree-group-header {
+.transaction-left-tree-root {
   display: flex;
   align-items: center;
   min-height: 30px;
@@ -326,7 +326,7 @@
   font-size: 11px;
 }
 .transaction-left-tree-root { border-bottom: 1px solid #d7e0ea; background: #eef3f8; }
-.transaction-left-tree-root button, .transaction-left-tree-group-header button {
+.transaction-left-tree-root button {
   display: inline-flex;
   flex: 0 0 18px;
   align-items: center;
@@ -338,18 +338,58 @@
   background: transparent;
   color: #405c78;
 }
-.transaction-left-tree-root strong, .transaction-left-tree-group-header strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.transaction-left-tree-group-header > input[aria-label^="Rename "] { min-width: 0; flex: 1 1 auto; height: 22px; padding: 2px 5px; border: 1px solid #2678bc; border-radius: 2px; background: white; color: #203a59; font-size: 11px; }
-.transaction-left-tree-root span, .transaction-left-tree-group-header span:last-child { color: #718096; font-size: 10px; }
-.transaction-left-tree-group-header { min-height: 28px; border-bottom: 1px solid #e1e7ef; }
+.transaction-left-tree-root strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.transaction-left-tree-root span { color: #718096; font-size: 10px; }
+.transaction-left-tree-group-header {
+  position: relative;
+  display: grid;
+  grid-template-columns: 18px 14px minmax(0, 1fr) auto 22px;
+  align-items: center;
+  min-height: 28px;
+  gap: 5px;
+  padding: 0 7px;
+  border-bottom: 1px solid #e1e7ef;
+  color: #263d58;
+  font-size: 11px;
+}
+.transaction-left-tree-group-header > button:first-child {
+  display: inline-flex;
+  grid-column: 1;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #405c78;
+}
+.transaction-left-tree-group-header > .transaction-left-tree-swatch { grid-column: 2; }
+.transaction-left-tree-group-header > strong,
+.transaction-left-tree-group-header > input[aria-label^="Rename "] {
+  grid-column: 3;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.transaction-left-tree-group-header > input[aria-label^="Rename "] { height: 22px; padding: 2px 5px; border: 1px solid #2678bc; border-radius: 2px; background: white; color: #203a59; font-size: 11px; }
+.transaction-left-tree-group-header > .transaction-left-tree-group-count { grid-column: 4; color: #718096; font-size: 10px; white-space: nowrap; }
+.transaction-left-tree-group-header > .transaction-left-tree-action-placeholder { grid-column: 5; width: 22px; height: 24px; }
 .transaction-left-tree-group-header[data-drop-target="true"] { outline: 2px solid #3478f6; outline-offset: -2px; background: #e6f1ff; }
 .transaction-left-tree-swatch, .transaction-left-tree-row i { flex: 0 0 14px; width: 14px; height: 14px; border-radius: 3px; }
 .transaction-left-tree-row { display: flex; align-items: center; width: 100%; min-height: var(--transaction-tree-row-height, 29px); height: var(--transaction-tree-row-height, 29px); gap: 7px; padding: 0 10px 0 31px; overflow: hidden; border: 0; background: transparent; color: #304b6a; font-size: 11px; text-align: left; white-space: nowrap; }
-.transaction-left-tree-row-wrap { position: relative; display: flex; align-items: center; }
+.transaction-left-tree-row-wrap { position: relative; display: block; width: 100%; height: var(--transaction-tree-row-height, 29px); }
 .transaction-bookmark-markers { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .transaction-bookmark-markers button { position: absolute; top: 0; bottom: 0; width: 6px; margin-left: -2px; padding: 0; border: 0; border-inline: 2px solid #d97706; background: transparent; box-shadow: 0 0 0 1px #fff8; pointer-events: auto; cursor: pointer; }
-.transaction-left-tree-row-wrap .transaction-left-tree-row { padding-right: 30px; }
-.transaction-left-tree-visibility { position: absolute; right: 7px; width: 20px; height: 20px; padding: 0; border: 0; background: transparent; color: #61758c; font-size: 14px; line-height: 20px; cursor: pointer; }
+.transaction-left-tree-row-wrap .transaction-left-tree-row { box-sizing: border-box; height: 100%; padding-right: 57px; }
+.transaction-left-tree-row-actions { position: absolute; z-index: 4; top: 50%; right: 7px; display: grid; grid-template-columns: 22px 22px; align-items: center; width: 44px; height: 24px; transform: translateY(-50%); }
+.transaction-left-tree-visibility, .transaction-left-tree-row-actions > .transaction-left-tree-more { display: inline-flex; align-items: center; justify-content: center; width: 22px; min-width: 22px; height: 24px; margin: 0; padding: 0; border: 0; border-radius: 2px; background: transparent; color: #52677f; cursor: pointer; }
+.transaction-left-tree-action-placeholder { display: block; width: 22px; height: 24px; }
+.transaction-left-tree-icon { display: block; width: 15px; height: 15px; }
+.transaction-left-tree-group-header > .transaction-left-tree-more { grid-column: 5; justify-self: end; }
+.transaction-left-tree-visibility[data-visibility-state="off"] { color: #8a98a9; }
+.transaction-left-tree-visibility:hover, .transaction-left-tree-visibility:focus-visible, .transaction-left-tree-more:hover, .transaction-left-tree-more:focus-visible { outline: 1px solid #8bb8e8; outline-offset: -1px; background: #e7f1fb; color: #1769aa; }
 .transaction-left-tree-visibility:hover, .transaction-left-tree-visibility:focus-visible { color: #1769aa; }
 .transaction-left-tree-row:hover, .transaction-left-tree-row[data-selected="true"] { background: #dcecff; color: #155ca0; }
 .cycle-panel.mode-transaction .transaction-lanes { min-height: calc(100% - 34px); }
@@ -519,8 +559,7 @@
 /* Transaction presentation belongs to the center timing surface. */
 .transaction-track { position: absolute; z-index: 3; top: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); width: var(--wave-width, 640px); height: 100%; transform-origin: 0 0; scale: var(--transaction-zoom) 1; }
 .transaction-geometry-line { position: absolute; top: 0; bottom: 0; width: 1px; border-left: 1px solid #dce4ed; pointer-events: none; }
-.transaction-left-tree-group-header { position: relative; }
-.transaction-left-tree-more { margin-left: auto; width: 20px; min-width: 20px; padding: 0; border: 0; background: transparent; color: #52677f; font-size: 15px; line-height: 20px; cursor: pointer; }
+.transaction-left-tree-more { display: inline-flex; align-items: center; justify-content: center; width: 22px; min-width: 22px; height: 24px; margin: 0; padding: 0; border: 0; background: transparent; color: #52677f; cursor: pointer; }
 .transaction-left-tree-group-menu { position: absolute; z-index: 20; top: calc(100% - 1px); right: 2px; display: grid; min-width: 132px; padding: 3px; border: 1px solid #b8c7d8; border-radius: 3px; background: #fff; box-shadow: 0 4px 12px rgb(30 55 80 / 18%); }
 .transaction-left-tree-group-menu button { padding: 5px 8px; border: 0; background: transparent; color: #29425e; text-align: left; font-size: 11px; cursor: pointer; }
 .transaction-left-tree-group-menu button:hover { background: #e7f1fb; }

@@ -51,6 +51,10 @@ for (const [unit, allowed] of Object.entries(packageRules)) {
       ...[...source.matchAll(/^\s*import\s+(["'])([^"']+)\1/gm)].map((match) => match[2]),
     ];
     for (const specifier of imports) {
+      // Renderer and React Tree deliberately share this data-only SVG spec.
+      // It has no renderer/runtime imports, and the narrow exception avoids
+      // duplicating the Cycle/Transaction icon paths across package builds.
+      if (unit === "apps/editor" && specifier === "../../../packages/renderer/src/left-tree-icon-spec.js") continue;
       const workspaceDependency = packageNameFromSpecifier(specifier);
       if (workspaceDependency && !allowed.includes(workspaceDependency)) {
         errors.push(`${path.relative(root, file)}: import of ${workspaceDependency} is forbidden`);
