@@ -10,98 +10,157 @@
 # Never merge/cherry-pick codex-control into main.
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line.
 #
-# Claude review/discovery queue is documented in .codex/AGENT_ASSIGNMENT.md.
-# One Issue = one active implementation owner.
+# Claude is unavailable until the user re-enables it (expected Sunday morning).
+# Do NOT wait/poll Claude for issues whose expected behavior is already decided.
+# Product-decision-only issues remain HOLD and must not be guessed.
 #
 # ============================================================================
-# CURRENT CODEX EXECUTABLE QUEUE
+# CURRENT CODEX EXECUTABLE QUEUE — CORRECTNESS / USER-VISIBLE REGRESSIONS FIRST
 # ============================================================================
 #
-# 1) #639 — Cycle-mode Transaction creation leaves Bottom in an invalid Transaction tab/state.
-#    Current main still reproduces the product bug. PR #654/test evidence is not closure.
-#    Fix the real production route and prove the exact Cycle-mode journey on main.
-639
+# 1) #625 — Cycle fixed left columns / horizontal scroll ownership.
+#    CURRENT USER VIDEO OVERRIDES NARROWER TEST PASS.
+#    User still sees Timeline content moving behind/through the fixed left pane during real scrollbar drag.
+#    This is a PRODUCTION STRUCTURE FIX, not another test-only PR.
+#    Required target:
+#      CycleWorkspace
+#      ├─ FixedColumns        <- never horizontally transformed
+#      └─ TimelineViewport    <- sole overflow-x / scroll owner
+#    Do not close with z-index/background masking or a few-pixel offset tweak.
+#    Require real native-thumb drag on actual main at 1672x941 and 1280x720 and frame-sampled proof.
+625
 #
-# 2) #676 — Annotation Canvas drag moves geometry but Inspector anchor fields remain stale.
+# 2) #646 — Transaction Tree fixed during horizontal timeline scroll.
+#    PR #652 is independently verified PASS but is still not on main.
+#    Rebase/land the production fix safely onto current main, then repeat real pointer scrollbar drag
+#    on actual main at 1672x941 and 1280x720.
+#    #647 owns Y-correspondence policy; #650 owns selection reveal. Do not wait for #647 to fix X ownership.
+646
+#
+# 3) #624 — Cycle restore/mode-entry projection completeness.
+#    PR #670 is independently verified PASS. Rebase/land safely and require main-branch re-Acceptance.
+624
+#
+# 4) #676 — Annotation Canvas drag moves geometry but Inspector anchor fields remain stale.
 #    Trace pointer-up -> semantic/canonical anchor update -> History -> selected stable ID ->
 #    Inspector/Bottom projection refresh. One drag = one semantic operation. No DOM-pixel truth.
 676
 #
-# 3) #651 — Dialog focus restoration.
-#    Broad focus-visible concern was a false positive; real Tab/Shift+Tab shows focus indicators.
-#    Remaining bug: dialog close must return focus to the invoking control (or explicit fallback),
-#    especially Bulk Signal Registration. Preserve working focus trap.
-651
+# 5) #626 — Visual / geometry / interaction regression harness.
+#    PR #671 is Phase 1 only. Extend the harness specifically to catch the failures the user is finding:
+#    - fixed-pane X/width invariance during real scrollbar drag
+#    - timeline paint bounds must not enter fixed-pane screen region
+#    - Cycle/Transaction cross-mode geometry isolation
+#    - before/after changed-region report
+#    Do not weaken baselines/thresholds/masks.
+626
 #
-# 4) #650 — Selecting a Transaction resets horizontal scroll to 0 instead of minimally revealing it.
+# 6) #650 — Selecting a Transaction resets horizontal scroll to 0 instead of minimally revealing it.
 #    Use semantic start/end + current viewport geometry. Already-visible selection must not move.
 650
 #
-# 5) #624 — Cycle restore/mode-entry projection completeness.
-#    PR #670 is independently verified PASS and supersedes the earlier partial #636 path.
-#    Rebase/land the validated fix safely, then require main-branch re-Acceptance before closure.
-624
-#
-# 6) #646 — Transaction Tree must remain fixed during horizontal timeline scroll.
-#    PR #652 is independently verified PASS. Land/rebase safely, then repeat real pointer scrollbar
-#    drag on main at 1672x941 and 1280x720. #647 owns Y-correspondence policy; #650 owns reveal.
-646
-#
 # 7) #632 — First Cycle Signal selection causes one-time full waveform cache replacement.
-#    QA isolated: idle/unrelated UI events do not trigger it; first Signal selection does.
-#    fullReplaceCalls/fullReplaceEpochResets +1, all visible signals miss cache, repeat selection does not.
 #    Source-trace invalidation/epoch ownership; do not paper over with memoization only.
 632
 #
-# 8) #615 — Passive View + hierarchical Mediator/state-machine ownership.
-#    Continue incrementally; use current concrete failures (#639/#676/#651/#632) as ownership examples.
-615
-#
-# 9) #593 — Cycle / Transaction / Combined workspace presentation isolation.
-#    Preserve mode-specific presentation owners and one Combined horizontal semantic-time owner.
+# 8) #593 — Cycle / Transaction / Combined workspace presentation isolation.
+#    This is the architecture follow-through for repeated cross-mode regressions.
+#    Standalone Cycle and Transaction layout/presentation owners must be isolated.
+#    Combined explicitly owns the shared horizontal semantic-time viewport.
 593
 #
-# 10) #599 — Transaction startup/reload performance closure.
-#     Re-measure after current correctness work; optimize only measured duplicate/avoidable work.
+# 9) #615 — Passive View + hierarchical Mediator/state-machine ownership.
+#    Continue incrementally using concrete current failures (#625/#646/#676/#632) as evidence.
+615
+#
+# 10) #639 — Cycle-mode Transaction creation leaves Bottom in an invalid Transaction tab/state.
+#     Fix production route, not only test setup.
+639
+#
+# 11) #651 — Dialog focus restoration.
+#     Dialog close must return focus to invoking control or explicit fallback; preserve working focus trap.
+651
+#
+# 12) #623 — Cycle startup/mode-entry visually settles multiple times.
+#     Existing evidence already identifies full-width fallback -> bounded width correction.
+#     Implement only after the higher-priority geometry/ownership fixes above; no timeout/debounce/opacity masking.
+623
+#
+# 13) #599 — Transaction startup/reload performance closure.
+#     Re-measure after correctness/ownership work; optimize only measured duplicate/avoidable work.
 599
+#
+# ============================================================================
+# ANTI-MICRO-TUNING / ROOT-CAUSE EXECUTION RULE
+# ============================================================================
+#
+# Repeated "change a few pixels -> rerun -> change a few pixels again" loops are NOT acceptable.
+#
+# For geometry/layout/scroll issues (#625/#646/#593/#623 especially):
+#
+# 1. Before editing, identify the authoritative owner and first divergence.
+#    Record:
+#      expected owner/state
+#      actual owner/state
+#      first function/component where they diverge
+#
+# 2. Prefer ownership/coordinate-space fixes over numeric tuning.
+#    Forbidden as a primary fix unless the Issue explicitly defines a product constant:
+#      - arbitrary +N/-N px offsets
+#      - repeated CSS left/width nudges
+#      - screenshot-matching magic numbers
+#      - z-index/background concealment of a wrong scroll surface
+#
+# 3. Two-strike rule:
+#    If two consecutive localized numeric/CSS adjustments fail to satisfy the same acceptance,
+#    STOP tuning. Revert the speculative adjustment and escalate to root-cause/owner restructuring.
+#
+# 4. Every geometry fix must state which invariant becomes true, e.g.:
+#      fixedPane.screenX == constant
+#      fixedPane.width == constant
+#      timelinePaint.left >= fixedPane.right
+#      Cycle pitch before scroll == Cycle pitch after scroll
+#      same source cycle -> same X
+#
+# 5. Do not create a new PR whose only effect is a tiny offset correction after another tiny offset PR
+#    for the same root cause. Fold the work into one root-cause branch until the acceptance is coherent.
+#
+# 6. User-visible real-browser evidence overrides narrower automated PASS.
+#    A passing programmatic scrollLeft test does not close a defect that still reproduces with a real pointer.
 #
 # ============================================================================
 # VERIFIED / MERGE COORDINATION — NOT EXECUTABLE ISSUE LINES
 # ============================================================================
-# - PR #668 fixes #635 binary-signal phantom Generator dirty state: independently PASS.
-# - PR #669 Generator disclosure/collapse: independently PASS.
-# - #668 and #669 overlap in the same code path; the second merge must intentionally reconcile/rebase
-#   and run a combined journey (zero-edit clean, real-edit dirty, disclosure, selection changes).
-# - PR #670 fixes #624 comprehensively: 6/6 annotation restore via Transaction->Cycle and
-#   Combined->Cycle + mode persistence on reload; main re-Acceptance still required after merge.
 # - PR #652 fixes #646 and is independently PASS; main re-Acceptance still required after merge.
-# - PR #660 / #671 independently PASS.
-# - PR #667 exposes real bug #676; do not treat the test PR as merge-ready closure evidence.
-# - PR #664 exposes routing/product gap #677; product/UX policy must be resolved first.
-# - PR #654 does not fix current-main #639 behavior.
+# - PR #670 fixes #624 comprehensively; main re-Acceptance still required after merge.
+# - PR #671 is only Phase 1 of #626.
+# - PR #668/#669 cover #635 sub-slices; reconcile overlapping paths intentionally if/when resumed.
+# - PR #667 exposes #676; do not treat a test PR as production closure.
+# - PR #654 does not prove current-main #639 production closure.
 #
 # ============================================================================
-# CLAUDE REVIEW / PRODUCT-DECISION OWNERS — DO NOT IMPLEMENT FROM CODEX QUEUE
+# CLAUDE / PRODUCT-DECISION HOLD — CODEX MUST NOT GUESS
 # ============================================================================
-# #635 Signal Bottom table-first / Draft-Apply UX — Claude review; Codex only bounded implementation
-#      after explicit handoff. Phantom-dirty sub-bug is covered by validated PR #668.
-# #631 Transaction visual hierarchy / Bookmark prominence — Claude visual evidence/design review.
-# #647 Tree/Lane correspondence model — PRODUCT DECISION. Claude gathers evidence; no silent Y-policy.
-# #677 Pinned Annotation collection-vs-detail routing — Claude product/GUI decision first.
-# #431 broad exploratory UX audit — Claude.
-# #426 Bottom UX architecture/review — Claude.
-# #441 Ribbon adaptive/high-density review — Claude.
-# #554 fresh-document real-user journey audit — Claude.
+# Claude is temporarily unavailable. These remain non-executable until user/product decision is explicit:
+# - #647 Tree/Lane correspondence model
+# - #677 Pinned Annotation collection-vs-detail routing
+# - #631 Transaction visual hierarchy / Bookmark prominence
+# - #431 broad exploratory UX audit
+# - #426 broad Bottom UX review beyond already-decided implementation slices
+# - #441 Ribbon adaptive/high-density review
+# - #554 broad fresh-document exploratory audit
+#
+# If a currently executing correctness issue touches one of these, fix only the already-decided
+# correctness boundary and leave the undecided product policy unchanged.
 #
 # ============================================================================
 # RECENTLY CLOSED / PRESERVE
 # ============================================================================
 # #627 Add Phase semantic commit — CLOSED after real fix verification.
-# #628 Annotation Bottom double-scroll/reflow — CLOSED after main re-Acceptance at both viewports.
+# #628 Annotation Bottom double-scroll/reflow — CLOSED after main re-Acceptance.
 # #629 stale cross-mode Inspector — CLOSED.
 # #630 stale title mode suffix — CLOSED.
 # #614 waveform scale mismatch — resolved/merged previously.
-# #625 Cycle fixed-column scroll architecture remains reference-correct pattern for #646.
 #
 # ============================================================================
 # HOLD / REFERENCE / EXTERNAL
@@ -116,9 +175,12 @@
 # GLOBAL EXECUTION RULES
 # ============================================================================
 # - Read latest origin/main, Issue body, comments and open PRs before editing.
+# - Complete/record one child Issue, then immediately continue to the next executable line.
+# - CHILD_BLOCKED does NOT block the queue; record evidence and continue to the next independent Issue.
+# - "no new user instruction", "state unchanged", and repeated status-only messages are not stop reasons.
 # - User-visible real-browser failure overrides narrower automated PASS.
 # - Regression guard should demonstrate base/pre-fix FAIL -> fix PASS when practical.
-# - PR branch PASS is not final closure: re-run the original journey on actual main after merge.
+# - PR branch PASS is not final closure: rerun original journey on actual main after merge.
 # - Pointer/D&D/scroll acceptance uses real browser pointer interaction.
 # - Treat stale Vite/HMR/long-lived-tab artifacts separately from product bugs; retry fresh tab/server.
 # - Never weaken Golden/reference/threshold/mask merely to pass.
