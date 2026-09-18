@@ -23,6 +23,8 @@ test("Transaction Mode's cycle-viewport is not clipped by its panel, so the hori
 
   const panel = page.locator(".cycle-panel.mode-transaction");
   const viewport = page.getByTestId("cycle-viewport");
+  const tree = page.getByTestId("transaction-left-tree");
+  const firstBar = page.locator(".transaction-lane > button[data-transaction-id]").first();
 
   const overflow = await viewport.evaluate((element) => element.scrollWidth - element.clientWidth);
   expect(overflow, "transaction-lanes must genuinely overflow the viewport width for this test to be meaningful").toBeGreaterThan(50);
@@ -35,7 +37,17 @@ test("Transaction Mode's cycle-viewport is not clipped by its panel, so the hori
   expect(viewportBottom).toBeLessThanOrEqual(panelBottom + 0.5);
 
   // The scrollbar being un-clipped means the viewport is actually
-  // horizontally scrollable by the user, not just via scrollLeft.
+  // horizontally scrollable by the user, not just via scrollLeft. The Tree
+  // must remain at the same screen X while the timing content moves beneath
+  // it; otherwise the left pane disappears with the scrolled timeline.
+  await viewport.evaluate((element) => { element.scrollLeft = 0; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  const before = await page.evaluate(() => ({
+    treeLeft: document.querySelector<HTMLElement>("[data-testid='transaction-left-tree']")!.getBoundingClientRect().left,
+    barLeft: document.querySelector<HTMLElement>(".transaction-lane > button[data-transaction-id]")!.getBoundingClientRect().left,
+  }));
   await viewport.evaluate((element) => { element.scrollLeft = 200; });
   await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBe(200);
+  await expect.poll(() => tree.evaluate((element) => element.getBoundingClientRect().left)).toBeCloseTo(before.treeLeft, 0);
+  const afterBarLeft = await firstBar.evaluate((element) => element.getBoundingClientRect().left);
+  expect(afterBarLeft, "the timeline bar should still move with horizontal scrolling").toBeLessThan(before.barLeft);
 });
