@@ -37,16 +37,24 @@
 #    #647 owns Y-correspondence policy; #650 owns selection reveal. Do not wait for #647 to fix X ownership.
 646
 #
-# 3) #624 — Cycle restore/mode-entry projection completeness.
+# 3) #637 — Sustained Cycle horizontal scrollbar drag blanks waveform canvas.
+#    User video reproduces a frame-visible blank/empty waveform during scroll.
+#    Implement the code-level contract in the latest #637 comment:
+#    small/medium documents do not re-window on scroll; large documents use retained-window hysteresis;
+#    renderer queue is latest-window-wins; replacement WaveDrom renders off-DOM and swaps atomically;
+#    stale/transient replacement must preserve the last-good visible SVG.
+637
+#
+# 4) #624 — Cycle restore/mode-entry projection completeness.
 #    PR #670 is independently verified PASS. Rebase/land safely and require main-branch re-Acceptance.
 624
 #
-# 4) #676 — Annotation Canvas drag moves geometry but Inspector anchor fields remain stale.
+# 5) #676 — Annotation Canvas drag moves geometry but Inspector anchor fields remain stale.
 #    Trace pointer-up -> semantic/canonical anchor update -> History -> selected stable ID ->
 #    Inspector/Bottom projection refresh. One drag = one semantic operation. No DOM-pixel truth.
 676
 #
-# 5) #626 — Visual / geometry / interaction regression harness.
+# 6) #626 — Visual / geometry / interaction regression harness.
 #    PR #671 is Phase 1 only. Extend the harness specifically to catch the failures the user is finding:
 #    - fixed-pane X/width invariance during real scrollbar drag
 #    - timeline paint bounds must not enter fixed-pane screen region
@@ -55,38 +63,38 @@
 #    Do not weaken baselines/thresholds/masks.
 626
 #
-# 6) #650 — Selecting a Transaction resets horizontal scroll to 0 instead of minimally revealing it.
+# 7) #650 — Selecting a Transaction resets horizontal scroll to 0 instead of minimally revealing it.
 #    Use semantic start/end + current viewport geometry. Already-visible selection must not move.
 650
 #
-# 7) #632 — First Cycle Signal selection causes one-time full waveform cache replacement.
+# 8) #632 — First Cycle Signal selection causes one-time full waveform cache replacement.
 #    Source-trace invalidation/epoch ownership; do not paper over with memoization only.
 632
 #
-# 8) #593 — Cycle / Transaction / Combined workspace presentation isolation.
+# 9) #593 — Cycle / Transaction / Combined workspace presentation isolation.
 #    This is the architecture follow-through for repeated cross-mode regressions.
 #    Standalone Cycle and Transaction layout/presentation owners must be isolated.
 #    Combined explicitly owns the shared horizontal semantic-time viewport.
 593
 #
-# 9) #615 — Passive View + hierarchical Mediator/state-machine ownership.
+# 10) #615 — Passive View + hierarchical Mediator/state-machine ownership.
 #    Continue incrementally using concrete current failures (#625/#646/#676/#632) as evidence.
 615
 #
-# 10) #639 — Cycle-mode Transaction creation leaves Bottom in an invalid Transaction tab/state.
+# 11) #639 — Cycle-mode Transaction creation leaves Bottom in an invalid Transaction tab/state.
 #     Fix production route, not only test setup.
 639
 #
-# 11) #651 — Dialog focus restoration.
+# 12) #651 — Dialog focus restoration.
 #     Dialog close must return focus to invoking control or explicit fallback; preserve working focus trap.
 651
 #
-# 12) #623 — Cycle startup/mode-entry visually settles multiple times.
+# 13) #623 — Cycle startup/mode-entry visually settles multiple times.
 #     Existing evidence already identifies full-width fallback -> bounded width correction.
 #     Implement only after the higher-priority geometry/ownership fixes above; no timeout/debounce/opacity masking.
 623
 #
-# 13) #599 — Transaction startup/reload performance closure.
+# 14) #599 — Transaction startup/reload performance closure.
 #     Re-measure after correctness/ownership work; optimize only measured duplicate/avoidable work.
 599
 #
