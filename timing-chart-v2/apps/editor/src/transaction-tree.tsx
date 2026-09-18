@@ -341,22 +341,40 @@ export function TransactionTree({
         />
         {transaction.name}
       </button>}
-      {onSetVisibility && (
+      <span className="transaction-left-tree-row-actions" aria-label={`${transaction.name} row actions`}>
+        {onSetVisibility ? (
+          <button
+            type="button"
+            className="transaction-left-tree-visibility"
+            data-transaction-tree-visibility-id={transaction.id}
+            data-visibility-state={transaction.visible === false ? "off" : "on"}
+            aria-pressed={transaction.visible !== false}
+            aria-label={`${transaction.visible === false ? "Show" : "Hide"} ${transaction.name}`}
+            title={`${transaction.visible === false ? "Show" : "Hide"} ${transaction.name}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelect(transaction.id);
+              onSetVisibility(transaction.id, transaction.visible === false);
+            }}
+          >
+            <EditorIcon name={transaction.visible === false ? "eye-off" : "eye"} className="transaction-left-tree-icon" />
+          </button>
+        ) : <span className="transaction-left-tree-action-placeholder" aria-hidden="true" />}
         <button
           type="button"
-          className="transaction-left-tree-visibility"
-          aria-label={`${transaction.visible === false ? "Show" : "Hide"} ${transaction.name}`}
-          title={`${transaction.visible === false ? "Show" : "Hide"} ${transaction.name}`}
+          className="transaction-left-tree-more"
+          aria-haspopup="menu"
+          aria-expanded={openTransactionMenuId === transaction.id}
+          aria-label={`More actions for ${transaction.name}`}
+          title={`More actions for ${transaction.name}`}
           onClick={(event) => {
             event.stopPropagation();
-            onSelect(transaction.id);
-            onSetVisibility(transaction.id, transaction.visible === false);
+            setOpenTransactionMenuId((current) => current === transaction.id ? undefined : transaction.id);
           }}
         >
-          {transaction.visible === false ? "○" : "●"}
+          <EditorIcon name="more" className="transaction-left-tree-icon" />
         </button>
-      )}
-      <button type="button" className="transaction-left-tree-more" aria-label={`${transaction.name} actions`} title={`${transaction.name} actions`} onClick={(event) => { event.stopPropagation(); setOpenTransactionMenuId((current) => current === transaction.id ? undefined : transaction.id); }}>⋮</button>
+      </span>
       {openTransactionMenuId === transaction.id && <div className="transaction-left-tree-group-menu transaction-left-tree-transaction-menu" role="menu" aria-label={`${transaction.name} actions`}>
         <button type="button" role="menuitem" onClick={() => { setOpenTransactionMenuId(undefined); onFocusTransaction?.(transaction.id); }}>Focus in Timeline</button>
         {onMoveToGroup && groups.map((group) => <button key={group.id} type="button" role="menuitem" disabled={transaction.groupId === group.id} onClick={() => { setOpenTransactionMenuId(undefined); onMoveToGroup(transaction.id, group.id); }}>Move to {group.name}</button>)}
@@ -407,7 +425,7 @@ export function TransactionTree({
           aria-expanded={!collapsed.has("__all__")}
           onClick={() => toggle("__all__")}
         >
-          <EditorIcon name={collapsed.has("__all__") ? "right" : "down"} />
+          <EditorIcon name={collapsed.has("__all__") ? "chevron-right" : "chevron-down"} className="transaction-left-tree-icon" />
         </button>
         <strong>All Transactions</strong>
         <span>({document.transactions.length})</span>
@@ -434,7 +452,7 @@ export function TransactionTree({
                     aria-expanded={!isCollapsed}
                     onClick={() => toggle(group.id)}
                   >
-                    <EditorIcon name={isCollapsed ? "right" : "down"} />
+                    <EditorIcon name={isCollapsed ? "chevron-right" : "chevron-down"} className="transaction-left-tree-icon" />
                   </button>
                   <span
                     className="transaction-left-tree-swatch"
@@ -466,30 +484,17 @@ export function TransactionTree({
                   ) : (
                     <strong title={group.name}>{group.name}</strong>
                   )}
-                  <span>({items.length})</span>
-                  {onRenameGroup && !editing && (
-                    <button
-                      type="button"
-                      className="transaction-left-tree-rename"
-                      aria-label={`Rename ${group.name}`}
-                      title={`Rename ${group.name}`}
-                      onClick={() => rename(group)}
-                    >
-                      ✎
-                    </button>
-                  )}
+                  <span className="transaction-left-tree-group-count">({items.length})</span>
                   <button
                     type="button"
                     className="transaction-left-tree-more"
-                    aria-label={`${group.name} actions`}
-                    title={`${group.name} actions`}
-                    onClick={() =>
-                      setOpenGroupMenuId((current) =>
-                        current === group.id ? undefined : group.id,
-                      )
-                    }
+                    aria-haspopup="menu"
+                    aria-expanded={openGroupMenuId === group.id}
+                    aria-label={`More actions for ${group.name}`}
+                    title={`More actions for ${group.name}`}
+                    onClick={() => setOpenGroupMenuId((current) => current === group.id ? undefined : group.id)}
                   >
-                    ⋮
+                    <EditorIcon name="more" className="transaction-left-tree-icon" />
                   </button>
                   {openGroupMenuId === group.id && (
                     <div
@@ -565,14 +570,15 @@ export function TransactionTree({
                     aria-expanded={!isCollapsed}
                     onClick={() => toggle("__ungrouped__")}
                   >
-                    <EditorIcon name={isCollapsed ? "right" : "down"} />
+                    <EditorIcon name={isCollapsed ? "chevron-right" : "chevron-down"} className="transaction-left-tree-icon" />
                   </button>
                   <span
                     className="transaction-left-tree-swatch"
                     aria-hidden="true"
                   />
                   <strong>Ungrouped</strong>
-                  <span>({items.length})</span>
+                  <span className="transaction-left-tree-group-count">({items.length})</span>
+                  <span className="transaction-left-tree-action-placeholder" aria-hidden="true" />
                 </div>
                 {!isCollapsed && items.map(renderTransaction)}
               </div>
