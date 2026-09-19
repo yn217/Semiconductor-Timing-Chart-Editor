@@ -273,7 +273,8 @@
 .transaction-group-header-delete { flex: none; margin-left: auto; width: 16px; height: 16px; padding: 0; border: 0; background: transparent; color: #8a97a8; font-size: 12px; line-height: 1; cursor: pointer; }
 .transaction-group-header-delete:hover { color: #b2382c; }
 .transaction-group-header-band { background: #eef2f7ad; border-bottom: 1px solid #c7d2de; }
-.transaction-lane { position: absolute; left: 0; width: 100%; border-bottom: 1px solid #d9e1ea; }
+.transaction-lane { position: absolute; left: 0; width: 100%; border-bottom: 1px solid #c9d6e3; }
+.transaction-lane:hover { background: rgb(214 229 245 / 45%); }
 .transaction-lane > button:has(.transaction-phases) { height: 32px; align-items: start; }
 .transaction-phases { position: absolute; inset: 15px 0 0; pointer-events: none; }
 /* #429/#397 Transaction Mode Product Closure P0-4: derive both the bar's
