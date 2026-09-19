@@ -394,7 +394,8 @@
 .transaction-left-tree-visibility[data-visibility-state="off"] { color: #8a98a9; }
 .transaction-left-tree-visibility:hover, .transaction-left-tree-visibility:focus-visible, .transaction-left-tree-more:hover, .transaction-left-tree-more:focus-visible { outline: 1px solid #8bb8e8; outline-offset: -1px; background: #e7f1fb; color: #1769aa; }
 .transaction-left-tree-visibility:hover, .transaction-left-tree-visibility:focus-visible { color: #1769aa; }
-.transaction-left-tree-row:hover, .transaction-left-tree-row[data-selected="true"] { background: #dcecff; color: #155ca0; }
+.transaction-left-tree-row:hover { background: var(--ds-hover-bg, #f3f8fd); color: #155ca0; }
+.transaction-left-tree-row[data-selected="true"] { background: var(--ds-selection-bg, #e5f2ff); color: #155ca0; box-shadow: inset 2px 0 0 var(--ds-selection-border, #287ac0); }
 .cycle-panel.mode-transaction .transaction-lanes { min-height: calc(100% - 34px); }
 .cycle-panel.mode-transaction .transaction-signal-tree { height: calc(100% - 34px); }
 /* #397: `.surface-host`'s padding-top must clear `.transaction-lanes`'s own
