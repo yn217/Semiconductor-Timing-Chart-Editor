@@ -67,6 +67,7 @@ type Setter<T> = Dispatch<SetStateAction<T>>;
 type Ref<T> = RefObject<T | null>;
 
 export interface EditorSecondarySurfacesInput {
+  readonly setBottomVisible: (visible: boolean) => void;
   readonly document: CanonicalDocument;
   readonly documentEpoch: number;
   readonly revision: number;
@@ -545,7 +546,7 @@ export function useEditorSecondarySurfaces(
         ) : workspace.bottomTab === "Transaction" ? (
           transactionEditor
         ) : workspace.bottomTab === "Phases" ? (
-          <TransactionPhaseSummary transaction={selected.transaction} />
+          <TransactionPhaseSummary transaction={selected.transaction} commands={surfaceCommands} />
         ) : workspace.bottomTab === "Linked Signals" ? (
           <TransactionLinkedSummary
             transaction={selected.transaction}
@@ -623,6 +624,10 @@ export function useEditorSecondarySurfaces(
       onClose={() => dialog.setInspectorVisible(false)}
       onDeleteBookmark={input.actions.deleteBottomBookmark}
       onToggleTransactionSignal={input.actions.toggleTransactionSignal}
+      onEditTransactionPhases={() => {
+        input.workspace.selectBottomTab("Phases");
+        input.setBottomVisible(true);
+      }}
       onGroupPreview={(groupId, style) =>
         refreshGroupStylePreview(
           refs.host.current!,

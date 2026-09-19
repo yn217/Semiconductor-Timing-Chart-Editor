@@ -8,7 +8,7 @@ import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/histo
 import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
-import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type ResetSemantics, type SemanticAnchor, type Signal, type SignalGroup, type SignalGroupStyle, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionGroup, type TransactionId, type TransactionPhase, type ValueSignal } from "@timing-chart-v2/schema";
+import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type ResetSemantics, type SemanticAnchor, type Signal, type SignalGroup, type SignalGroupStyle, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionGroup, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ViewMetricsOwner } from "../runtime/view-metrics.js";
 import { buildViewportWindow } from "../runtime/viewport-window.js";
@@ -82,18 +82,6 @@ import { createTimelineViewportRuntime } from "../runtime/timeline-viewport-runt
 import { SIGNAL_TYPE_OPTIONS, signalTypeLabel as sharedSignalTypeLabel } from "../runtime/signal-type-registry.js";
 
 
-function phasesEqual(left: readonly TransactionPhase[], right: readonly TransactionPhase[]): boolean {
-  return left.length === right.length && left.every((phase, index) => {
-    const other = right[index];
-    return other !== undefined && phase.start === other.start && phase.end === other.end && phase.name === other.name;
-  });
-}
-
-function nextTransactionPhase(phases: readonly { readonly name: string; readonly start: number; readonly end: number }[], start: number, end: number): { readonly name: string; readonly start: number; readonly end: number } | undefined {
-  const nextStart = Math.max(start, ...phases.map((phase) => phase.end));
-  return nextStart < end ? { name: `Phase ${phases.length + 1}`, start: nextStart, end: nextStart + 1 } : undefined;
-}
-
 const spacerId = (value: string) => value as SpacerId;
 
 function InspectorSpacerDraft({ spacer, onApply, onDelete }: { readonly spacer: SpacerRow; readonly onApply: (height: number) => void; readonly onDelete: () => void }) {
@@ -124,7 +112,7 @@ function InspectorSpacerDraft({ spacer, onApply, onDelete }: { readonly spacer: 
   </form>;
 }
 
-export function InspectorPanel({ signal, selectedSignalIds, group, annotation, transaction, bookmark, collapsedGroup, onToggleGroupCollapse, registry, document, viewport, commands, onReveal, onCancel, onClose, onDeleteBookmark, onToggleTransactionSignal, onGroupPreview, onAnnotationPreview, minimapMode = "signal" }: { readonly signal: Signal | undefined; readonly selectedSignalIds?: ReadonlySet<SignalId>; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly bookmark: Bookmark | undefined; readonly collapsedGroup: boolean; readonly onToggleGroupCollapse: (() => void) | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void; readonly onDeleteBookmark: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void; readonly onGroupPreview?: (groupId: GroupId, style: SignalGroupStyle | undefined) => void; readonly onAnnotationPreview?: (annotationId: AnnotationId, draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => void; readonly minimapMode?: "signal" | "transaction" }) {
+export function InspectorPanel({ signal, selectedSignalIds, group, annotation, transaction, bookmark, collapsedGroup, onToggleGroupCollapse, registry, document, viewport, commands, onReveal, onCancel, onClose, onDeleteBookmark, onToggleTransactionSignal, onEditTransactionPhases, onGroupPreview, onAnnotationPreview, minimapMode = "signal" }: { readonly signal: Signal | undefined; readonly selectedSignalIds?: ReadonlySet<SignalId>; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly bookmark: Bookmark | undefined; readonly collapsedGroup: boolean; readonly onToggleGroupCollapse: (() => void) | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void; readonly onDeleteBookmark: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void; readonly onEditTransactionPhases: () => void; readonly onGroupPreview?: (groupId: GroupId, style: SignalGroupStyle | undefined) => void; readonly onAnnotationPreview?: (annotationId: AnnotationId, draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => void; readonly minimapMode?: "signal" | "transaction" }) {
   if ((selectedSignalIds?.size ?? 0) > 1) return <InspectorMultiSelection count={selectedSignalIds!.size} registry={registry} document={document} viewport={viewport} onCancel={onCancel} onClose={onClose} />;
   const [name, setName] = useState(signal?.name ?? "");
   const [groupName, setGroupName] = useState(group?.name ?? "");
@@ -163,33 +151,19 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
   // semantics as Color/Group above: an empty Draft clears a previously
   // committed description, it isn't "leave whatever was there".
   const [transactionDescription, setTransactionDescription] = useState(transaction?.description ?? "");
-  // #429/#397 Transaction Mode Product Closure: phaseRows (a structured
-  // Name/Start/End table) is the one real source of truth for Apply
-  // Transaction below, and now the ONLY editing path -- the raw "Advanced:
-  // edit as JSON" textarea this comment used to describe as a secondary
-  // input method has been removed entirely from normal Transaction editing
-  // per explicit product direction (canonical JSON persistence/schema and
-  // the separate document-level JSON tab are unaffected; only this one
-  // per-Transaction raw-text affordance is gone).
-  const [phaseRows, setPhaseRows] = useState<{ name: string; start: number; end: number }[]>(() => (transaction?.phases ?? []).map((phase) => ({ ...phase })));
-  const canAddTransactionPhase = nextTransactionPhase(phaseRows, transactionStart, transactionEnd) !== undefined;
-  const addTransactionPhase = () => setPhaseRows((rows) => {
-    const phase = nextTransactionPhase(rows, transactionStart, transactionEnd);
-    return phase === undefined ? rows : [...rows, phase];
-  });
   const [transactionStatus, setTransactionStatus] = useState("");
   // Keep the draft owner mounted across unrelated commands, but refresh its
   // committed fields only when the selected Transaction itself changes. A
   // linked-signal command replaces the Transaction object while the user may
   // still be editing phases/name/group/color/description; syncing on every
   // entity-field dependency would silently discard that draft before Apply.
-  const committedTransactionRef = useRef<{ id: string | undefined; name: string; start: number; end: number; lane: string; group: string; color: string; description: string; phases: readonly { name: string; start: number; end: number }[] }>({ id: undefined, name: "", start: 0, end: 1, lane: "lane_0", group: "", color: "", description: "", phases: [] });
+  const committedTransactionRef = useRef<{ id: string | undefined; name: string; start: number; end: number; lane: string; group: string; color: string; description: string }>({ id: undefined, name: "", start: 0, end: 1, lane: "lane_0", group: "", color: "", description: "" });
   useEffect(() => {
     const previous = committedTransactionRef.current;
     const sameDraft = previous.id === transaction?.id
       && transactionName === previous.name && transactionStart === previous.start && transactionEnd === previous.end
       && transactionLane === previous.lane && transactionGroupId === previous.group && transactionColor === previous.color
-      && transactionDescription === previous.description && phasesEqual(phaseRows, previous.phases);
+      && transactionDescription === previous.description;
     if (previous.id !== transaction?.id || sameDraft) {
     setTransactionName(transaction?.name ?? "");
     setTransactionStart(transaction?.start ?? 0);
@@ -198,11 +172,10 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
     setTransactionGroupId(transaction?.groupId ?? "");
     setTransactionColor(transaction?.color ?? "");
     setTransactionDescription(transaction?.description ?? "");
-    setPhaseRows((transaction?.phases ?? []).map((phase) => ({ ...phase })));
     setTransactionStatus("");
     }
-    committedTransactionRef.current = { id: transaction?.id, name: transaction?.name ?? "", start: transaction?.start ?? 0, end: transaction?.end ?? 1, lane: transaction?.laneId ?? "lane_0", group: transaction?.groupId ?? "", color: transaction?.color ?? "", description: transaction?.description ?? "", phases: transaction?.phases ?? [] };
-  }, [transaction?.id, transaction?.start, transaction?.end, transaction?.laneId, transaction?.groupId, transaction?.color, transaction?.description, transaction?.phases]);
+    committedTransactionRef.current = { id: transaction?.id, name: transaction?.name ?? "", start: transaction?.start ?? 0, end: transaction?.end ?? 1, lane: transaction?.laneId ?? "lane_0", group: transaction?.groupId ?? "", color: transaction?.color ?? "", description: transaction?.description ?? "" };
+  }, [transaction?.id, transaction?.start, transaction?.end, transaction?.laneId, transaction?.groupId, transaction?.color, transaction?.description]);
   const previewGroupStyle = (overrides: Partial<SignalGroupStyle> & { readonly showBorder?: boolean } = {}) => {
     if (!group) return;
     const showBorder = overrides.showBorder ?? groupShowBorder;
@@ -289,17 +262,9 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
             identity owner. */}
         <label>Lane<span className="inspector-field-with-help"><input aria-label="Transaction lane" list="transaction-lane-options" value={transactionLane} onChange={(event) => setTransactionLane(event.target.value)} /><datalist id="transaction-lane-options">{[...new Set(document.transactions.map((item) => item.laneId ?? "lane_0"))].sort().map((laneId) => <option key={laneId} value={laneId} />)}</datalist><span className="field-help" tabIndex={0} title="A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track." aria-label="About Lane">ⓘ</span></span></label>
       </InspectorSection>
-      <InspectorSection sectionId="phases" title="Phases" count={phaseRows.length} onAdd={addTransactionPhase} addDisabled={!canAddTransactionPhase} open={transactionSections.phases ?? true} onToggle={() => toggleTransactionSection("phases")}>
-        <div className="transaction-phase-editor" data-testid="transaction-phase-editor"><div className="transaction-phase-table">{phaseRows.length > 0 && <div className="transaction-phase-row transaction-phase-row-header" aria-hidden="true"><span>Phase</span><span>Start</span><span>End</span><span /><span /><span /></div>}{phaseRows.map((phase, index) => <div className="transaction-phase-row" key={index} data-phase-index={index}><input aria-label={`Phase ${index + 1} name`} value={phase.name} onChange={(event) => setPhaseRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, name: event.target.value } : row))} /><input aria-label={`Phase ${index + 1} start`} type="number" value={phase.start} onChange={(event) => setPhaseRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, start: Number(event.target.value) } : row))} /><input aria-label={`Phase ${index + 1} end`} type="number" value={phase.end} onChange={(event) => setPhaseRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, end: Number(event.target.value) } : row))} />
-          {/* #454: Phase "Reorder" -- pure local draft-array reordering
-              (swaps position only; Start/End values travel with the row),
-              same shape as every other phase edit here -- nothing commits
-              until Apply. Disabled at the array's own ends rather than
-              hidden, matching this row's existing Delete-button precedent
-              for a fixed, predictable column count. */}
-          <button type="button" aria-label={`Move phase ${index + 1} up`} disabled={index === 0} onClick={() => setPhaseRows((rows) => { const next = [...rows]; [next[index - 1], next[index]] = [next[index]!, next[index - 1]!]; return next; })}>↑</button>
-          <button type="button" aria-label={`Move phase ${index + 1} down`} disabled={index === phaseRows.length - 1} onClick={() => setPhaseRows((rows) => { const next = [...rows]; [next[index], next[index + 1]] = [next[index + 1]!, next[index]!]; return next; })}>↓</button>
-          <button type="button" aria-label={`Delete phase ${index + 1}`} onClick={() => setPhaseRows((rows) => rows.filter((_, rowIndex) => rowIndex !== index))}>×</button></div>)}{phaseRows.length === 0 && <span className="inspector-note">No phases -- the whole Start..End span is one unnamed phase.</span>}</div><button type="button" data-testid="add-transaction-phase" disabled={!canAddTransactionPhase} title={!canAddTransactionPhase ? "No unused cycles remain. Extend the Transaction or shorten a Phase to add another." : undefined} onClick={addTransactionPhase}>Add Phase</button>{!canAddTransactionPhase && <span className="inspector-note" role="note">No unused cycles remain. Extend the Transaction or shorten a Phase to add another.</span>}</div>
+      <InspectorSection sectionId="phases" title="Phases" count={transaction.phases?.length ?? 0} open={transactionSections.phases ?? true} onToggle={() => toggleTransactionSection("phases")}>
+        <p className="inspector-note" data-testid="transaction-phase-summary">{transaction.phases?.length ? `${transaction.phases[0]?.name || "Unnamed phase"} … ${transaction.phases.at(-1)?.name || "Unnamed phase"}` : "No phases defined."} ({transaction.phases?.length ?? 0})</p>
+        <button type="button" data-testid="edit-transaction-phases" onClick={onEditTransactionPhases}>Edit Phases in Bottom</button>
       </InspectorSection>
       <InspectorSection sectionId="linked-signals" title="Linked Signals" count={transaction.linkedSignals?.length ?? 0} onAdd={() => {}} open={transactionSections["linked-signals"] ?? true} onToggle={() => toggleTransactionSection("linked-signals")}>
         <TransactionLinkedSignals transaction={transaction} document={document} onToggle={(signalId) => onToggleTransactionSignal(transaction.id, signalId)} renderUnlinkButton={(label, onClick) => <EditorIconButton label={label} icon="close" onClick={onClick} />} />
@@ -307,7 +272,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
       {transactionStatus && <output role="status">{transactionStatus}</output>}
       <section><button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Transaction</button></section>
       </div>
-      <InspectorFooter onCancel={onCancel} onApply={() => { const phases = phaseRows.map((phase) => ({ ...phase, name: phase.name.trim() })); if (phases.some((phase) => !phase.name || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < transactionStart || phase.start >= phase.end || phase.end > transactionEnd)) { setTransactionStatus("Phases must be named integer-cycle half-open subranges within Start..End."); return; } setTransactionStatus(""); const result = commands.updateTransaction({ transactionId: transaction.id, name: transactionName, start: transactionStart, end: transactionEnd, laneId: transactionLane, phases, ...(transactionGroupId ? { groupId: transactionGroupId as TransactionGroup["id"] } : {}), ...(transactionColor ? { color: transactionColor } : {}), description: transactionDescription });
+      <InspectorFooter onCancel={onCancel} onApply={() => { setTransactionStatus(""); const result = commands.updateTransaction({ transactionId: transaction.id, name: transactionName, start: transactionStart, end: transactionEnd, laneId: transactionLane, ...(transactionGroupId ? { groupId: transactionGroupId as TransactionGroup["id"] } : {}), ...(transactionColor ? { color: transactionColor } : {}), description: transactionDescription });
         // #454 Visual Quality Closure ("unclear draft state"): a rejected
         // Apply (e.g. End beyond the document's own cycle count) used to
         // fail silently -- the draft stayed on-screen looking applied
@@ -316,7 +281,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
         // wrong. Surface it the exact same way the Phases validation just
         // above already does -- one shared status output, not a second
         // error-reporting mechanism.
-        if (!result.ok && result.reason !== "no-op") setTransactionStatus(result.problems[0]?.message ?? "Could not apply Transaction changes."); }} applyDisabled={transactionName === transaction.name && transactionStart === transaction.start && transactionEnd === transaction.end && transactionLane === (transaction.laneId ?? "lane_0") && transactionGroupId === (transaction.groupId ?? "") && transactionColor === (transaction.color ?? "") && transactionDescription === (transaction.description ?? "") && phasesEqual(phaseRows, transaction.phases ?? [])} applyTestId="apply-inspector-transaction" />
+        if (!result.ok && result.reason !== "no-op") setTransactionStatus(result.problems[0]?.message ?? "Could not apply Transaction changes."); }} applyDisabled={transactionName === transaction.name && transactionStart === transaction.start && transactionEnd === transaction.end && transactionLane === (transaction.laneId ?? "lane_0") && transactionGroupId === (transaction.groupId ?? "") && transactionColor === (transaction.color ?? "") && transactionDescription === (transaction.description ?? "")} applyTestId="apply-inspector-transaction" />
     </>}
     <MiniMap document={document} viewport={viewport} mode={minimapMode} />
   </aside>;
