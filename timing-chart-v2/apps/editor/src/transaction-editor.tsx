@@ -14,6 +14,12 @@ function phasesEqual(left: readonly TransactionPhase[], right: readonly Transact
   });
 }
 
+export function validateTransactionDraft(start: number, end: number, phases: readonly TransactionPhase[], cycleCount: number): string | undefined {
+  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || start >= end || end > cycleCount) return "Start and End must be integer cycles within the document timeline, with Start < End.";
+  if (phases.some((phase) => !phase.name.trim() || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < start || phase.start >= phase.end || phase.end > end)) return "Phases must be named integer-cycle half-open subranges within Start..End.";
+  return undefined;
+}
+
 export function TransactionEditor({ transaction, selectedTransactionIds, document, history, onSelect, commands, onUndo, onRedo, onDelete, onCancel, onToggleTransactionSignal }: { readonly transaction: Transaction | undefined; readonly selectedTransactionIds?: ReadonlySet<TransactionId>; readonly document: CanonicalDocument; readonly history: HistoryState; readonly onSelect: (id: TransactionId) => void; readonly commands: TransactionEditorCommandActions; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void }) {
   const [name, setName] = useState("Transaction");
   const [start, setStart] = useState(1);
@@ -23,6 +29,10 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   const [editStart, setEditStart] = useState(transaction?.start ?? 0);
   const [editEnd, setEditEnd] = useState(transaction?.end ?? 1);
   const [editLaneId, setEditLaneId] = useState(transaction?.laneId ?? "");
+  const [editGroupId, setEditGroupId] = useState(transaction?.groupId ?? "");
+  const [editColor, setEditColor] = useState(transaction?.color ?? "#8895a7");
+  const [editDescription, setEditDescription] = useState(transaction?.description ?? "");
+  const [draftSwitchError, setDraftSwitchError] = useState("");
   useEffect(() => {
     if (transaction !== undefined) return;
     setName("Transaction"); setStart(1); setEnd(Math.min(5, document.timeline.cycleCount)); setLaneId("");
@@ -45,23 +55,28 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
     setEditStart(transaction?.start ?? 0);
     setEditEnd(transaction?.end ?? 1);
     setEditLaneId(transaction?.laneId ?? "");
+    setEditGroupId(transaction?.groupId ?? "");
+    setEditColor(transaction?.color ?? "#8895a7");
+    setEditDescription(transaction?.description ?? "");
     setPhaseRows((transaction?.phases ?? []).map((phase) => ({ ...phase })));
     setPhaseError("");
-  }, [transaction?.id, transaction?.name, transaction?.start, transaction?.end, transaction?.laneId, transaction?.phases]);
+    setDraftSwitchError("");
+  }, [transaction?.id, transaction?.name, transaction?.start, transaction?.end, transaction?.laneId, transaction?.groupId, transaction?.color, transaction?.description, transaction?.phases]);
   // #426: Apply had no Draft/dirty gating at all (always enabled, no
   // "unapplied changes" indicator) and Cancel lived in the header while
   // Apply lived at the end of the form -- two different locations for
   // one Draft's two actions, the exact split-placement inconsistency the
   // Epic calls out. Both now live together in one sticky bottom action
   // bar, same shared classes Annotation's own bar already uses.
-  const hasChanges = transaction !== undefined && (editName !== transaction.name || editStart !== transaction.start || editEnd !== transaction.end || (editLaneId.trim() || undefined) !== transaction.laneId || !phasesEqual(phaseRows, transaction.phases ?? []));
+  const hasChanges = transaction !== undefined && (editName !== transaction.name || editStart !== transaction.start || editEnd !== transaction.end || (editLaneId.trim() || undefined) !== transaction.laneId || (editGroupId || undefined) !== transaction.groupId || editColor !== (transaction.color ?? "#8895a7") || editDescription !== (transaction.description ?? "") || !phasesEqual(phaseRows, transaction.phases ?? []));
   const createHasChanges = transaction === undefined && (name !== "Transaction" || start !== 1 || end !== Math.min(5, document.timeline.cycleCount) || laneId !== "");
   const addPhaseRow = () => setPhaseRows((rows) => { const last = rows.at(-1); const rowStart = last ? last.end : editStart; return [...rows, { name: `Phase ${rows.length + 1}`, start: rowStart, end: Math.min(rowStart + 1, editEnd) }]; });
   const applyTransactionDraft = () => {
     if (!transaction || !hasChanges) return;
     const phases = phaseRows.map((phase) => ({ ...phase, name: phase.name.trim() }));
-    if (phases.some((phase) => !phase.name || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < editStart || phase.start >= phase.end || phase.end > editEnd)) {
-      setPhaseError("Phases must be named integer-cycle half-open subranges within Start..End.");
+    const validationError = validateTransactionDraft(editStart, editEnd, phases, document.timeline.cycleCount);
+    if (validationError) {
+      setPhaseError(validationError);
       return;
     }
     setPhaseError("");
@@ -73,7 +88,15 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
     // all three). Every field this editor doesn't expose its own control
     // for must still round-trip the currently committed value, exactly like
     // colorSelected below already does for groupId/phases.
-    commands.updateTransactionFromBottom({ transactionId: transaction.id, name: editName.trim() || "Transaction", start: editStart, end: editEnd, laneId: editLaneId, phases, ...(transaction.groupId === undefined ? {} : { groupId: transaction.groupId }), ...(transaction.color === undefined ? {} : { color: transaction.color }), ...(transaction.description === undefined ? {} : { description: transaction.description }) });
+    commands.updateTransactionFromBottom({ transactionId: transaction.id, name: editName.trim() || "Transaction", start: editStart, end: editEnd, ...(editLaneId.trim() ? { laneId: editLaneId.trim() } : { clearLaneId: true }), phases, ...(editGroupId ? { groupId: editGroupId as TransactionGroup["id"] } : { clearGroupId: true }), ...(editColor ? { color: editColor } : { clearColor: true }), ...(editDescription ? { description: editDescription } : { clearDescription: true }) });
+  };
+  const revertTransactionDraft = () => {
+    if (!transaction) return;
+    setEditName(transaction.name); setEditStart(transaction.start); setEditEnd(transaction.end);
+    setEditLaneId(transaction.laneId ?? ""); setEditGroupId(transaction.groupId ?? "");
+    setEditColor(transaction.color ?? "#8895a7"); setEditDescription(transaction.description ?? "");
+    setPhaseRows((transaction.phases ?? []).map((phase) => ({ ...phase })));
+    setPhaseError(""); setDraftSwitchError("");
   };
   // #453: Group/Color had zero GUI entry point at all before this (schema/
   // commands already supported both via #430/#450) -- added here, scoped to
@@ -196,9 +219,9 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
       <button type="button" data-testid="bottom-transaction-add" onClick={() => { const id = nextEntityId("transaction", document) as TransactionId; const result = commands.createTransactionFromBottom({ id, name: `Transaction ${document.transactions.length + 1}`, start, end, ...(laneId.trim() ? { laneId: laneId.trim() } : {}) }); if (result.ok) onSelect(id); }}>Add</button>
       <button type="button" data-testid="bottom-transaction-duplicate" disabled={!transaction} onClick={duplicateSelected}>Duplicate</button>
       <button type="button" className="danger" data-testid="bottom-transaction-delete" disabled={!transaction} onClick={onDelete}>Delete</button>
-      <label className="field-inline transaction-group-control"><span aria-hidden="true">Group ▾</span><select aria-label="Move selected transaction to group" disabled={!transaction} value={transaction?.groupId ?? ""} onChange={(event) => moveSelectedToGroup(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
-      <button type="button" data-testid="bottom-transaction-ungroup" disabled={!transaction || !transaction.groupId} onClick={() => moveSelectedToGroup(undefined)}>Ungroup</button>
-      <label className="field-inline transaction-color-control"><span aria-hidden="true">Color ▾</span><input aria-label="Set selected transaction color" type="color" disabled={!transaction} value={transaction?.color ?? "#8895a7"} onChange={(event) => colorSelected(event.target.value)} /></label>
+      <label className="field-inline transaction-group-control"><span aria-hidden="true">Group ▾</span><select aria-label="Move selected transaction to group" disabled={!transaction} value={transaction ? editGroupId : ""} onChange={(event) => setEditGroupId(event.target.value)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
+      <button type="button" data-testid="bottom-transaction-ungroup" disabled={!transaction || !editGroupId} onClick={() => setEditGroupId("")}>Ungroup</button>
+      <label className="field-inline transaction-color-control"><span aria-hidden="true">Color ▾</span><input aria-label="Set selected transaction color" type="color" disabled={!transaction} value={transaction ? editColor : "#8895a7"} onChange={(event) => setEditColor(event.target.value)} /></label>
       {/* Delete already lives in the header as "Delete Transaction"
           (data-testid="delete-bottom-transaction") -- not duplicated here,
           since the reference's toolbar Delete and this header button are
@@ -229,9 +252,25 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
           lines up exactly with each row's button (same grid-template-columns
           CSS rule, reused rather than duplicated). */}
       <div className="transaction-list-header" data-transaction-table-header="true"><span className="transaction-list-header-spacer"><input ref={selectAllRef} type="checkbox" aria-label="Select all visible transactions" checked={allVisibleChecked} onChange={toggleAllVisible} /></span><span className="transaction-list-header-cells"><span aria-hidden="true" /><span>Name</span><span>Group</span><span>Lane</span><span>Start Cycle</span><span>End Cycle</span><span>Duration (cycles)</span><span># Phases</span><span>Linked Signals</span><span>Color</span><span>Description</span></span></div>
-    </>}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: transactionFirstVisibleIndex * transactionRowHeight }} />}{renderedTransactions.map((item) => <div className="transaction-list-row" data-transaction-row-id={item.id} key={item.id}>
+    </>}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: transactionFirstVisibleIndex * transactionRowHeight }} />}{renderedTransactions.map((item) => {
+      const isActive = item.id === transaction?.id;
+      const selectTransaction = () => {
+        if (isActive || !hasChanges) { setDraftSwitchError(""); onSelect(item.id); return; }
+        setDraftSwitchError("Apply or Revert the current Transaction draft before selecting another row.");
+      };
+      return <div className={`transaction-list-row${isActive ? " is-editing" : ""}`} data-transaction-row-id={item.id} key={item.id}>
       <input type="checkbox" aria-label={`Select ${item.name}`} checked={validCheckedIds.has(item.id)} onChange={() => toggleChecked(item.id)} />
-      <button type="button" data-selected={String(selectedTransactionIds?.has(item.id) === true || item.id === transaction?.id)} onClick={() => onSelect(item.id)}>
+      {isActive ? <div className="transaction-list-inline-editor" data-testid="transaction-inline-editor" data-selected="true">
+        <i className="transaction-row-swatch" aria-hidden="true" style={{ background: editColor }} />
+        <input aria-label="Inline Transaction name" data-testid="transaction-inline-name" value={editName} onChange={(event) => setEditName(event.target.value)} />
+        <select aria-label="Inline Transaction group" data-testid="transaction-inline-group" value={editGroupId} onChange={(event) => setEditGroupId(event.target.value)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select>
+        <input aria-label="Inline Transaction lane" data-testid="transaction-inline-lane" value={editLaneId} onChange={(event) => setEditLaneId(event.target.value)} />
+        <input aria-label="Inline Transaction start" data-testid="transaction-inline-start" type="number" min="0" max={editEnd - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} />
+        <input aria-label="Inline Transaction end" data-testid="transaction-inline-end" type="number" min={editStart + 1} max={document.timeline.cycleCount} value={editEnd} onChange={(event) => setEditEnd(Number(event.target.value))} />
+        <span>{editEnd - editStart}</span><span>{item.phases?.length ?? 0}</span><span>{item.linkedSignals?.length ?? 0}</span>
+        <input aria-label="Inline Transaction color" data-testid="transaction-inline-color" type="color" value={editColor} onChange={(event) => setEditColor(event.target.value)} />
+        <input aria-label="Inline Transaction description" data-testid="transaction-inline-description" value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
+      </div> : <button type="button" data-selected={String(selectedTransactionIds?.has(item.id) === true || item.id === transaction?.id)} onClick={selectTransaction}>
         {/* #453: every new field is appended AFTER the original 4 (name/
             start-end/lane/links), never interspersed between them -- several
             existing tests match this row's accessible name against a regex
@@ -252,14 +291,15 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
             comment above), never interspersed, so no existing test's
             accessible-name-order assertion breaks. */}
         <span title={item.description}>{item.description ?? "—"}</span>
-      </button>
-    </div>)}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: (visibleTransactions.length - transactionLastVisibleIndex) * transactionRowHeight }} />}
+      </button>}
+    </div>;
+    })}{draftSwitchError && <p className="inspector-note" data-testid="transaction-draft-switch-error" role="alert">{draftSwitchError}</p>}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: (visibleTransactions.length - transactionLastVisibleIndex) * transactionRowHeight }} />}
   {visibleTransactions.length === 0 && document.transactions.length > 0 && search.trim() !== "" && <p className="inspector-note">No Transactions match this search.</p>}</div>
   </>;
   // Transaction details belong to the Inspector. The Bottom panel remains
   // table-first after a row is selected; only the zero-Transaction state uses
   // the compact create form below.
-  if (transaction) return <section className="transaction-editor" data-testid="transaction-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>{toolbarAndTable}</section>;
+  if (transaction) return <section className="transaction-editor" data-testid="transaction-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); revertTransactionDraft(); } }}>{toolbarAndTable}{phaseError && <p className="inspector-note" data-testid="transaction-inline-validation-error" role="alert">{phaseError}</p>}<div className="bottom-sticky-actions" data-testid="transaction-inline-draft-actions">{hasChanges && <DraftStatus testId="transaction-inline-unapplied" />}<span className="bottom-sticky-buttons"><button type="button" data-testid="transaction-inline-revert" onClick={revertTransactionDraft} disabled={!hasChanges}>Revert</button><button type="button" data-testid="transaction-inline-apply" onClick={applyTransactionDraft} disabled={!hasChanges}>Apply</button></span></div></section>;
   return <section className="transaction-editor" data-testid="transaction-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}><header><strong>Transaction Editor</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button></header>{/* #534: the zero-Transaction state is the create form below (part of toolbarAndTable), shown directly -- no separate "No Transactions yet" onboarding block. */}{toolbarAndTable}{transaction ? <><form id="transaction-properties-form" onSubmit={(event) => { event.preventDefault(); applyTransactionDraft(); }}><label>Name<input aria-label="Transaction name" value={editName} onChange={(event) => setEditName(event.target.value)} /></label><label>Start<input aria-label="Transaction start" type="number" min="0" max={editEnd - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={editStart + 1} max={document.timeline.cycleCount} value={editEnd} onChange={(event) => setEditEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="Transaction lane" value={editLaneId} onChange={(event) => setEditLaneId(event.target.value)} /><span className="inspector-note">A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track.</span></label>
         {/* #426: Phase editing, same `.transaction-phase-*` classes/markup
             shape Inspector's own Phase table already uses (packages/schema's
