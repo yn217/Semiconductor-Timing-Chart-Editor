@@ -105,8 +105,9 @@ button, input, select { font: inherit; font-size: var(--ds-font-size); }
 .column-headings span { display: flex; align-items: center; padding: 0 12px; border-right: 1px solid #d6dde6; }
 .cycle-viewport { position: relative; height: 250px; overflow: auto; background: #fbfcfe; }
 .desktop-workspace { min-height: 0; display: grid; grid-template-columns: var(--gui-left-width) minmax(0, 1fr) var(--gui-inspector-width); grid-template-rows: minmax(260px, 1fr) 10px var(--gui-bottom-height); }
-.left-workspace-rail { display: flex; flex-direction: column; grid-column: 1; grid-row: 1 / 4; min-width: 0; min-height: 0; overflow: hidden; z-index: 22; pointer-events: none; border-right: 1px solid #c7d0dd; background: linear-gradient(to bottom, transparent 0 calc(100% - var(--gui-bottom-height) - 10px), #f9fbfd calc(100% - var(--gui-bottom-height) - 10px) 100%); }
-.left-workspace-rail > .left-panel-tail { flex: 0 0 28px; width: 100%; margin-top: auto; pointer-events: auto; border-top: 1px solid #c7d0dd; border-right: 0; }
+.left-workspace-rail { position: relative; display: flex; flex-direction: column; grid-column: 1; grid-row: 1 / 4; min-width: 0; min-height: 0; overflow: hidden; z-index: 40; pointer-events: none; border-right: 1px solid #c7d0dd; background: transparent; }
+.left-workspace-rail::before { content: ""; position: absolute; z-index: 0; top: calc(100% - var(--gui-bottom-height) - 22px); right: 0; bottom: 0; left: 0; border-top: 1px solid #c7d0dd; background: #f9fbfd; pointer-events: none; }
+.left-workspace-rail > .left-panel-tail { position: relative; z-index: 1; flex: 0 0 28px; width: 100%; margin-top: auto; pointer-events: auto; border-top: 1px solid #c7d0dd; border-right: 0; }
 .column-headings { grid-template-columns: var(--gui-left-width) var(--gui-frozen-width, 210px) minmax(640px, 1fr); }
 .cycle-viewport { height: calc(100% - 34px); }
 .frozen-pane-resize-handle { position: absolute; z-index: 24; top: 0; bottom: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px) - 4px); width: 8px; cursor: ew-resize; touch-action: none; }
