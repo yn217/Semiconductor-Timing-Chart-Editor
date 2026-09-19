@@ -168,7 +168,7 @@
 .transaction-bottom-summary > header span { color: #718096; font-size: 10px; }
 .transaction-bottom-phase-table { display: grid; gap: 2px; margin-top: 8px; max-width: 620px; }
 .transaction-bottom-phase-row { display: grid; grid-template-columns: minmax(160px, 1fr) 80px 80px 80px; gap: 8px; min-height: 28px; align-items: center; padding: 0 8px; border: 1px solid #d5dde7; font-size: 10px; }
-.transaction-bottom-phase-editor .transaction-bottom-phase-row { grid-template-columns: minmax(160px, 1fr) 70px 70px 70px 28px 28px 28px; }
+.transaction-bottom-phase-editor .transaction-bottom-phase-row { grid-template-columns: minmax(160px, 1fr) 70px 70px 70px 28px; }
 .transaction-bottom-phase-editor input { min-width: 0; width: 100%; box-sizing: border-box; }
 .transaction-bottom-phase-head { background: #eef3f8; color: #5c687c; font-weight: 700; }
 .transaction-bottom-linked-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -589,3 +589,7 @@
 .json-toolbar button, .json-toolbar select { height: 27px; border: 1px solid #bdc8d5; border-radius: 3px; background: white; }
 .json-toolbar output { margin-left: auto; }
 .json-panel pre { flex: 1; margin: 0; padding: 10px 18px; overflow: auto; background: #fbfcfe; font: 11px/1.35 Consolas, monospace; }
+
+.transaction-bottom-phase-header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 4px 0; background: var(--gui-panel-bg, #fff); }
+.transaction-bottom-phase-header .bottom-sticky-buttons { margin-left: auto; display: inline-flex; gap: 6px; }
+.transaction-bottom-phase-context { margin: 2px 0 6px; color: #5c687c; font-size: 11px; }
