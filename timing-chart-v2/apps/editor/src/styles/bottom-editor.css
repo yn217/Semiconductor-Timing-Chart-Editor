@@ -245,6 +245,8 @@
 .event-editor { padding: 8px 12px 12px; }
 
 .event-toolbar { display: flex; align-items: center; gap: 5px; min-height: 30px; padding: 3px 0; border-top: 1px solid #d5dde7; border-bottom: 1px solid #d5dde7; }
+.transaction-bulk-toolbar-slot { min-height: 30px; }
+.transaction-bulk-toolbar-slot[data-active="false"] { visibility: hidden; }
 
 .event-toolbar button { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 8px; font-size: 10px; font-weight: 650; }
 
