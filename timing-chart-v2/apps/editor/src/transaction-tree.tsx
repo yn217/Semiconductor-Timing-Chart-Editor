@@ -156,7 +156,10 @@ export function TransactionTree({
         groupId === undefined || groupId === "ungrouped"
           ? undefined
           : groups.find((candidate) => candidate.id === groupId);
-      if (group) setEditingGroupId(group.id);
+      // Keep the primary double-click action consistent with transaction rows:
+      // open/focus the item. Group rename remains available through F2, the
+      // explicit rename control, and the More menu.
+      if (group) toggle(group.id);
     };
     const onArrow = (event: KeyboardEvent) => {
       if (event.key === "Delete") {
