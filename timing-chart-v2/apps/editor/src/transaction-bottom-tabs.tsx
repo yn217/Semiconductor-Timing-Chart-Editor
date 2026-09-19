@@ -16,11 +16,27 @@ function phaseError(phases: readonly TransactionPhase[], start: number, end: num
   return undefined;
 }
 
+const phaseDrafts = new Map<string, { readonly base: readonly TransactionPhase[]; readonly rows: readonly TransactionPhase[] }>();
+
+function initialPhaseRows(transaction: Transaction | undefined): TransactionPhase[] {
+  const base = transaction?.phases ?? [];
+  const draft = transaction ? phaseDrafts.get(transaction.id) : undefined;
+  return (draft && phasesEqual(draft.base, base) ? draft.rows : base).map((phase) => ({ ...phase }));
+}
+
 export function TransactionPhaseEditor({ transaction, commands }: { readonly transaction: Transaction | undefined; readonly commands: EditorSurfaceCommandController }) {
-  const [rows, setRows] = useState<TransactionPhase[]>(() => (transaction?.phases ?? []).map((phase) => ({ ...phase })));
+  const [rows, setRowsRaw] = useState<TransactionPhase[]>(() => initialPhaseRows(transaction));
   const [error, setError] = useState("");
+  const setRows = (update: (current: TransactionPhase[]) => TransactionPhase[]) => setRowsRaw((current) => {
+    const next = update(current);
+    if (transaction) {
+      const base = transaction.phases ?? [];
+      if (phasesEqual(next, base)) phaseDrafts.delete(transaction.id); else phaseDrafts.set(transaction.id, { base, rows: next.map((phase) => ({ ...phase })) });
+    }
+    return next;
+  });
   useEffect(() => {
-    setRows((transaction?.phases ?? []).map((phase) => ({ ...phase })));
+    setRowsRaw(initialPhaseRows(transaction));
     setError("");
   }, [transaction?.id, transaction?.start, transaction?.end, transaction?.phases]);
   if (!transaction) return <section className="transaction-bottom-summary" data-testid="transaction-bottom-phases"><p className="inspector-note">Select a Transaction to edit phases.</p></section>;
@@ -52,7 +68,7 @@ export function TransactionPhaseEditor({ transaction, commands }: { readonly tra
       <strong>Phases ({rows.length})</strong><span>{transaction.name}</span>
       {changed && <span className="draft-unapplied-indicator" role="status" data-testid="transaction-bottom-phases-unapplied">Unapplied changes</span>}
       <span className="bottom-sticky-buttons">
-        <button type="button" onClick={() => { setRows((transaction.phases ?? []).map((phase) => ({ ...phase }))); setError(""); }} disabled={!changed}>Revert</button>
+        <button type="button" onClick={() => { setRows(() => (transaction.phases ?? []).map((phase) => ({ ...phase }))); setError(""); }} disabled={!changed}>Revert</button>
         <button type="button" data-testid="apply-bottom-transaction-phases" onClick={apply} disabled={!changed}>Apply</button>
       </span>
     </header>

@@ -27,4 +27,13 @@ test("Bottom Phases tab shows parent context, top Apply/Revert and live validati
   await tab.getByRole("button", { name: "Revert" }).click();
   await expect(tab.getByTestId("transaction-bottom-phase-error")).toHaveCount(0);
   await expect(apply).toBeDisabled();
+
+  await tab.getByLabel("Bottom Phase 1 name").fill("KEEP_ME");
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Linked Signals", exact: true }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Phases", exact: true }).click();
+  await expect(page.getByTestId("transaction-bottom-phases").getByLabel("Bottom Phase 1 name")).toHaveValue("KEEP_ME");
+  await expect(page.getByTestId("transaction-bottom-phases-unapplied")).toBeVisible();
+  await expect(page.getByTestId("history-status")).toHaveText(history);
+  await page.getByTestId("transaction-bottom-phases").getByRole("button", { name: "Revert" }).click();
+  await expect(page.getByTestId("transaction-bottom-phases").getByLabel("Bottom Phase 1 name")).not.toHaveValue("KEEP_ME");
 });
