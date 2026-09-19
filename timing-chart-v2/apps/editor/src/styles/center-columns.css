@@ -606,9 +606,7 @@
 /* #397: explicit margin:0 -- the UA default checkbox margin (commonly
    ~3-4px) otherwise silently offsets the button/header alignment below by
    that same amount, since flex item outer size includes margin. */
-.transaction-list-row > input[type="checkbox"] { appearance: none; box-sizing: border-box; flex: 0 0 16px; display: block; width: 16px; min-width: 16px; max-width: 16px; height: 16px; min-height: 16px; max-height: 16px; aspect-ratio: 1 / 1; margin: 0 6px; align-self: center; border: 1px solid #9aaabd; border-radius: 2px; background: #fff; }
-.transaction-list-row > input[type="checkbox"]:checked { border-color: var(--ds-focus-color, #2678bc); background: var(--ds-focus-color, #2678bc) linear-gradient(135deg, transparent 44%, #fff 44%, #fff 58%, transparent 58%) 2px 6px / 5px 5px no-repeat, var(--ds-focus-color, #2678bc) linear-gradient(45deg, transparent 42%, #fff 42%, #fff 56%, transparent 56%) 6px 2px / 7px 9px no-repeat; }
-.transaction-list-row > input[type="checkbox"]:focus-visible { outline: 2px solid var(--ds-focus-color, #2678bc); outline-offset: 1px; }
+.transaction-disclosure-slot { flex: 0 0 28px; width: 28px; min-width: 28px; display: block; }
 .transaction-left-tree-rename { margin-left: auto; padding: 0 4px; border: 0; background: transparent; color: #6d7d91; cursor: pointer; }
 /* #397: fixed pixel widths (not `auto`) for every trailing column -- each
    row's button is its own independent grid formatting context, so `auto`
@@ -631,7 +629,6 @@
 .transaction-list-header { display: flex; align-items: center; gap: 0; padding: 0; }
 .transaction-list-header-spacer { flex: 0 0 28px; width: 28px; }
 .transaction-list-header-spacer { display: grid; place-items: center; }
-.transaction-list-header-spacer > input[type="checkbox"] { width: 13px; min-width: 13px; height: 13px; min-height: 13px; aspect-ratio: 1 / 1; margin: 0; }
 .transaction-list-header-cells { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); gap: 0; padding-inline: 0; color: #5c687c; font-size: 10px; font-weight: 650; text-transform: uppercase; letter-spacing: .01em; position: sticky; top: 0; z-index: 2; }
 .transaction-list-header-cells > span, .transaction-list-row > button > * { min-width: 0; padding-inline: 4px; border-right: 1px solid #dfe7ef; }
 .transaction-list-header-cells > span:first-child, .transaction-list-row > button > i { padding-inline: 0; }

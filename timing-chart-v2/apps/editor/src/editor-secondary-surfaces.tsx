@@ -323,6 +323,7 @@ export function useEditorSecondarySurfaces(
       document={input.document}
       history={input.history}
       onSelect={input.actions.selectTransaction}
+      onSelectTransactions={input.actions.selectTransactions}
       commands={surfaceCommands}
       onUndo={undo}
       onRedo={redo}

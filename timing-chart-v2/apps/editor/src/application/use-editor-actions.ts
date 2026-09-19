@@ -94,6 +94,7 @@ export interface EditorActions {
   readonly deleteBottomAnnotation: () => void;
   readonly deleteBottomTransaction: () => void;
   readonly selectTransaction: (id: TransactionId, additive?: boolean) => void;
+  readonly selectTransactions: (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => void;
   readonly toggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => CommandResult;
   readonly createTransaction: () => void;
   readonly createTransactionGroup: () => void;
@@ -205,7 +206,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     document,
   });
   const selectionActions = createSelectionActions({ document: input.document, selection: input.selection, hostRef: input.hostRef, selectedSignalId: input.selectedSignal?.id });
-  const { selectAnnotation, selectTransaction, clearSelection, selectAllSignals, selectAllTransactions, selectHierarchySignal, revealSelectedInHierarchy } = selectionActions;
+  const { selectAnnotation, selectTransaction, selectTransactions, clearSelection, selectAllSignals, selectAllTransactions, selectHierarchySignal, revealSelectedInHierarchy } = selectionActions;
   const selectAll = () => input.viewMode === "Transaction" ? selectAllTransactions() : selectAllSignals();
   const bottomActions = createBottomEditorActions({
     application: input.application,
@@ -439,6 +440,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     deleteBottomAnnotation,
     deleteBottomTransaction,
     selectTransaction,
+    selectTransactions,
     toggleTransactionSignal,
     createTransaction,
     createTransactionGroup,

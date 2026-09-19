@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { MouseEvent } from "react";
 import type { HistoryState } from "@timing-chart-v2/history";
 import type { CanonicalDocument, SignalId, Transaction, TransactionGroup, TransactionId } from "@timing-chart-v2/schema";
 import { nextEntityId } from "./entity-id.js";
@@ -7,7 +8,7 @@ import { EditorIconButton } from "./editor-icon.js";
 import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 import { DraftStatus } from "./draft-status.js";
 
-export function TransactionEditor({ transaction, selectedTransactionIds, document, history, onSelect, commands, onUndo, onRedo, onDelete, onCancel, onToggleTransactionSignal }: { readonly transaction: Transaction | undefined; readonly selectedTransactionIds?: ReadonlySet<TransactionId>; readonly document: CanonicalDocument; readonly history: HistoryState; readonly onSelect: (id: TransactionId) => void; readonly commands: TransactionEditorCommandActions; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void }) {
+export function TransactionEditor({ transaction, selectedTransactionIds, document, history, onSelect, onSelectTransactions, commands, onUndo, onRedo, onDelete, onCancel, onToggleTransactionSignal }: { readonly transaction: Transaction | undefined; readonly selectedTransactionIds?: ReadonlySet<TransactionId>; readonly document: CanonicalDocument; readonly history: HistoryState; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSelectTransactions: (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => void; readonly commands: TransactionEditorCommandActions; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void }) {
   const [name, setName] = useState("Transaction");
   const [start, setStart] = useState(1);
   const [end, setEnd] = useState(Math.min(5, document.timeline.cycleCount));
@@ -81,6 +82,27 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   const transactionFirstVisibleIndex = shouldVirtualizeTransactions ? Math.max(0, Math.floor(transactionListScrollTop / transactionRowHeight) - transactionOverscan) : 0;
   const transactionLastVisibleIndex = shouldVirtualizeTransactions ? Math.min(visibleTransactions.length, Math.ceil((transactionListScrollTop + transactionViewportHeight) / transactionRowHeight) + transactionOverscan) : visibleTransactions.length;
   const renderedTransactions = visibleTransactions.slice(transactionFirstVisibleIndex, transactionLastVisibleIndex);
+  const selectedIds = selectedTransactionIds ?? new Set<TransactionId>();
+  const selectionAnchorRef = useRef<TransactionId | undefined>(transaction?.id);
+  const selectVisibleRow = (id: TransactionId, event: MouseEvent<HTMLButtonElement>) => {
+    const anchor = selectionAnchorRef.current;
+    const clickedIndex = visibleTransactions.findIndex((item) => item.id === id);
+    const anchorIndex = anchor === undefined ? -1 : visibleTransactions.findIndex((item) => item.id === anchor);
+    if (event.shiftKey && anchorIndex >= 0 && clickedIndex >= 0) {
+      const [from, to] = anchorIndex <= clickedIndex ? [anchorIndex, clickedIndex] : [clickedIndex, anchorIndex];
+      const range = new Set(visibleTransactions.slice(from, to + 1).map((item) => item.id));
+      const next = event.ctrlKey || event.metaKey ? new Set([...selectedIds, ...range]) : range;
+      onSelectTransactions(next, id);
+    } else if (event.ctrlKey || event.metaKey) {
+      const next = new Set(selectedIds);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.size === 0) next.add(id);
+      onSelectTransactions(next, id);
+    } else {
+      onSelect(id);
+    }
+    selectionAnchorRef.current = id;
+  };
   useEffect(() => {
     setTransactionListScrollTop(0);
     if (transactionListViewportRef.current) transactionListViewportRef.current.scrollTop = 0;
@@ -100,7 +122,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   // user's manual scroll back to the selected row on every edit.
   }, [shouldVirtualizeTransactions, transaction?.id, transactionOverscan, transactionRowHeight]);
   const duplicateSelected = () => {
-    if (!transaction) return;
+    if (!transaction || selectedIds.size !== 1) return;
     const newTransactionId = nextEntityId("transaction", document) as TransactionId;
     const result = commands.duplicateTransactionById(transaction.id, newTransactionId, `${transaction.name} Copy`);
     if (result.ok) onSelect(newTransactionId);
@@ -111,8 +133,8 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
     commands.createTransactionGroup({ id, name: `Group ${order + 1}`, order });
   };
   const moveSelectedToGroup = (groupId: TransactionGroup["id"] | undefined) => {
-    if (!transaction) return;
-    commands.moveTransactionToGroup(transaction.id, groupId);
+    if (selectedIds.size > 1) bulkMoveToGroup(groupId);
+    else if (transaction) commands.moveTransactionToGroup(transaction.id, groupId);
   };
   const colorSelected = (color: string) => {
     if (!transaction) return;
@@ -120,53 +142,22 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
     // this already preserved groupId/laneId/phases but not description.
     commands.updateTransactionFromBottom({ transactionId: transaction.id, name: transaction.name, start: transaction.start, end: transaction.end, ...(transaction.laneId === undefined ? {} : { laneId: transaction.laneId }), ...(transaction.phases === undefined ? {} : { phases: transaction.phases }), ...(transaction.groupId === undefined ? {} : { groupId: transaction.groupId }), ...(transaction.description === undefined ? {} : { description: transaction.description }), color });
   };
-  // #453 (bulk operations): a distinct "checked for bulk action" set,
-  // independent of `transaction` (the single row currently open for
-  // editing) -- checking rows and editing a row are two different
-  // gestures, same as any spreadsheet/table checkbox-select pattern.
-  // Re-derived against the live document every render so a Transaction
-  // deleted elsewhere can't leave a stale, dangling checked ID behind.
-  const [checkedIds, setCheckedIds] = useState<ReadonlySet<TransactionId>>(new Set());
-  const documentTransactionIds = new Set(document.transactions.map((item) => item.id));
-  const validCheckedIds = new Set([...checkedIds].filter((id) => documentTransactionIds.has(id)));
-  const checkedTransactions = document.transactions.filter((item) => validCheckedIds.has(item.id));
-  const toggleChecked = (id: TransactionId) => setCheckedIds((current) => {
-    const next = new Set(current);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    return next;
-  });
-  const clearChecked = () => setCheckedIds(new Set());
-  const allVisibleChecked = visibleTransactions.length > 0 && visibleTransactions.every((item) => validCheckedIds.has(item.id));
-  const someVisibleChecked = visibleTransactions.some((item) => validCheckedIds.has(item.id));
-  const selectAllRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (selectAllRef.current) selectAllRef.current.indeterminate = someVisibleChecked && !allVisibleChecked;
-  }, [someVisibleChecked, allVisibleChecked]);
-  const toggleAllVisible = () => setCheckedIds((current) => {
-    if (allVisibleChecked) {
-      const visibleIds = new Set(visibleTransactions.map((item) => item.id));
-      return new Set([...current].filter((id) => !visibleIds.has(id)));
-    }
-    return new Set([...current, ...visibleTransactions.map((item) => item.id)]);
-  });
-  // Bulk Group/Color/Delete: one command per checked Transaction, all
-  // dispatched through the shared executeBatch path -- 1 logical action,
-  // 1 History entry, same atomic-batch contract the Ribbon's Annotation
-  // Arrange commands already use. No second bulk-mutation command type.
   const bulkMoveToGroup = (groupId: TransactionGroup["id"] | undefined) => {
-    if (checkedTransactions.length === 0) return;
-    commands.bulkMoveTransactionsToGroup(checkedTransactions.map((item) => ({ transactionId: item.id, ...(groupId === undefined ? {} : { groupId }) })));
+    const selected = document.transactions.filter((item) => selectedIds.has(item.id));
+    if (selected.length === 0) return;
+    commands.bulkMoveTransactionsToGroup(selected.map((item) => ({ transactionId: item.id, ...(groupId === undefined ? {} : { groupId }) })));
   };
   const bulkColor = (color: string) => {
-    if (checkedTransactions.length === 0) return;
+    const selected = document.transactions.filter((item) => selectedIds.has(item.id));
+    if (selected.length === 0) return;
     // #461: same round-trip requirement as applyTransactionDraft/
     // colorSelected above -- description was still missing here.
-    commands.bulkUpdateTransactions(checkedTransactions.map((item) => ({ transactionId: item.id, name: item.name, start: item.start, end: item.end, ...(item.laneId === undefined ? {} : { laneId: item.laneId }), ...(item.phases === undefined ? {} : { phases: item.phases }), ...(item.groupId === undefined ? {} : { groupId: item.groupId }), ...(item.description === undefined ? {} : { description: item.description }), color })));
+    commands.bulkUpdateTransactions(selected.map((item) => ({ transactionId: item.id, name: item.name, start: item.start, end: item.end, ...(item.laneId === undefined ? {} : { laneId: item.laneId }), ...(item.phases === undefined ? {} : { phases: item.phases }), ...(item.groupId === undefined ? {} : { groupId: item.groupId }), ...(item.description === undefined ? {} : { description: item.description }), color })));
   };
   const bulkDelete = () => {
-    if (checkedTransactions.length === 0) return;
-    const result = commands.bulkDeleteTransactions(checkedTransactions.map((item) => item.id));
-    if (result.ok) clearChecked();
+    const ids = document.transactions.filter((item) => selectedIds.has(item.id)).map((item) => item.id);
+    if (ids.length === 0) return;
+    commands.bulkDeleteTransactions(ids);
   };
   // #397/#429 Transaction Mode GUI Closure P0-6: the multi-row table is the
   // Bottom Panel's primary content -- the single-item editor (create-new or
@@ -186,12 +177,13 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
           + default draft values the empty-state create form below already
           uses -- no new command, no second creation path. */}
       <button type="button" data-testid="bottom-transaction-add" onClick={() => { const id = nextEntityId("transaction", document) as TransactionId; const result = commands.createTransactionFromBottom({ id, name: `Transaction ${document.transactions.length + 1}`, start, end, ...(laneId.trim() ? { laneId: laneId.trim() } : {}) }); if (result.ok) onSelect(id); }}>Add</button>
-      <button type="button" data-testid="bottom-transaction-duplicate" disabled={!transaction} onClick={duplicateSelected}>Duplicate</button>
-      <button type="button" className="danger" data-testid="bottom-transaction-delete" disabled={!transaction} onClick={onDelete}>Delete</button>
+      <button type="button" data-testid="bottom-transaction-duplicate" disabled={selectedIds.size !== 1} onClick={duplicateSelected}>Duplicate</button>
+      <button type="button" className="danger" data-testid="bottom-transaction-delete" disabled={selectedIds.size === 0} onClick={() => selectedIds.size > 1 ? bulkDelete() : onDelete()}>Delete</button>
       <button type="button" data-testid="bottom-transaction-add-group" onClick={addTransactionGroup}>Add Group</button>
-      <label className="field-inline transaction-group-control"><span aria-hidden="true">Group ▾</span><select aria-label="Move selected transaction to group" disabled={!transaction} value={transaction?.groupId ?? ""} onChange={(event) => moveSelectedToGroup(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
-      <button type="button" data-testid="bottom-transaction-ungroup" disabled={!transaction || !transaction.groupId} onClick={() => moveSelectedToGroup(undefined)}>Ungroup</button>
-      <label className="field-inline transaction-color-control"><span aria-hidden="true">Color ▾</span><input aria-label="Set selected transaction color" type="color" disabled={!transaction} value={transaction?.color ?? "#8895a7"} onChange={(event) => colorSelected(event.target.value)} /></label>
+      <label className="field-inline transaction-group-control"><span aria-hidden="true">Group ▾</span><select aria-label="Move selected transaction to group" disabled={selectedIds.size === 0} value={selectedIds.size === 1 ? transaction?.groupId ?? "" : ""} onChange={(event) => moveSelectedToGroup(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
+      <button type="button" data-testid="bottom-transaction-ungroup" disabled={selectedIds.size === 0} onClick={() => moveSelectedToGroup(undefined)}>Ungroup</button>
+      <label className="field-inline transaction-color-control"><span aria-hidden="true">Color ▾</span><input aria-label="Set selected transaction color" type="color" disabled={selectedIds.size === 0} value={transaction?.color ?? "#8895a7"} onChange={(event) => selectedIds.size > 1 ? bulkColor(event.target.value) : colorSelected(event.target.value)} /></label>
+      {selectedIds.size > 1 && <span className="transaction-selection-count" data-testid="transaction-selection-count">{selectedIds.size} selected</span>}
       {/* Delete already lives in the header as "Delete Transaction"
           (data-testid="delete-bottom-transaction") -- not duplicated here,
           since the reference's toolbar Delete and this header button are
@@ -200,19 +192,6 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
           been removing elsewhere (#416), not adding. */}
       <input aria-label="Search transactions" data-testid="transaction-list-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search transactions…" />
     </div>}
-    {/* #453: bulk operations -- only shown once at least one row is checked,
-        so a single-Transaction workflow sees no new UI at all. Group/Color/
-        Delete here act on every checked row (via onCommandBatch, one atomic
-        History entry), completely independent of `transaction` (the row
-        open for editing below) -- checking a row for a bulk action and
-        opening it for editing are two different gestures. */}
-    <div className="event-toolbar transaction-bulk-toolbar-slot" role="toolbar" aria-label="Bulk transaction commands" data-testid="transaction-bulk-toolbar" data-active={String(validCheckedIds.size > 0)} aria-hidden={validCheckedIds.size === 0}>
-      <span data-testid="transaction-bulk-count">{validCheckedIds.size} selected</span>
-      <label className="field-inline">Group<select aria-label="Move selected transactions to group" disabled={validCheckedIds.size === 0} defaultValue="" onChange={(event) => bulkMoveToGroup(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
-      <label className="field-inline">Color<input aria-label="Set selected transactions color" disabled={validCheckedIds.size === 0} type="color" defaultValue="#8895a7" onChange={(event) => bulkColor(event.target.value)} /></label>
-      <button type="button" className="danger" data-testid="bulk-delete-transactions" disabled={validCheckedIds.size === 0} onClick={bulkDelete}>Delete Selected</button>
-      <button type="button" data-testid="bulk-clear-selection" disabled={validCheckedIds.size === 0} onClick={clearChecked}>Clear Selection</button>
-    </div>
     <div ref={transactionListViewportRef} className="transaction-list" onScroll={shouldVirtualizeTransactions ? (event) => setTransactionListScrollTop(event.currentTarget.scrollTop) : undefined} style={shouldVirtualizeTransactions ? { maxHeight: transactionViewportHeight, overflowY: "auto" } : undefined}>{visibleTransactions.length > 0 && <>
       {/* #397 Transaction Mode GUI Closure Section 6: column header row,
           same shared pattern as .bookmark-list-header -- fixed labels over
@@ -221,9 +200,9 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
           spacer matches the row's checkbox column so the cell grid below it
           lines up exactly with each row's button (same grid-template-columns
           CSS rule, reused rather than duplicated). */}
-      <div className="transaction-list-header" data-transaction-table-header="true"><span className="transaction-list-header-spacer"><input ref={selectAllRef} type="checkbox" aria-label="Select all visible transactions" checked={allVisibleChecked} onChange={toggleAllVisible} /></span><span className="transaction-list-header-cells"><span>Name</span><span>Group</span><span>Lane</span><span>Start Cycle</span><span>End Cycle</span><span>Duration (cycles)</span><span># Phases</span><span>Linked Signals</span><span>Color</span><span>Description</span></span></div>
+      <div className="transaction-list-header" data-transaction-table-header="true"><span className="transaction-list-header-spacer" aria-hidden="true" /><span className="transaction-list-header-cells"><span>Name</span><span>Group</span><span>Lane</span><span>Start Cycle</span><span>End Cycle</span><span>Duration (cycles)</span><span># Phases</span><span>Linked Signals</span><span>Color</span><span>Description</span></span></div>
     </>}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: transactionFirstVisibleIndex * transactionRowHeight }} />}{renderedTransactions.map((item) => <div className={`transaction-list-row${item.id === transaction?.id ? " transaction-list-row-editing" : ""}`} data-transaction-row-id={item.id} key={item.id}>
-      <input type="checkbox" aria-label={`Select ${item.name}`} checked={validCheckedIds.has(item.id)} onChange={() => toggleChecked(item.id)} />
+      <span className="transaction-disclosure-slot" aria-hidden="true" />
       {item.id === transaction?.id ? <div className="transaction-list-row-editor" data-selected="true" role="group" aria-label={`Edit ${item.name}`}>
         <input aria-label="Bottom Transaction name" value={editName} onChange={(event) => setEditName(event.target.value)} />
         <select aria-label="Bottom Transaction group" value={editGroupId ?? ""} onChange={(event) => setEditGroupId(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select>
@@ -233,7 +212,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
         <span>{Math.max(0, editEnd - editStart)}</span><span>{item.phases?.length ?? 0}</span><span>{item.linkedSignals?.length ?? 0}</span>
         <input aria-label="Bottom Transaction color" type="color" value={editColor || "#8895a7"} onChange={(event) => setEditColor(event.target.value)} />
         <input aria-label="Bottom Transaction description" value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
-      </div> : <button type="button" data-selected={String(selectedTransactionIds?.has(item.id) === true || item.id === transaction?.id)} onClick={() => onSelect(item.id)}>
+      </div> : <button type="button" data-selected={String(selectedIds.has(item.id))} aria-selected={selectedIds.has(item.id)} onClick={(event) => selectVisibleRow(item.id, event)}>
         {/* #453: every new field is appended AFTER the original 4 (name/
             start-end/lane/links), never interspersed between them -- several
             existing tests match this row's accessible name against a regex

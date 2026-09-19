@@ -12,6 +12,7 @@ export interface SelectionActionsInput {
 export interface SelectionActions {
   readonly selectAnnotation: (id: AnnotationId) => void;
   readonly selectTransaction: (id: TransactionId, additive?: boolean) => void;
+  readonly selectTransactions: (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => void;
   readonly clearSelection: () => void;
   readonly selectAllSignals: () => void;
   readonly selectAllTransactions: () => void;
@@ -23,6 +24,7 @@ export interface SelectionActions {
 export function createSelectionActions(input: SelectionActionsInput): SelectionActions {
   const selectAnnotation = (id: AnnotationId) => input.selection.selectAnnotation(id);
   const selectTransaction = (id: TransactionId, additive = false) => input.selection.selectTransaction(id, additive);
+  const selectTransactions = (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => input.selection.selectTransactions(ids, primary);
   const clearSelection = () => input.selection.clear();
   const selectAllSignals = () => {
     const ids = input.document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
@@ -41,5 +43,5 @@ export function createSelectionActions(input: SelectionActionsInput): SelectionA
     input.selection.selectSignal(id);
     requestAnimationFrame(() => input.hostRef.current?.querySelector<HTMLElement>(`[data-role='left-tree-rows'] [data-row-id='${CSS.escape(id)}']`)?.scrollIntoView({ block: "nearest" }));
   };
-  return { selectAnnotation, selectTransaction, clearSelection, selectAllSignals, selectAllTransactions, selectHierarchySignal, revealSelectedInHierarchy };
+  return { selectAnnotation, selectTransaction, selectTransactions, clearSelection, selectAllSignals, selectAllTransactions, selectHierarchySignal, revealSelectedInHierarchy };
 }
