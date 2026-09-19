@@ -619,6 +619,12 @@
 .transaction-list-row > button { flex: 1 1 auto; min-width: 0; height: 30px; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #c2cfdd; border-radius: 0; text-align: left; padding-inline: 0; overflow: hidden; }
 .editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row > button { height: 28px; }
 .transaction-list-row > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: #5c687c; }
+.transaction-list-row-editor { flex: 1 1 auto; min-width: 0; min-height: 30px; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #287ac0; background: #e5f2ff; color: #163756; }
+.editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row-editor { min-height: 28px; }
+.transaction-list-row-editor > * { min-width: 0; width: 100%; height: 24px; box-sizing: border-box; padding: 2px 4px; border: 0; border-right: 1px solid #c7d8e8; border-radius: 0; background: transparent; color: #163756; font: inherit; font-size: 10px; }
+.transaction-list-row-editor > input[type="color"] { padding: 2px 4px; }
+.transaction-list-row-editor > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.transaction-list-row-editor > *:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; background: #fff; }
 /* #397: column header row -- the spacer matches the row checkbox's fixed
    width and `.transaction-list-header-cells` repeats the row button's own
    grid-template-columns/gap exactly, so header and every row line up. */
