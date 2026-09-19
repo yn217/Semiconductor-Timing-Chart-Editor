@@ -101,8 +101,11 @@ export function useDocumentLifecycle({
       return false;
     }
     const migrationDiagnostics = migrationWarnings.map((warning, index) => ({ code: warning.code, path: `${warning.path}[migration:${index}]`, message: warning.message }));
-    const documentEpoch = application.runtime.documentEpoch.advance();
     const session = application.replaceSession(input, migrationDiagnostics);
+    // Publish the new document identity only after the authoritative session
+    // replacement succeeds. A failed replacement must not invalidate
+    // renderer/gesture work for the still-current document.
+    const documentEpoch = application.runtime.documentEpoch.advance();
     setCompatibilityPreview(undefined);
     effectsRef.current?.applyReplacement({ document, session, documentEpoch, migrationWarnings });
     return true;
