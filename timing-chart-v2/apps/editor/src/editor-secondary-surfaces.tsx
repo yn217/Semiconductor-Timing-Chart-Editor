@@ -408,6 +408,13 @@ export function useEditorSecondarySurfaces(
               onFilterModeChange: workspace.setTransactionTreeFilterMode,
               onAdd: input.actions.createTransaction,
               onAddGroup: input.actions.createTransactionGroup,
+              timeScale: {
+                cyclesPerTc: input.document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1,
+                onChange: (cyclesPerTc: number) => {
+                  const current = input.document.transactionTimeScale ?? { clockCyclesPerTransactionCycle: 1, majorInterval: 5, minorInterval: 1 };
+                  surfaceCommands.setTransactionTimeScale({ ...current, clockCyclesPerTransactionCycle: cyclesPerTc });
+                },
+              },
             }
           : undefined
       }

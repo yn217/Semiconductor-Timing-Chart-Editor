@@ -100,7 +100,7 @@ export type SignalTreeColumnHeaderProps = {
   // component so both stay visually identical (row density, Add-button
   // placement, filter-input styling) without a second header primitive.
   // field here.
-  readonly transactionMode?: { readonly filter: string; readonly onFilterChange: (value: string) => void; readonly filterMode: TransactionTreeFilterMode; readonly onFilterModeChange: (value: TransactionTreeFilterMode) => void; readonly onAdd: () => void; readonly onAddGroup: () => void } | undefined;
+  readonly transactionMode?: { readonly filter: string; readonly onFilterChange: (value: string) => void; readonly filterMode: TransactionTreeFilterMode; readonly onFilterModeChange: (value: TransactionTreeFilterMode) => void; readonly onAdd: () => void; readonly onAddGroup: () => void; readonly timeScale?: { readonly cyclesPerTc: number; readonly onChange: (cyclesPerTc: number) => void } } | undefined;
 };
 
 /** The Signal/Group tree's column header: type/text filter, the Add and
@@ -108,6 +108,8 @@ export type SignalTreeColumnHeaderProps = {
  * state owned by `use-workspace-ui-state.ts` (filters) and
  * `use-dialog-menu-state.ts` (menu open flags) -- every state transition is
  * still decided by the caller via these callbacks. */
+const TC_SCALE_PRESETS = [1, 2, 4, 5, 10, 20, 50] as const;
+
 export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange, treeFilter, onTreeFilterChange, onClearTreeFilter, addMenuOpen, onToggleAddMenu, moreMenuOpen, onToggleMoreMenu, onAddEntity, onCloseAddMenu, onOpenBulkRegistration, onCollapseAllGroups, onExpandAllGroups, onOpenHierarchy, onCloseMoreMenu, timeScaleLabel, transactionMode }: SignalTreeColumnHeaderProps) {
   useEffect(() => {
     if (!addMenuOpen && !moreMenuOpen) return;
@@ -136,7 +138,7 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
     </span>
     <span className="role-column-heading" aria-label="Group">Group</span><span className="signal-column-heading" aria-label="Transaction">Transaction</span>
     <span className="frozen-pane-heading-gutter" aria-hidden="true" />
-    <span>{timeScaleLabel}</span>
+    <span className="transaction-time-scale-readout">Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = {transactionMode.timeScale ? <select data-testid="transaction-tc-scale" aria-label="Cycles per TC" value={transactionMode.timeScale.cyclesPerTc} onChange={(event) => transactionMode.timeScale?.onChange(Number(event.target.value))}>{[...new Set([...TC_SCALE_PRESETS, transactionMode.timeScale.cyclesPerTc])].sort((a, b) => a - b).map((value) => <option key={value} value={value}>{value}</option>)}</select> : timeScaleLabel} Cycles)</span>
   </div>;
   }
   return <div className="column-headings">
