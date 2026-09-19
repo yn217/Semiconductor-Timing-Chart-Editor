@@ -17,6 +17,12 @@ test("Bottom Transaction table uses click/Ctrl/Shift selection without checkboxe
   await rows.nth(0).click();
   await rows.nth(3).click({ modifiers: ["Shift"] });
   for (const index of [0, 1, 2, 3]) await expect(rows.nth(index)).toHaveAttribute("data-selected", "true");
-  await expect(bottom.getByTestId("bottom-transaction-duplicate")).toBeDisabled();
-  await expect(page.getByTestId("history-status")).toHaveText(history);
+  await expect(bottom.getByTestId("bottom-transaction-duplicate")).toBeEnabled();
+  const countBefore = await page.locator(".transaction-left-tree-row").count();
+  await bottom.getByTestId("bottom-transaction-duplicate").click();
+  await expect(page.locator(".transaction-left-tree-row")).toHaveCount(countBefore + 4);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.locator(".transaction-left-tree-row")).toHaveCount(countBefore);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
 });

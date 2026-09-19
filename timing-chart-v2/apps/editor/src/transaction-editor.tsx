@@ -134,6 +134,14 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   // user's manual scroll back to the selected row on every edit.
   }, [shouldVirtualizeTransactions, transaction?.id, transactionOverscan, transactionRowHeight]);
   const duplicateSelected = () => {
+    if (selectedIds.size > 1) {
+      const sources = document.transactions.filter((item) => selectedIds.has(item.id));
+      const items = sources.map((item) => ({ transactionId: item.id, newTransactionId: nextEntityId("transaction", document) as TransactionId, name: `${item.name} Copy` }));
+      const batch = commands.bulkDuplicateTransactions(items);
+      const last = items[items.length - 1];
+      if (batch.ok && last) onSelect(last.newTransactionId);
+      return;
+    }
     if (!transaction || selectedIds.size !== 1) return;
     const newTransactionId = nextEntityId("transaction", document) as TransactionId;
     const result = commands.duplicateTransactionById(transaction.id, newTransactionId, `${transaction.name} Copy`);
@@ -189,7 +197,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
           + default draft values the empty-state create form below already
           uses -- no new command, no second creation path. */}
       <button type="button" data-testid="bottom-transaction-add" onClick={() => { const id = nextEntityId("transaction", document) as TransactionId; const result = commands.createTransactionFromBottom({ id, name: `Transaction ${document.transactions.length + 1}`, start, end, ...(laneId.trim() ? { laneId: laneId.trim() } : {}) }); if (result.ok) onSelect(id); }}>Add</button>
-      <button type="button" data-testid="bottom-transaction-duplicate" disabled={selectedIds.size !== 1} title={selectedIds.size === 1 ? "Duplicate selected Transaction" : "Select exactly one Transaction first"} onClick={duplicateSelected}>Duplicate</button>
+      <button type="button" data-testid="bottom-transaction-duplicate" disabled={selectedIds.size === 0} title={selectedIds.size === 0 ? "Select a Transaction first" : selectedIds.size === 1 ? "Duplicate selected Transaction" : "Duplicate all selected Transactions"} onClick={duplicateSelected}>Duplicate</button>
       <button type="button" className="danger" data-testid="bottom-transaction-delete" disabled={selectedIds.size === 0} title={selectedIds.size === 0 ? "Select a Transaction first" : "Delete selected Transaction(s)"} onClick={() => selectedIds.size > 1 ? bulkDelete() : onDelete()}>Delete</button>
       <button type="button" data-testid="bottom-transaction-add-group" onClick={addTransactionGroup}>Add Group</button>
       <label className="field-inline transaction-group-control"><span aria-hidden="true">Group ▾</span><select aria-label="Move selected transaction to group" title={selectedIds.size === 0 ? "Select a Transaction first" : "Move selected Transaction(s) to a Group"} disabled={selectedIds.size === 0} value={selectedIds.size === 1 ? transaction?.groupId ?? "" : ""} onChange={(event) => moveSelectedToGroup(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
