@@ -416,26 +416,15 @@ export function useEditorSecondarySurfaces(
       }
     />
   );
-  // #429/#397 P0-2: Transaction Mode's "Transactions | Signals" tabs -- the
-  // Signals tab swaps in a real, separate Signal browse/select list (never
-  // a fork of the Cycle Mode tree's own rendering, never a second selection
-  // owner -- see TransactionSignalTree's own doc comment) in place of
-  // TransactionLanes, at the exact same DOM slot.
+  // #429/#397 P0-2: Transaction Mode's "Transactions | Signals" tabs are
+  // sidebar browse tabs. The center remains the Transaction timeline in both
+  // states; only the left rail content changes.
   const transactionBoundaryX = useCallback(
     (cycle: number) => refs.transactionBoundaryX.current(cycle),
     [refs.transactionBoundaryX],
   );
-  const workspaceViewportContent =
-    workspace.viewMode !== "Cycle" &&
-    (workspace.viewMode === "Transaction" &&
-    workspace.transactionTreeTab === "signals" ? (
-      <TransactionSignalTree
-        document={input.document}
-        selectedSignalId={selected.signal?.id}
-        onSelectSignal={input.actions.selectHierarchySignal}
-      />
-    ) : (
-      <TransactionLanes
+  const workspaceViewportContent = workspace.viewMode !== "Cycle" ? (
+    <TransactionLanes
         document={input.document}
         documentEpoch={input.documentEpoch}
         viewMode={workspace.viewMode}
@@ -458,11 +447,18 @@ export function useEditorSecondarySurfaces(
         bookmarks={input.document.bookmarks}
         onNavigateBookmark={input.actions.navigateToBookmark}
       />
-    ));
+  ) : null;
   const workspaceViewportLegend = (
     <LegendView document={input.document} commands={surfaceCommands} />
   );
   const workspaceTransactionTree =
+    workspace.viewMode === "Transaction" && workspace.transactionTreeTab === "signals" ? (
+      <TransactionSignalTree
+        document={input.document}
+        selectedSignalId={selected.signal?.id}
+        onSelectSignal={input.actions.selectHierarchySignal}
+      />
+    ) :
     // Combined ("Split") reuses the exact same production Transaction Tree
     // component as standalone Transaction Mode -- see #598-adjacent mockup
     // review: the left column becomes Transaction Tree (upper) stacked over
