@@ -700,6 +700,11 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.signalGroups[0]?.spacers?.[0]?.height).toBe(42);
     expect(session.undo().ok).toBe(true);
     expect(session.getSnapshot().document.signalGroups[0]?.spacers?.[0]?.height).toBe(18);
+    const historyBeforeInvalid = session.historyState().undoDepth;
+    const rejectedHeight = session.execute({ id: commandId("cmd_spacer_update_invalid"), type: "spacer.update", spacerId, height: 0 });
+    expect(rejectedHeight).toMatchObject({ ok: false, reason: "invalid" });
+    expect(session.historyState().undoDepth).toBe(historyBeforeInvalid);
+    expect(session.getSnapshot().document.signalGroups[0]?.spacers?.[0]?.height).toBe(18);
     const moved = session.execute({ id: commandId("cmd_spacer_move"), type: "spacer.move", spacerId, targetGroupId: "grp_main" as GroupId, index: 0 });
     expect(moved.ok).toBe(true);
     expect(session.getSnapshot().document.signalGroups[0]?.rows).toEqual([spacerId, "sig_clk", "sig_data"]);

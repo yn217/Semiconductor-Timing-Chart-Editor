@@ -97,15 +97,29 @@ function nextTransactionPhase(phases: readonly { readonly name: string; readonly
 const spacerId = (value: string) => value as SpacerId;
 
 function InspectorSpacerDraft({ spacer, onApply, onDelete }: { readonly spacer: SpacerRow; readonly onApply: (height: number) => void; readonly onDelete: () => void }) {
-  const [height, setHeight] = useState(spacer.height);
-  useEffect(() => setHeight(spacer.height), [spacer.id, spacer.height]);
-  const changed = height !== spacer.height;
-  return <form data-spacer-id={spacer.id} onSubmit={(event) => { event.preventDefault(); if (changed) onApply(height); }}>
+  const [draft, setDraft] = useState(String(spacer.height));
+  const [error, setError] = useState("");
+  useEffect(() => {
+    setDraft(String(spacer.height));
+    setError("");
+  }, [spacer.id, spacer.height]);
+  const height = Number(draft);
+  const valid = draft.trim().length > 0 && Number.isFinite(height) && height > 0;
+  const changed = valid && height !== spacer.height;
+  return <form data-spacer-id={spacer.id} onSubmit={(event) => {
+    event.preventDefault();
+    if (!valid) {
+      setError("Spacer height must be a finite positive number.");
+      return;
+    }
+    if (changed) onApply(height);
+  }}>
     <code>{spacer.id}</code>
-    <label>Height<input name="height" aria-label={`Spacer height ${spacer.id}`} type="number" min="1" step="1" value={height} onChange={(event) => setHeight(Number(event.target.value))} /></label>
+    <label>Height<input name="height" aria-label={`Spacer height ${spacer.id}`} type="number" min="1" step="1" value={draft} onChange={(event) => { setDraft(event.target.value); setError(""); }} /></label>
+    {error && <span role="alert" className="editor-problem">{error}</span>}
     {changed && <span className="draft-unapplied-indicator" role="status">Unapplied changes</span>}
     <button type="submit" disabled={!changed}>Apply Height</button>
-    <button type="button" onClick={() => setHeight(spacer.height)} disabled={!changed}>Cancel</button>
+    <button type="button" onClick={() => { setDraft(String(spacer.height)); setError(""); }} disabled={draft === String(spacer.height) && !error}>Cancel</button>
     <button type="button" onClick={onDelete}>Delete</button>
   </form>;
 }

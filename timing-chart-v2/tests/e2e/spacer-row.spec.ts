@@ -21,6 +21,14 @@ test("adds and edits a Spacer Row from the Group Inspector with Save/Open and Un
   const rowOrderAfterMove = await host.locator("[data-role='timing-row'][data-row-id]").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-row-id")));
   expect(rowOrderAfterMove.indexOf(spacerId)).toBe(rowOrderBeforeMove.indexOf(spacerId) - 1);
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  const spacerRow = host.locator(`[data-role='timing-row'][data-row-id='${spacerId}']`);
+  const spacerHeightBeforeDraft = Math.round((await spacerRow.boundingBox())!.height);
+  await spacer.getByLabel(`Spacer height ${spacerId}`).fill("0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  expect(Math.round((await spacerRow.boundingBox())!.height)).toBe(spacerHeightBeforeDraft);
+  await spacer.getByRole("button", { name: "Apply Height" }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(spacer.getByRole("alert")).toHaveText("Spacer height must be a finite positive number.");
   await spacer.getByLabel(`Spacer height ${spacerId}`).fill("48");
   await spacer.getByRole("button", { name: "Apply Height" }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
