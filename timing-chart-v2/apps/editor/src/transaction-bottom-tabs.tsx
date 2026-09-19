@@ -41,6 +41,10 @@ export function TransactionPhaseEditor({ transaction, commands }: { readonly tra
   const covered = rows.reduce((sum, phase) => sum + Math.max(0, phase.end - phase.start), 0);
   const duration = transaction.end - transaction.start;
   const liveError = changed ? phaseError(rows.map((phase) => ({ ...phase, name: phase.name.trim() })), transaction.start, transaction.end) : undefined;
+  const ordered = [...rows].sort((a, b) => a.start - b.start || a.end - b.end);
+  const overlaps = ordered.some((phase, index) => index > 0 && phase.start < ordered[index - 1]!.end);
+  const outside = rows.some((phase) => phase.start < transaction.start || phase.end > transaction.end);
+  const coverageProblem = rows.length === 0 ? "No phases defined" : outside ? "Phase exceeds the Transaction range" : overlaps ? "Phases overlap" : covered < duration ? `Uncovered time: ${duration - covered} cycles` : undefined;
   const shownError = error || liveError || "";
   const updateRow = (index: number, patch: Partial<TransactionPhase>) => setRows((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
   return <section className="transaction-bottom-summary transaction-bottom-phase-editor" data-testid="transaction-bottom-phases">
@@ -53,6 +57,14 @@ export function TransactionPhaseEditor({ transaction, commands }: { readonly tra
       </span>
     </header>
     <p className="transaction-bottom-phase-context" data-testid="transaction-bottom-phase-context">Group: {transaction.groupId ?? "Ungrouped"} · Lane: {transaction.laneId ?? "lane_0"} · Start {transaction.start} · End {transaction.end} · Duration {duration} cycles · Coverage {covered} / {duration} · Remaining {Math.max(0, duration - covered)}</p>
+    <div className="transaction-bottom-phase-timeline" data-testid="transaction-bottom-phase-timeline" role="img" aria-label={`Phase timeline ${transaction.start} to ${transaction.end}`}>
+      {[...rows].map((phase, index) => ({ phase, index })).sort((a, b) => a.phase.start - b.phase.start).map(({ phase, index }) => {
+        const left = Math.max(0, Math.min(100, 100 * (phase.start - transaction.start) / Math.max(1, duration)));
+        const width = Math.max(0.5, Math.min(100 - left, 100 * (phase.end - phase.start) / Math.max(1, duration)));
+        return <span key={index} className="transaction-bottom-phase-segment" data-phase-index={index} title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${left}%`, width: `${width}%` }}>{phase.name}</span>;
+      })}
+    </div>
+    <p className={`transaction-bottom-phase-coverage${coverageProblem ? " is-warning" : ""}`} data-testid="transaction-bottom-phase-coverage">{coverageProblem ?? "✓ Full Transaction range is covered"}</p>
     <div className="transaction-bottom-phase-table"><div className="transaction-bottom-phase-row transaction-bottom-phase-head"><span>Name</span><span>Start</span><span>End</span><span>Duration</span><span /></div>{rows.map((phase, index) => <div className="transaction-bottom-phase-row" key={`${transaction.id}-${index}`} data-phase-index={index}><input aria-label={`Bottom Phase ${index + 1} name`} value={phase.name} onChange={(event) => updateRow(index, { name: event.target.value })} /><input aria-label={`Bottom Phase ${index + 1} start`} type="number" value={phase.start} onChange={(event) => updateRow(index, { start: Number(event.target.value) })} /><input aria-label={`Bottom Phase ${index + 1} end`} type="number" value={phase.end} onChange={(event) => updateRow(index, { end: Number(event.target.value) })} /><span>{phase.end - phase.start}</span><button type="button" aria-label={`Delete bottom phase ${index + 1}`} onClick={() => setRows((current) => current.filter((_, itemIndex) => itemIndex !== index))}>×</button></div>)}</div>
     {rows.length === 0 && <p className="inspector-note">No phases defined. Add a phase within the Transaction range.</p>}
     <button type="button" data-testid="add-bottom-transaction-phase" onClick={addPhase} disabled={Math.max(transaction.start, ...rows.map((phase) => phase.end)) >= transaction.end}>Add Phase</button>

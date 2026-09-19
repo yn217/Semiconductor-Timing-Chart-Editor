@@ -17,6 +17,8 @@ test("Bottom Phases tab shows parent context, top Apply/Revert and live validati
   expect(headerBox.y).toBeLessThan(tableBox.y);
   expect((await apply.boundingBox())!.y).toBeLessThan(tableBox.y);
 
+  await expect(page.getByTestId("transaction-bottom-phase-timeline").locator(".transaction-bottom-phase-segment").first()).toBeVisible();
+  await expect(page.getByTestId("transaction-bottom-phase-coverage")).toBeVisible();
   const history = await page.getByTestId("history-status").innerText();
   await tab.getByLabel("Bottom Phase 1 name").fill("");
   await expect(tab.getByTestId("transaction-bottom-phase-error")).toBeVisible();

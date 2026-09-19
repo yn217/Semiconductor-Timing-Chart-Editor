@@ -593,3 +593,7 @@
 .transaction-bottom-phase-header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 4px 0; background: var(--gui-panel-bg, #fff); }
 .transaction-bottom-phase-header .bottom-sticky-buttons { margin-left: auto; display: inline-flex; gap: 6px; }
 .transaction-bottom-phase-context { margin: 2px 0 6px; color: #5c687c; font-size: 11px; }
+.transaction-bottom-phase-timeline { position: relative; height: 22px; margin: 4px 0; border: 1px solid #c3ceda; border-radius: 3px; background: #f4f7fa; overflow: hidden; }
+.transaction-bottom-phase-segment { position: absolute; top: 0; bottom: 0; box-sizing: border-box; padding: 0 4px; overflow: hidden; border-inline: 1px solid #5b86b3; background: #cfe2f6; color: #23405f; font-size: 10px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.transaction-bottom-phase-coverage { margin: 0 0 6px; color: #2f6d4f; font-size: 11px; }
+.transaction-bottom-phase-coverage.is-warning { color: #a25a00; }
