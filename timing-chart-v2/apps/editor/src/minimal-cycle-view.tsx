@@ -816,6 +816,7 @@ export function MinimalCycleView() {
       onInspectorKeyDown: resizeInspectorByKeyboard, onInspectorPointerDown: startInspectorResize, onInspectorPointerMove: moveInspectorResize, onInspectorPointerUp: finishInspectorResize,
       onLeftPaneKeyDown: resizeLeftPaneByKeyboard, onLeftPanePointerDown: startLeftPaneResize, onLeftPanePointerMove: moveLeftPaneResize, onLeftPanePointerUp: finishLeftPaneResize,
       onFrozenPaneKeyDown: resizeFrozenPaneByKeyboard, onFrozenPanePointerDown: startFrozenPaneResize, onFrozenPanePointerMove: moveFrozenPaneResize, onFrozenPanePointerUp: finishFrozenPaneResize,
+      onBottomReset: () => setBottomHeight(240), onInspectorReset: () => setInspectorWidth(297),
       onBottomKeyDown: resizeBottomByKeyboard, onBottomPointerDown: startBottomResize, onBottomPointerMove: moveBottomResize, onBottomPointerUp: finishBottomResize,
       onSignalSplitKeyDown: resizeSignalSplitByKeyboard, onSignalSplitPointerDown: startSignalSplitResize, onSignalSplitPointerMove: moveSignalSplitResize, onSignalSplitPointerUp: finishSignalSplitResize,
       onViewportKeyDown: onCursorKeyDown,
