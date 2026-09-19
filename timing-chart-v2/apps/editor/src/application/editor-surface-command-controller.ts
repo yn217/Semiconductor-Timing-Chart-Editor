@@ -24,6 +24,7 @@ export interface TransactionLaneCommandActions {
 
 export interface TransactionEditorCommandActions {
   readonly createTransactionFromBottom: (transaction: Transaction) => CommandResult;
+  readonly createTransactionGroup: (group: TransactionGroup) => CommandResult;
   readonly duplicateTransactionById: (transactionId: TransactionId, newTransactionId: TransactionId, name: string) => CommandResult;
   readonly deleteTransaction: (transactionId: TransactionId) => CommandResult;
   readonly updateTransactionFromBottom: (payload: CommandPayload<"transaction.update">) => CommandResult;

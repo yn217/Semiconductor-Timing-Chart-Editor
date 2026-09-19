@@ -118,6 +118,11 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
     const result = commands.duplicateTransactionById(transaction.id, newTransactionId, `${transaction.name} Copy`);
     if (result.ok) onSelect(newTransactionId);
   };
+  const addTransactionGroup = () => {
+    const id = nextEntityId("transactionGroup", document) as TransactionGroup["id"];
+    const order = document.transactionGroups?.length ?? 0;
+    commands.createTransactionGroup({ id, name: `Group ${order + 1}`, order });
+  };
   const moveSelectedToGroup = (groupId: TransactionGroup["id"] | undefined) => {
     if (!transaction) return;
     commands.moveTransactionToGroup(transaction.id, groupId);
@@ -196,6 +201,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
       <button type="button" data-testid="bottom-transaction-add" onClick={() => { const id = nextEntityId("transaction", document) as TransactionId; const result = commands.createTransactionFromBottom({ id, name: `Transaction ${document.transactions.length + 1}`, start, end, ...(laneId.trim() ? { laneId: laneId.trim() } : {}) }); if (result.ok) onSelect(id); }}>Add</button>
       <button type="button" data-testid="bottom-transaction-duplicate" disabled={!transaction} onClick={duplicateSelected}>Duplicate</button>
       <button type="button" className="danger" data-testid="bottom-transaction-delete" disabled={!transaction} onClick={onDelete}>Delete</button>
+      <button type="button" data-testid="bottom-transaction-add-group" onClick={addTransactionGroup}>Add Group</button>
       <label className="field-inline transaction-group-control"><span aria-hidden="true">Group ▾</span><select aria-label="Move selected transaction to group" disabled={!transaction} value={transaction?.groupId ?? ""} onChange={(event) => moveSelectedToGroup(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
       <button type="button" data-testid="bottom-transaction-ungroup" disabled={!transaction || !transaction.groupId} onClick={() => moveSelectedToGroup(undefined)}>Ungroup</button>
       <label className="field-inline transaction-color-control"><span aria-hidden="true">Color ▾</span><input aria-label="Set selected transaction color" type="color" disabled={!transaction} value={transaction?.color ?? "#8895a7"} onChange={(event) => colorSelected(event.target.value)} /></label>
