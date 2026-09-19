@@ -106,6 +106,8 @@
    minimal-cycle-view-panels.tsx) instead of raw JSON as the Transaction's
    primary Phase-editing surface. */
 .transaction-phase-editor { margin: 8px 0; }
+.inspector-phase-summary .transaction-phase-row { grid-template-columns: minmax(0, 1fr) 56px 56px; }
+.inspector-phase-summary .transaction-phase-row > :nth-child(n+4) { display: none; }
 .transaction-phase-editor h4 { margin: 0 0 5px; color: #43536a; font-size: 11px; font-weight: 700; }
 .transaction-phase-table { display: flex; flex-direction: column; gap: 3px; margin-bottom: 5px; }
 /* #454: two more 20px columns for Move Up/Down (Reorder), ahead of the

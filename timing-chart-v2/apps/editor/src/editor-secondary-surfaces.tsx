@@ -548,7 +548,7 @@ export function useEditorSecondarySurfaces(
         ) : workspace.bottomTab === "Transaction" ? (
           transactionEditor
         ) : workspace.bottomTab === "Phases" ? (
-          <TransactionPhaseSummary transaction={selected.transaction} />
+          <TransactionPhaseSummary transaction={selected.transaction} commands={surfaceCommands} />
         ) : workspace.bottomTab === "Linked Signals" ? (
           <TransactionLinkedSummary
             transaction={selected.transaction}
@@ -626,6 +626,7 @@ export function useEditorSecondarySurfaces(
       onClose={() => dialog.setInspectorVisible(false)}
       onDeleteBookmark={input.actions.deleteBottomBookmark}
       onToggleTransactionSignal={input.actions.toggleTransactionSignal}
+      onEditTransactionPhases={() => workspace.selectBottomTab("Transaction")}
       onGroupPreview={(groupId, style) =>
         refreshGroupStylePreview(
           refs.host.current!,
