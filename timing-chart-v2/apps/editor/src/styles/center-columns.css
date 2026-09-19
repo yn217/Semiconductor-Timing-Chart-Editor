@@ -616,7 +616,7 @@
    with every other row (and with the header) the moment two rows' text
    lengths differ. Fixed widths make every row (and the header, which
    repeats this exact template) share identical column boundaries. */
-.transaction-list-row > button { flex: 1 1 auto; min-width: 0; height: 30px; display: grid; grid-template-columns: 12px minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #c2cfdd; border-radius: 0; text-align: left; padding-inline: 0; overflow: hidden; }
+.transaction-list-row > button { flex: 1 1 auto; min-width: 0; height: 30px; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #c2cfdd; border-radius: 0; text-align: left; padding-inline: 0; overflow: hidden; }
 .editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row > button { height: 28px; }
 .transaction-list-row > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: #5c687c; }
 /* #397: column header row -- the spacer matches the row checkbox's fixed
@@ -626,7 +626,7 @@
 .transaction-list-header-spacer { flex: 0 0 28px; width: 28px; }
 .transaction-list-header-spacer { display: grid; place-items: center; }
 .transaction-list-header-spacer > input[type="checkbox"] { width: 13px; min-width: 13px; height: 13px; min-height: 13px; aspect-ratio: 1 / 1; margin: 0; }
-.transaction-list-header-cells { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: 12px minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); gap: 0; padding-inline: 0; color: #5c687c; font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: .01em; position: sticky; top: 0; z-index: 2; }
+.transaction-list-header-cells { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); gap: 0; padding-inline: 0; color: #5c687c; font-size: 10px; font-weight: 650; text-transform: uppercase; letter-spacing: .01em; position: sticky; top: 0; z-index: 2; }
 .transaction-list-header-cells > span, .transaction-list-row > button > * { min-width: 0; padding-inline: 4px; border-right: 1px solid #dfe7ef; }
 .transaction-list-header-cells > span:first-child, .transaction-list-row > button > i { padding-inline: 0; }
 .transaction-list-header-cells > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
