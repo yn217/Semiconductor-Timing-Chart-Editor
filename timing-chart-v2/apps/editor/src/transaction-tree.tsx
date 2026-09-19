@@ -8,6 +8,7 @@ import type {
 } from "@timing-chart-v2/schema";
 import { EditorIcon } from "./editor-icon.js";
 import { InlineNameInput } from "./inline-name-input.js";
+import { RibbonIcon } from "./ribbon-icon.js";
 
 export function TransactionTree({
   document,
@@ -353,10 +354,10 @@ export function TransactionTree({
             onSetVisibility(transaction.id, transaction.visible === false);
           }}
         >
-          {transaction.visible === false ? "○" : "●"}
+          <RibbonIcon name={transaction.visible === false ? "i-eye-off" : "i-eye"} />
         </button>
       )}
-      <button type="button" className="transaction-left-tree-more" aria-label={`${transaction.name} actions`} title={`${transaction.name} actions`} onClick={(event) => { event.stopPropagation(); setOpenTransactionMenuId((current) => current === transaction.id ? undefined : transaction.id); }}>⋮</button>
+      <button type="button" className="transaction-left-tree-more" aria-label={`${transaction.name} actions`} title={`${transaction.name} actions`} onClick={(event) => { event.stopPropagation(); setOpenTransactionMenuId((current) => current === transaction.id ? undefined : transaction.id); }}><EditorIcon name="more" /></button>
       {openTransactionMenuId === transaction.id && <div className="transaction-left-tree-group-menu transaction-left-tree-transaction-menu" role="menu" aria-label={`${transaction.name} actions`}>
         <button type="button" role="menuitem" onClick={() => { setOpenTransactionMenuId(undefined); onFocusTransaction?.(transaction.id); }}>Focus in Timeline</button>
         {onMoveToGroup && groups.map((group) => <button key={group.id} type="button" role="menuitem" disabled={transaction.groupId === group.id} onClick={() => { setOpenTransactionMenuId(undefined); onMoveToGroup(transaction.id, group.id); }}>Move to {group.name}</button>)}
@@ -418,6 +419,7 @@ export function TransactionTree({
             const items = groupTransactions(group.id);
             const isCollapsed = collapsed.has(group.id);
             const editing = editingGroupId === group.id;
+            const groupVisible = items.length > 0 && items.every((item) => item.visible !== false);
             return (
               <div
                 className="transaction-left-tree-group"
@@ -467,17 +469,7 @@ export function TransactionTree({
                     <strong title={group.name}>{group.name}</strong>
                   )}
                   <span>({items.length})</span>
-                  {onRenameGroup && !editing && (
-                    <button
-                      type="button"
-                      className="transaction-left-tree-rename"
-                      aria-label={`Rename ${group.name}`}
-                      title={`Rename ${group.name}`}
-                      onClick={() => rename(group)}
-                    >
-                      ✎
-                    </button>
-                  )}
+                  {onSetGroupVisibility && <button type="button" className="transaction-left-tree-visibility transaction-left-tree-group-visibility" aria-label={`${groupVisible ? "Hide" : "Show"} ${group.name}`} title={`${groupVisible ? "Hide" : "Show"} ${group.name}`} onClick={(event) => { event.stopPropagation(); onSetGroupVisibility(group.id, !groupVisible); }}><RibbonIcon name={groupVisible ? "i-eye" : "i-eye-off"} /></button>}
                   <button
                     type="button"
                     className="transaction-left-tree-more"
@@ -488,9 +480,7 @@ export function TransactionTree({
                         current === group.id ? undefined : group.id,
                       )
                     }
-                  >
-                    ⋮
-                  </button>
+                  ><EditorIcon name="more" /></button>
                   {openGroupMenuId === group.id && (
                     <div
                       className="transaction-left-tree-group-menu"
@@ -550,6 +540,7 @@ export function TransactionTree({
           {(() => {
             const items = groupTransactions(undefined);
             const isCollapsed = collapsed.has("__ungrouped__");
+            const groupVisible = items.length > 0 && items.every((item) => item.visible !== false);
             return (
               <div
                 className="transaction-left-tree-group"
@@ -573,7 +564,14 @@ export function TransactionTree({
                   />
                   <strong>Ungrouped</strong>
                   <span>({items.length})</span>
+                  {onSetGroupVisibility && <button type="button" className="transaction-left-tree-visibility transaction-left-tree-group-visibility" aria-label={`${groupVisible ? "Hide" : "Show"} Ungrouped`} title={`${groupVisible ? "Hide" : "Show"} Ungrouped`} onClick={(event) => { event.stopPropagation(); onSetGroupVisibility(undefined, !groupVisible); }}><RibbonIcon name={groupVisible ? "i-eye" : "i-eye-off"} /></button>}
+                  <button type="button" className="transaction-left-tree-more" aria-label="Ungrouped actions" title="Ungrouped actions" onClick={(event) => { event.stopPropagation(); setOpenGroupMenuId((current) => current === "ungrouped" ? undefined : "ungrouped"); }}><EditorIcon name="more" /></button>
                 </div>
+                {openGroupMenuId === "ungrouped" && <div className="transaction-left-tree-group-menu" role="menu" aria-label="Ungrouped actions">
+                  <button type="button" role="menuitem" onClick={() => { setOpenGroupMenuId(undefined); onCreateTransaction?.(); }}>New Transaction</button>
+                  <button type="button" role="menuitem" onClick={() => { setOpenGroupMenuId(undefined); items.forEach((transaction, index) => onSelect(transaction.id, index > 0)); }}>Select Children</button>
+                  {onSetGroupVisibility && <><button type="button" role="menuitem" onClick={() => { setOpenGroupMenuId(undefined); onSetGroupVisibility(undefined, true); }}>Show All</button><button type="button" role="menuitem" onClick={() => { setOpenGroupMenuId(undefined); onSetGroupVisibility(undefined, false); }}>Hide All</button></>}
+                </div>}
                 {!isCollapsed && items.map(renderTransaction)}
               </div>
             );
