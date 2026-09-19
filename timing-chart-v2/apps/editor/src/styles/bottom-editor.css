@@ -13,6 +13,12 @@
 
 .bottom-resize-track:hover::after, .bottom-resize-track:focus-visible::after { background: var(--ds-focus-color); opacity: 1; }
 
+/* The workspace header is a real grid row. The bottom splitter/editor therefore
+   own rows 3/4 of the center column; they must not be placed under the left
+   tree or the header by the legacy three-row composition. */
+.editor-shell .bottom-resize-track { grid-column: 2; grid-row: 3; }
+.editor-shell .bottom-editor { grid-column: 2; grid-row: 4; }
+
 .bottom-tabs { flex: 0 0 38px; display: flex; align-items: end; padding: 0 9px; border-bottom: 1px solid #cbd3dd; }
 
 /* #391: an unstyled <button> takes its default text color from the UA's
@@ -225,7 +231,7 @@
 .bookmark-editor-panel form button:disabled, .bookmark-editor-panel header button:disabled { color: #9aa7b8; background: #f3f5f8; border-color: #d7dee7; cursor: not-allowed; }
 .bookmark-editor-panel form button { border-color: #246aa8; background: #2c78bb; color: white; }
 .bookmark-editor-panel form button:hover:not(:disabled) { border-color: #1a5c94; background: #2569a4; color: white; }
-.editor-shell[data-bottom-visible="false"] .desktop-workspace { grid-template-rows: minmax(0, 1fr) 0 0; }
+.editor-shell[data-bottom-visible="false"] .desktop-workspace { grid-template-rows: var(--gui-workspace-header-height, 37px) minmax(0, 1fr) 0 0; }
 .editor-shell[data-bottom-visible="false"] .bottom-resize-track { display: none; }
 
 .clock-generator label, .clock-edge-counter label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; font-weight: 650; }
