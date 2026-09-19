@@ -205,7 +205,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
           the exact same one-Transaction-delete action, and two buttons for
           one action is the "action競合/hard-coded重複" this session has
           been removing elsewhere (#416), not adding. */}
-      <input aria-label="Search transactions" data-testid="transaction-list-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search…" />
+      <input aria-label="Search transactions" data-testid="transaction-list-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search transactions…" />
     </div>}
     {/* #453: bulk operations -- only shown once at least one row is checked,
         so a single-Transaction workflow sees no new UI at all. Group/Color/
