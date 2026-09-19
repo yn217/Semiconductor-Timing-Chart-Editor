@@ -341,15 +341,16 @@
 .transaction-left-tree-root strong, .transaction-left-tree-group-header strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .transaction-left-tree-group-header > input[aria-label^="Rename "] { min-width: 0; flex: 1 1 auto; height: 22px; padding: 2px 5px; border: 1px solid #2678bc; border-radius: 2px; background: white; color: #203a59; font-size: 11px; }
 .transaction-left-tree-root span, .transaction-left-tree-group-header span:last-child { color: #718096; font-size: 10px; }
-.transaction-left-tree-group-header { min-height: 28px; border-bottom: 1px solid #e1e7ef; }
+.transaction-left-tree-group-header { position: relative; min-height: 28px; padding-right: 58px; border-bottom: 1px solid #e1e7ef; }
 .transaction-left-tree-group-header[data-drop-target="true"] { outline: 2px solid #3478f6; outline-offset: -2px; background: #e6f1ff; }
 .transaction-left-tree-swatch, .transaction-left-tree-row i { flex: 0 0 14px; width: 14px; height: 14px; border-radius: 3px; }
-.transaction-left-tree-row { display: flex; align-items: center; width: 100%; min-height: var(--transaction-tree-row-height, 29px); height: var(--transaction-tree-row-height, 29px); gap: 7px; padding: 0 10px 0 31px; overflow: hidden; border: 0; background: transparent; color: #304b6a; font-size: 11px; text-align: left; white-space: nowrap; }
+.transaction-left-tree-row { display: flex; align-items: center; width: 100%; min-height: var(--transaction-tree-row-height, 29px); height: var(--transaction-tree-row-height, 29px); gap: 7px; padding: 0 58px 0 31px; overflow: hidden; border: 0; background: transparent; color: #304b6a; font-size: 11px; text-align: left; white-space: nowrap; }
 .transaction-left-tree-row-wrap { position: relative; display: flex; align-items: center; }
 .transaction-bookmark-markers { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .transaction-bookmark-markers button { position: absolute; top: 0; bottom: 0; width: 6px; margin-left: -2px; padding: 0; border: 0; border-inline: 2px solid #d97706; background: transparent; box-shadow: 0 0 0 1px #fff8; pointer-events: auto; cursor: pointer; }
-.transaction-left-tree-row-wrap .transaction-left-tree-row { padding-right: 30px; }
-.transaction-left-tree-visibility { position: absolute; right: 7px; width: 20px; height: 20px; padding: 0; border: 0; background: transparent; color: #61758c; font-size: 14px; line-height: 20px; cursor: pointer; }
+.transaction-left-tree-row-wrap .transaction-left-tree-row { padding-right: 58px; }
+.transaction-left-tree-visibility { position: absolute; right: 31px; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; padding: 0; border: 0; background: transparent; color: #61758c; cursor: pointer; }
+.transaction-left-tree-visibility svg { width: 14px; height: 14px; fill: currentColor; }
 .transaction-left-tree-visibility:hover, .transaction-left-tree-visibility:focus-visible { color: #1769aa; }
 .transaction-left-tree-row:hover, .transaction-left-tree-row[data-selected="true"] { background: #dcecff; color: #155ca0; }
 .cycle-panel.mode-transaction .transaction-lanes { min-height: calc(100% - 34px); }
@@ -520,7 +521,8 @@
 .transaction-track { position: absolute; z-index: 3; top: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); width: var(--wave-width, 640px); height: 100%; transform-origin: 0 0; scale: var(--transaction-zoom) 1; }
 .transaction-geometry-line { position: absolute; top: 0; bottom: 0; width: 1px; border-left: 1px solid #dce4ed; pointer-events: none; }
 .transaction-left-tree-group-header { position: relative; }
-.transaction-left-tree-more { margin-left: auto; width: 20px; min-width: 20px; padding: 0; border: 0; background: transparent; color: #52677f; font-size: 15px; line-height: 20px; cursor: pointer; }
+.transaction-left-tree-more { position: absolute; right: 7px; display: inline-flex; align-items: center; justify-content: center; width: 20px; min-width: 20px; height: 20px; padding: 0; border: 0; background: transparent; color: #52677f; cursor: pointer; }
+.transaction-left-tree-more svg { width: 14px; height: 14px; }
 .transaction-left-tree-group-menu { position: absolute; z-index: 20; top: calc(100% - 1px); right: 2px; display: grid; min-width: 132px; padding: 3px; border: 1px solid #b8c7d8; border-radius: 3px; background: #fff; box-shadow: 0 4px 12px rgb(30 55 80 / 18%); }
 .transaction-left-tree-group-menu button { padding: 5px 8px; border: 0; background: transparent; color: #29425e; text-align: left; font-size: 11px; cursor: pointer; }
 .transaction-left-tree-group-menu button:hover { background: #e7f1fb; }
@@ -543,7 +545,6 @@
 .transaction-list-row > input[type="checkbox"] { appearance: none; box-sizing: border-box; flex: 0 0 16px; display: block; width: 16px; min-width: 16px; max-width: 16px; height: 16px; min-height: 16px; max-height: 16px; aspect-ratio: 1 / 1; margin: 0 6px; align-self: center; border: 1px solid #9aaabd; border-radius: 2px; background: #fff; }
 .transaction-list-row > input[type="checkbox"]:checked { border-color: var(--ds-focus-color, #2678bc); background: var(--ds-focus-color, #2678bc) linear-gradient(135deg, transparent 44%, #fff 44%, #fff 58%, transparent 58%) 2px 6px / 5px 5px no-repeat, var(--ds-focus-color, #2678bc) linear-gradient(45deg, transparent 42%, #fff 42%, #fff 56%, transparent 56%) 6px 2px / 7px 9px no-repeat; }
 .transaction-list-row > input[type="checkbox"]:focus-visible { outline: 2px solid var(--ds-focus-color, #2678bc); outline-offset: 1px; }
-.transaction-left-tree-rename { margin-left: auto; padding: 0 4px; border: 0; background: transparent; color: #6d7d91; cursor: pointer; }
 /* #397: fixed pixel widths (not `auto`) for every trailing column -- each
    row's button is its own independent grid formatting context, so `auto`
    columns size to that one row's own content and drift out of alignment
