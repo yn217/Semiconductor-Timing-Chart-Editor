@@ -213,13 +213,15 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
         History entry), completely independent of `transaction` (the row
         open for editing below) -- checking a row for a bulk action and
         opening it for editing are two different gestures. */}
-    {validCheckedIds.size > 0 && <div className="event-toolbar" role="toolbar" aria-label="Bulk transaction commands" data-testid="transaction-bulk-toolbar">
-      <span data-testid="transaction-bulk-count">{validCheckedIds.size} selected</span>
-      <label className="field-inline">Group<select aria-label="Move selected transactions to group" defaultValue="" onChange={(event) => bulkMoveToGroup(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
-      <label className="field-inline">Color<input aria-label="Set selected transactions color" type="color" defaultValue="#8895a7" onChange={(event) => bulkColor(event.target.value)} /></label>
-      <button type="button" className="danger" data-testid="bulk-delete-transactions" onClick={bulkDelete}>Delete Selected</button>
-      <button type="button" data-testid="bulk-clear-selection" onClick={clearChecked}>Clear Selection</button>
-    </div>}
+    <div className={`transaction-bulk-slot${validCheckedIds.size > 0 ? " is-active" : ""}`} data-testid="transaction-bulk-slot">
+      {validCheckedIds.size > 0 && <div className="event-toolbar" role="toolbar" aria-label="Bulk transaction commands" data-testid="transaction-bulk-toolbar">
+        <span data-testid="transaction-bulk-count">{validCheckedIds.size} selected</span>
+        <label className="field-inline">Group<select aria-label="Move selected transactions to group" defaultValue="" onChange={(event) => bulkMoveToGroup(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
+        <label className="field-inline">Color<input aria-label="Set selected transactions color" type="color" defaultValue="#8895a7" onChange={(event) => bulkColor(event.target.value)} /></label>
+        <button type="button" className="danger" data-testid="bulk-delete-transactions" onClick={bulkDelete}>Delete Selected</button>
+        <button type="button" data-testid="bulk-clear-selection" onClick={clearChecked}>Clear Selection</button>
+      </div>}
+    </div>
     <div ref={transactionListViewportRef} className="transaction-list" onScroll={shouldVirtualizeTransactions ? (event) => setTransactionListScrollTop(event.currentTarget.scrollTop) : undefined} style={shouldVirtualizeTransactions ? { maxHeight: transactionViewportHeight, overflowY: "auto" } : undefined}>{visibleTransactions.length > 0 && <>
       {/* #397 Transaction Mode GUI Closure Section 6: column header row,
           same shared pattern as .bookmark-list-header -- fixed labels over
