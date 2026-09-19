@@ -665,8 +665,8 @@
    focus-visible/disabled) sets its own color, background and border,
    keeping border-width constant across states to avoid layout shift. */
 .transaction-list-row > button, .bookmark-list > button { color: #233a59; background: #fff; }
-.transaction-list-row > button:hover:not([data-selected="true"]):not(:disabled), .bookmark-list > button:hover:not([data-selected="true"]):not(:disabled) { border-color: #9fc4e5; background: #f3f8fd; color: #163756; }
-.transaction-list-row > button[data-selected="true"], .bookmark-list > button[data-selected="true"] { border-color: #287ac0; background: #e5f2ff; color: #163756; }
+.transaction-list-row > button:hover:not([data-selected="true"]):not(:disabled), .bookmark-list > button:hover:not([data-selected="true"]):not(:disabled) { border-color: var(--ds-hover-border, #9fc4e5); background: var(--ds-hover-bg, #f3f8fd); color: #163756; }
+.transaction-list-row > button[data-selected="true"], .bookmark-list > button[data-selected="true"] { border-color: var(--ds-selection-border, #287ac0); background: var(--ds-selection-bg, #e5f2ff); color: #163756; }
 .transaction-list-row > button[data-selected="true"]:hover, .bookmark-list > button[data-selected="true"]:hover { background: #d8ecfd; }
 .transaction-list-row > button:focus-visible, .bookmark-list > button:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; z-index: 1; }
 .transaction-list-row > button:disabled, .bookmark-list > button:disabled { color: #8b97a8; background: #f3f5f8; border-color: #d7dee7; cursor: not-allowed; }
