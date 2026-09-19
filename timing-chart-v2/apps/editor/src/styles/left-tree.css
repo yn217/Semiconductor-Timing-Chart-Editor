@@ -16,6 +16,7 @@
 /* #429/#397 P0-2: the Transaction Mode Left Tree's "Transactions | Signals"
    tabs -- same row height/font as the label they replace (`strong` above),
    just two clickable segments instead of one static label. */
+.transaction-tree-title { flex: 0 0 auto; padding: 0 6px; color: #29425e; font-size: 11px; font-weight: 600; line-height: 24px; }
 .transaction-tree-tabs { display: flex; flex: 1 1 auto; gap: 2px; min-width: 0; }
 /* `.left-column-heading button` (above) is a generic rule (absolute icon
    buttons like the filter's clear-X) that also matches these two -- same

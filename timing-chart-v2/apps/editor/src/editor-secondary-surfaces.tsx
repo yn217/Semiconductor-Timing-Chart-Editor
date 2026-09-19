@@ -39,7 +39,6 @@ import { SignalEditor } from "./editors/signal-editor.js";
 import { SignalTreeColumnHeader } from "./minimal-cycle-view-panels.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
-import { TransactionSignalTree } from "./transaction-signal-tree.js";
 import { TransactionTree } from "./transaction-tree.js";
 import {
   TransactionLinkedSummary,
@@ -144,8 +143,6 @@ export interface EditorSecondarySurfacesInput {
     readonly setTransactionTreeFilterMode: (
       value: TransactionTreeFilterMode,
     ) => void;
-    readonly transactionTreeTab: "transactions" | "signals";
-    readonly setTransactionTreeTab: (tab: "transactions" | "signals") => void;
     readonly setRibbonTab: (tab: string) => void;
   };
   readonly dialog: {
@@ -208,7 +205,7 @@ export function useEditorSecondarySurfaces(
   // not keep editing a hidden-mode entity until the user returns to it.
   const inspectorContext: ActiveContext = workspace.viewMode === "Split"
     ? workspace.activeContext
-    : workspace.viewMode === "Transaction" && workspace.transactionTreeTab === "transactions"
+    : workspace.viewMode === "Transaction"
       ? "Transaction"
       : "Signal";
   const inspectorSignal = inspectorContext === "Signal" ? selected.signal : undefined;
@@ -411,8 +408,6 @@ export function useEditorSecondarySurfaces(
               onFilterModeChange: workspace.setTransactionTreeFilterMode,
               onAdd: input.actions.createTransaction,
               onAddGroup: input.actions.createTransactionGroup,
-              tab: workspace.transactionTreeTab,
-              onTabChange: workspace.setTransactionTreeTab,
             }
           : undefined
       }
@@ -454,18 +449,11 @@ export function useEditorSecondarySurfaces(
     <LegendView document={input.document} commands={surfaceCommands} />
   );
   const workspaceTransactionTree =
-    workspace.viewMode === "Transaction" && workspace.transactionTreeTab === "signals" ? (
-      <TransactionSignalTree
-        document={input.document}
-        selectedSignalId={selected.signal?.id}
-        onSelectSignal={input.actions.selectHierarchySignal}
-      />
-    ) :
     // Combined ("Split") reuses the exact same production Transaction Tree
     // component as standalone Transaction Mode -- see #598-adjacent mockup
     // review: the left column becomes Transaction Tree (upper) stacked over
     // the Cycle Signal Tree (lower), never a second tree implementation.
-    ((workspace.viewMode === "Transaction" && workspace.transactionTreeTab === "transactions") || workspace.viewMode === "Split") ? (
+    (workspace.viewMode === "Transaction" || workspace.viewMode === "Split") ? (
       <TransactionTree
         document={input.document}
         documentEpoch={input.documentEpoch}

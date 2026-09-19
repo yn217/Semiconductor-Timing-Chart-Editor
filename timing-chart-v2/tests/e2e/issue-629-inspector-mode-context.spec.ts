@@ -40,8 +40,8 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
 
     await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
     await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
-    await page.getByTestId("transaction-tree-tab-transactions").click();
-    await expect(page.getByTestId("transaction-tree-tab-transactions")).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId("transaction-tree-title")).toHaveText("Transactions");
+    await expect(page.getByTestId("transaction-tree-tab-signals")).toHaveCount(0);
     await expect(inspector.getByRole("heading", { name: "Layout" })).toBeVisible();
 
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();

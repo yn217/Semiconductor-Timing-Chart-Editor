@@ -211,7 +211,6 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   // as `treeTypeFilter`/`viewMode` above: never touches Canonical, never a
   // second selection owner (a Signal picked here is the exact same
   // selection Cycle Mode's own tree would produce).
-  const [transactionTreeTab, setTransactionTreeTab] = useState<"transactions" | "signals">("transactions");
 
   const [followSelection, setFollowSelection] = useState(true);
   const followSelectionRef = useRef(true);
@@ -257,7 +256,6 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     bottomHeight, setBottomHeight, bottomResizeRef,
     treeFilter, setTreeFilter, transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode,
     treeTypeFilter, setTreeTypeFilter,
-    transactionTreeTab, setTransactionTreeTab,
     followSelection, setFollowSelection, followSelectionRef,
     bottomPinned, setBottomPinned, bottomPinnedRef,
     pinnedBottomSelection, setPinnedBottomSelection,
