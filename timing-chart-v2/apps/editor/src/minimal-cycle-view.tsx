@@ -678,7 +678,7 @@ export function MinimalCycleView() {
   const canShowSelection = capabilities.canShow;
   const canHideSelection = capabilities.canHide;
   const shellRibbon = {
-    tabs: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />,
+    tabs: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} />,
     main: {
       commands: secondarySurfaces.surfaceCommands,
       tab: ribbonTab,
