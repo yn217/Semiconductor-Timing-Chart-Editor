@@ -27,3 +27,12 @@ test("Transaction Tree hover and selection are visually distinct", async ({ page
   expect(await bg(other)).not.toBe(await bg(selected));
   await expect(selected).toHaveCSS("box-shadow", /rgb\(40, 122, 192\)/);
 });
+
+test("Timeline bar selection uses the shared selection token", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByTestId("transaction-left-tree-row-demo_txn_read").click();
+  const bar = page.locator(".transaction-lane > button[data-selected='true']").first();
+  await expect(bar).toBeVisible();
+  await expect(bar).toHaveCSS("outline-color", "rgb(40, 122, 192)");
+});
