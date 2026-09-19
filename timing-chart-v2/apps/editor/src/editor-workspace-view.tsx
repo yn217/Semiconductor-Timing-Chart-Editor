@@ -5,7 +5,7 @@ export interface EditorWorkspaceViewModel {
   readonly view: { readonly viewMode: string; readonly signalSplitEnabled: boolean; readonly signalSplitRatio: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly zoom?: number; readonly cursorPresentationRevision?: number; readonly cursor: { readonly a?: number; readonly b?: number; readonly deltaCycles?: number } };
   readonly layout: { readonly leftPaneWidth: number; readonly frozenPaneMinWidth: number; readonly frozenPaneWidth: number; readonly bottomVisible: boolean; readonly bottomHeight: number; readonly inspectorVisible: boolean; readonly inspectorWidth: number };
   readonly refs: { readonly viewport: RefObject<HTMLDivElement | null>; readonly gridLayer: RefObject<HTMLDivElement | null>; readonly ruler: RefObject<HTMLDivElement | null>; readonly host: RefObject<HTMLDivElement | null>; readonly viewportLower: RefObject<HTMLDivElement | null>; readonly rulerLower: RefObject<HTMLDivElement | null>; readonly hostLower: RefObject<HTMLDivElement | null>; readonly gridLayerLower: RefObject<HTMLDivElement | null> };
-  readonly content: { readonly header: ReactNode; readonly transactionTree: ReactNode; readonly viewportContent: ReactNode; readonly viewportLegend: ReactNode; readonly bottom: ReactNode; readonly inspector: ReactNode };
+  readonly content: { readonly header: ReactNode; readonly transactionTree: ReactNode; readonly viewportContent: ReactNode; readonly viewportLegend: ReactNode; readonly leftRail?: ReactNode; readonly bottom: ReactNode; readonly inspector: ReactNode };
   readonly interactions: {
     readonly onInspectorKeyDown: KeyboardEventHandler<HTMLDivElement>; readonly onInspectorPointerDown: PointerEventHandler<HTMLDivElement>; readonly onInspectorPointerMove: PointerEventHandler<HTMLDivElement>; readonly onInspectorPointerUp: PointerEventHandler<HTMLDivElement>;
     readonly onLeftPaneKeyDown: KeyboardEventHandler<HTMLDivElement>; readonly onLeftPanePointerDown: PointerEventHandler<HTMLDivElement>; readonly onLeftPanePointerMove: PointerEventHandler<HTMLDivElement>; readonly onLeftPanePointerUp: PointerEventHandler<HTMLDivElement>;
@@ -29,7 +29,7 @@ export function EditorWorkspaceView({
   const { viewMode, signalSplitEnabled, signalSplitRatio, gridEnabled, snapEnabled, rulerEnabled, zoom, cursorPresentationRevision, cursor } = viewModel.view;
   const { leftPaneWidth, frozenPaneMinWidth, frozenPaneWidth, bottomVisible, bottomHeight, inspectorVisible, inspectorWidth } = viewModel.layout;
   const { viewport, gridLayer, ruler, host, viewportLower, rulerLower, hostLower, gridLayerLower } = viewModel.refs;
-  const { header, transactionTree, viewportContent, viewportLegend, bottom, inspector } = viewModel.content;
+  const { header, transactionTree, viewportContent, viewportLegend, leftRail, bottom, inspector } = viewModel.content;
   const { onInspectorKeyDown, onInspectorPointerDown, onInspectorPointerMove, onInspectorPointerUp, onLeftPaneKeyDown, onLeftPanePointerDown, onLeftPanePointerMove, onLeftPanePointerUp, onFrozenPaneKeyDown, onFrozenPanePointerDown, onFrozenPanePointerMove, onFrozenPanePointerUp, onBottomKeyDown, onBottomPointerDown, onBottomPointerMove, onBottomPointerUp, onSignalSplitKeyDown, onSignalSplitPointerDown, onSignalSplitPointerMove, onSignalSplitPointerUp, onViewportKeyDown, onSetCursorAtCycle, resolveCursorCycleAtClientX } = viewModel.interactions;
   useEffect(() => {
     // Cursor A/B are workspace-only source-cycle markers. The ruler is the
@@ -233,6 +233,7 @@ export function EditorWorkspaceView({
         </div>
       </>}
     </section>
+    <div className="left-workspace-rail" data-testid="left-workspace-rail">{leftRail}</div>
     {bottomVisible && <div className="bottom-resize-track" data-testid="bottom-resizer" role="separator" aria-label="Resize bottom editor" aria-orientation="horizontal" aria-valuemin={180} aria-valuemax={420} aria-valuenow={bottomHeight} tabIndex={0} onKeyDown={onBottomKeyDown} onPointerDown={onBottomPointerDown} onPointerMove={onBottomPointerMove} onPointerUp={onBottomPointerUp} onPointerCancel={onBottomPointerUp} />}
     {bottomVisible && bottom}
     <aside hidden={!inspectorVisible} className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} onKeyDown={onInspectorKeyDown} onPointerDown={onInspectorPointerDown} onPointerMove={onInspectorPointerMove} onPointerUp={onInspectorPointerUp} onPointerCancel={onInspectorPointerUp} />{inspector}</aside>

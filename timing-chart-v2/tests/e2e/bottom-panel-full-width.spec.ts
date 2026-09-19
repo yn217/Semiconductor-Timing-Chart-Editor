@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 type LayoutEvidence = {
   readonly workspaceLeft: number;
+  readonly leftRailRight: number;
   readonly bottomContentLeft: number;
   readonly bottomContentRight: number;
   readonly minimapLeft: number;
@@ -28,10 +29,12 @@ async function readLayout(page: Page): Promise<LayoutEvidence> {
       return { left: box.left, right: box.right, width: box.width };
     };
     const workspace = rect(".desktop-workspace");
+    const leftRail = rect("[data-testid='left-workspace-rail']");
     const bottomContent = rect("[data-testid='bottom-editor'] > .bottom-content");
     const minimap = rect(".inspector > [data-testid='minimap']");
     return {
       workspaceLeft: workspace.left,
+      leftRailRight: leftRail.right,
       bottomContentLeft: bottomContent.left,
       bottomContentRight: bottomContent.right,
       minimapLeft: minimap.left,
@@ -47,14 +50,14 @@ async function readLayout(page: Page): Promise<LayoutEvidence> {
 }
 
 function expectBottomShell(evidence: LayoutEvidence): void {
-  expect(Math.abs(evidence.bottomContentLeft - evidence.workspaceLeft)).toBeLessThanOrEqual(1);
+  expect(Math.abs(evidence.bottomContentLeft - evidence.leftRailRight)).toBeLessThanOrEqual(1);
   expect(evidence.bottomContentRight).toBeLessThanOrEqual(evidence.minimapLeft + 1);
   expect(evidence.bottomWidth).toBeGreaterThan(600);
   expect(evidence.bottomContentRight).toBeLessThanOrEqual(evidence.inspectorLeft + 1);
 }
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
-  test(`#428 Bottom shell spans from the workspace left edge to the MiniMap at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  test(`#428 Bottom shell starts after the persistent left rail at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await ready(page);
 
@@ -98,7 +101,8 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
       const bottomBox = bottom.getBoundingClientRect();
       return { workspaceLeft: workspaceBox.left, bottomLeft: bottomBox.left, bottomRight: bottomBox.right };
     });
-    expect(Math.abs(hiddenInspectorLayout.bottomLeft - hiddenInspectorLayout.workspaceLeft)).toBeLessThanOrEqual(1);
+    const leftRailRight = await page.locator("[data-testid='left-workspace-rail']").evaluate((element) => element.getBoundingClientRect().right);
+    expect(Math.abs(hiddenInspectorLayout.bottomLeft - leftRailRight)).toBeLessThanOrEqual(1);
     expect(hiddenInspectorLayout.bottomRight).toBeLessThanOrEqual(viewport.width + 1);
     await inspectorToggle.click();
     await expect(page.getByTestId("minimap")).toBeVisible();

@@ -187,6 +187,7 @@ export interface EditorSecondarySurfacesOutput {
   readonly workspaceTransactionTree: ReactNode;
   readonly workspaceViewportContent: ReactNode;
   readonly workspaceViewportLegend: ReactNode;
+  readonly workspaceLeftRail: ReactNode;
   readonly workspaceBottom: ReactNode;
   readonly workspaceInspector: ReactNode;
   readonly aiBridgeStatus: "disabled" | "connecting" | "connected" | "error";
@@ -527,6 +528,21 @@ export function useEditorSecondarySurfaces(
         onRenameTransaction={(transactionId, name) => surfaceCommands.renameTransactions([{ transactionId, name }])}
       />
     ) : null;
+  const workspaceLeftRail = (
+    <div className="left-panel-tail">
+      <span data-testid="left-tree-signal-count">
+        {input.document.signals.length} signals
+      </span>
+      {selected.signal && (
+        <span className="scope-breadcrumb" data-testid="scope-breadcrumb">
+          Scope:{" "}
+          {selected.signal.source.instancePath.length
+            ? selected.signal.source.instancePath.join(" / ")
+            : "(root)"}
+        </span>
+      )}
+    </div>
+  );
   const workspaceBottom = (
     <BottomEditorPanel
       tabs={workspace.bottomTabs}
@@ -537,21 +553,6 @@ export function useEditorSecondarySurfaces(
       onFollowSelectionChange={workspace.setFollowSelection}
       pinned={workspace.bottomPinned}
       onTogglePinned={workspace.toggleBottomPin}
-      summary={
-        <div className="left-panel-tail">
-          <span data-testid="left-tree-signal-count">
-            {input.document.signals.length} signals
-          </span>
-          {selected.signal && (
-            <span className="scope-breadcrumb" data-testid="scope-breadcrumb">
-              Scope:{" "}
-              {selected.signal.source.instancePath.length
-                ? selected.signal.source.instancePath.join(" / ")
-                : "(root)"}
-            </span>
-          )}
-        </div>
-      }
       content={
         workspace.bottomTab === "Signal" ? (
           signalEditor
@@ -653,6 +654,7 @@ export function useEditorSecondarySurfaces(
     workspaceTransactionTree,
     workspaceViewportContent,
     workspaceViewportLegend,
+    workspaceLeftRail,
     workspaceBottom,
     workspaceInspector,
     aiBridgeStatus,
