@@ -569,6 +569,15 @@
   left: 0;
   width: var(--wave-width, 640px);
 }
+.editor-shell .cycle-panel.mode-transaction .cycle-ruler {
+  --time-domain-left: 0px;
+  left: 0;
+  width: 100%;
+}
+.editor-shell .cycle-panel.mode-transaction .geometry-grid {
+  left: 0;
+  width: var(--wave-width, 640px);
+}
 .editor-shell .cycle-panel.mode-transaction .transaction-track {
   left: 0;
   width: var(--wave-width, 640px);
