@@ -558,6 +558,24 @@
 
 /* Transaction presentation belongs to the center timing surface. */
 .transaction-track { position: absolute; z-index: 3; top: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); width: var(--wave-width, 640px); height: 100%; transform-origin: 0 0; scale: var(--transaction-zoom) 1; }
+/* Transaction Mode owns its tree in the outer left rail.  The center
+   timeline must therefore not reserve the legacy left/frozen columns a
+   second time.  Keep this scoped to Transaction Mode; Combined/Split still
+   use the embedded transaction pane layout. */
+.editor-shell .cycle-panel.mode-transaction .transaction-lanes {
+  width: var(--wave-width, 640px);
+}
+.editor-shell .cycle-panel.mode-transaction .transaction-lane-labels {
+  left: 0;
+  width: var(--wave-width, 640px);
+}
+.editor-shell .cycle-panel.mode-transaction .transaction-track {
+  left: 0;
+  width: var(--wave-width, 640px);
+}
+.editor-shell .cycle-panel.mode-transaction .transaction-signal-tree {
+  width: 100%;
+}
 .transaction-geometry-line { position: absolute; top: 0; bottom: 0; width: 1px; border-left: 1px solid #dce4ed; pointer-events: none; }
 .transaction-left-tree-more { display: inline-flex; align-items: center; justify-content: center; width: 22px; min-width: 22px; height: 24px; margin: 0; padding: 0; border: 0; background: transparent; color: #52677f; cursor: pointer; }
 .transaction-left-tree-group-menu { position: fixed; z-index: 1200; display: grid; width: 216px; min-width: min(216px, calc(100vw - 16px)); max-width: calc(100vw - 16px); padding: 4px; border: 1px solid #b8c7d8; border-radius: 3px; background: #fff; box-shadow: 0 4px 12px rgb(30 55 80 / 18%); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
