@@ -2,6 +2,7 @@ import type { SignalValueChange, ValueSignal } from "./types.js";
 
 export type ValueSignalType = ValueSignal["type"];
 export type ValueSignalWaveDomain = "logic" | "data";
+export type ValueSignalCompatibilityKind = "logic-token" | "enumerated-data" | "freeform-data";
 
 /**
  * The supported production profile shared by schema validation, commands,
@@ -14,15 +15,16 @@ export type ValueSignalWaveDomain = "logic" | "data";
  */
 export const VALUE_SIGNAL_RENDER_POLICY: Readonly<Record<ValueSignalType, Readonly<{
   readonly domain: ValueSignalWaveDomain;
+  readonly kind: ValueSignalCompatibilityKind;
   readonly acceptedTokens?: readonly string[];
   readonly semantics: string;
 }>>> = {
-  binary: { domain: "logic", acceptedTokens: ["0", "1", "x", "z"], semantics: "Two-level signal with unknown/high-impedance states." },
-  logic: { domain: "logic", acceptedTokens: ["0", "1", "x", "z", "d", "u"], semantics: "Four-state plus weak-drive logic level." },
-  event: { domain: "data", semantics: "Data-domain event marker; values such as none/rise/fall identify event occurrences." },
-  pulse: { domain: "logic", acceptedTokens: ["0", "1", "x", "z", "d", "u"], semantics: "Logic-domain pulse; pulse width is represented by transitions." },
-  bus: { domain: "data", semantics: "Data-bearing bus value rendered through WaveDrom data entries." },
-  state: { domain: "data", semantics: "Symbolic or numeric state value rendered through WaveDrom data entries." },
+  binary: { domain: "logic", kind: "logic-token", acceptedTokens: ["0", "1", "x", "z"], semantics: "Two-level signal with unknown/high-impedance states." },
+  logic: { domain: "logic", kind: "logic-token", acceptedTokens: ["0", "1", "x", "z", "d", "u"], semantics: "Four-state plus weak-drive logic level." },
+  event: { domain: "data", kind: "enumerated-data", acceptedTokens: ["none", "rise", "fall"], semantics: "Event marker with an explicit supported value set." },
+  pulse: { domain: "logic", kind: "logic-token", acceptedTokens: ["0", "1", "x", "z", "d", "u"], semantics: "Logic-domain pulse; pulse width is represented by transitions." },
+  bus: { domain: "data", kind: "freeform-data", semantics: "Data-bearing bus value rendered through WaveDrom data entries." },
+  state: { domain: "data", kind: "freeform-data", semantics: "Symbolic or numeric state value rendered through WaveDrom data entries." },
 };
 
 const TOKEN_ALIASES: Readonly<Record<string, string>> = {
@@ -42,20 +44,30 @@ export function valueSignalWaveDomain(type: ValueSignalType): ValueSignalWaveDom
   return VALUE_SIGNAL_RENDER_POLICY[type].domain;
 }
 
-export function waveDromLogicToken(type: ValueSignalType, value: string | number): string | undefined {
-  if (valueSignalWaveDomain(type) !== "logic") return undefined;
+function normalizedValueToken(value: string | number): string {
   const normalized = String(value).trim().toLowerCase();
-  const token = TOKEN_ALIASES[normalized] ?? normalized;
+  return TOKEN_ALIASES[normalized] ?? normalized;
+}
+
+export function valueSignalAcceptedToken(type: ValueSignalType, value: string | number): string | undefined {
+  const token = normalizedValueToken(value);
   return VALUE_SIGNAL_RENDER_POLICY[type].acceptedTokens?.includes(token) ? token : undefined;
 }
 
+export function waveDromLogicToken(type: ValueSignalType, value: string | number): string | undefined {
+  if (VALUE_SIGNAL_RENDER_POLICY[type].kind !== "logic-token") return undefined;
+  return valueSignalAcceptedToken(type, value);
+}
+
 export function valueSignalValueProblem(type: ValueSignalType, value: string | number): string | undefined {
-  if (valueSignalWaveDomain(type) === "data") {
+  const policy = VALUE_SIGNAL_RENDER_POLICY[type];
+  if (policy.kind === "freeform-data") {
     return String(value).trim().length === 0 ? "Data-domain values must not be empty." : undefined;
   }
-  return waveDromLogicToken(type, value) === undefined
-    ? `Value '${String(value)}' is not supported for ${type} WaveDrom logic semantics.`
-    : undefined;
+  if (valueSignalAcceptedToken(type, value) !== undefined) return undefined;
+  return policy.kind === "enumerated-data"
+    ? `Value '${String(value)}' is not supported for ${type}; supported values are ${policy.acceptedTokens?.join(", ")}.`
+    : `Value '${String(value)}' is not supported for ${type} WaveDrom logic semantics.`;
 }
 
 export function valuesCompatibleForType(type: ValueSignalType, values: readonly SignalValueChange[]): string | undefined {

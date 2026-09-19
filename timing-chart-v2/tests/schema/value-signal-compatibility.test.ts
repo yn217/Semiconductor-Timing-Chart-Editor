@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { planCommand } from "@timing-chart-v2/commands";
-import { quickValueLiteral, quickValueOptions, valueSignalValueProblem, valuesCompatibleForType, type ValueSignal } from "@timing-chart-v2/schema";
+import { normalizeDocument, quickValueLiteral, quickValueOptions, valueSignalValueProblem, valuesCompatibleForType, type ValueSignal } from "@timing-chart-v2/schema";
 import { toWaveJson } from "@timing-chart-v2/wavedrom-adapter";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -23,6 +23,18 @@ describe("ValueSignal render compatibility policy", () => {
     expect(valueSignalValueProblem("logic", "D")).toBeUndefined();
     expect(() => toWaveJson({ signal: signal("binary", "D"), cycleCount: 4 })).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_LOGIC_VALUE" }));
     expect(toWaveJson({ signal: signal("logic", "D"), cycleCount: 4 })).toEqual({ wave: "d..." });
+  });
+
+  it("rejects unsupported event markers before document normalization and adapter conversion", () => {
+    expect(valueSignalValueProblem("event", "EDGE")).toContain("supported values are none, rise, fall");
+    expect(() => toWaveJson({ signal: signal("event", "EDGE"), cycleCount: 4 })).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_EVENT_VALUE" }));
+
+    const source = canonicalFixture();
+    const event = signal("event", "EDGE");
+    const document = { ...source, signals: [...source.signals, event], signalGroups: source.signalGroups.map((group, index) => index === 0 ? { ...group, rows: [...group.rows, event.id] } : group) };
+    const parsed = normalizeDocument(document);
+    expect(parsed.ok).toBe(false);
+    if (!parsed.ok) expect(parsed.problems).toEqual(expect.arrayContaining([expect.objectContaining({ code: "UNSUPPORTED_SIGNAL_VALUE" })]));
   });
 
   it("rejects incompatible type conversion without changing identity or values", () => {

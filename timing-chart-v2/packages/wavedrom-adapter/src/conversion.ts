@@ -1,4 +1,4 @@
-import { formatBusValue, valueSignalWaveDomain, waveDromLogicToken, type ClockSignal, type SignalValueChange, type ValueSignal } from "@timing-chart-v2/schema";
+import { formatBusValue, valueSignalAcceptedToken, valueSignalWaveDomain, waveDromLogicToken, type ClockSignal, type SignalValueChange, type ValueSignal } from "@timing-chart-v2/schema";
 import {
   WAVEDROM_CLOCK_TOKENS,
   WAVEDROM_DATA_TOKEN,
@@ -23,6 +23,12 @@ function logicToken(type: ValueSignal["type"], value: string | number): string {
   const token = waveDromLogicToken(type, value);
   if (token !== undefined) return token;
   throw new WaveDromAdapterError("UNSUPPORTED_LOGIC_VALUE", `Value '${String(value)}' has no supported WaveDrom state token for ${type}.`);
+}
+
+function eventToken(value: string | number): string {
+  const token = valueSignalAcceptedToken("event", value);
+  if (token !== undefined) return token;
+  throw new WaveDromAdapterError("UNSUPPORTED_EVENT_VALUE", `Value '${String(value)}' is not a supported event marker.`);
 }
 
 function assertChangePoints(changes: readonly SignalValueChange[], cycleCount: number): void {
@@ -51,7 +57,11 @@ function valueSignalToWaveJson(signal: ValueSignal, cycleCount: number, gaps: re
   const isData = valueSignalWaveDomain(signal.type) === "data";
   if (signal.values[0]?.start !== 0) wave[0] = "x";
   for (const change of signal.values) {
-    if (isData) {
+    if (signal.type === "event") {
+      eventToken(change.value);
+      wave[change.start] = WAVEDROM_DATA_TOKEN;
+      data.push(String(change.value));
+    } else if (isData) {
       wave[change.start] = WAVEDROM_DATA_TOKEN;
       data.push(change.displayLabel ?? (signal.type === "bus" && signal.displayFormat !== undefined
         ? formatBusValue(change.value, signal.displayFormat, signal.width)
