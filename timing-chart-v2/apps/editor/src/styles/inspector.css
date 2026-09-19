@@ -201,8 +201,6 @@
 
 .editor-shell .inspector-section-toggle:focus-visible { outline: var(--ds-focus-width) solid var(--ds-focus-color); outline-offset: -2px; }
 
-.editor-shell .inspector-section-toggle span { width: 10px; color: #58728e; font-size: 9px; }
-
 .editor-shell .inspector-section-content { padding: 8px 10px 10px; }
 
 .editor-shell .inspector-section-content > form { display: grid; gap: 7px; }
@@ -210,6 +208,16 @@
 .inspector-edge-counter { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 .inspector-edge-counter label { min-width: 0; }
+
+/* One disclosure affordance contract shared by the imperative Cycle Tree and
+   React Transaction Tree / Inspector. Their surrounding row layouts remain
+   independently owned; glyph geometry, tree hit-area, hover and focus do not. */
+.editor-shell .shared-disclosure-chevron { display: block; flex: 0 0 15px; width: 15px; height: 15px; color: #405c78; }
+.editor-shell .shared-disclosure-toggle:hover { background: var(--gui-hover-bg, #eaf2fa); }
+.editor-shell .shared-disclosure-toggle:focus-visible { outline: var(--ds-focus-width, 2px) solid var(--ds-focus-color, #2678bc); outline-offset: 1px; }
+.editor-shell .surface-host [data-role="tree-collapse"].shared-disclosure-toggle--tree,
+.editor-shell .transaction-left-tree-root .shared-disclosure-toggle--tree,
+.editor-shell .transaction-left-tree-group-header .shared-disclosure-toggle--tree { display: inline-flex; flex: 0 0 23px; align-items: center; justify-content: center; width: 23px; height: 24px; padding: 0; border: 0; border-radius: 3px; background: transparent; cursor: pointer; }
 
 .inspector-edge-counter input[type="number"], .inspector-edge-counter select { width: 100%; min-width: 0; }
 

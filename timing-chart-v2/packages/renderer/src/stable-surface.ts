@@ -1,5 +1,6 @@
 import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
+import { DISCLOSURE_CHEVRON_SPEC } from "./disclosure-chevron-spec.js";
 
 export function isWaveMountRequestFresh(request: Pick<WaveMountRequest, "documentEpoch" | "isFresh">, currentDocumentEpoch: number): boolean {
   return (request.documentEpoch === undefined || request.documentEpoch === currentDocumentEpoch) && (request.isFresh?.() ?? true);
@@ -46,10 +47,11 @@ function createLeftTreeIcon(document: Document, name: "chevron-down" | "chevron-
   };
   if (name === "chevron-down" || name === "chevron-right") {
     const path = append("path");
-    path.setAttribute("d", name === "chevron-down" ? "M6 9l6 6 6-6" : "M9 6l6 6-6 6");
+    const spec = DISCLOSURE_CHEVRON_SPEC[name === "chevron-down" ? "down" : "right"];
+    path.setAttribute("d", spec.path);
     path.setAttribute("fill", "none");
     path.setAttribute("stroke", "currentColor");
-    path.setAttribute("stroke-width", "2");
+    path.setAttribute("stroke-width", String(spec.strokeWidth));
     path.setAttribute("stroke-linecap", "round");
     path.setAttribute("stroke-linejoin", "round");
   } else if (name === "eye" || name === "eye-off") {
@@ -1196,7 +1198,8 @@ function populateGroupHeader(shell: HTMLElement, header: GroupHeaderLayoutEntry)
   collapse.setAttribute("aria-label", `${header.collapsed ? "Expand" : "Collapse"} ${header.groupName} group`);
   collapse.setAttribute("aria-expanded", String(!header.collapsed));
   collapse.dataset.collapsed = String(header.collapsed);
-  collapse.append(createLeftTreeIcon(document, header.collapsed ? "chevron-right" : "chevron-down", "surface-icon chevron-icon"));
+  collapse.classList.add("shared-disclosure-toggle", "shared-disclosure-toggle--tree");
+  collapse.append(createLeftTreeIcon(document, header.collapsed ? "chevron-right" : "chevron-down", "surface-icon chevron-icon shared-disclosure-chevron"));
   branch.append(collapse, document.createTextNode(` ${header.groupName}`));
   const more = document.createElement("button");
   more.type = "button";

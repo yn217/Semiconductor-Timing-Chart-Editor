@@ -403,11 +403,12 @@ export function TransactionTree({
       <div className="transaction-left-tree-root">
         <button
           type="button"
+          className="shared-disclosure-toggle shared-disclosure-toggle--tree"
           aria-label={`${collapsed.has("__all__") ? "Expand" : "Collapse"} All Transactions`}
           aria-expanded={!collapsed.has("__all__")}
           onClick={() => toggle("__all__")}
         >
-          <EditorIcon name={collapsed.has("__all__") ? "right" : "down"} />
+          <EditorIcon name={collapsed.has("__all__") ? "chevron-right" : "chevron-down"} />
         </button>
         <strong>All Transactions</strong>
         <span>({document.transactions.length})</span>
@@ -430,11 +431,12 @@ export function TransactionTree({
                 >
                   <button
                     type="button"
+                    className="shared-disclosure-toggle shared-disclosure-toggle--tree"
                     aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${group.name}`}
                     aria-expanded={!isCollapsed}
                     onClick={() => toggle(group.id)}
                   >
-                    <EditorIcon name={isCollapsed ? "right" : "down"} />
+                    <EditorIcon name={isCollapsed ? "chevron-right" : "chevron-down"} />
                   </button>
                   <span
                     className="transaction-left-tree-swatch"
@@ -561,11 +563,12 @@ export function TransactionTree({
                 >
                   <button
                     type="button"
+                    className="shared-disclosure-toggle shared-disclosure-toggle--tree"
                     aria-label={`${isCollapsed ? "Expand" : "Collapse"} Ungrouped`}
                     aria-expanded={!isCollapsed}
                     onClick={() => toggle("__ungrouped__")}
                   >
-                    <EditorIcon name={isCollapsed ? "right" : "down"} />
+                    <EditorIcon name={isCollapsed ? "chevron-right" : "chevron-down"} />
                   </button>
                   <span
                     className="transaction-left-tree-swatch"
