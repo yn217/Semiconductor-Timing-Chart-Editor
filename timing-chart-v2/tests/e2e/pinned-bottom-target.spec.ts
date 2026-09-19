@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openBottomSettings } from "./bottom-settings";
 
 async function ready(page: Page) {
   await page.goto("/");
@@ -11,6 +12,7 @@ test("pinned Signal visibility and duplicate actions target the pinned stable ID
   const bottom = page.getByTestId("bottom-editor");
 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await openBottomSettings(page);
   await bottom.getByTestId("bottom-pin").click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click();
   await bottom.getByTestId("signal-visibility").click();
@@ -18,8 +20,10 @@ test("pinned Signal visibility and duplicate actions target the pinned stable ID
   await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request'] [data-role='tree-visibility'] svg")).toHaveAttribute("data-icon", "eye-off");
   await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_ready'] [data-role='tree-visibility'] svg")).toHaveAttribute("data-icon", "eye");
 
+  await openBottomSettings(page);
   await bottom.getByTestId("bottom-pin").click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  await openBottomSettings(page);
   await bottom.getByTestId("bottom-pin").click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
   await bottom.getByTestId("clock-duplicate").click();
@@ -37,6 +41,7 @@ test("pinned Annotation delete targets the pinned stable ID", async ({ page }) =
   await page.getByTestId("annotation-toolbar").getByRole("button", { name: "Add annotation", exact: true }).click();
   const annotation = page.getByTestId("annotation-list").locator("[data-annotation-list-id]").first();
   await expect(annotation).toBeVisible();
+  await openBottomSettings(page);
   await bottom.getByTestId("bottom-pin").click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click();
   await bottom.getByTestId("delete-annotation").click();
@@ -51,6 +56,7 @@ test("pinned Signal delete targets the pinned stable ID", async ({ page }) => {
   const host = page.getByTestId("cycle-surface");
   const bottom = page.getByTestId("bottom-editor");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await openBottomSettings(page);
   await bottom.getByTestId("bottom-pin").click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click();
   await bottom.getByTestId("signal-delete").click();
@@ -71,6 +77,7 @@ test("pinned Transaction edits target the pinned stable ID", async ({ page }) =>
   await page.getByLabel("New Transaction name").fill("Pinned Transfer");
   await page.getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(bottom).toContainText("Pinned Transfer");
+  await openBottomSettings(page);
   await bottom.getByTestId("bottom-pin").click();
   await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();

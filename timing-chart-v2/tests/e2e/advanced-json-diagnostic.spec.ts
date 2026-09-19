@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openBottomSettings } from "./bottom-settings";
 
 test("Advanced JSON reports deterministic line and column for malformed input", async ({ page }) => {
   await page.goto("/");
@@ -8,6 +9,7 @@ test("Advanced JSON reports deterministic line and column for malformed input", 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const bottom = page.getByTestId("bottom-editor");
   await bottom.getByRole("tab", { name: "JSON", exact: true }).click();
+  await openBottomSettings(page);
   await bottom.getByTestId("bottom-pin").click();
   const json = page.getByTestId("json-panel");
   await json.getByTestId("json-advanced-toggle").click();
@@ -109,6 +111,7 @@ test("Advanced JSON preserves a dirty selected-object draft when selection chang
 
   const bottom = page.getByTestId("bottom-editor");
   await bottom.getByRole("tab", { name: "JSON", exact: true }).click();
+  await openBottomSettings(page);
   await bottom.getByTestId("bottom-pin").click();
   const json = page.getByTestId("json-panel");
   await json.getByTestId("json-advanced-toggle").click();

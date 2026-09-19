@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openBottomSettings } from "./bottom-settings";
 
 test("Inspector and Bottom expose the documented edit contract surfaces", async ({ page }) => {
   await page.goto("/");
@@ -16,7 +17,9 @@ test("Inspector and Bottom expose the documented edit contract surfaces", async 
   await expect(page.getByTestId("bottom-tabs").getByRole("tab", { name: "JSON", exact: true })).toBeVisible();
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(page.getByTestId("bottom-tabs").getByRole("tab", { name: "Transaction", exact: true })).toBeVisible();
+  await openBottomSettings(page);
   await expect(page.getByTestId("follow-selection")).toBeVisible();
+  await openBottomSettings(page);
   await expect(page.getByTestId("bottom-pin")).toBeVisible();
 });
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { RefObject } from "react";
 import type { GroupId, SignalGroup, SpacerId } from "@timing-chart-v2/schema";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -205,6 +205,14 @@ export type BottomEditorPanelProps<Tab extends string> = {
  * tab is decided by the caller (it depends on the current selection across
  * several owners) and passed in as `content`. */
 export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelectTab, onTabKeyDown, followSelection, onFollowSelectionChange, pinned, onTogglePinned, summary, content, contentClassName }: BottomEditorPanelProps<Tab>) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const close = (event: PointerEvent) => { if (!(event.target instanceof Node) || !settingsRef.current?.contains(event.target)) setSettingsOpen(false); };
+    document.addEventListener("pointerdown", close, true);
+    return () => document.removeEventListener("pointerdown", close, true);
+  }, [settingsOpen]);
   return <section className="bottom-editor" data-testid="bottom-editor">
     <nav className="bottom-tabs" data-testid="bottom-tabs" role="tablist" aria-label="Bottom context panels">
       {tabs.map((tab) => {
@@ -220,8 +228,14 @@ export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelec
           the only clue, so a Transaction-selected-while-Bottom-still-
           shows-Bookmark moment reads as intentional, not stale. */}
       <output className="bottom-follow-status" data-testid="bottom-follow-status">{pinned ? `Pinned: ${activeTab}` : "Following Selection"}</output>
-      <label><input data-testid="follow-selection" type="checkbox" checked={followSelection} onChange={(event) => onFollowSelectionChange(event.target.checked)} /> Follow Selection</label>
-      <button type="button" data-testid="bottom-pin" aria-label={pinned ? "Unpin" : "Pin"} aria-pressed={pinned} onClick={onTogglePinned}><span className="bottom-pin-label" data-v1-label={pinned ? "Unpin" : "Pin"}>{pinned ? "Unpin" : "Pin"}</span></button>
+      <span className="bottom-settings-anchor" ref={settingsRef}>
+        <button type="button" className="bottom-settings-button" data-testid="bottom-settings" aria-label="Bottom panel settings" aria-haspopup="true" aria-expanded={settingsOpen} title="Bottom panel behavior: Follow Selection, Pin" onClick={() => setSettingsOpen((open) => !open)}>{"⚙"}</button>
+        <div className="bottom-settings-popover" data-testid="bottom-settings-popover" role="group" aria-label="Bottom panel behavior" hidden={!settingsOpen} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); setSettingsOpen(false); } }}>
+        <label><input data-testid="follow-selection" type="checkbox" checked={followSelection} onChange={(event) => onFollowSelectionChange(event.target.checked)} /> Follow Selection</label>
+        <button type="button" data-testid="bottom-pin" aria-label={pinned ? "Unpin" : "Pin"} aria-pressed={pinned} onClick={onTogglePinned}><span className="bottom-pin-label" data-v1-label={pinned ? "Unpin" : "Pin"}>{pinned ? "Unpin" : "Pin"}</span></button>
+      
+        </div>
+      </span>
     </nav>
     <div className={`bottom-content${contentClassName ? ` ${contentClassName}` : ""}`} id="bottom-context-content" role="tabpanel" aria-labelledby={`bottom-tab-${activeTab.toLowerCase()}`}>{content}</div>
     {summary}

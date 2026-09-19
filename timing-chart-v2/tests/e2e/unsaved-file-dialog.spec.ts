@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openBottomSettings } from "./bottom-settings";
 import { canonicalFixture } from "../fixtures/canonical";
 
 // Bottom Panel Visual Reference pass (#402/#426): Name moved to Inspector
@@ -194,6 +195,7 @@ test("Open atomically clears document-scoped selection, pin, filter and timeline
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click({ modifiers: ["Control"] });
   await expect(page.getByTestId("selection-status")).toHaveText("2 signals");
+  await openBottomSettings(page);
   await page.getByTestId("bottom-pin").click();
   await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
   await page.getByTestId("signal-tree-search-top").fill("REQUEST");
@@ -233,6 +235,7 @@ test("Open resets entity-keyed Transaction bulk selection and Bottom pin across 
   await page.getByTestId("transaction-lanes").locator("[data-transaction-id='tx_shared']").dispatchEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 240, clientY: 180 });
   await expect(page.getByTestId("signal-context-menu")).toBeVisible();
   await expect(page.getByTestId("signal-context-menu")).toHaveAttribute("data-context-target", "transaction");
+  await openBottomSettings(page);
   await page.getByTestId("bottom-pin").click();
   await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
 
