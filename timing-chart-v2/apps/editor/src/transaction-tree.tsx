@@ -189,6 +189,12 @@ export function TransactionTree({
     globalThis.document.addEventListener("keydown", onKeyDown);
     const onDoubleClick = (event: MouseEvent) => {
       const target = event.target instanceof Element ? event.target : null;
+      if (
+        target?.closest(
+          "button, input, select, textarea, [role='menuitem'], [contenteditable='true']",
+        )
+      )
+        return;
       const header = target?.closest<HTMLElement>(
         ".transaction-left-tree-group-header",
       );
@@ -199,7 +205,7 @@ export function TransactionTree({
         groupId === undefined || groupId === "ungrouped"
           ? undefined
           : groups.find((candidate) => candidate.id === groupId);
-      if (group) setEditingGroupId(group.id);
+      if (group) toggle(group.id);
     };
     const onArrow = (event: KeyboardEvent) => {
       if (event.key === "Delete") {
@@ -268,6 +274,12 @@ export function TransactionTree({
     const onGroupMultiSelect = (event: MouseEvent) => {
       if (!event.shiftKey) return;
       const target = event.target instanceof Element ? event.target : null;
+      if (
+        target?.closest(
+          "button, input, select, textarea, [role='menuitem'], [contenteditable='true']",
+        )
+      )
+        return;
       const header = target?.closest<HTMLElement>(
         ".transaction-left-tree-group-header",
       );
