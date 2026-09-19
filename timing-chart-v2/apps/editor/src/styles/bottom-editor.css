@@ -39,6 +39,7 @@
 .bottom-follow-status { align-self: center; margin-right: 8px; padding: 2px 7px; border-radius: 9px; background: #eef3f9; color: #45566d; font-size: 9px; font-weight: 650; white-space: nowrap; }
 
 .bottom-content { flex: 1; min-height: 0; overflow: auto; }
+.bottom-content-annotation { display: flex; flex-direction: column; overflow: hidden; }
 
 .bottom-content > .signal-editor { min-height: 100%; display: block; }
 .bottom-content .editor-tabbar { height: 37px; }
@@ -489,7 +490,21 @@
    Target/X/Y -- would force a horizontal scrollbar inside an already-
    narrow column. min-width: 0 + a compact 7-column template (see
    annotation-list.tsx for which columns) fits it instead. */
-.annotation-list { min-width: 0; max-height: 320px; overflow: hidden auto; border-bottom: 1px solid #dce3eb; background: #fbfcfe; }
+.annotation-collection { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.annotation-collection-toolbar { position: sticky; top: 0; z-index: 2; display: flex; flex: 0 0 auto; align-items: center; gap: 5px; min-height: 32px; padding: 3px 8px; border-bottom: 1px solid #d5dde7; background: #f7f9fb; }
+.annotation-collection-toolbar label { display: inline-flex; align-items: center; gap: 4px; color: #52677d; font-size: 10px; font-weight: 650; }
+.annotation-collection-toolbar select, .annotation-collection-toolbar button { height: 24px; border: 1px solid #b9c5d3; border-radius: 3px; background: white; color: #29425e; padding: 2px 7px; font-size: 10px; }
+.annotation-collection-toolbar button:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; }
+.annotation-collection-toolbar button.danger { border-color: #d39b9b; color: #a52b2b; }
+.annotation-collection-spacer { flex: 1 1 auto; }
+.annotation-collection-toolbar output { max-width: 22%; overflow: hidden; color: #63758b; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.annotation-collection-heading { display: flex; flex: 0 0 auto; align-items: center; gap: 6px; min-height: 25px; padding: 0 8px; color: #304761; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+.annotation-collection-heading > span:first-of-type { color: #758197; font-weight: 500; text-transform: none; letter-spacing: normal; }
+.annotation-collection-selection { margin-left: auto; overflow: hidden; color: #53677c; font-weight: 500; text-overflow: ellipsis; text-transform: none; white-space: nowrap; letter-spacing: normal; }
+.annotation-collection .annotation-list { flex: 1 1 auto; min-height: 0; max-height: none; overflow: auto; border-bottom: 0; }
+.annotation-collection .empty-editor { flex: 1 1 auto; overflow: auto; padding: 12px; }
+.bottom-content-annotation .annotation-collection { height: 100%; }
+.bottom-content-annotation .annotation-collection-toolbar { position: sticky; }
 .annotation-list-row { display: grid; grid-template-columns: 18px 20px 46px minmax(0, 1fr) 52px 52px 18px; align-items: center; gap: 4px; min-height: 27px; padding: 3px 6px; color: #304761; text-align: left; font-size: 10px; }
 .annotation-list-color { width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(0,0,0,.15); }
 .annotation-list-header { min-height: 25px; border-bottom: 1px solid #cbd6e2; background: #f0f4f8; color: #607188; font-size: 9px; font-weight: 700; }

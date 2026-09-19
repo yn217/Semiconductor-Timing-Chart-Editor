@@ -193,6 +193,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       geometryRegistry,
       markOpenPhase,
       getWaveWidthPxPerDisplayCycle: () => timelineGeometry.waveWidthPxPerDisplayCycle,
+      getWaveOriginPx: () => timelineGeometry.waveOriginPx,
       onReferenceGeometryReady: () => {
         if (active && !rulerInitialized) {
           timelineRuntimeRef.current?.refreshRuler();
@@ -205,6 +206,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         // presentation-thinned WaveDrom artifact.
         if (active && projection !== undefined && !referenceGeometryReprojected) {
           referenceGeometryReprojected = true;
+          // TransactionLanes may have memoized an empty shared-boundary
+          // projection before this document's Cycle geometry was published.
+          // Invalidate once at the first geometry-ready boundary; later
+          // virtualized owner remounts must not reproject bars during scroll.
+          setTransactionPresentationRevision((value) => value + 1);
           const reproject = () => { if (active && projection !== undefined) renderCoordinator.renderer.update(projection); };
           if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(reproject);
           else globalThis.setTimeout(reproject, 0);
@@ -373,7 +379,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         onRange: () => refreshRangeSelectionBand.current(),
         onResize: () => applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() }),
       });
-      timelineGeometry.updatePresentation(presentation.timeAxis, presentation.screenGeometryScale, presentation.waveWidthPxPerDisplayCycle);
+      timelineGeometry.updatePresentation(presentation.timeAxis, presentation.screenGeometryScale, presentation.waveWidthPxPerDisplayCycle, presentation.waveOriginPx);
       rulerInitialized = presentation.rulerInitialized;
       // Timeline presentation refreshes are view-only. The canonical command path
       // already submits the changed projection once; replaying that projection for

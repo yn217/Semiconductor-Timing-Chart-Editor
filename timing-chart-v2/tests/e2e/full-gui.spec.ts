@@ -238,12 +238,12 @@ test("applies Annotation Inspector drafts through one semantic command", async (
   const inspector = page.getByTestId("inspector");
   const surface = host.locator("[data-role='timing-chart-surface']");
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
-  await inspector.getByLabel("Inspector annotation label").fill("Inspector Note");
+  await inspector.getByLabel("Annotation label").fill("Inspector Note");
   await inspector.getByLabel("Inspector annotation color").fill("#114477");
-  await inspector.getByTestId("apply-inspector-annotation").click();
+  await inspector.getByTestId("apply-annotation-properties").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
-  await expect(inspector.getByLabel("Inspector annotation label")).toHaveValue("Inspector Note");
+  await expect(inspector.getByLabel("Annotation label")).toHaveValue("Inspector Note");
   await expect(owner.locator("[data-role='annotation-label']")).toHaveText("Inspector Note");
   const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(after.waveDromRenders).toBe(before.waveDromRenders);

@@ -32,6 +32,7 @@ export class TimelineGeometryOwner {
   #timeAxis: TimeAxisGeometry = { mode: "clockless" };
   #presentationScale = 1;
   #waveWidthPxPerDisplayCycle: number | undefined;
+  #waveOriginPx: number | undefined;
   #snapIndex: ImmutableSnapIndex | undefined;
   #cycleBoundaryCandidates: ReturnType<ImmutableSnapIndex["entries"]> = [];
   #viewportBoundaryCache: { readonly geometry: LocalGeometryMap; readonly mapping: DisplayTimeMapping; readonly entries: readonly { readonly cycle: number; readonly x: number }[] } | undefined;
@@ -58,8 +59,16 @@ export class TimelineGeometryOwner {
    * window happens to be currently mounted, or when relative to a ruler rebuild
    * that owner's own window last changed (#614). */
   get waveWidthPxPerDisplayCycle(): number | undefined { return this.#waveWidthPxPerDisplayCycle; }
+  /** Screen-space X of display-cycle 0, as of the ruler's last authoritative
+   * rebuild -- the same coordinate-system origin the ruler's own ticks use
+   * (`point.x * scale`, including whatever fixed left margin WaveDrom's own
+   * rendering bakes into its raw geometry). A windowed wave-owner's inline
+   * `left` must be computed in this same coordinate system, not a naive
+   * `display * waveWidthPxPerDisplayCycle` with an implicit zero intercept,
+   * or every owner ends up offset from the ruler by that fixed margin (#620). */
+  get waveOriginPx(): number | undefined { return this.#waveOriginPx; }
 
-  updatePresentation(timeAxis: TimeAxisGeometry, presentationScale: number, waveWidthPxPerDisplayCycle?: number): void {
+  updatePresentation(timeAxis: TimeAxisGeometry, presentationScale: number, waveWidthPxPerDisplayCycle?: number, waveOriginPx?: number): void {
     const geometryChanged = this.#presentationScale !== presentationScale
       || this.#timeAxis.mode !== timeAxis.mode
       || this.#timeAxis.ownerSignalId !== timeAxis.ownerSignalId
@@ -67,6 +76,7 @@ export class TimelineGeometryOwner {
     this.#timeAxis = timeAxis;
     this.#presentationScale = presentationScale;
     if (waveWidthPxPerDisplayCycle !== undefined) this.#waveWidthPxPerDisplayCycle = waveWidthPxPerDisplayCycle;
+    if (waveOriginPx !== undefined) this.#waveOriginPx = waveOriginPx;
     if (geometryChanged) this.invalidateSnapIndex();
   }
 
@@ -74,6 +84,7 @@ export class TimelineGeometryOwner {
     this.#timeAxis = { mode: "clockless" };
     this.#presentationScale = 1;
     this.#waveWidthPxPerDisplayCycle = undefined;
+    this.#waveOriginPx = undefined;
     this.invalidateSnapIndex();
     this.#requestedSourceCycle = undefined;
   }
@@ -99,7 +110,21 @@ export class TimelineGeometryOwner {
     // Keep the display-cycle lookup as the identity/no-fold fallback.
     const point = axis.geometry.find({ signalId: axis.ownerSignalId, cycle, point: "cycle-start" })?.point
       ?? axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
-    return point === undefined ? undefined : point.x * this.#presentationScale;
+    if (point !== undefined) return point.x * this.#presentationScale;
+
+    // A bounded WaveDrom render intentionally retains detailed boundary
+    // geometry only around its current window. Transaction bars can refer to
+    // canonical start/end cycles outside that mounted window, though. Use
+    // the same ruler-owned origin and pixels-per-display-cycle published by
+    // buildRuler to project those boundaries; never infer pitch from Cycle
+    // DOM nodes or build a Transaction-local time mapper. The display mapping
+    // above preserves collapsed TimeGroups and keeps all surfaces on the
+    // shared time axis.
+    const pixelsPerDisplayCycle = this.#waveWidthPxPerDisplayCycle;
+    const waveOriginPx = this.#waveOriginPx;
+    if (pixelsPerDisplayCycle === undefined || !Number.isFinite(pixelsPerDisplayCycle) || pixelsPerDisplayCycle <= 0
+      || waveOriginPx === undefined || !Number.isFinite(waveOriginPx)) return undefined;
+    return waveOriginPx + displayCycle * pixelsPerDisplayCycle;
   }
 
   /** Resolve a local time viewport to canonical source cycles using semantic geometry. */

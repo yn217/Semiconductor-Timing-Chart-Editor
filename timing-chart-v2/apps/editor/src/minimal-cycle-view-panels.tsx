@@ -34,7 +34,11 @@ export function ContextMenuPanel({ contextMenu, hasSelectedClipboard, clipboardA
 const VIEW_MODE_TITLE_LABEL: Record<"Cycle" | "Transaction" | "Split", string> = { Cycle: "Cycle View", Transaction: "Transaction View", Split: "Combined View" };
 
 export function MinimalCycleViewTitleBar({ title, dirty, viewMode }: { readonly title: string; readonly dirty: boolean; readonly viewMode: "Cycle" | "Transaction" | "Split" }) {
-  return <header className="app-titlebar"><span className="appmark">∿</span><h1>{title}</h1><span className="save-state">{dirty ? "Modified" : "Saved"}</span><span className="view-title" data-testid="titlebar-view-title">{VIEW_MODE_TITLE_LABEL[viewMode]}</span></header>;
+  // Historical showcase documents may include a view mode in their saved
+  // title. Mode is workspace presentation, so do not let that stale suffix
+  // contradict the live mode label or mutate the Canonical document title.
+  const displayTitle = title.replace(/\s+(?:--|—)\s+(?:Cycle|Transaction|Combined)\s+Mode$/i, "").trim() || title;
+  return <header className="app-titlebar"><span className="appmark">∿</span><h1>{displayTitle}</h1><span className="save-state">{dirty ? "Modified" : "Saved"}</span><span className="view-title" data-testid="titlebar-view-title">{VIEW_MODE_TITLE_LABEL[viewMode]}</span></header>;
 }
 
 export type RenameDialogProps = {
@@ -199,6 +203,7 @@ export type BottomEditorPanelProps<Tab extends string> = {
   readonly onTogglePinned: () => void;
   readonly summary?: ReactNode;
   readonly content: ReactNode;
+  readonly contentClassName?: string;
 };
 
 /** The Bottom Editor section: its tab strip (Signal/Annotation/Transaction/
@@ -206,7 +211,7 @@ export type BottomEditorPanelProps<Tab extends string> = {
  * the single active-tab content pane. Which editor renders for the active
  * tab is decided by the caller (it depends on the current selection across
  * several owners) and passed in as `content`. */
-export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelectTab, onTabKeyDown, followSelection, onFollowSelectionChange, pinned, onTogglePinned, summary, content }: BottomEditorPanelProps<Tab>) {
+export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelectTab, onTabKeyDown, followSelection, onFollowSelectionChange, pinned, onTogglePinned, summary, content, contentClassName }: BottomEditorPanelProps<Tab>) {
   return <section className="bottom-editor" data-testid="bottom-editor">
     <nav className="bottom-tabs" data-testid="bottom-tabs" role="tablist" aria-label="Bottom context panels">
       {tabs.map((tab) => {
@@ -225,7 +230,7 @@ export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelec
       <label><input data-testid="follow-selection" type="checkbox" checked={followSelection} onChange={(event) => onFollowSelectionChange(event.target.checked)} /> Follow Selection</label>
       <button type="button" data-testid="bottom-pin" aria-label={pinned ? "Unpin" : "Pin"} aria-pressed={pinned} onClick={onTogglePinned}><span className="bottom-pin-label" data-v1-label={pinned ? "Unpin" : "Pin"}>{pinned ? "Unpin" : "Pin"}</span></button>
     </nav>
-    <div className="bottom-content" id="bottom-context-content" role="tabpanel" aria-labelledby={`bottom-tab-${activeTab.toLowerCase()}`}>{content}</div>
+    <div className={`bottom-content${contentClassName ? ` ${contentClassName}` : ""}`} id="bottom-context-content" role="tabpanel" aria-labelledby={`bottom-tab-${activeTab.toLowerCase()}`}>{content}</div>
     {summary}
   </section>;
 }

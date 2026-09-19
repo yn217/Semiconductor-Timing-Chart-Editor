@@ -30,8 +30,7 @@ import type { EditorActions } from "./application/use-editor-actions.js";
 import type { ClipboardActions } from "./application/clipboard-actions.js";
 import type { TransactionTreeFilterMode } from "./workspace/use-workspace-ui-state.js";
 import { useEditorAiAssistantModel } from "./application/use-editor-ai-assistant-model.js";
-import { AnnotationEditor } from "./annotation-editor.js";
-import { AnnotationList } from "./annotation-list.js";
+import { AnnotationCollectionPanel } from "./annotation-collection-panel.js";
 import { AIOperationPanel } from "./ai-operation-panel.js";
 import { AdvancedJsonPanel } from "./advanced-json-panel.js";
 import { BookmarkEditor } from "./bookmark-editor.js";
@@ -50,6 +49,7 @@ import { InspectorPanel } from "./panels/inspector-panel.js";
 import { LegendView } from "./legend-view.js";
 import { ProblemsPanel } from "./problems-panel.js";
 import {
+  type ActiveContext,
   useWorkspaceUiState,
   type BottomTab,
   type TreeTypeFilter,
@@ -120,6 +120,7 @@ export interface EditorSecondarySurfacesInput {
   };
   readonly workspace: {
     readonly viewMode: ViewMode;
+    readonly activeContext: ActiveContext;
     readonly bottomTabs: readonly BottomTab[];
     readonly bottomTab: BottomTab;
     readonly setBottomTab: (tab: BottomTab) => void;
@@ -201,6 +202,22 @@ export function useEditorSecondarySurfaces(
   const undo = input.command.undo;
   const redo = input.command.redo;
   const { selected, bottom, workspace, dialog, refs } = input;
+  // Inspector is a projection of the visible workspace context, not a second
+  // selection owner. Preserve stable selections across mode switches, but do
+  // not keep editing a hidden-mode entity until the user returns to it.
+  const inspectorContext: ActiveContext = workspace.viewMode === "Split"
+    ? workspace.activeContext
+    : workspace.viewMode === "Transaction" && workspace.transactionTreeTab === "transactions"
+      ? "Transaction"
+      : "Signal";
+  const inspectorSignal = inspectorContext === "Signal" ? selected.signal : undefined;
+  const inspectorSignalIds = inspectorContext === "Signal" ? selected.signalIds : new Set<SignalId>();
+  const inspectorGroup = inspectorContext === "Signal" ? selected.group : undefined;
+  const inspectorAnnotation = inspectorContext === "Signal" ? selected.annotation : undefined;
+  const inspectorTransaction = inspectorContext === "Transaction" ? selected.transaction : undefined;
+  const inspectorSelectionKey = inspectorSignalIds.size > 1
+    ? `multi:${inspectorSignalIds.size}`
+    : inspectorSignal?.id ?? inspectorGroup?.id ?? inspectorAnnotation?.id ?? inspectorTransaction?.id ?? selected.bookmark?.id ?? "none";
   const { aiBridgeStatus, ...aiAssistantPanel } = useEditorAiAssistantModel({
     document: input.document,
     documentEpoch: input.documentEpoch,
@@ -286,47 +303,17 @@ export function useEditorSecondarySurfaces(
       signalCommands={surfaceCommands}
     />
   );
-  const annotationEditor = bottom.annotation ? (
-    <AnnotationEditor
-      key={`${input.documentEpoch}:${bottom.annotation.id}:${dialog.bottomResetToken}`}
-      annotation={bottom.annotation}
-      annotations={input.document.annotations}
-      document={input.document}
-      history={input.history}
-      problem={input.problem}
-      onSelect={input.actions.selectAnnotation}
-      onCreate={input.actions.createSelectedAnnotationForType}
-      onDuplicate={input.actions.duplicateAnnotation}
-      commands={surfaceCommands}
-      onReplaceDocument={input.actions.replaceDocument}
-      onUndo={undo}
-      onRedo={redo}
-      onDelete={input.actions.deleteBottomAnnotation}
-      onCancel={() => dialog.setBottomResetToken((value) => value + 1)}
-      onPreview={(draft) =>
-        refreshAnnotationPreview(
-          refs.host.current!,
-          bottom.annotation!.id,
-          draft,
-          {
-            label: bottom.annotation!.label,
-            color: bottom.annotation!.color,
-            opacity: bottom.annotation!.opacity,
-          },
-        )
-      }
-    />
-  ) : (
-    <>
-      <AnnotationList
-        annotations={input.document.annotations}
-        selectedId={undefined}
-        onSelect={input.actions.selectAnnotation}
-        commands={surfaceCommands}
-      />
-      <div className="empty-editor">Select or create an Annotation.</div>
-    </>
-  );
+  const annotationEditor = <AnnotationCollectionPanel
+    annotations={input.document.annotations}
+    selectedId={bottom.annotation?.id}
+    document={input.document}
+    onSelect={input.actions.selectAnnotation}
+    onCreate={input.actions.createSelectedAnnotationForType}
+    onDuplicate={input.actions.duplicateAnnotation}
+    onDelete={input.actions.deleteBottomAnnotation}
+    commands={surfaceCommands}
+    onReplaceDocument={input.actions.replaceDocument}
+  />;
   const transactionEditor = (
     <TransactionEditor
       key={`${input.documentEpoch}:${bottom.transaction?.id ?? "none"}:${dialog.bottomResetToken}`}
@@ -553,6 +540,7 @@ export function useEditorSecondarySurfaces(
       onFollowSelectionChange={workspace.setFollowSelection}
       pinned={workspace.bottomPinned}
       onTogglePinned={workspace.toggleBottomPin}
+      {...(workspace.bottomTab === "Annotation" ? { contentClassName: "bottom-content-annotation" } : {})}
       content={
         workspace.bottomTab === "Signal" ? (
           signalEditor
@@ -599,23 +587,28 @@ export function useEditorSecondarySurfaces(
       }
     />
   );
+  const previewAnnotationDraft = useCallback((annotationId: AnnotationId, draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => {
+    const annotation = input.document.annotations.find((item) => item.id === annotationId);
+    if (!annotation) return;
+    refreshAnnotationPreview(refs.host.current!, annotationId, draft, { label: annotation.label, color: annotation.color, opacity: annotation.opacity });
+  }, [input.document.annotations, refs.host]);
   const workspaceInspector = (
     <InspectorPanel
-      key={`${input.documentEpoch}:${selected.signalIds.size > 1 ? `multi:${selected.signalIds.size}` : (selected.signal?.id ?? selected.group?.id ?? selected.annotation?.id ?? selected.transaction?.id ?? selected.bookmark?.id ?? "none")}:${dialog.inspectorResetToken}`}
-      signal={selected.signal}
-      selectedSignalIds={selected.signalIds}
-      group={selected.group}
-      annotation={selected.annotation}
-      transaction={selected.transaction}
+      key={`${input.documentEpoch}:${inspectorSelectionKey}:${dialog.inspectorResetToken}`}
+      signal={inspectorSignal}
+      selectedSignalIds={inspectorSignalIds}
+      group={inspectorGroup}
+      annotation={inspectorAnnotation}
+      transaction={inspectorTransaction}
       bookmark={selected.bookmark}
       collapsedGroup={
-        selected.group !== undefined &&
-        input.timeline.collapsedGroupIds.has(selected.group.id)
+        inspectorGroup !== undefined &&
+        input.timeline.collapsedGroupIds.has(inspectorGroup.id)
       }
       onToggleGroupCollapse={
-        selected.group === undefined
+        inspectorGroup === undefined
           ? undefined
-          : () => input.timeline.toggleCollapsedGroup(selected.group!.id)
+          : () => input.timeline.toggleCollapsedGroup(inspectorGroup.id)
       }
       registry={input.command.registry.current}
       document={input.document}
@@ -623,11 +616,11 @@ export function useEditorSecondarySurfaces(
       commands={surfaceCommands}
       onReveal={input.actions.revealSelectedInHierarchy}
       onCancel={() => {
-        if (selected.group)
+        if (inspectorGroup)
           refreshGroupStylePreview(
             refs.host.current!,
-            selected.group.id,
-            selected.group.style,
+            inspectorGroup.id,
+            inspectorGroup.style,
           );
         dialog.setInspectorResetToken((value) => value + 1);
       }}
@@ -643,9 +636,8 @@ export function useEditorSecondarySurfaces(
               ?.style,
         )
       }
-      minimapMode={
-        workspace.viewMode === "Transaction" ? "transaction" : "signal"
-      }
+      onAnnotationPreview={previewAnnotationDraft}
+      minimapMode={inspectorContext === "Transaction" ? "transaction" : "signal"}
     />
   );
   return {

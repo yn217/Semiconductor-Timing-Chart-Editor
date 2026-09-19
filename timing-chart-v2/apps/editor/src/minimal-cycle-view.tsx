@@ -218,9 +218,15 @@ export function MinimalCycleView() {
     decorateSelection: applySelectionDecorations,
     synchronizeContext: (kind) => {
       if (!followSelectionRef.current || bottomPinnedRef.current) return;
-      if (kind === "annotation") setBottomTab("Annotation");
-      else if (kind === "transaction") setBottomTab("Transaction");
-      else if (kind === "signal" || kind === "spacer") setBottomTab("Signal");
+      const preferredTab = kind === "annotation" ? "Annotation"
+        : kind === "transaction" ? "Transaction"
+          : kind === "signal" || kind === "spacer" ? "Signal" : undefined;
+      // Entity creation/selection can originate in a ribbon that is visible
+      // from another View Mode. Keep Follow Selection, but never put the
+      // Bottom panel into a tab that the current mode does not expose; that
+      // would make aria-labelledby point at a nonexistent tab while rendering
+      // the corresponding hidden-mode editor.
+      if (preferredTab !== undefined && bottomTabs.includes(preferredTab)) setBottomTab(preferredTab);
     },
   });
   const viewMetricsOwnerRef = useRef<ViewMetricsOwner | null>(null);
@@ -425,6 +431,28 @@ export function MinimalCycleView() {
     signalSplitRatio,
     viewMode,
   });
+  // #613: `getSourceWindow` (timeline-surface-controller.ts) reads the live
+  // `data-view-mode` DOM attribute and returns a different bounded window for
+  // Cycle vs. Transaction/Combined (Cycle excludes the shared
+  // transactionExtent padding). Switching View Mode is pure React state --
+  // `setViewMode` never touches the renderer -- so that window mismatch sits
+  // stale until whatever `renderer.update()` call happens to come next, which
+  // then gets blamed for a WaveDrom re-render it didn't actually cause.
+  // Force the same canonical/history/dirty-neutral reproject Signal Split
+  // already uses for its own pure view-state toggle (forceUpperReprojectRef,
+  // see timeline-surface-controller.ts) so the window reconciles at the
+  // moment View Mode actually changes instead of leaking into later updates.
+  const viewModeMounted = useRef(false);
+  useEffect(() => {
+    if (!viewModeMounted.current) { viewModeMounted.current = true; return; }
+    forceUpperReprojectRef.current();
+    // #614 taught us the ruler and each wave-owner's window/width must be
+    // reconciled together through the ruler's one authoritative rebuild --
+    // reprojecting the wave owners alone (above) without also rebuilding the
+    // ruler leaves the ruler's cached tick positions stale against the new
+    // window, misaligning the grid/ruler from the waveform edges.
+    timelineRuntimeRef.current?.refreshRuler();
+  }, [viewMode]);
   useEffect(() => {
     refreshPlayhead.current();
   }, [selectedCycle, playheadPresentationRevision, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
@@ -633,7 +661,7 @@ export function MinimalCycleView() {
     selected: { signal: selectedSignal, signalIds: selectedSignalIds, group: selectedGroup, annotation: selectedAnnotation, transaction: selectedTransaction, transactionIds: selectedTransactionIds, bookmark: selectedBookmark, transactionId: selectedTransactionId },
     bottom: { signal: bottomSignal, group: bottomGroup, annotation: bottomAnnotation, transaction: bottomTransaction },
     timeline: { range: timelineRange, collapsedGroupIds, setCollapsedGroups, toggleCollapsedGroup },
-    workspace: { viewMode, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionWithFreeze, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, transactionTreeTab, setTransactionTreeTab, setRibbonTab },
+    workspace: { viewMode, activeContext, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionWithFreeze, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, transactionTreeTab, setTransactionTreeTab, setRibbonTab },
     dialog: { treeAddMenuOpen, setTreeAddMenuOpen, treeMoreMenuOpen, setTreeMoreMenuOpen, bulkRegistrationText, setBulkRegistrationText, bulkRegistrationGroupId, setBulkRegistrationGroupId, bulkRegistrationStatus, setBulkRegistrationStatus, setBulkRegistrationVisible, setHierarchyVisible, contextMenu, setContextMenu, closeTreeAddMenu, closeTreeMoreMenu, bottomResetToken, setBottomResetToken, inspectorResetToken, setInspectorResetToken, setInspectorVisible },
     annotationTargetSignalId,
     referenceClockName: referenceClockSignal?.display.name,

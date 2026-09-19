@@ -108,7 +108,7 @@ const runtimeOwnershipContracts = [
   ["application runtime owns display mapping", applicationRuntimeSource, /displayMapping\s*=\s*new DisplayMappingCoordinator/],
   ["application runtime owns geometry and projection", applicationRuntimeSource, /geometry\s*=\s*new GeometryRegistry[\s\S]*projection\s*=\s*new ProjectionCoordinator/],
   ["application runtime creates renderer and WaveDrom adapter", applicationRuntimeSource, /createRenderer\([\s\S]*createWaveDromAdapter\(/],
-  ["timeline surface is a typed runtime owner", timelineRuntimeHookSource, /createTimelineSurfaceController\(input\)/],
+  ["timeline surface is a typed runtime owner", timelineRuntimeHookSource, /createTimelineSurfaceController\(\w+\)/],
   ["timeline surface owns WaveDrom provider", timelineSurfaceSource, /createWaveformSurfaceProvider\(/],
   ["timeline surface owns one geometry owner", timelineSurfaceSource, /new TimelineGeometryOwner\(/],
   ["timeline surface owns renderer lifecycle", timelineSurfaceSource, /runtime\.createRenderer\([\s\S]*renderCoordinator\.dispose\(/],

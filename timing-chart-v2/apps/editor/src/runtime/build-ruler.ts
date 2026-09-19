@@ -5,13 +5,13 @@ import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { presentationCycles } from "../presentation-cycles.js";
 import { displayWindowForSource } from "./display-boundary.js";
 
-export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0, viewportElement?: HTMLElement, referenceViewBoxWidth?: number): Readonly<{ scale: number; targetWidth: number }> {
+export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0, viewportElement?: HTMLElement, referenceViewBoxWidth?: number): Readonly<{ scale: number; targetWidth: number; waveOriginPx: number }> {
   element.dataset.axisMode = axisMode;
   if (!geometry || !axisOwnerSignalId) {
     element.dataset.geometryError = "Time-axis geometry unavailable";
     element.parentElement?.setAttribute("data-geometry-error", "Time-axis geometry unavailable");
     element.replaceChildren();
-    return { scale: 1, targetWidth: 0 };
+    return { scale: 1, targetWidth: 0, waveOriginPx: 0 };
   }
   delete element.dataset.geometryError;
   element.parentElement?.removeAttribute("data-geometry-error");
@@ -105,23 +105,67 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   const cycleZeroPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: 0, point: "cycle-start" })?.point;
   const cycleOnePoint = mapping.displayCycleCount > 0 ? geometry.find({ signalId: axisOwnerSignalId, cycle: 1, point: "cycle-start" })?.point : undefined;
   const pixelsPerCycle = cycleZeroPoint && cycleOnePoint ? (cycleOnePoint.x - cycleZeroPoint.x) * scale : Infinity;
-  const semanticDisplayCycleCount = geometry.cycleBoundaryEntries?.().at(-1)?.cycle ?? mapping.displayCycleCount;
+  // `geometry.cycleBoundaryEntries()` only covers whatever cycle range the
+  // axis-owner signal's bounded/windowed geometry (#587) currently has
+  // mounted -- once scrolled away from the document start (or before a
+  // wider window has been requested), its last entry silently truncates far
+  // short of the true document length, generating ticks (and therefore
+  // ruler/grid alignment) for only a fraction of the actual document width
+  // computed below. `mapping.displayCycleCount` is the same window-independent,
+  // always-global count already used for `windowIndependentWidth` -- use it
+  // here too so tick generation always covers the ruler's full rendered width.
+  const semanticDisplayCycleCount = mapping.displayCycleCount;
   const rulerTickBudget = document.timeline.cycleCount > 4096 ? 512 : Infinity;
-  // #614: once bounded/windowed rendering (#587) is active, `geometry` only
-  // has entries for whatever cycle range happens to be currently mounted --
-  // after scrolling away from cycle 0/1, `cycleZeroPoint`/`cycleOnePoint`
-  // above silently go missing. Track the first two ticks this loop actually
-  // finds (guaranteed to be inside the current window, wherever it is) as a
-  // second, always-available source for the per-cycle pitch, used below to
-  // derive the *document's* true total width independent of which window is
-  // currently mounted.
+  // #614/#620: `geometry.find()` below only resolves points inside whatever
+  // cycle range the axis-owner signal's bounded/windowed geometry (#587)
+  // currently has mounted -- and that window is never widened by a pure
+  // horizontal scroll (only the *wave-owner* windows re-request on scroll,
+  // see viewport-projection.ts; the ruler is rebuilt only for `reason ===
+  // "ruler"/"resize"`, never `"scroll"`). Once scrolled away from the
+  // mounted window, every tick outside it would silently be dropped instead
+  // of drawn, desyncing the ruler from the waveform edges it must line up
+  // with. Derive the per-cycle pitch from whatever two boundary entries the
+  // *currently mounted* geometry actually has (wherever that window is), and
+  // use it to extrapolate every other tick's position analytically instead
+  // of requiring `geometry.find()` to succeed for each one -- this is the
+  // same window-independent approach `windowIndependentWidth` below already
+  // relies on for the ruler's total width.
+  const boundaryEntries = geometry.cycleBoundaryEntries?.() ?? [];
+  // Anchor on the lowest- and highest-display boundary entries actually
+  // present (not iteration order, which isn't guaranteed sorted) so the
+  // derived pitch uses the full span of whatever window is mounted --
+  // more numerically stable than an arbitrary adjacent pair, and immune to
+  // out-of-order entries.
   let firstFoundPoint: { readonly x: number } | undefined;
   let firstFoundDisplay: number | undefined;
   let secondFoundPoint: { readonly x: number } | undefined;
   let secondFoundDisplay: number | undefined;
+  for (const entry of boundaryEntries) {
+    const display = mapping.sourceToDisplay[entry.cycle] ?? (entry.cycle === document.timeline.cycleCount ? mapping.displayCycleCount : undefined);
+    if (display === undefined) continue;
+    if (firstFoundDisplay === undefined || display < firstFoundDisplay) { firstFoundPoint = entry.position; firstFoundDisplay = display; }
+    if (secondFoundDisplay === undefined || display > secondFoundDisplay) { secondFoundPoint = entry.position; secondFoundDisplay = display; }
+  }
+  const windowLocalPixelsPerCycle = firstFoundPoint && secondFoundPoint && firstFoundDisplay !== undefined && secondFoundDisplay !== undefined && secondFoundDisplay !== firstFoundDisplay
+    ? (secondFoundPoint.x - firstFoundPoint.x) / (secondFoundDisplay - firstFoundDisplay)
+    : undefined;
+  // Screen-space X of display-cycle 0 (the ruler/tick coordinate system's
+  // origin, including whatever fixed left margin WaveDrom's own rendering
+  // bakes into its raw geometry -- ticks below use this same `point.x *
+  // scale` convention). A windowed wave-owner's horizontal position must be
+  // computed in this same coordinate system (see the owner-reapply loop and
+  // waveform-surface-provider.ts), not a naive `display * pxPerDisplayCycle`
+  // with an implicit zero intercept, or every owner ends up offset from the
+  // ruler by this same fixed margin.
+  const waveOriginPx = firstFoundPoint && firstFoundDisplay !== undefined && windowLocalPixelsPerCycle !== undefined
+    ? (firstFoundPoint.x - firstFoundDisplay * windowLocalPixelsPerCycle) * scale
+    : 0;
   for (const display of presentationCycles(semanticDisplayCycleCount, pixelsPerCycle, rulerTickBudget)) {
     const sourceCycle = display === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[display] ?? display);
-    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: sourceCycle, point: "cycle-start" })?.point;
+    const resolvedPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: sourceCycle, point: "cycle-start" })?.point;
+    const point = resolvedPoint ?? (firstFoundPoint && firstFoundDisplay !== undefined && windowLocalPixelsPerCycle !== undefined
+      ? { x: firstFoundPoint.x + (display - firstFoundDisplay) * windowLocalPixelsPerCycle }
+      : undefined);
     if (!point) continue;
     const tick = element.ownerDocument.createElement("span");
     tick.dataset.cycle = String(mapping.labelFor(display));
@@ -133,12 +177,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     tick.textContent = String(mapping.labelFor(display));
     ticks.push(tick);
     finalX = point.x;
-    if (firstFoundPoint === undefined) { firstFoundPoint = point; firstFoundDisplay = display; }
-    else if (secondFoundPoint === undefined) { secondFoundPoint = point; secondFoundDisplay = display; }
   }
-  const windowLocalPixelsPerCycle = firstFoundPoint && secondFoundPoint && firstFoundDisplay !== undefined && secondFoundDisplay !== undefined && secondFoundDisplay !== firstFoundDisplay
-    ? (secondFoundPoint.x - firstFoundPoint.x) / (secondFoundDisplay - firstFoundDisplay)
-    : undefined;
   const overlays: HTMLElement[] = [];
   for (const bookmark of document.bookmarks) {
     const displayCycle = mapping.sourceToDisplay[bookmark.start];
@@ -257,9 +296,20 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
       const displayWindow = Number.isInteger(sourceStart) && Number.isInteger(sourceEnd) && sourceEnd > sourceStart
         ? displayWindowForSource(mapping, { sourceStart, sourceEnd }, document.timeline.cycleCount)
         : undefined;
-      if (displayWindow) owner.style.width = `${(displayWindow.displayEnd - displayWindow.displayStart) * pxPerDisplayCycle}px`;
-      else owner.style.removeProperty("width");
+      if (displayWindow) {
+        owner.style.width = `${(displayWindow.displayEnd - displayWindow.displayStart) * pxPerDisplayCycle}px`;
+        // See the matching comment in waveform-surface-provider.ts: a
+        // windowed owner's horizontal position must reflect where its own
+        // window starts within the whole document -- `place()` only ever
+        // sets vertical position, so this is the only place it gets set.
+        // `waveOriginPx` carries the ruler's own coordinate-system origin so
+        // this lines up with tick positions exactly, not just proportionally.
+        owner.style.left = `${displayWindow.displayStart * pxPerDisplayCycle + waveOriginPx}px`;
+      } else {
+        owner.style.removeProperty("width");
+        owner.style.removeProperty("left");
+      }
     }
   }
-  return { scale, targetWidth };
+  return { scale, targetWidth, waveOriginPx };
 }
