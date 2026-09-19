@@ -589,6 +589,8 @@
 .transaction-left-tree-more { display: inline-flex; align-items: center; justify-content: center; width: 22px; min-width: 22px; height: 24px; margin: 0; padding: 0; border: 0; background: transparent; color: #52677f; cursor: pointer; }
 .transaction-left-tree-group-menu { position: fixed; z-index: 1200; display: grid; width: 216px; min-width: min(216px, calc(100vw - 16px)); max-width: calc(100vw - 16px); padding: 4px; border: 1px solid #b8c7d8; border-radius: 3px; background: #fff; box-shadow: 0 4px 12px rgb(30 55 80 / 18%); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
 .transaction-left-tree-group-menu button { box-sizing: border-box; width: 100%; min-width: 0; min-height: 27px; padding: 5px 8px; border: 0; background: transparent; color: #29425e; text-align: left; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.transaction-left-tree-submenu { display: grid; margin: 0 0 2px 10px; border-left: 2px solid #c9d8e8; }
+.transaction-left-tree-submenu button { padding-left: 12px; }
 .transaction-left-tree-group-menu button:hover { background: #e7f1fb; }
 /* #397 Transaction Mode GUI Closure Section 6: single full-width column
    (was a wrapping `repeat(auto-fill,minmax(340px,1fr))` card grid) -- the

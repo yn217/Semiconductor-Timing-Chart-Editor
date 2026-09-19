@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import type {
@@ -15,7 +15,7 @@ type TransactionTreeMenu = Readonly<
   | { kind: "group"; id: string }
   | { kind: "transaction"; id: TransactionId }
 >;
-type TransactionTreeMenuItem = Readonly<{ label: string; run: () => void; disabled?: boolean }>;
+type TransactionTreeMenuItem = Readonly<{ label: string; run: () => void; disabled?: boolean; submenu?: readonly TransactionTreeMenuItem[] }>;
 
 export function TransactionTree({
   document,
@@ -80,6 +80,7 @@ export function TransactionTree({
   const [dragOverGroup, setDragOverGroup] = useState<string>();
   const [editingGroupId, setEditingGroupId] = useState<string>();
   const [openMenu, setOpenMenu] = useState<TransactionTreeMenu>();
+  const [submenuOpen, setSubmenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ readonly left: number; readonly top: number; readonly maxHeight: number }>();
   const menuRef = useRef<HTMLDivElement>(null);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
@@ -348,6 +349,7 @@ export function TransactionTree({
     const trigger = menuTriggerRef.current;
     setOpenMenu(undefined);
     setMenuPosition(undefined);
+    setSubmenuOpen(false);
     if (restoreFocus) requestAnimationFrame(() => { if (trigger?.isConnected) trigger.focus(); });
   };
   const toggleMenu = (nextMenu: TransactionTreeMenu, trigger: HTMLButtonElement) => {
@@ -356,6 +358,7 @@ export function TransactionTree({
       return;
     }
     menuTriggerRef.current = trigger;
+    setSubmenuOpen(false);
     setMenuPosition(undefined);
     setOpenMenu(nextMenu);
   };
@@ -379,8 +382,14 @@ export function TransactionTree({
     : selectedMenuTransaction
       ? [
           { label: "Focus in Timeline", run: () => onFocusTransaction?.(selectedMenuTransaction.id) },
-          ...(onMoveToGroup ? groups.map((group) => ({ label: `Move to ${group.name}`, disabled: selectedMenuTransaction.groupId === group.id, run: () => onMoveToGroup(selectedMenuTransaction.id, group.id) })) : []),
-          ...(onMoveToGroup && selectedMenuTransaction.groupId !== undefined ? [{ label: "Ungroup", run: () => onMoveToGroup(selectedMenuTransaction.id, undefined) }] : []),
+          ...(onMoveToGroup ? [{
+            label: "Move to Group",
+            run: () => undefined,
+            submenu: [
+              ...groups.map((group) => ({ label: group.name, disabled: selectedMenuTransaction.groupId === group.id, run: () => onMoveToGroup(selectedMenuTransaction.id, group.id) })),
+              { label: "Ungrouped", disabled: selectedMenuTransaction.groupId === undefined, run: () => onMoveToGroup(selectedMenuTransaction.id, undefined) },
+            ],
+          }] : []),
           ...(onDuplicateTransaction ? [{ label: "Duplicate", run: () => { onSelect(selectedMenuTransaction.id); onDuplicateTransaction(selectedMenuTransaction.id); } }] : []),
           ...(onDelete ? [{ label: "Delete", run: () => { onSelect(selectedMenuTransaction.id); onDelete(); } }] : []),
         ]
@@ -658,7 +667,12 @@ export function TransactionTree({
         onKeyDown={onMenuKeyDown}
         style={{ left: `${menuPosition?.left ?? 0}px`, top: `${menuPosition?.top ?? 0}px`, maxHeight: `${menuPosition?.maxHeight ?? 200}px`, visibility: menuPosition ? "visible" : "hidden" }}
       >
-        {menuItems.map((item) => <button key={item.label} type="button" role="menuitem" disabled={item.disabled} onClick={() => invokeMenuItem(item)}>{item.label}</button>)}
+        {menuItems.map((item) => item.submenu ? <Fragment key={item.label}>
+          <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded={submenuOpen} onClick={() => setSubmenuOpen((open) => !open)} onKeyDown={(event) => { if (event.key === "ArrowRight") { event.preventDefault(); setSubmenuOpen(true); } else if (event.key === "ArrowLeft") { event.preventDefault(); setSubmenuOpen(false); } }}>{item.label} {submenuOpen ? "▾" : "▸"}</button>
+          {submenuOpen && <div role="group" aria-label={item.label} className="transaction-left-tree-submenu">
+            {item.submenu.map((sub) => <button key={sub.label} type="button" role="menuitem" disabled={sub.disabled} onClick={() => invokeMenuItem(sub)}>{sub.label}</button>)}
+          </div>}
+        </Fragment> : <button key={item.label} type="button" role="menuitem" disabled={item.disabled} onClick={() => invokeMenuItem(item)}>{item.label}</button>)}
       </div>,
       globalThis.document.body,
     )}
