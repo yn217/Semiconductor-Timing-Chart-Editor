@@ -70,10 +70,16 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   // list-owned multi-select. `search` is a pure client-side filter over the
   // existing list render; it never touches Canonical.
   const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<"document" | "start" | "end" | "name">("document");
+  const [sortDescending, setSortDescending] = useState(false);
   const [expandedPhaseTransactionIds, setExpandedPhaseTransactionIds] = useState<ReadonlySet<TransactionId>>(new Set());
   const groupNameById = new Map(document.transactionGroups?.map((group) => [group.id, group.name]) ?? []);
   const needle = search.trim().toLocaleLowerCase();
-  const visibleTransactions = needle.length === 0 ? document.transactions : document.transactions.filter((item) => item.name.toLocaleLowerCase().includes(needle) || (item.groupId !== undefined && (groupNameById.get(item.groupId) ?? "").toLocaleLowerCase().includes(needle)));
+  const filteredTransactions = needle.length === 0 ? document.transactions : document.transactions.filter((item) => item.name.toLocaleLowerCase().includes(needle) || (item.groupId !== undefined && (groupNameById.get(item.groupId) ?? "").toLocaleLowerCase().includes(needle)));
+  const visibleTransactions = sortKey === "document" ? filteredTransactions : [...filteredTransactions].sort((left, right) => {
+    const order = sortKey === "start" ? left.start - right.start || left.end - right.end : sortKey === "end" ? left.end - right.end || left.start - right.start : left.name.localeCompare(right.name);
+    return sortDescending ? -order : order;
+  });
   type TransactionListEntry = Readonly<{ kind: "transaction"; item: Transaction } | { kind: "phase"; transaction: Transaction; phase: TransactionPhase; index: number }>;
   const listEntries: readonly TransactionListEntry[] = visibleTransactions.flatMap((item) => [
     { kind: "transaction" as const, item },
@@ -196,6 +202,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
           the exact same one-Transaction-delete action, and two buttons for
           one action is the "action競合/hard-coded重複" this session has
           been removing elsewhere (#416), not adding. */}
+      <label className="field-inline transaction-sort-control"><span>Sort</span><select aria-label="Sort transactions" data-testid="transaction-sort-key" value={sortKey} onChange={(event) => setSortKey(event.target.value as typeof sortKey)}><option value="document">Document order</option><option value="start">Start</option><option value="end">End</option><option value="name">Name</option></select><button type="button" data-testid="transaction-sort-direction" aria-label={sortDescending ? "Sort descending" : "Sort ascending"} aria-pressed={sortDescending} disabled={sortKey === "document"} onClick={() => setSortDescending((value) => !value)}>{sortDescending ? "↓" : "↑"}</button></label>
       <input aria-label="Search transactions" data-testid="transaction-list-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search transactions…" />
     </div>}
     <div ref={transactionListViewportRef} className="transaction-list" onScroll={shouldVirtualizeTransactions ? (event) => setTransactionListScrollTop(event.currentTarget.scrollTop) : undefined} style={shouldVirtualizeTransactions ? { maxHeight: transactionViewportHeight, overflowY: "auto" } : undefined}>{visibleTransactions.length > 0 && <>
