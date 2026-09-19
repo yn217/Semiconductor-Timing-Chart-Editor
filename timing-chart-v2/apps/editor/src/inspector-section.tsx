@@ -13,7 +13,7 @@ export function InspectorSection({ sectionId, title, open, onToggle, count, onAd
   const contentId = `inspector-section-${sectionId}`;
   return <section className={`inspector-section${open ? " is-open" : " is-collapsed"}`} data-section-id={sectionId}>
     <h3 className="inspector-section-heading">
-      <button type="button" className="inspector-section-toggle" aria-expanded={open} aria-controls={contentId} onClick={onToggle}><EditorIcon name={open ? "down" : "right"} />{title}</button>
+      <button type="button" className="inspector-section-toggle" aria-expanded={open} aria-controls={contentId} onClick={onToggle}><EditorIcon name={open ? "chevron-down" : "chevron-right"} className="inspector-section-chevron" />{title}</button>
       {count !== undefined && <span className="inspector-section-count" data-testid={`inspector-section-count-${sectionId}`}>{count}</span>}
       {count !== undefined && !open && onAdd && <button type="button" className="inspector-section-add" aria-label={`Add to ${title}`} disabled={addDisabled} title={addDisabled ? "No unused cycles remain. Extend the Transaction or shorten a Phase to add another." : undefined} onClick={(event) => { event.stopPropagation(); if (!open) onToggle(); onAdd(); }}><EditorIcon name="plus" /></button>}
     </h3>

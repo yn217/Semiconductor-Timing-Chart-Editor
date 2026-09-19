@@ -265,3 +265,5 @@
 .property-toggle-switch[data-checked="true"] .property-toggle-thumb { transform: translateX(13px); }
 .property-toggle-switch input:focus-visible ~ .property-toggle-track { outline: var(--ds-focus-width) solid var(--ds-focus-color); outline-offset: 1px; }
 .inspector-style-checks .property-toggle { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+
+.editor-shell .inspector-section-toggle .inspector-section-chevron { display: block; flex: 0 0 15px; width: 15px; height: 15px; color: #405c78; }
