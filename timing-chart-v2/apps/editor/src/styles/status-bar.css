@@ -21,3 +21,6 @@
 .status-bar { display: flex; align-items: center; gap: 28px; padding: 0 22px; border-top: 1px solid #cbd3dd; background: #f8fafc; color: #566278; font-size: 11px; }
 
 .status-bar span:last-child { margin-left: auto; }
+
+.editor-shell .status-bar .status-diagnostics-toggle { height: 18px; padding: 0 6px; border: 1px solid #c3ceda; border-radius: 3px; background: transparent; color: #52647a; font-size: 10px; cursor: pointer; }
+.editor-shell .status-bar .status-diagnostics-toggle[aria-pressed="true"] { background: #e7f1fb; border-color: #8fb4d9; }
