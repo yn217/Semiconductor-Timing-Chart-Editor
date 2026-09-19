@@ -597,3 +597,4 @@
 .transaction-bottom-phase-segment { position: absolute; top: 0; bottom: 0; box-sizing: border-box; padding: 0 4px; overflow: hidden; border-inline: 1px solid #5b86b3; background: #cfe2f6; color: #23405f; font-size: 10px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
 .transaction-bottom-phase-coverage { margin: 0 0 6px; color: #2f6d4f; font-size: 11px; }
 .transaction-bottom-phase-coverage.is-warning { color: #a25a00; }
+.transaction-list-row-editor input[data-draft-dirty="true"] { background: #fff7e0; border-color: #d9a441; }
