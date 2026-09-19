@@ -1,0 +1,10 @@
+{
+  "id": "transaction-bottom-apply-undo",
+  "relatedIssue": 703,
+  "preconditions": ["Fresh production app", "Sample document is loaded"],
+  "actions": ["Enter Transaction mode", "Select Read_0", "Edit Name", "Apply", "Undo"],
+  "expected": ["One semantic operation is recorded", "Undo restores the original name"],
+  "invariants": { "canonicalDelta": 1, "historyDelta": 1, "dirty": true },
+  "freshStart": true,
+  "productionPath": true
+}

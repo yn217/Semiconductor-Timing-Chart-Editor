@@ -33,6 +33,7 @@
     "harness:verify": "node scripts/run-harness-verify.mjs",
     "ai-bridge": "node scripts/ai-bridge-server.mjs",
     "reconcile:agent-status": "node scripts/reconcile-agent-status.mjs",
+    "check:fix-evidence": "node scripts/check-fix-evidence.mjs",
     "build": "npm run typecheck && npm --workspace @timing-chart-v2/editor run build",
     "check": "npm run check:boundaries && npm run check:runtime-owner-types && npm run check:interactive-controls && npm run check:legacy-css-budget && npm run check:editor-complexity && npm run check:composition-root && npm run check:performance-architecture && npm run check:production-presentation && npm run check:left-tree-icons && npm run check:parity && npm run test && npm run build",
     "test:perf:pr": "playwright test tests/e2e/performance-closure.spec.ts --grep-invert nightly/manual",
