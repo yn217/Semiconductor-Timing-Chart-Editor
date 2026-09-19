@@ -21,8 +21,10 @@ test("Bottom Transaction table uses click/Ctrl/Shift selection without checkboxe
   await rows.nth(1).press("Control+a");
   const total = await rows.count();
   for (let index = 0; index < total; index += 1) await expect(rows.nth(index)).toHaveAttribute("data-selected", "true");
-  await rows.nth(0).click();
-  await rows.nth(3).click({ modifiers: ["Shift"] });
+  await rows.nth(4).click();
+  await rows.nth(1).click({ modifiers: ["Shift"] });
+  for (const index of [1, 2, 3, 4]) await expect(rows.nth(index)).toHaveAttribute("data-selected", "true");
+  await expect(rows.nth(5)).toHaveAttribute("data-selected", "false");
   await expect(bottom.getByTestId("bottom-transaction-duplicate")).toBeEnabled();
   const countBefore = await page.locator(".transaction-left-tree-row").count();
   await bottom.getByTestId("bottom-transaction-duplicate").click();

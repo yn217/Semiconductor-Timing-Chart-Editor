@@ -314,7 +314,7 @@ export function useEditorSecondarySurfaces(
   />;
   const transactionEditor = (
     <TransactionEditor
-      key={`${input.documentEpoch}:${bottom.transaction?.id ?? "none"}:${dialog.bottomResetToken}`}
+      key={`${input.documentEpoch}:${dialog.bottomResetToken}`}
       transaction={bottom.transaction}
       selectedTransactionIds={selected.transactionIds}
       document={input.document}

@@ -24,14 +24,29 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
     if (transaction !== undefined) return;
     setName("Transaction"); setStart(1); setEnd(Math.min(5, document.timeline.cycleCount)); setLaneId("");
   }, [transaction?.id, document.timeline.cycleCount]);
+  type RowDraft = { readonly name: string; readonly start: number; readonly end: number; readonly laneId: string; readonly groupId: TransactionGroup["id"] | undefined; readonly color: string; readonly description: string };
+  const baseOf = (item: Transaction | undefined): RowDraft => ({ name: item?.name ?? "", start: item?.start ?? 0, end: item?.end ?? 1, laneId: item?.laneId ?? "", groupId: item?.groupId, color: item?.color ?? "", description: item?.description ?? "" });
+  const draftStoreRef = useRef(new Map<TransactionId, { readonly base: RowDraft; readonly draft: RowDraft }>());
+  const liveRef = useRef<{ id: TransactionId | undefined; base: RowDraft; draft: RowDraft }>({ id: transaction?.id, base: baseOf(transaction), draft: baseOf(transaction) });
+  liveRef.current = { id: liveRef.current.id, base: liveRef.current.base, draft: { name: editName, start: editStart, end: editEnd, laneId: editLaneId, groupId: editGroupId, color: editColor, description: editDescription } };
   useEffect(() => {
-    setEditName(transaction?.name ?? "");
-    setEditStart(transaction?.start ?? 0);
-    setEditEnd(transaction?.end ?? 1);
-    setEditLaneId(transaction?.laneId ?? "");
-    setEditGroupId(transaction?.groupId);
-    setEditColor(transaction?.color ?? "");
-    setEditDescription(transaction?.description ?? "");
+    const previous = liveRef.current;
+    const nextBase = baseOf(transaction);
+    let next = nextBase;
+    if (previous.id !== transaction?.id) {
+      if (previous.id !== undefined && JSON.stringify(previous.draft) !== JSON.stringify(previous.base)) draftStoreRef.current.set(previous.id, { base: previous.base, draft: previous.draft });
+      const stored = transaction ? draftStoreRef.current.get(transaction.id) : undefined;
+      if (stored && JSON.stringify(stored.base) === JSON.stringify(nextBase)) next = stored.draft;
+      else if (transaction) draftStoreRef.current.delete(transaction.id);
+    } else if (transaction) draftStoreRef.current.delete(transaction.id);
+    liveRef.current = { id: transaction?.id, base: nextBase, draft: next };
+    setEditName(next.name);
+    setEditStart(next.start);
+    setEditEnd(next.end);
+    setEditLaneId(next.laneId);
+    setEditGroupId(next.groupId);
+    setEditColor(next.color);
+    setEditDescription(next.description);
   }, [transaction?.id, transaction?.name, transaction?.start, transaction?.end, transaction?.laneId, transaction?.groupId, transaction?.color, transaction?.description]);
   // #426: Apply had no Draft/dirty gating at all (always enabled, no
   // "unapplied changes" indicator) and Cancel lived in the header while
