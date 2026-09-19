@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import type { HistoryState } from "@timing-chart-v2/history";
-import type { CanonicalDocument, SignalId, Transaction, TransactionGroup, TransactionId } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, SignalId, Transaction, TransactionGroup, TransactionId, TransactionPhase } from "@timing-chart-v2/schema";
 import { nextEntityId } from "./entity-id.js";
 import type { TransactionEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { EditorIconButton } from "./editor-icon.js";
@@ -70,18 +70,24 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   // list-owned multi-select. `search` is a pure client-side filter over the
   // existing list render; it never touches Canonical.
   const [search, setSearch] = useState("");
+  const [expandedPhaseTransactionIds, setExpandedPhaseTransactionIds] = useState<ReadonlySet<TransactionId>>(new Set());
   const groupNameById = new Map(document.transactionGroups?.map((group) => [group.id, group.name]) ?? []);
   const needle = search.trim().toLocaleLowerCase();
   const visibleTransactions = needle.length === 0 ? document.transactions : document.transactions.filter((item) => item.name.toLocaleLowerCase().includes(needle) || (item.groupId !== undefined && (groupNameById.get(item.groupId) ?? "").toLocaleLowerCase().includes(needle)));
+  type TransactionListEntry = Readonly<{ kind: "transaction"; item: Transaction } | { kind: "phase"; transaction: Transaction; phase: TransactionPhase; index: number }>;
+  const listEntries: readonly TransactionListEntry[] = visibleTransactions.flatMap((item) => [
+    { kind: "transaction" as const, item },
+    ...(expandedPhaseTransactionIds.has(item.id) ? (item.phases ?? []).map((phase, index) => ({ kind: "phase" as const, transaction: item, phase, index })) : []),
+  ]);
   const transactionRowHeight = 30;
-  const shouldVirtualizeTransactions = visibleTransactions.length > 200;
+  const shouldVirtualizeTransactions = listEntries.length > 200;
   const transactionListViewportRef = useRef<HTMLDivElement>(null);
   const [transactionListScrollTop, setTransactionListScrollTop] = useState(0);
   const transactionViewportHeight = 360;
   const transactionOverscan = 12;
   const transactionFirstVisibleIndex = shouldVirtualizeTransactions ? Math.max(0, Math.floor(transactionListScrollTop / transactionRowHeight) - transactionOverscan) : 0;
-  const transactionLastVisibleIndex = shouldVirtualizeTransactions ? Math.min(visibleTransactions.length, Math.ceil((transactionListScrollTop + transactionViewportHeight) / transactionRowHeight) + transactionOverscan) : visibleTransactions.length;
-  const renderedTransactions = visibleTransactions.slice(transactionFirstVisibleIndex, transactionLastVisibleIndex);
+  const transactionLastVisibleIndex = shouldVirtualizeTransactions ? Math.min(listEntries.length, Math.ceil((transactionListScrollTop + transactionViewportHeight) / transactionRowHeight) + transactionOverscan) : listEntries.length;
+  const renderedEntries = listEntries.slice(transactionFirstVisibleIndex, transactionLastVisibleIndex);
   const selectedIds = selectedTransactionIds ?? new Set<TransactionId>();
   const selectionAnchorRef = useRef<TransactionId | undefined>(transaction?.id);
   const selectVisibleRow = (id: TransactionId, event: MouseEvent<HTMLButtonElement>) => {
@@ -112,7 +118,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   }, [search]);
   useEffect(() => {
     if (!shouldVirtualizeTransactions || transaction === undefined) return;
-    const selectedIndex = visibleTransactions.findIndex((item) => item.id === transaction.id);
+    const selectedIndex = listEntries.findIndex((entry) => entry.kind === "transaction" && entry.item.id === transaction.id);
     if (selectedIndex < 0) return;
     const nextScrollTop = Math.max(0, selectedIndex * transactionRowHeight - transactionOverscan * transactionRowHeight);
     setTransactionListScrollTop(nextScrollTop);
@@ -201,18 +207,18 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
           lines up exactly with each row's button (same grid-template-columns
           CSS rule, reused rather than duplicated). */}
       <div className="transaction-list-header" data-transaction-table-header="true"><span className="transaction-list-header-spacer" aria-hidden="true" /><span className="transaction-list-header-cells"><span>Name</span><span>Group</span><span>Lane</span><span>Start Cycle</span><span>End Cycle</span><span>Duration (cycles)</span><span># Phases</span><span>Linked Signals</span><span>Color</span><span>Description</span></span></div>
-    </>}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: transactionFirstVisibleIndex * transactionRowHeight }} />}{renderedTransactions.map((item) => <div className={`transaction-list-row${item.id === transaction?.id ? " transaction-list-row-editing" : ""}`} data-transaction-row-id={item.id} key={item.id}>
-      <span className="transaction-disclosure-slot" aria-hidden="true" />
-      {item.id === transaction?.id ? <div className="transaction-list-row-editor" data-selected="true" role="group" aria-label={`Edit ${item.name}`}>
+    </>}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: transactionFirstVisibleIndex * transactionRowHeight }} />}{renderedEntries.map((entry) => entry.kind === "phase" ? <div className="transaction-phase-row" data-transaction-phase-row-id={`${entry.transaction.id}::phase-${entry.index}`} data-transaction-id={entry.transaction.id} data-phase-index={entry.index} key={`${entry.transaction.id}::phase-${entry.index}`}><span className="transaction-phase-indent" aria-hidden="true" /><div className="transaction-phase-cells"><span>{entry.phase.name}</span><span>{entry.transaction.groupId === undefined ? "Ungrouped" : groupNameById.get(entry.transaction.groupId) ?? "Group"}</span><span>{entry.transaction.laneId ?? "lane_0"}</span><span>{entry.phase.start}</span><span>{entry.phase.end}</span><span>{entry.phase.end - entry.phase.start}</span><span className="transaction-phase-kind">Phase</span><span /><span /><span /></div></div> : <div className={`transaction-list-row${entry.item.id === transaction?.id ? " transaction-list-row-editing" : ""}`} data-transaction-row-id={entry.item.id} key={entry.item.id}>
+      {entry.item.phases && entry.item.phases.length > 0 ? <button type="button" className="transaction-disclosure-slot" aria-label={`${expandedPhaseTransactionIds.has(entry.item.id) ? "Collapse" : "Expand"} phases for ${entry.item.name}`} aria-expanded={expandedPhaseTransactionIds.has(entry.item.id)} onClick={() => setExpandedPhaseTransactionIds((current) => { const next = new Set(current); if (next.has(entry.item.id)) next.delete(entry.item.id); else next.add(entry.item.id); return next; })}>{expandedPhaseTransactionIds.has(entry.item.id) ? "▾" : "▸"}</button> : <span className="transaction-disclosure-slot" aria-hidden="true" />}
+      {entry.item.id === transaction?.id ? <div className="transaction-list-row-editor" data-selected="true" role="group" aria-label={`Edit ${entry.item.name}`}>
         <input aria-label="Bottom Transaction name" value={editName} onChange={(event) => setEditName(event.target.value)} />
         <select aria-label="Bottom Transaction group" value={editGroupId ?? ""} onChange={(event) => setEditGroupId(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select>
         <input aria-label="Bottom Transaction lane" value={editLaneId} onChange={(event) => setEditLaneId(event.target.value)} />
         <input aria-label="Bottom Transaction start" type="number" min="0" max={editEnd - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} />
         <input aria-label="Bottom Transaction end" type="number" min={editStart + 1} max={document.timeline.cycleCount} value={editEnd} onChange={(event) => setEditEnd(Number(event.target.value))} />
-        <span>{Math.max(0, editEnd - editStart)}</span><span>{item.phases?.length ?? 0}</span><span>{item.linkedSignals?.length ?? 0}</span>
+        <span>{Math.max(0, editEnd - editStart)}</span><span>{entry.item.phases?.length ?? 0}</span><span>{entry.item.linkedSignals?.length ?? 0}</span>
         <input aria-label="Bottom Transaction color" type="color" value={editColor || "#8895a7"} onChange={(event) => setEditColor(event.target.value)} />
         <input aria-label="Bottom Transaction description" value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
-      </div> : <button type="button" data-selected={String(selectedIds.has(item.id))} aria-selected={selectedIds.has(item.id)} onClick={(event) => selectVisibleRow(item.id, event)}>
+      </div> : <button type="button" data-selected={String(selectedIds.has(entry.item.id))} aria-selected={selectedIds.has(entry.item.id)} onClick={(event) => selectVisibleRow(entry.item.id, event)}>
         {/* #453: every new field is appended AFTER the original 4 (name/
             start-end/lane/links), never interspersed between them -- several
             existing tests match this row's accessible name against a regex
@@ -224,16 +230,16 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
             fixed 8-column table needs every row to occupy the same columns,
             and a row silently skipping one grid child shifted Phases one
             column left relative to rows that do have a Group. */}
-        <b>{item.name}</b><span>{item.groupId === undefined ? "Ungrouped" : groupNameById.get(item.groupId) ?? "Group"}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.start}</span><span>{item.end}</span><span>{item.end - item.start}</span><span>{item.phases?.length ?? 0}</span><span>{item.linkedSignals?.length ?? 0}</span><span className="transaction-row-color-value" title={item.color ?? "#8895a7"}><i className="transaction-row-color-swatch" aria-hidden="true" style={{ background: item.color ?? (item.groupId === undefined ? "#8895a7" : document.transactionGroups?.find((group) => group.id === item.groupId)?.color ?? "#8895a7") }} /></span>
+        <b>{entry.item.name}</b><span>{entry.item.groupId === undefined ? "Ungrouped" : groupNameById.get(entry.item.groupId) ?? "Group"}</span><span>{entry.item.laneId ?? "lane_0"}</span><span>{entry.item.start}</span><span>{entry.item.end}</span><span>{entry.item.end - entry.item.start}</span><span>{entry.item.phases?.length ?? 0}</span><span>{entry.item.linkedSignals?.length ?? 0}</span><span className="transaction-row-color-value" title={entry.item.color ?? "#8895a7"}><i className="transaction-row-color-swatch" aria-hidden="true" style={{ background: entry.item.color ?? (entry.item.groupId === undefined ? "#8895a7" : document.transactionGroups?.find((group) => group.id === entry.item.groupId)?.color ?? "#8895a7") }} /></span>
         {/* Transaction Mode GUI realignment: Description is a real,
             already-persisted field (Transaction.description, #454) with no
             column in this table at all -- appended after the original
             columns per this row's own established convention (see the
             comment above), never interspersed, so no existing test's
             accessible-name-order assertion breaks. */}
-        <span title={item.description}>{item.description ?? "—"}</span>
+        <span title={entry.item.description}>{entry.item.description ?? "—"}</span>
       </button>}
-    </div>)}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: (visibleTransactions.length - transactionLastVisibleIndex) * transactionRowHeight }} />}
+    </div>)}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: (listEntries.length - transactionLastVisibleIndex) * transactionRowHeight }} />}
   {visibleTransactions.length === 0 && document.transactions.length > 0 && search.trim() !== "" && <p className="inspector-note">No Transactions match this search.</p>}</div>
   </>;
   // Transaction details belong to the Inspector. The Bottom panel remains
