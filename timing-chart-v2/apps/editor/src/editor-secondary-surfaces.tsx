@@ -480,6 +480,7 @@ export function useEditorSecondarySurfaces(
         }}
         onContextMenu={openTransactionContextMenu}
         onCreateTransaction={input.actions.createTransaction}
+        onClearSelection={input.actions.clearSelection}
         onFocusTransaction={(transactionId) =>
           refs.viewport.current
             ?.querySelector<HTMLElement>(

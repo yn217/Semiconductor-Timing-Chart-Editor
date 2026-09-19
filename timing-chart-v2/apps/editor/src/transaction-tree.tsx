@@ -30,6 +30,7 @@ export function TransactionTree({
   onContextMenu,
   onCreateTransaction,
   onFocusTransaction,
+  onClearSelection,
   onDelete,
   onSetVisibility,
   onSetGroupVisibility,
@@ -63,6 +64,7 @@ export function TransactionTree({
   ) => void;
   readonly onCreateTransaction?: () => void;
   readonly onFocusTransaction?: (transactionId: TransactionId) => void;
+  readonly onClearSelection?: () => void;
   readonly onDelete?: () => void;
   readonly onSetVisibility?: (
     transactionId: TransactionId,
@@ -536,6 +538,8 @@ export function TransactionTree({
       data-testid="transaction-left-tree"
       data-transaction-tree-root="true"
       aria-label="Transaction tree"
+      onClick={(event) => { if (onClearSelection && (event.target === event.currentTarget || (event.target instanceof Element && event.target.classList.contains("transaction-left-tree-root")))) onClearSelection(); }}
+      onKeyDown={(event) => { if (event.key === "Escape" && onClearSelection && !openMenu && !(event.target instanceof HTMLInputElement)) { event.preventDefault(); onClearSelection(); } }}
     >
       <div className="transaction-left-tree-root">
         <button
