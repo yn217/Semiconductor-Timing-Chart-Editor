@@ -71,7 +71,16 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     }
     setSnapshot(result.snapshot);
     setHistory(runtime.session.current().historyState());
-    setValidationDiagnostics((current) => current.length === 0 ? current : []);
+    // Keep Problems derived from the committed Canonical snapshot. Clearing
+    // the previous list after every successful command made an unchanged or
+    // newly introduced timing warning disappear until the user manually ran
+    // Refresh Checks. Undo/Redo use this same accepted-result path, so their
+    // diagnostics stay aligned with the resulting document as well.
+    validatorInvocationsRef.current += 1;
+    setValidationDiagnostics([
+      ...validateCanonicalDocument(result.snapshot.document),
+      ...deriveTimingDiagnostics(result.snapshot.document),
+    ]);
     setProblem("");
     setRuntimeDiagnostics(withoutCommandRejectionDiagnostics);
     acceptedHandlerRef.current?.(result, context);
