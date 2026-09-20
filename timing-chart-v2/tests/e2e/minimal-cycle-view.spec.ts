@@ -26,7 +26,8 @@ test("projects canonical rows into aligned tree, frozen labels, and waveform sur
     expect(new Set(positions).size, `${id} must use one projected Y position`).toBe(1);
   }
   await expect(surface.locator("[data-role='left-row'][data-group-start='true']")).toHaveCount(2);
-  await expect(surface.locator("[data-role='signal-role']").first()).toHaveText("i");
+  // The role badge carries the Signal type label; the first row is the CLOCK.
+  await expect(surface.locator("[data-role='signal-role']").first()).toHaveText("Clock");
 });
 
 test("derives the ruler from local geometry and keeps selection view-only", async ({ page }) => {
