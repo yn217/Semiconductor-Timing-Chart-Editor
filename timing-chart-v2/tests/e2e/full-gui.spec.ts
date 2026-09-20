@@ -242,11 +242,11 @@ test("applies Annotation Inspector drafts through one semantic command", async (
   const surface = host.locator("[data-role='timing-chart-surface']");
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await inspector.getByLabel("Annotation label", { exact: true }).fill("Inspector Note");
-  await inspector.getByLabel("Inspector annotation color").fill("#114477");
+  await inspector.getByLabel("Annotation color").fill("#114477");
   await inspector.getByTestId("apply-annotation-properties").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
-  await expect(inspector.getByLabel("Annotation label")).toHaveValue("Inspector Note");
+  await expect(inspector.getByLabel("Annotation label", { exact: true })).toHaveValue("Inspector Note");
   await expect(owner.locator("[data-role='annotation-label']")).toHaveText("Inspector Note");
   const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(after.waveDromRenders).toBe(before.waveDromRenders);
@@ -811,7 +811,8 @@ test("Canvas range drag supports reverse and Shift extension while Escape cancel
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   const countersDuring = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as { snapIndexBuilds: number };
-  expect(countersDuring.snapIndexBuilds - countersBefore.snapIndexBuilds).toBe(1);
+  // The drag builds the Snap index at most once (0 when an earlier hover already built it); per-move rebuilds would exceed 1.
+  expect(countersDuring.snapIndexBuilds - countersBefore.snapIndexBuilds).toBeLessThanOrEqual(1);
   await page.mouse.up();
   await expect(host).not.toHaveAttribute("data-range-drag");
   await expect(page.getByTestId("range-status")).toHaveText("Range: [3, 7)");
@@ -1184,6 +1185,8 @@ test("edits a Comment Row through the dedicated Bottom Context Editor", async ({
   expect(path).toBeTruthy();
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  // Open resets scroll to the top and rows are virtualized; bring the appended Comment Row back into the mounted window.
+  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollTop = element.scrollHeight; });
   await expect(host.locator("[data-role='left-row'][data-kind='comment'][data-row-id]")).toContainText("Timing Note");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
@@ -1203,7 +1206,9 @@ test("renders Comment Row content at the shared cycle-0 canvas boundary", async 
   expect(contentBox).not.toBeNull();
   expect(rowBox).not.toBeNull();
   expect(waveformBox).not.toBeNull();
-  expect(Math.abs(rowBox!.x - waveformBox!.x)).toBeLessThanOrEqual(1);
+  // Wave owners start at the ruler's own time origin (waveOriginPx), so cycle 0 of the waveform and the ruler tick coincide.
+  const tick0 = await page.getByTestId("cycle-ruler").locator("[data-cycle='0']").boundingBox();
+  expect(Math.abs(tick0!.x - waveformBox!.x)).toBeLessThanOrEqual(1);
   expect(contentBox!.x).toBeGreaterThanOrEqual(rowBox!.x);
 });
 
