@@ -109,9 +109,7 @@ button, input, select { font: inherit; font-size: var(--ds-font-size); }
 .workspace-header { grid-column: 1 / 4; grid-row: 1; min-width: 0; min-height: 0; z-index: 30; }
 .left-workspace-rail { position: relative; display: flex; flex-direction: column; grid-column: 1; grid-row: 2 / 5; min-width: 0; min-height: 0; overflow: hidden; z-index: 20; pointer-events: auto; border-right: 1px solid #c7d0dd; background: #f9fbfd; }
 .left-workspace-rail::before { content: none; }
-.left-workspace-rail > .transaction-left-tree { position: static; flex: 1 1 auto; width: 100%; height: auto; max-height: none; min-height: 0; overflow-y: auto; border-right: 0; border-bottom: 0; }
-.editor-shell .left-workspace-rail > .transaction-signal-tree { position: static; flex: 1 1 auto; width: 100%; height: auto; max-height: none; min-height: 0; overflow-y: auto; border-right: 0; border-bottom: 0; }
-.left-workspace-rail > .left-panel-tail { position: static; flex: 0 0 28px; width: 100%; margin-top: auto; pointer-events: auto; border-top: 1px solid #c7d0dd; border-right: 0; }
+.left-workspace-rail > .transaction-left-tree { position: static; flex: 1 1 auto; width: 100%; height: auto; max-height: none; min-height: 0; overflow-y: auto; border-right: 0; border-bottom: 0; }.left-workspace-rail > .left-panel-tail { position: static; flex: 0 0 28px; width: 100%; margin-top: auto; pointer-events: auto; border-top: 1px solid #c7d0dd; border-right: 0; }
 .column-headings { grid-template-columns: var(--gui-left-width) var(--gui-frozen-width, 210px) minmax(640px, 1fr); }
 .cycle-viewport { height: calc(100% - 34px); }
 .frozen-pane-resize-handle { position: absolute; z-index: 24; top: 0; bottom: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px) - 4px); width: 8px; cursor: ew-resize; touch-action: none; }
@@ -150,21 +148,11 @@ button, input, select { font: inherit; font-size: var(--ds-font-size); }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] > .signal-column-heading,
 .editor-shell .column-headings[data-testid="transaction-tree-header"] > .frozen-pane-heading-gutter { display: none; }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] { min-height: 58px; height: 58px; align-items: stretch; }
-.editor-shell .column-headings[data-testid="transaction-tree-header"] > .left-column-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 28px 28px; align-items: center; gap: 0 4px; overflow: hidden; padding: 0 8px; }
-.editor-shell .column-headings[data-testid="transaction-tree-header"] .transaction-tree-tabs { grid-column: 1 / -1; display: flex; min-width: 0; padding: 0; border: 0; }
-.editor-shell .column-headings[data-testid="transaction-tree-header"] .tree-filter-controls { min-width: 0; padding: 0; border: 0; }
+.editor-shell .column-headings[data-testid="transaction-tree-header"] > .left-column-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 28px 28px; align-items: center; gap: 0 4px; overflow: hidden; padding: 0 8px; }.editor-shell .column-headings[data-testid="transaction-tree-header"] .tree-filter-controls { min-width: 0; padding: 0; border: 0; }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] > .left-column-heading > .tree-filter-controls { position: static; inset: auto; z-index: auto; height: auto; background: transparent; }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] > .left-column-heading > select { min-width: 0; width: 96px; height: 24px; }
 .editor-shell .column-headings[data-testid="transaction-tree-header"] { z-index: 30; }
-.editor-shell:has(.column-headings[data-testid="transaction-tree-header"]) { --gui-workspace-header-height: 58px; }
-.editor-shell .column-headings[data-testid="transaction-tree-header"] .transaction-tree-tabs { position: relative; z-index: 1; }
-.editor-shell .transaction-signal-tree { top: 58px; }
-.editor-shell .cycle-panel.mode-transaction .transaction-signal-tree { height: calc(100% - 58px); }
-.editor-shell .cycle-panel.mode-transaction .transaction-signal-tree {
-  width: var(--gui-left-width);
-  overflow-x: hidden;
-}
-.editor-shell:has([data-testid="transaction-tree-header"]) .left-pane-resize-handle { pointer-events: none; }
+.editor-shell:has(.column-headings[data-testid="transaction-tree-header"]) { --gui-workspace-header-height: 58px; }.editor-shell:has([data-testid="transaction-tree-header"]) .left-pane-resize-handle { pointer-events: none; }
 .editor-shell .cycle-viewport { height: 100%; }
 /* Transaction mode's tree header is 58px tall (line 140), not the plain
    37px `.column-headings` height every other mode uses -- `.cycle-viewport`
