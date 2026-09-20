@@ -29,6 +29,8 @@ export interface TransactionEditorCommandActions {
   readonly deleteTransaction: (transactionId: TransactionId) => CommandResult;
   readonly updateTransactionFromBottom: (payload: CommandPayload<"transaction.update">) => CommandResult;
   readonly moveTransactionToGroup: (transactionId: TransactionId, groupId?: TransactionGroup["id"]) => CommandResult;
+  /** #749: create a Group and move the Transaction into it as ONE undoable batch. */
+  readonly moveTransactionToNewGroup: (transactionId: TransactionId, group: TransactionGroup) => CommandResult;
   readonly bulkMoveTransactionsToGroup: (items: readonly { readonly transactionId: TransactionId; readonly groupId?: TransactionGroup["id"] }[]) => CommandResult;
   readonly bulkUpdateTransactions: (payloads: readonly CommandPayload<"transaction.update">[]) => CommandResult;
   readonly bulkDuplicateTransactions: (items: readonly { readonly transactionId: TransactionId; readonly newTransactionId: TransactionId; readonly name: string }[]) => CommandResult;
@@ -149,6 +151,10 @@ export function createEditorSurfaceCommandController(input: {
     duplicateTransactionById: (transactionId, newTransactionId, name) => dispatch<"transaction.duplicate">("bottom_transaction_duplicate", { type: "transaction.duplicate", transactionId, newTransactionId, name }),
     deleteTransaction: (transactionId) => dispatch<"transaction.delete">("bottom_transaction_delete", { type: "transaction.delete", transactionId }),
     updateTransactionFromBottom: (payload) => dispatch<"transaction.update">("bottom_transaction_update", { type: "transaction.update", ...payload }),
+    moveTransactionToNewGroup: (transactionId, group) => input.executeBatch(input.nextCommandId("bottom_transaction_new_group"), [
+      { id: input.nextCommandId("bottom_transaction_new_group_create"), type: "transactionGroup.create", group },
+      { id: input.nextCommandId("bottom_transaction_new_group_move"), type: "transaction.moveToGroup", transactionId, groupId: group.id },
+    ]),
     moveTransactionToGroup: (transactionId, groupId) => dispatch<"transaction.moveToGroup">("bottom_transaction_group", { type: "transaction.moveToGroup", transactionId, ...(groupId === undefined ? {} : { groupId }) }),
     bulkMoveTransactionsToGroup: (items) => dispatchBatch<"transaction.moveToGroup">("bottom_transaction_bulk_group", items.map(({ transactionId, groupId }) => ({ type: "transaction.moveToGroup", transactionId, ...(groupId === undefined ? {} : { groupId }) })), "bottom_transaction_bulk"),
     bulkUpdateTransactions: (payloads) => dispatchBatch<"transaction.update">("bottom_transaction_bulk_color", payloads.map((payload) => ({ type: "transaction.update", ...payload })), "bottom_transaction_bulk"),

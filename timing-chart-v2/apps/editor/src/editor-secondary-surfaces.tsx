@@ -22,8 +22,10 @@ import type {
   SignalGroup,
   SignalId,
   Transaction,
+  TransactionGroup,
   TransactionId,
 } from "@timing-chart-v2/schema";
+import { nextEntityId } from "./entity-id.js";
 import type { UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { EditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import type { EditorActions } from "./application/use-editor-actions.js";
@@ -477,6 +479,10 @@ export function useEditorSecondarySurfaces(
         onRenameGroup={input.actions.renameTransactionGroup}
         onMoveToGroup={(transactionId, groupId) => {
           surfaceCommands.moveTransactionToGroup(transactionId, groupId);
+        }}
+        onMoveToNewGroup={(transactionId) => {
+          const order = input.document.transactionGroups?.length ?? 0;
+          surfaceCommands.moveTransactionToNewGroup(transactionId, { id: nextEntityId("transactionGroup", input.document) as TransactionGroup["id"], name: `Group ${order + 1}`, order });
         }}
         onContextMenu={openTransactionContextMenu}
         onCreateTransaction={input.actions.createTransaction}

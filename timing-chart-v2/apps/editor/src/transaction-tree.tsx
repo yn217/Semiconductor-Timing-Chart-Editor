@@ -27,6 +27,7 @@ export function TransactionTree({
   onSelect,
   onRenameGroup,
   onMoveToGroup,
+  onMoveToNewGroup,
   onContextMenu,
   onCreateTransaction,
   onFocusTransaction,
@@ -58,6 +59,8 @@ export function TransactionTree({
     transactionId: TransactionId,
     groupId: TransactionGroup["id"] | undefined,
   ) => void;
+  /** #749: submenu 'New Group…' -- create a Group and move the Transaction into it atomically. */
+  readonly onMoveToNewGroup?: (transactionId: TransactionId) => void;
   readonly onContextMenu?: (
     event: React.MouseEvent<HTMLButtonElement>,
     transactionId: TransactionId,
@@ -392,6 +395,7 @@ export function TransactionTree({
             submenu: [
               ...groups.map((group) => ({ label: group.name, disabled: selectedMenuTransaction.groupId === group.id, run: () => onMoveToGroup(selectedMenuTransaction.id, group.id) })),
               { label: "Ungrouped", disabled: selectedMenuTransaction.groupId === undefined, run: () => onMoveToGroup(selectedMenuTransaction.id, undefined) },
+              ...(onMoveToNewGroup ? [{ label: "New Group…", run: () => onMoveToNewGroup(selectedMenuTransaction.id) }] : []),
             ],
           }] : []),
           ...(onDuplicateTransaction ? [{ label: "Duplicate", run: () => { onSelect(selectedMenuTransaction.id); onDuplicateTransaction(selectedMenuTransaction.id); } }] : []),
