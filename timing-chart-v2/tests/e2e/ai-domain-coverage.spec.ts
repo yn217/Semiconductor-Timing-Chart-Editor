@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 async function applyAI(page: Page, query: string, expectedSummary: string, expectedStatus = "Applied · one atomic SemanticCommand transaction") {
   const ai = page.getByTestId("ai-operation-panel");

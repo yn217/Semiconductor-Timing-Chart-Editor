@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 const readTabState = async (page: import("@playwright/test").Page) => page.getByTestId("bottom-tabs").locator("[data-bottom-tab]").evaluateAll((tabs) => tabs.map((tab) => {
   const element = tab as HTMLElement;

@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
 import { openBottomSettings } from "./bottom-settings";
+
+startInCycleMode(test);
 
 test("Inspector and Bottom expose the documented edit contract surfaces", async ({ page }) => {
   await page.goto("/");

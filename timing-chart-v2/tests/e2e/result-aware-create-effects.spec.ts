@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("does not select an annotation rejected by import", async ({ page }) => {
   await page.goto("/");

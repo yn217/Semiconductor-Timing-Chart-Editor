@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // Bottom Panel Visual Reference pass (#402/#426): Name/Role/Type/Spacing
 // moved to Inspector (its sole owner now) -- Bottom's own duplicate

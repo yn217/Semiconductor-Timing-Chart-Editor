@@ -2,8 +2,11 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
 import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
+
+startInCycleMode(test);
 
 test.setTimeout(120_000);
 

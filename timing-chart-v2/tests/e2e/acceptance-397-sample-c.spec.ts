@@ -1,6 +1,9 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #397 Sample C -- Cycle/Transaction Split (the *other* Split concept:
 // waveform view + Transaction view stacked in one shared viewport, not to

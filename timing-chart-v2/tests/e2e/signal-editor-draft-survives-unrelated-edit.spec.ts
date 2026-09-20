@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #578: SignalEditor's remount key included the whole-document `revision`,
 // so ANY canonical mutation anywhere -- not just edits to the open Signal --

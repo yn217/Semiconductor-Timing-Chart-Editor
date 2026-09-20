@@ -1,6 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
 import type { BookmarkId } from "@timing-chart-v2/schema";
 import { cycleDocument } from "../../apps/editor/src/fixtures-cycle-reference-documents.js";
+
+startInCycleMode(test);
 
 const periodOneClockDocument = {
   ...cycleDocument,

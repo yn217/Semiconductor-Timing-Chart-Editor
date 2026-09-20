@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // Cross-component Visual Quality audit (Inspector / Bottom / Ribbon)
 // requested by the Goal's Stop-hook feedback: clipping, panel collision,

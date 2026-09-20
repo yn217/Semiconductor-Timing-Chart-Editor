@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("Annotation and Transaction X positions stay exactly aligned with the Ruler at 50/100/150/200% zoom, with no double-scaling", async ({ page }) => {
   await page.goto("/");

@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("Signal Split shows the same canonical Signal sequence in both panes", async ({ page }) => {
   await page.goto("/");

@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #205: Dimension-style visual closure for Measurement -- independent
 // start/end markers, inward/outward/auto arrow layout, and extension

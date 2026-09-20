@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
+
+startInCycleMode(test);
 
 test.setTimeout(180_000);
 
