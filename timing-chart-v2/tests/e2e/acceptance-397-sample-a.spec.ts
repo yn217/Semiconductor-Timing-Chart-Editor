@@ -77,8 +77,9 @@ test("Sample A: create/rename/move/resize/delete, phase add/edit/delete, link/un
   // table-first (no stale values from a previous/default state).
   await lanes.locator("[data-transaction-id='txn_read0']").click();
   await expect(inspector.getByLabel("Transaction name")).toHaveValue("Read_0");
-  await expect(bottomEditor.locator("[data-transaction-row-id='txn_read0']")).toContainText("Read_0");
-  await expect(bottomEditor.getByTestId("apply-transaction-properties")).toHaveCount(0);
+  await expect(bottomEditor.locator("[data-transaction-row-id='txn_read0'] input[aria-label='Bottom Transaction name']")).toHaveValue("Read_0");
+  // #703: the Bottom row is editable and carries its own Apply, disabled while the draft equals Canonical.
+  await expect(bottomEditor.getByTestId("apply-transaction-properties")).toBeDisabled();
   await expect(inspector.getByLabel("Transaction start")).toHaveValue("6");
   await expect(inspector.getByLabel("Transaction end")).toHaveValue("12");
 
@@ -86,7 +87,7 @@ test("Sample A: create/rename/move/resize/delete, phase add/edit/delete, link/un
   await inspector.getByLabel("Transaction name").fill("Read_0_renamed");
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
-  await expect(bottomEditor.locator("[data-transaction-row-id='txn_read0']")).toContainText("Read_0_renamed");
+  await expect(bottomEditor.locator("[data-transaction-row-id='txn_read0'] input[aria-label='Bottom Transaction name']")).toHaveValue("Read_0_renamed");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 
   // Move (Start/End) and lane edit through the Inspector, one Apply.
@@ -101,13 +102,13 @@ test("Sample A: create/rename/move/resize/delete, phase add/edit/delete, link/un
   await expect(lanes.locator("div.transaction-lane[data-lane-id='lane_2']")).toBeVisible();
 
   // Phase edit: rename an existing phase, delete one, add a new one.
-  const phaseTable = inspector.getByTestId("transaction-phase-editor");
-  await expect(phaseTable.locator(".transaction-phase-row:not(.transaction-phase-row-header)")).toHaveCount(3);
+  const phaseTable = inspector.getByTestId("inspector-phase-editor");
+  await expect(phaseTable.locator(".transaction-bottom-phase-row:not(.transaction-bottom-phase-head)")).toHaveCount(3);
   await inspector.getByLabel("Phase 1 name").fill("Addr");
   await inspector.getByLabel("Delete phase 3").click();
-  await expect(phaseTable.locator(".transaction-phase-row:not(.transaction-phase-row-header)")).toHaveCount(2);
+  await expect(phaseTable.locator(".transaction-bottom-phase-row:not(.transaction-bottom-phase-head)")).toHaveCount(2);
   await inspector.getByTestId("add-transaction-phase").click();
-  await expect(phaseTable.locator(".transaction-phase-row:not(.transaction-phase-row-header)")).toHaveCount(3);
+  await expect(phaseTable.locator(".transaction-bottom-phase-row:not(.transaction-bottom-phase-head)")).toHaveCount(3);
   await inspector.getByLabel("Phase 3 name").fill("Extra");
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");

@@ -1,9 +1,9 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 // #397 Sample C -- Cycle/Transaction Split (the *other* Split concept:
 // waveform view + Transaction view stacked in one shared viewport, not to
@@ -58,7 +58,10 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     const surfaceBox = (await surface.boundingBox())!;
     expect(transactionPaneBox.y + transactionPaneBox.height).toBeLessThanOrEqual(signalPaneBox.y + 1);
     expect(transactionPaneBox.x).toBeCloseTo(signalPaneBox.x, 0);
-    expect(transactionPaneBox.width).toBeCloseTo(signalPaneBox.width, 0);
+    // Both panes share one horizontal time domain: the Signal pane's laid-out content (scrollWidth) spans at least
+    // the Transaction pane's full width, even though its own box is clipped to the viewport-derived width.
+    const signalContentWidth = await page.locator(".split-signal-content").evaluate((element) => element.scrollWidth);
+    expect(signalContentWidth).toBeGreaterThanOrEqual(transactionPaneBox.width);
     expect(lanesBox.x).toBeGreaterThanOrEqual(transactionPaneBox.x);
     expect(surfaceBox.x).toBeGreaterThanOrEqual(signalPaneBox.x);
 
