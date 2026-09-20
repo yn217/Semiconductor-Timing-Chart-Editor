@@ -4,7 +4,7 @@ import type { EditorSessionController } from "./editor-session-controller.js";
 import type { CanonicalDocument, Signal, SignalId, SignalValueChange } from "@timing-chart-v2/schema";
 import { valueSignalWaveDomain } from "@timing-chart-v2/schema";
 import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
-import { toWaveJsonWindow, type RenderedWave, type WaveDromAdapter, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
+import { analyticLocalGeometry, toWaveJsonWindow, type RenderedWave, type WaveDromAdapter, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 import type { DisplayTimeMappingCache } from "@timing-chart-v2/projection";
 import type { GeometryRegistry } from "./geometry-registry.js";
 import { displayWindowForSource } from "./display-boundary.js";
@@ -212,7 +212,9 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           // satisfy the readiness gate or trigger a stale refresh.
           const currentReferenceClock = latestSnapshot.document.timeline.referenceClock;
           if (item.request.signalId === currentReferenceClock) context.markOpenPhase("reference-clock-painted");
-          const geometry = context.adapter.extractLocalGeometry(item.rendered);
+          // Renderer-independent Local Geometry (#755): computed from the WaveJson + pinned WaveDrom layout, not by reading
+          // the rendered SVG DOM (getScreenCTM / <use> walk). `?geometrySource=svg` restores DOM extraction for comparison.
+          const geometry = useDomGeometrySource() ? context.adapter.extractLocalGeometry(item.rendered) : analyticLocalGeometry(item.request.signalId, item.rendered.waveJson);
           if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
           context.geometryRegistry.maps.set(item.request.signalId, geometry);
           context.geometryRegistry.svgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
@@ -242,4 +244,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
     },
     disposeWave(id) { context.adapter.dispose(id); context.geometryRegistry.remove(id); context.invalidateSnapIndex(); },
   };
+}
+
+function useDomGeometrySource(): boolean {
+  try { return typeof location !== "undefined" && new URLSearchParams(location.search).get("geometrySource") === "svg"; } catch { return false; }
 }
