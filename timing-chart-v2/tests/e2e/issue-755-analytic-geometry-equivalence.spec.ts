@@ -31,8 +31,7 @@ test("analytic cycle grid equals SVG-derived boundaries (unwindowed document)", 
   for (const report of reports) expect(maxDeviation(report), `${report.id} max |analytic - svg|`).toBeLessThanOrEqual(TOLERANCE);
 });
 
-// Blocked by the far-scroll window non-convergence bug (see #757): a programmatic far scroll never rebases the window.
-test.fixme("analytic cycle grid equals SVG-derived boundaries (bounded window on a >4096-cycle document)", async ({ page }) => {
+test("analytic cycle grid equals SVG-derived boundaries (bounded window on a >4096-cycle document)", async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/");
@@ -41,10 +40,10 @@ test.fixme("analytic cycle grid equals SVG-derived boundaries (bounded window on
   const document = generatePerformanceDocument({ signalCount: 30, cycleCount: 10_000, profile: "transaction-heavy" });
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "p755.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
-  await page.getByRole("button", { name: "Combined", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
   const viewport = page.getByTestId("cycle-viewport");
-  await viewport.evaluate((el) => { el.scrollLeft = Math.floor((el.scrollWidth - el.clientWidth) / 2); });
+  await viewport.evaluate((el) => { el.scrollLeft = 200_000; });
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
   await expect.poll(async () => (await boundaryReport(page)).some((report) => report.cycles[0]! > 0), { timeout: 30_000, message: "a far jump must rebase at least one owner's window" }).toBe(true);
   const reports = await boundaryReport(page);

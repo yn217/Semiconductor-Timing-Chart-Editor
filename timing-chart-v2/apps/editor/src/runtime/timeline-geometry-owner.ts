@@ -165,12 +165,21 @@ export class TimelineGeometryOwner {
     // mapping to recover source boundaries instead of treating the retained
     // edge as the end of the document. This keeps windowing bounded while
     // allowing scroll/navigation to reach offscreen source time.
-    const sourceAtMappedBoundary = (localX: number, fallback: number): number => {
-      const displayCycle = Math.max(0, Math.min(mapping.displayCycleCount, Math.round(localX)));
-      return mapping.displayToSource[displayCycle] ?? fallback;
-    };
     const firstEntry = entries[0];
     const lastEntry = entries.at(-1);
+    // Outside the retained window the local x is a pixel-space value, not a display-cycle index (#757):
+    // extrapolate with the retained geometry's own pitch (local units per display cycle).
+    const firstDisplay = firstEntry === undefined ? undefined : mapping.sourceToDisplay[firstEntry.cycle];
+    const lastDisplay = lastEntry === undefined ? undefined : mapping.sourceToDisplay[lastEntry.cycle];
+    const pitch = firstEntry && lastEntry && firstDisplay !== undefined && lastDisplay !== undefined && lastDisplay > firstDisplay
+      ? (lastEntry.x - firstEntry.x) / (lastDisplay - firstDisplay) : undefined;
+    const sourceAtMappedBoundary = (localX: number, fallback: number): number => {
+      const displayIndex = pitch !== undefined && pitch > 0 && firstEntry !== undefined && firstDisplay !== undefined
+        ? firstDisplay + (localX - firstEntry.x) / pitch
+        : localX;
+      const displayCycle = Math.max(0, Math.min(mapping.displayCycleCount, Math.round(displayIndex)));
+      return mapping.displayToSource[displayCycle] ?? fallback;
+    };
     let start = sourceAtMappedBoundary(localStart, firstEntry?.cycle ?? 0);
     let end = sourceAtMappedBoundary(localEnd, lastEntry?.cycle ?? document.timeline.cycleCount);
     if (firstEntry && lastEntry && localStart <= lastEntry.x && localEnd >= firstEntry.x) {
