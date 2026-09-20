@@ -1,5 +1,8 @@
 import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 async function ready(page: Page) {
   await page.goto("/");
@@ -161,7 +164,9 @@ test("clamps a Transaction edge drag at the terminal boundary and cannot cross t
   await page.mouse.up();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const clamped = (await transaction.boundingBox())!;
-  expect(Math.abs((clamped.x + clamped.width) - terminal.x)).toBeLessThanOrEqual(2);
+  // The drag scrolls the viewport to reveal the edge, so the terminal tick is re-measured after the drop.
+  const terminalAfter = (await page.getByTestId("cycle-ruler").locator("[data-cycle='24']").boundingBox())!;
+  expect(Math.abs((clamped.x + clamped.width) - terminalAfter.x)).toBeLessThanOrEqual(2);
 });
 
 test("Escape cancels an in-progress Transaction drag without any semantic mutation", async ({ page }) => {
@@ -281,6 +286,8 @@ test("rejects an End resize that would remove the final Phase", async ({ page })
   await expect(transaction).toBeVisible();
   const beforeRevision = await host.getAttribute("data-canonical-revision");
   const beforeHistory = await page.getByTestId("history-status").textContent();
+  // At 10 cycles/TC the End edge (cycle 60) is off-screen at the default zoom; bring it into view so the pointer can reach cycle 50.
+  await transaction.locator("[data-edge='end']").scrollIntoViewIfNeeded();
   const box = (await transaction.boundingBox())!;
   const phaseBoundary = (await page.getByTestId("cycle-ruler").locator("[data-cycle='50']").boundingBox())!;
   await transaction.locator("[data-edge='end']").hover();
@@ -304,7 +311,7 @@ test("persists a valid Transaction resize and its Phases through Save/Open", asy
   const targetBeforeScroll = (await targetLocator.boundingBox())!;
   const viewport = page.getByTestId("cycle-viewport");
   await viewport.evaluate((element, targetX) => {
-    element.scrollLeft = Math.max(0, targetX - element.clientWidth * 0.7);
+    element.scrollLeft += targetX - (element.getBoundingClientRect().left + element.clientWidth * 0.75);
     element.dispatchEvent(new Event("scroll", { bubbles: true }));
   }, targetBeforeScroll.x);
   const target = (await targetLocator.boundingBox())!;
@@ -312,12 +319,12 @@ test("persists a valid Transaction resize and its Phases through Save/Open", asy
   await page.mouse.down();
   await page.mouse.move(target.x, before.y + before.height / 2);
   await page.mouse.up();
-  await expect(page.locator(".transaction-list-row[data-transaction-row-id='txn_read0']")).toContainText("70");
+  await expect(page.locator(".transaction-list-row[data-transaction-row-id='txn_read0']")).toContainText("Peripheral632") /* Duration 6 TC (End 70 cycles at 10 cycles/TC), 3 Phases, 2 Linked Signals */;
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   const savedPath = await (await download).path();
   expect(savedPath).toBeTruthy();
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
-  await expect(page.locator(".transaction-list-row[data-transaction-row-id='txn_read0']")).toContainText("70");
+  await expect(page.locator(".transaction-list-row[data-transaction-row-id='txn_read0']")).toContainText("lane_017632") /* Start 1, End 7, Duration 6 TC; 3 Phases; 2 Linked Signals */;
   await expect(page.locator(".transaction-list-row[data-transaction-row-id='txn_read0']")).toContainText("3");
 });
