@@ -339,3 +339,4 @@ export class SemanticSnapCandidateService {
     }
   }
 }
+export * from "./uniform-cycle-geometry.js";
