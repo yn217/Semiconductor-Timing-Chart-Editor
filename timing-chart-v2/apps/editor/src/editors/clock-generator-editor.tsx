@@ -19,6 +19,8 @@ export function ClockGeneratorEditor({ signal, bookmarks, commands, onDuplicate,
     setEdgeCounter(signal.edgeCounter);
     setSuppressedPeriods((signal.generator.suppressedPeriods ?? []).join(", "));
     setGeneratorError("");
+    // A committed generator (Apply/Undo/Redo/Open) always returns to the real canonical waveform: Preview switches off.
+    setPreview(false);
   }, [signal.id, signal.generator, signal.edgeCounter]);
   // Preview reflects the CURRENT draft generator on the real, selected Clock
   // row's waveform via a pure DOM-only path (see refreshClockPreview in
