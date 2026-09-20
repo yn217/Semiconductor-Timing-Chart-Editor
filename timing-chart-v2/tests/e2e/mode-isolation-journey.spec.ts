@@ -75,10 +75,9 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   const transactionZoom = await page.getByTestId("zoom-status").textContent();
   expect(transactionZoom).not.toBe(cycleZoom);
   const transactionLeft = Number(await shell.getAttribute("data-left-pane-width"));
-  await page.getByTestId("left-pane-resizer").press("ArrowRight");
-  await expect.poll(() => shell.getAttribute("data-left-pane-width").then(Number), { timeout: 5_000, message: "Transaction tree resize must settle before capturing its mode-local value" }).toBeGreaterThan(transactionLeft);
-  const transactionLeftAfter = Number(await shell.getAttribute("data-left-pane-width"));
-  expect(transactionLeftAfter).toBeGreaterThan(transactionLeft);
+  // Transaction Mode uses a fixed-width tree (composeMode.fixedLeftWidth) and has no left-pane resizer.
+  await expect(page.getByTestId("left-pane-resizer")).toHaveCount(0);
+  const transactionLeftAfter = transactionLeft;
   await page.getByTestId("ribbon").getByRole("button", { name: "Bottom Editor", exact: true }).click();
   await expect(shell).toHaveAttribute("data-bottom-visible", "false");
   await assertViewOnly();

@@ -5,7 +5,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await page.setViewportSize(viewport);
     await page.goto("/");
     const host = page.getByTestId("cycle-surface");
-    const workspace = page.locator("[data-view-mode]");
+    const workspace = page.locator("main.editor-shell[data-view-mode]");
     await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
     const before = await host.evaluate((element) => ({
       revision: element.getAttribute("data-canonical-revision"),
