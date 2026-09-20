@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 const base = (id: string, title: string, signals: readonly unknown[], rows: readonly string[], referenceClock?: string) => ({
   formatVersion: 2,

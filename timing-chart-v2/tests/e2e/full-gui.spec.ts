@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
 import { readFile } from "node:fs/promises";
+
+startInCycleMode(test);
 
 async function ready(page: Page) {
   await page.goto("/");
