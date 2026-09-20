@@ -131,6 +131,8 @@ test("Lock shows a real visible indicator, blocks drag, and Unlock restores it -
 
   const first = await addAnnotation(page, "text");
   const firstId = await first.getAttribute("data-annotation-id");
+  // Anchor the second Annotation on another Signal so the two labels do not overlap.
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid']").click();
   const second = await addAnnotation(page, "marker");
   const secondId = await second.getAttribute("data-annotation-id");
 
@@ -141,7 +143,7 @@ test("Lock shows a real visible indicator, blocks drag, and Unlock restores it -
   const menu = page.locator(".arrange-menu");
 
   // Lock only the first annotation.
-  await first.locator("[data-role='annotation-label']").click({ force: true }); // the second annotation is drawn over the first's anchor
+  await first.locator("[data-role='annotation-label']").click();
   await openMenu();
   await menu.getByRole("menuitem", { name: "Lock", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");

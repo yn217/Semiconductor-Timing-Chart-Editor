@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 // #332 item D: implemented-but-currently-unavailable Arrange controls must
 // expose a truthful, contextual disabled reason -- never the generic

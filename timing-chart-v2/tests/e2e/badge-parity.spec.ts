@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 for (const width of [1672, 1000]) {
   test(`Left Tree and frozen badges share geometry at ${width}px`, async ({ browser }) => {

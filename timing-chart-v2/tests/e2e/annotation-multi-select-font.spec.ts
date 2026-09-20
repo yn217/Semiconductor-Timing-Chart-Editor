@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 // #331 P2: Ribbon Font edits must apply to every selected Annotation
 // (multi-selection), as one atomic History entry, each preserving its own
@@ -20,6 +20,8 @@ test("Ribbon Bold applies to every selected Annotation as one atomic commit, eac
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const firstId = await owners.last().getAttribute("data-annotation-id");
 
+  // Anchor the second Annotation on another Signal so the two labels do not overlap.
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid']").click();
   await page.getByLabel("Annotation type").selectOption("marker");
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
