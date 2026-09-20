@@ -62,6 +62,11 @@ function executeTool(tool: string, args: Record<string, unknown>, context: AIBri
   throw new Error(`Unknown tool '${tool}'.`);
 }
 
+const LOOPBACK_BRIDGE_HOSTS: ReadonlySet<string> = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
+export function isLoopbackBridgeHost(host: string): boolean {
+  return LOOPBACK_BRIDGE_HOSTS.has(host.trim().toLowerCase());
+}
+
 export function useAIBridgeClient(enabled: boolean, host: string, port: number, token: string, context: AIBridgeContext): AIBridgeStatus {
   const [status, setStatus] = useState<AIBridgeStatus>("disabled");
   const contextRef = useRef(context);
@@ -70,6 +75,8 @@ export function useAIBridgeClient(enabled: boolean, host: string, port: number, 
   useEffect(() => {
     if (!enabled) { setStatus("disabled"); return undefined; }
     if (!token) { setStatus("error"); return undefined; }
+    // The Editor only ever talks to a local Agent Bridge (#569): never poll or answer a non-loopback host.
+    if (!isLoopbackBridgeHost(host)) { setStatus("error"); return undefined; }
     let cancelled = false;
     // An aborted in-flight poll must never be allowed to keep running in
     // the background: a stale, already-cancelled loop that still holds a
