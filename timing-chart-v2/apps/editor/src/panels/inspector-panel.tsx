@@ -1,3 +1,4 @@
+import { cyclesPerTc, cyclesToTc, tcFieldLabel, tcToCycles, tcUnitLabel } from "../transaction-tc.js";
 import type { ReactNode } from "react";
 import { memo, startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
@@ -126,6 +127,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings | undefined>(signal?.type === "clock" ? signal.edgeCounter : undefined);
   const phaseDraft = usePendingPhaseDraft(transaction);
   const [transactionName, setTransactionName] = useState(transaction?.name ?? "");
+  const tcPer = cyclesPerTc(document);
   const [transactionStart, setTransactionStart] = useState(transaction?.start ?? 0);
   const [transactionEnd, setTransactionEnd] = useState(transaction?.end ?? 1);
   const [transactionLane, setTransactionLane] = useState(transaction?.laneId ?? "lane_0");
@@ -245,8 +247,8 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
         <label>Description<textarea aria-label="Transaction description" rows={2} value={transactionDescription} onChange={(event) => setTransactionDescription(event.target.value)} /></label>
       </InspectorSection>
       <InspectorSection sectionId="timing" title="Timing" open={transactionSections.timing ?? true} onToggle={() => toggleTransactionSection("timing")}>
-        <div className="inspector-property-pair"><label>Start<input aria-label="Transaction start" type="number" min="0" max={transactionEnd - 1} value={transactionStart} onChange={(event) => setTransactionStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={transactionStart + 1} max={document.timeline.cycleCount} value={transactionEnd} onChange={(event) => setTransactionEnd(Number(event.target.value))} /></label></div>
-        <div className="property-row"><span>Duration</span><span>{transactionEnd - transactionStart} cycles</span></div>
+        <div className="inspector-property-pair"><label>{tcFieldLabel("Start", tcPer)}<input aria-label="Transaction start" type="number" min="0" max={cyclesToTc(transactionEnd - 1, tcPer)} step={tcPer === 1 ? 1 : 1 / tcPer} value={cyclesToTc(transactionStart, tcPer)} onChange={(event) => setTransactionStart(tcToCycles(Number(event.target.value), tcPer))} /></label><label>{tcFieldLabel("End", tcPer)}<input aria-label="Transaction end" type="number" min={cyclesToTc(transactionStart + 1, tcPer)} max={cyclesToTc(document.timeline.cycleCount, tcPer)} step={tcPer === 1 ? 1 : 1 / tcPer} value={cyclesToTc(transactionEnd, tcPer)} onChange={(event) => setTransactionEnd(tcToCycles(Number(event.target.value), tcPer))} /></label></div>
+        <div className="property-row"><span>Duration</span><span>{cyclesToTc(transactionEnd - transactionStart, tcPer)} {tcUnitLabel(tcPer)}{tcPer === 1 ? "" : ` (${transactionEnd - transactionStart} cycles)`}</span></div>
         {/* Transaction Mode GUI realignment: the reference shows Lane as a
             dropdown of existing lanes ("Lane 0"). laneId is a free-form
             identifier (any Lane sharing a name stacks into the same track,
@@ -261,7 +263,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
         <label>Lane<span className="inspector-field-with-help"><input aria-label="Transaction lane" list="transaction-lane-options" value={transactionLane} onChange={(event) => setTransactionLane(event.target.value)} /><datalist id="transaction-lane-options">{[...new Set(document.transactions.map((item) => item.laneId ?? "lane_0"))].sort().map((laneId) => <option key={laneId} value={laneId} />)}</datalist><span className="field-help" tabIndex={0} title="A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track." aria-label="About Lane">ⓘ</span></span></label>
       </InspectorSection>
       <InspectorSection sectionId="phases" title="Phases" count={phaseDraft?.length ?? transaction.phases?.length ?? 0} onAdd={() => addPhaseToDraft(transaction)} addDisabled={!canAddPhase(transaction)} open={transactionSections.phases ?? true} onToggle={() => toggleTransactionSection("phases")}>
-        <TransactionPhaseEditor transaction={transaction} commands={commands} compact />
+        <TransactionPhaseEditor transaction={transaction} commands={commands} compact cyclesPerTc={tcPer} />
       </InspectorSection>
       <InspectorSection sectionId="linked-signals" title="Linked Signals" count={transaction.linkedSignals?.length ?? 0} onAdd={() => {}} open={transactionSections["linked-signals"] ?? true} onToggle={() => toggleTransactionSection("linked-signals")}>
         <TransactionLinkedSignals transaction={transaction} document={document} onToggle={(signalId) => onToggleTransactionSignal(transaction.id, signalId)} renderUnlinkButton={(label, onClick) => <EditorIconButton label={label} icon="close" onClick={onClick} />} />

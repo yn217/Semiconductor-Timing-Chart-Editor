@@ -1,3 +1,4 @@
+import { cyclesToTc, tcToCycles } from "./transaction-tc.js";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { CanonicalDocument, Transaction, TransactionPhase } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
@@ -66,7 +67,7 @@ function initialPhaseRows(transaction: Transaction | undefined): TransactionPhas
   return (draft && phasesEqual(draft.base, base) ? draft.rows : base).map((phase) => ({ ...phase }));
 }
 
-export function TransactionPhaseEditor({ transaction, commands, compact = false }: { readonly transaction: Transaction | undefined; readonly commands: EditorSurfaceCommandController; readonly compact?: boolean }) {
+export function TransactionPhaseEditor({ transaction, commands, compact = false, cyclesPerTc: perTc = 1 }: { readonly transaction: Transaction | undefined; readonly commands: EditorSurfaceCommandController; readonly compact?: boolean; readonly cyclesPerTc?: number }) {
   const [rows, setRowsRaw] = useState<TransactionPhase[]>(() => initialPhaseRows(transaction));
   const [error, setError] = useState("");
   const setRows = (update: (current: TransactionPhase[]) => TransactionPhase[]) => setRowsRaw((current) => {
@@ -133,7 +134,7 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false 
       })}
     </div>}
     <p className={`transaction-bottom-phase-coverage${coverageProblem ? " is-warning" : ""}`} data-testid="transaction-bottom-phase-coverage">{coverageProblem ?? "✓ Full Transaction range is covered"}</p>
-    <div className="transaction-bottom-phase-table"><div className="transaction-bottom-phase-row transaction-bottom-phase-head"><span>Name</span><span>Start</span><span>End</span><span>Duration</span><span /></div>{rows.map((phase, index) => <div className="transaction-bottom-phase-row" key={`${transaction.id}-${index}`} data-phase-index={index}><input aria-label={`${compact ? "" : "Bottom "}Phase ${index + 1} name`} value={phase.name} onChange={(event) => updateRow(index, { name: event.target.value })} /><input aria-label={`${compact ? "" : "Bottom "}Phase ${index + 1} start`} type="number" value={phase.start} onChange={(event) => updateRow(index, { start: Number(event.target.value) })} /><input aria-label={`${compact ? "" : "Bottom "}Phase ${index + 1} end`} type="number" value={phase.end} onChange={(event) => updateRow(index, { end: Number(event.target.value) })} /><span>{phase.end - phase.start}</span><button type="button" aria-label={compact ? `Delete phase ${index + 1}` : `Delete bottom phase ${index + 1}`} onClick={() => setRows((current) => current.filter((_, itemIndex) => itemIndex !== index))}>×</button></div>)}</div>
+    <div className="transaction-bottom-phase-table"><div className="transaction-bottom-phase-row transaction-bottom-phase-head"><span>Name</span><span>{perTc === 1 ? "Start" : "Start (TC)"}</span><span>{perTc === 1 ? "End" : "End (TC)"}</span><span>{perTc === 1 ? "Duration" : "Duration (TC)"}</span><span /></div>{rows.map((phase, index) => <div className="transaction-bottom-phase-row" key={`${transaction.id}-${index}`} data-phase-index={index}><input aria-label={`${compact ? "" : "Bottom "}Phase ${index + 1} name`} value={phase.name} onChange={(event) => updateRow(index, { name: event.target.value })} /><input aria-label={`${compact ? "" : "Bottom "}Phase ${index + 1} start`} type="number" step={perTc === 1 ? 1 : 1 / perTc} value={cyclesToTc(phase.start, perTc)} onChange={(event) => updateRow(index, { start: tcToCycles(Number(event.target.value), perTc) })} /><input aria-label={`${compact ? "" : "Bottom "}Phase ${index + 1} end`} type="number" step={perTc === 1 ? 1 : 1 / perTc} value={cyclesToTc(phase.end, perTc)} onChange={(event) => updateRow(index, { end: tcToCycles(Number(event.target.value), perTc) })} /><span>{cyclesToTc(phase.end - phase.start, perTc)}</span><button type="button" aria-label={compact ? `Delete phase ${index + 1}` : `Delete bottom phase ${index + 1}`} onClick={() => setRows((current) => current.filter((_, itemIndex) => itemIndex !== index))}>×</button></div>)}</div>
     {rows.length === 0 && <p className="inspector-note">No phases defined. Add a phase within the Transaction range.</p>}
     <button type="button" data-testid={compact ? "add-transaction-phase" : "add-bottom-transaction-phase"} onClick={addPhase} disabled={Math.max(transaction.start, ...rows.map((phase) => phase.end)) >= transaction.end}>Add Phase</button>
     {compact && rows.length > 0 && Math.max(transaction.start, ...rows.map((phase) => phase.end)) >= transaction.end && <p className="inspector-note" role="note">No unused cycles remain. Extend the Transaction or shorten a Phase to add another.</p>}
@@ -141,8 +142,8 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false 
   </section>;
 }
 
-export function TransactionPhaseSummary({ transaction, commands }: { readonly transaction: Transaction | undefined; readonly commands: EditorSurfaceCommandController }) {
-  return <TransactionPhaseEditor transaction={transaction} commands={commands} />;
+export function TransactionPhaseSummary({ transaction, commands, cyclesPerTc }: { readonly transaction: Transaction | undefined; readonly commands: EditorSurfaceCommandController; readonly cyclesPerTc?: number }) {
+  return <TransactionPhaseEditor transaction={transaction} commands={commands} {...(cyclesPerTc === undefined ? {} : { cyclesPerTc })} />;
 }
 
 export function TransactionLinkedSummary({ transaction, document }: { readonly transaction: Transaction | undefined; readonly document: CanonicalDocument }) {

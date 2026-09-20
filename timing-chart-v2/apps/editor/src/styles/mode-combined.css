@@ -55,6 +55,9 @@
   border-bottom: 1px solid var(--ds-border-subtle, #b7c4d2);
   background: var(--ds-surface-muted, #edf2f7);
   z-index: 30;
+  /* The divider lives in the horizontally scrolling Combined viewport; keep it pinned to the visible left edge so it stays grabbable after any horizontal scroll. */
+  position: sticky;
+  left: 0;
 }
 .cycle-panel.mode-split .combined-split-divider:focus-visible {
   outline: 2px solid var(--ds-focus-color, #2678bc);

@@ -25,13 +25,13 @@ async function openTransactionMode(page: Page) {
 async function createReadRequestTransaction(page: Page, { withLinks = false }: { withLinks?: boolean } = {}) {
   const bottomEditor = page.getByTestId("transaction-editor");
   await bottomEditor.getByLabel("New Transaction name").fill("Read Request");
-  await bottomEditor.getByLabel("New Transaction start").fill("2");
-  await bottomEditor.getByLabel("New Transaction end").fill("12");
+  await bottomEditor.getByLabel("New Transaction start").fill("0.2"); // TC (10 cycles/TC) = cycle 2
+  await bottomEditor.getByLabel("New Transaction end").fill("1.2"); // cycle 12
   await bottomEditor.getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
 
   const inspector = page.getByTestId("inspector");
-  const phases: readonly [string, number, number][] = [["Request", 2, 5], ["Processing", 5, 9], ["Response", 9, 12]];
+  const phases: readonly [string, number, number][] = [["Request", 0.2, 0.5], ["Processing", 0.5, 0.9], ["Response", 0.9, 1.2]]; // TC = cycles 2-5, 5-9, 9-12
   for (let i = 0; i < phases.length; i++) await inspector.getByTestId("add-transaction-phase").click();
   for (let i = 0; i < phases.length; i++) {
     const [name, start, end] = phases[i]!;

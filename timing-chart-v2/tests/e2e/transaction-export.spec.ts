@@ -264,16 +264,16 @@ test("cross-highlights stable linked Signals when a Transaction is selected", as
 
 test("ripples Transaction ranges through Timeline edits with exact Undo", async ({ page }) => {
   await ready(page);
-  await createTransaction(page, "Ripple", 2, 6);
+  await createTransaction(page, "Ripple", 0.2, 0.6) /* TC at 10 cycles/TC = cycles 2..6 */;
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline insert count").fill("2");
   await page.getByRole("button", { name: "Insert before" }).click();
-  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("4");
-  await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("8");
+  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("0.4");
+  await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("0.8");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
-  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("2");
-  await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("6");
+  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("0.2");
+  await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("0.6");
 });
 
 test("moves and resizes Transaction edges through the shared rendered-geometry Snap Service", async ({ page }) => {

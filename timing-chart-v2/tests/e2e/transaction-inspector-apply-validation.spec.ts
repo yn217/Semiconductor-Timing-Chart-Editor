@@ -39,15 +39,15 @@ test("commits an available Phase as one History unit and preserves it through Un
 
   const inspector = page.getByTestId("inspector");
   const rows = inspector.getByTestId("inspector-phase-editor").locator(".transaction-bottom-phase-row:not(.transaction-bottom-phase-head)");
-  await inspector.getByLabel("Transaction end").fill("61");
+  await inspector.getByLabel("Transaction end").fill("6.1"); // TC (10 cycles/TC) = 61 cycles
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   const add = inspector.getByTestId("add-transaction-phase");
   await expect(add).toBeEnabled();
   await add.click();
   await expect(rows).toHaveCount(4);
-  await expect(inspector.getByLabel("Phase 4 start")).toHaveValue("60");
-  await expect(inspector.getByLabel("Phase 4 end")).toHaveValue("61");
+  await expect(inspector.getByLabel("Phase 4 start")).toHaveValue("6");
+  await expect(inspector.getByLabel("Phase 4 end")).toHaveValue("6.1");
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 
@@ -72,8 +72,8 @@ test("commits an available Phase as one History unit and preserves it through Un
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await page.getByTestId("transaction-left-tree-row-txn_read0").click();
   await expect(rows).toHaveCount(4);
-  await expect(inspector.getByLabel("Phase 4 start")).toHaveValue("60");
-  await expect(inspector.getByLabel("Phase 4 end")).toHaveValue("61");
+  await expect(inspector.getByLabel("Phase 4 start")).toHaveValue("6");
+  await expect(inspector.getByLabel("Phase 4 end")).toHaveValue("6.1");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
@@ -98,7 +98,7 @@ test("a rejected Transaction Apply surfaces its reason instead of silently no-op
   await expect(inspector.getByRole("status")).toHaveText(/half-open|range|cycle/i);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 
-  await inspector.getByLabel("Transaction end").fill("20");
+  await inspector.getByLabel("Transaction end").fill("2"); // 2 TC = 20 cycles
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 });

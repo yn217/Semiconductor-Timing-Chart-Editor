@@ -81,8 +81,8 @@ test("Transaction crossing a collapsed TimeGroup renders an Axis Break gap", asy
   expect(barBox?.width).toBeGreaterThan(0);
   expect(gapBox?.width).toBeGreaterThan(0);
   await bar.click();
-  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("10");
-  await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("60");
+  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("1"); // 10 cycles at 10 cycles/TC
+  await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("6");
 });
 
 test("Transaction fully inside a collapsed TimeGroup remains selectable", async ({ page }) => {
@@ -101,8 +101,8 @@ test("Transaction fully inside a collapsed TimeGroup remains selectable", async 
   const hidden = page.locator('[data-transaction-id="txn_read0"][data-hidden-in-fold="true"]');
   await expect(hidden).toBeVisible();
   await expect(hidden).toHaveAttribute("aria-label", "Read_0 inside collapsed TimeGroup");
-  await expect(page.locator('[data-transaction-row-id="txn_read0"]')).toContainText("25");
-  await expect(page.locator('[data-transaction-row-id="txn_read0"]')).toContainText("35");
+  await expect(page.locator('[data-transaction-row-id="txn_read0"]')).toContainText("2.5"); // cycle 25 at 10 cycles/TC
+  await expect(page.locator('[data-transaction-row-id="txn_read0"]')).toContainText("3.5");
 });
 
 test("Bookmark inside a collapsed TimeGroup is identified in the Bookmarks panel", async ({ page }) => {
@@ -237,7 +237,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(page.getByTestId("transaction-list-search")).toBeVisible();
     await expect(page.getByTestId("delete-bottom-transaction")).toBeHidden();
     await expect(page.getByText(/^Editing:/)).toBeHidden();
-    for (const heading of ["Name", "Group", "Lane", "Start Cycle", "End Cycle", "Duration (cycles)", "# Phases", "Linked Signals", "Color", "Description"]) {
+    for (const heading of ["Name", "Group", "Lane", "Start (TC)", "End (TC)", "Duration (TC)", "# Phases", "Linked Signals", "Color", "Description"]) {
       await expect(page.locator(".transaction-list-header-cells")).toContainText(heading);
     }
     await expect(page.locator(".inspector > .minimap .minimap-segment-transaction").first()).toBeVisible();
@@ -355,7 +355,7 @@ test("Moving a folded Transaction uses source-cycle geometry", async ({ page }) 
   await page.mouse.up();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   const row = page.locator('[data-transaction-row-id="txn_read0"]');
-  await expect(row).toContainText("50");
+  await expect(row).toContainText("5"); // 50-cycle duration = 5 TC
 });
 
 test("Resizing a folded Transaction preserves the opposite source boundary and undoes", async ({ page }) => {
@@ -388,10 +388,10 @@ test("Resizing a folded Transaction preserves the opposite source boundary and u
   await page.mouse.move(nextBoundary!.x + 1, barBox!.y + barBox!.height / 2, { steps: 3 });
   await page.mouse.up();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
-  await expect(inspector.getByLabel("Transaction end")).toHaveValue("60");
-  await expect(inspector.getByLabel("Transaction start")).not.toHaveValue("10");
+  await expect(inspector.getByLabel("Transaction end")).toHaveValue("6"); // 60 cycles
+  await expect(inspector.getByLabel("Transaction start")).not.toHaveValue("1");
   await page.getByRole("button", { name: "Undo", exact: true }).first().click();
-  await expect(inspector.getByLabel("Transaction start")).toHaveValue("10");
+  await expect(inspector.getByLabel("Transaction start")).toHaveValue("1");
 });
 
 test("Transaction starting inside a fold shows a start-hidden affordance", async ({ page }) => {
