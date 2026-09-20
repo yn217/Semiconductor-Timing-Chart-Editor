@@ -604,3 +604,5 @@
 .bottom-settings-popover[hidden] { display: none; }
 .signal-context-header .signal-scope-actions { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; padding-left: 12px; border-left: 1px solid #c3ceda; }
 .signal-context-header button.danger { border-color: #d39b9b; color: #a52b2b; background: #fff7f7; }
+.event-derived-column { font-style: italic; cursor: help; }
+.event-row output[data-testid^="event-row-end-"], .event-row output[data-testid^="event-row-duration-"] { color: #5c687c; }
