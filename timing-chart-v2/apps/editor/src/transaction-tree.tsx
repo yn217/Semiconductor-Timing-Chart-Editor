@@ -15,7 +15,7 @@ type TransactionTreeMenu = Readonly<
   | { kind: "group"; id: string }
   | { kind: "transaction"; id: TransactionId }
 >;
-type TransactionTreeMenuItem = Readonly<{ label: string; run: () => void; disabled?: boolean; submenu?: readonly TransactionTreeMenuItem[] }>;
+type TransactionTreeMenuItem = Readonly<{ label: string; run: () => void; disabled?: boolean; submenu?: readonly TransactionTreeMenuItem[]; movesFocus?: boolean }>;
 
 export function TransactionTree({
   document,
@@ -365,14 +365,16 @@ export function TransactionTree({
     setOpenMenu(nextMenu);
   };
   const invokeMenuItem = (item: TransactionTreeMenuItem) => {
-    closeMenu(true);
+    // Items that start inline editing own focus; restoring it to the trigger
+    // would blur the new input and cancel the edit immediately.
+    closeMenu(item.movesFocus !== true);
     item.run();
   };
   const selectedMenuGroup = openMenu?.kind === "group" ? groups.find((group) => group.id === openMenu.id) : undefined;
   const selectedMenuTransaction = openMenu?.kind === "transaction" ? document.transactions.find((transaction) => transaction.id === openMenu.id) : undefined;
   const menuItems: readonly TransactionTreeMenuItem[] = selectedMenuGroup
     ? [
-        { label: "Rename Group", run: () => rename(selectedMenuGroup) },
+        { label: "Rename Group", movesFocus: true, run: () => rename(selectedMenuGroup) },
         { label: "New Transaction", run: () => onCreateTransaction?.() },
         { label: "Select Children", run: () => groupTransactions(selectedMenuGroup.id).forEach((transaction, index) => onSelect(transaction.id, index > 0)) },
         ...(onDeleteGroup ? [{ label: "Delete Group", run: () => onDeleteGroup(selectedMenuGroup.id) }] : []),

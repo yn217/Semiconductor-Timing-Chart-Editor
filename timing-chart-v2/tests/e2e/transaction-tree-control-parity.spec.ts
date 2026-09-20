@@ -42,7 +42,7 @@ for (const viewport of viewports) {
 
     await memory.locator(".transaction-left-tree-group-header .transaction-left-tree-more").click();
     await page.getByTestId("transaction-tree-action-menu").getByRole("menuitem", { name: "Rename Group" }).click();
-    const rename = memory.getByRole("textbox", { name: "Rename Group Memory" });
+    const rename = memory.getByRole("textbox", { name: "Rename Memory" });
     await rename.fill("Memory Very Long Group Name For Column Alignment");
     await rename.press("Enter");
     await rename.press("Escape");
