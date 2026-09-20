@@ -24,6 +24,7 @@ import { resolveGroupInsertionIndex, resolveInsertionTarget } from "./insertion-
 import type { AIViewIntent } from "./ai-proposal-provider.js";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { HomeOverflow } from "./ribbon/home-overflow.js";
+import { buildTransactionRibbonGroups } from "./ribbon/transaction-ribbon-groups.js";
 
 type DensityMode = "compact" | "comfortable";
 type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
@@ -112,34 +113,6 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
   const insertRangeArrow = () => {
     if (!selectedSignalId) return;
     onCreateAnnotation(createAnnotation("arrow", selectedSignalId, range, document, undefined, "bidirectional"));
-  };
-  const addTransaction = () => {
-    const id = nextEntityId("transaction", document) as TransactionId;
-    const result = commands.createTransaction({ id, name: `Transaction ${document.transactions.length + 1}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), laneId: "lane_0" });
-    if (result.ok) onTransactionCreated(id);
-  };
-  const duplicateTransaction = () => {
-    const source = selectedTransactionId === undefined ? undefined : document.transactions.find((item) => item.id === selectedTransactionId);
-    if (!source) return;
-    const id = nextEntityId("transaction", document) as TransactionId;
-    const result = commands.duplicateTransaction({ ...source, id, name: `${source.name} Copy` });
-    if (result.ok) onTransactionCreated(id);
-  };
-  // #397 Transaction Mode GUI Closure Section 8: Ribbon-level parity for the
-  // Group header's own "Ungroup" button -- lets the user act on the
-  // selected Transaction's Group without hunting for the small header
-  // control, using the same already-existing `transactionGroup.delete`
-  // command (atomically ungroups every member Transaction).
-  const selectedTransactionGroupId = selectedTransactionId === undefined ? undefined : document.transactions.find((item) => item.id === selectedTransactionId)?.groupId;
-  const ungroupSelectedTransaction = () => {
-    if (selectedTransactionGroupId !== undefined) commands.deleteTransactionGroup(selectedTransactionGroupId);
-  };
-  // #429 Ribbon cleanup: parity for the Left Tree's own "+" Add Group
-  // button -- same `transactionGroup.create` command/ID generation.
-  const addTransactionGroup = () => {
-    const id = nextEntityId("transactionGroup", document) as TransactionGroup["id"];
-    const order = document.transactionGroups?.length ?? 0;
-    commands.createTransactionGroup({ id, name: `Group ${order + 1}`, order });
   };
   // #406: Home Ribbon's group set now depends on ActiveContext (#404/#405)
   // rather than always showing every group regardless of Cycle/Transaction
@@ -237,28 +210,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         { kind: "toggle", id: "ruler", label: "Ruler", testId: "home-ruler-toggle", checked: rulerEnabled, onChange: onToggleRuler },
       ],
     },
-    {
-      // #429 Ribbon cleanup: this one "Transaction" group used to mix
-      // Transaction/Group/Time Scale commands with no visual distinction --
-      // split into three coherently-captioned groups (Transaction/Group/
-      // Time) over the same already-existing commands, no new model.
-      id: "transaction", majorGroup: "Transaction", caption: "Transaction", items: [
-        { kind: "button", id: "transaction-create", icon: "i-plus", label: "Create", ariaLabel: "Create Transaction", onClick: addTransaction },
-        // #439: "wide" -- see the Clipboard group's "Duplicate" above.
-        { kind: "button", id: "transaction-duplicate", icon: "i-duplicate", label: "Duplicate", ariaLabel: "Duplicate Transaction", size: "wide", onClick: duplicateTransaction, disabled: !selectedTransactionId },
-      ],
-    },
-    ...(viewMode === "Transaction" || (viewMode === "Split" && activeContext === "Transaction") ? [{
-      id: "transaction-group", majorGroup: "Group", caption: "Group", items: [
-        { kind: "button", id: "transaction-group-add", icon: "i-plus", label: "Add", ariaLabel: "Add Transaction Group", onClick: addTransactionGroup },
-        { kind: "button", id: "transaction-ungroup", icon: "i-ungroup", label: "Ungroup", ariaLabel: "Ungroup selected Transaction", title: "Remove the selected Transaction's Group (keeps the Transaction, ungrouped)", onClick: ungroupSelectedTransaction, disabled: selectedTransactionGroupId === undefined },
-      ],
-    } as const] : []),
-    ...(viewMode === "Transaction" || (viewMode === "Split" && activeContext === "Transaction") ? [{
-      id: "transaction-time", majorGroup: "Transaction Time", caption: "Time Scale", items: [
-        { kind: "custom", id: "transaction-time-scale", render: () => <TransactionTimeScalePanel key="transaction-time-scale" document={document} onSetScale={commands.setTransactionTimeScale} /> },
-      ],
-    } as const] : []),
+    ...buildTransactionRibbonGroups({ document, range, commands, selectedTransactionId, onTransactionCreated, viewMode, activeContext }),
   ];
   const signalRibbonGroups: readonly RibbonGroupSpec[] = [
     {
