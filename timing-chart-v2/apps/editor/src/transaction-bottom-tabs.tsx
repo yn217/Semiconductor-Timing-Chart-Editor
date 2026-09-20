@@ -113,7 +113,7 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false,
   const ordered = [...rows].sort((a, b) => a.start - b.start || a.end - b.end);
   const overlaps = ordered.some((phase, index) => index > 0 && phase.start < ordered[index - 1]!.end);
   const outside = rows.some((phase) => phase.start < transaction.start || phase.end > transaction.end);
-  const coverageProblem = rows.length === 0 ? "No phases defined" : outside ? "Phase exceeds the Transaction range" : overlaps ? "Phases overlap" : covered < duration ? `Uncovered time: ${duration - covered} cycles` : undefined;
+  const coverageProblem = rows.length === 0 ? "No phases defined" : outside ? "Phase exceeds the Transaction range" : overlaps ? "Phases overlap" : covered < duration ? `Uncovered time: ${cyclesToTc(duration - covered, perTc)} ${perTc === 1 ? "cycles" : "TC"}` : undefined;
   const shownError = error || liveError || "";
   const updateRow = (index: number, patch: Partial<TransactionPhase>) => setRows((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
   return <section className={`transaction-bottom-summary transaction-bottom-phase-editor${compact ? " is-compact" : ""}`} data-testid={compact ? "inspector-phase-editor" : "transaction-bottom-phases"}>
@@ -125,12 +125,12 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false,
         <button type="button" data-testid={compact ? "apply-transaction-phases" : "apply-bottom-transaction-phases"} onClick={apply} disabled={!changed}>Apply</button>
       </span>}
     </header>
-    {!compact && <p className="transaction-bottom-phase-context" data-testid="transaction-bottom-phase-context">Group: {transaction.groupId ?? "Ungrouped"} · Lane: {transaction.laneId ?? "lane_0"} · Start {transaction.start} · End {transaction.end} · Duration {duration} cycles · Coverage {covered} / {duration} · Remaining {Math.max(0, duration - covered)}</p>}
-    {!compact && <div className="transaction-bottom-phase-timeline" data-testid="transaction-bottom-phase-timeline" role="img" aria-label={`Phase timeline ${transaction.start} to ${transaction.end}`}>
+    {!compact && <p className="transaction-bottom-phase-context" data-testid="transaction-bottom-phase-context">Group: {transaction.groupId ?? "Ungrouped"} · Lane: {transaction.laneId ?? "lane_0"} · Start {cyclesToTc(transaction.start, perTc)} · End {cyclesToTc(transaction.end, perTc)} · Duration {cyclesToTc(duration, perTc)} {perTc === 1 ? "cycles" : "TC"} · Coverage {cyclesToTc(covered, perTc)} / {cyclesToTc(duration, perTc)} · Remaining {cyclesToTc(Math.max(0, duration - covered), perTc)}</p>}
+    {!compact && <div className="transaction-bottom-phase-timeline" data-testid="transaction-bottom-phase-timeline" role="img" aria-label={`Phase timeline ${cyclesToTc(transaction.start, perTc)} to ${cyclesToTc(transaction.end, perTc)}`}>
       {[...rows].map((phase, index) => ({ phase, index })).sort((a, b) => a.phase.start - b.phase.start).map(({ phase, index }) => {
         const left = Math.max(0, Math.min(100, 100 * (phase.start - transaction.start) / Math.max(1, duration)));
         const width = Math.max(0.5, Math.min(100 - left, 100 * (phase.end - phase.start) / Math.max(1, duration)));
-        return <span key={index} className="transaction-bottom-phase-segment" data-phase-index={index} title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${left}%`, width: `${width}%` }}>{phase.name}</span>;
+        return <span key={index} className="transaction-bottom-phase-segment" data-phase-index={index} title={`${phase.name}: ${cyclesToTc(phase.start, perTc)}–${cyclesToTc(phase.end, perTc)}`} style={{ left: `${left}%`, width: `${width}%` }}>{phase.name}</span>;
       })}
     </div>}
     <p className={`transaction-bottom-phase-coverage${coverageProblem ? " is-warning" : ""}`} data-testid="transaction-bottom-phase-coverage">{coverageProblem ?? "✓ Full Transaction range is covered"}</p>
