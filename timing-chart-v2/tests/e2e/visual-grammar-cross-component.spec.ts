@@ -57,6 +57,8 @@ for (const viewport of [{ width: 1672, height: 941, label: "1672x941" }, { width
 
     // Bookmark context
     await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
+    // Create stays disabled until the draft differs from its defaults (Draft/Apply contract): give it a name first.
+    await page.getByLabel("New Bottom Bookmark name").fill("Audit");
     await page.getByRole("button", { name: "Create Bookmark", exact: true }).click();
     await auditContext(page, `${viewport.label} Bookmark`);
 

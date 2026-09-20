@@ -23,12 +23,13 @@ test("the Cycle-only frozen-pane splitter is absent in Transaction Mode and reap
 
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(page.getByTestId("frozen-pane-resizer")).toHaveCount(0);
-  // The Left Tree panel's own splitter is unaffected -- only the
-  // Cycle-specific inner one is gone.
-  await expect(page.getByTestId("left-pane-resizer")).toBeVisible();
+  // Transaction Mode's left rail has a fixed width (mode composition: fixedLeftWidth 246, no left-pane resizer).
+  await expect(page.getByTestId("left-pane-resizer")).toHaveCount(0);
 
   await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.getByTestId("frozen-pane-resizer")).toHaveCount(0);
+  // Combined keeps the Left Tree panel's own splitter -- only the Cycle-specific inner one is gone.
+  await expect(page.getByTestId("left-pane-resizer")).toBeVisible();
 
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.getByTestId("frozen-pane-resizer")).toBeVisible();

@@ -198,7 +198,7 @@ test("Event Table exposes one action route and visibly rejects invalid imports",
   await expect(toolbar.getByRole("button", { name: "Preview Update", exact: true })).toHaveCount(0);
   const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
   await bottom.getByLabel("Import signal events").setInputFiles({ name: "invalid.json", mimeType: "application/json", buffer: Buffer.from("not-json") });
-  await expect(bottom.getByTestId("event-import-status")).toHaveText("Import rejected: invalid JSON.");
+  await expect(bottom.getByTestId("event-import-status")).toHaveText(/^Import rejected: .+/); // the parser problem follows the shared prefix
   expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);

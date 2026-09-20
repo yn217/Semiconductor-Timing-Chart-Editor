@@ -65,6 +65,8 @@ test("MiniMap shows a Transaction-aware overview in Transaction Mode: one segmen
 
 test("MiniMap falls back to the Signal overview in Cycle Mode, view-only throughout", async ({ page }) => {
   await openSample(page);
+  // Normal startup is Transaction mode; this test starts from Cycle explicitly.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const minimap = page.getByTestId("minimap");
   await expect(minimap).toHaveAttribute("data-minimap-mode", "signal");
   await expect(minimap.locator("[data-row-id]")).toHaveCount(8);
