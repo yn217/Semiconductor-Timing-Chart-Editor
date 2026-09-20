@@ -51,9 +51,15 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     // #453 (bulk operations): each row is now wrapped in a
     // `.transaction-list-row` alongside its own bulk-select checkbox --
     // the row itself is still the `<button>` this test cares about.
-    const transactionRow = page.locator(".transaction-list-row > button[data-selected='true']");
+    // #703: the selected row is the in-place editing row; its name field is the readable text of that selected row.
+    const transactionRow = page.locator(".transaction-list-row > [data-selected='true'] input[aria-label='Bottom Transaction name']");
     await expect(transactionRow).toBeVisible();
-    const transactionStyle = await transactionRow.evaluate((element) => { const computed = getComputedStyle(element); return { color: computed.color, background: computed.backgroundColor }; });
+    const transactionStyle = await transactionRow.evaluate((element) => {
+      // The name field is transparent: its readable background is the nearest opaque ancestor.
+      let background = getComputedStyle(element).backgroundColor;
+      for (let node: HTMLElement | null = element.parentElement; node && /rgba\(0, 0, 0, 0\)|transparent/.test(background); node = node.parentElement) background = getComputedStyle(node).backgroundColor;
+      return { color: getComputedStyle(element).color, background };
+    });
     expect(Math.abs(rgbToLuminanceLikeSum(transactionStyle.color) - rgbToLuminanceLikeSum(transactionStyle.background)), JSON.stringify(transactionStyle)).toBeGreaterThan(300);
   });
 }

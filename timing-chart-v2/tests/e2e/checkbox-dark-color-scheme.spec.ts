@@ -1,5 +1,3 @@
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
 
@@ -18,19 +16,15 @@ startInCycleSample(test);
 // with one shared, app-wide rule (controls.css) instead of a
 // Transaction-only patch.
 
-const dirname = path.dirname(fileURLToPath(import.meta.url));
-const samplePath = path.resolve(dirname, "../../samples/acceptance-429/sample-transaction-mode-closure.tcd.json");
 
 test("checkboxes render an explicit bordered box (not a solid black square) under dark color-scheme, both checked and unchecked", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "dark" });
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(samplePath);
-  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
-  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
-  await page.getByRole("tab", { name: "Transaction", exact: true }).click();
-
-  const selectAll = page.locator(".transaction-select-all input[type='checkbox']");
+  // #737 removed the Transaction bulk-select checkboxes; the Home ribbon's Display checkboxes (Grid/Snap/...) are the
+  // remaining app-wide native checkboxes covered by the shared controls.css rule.
+  const selectAll = page.getByTestId("ribbon").locator("input[type='checkbox']").first();
+  await selectAll.uncheck();
   const unchecked = await selectAll.evaluate((el) => ({ appearance: getComputedStyle(el).appearance, background: getComputedStyle(el).backgroundColor, borderWidth: getComputedStyle(el).borderTopWidth }));
   // The bug's exact signature: an unstyled native checkbox renders with no
   // explicit background/border of its own (it's the UA's native paint, not
