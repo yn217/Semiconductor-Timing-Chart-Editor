@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 test("restores V1 pane vocabulary without changing command identity or document state", async ({ page }) => {
   await page.goto("/");

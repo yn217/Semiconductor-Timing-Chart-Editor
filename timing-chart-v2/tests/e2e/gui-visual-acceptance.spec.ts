@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { PNG } from "pngjs";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 const viewport = { width: 1672, height: 941 } as const;
 const appRoot = process.cwd();

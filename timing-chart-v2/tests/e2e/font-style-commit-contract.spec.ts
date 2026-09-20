@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 // #331 P1 UX/history item: Font Family / Size / Color must each be one
 // completed edit = one History entry, not one entry per keystroke/drag
@@ -18,7 +18,7 @@ test("Font Family/Size/Color commit once on blur or Enter, and Clear formatting 
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
   const history = page.getByTestId("history-status");
-  const clear = page.getByTestId("annotation-font-clear");
+  const clear = page.getByTestId("ribbon-annotation-font-clear");
   const historyDepth = async () => Number((await history.textContent())?.match(/History (\d+)/)?.[1] ?? NaN);
   const base = await historyDepth(); // annotation.create already committed one entry.
 
@@ -26,13 +26,13 @@ test("Font Family/Size/Color commit once on blur or Enter, and Clear formatting 
   await expect(clear).toBeDisabled();
 
   // Bold is an immediate one-click commit (unchanged contract).
-  await page.getByTestId("annotation-font-bold").click();
+  await page.getByTestId("ribbon-annotation-font-bold").click();
   await expect(history).toHaveText(`History ${base + 1} / Redo 0`);
   await expect(clear).toBeEnabled();
 
   // Typing a font family does NOT commit until blur -- only one History
   // entry for the whole completed edit, not one per keystroke.
-  const family = page.getByTestId("annotation-font-font-family");
+  const family = page.getByTestId("ribbon-annotation-font-font-family");
   await family.fill("Ari");
   await expect(history).toHaveText(`History ${base + 1} / Redo 0`);
   await family.fill("Arial");
@@ -44,7 +44,7 @@ test("Font Family/Size/Color commit once on blur or Enter, and Clear formatting 
   await expect(history).toHaveText(`History ${base + 2} / Redo 0`);
 
   // Font size commits on Enter, once, for the final value.
-  const size = page.getByTestId("annotation-font-font-size");
+  const size = page.getByTestId("ribbon-annotation-font-font-size");
   await size.fill("14");
   await size.fill("18");
   await expect(history).toHaveText(`History ${base + 2} / Redo 0`);
@@ -52,7 +52,7 @@ test("Font Family/Size/Color commit once on blur or Enter, and Clear formatting 
   await expect(history).toHaveText(`History ${base + 3} / Redo 0`);
 
   // Color commits once on blur.
-  const color = page.getByTestId("annotation-font-color");
+  const color = page.getByTestId("ribbon-annotation-font-color");
   await color.focus();
   await color.evaluate((element: HTMLInputElement) => {
     const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")!.set!;
