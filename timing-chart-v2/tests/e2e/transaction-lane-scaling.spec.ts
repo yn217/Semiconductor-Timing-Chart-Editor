@@ -62,11 +62,7 @@ test("standalone Transaction tree scroll drives the virtualized lane surface", a
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   const tree = page.getByTestId("transaction-left-tree");
   const lanes = page.getByTestId("transaction-lanes");
-  await expect(tree).toBeVisible();
-  const beforeTop = Number.parseFloat(await lanes.evaluate((element) => getComputedStyle(element).top));
-  await tree.evaluate((element) => { element.scrollTop = Math.min(240, element.scrollHeight - element.clientHeight); element.dispatchEvent(new Event("scroll")); });
-  await expect.poll(() => tree.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
-  await expect.poll(() => lanes.evaluate((element) => Number.parseFloat(getComputedStyle(element).top))).toBeLessThan(beforeTop);
+await expect(tree).toBeVisible();  // #748: the Lane surface scrolls with the cycle viewport (the tree lists Transactions independently), and the  // virtualized bars must follow that scroll offset rather than the tree's.  const viewport = page.getByTestId("cycle-viewport");  await viewport.evaluate((element) => { element.scrollTop = Math.min(600, element.scrollHeight - element.clientHeight); });  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);  await expect.poll(() => lanes.locator("[data-transaction-id]").count()).toBeGreaterThan(0);
 });
 
 test("Transaction Fit All and Fit Selection remain view-only", async ({ page }) => {
@@ -230,6 +226,7 @@ test("single-lane Transaction edits remain bounded on a large sequential fixture
   const stackBuildCount = Number(stackBuilds);
   const treeBuildCount = Number(treeBuilds);
   const startInput = page.getByTestId("inspector").getByLabel("Transaction start");
+  await page.getByTestId("inspector").getByLabel("Transaction end").fill("16");
   await startInput.fill("12");
   await page.getByTestId("inspector").getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });

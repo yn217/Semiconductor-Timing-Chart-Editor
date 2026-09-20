@@ -521,9 +521,11 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     // the outer cycle viewport only owns the shared horizontal surface there.
     // Keep the standalone Transaction mode fallback on its cycle viewport.
     const panel = laneRoot?.closest<HTMLElement>(".cycle-panel");
+    // The standalone Transaction tree lists Transactions independently of the Lane surface (#748), so the lanes
+    // virtualize against the cycle viewport that actually scrolls them, not against the tree's scroll offset.
     const viewport = laneRoot?.closest<HTMLElement>(".split-transaction-pane")
-      ?? panel?.querySelector<HTMLElement>(".transaction-left-tree")
-      ?? laneRoot?.closest<HTMLElement>(".cycle-viewport");
+      ?? laneRoot?.closest<HTMLElement>(".cycle-viewport")
+      ?? panel?.querySelector<HTMLElement>(".transaction-left-tree");
     if (!viewport) return;
     const update = () => setVirtualWindow({ top: viewport.scrollTop, height: viewport.clientHeight || 900 });
     update();
