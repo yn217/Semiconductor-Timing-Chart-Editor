@@ -42,6 +42,7 @@ export type WaveformProviderContext = Readonly<{
    * every owner ends up offset from the ruler by WaveDrom's own fixed left
    * margin (#620). */
   getWaveOriginPx?: () => number | undefined;
+  getPresentationScale?: () => number;
   getViewMode?: () => "Cycle" | "Transaction" | "Split";
 }>;
 
@@ -148,7 +149,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const waveOriginPx = context.getWaveOriginPx?.() ?? 0;
       for (const item of prepared) {
         if (pxPerDisplayCycle !== undefined && item.rendererStart !== undefined && item.rendererEnd !== undefined && item.rendererEnd > item.rendererStart) {
-          const placement = waveOwnerPlacement({ displayStart: item.rendererStart, displayEnd: item.rendererEnd, pxPerDisplayCycle, waveOriginPx });
+          const placement = waveOwnerPlacement({ displayStart: item.rendererStart, displayEnd: item.rendererEnd, pxPerDisplayCycle, waveOriginPx, presentationScale: context.getPresentationScale?.() ?? 1 });
           item.request.owner.style.width = `${placement.width}px`;
           // The shared wave-owner layer (`stable-waveform-surface`) is one
           // element as wide as the whole document (`--wave-width`), scrolled

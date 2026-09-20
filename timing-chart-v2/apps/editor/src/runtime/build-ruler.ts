@@ -312,7 +312,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
         ? displayWindowForSource(mapping, { sourceStart, sourceEnd }, document.timeline.cycleCount)
         : undefined;
       if (displayWindow) {
-        const placement = waveOwnerPlacement({ displayStart: displayWindow.displayStart, displayEnd: displayWindow.displayEnd, pxPerDisplayCycle, waveOriginPx, viewBoxWidth: owner.querySelector<SVGSVGElement>(":scope > svg")?.viewBox.baseVal.width });
+        const placement = waveOwnerPlacement({ displayStart: displayWindow.displayStart, displayEnd: displayWindow.displayEnd, pxPerDisplayCycle, waveOriginPx, presentationScale: scale, viewBoxWidth: owner.querySelector<SVGSVGElement>(":scope > svg")?.viewBox.baseVal.width });
         owner.style.width = `${placement.width}px`;
         // See the matching comment in waveform-surface-provider.ts: a
         // windowed owner's horizontal position must reflect where its own

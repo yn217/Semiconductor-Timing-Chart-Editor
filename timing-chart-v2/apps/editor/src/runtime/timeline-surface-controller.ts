@@ -194,6 +194,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       markOpenPhase,
       getWaveWidthPxPerDisplayCycle: () => timelineGeometry.waveWidthPxPerDisplayCycle,
       getWaveOriginPx: () => timelineGeometry.waveOriginPx,
+      getPresentationScale: () => timelineGeometry.presentationScale,
       onReferenceGeometryReady: () => {
         if (active && !rulerInitialized) {
           timelineRuntimeRef.current?.refreshRuler();

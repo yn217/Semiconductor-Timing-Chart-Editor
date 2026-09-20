@@ -1206,9 +1206,10 @@ test("renders Comment Row content at the shared cycle-0 canvas boundary", async 
   expect(contentBox).not.toBeNull();
   expect(rowBox).not.toBeNull();
   expect(waveformBox).not.toBeNull();
-  // Wave owners start at the ruler's own time origin (waveOriginPx), so cycle 0 of the waveform and the ruler tick coincide.
+  // The wave owner box starts at the row edge and its SVG carries a 20.5-unit left margin, so cycle 0 of the waveform sits
+  // one margin inside the box -- exactly where the ruler's cycle-0 tick is.
   const tick0 = await page.getByTestId("cycle-ruler").locator("[data-cycle='0']").boundingBox();
-  expect(Math.abs(tick0!.x - waveformBox!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(tick0!.x - (waveformBox!.x + 20.5))).toBeLessThanOrEqual(1);
   expect(contentBox!.x).toBeGreaterThanOrEqual(rowBox!.x);
 });
 
@@ -1285,9 +1286,10 @@ test("renders Clock Edge Numbers from actual Geometry without WaveDrom regenerat
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   expect(await host.locator("[data-role='clock-edge-number'][data-signal-id='sig_cycle_clock']").count()).toBeGreaterThan(5);
-  // Open/New resets the transient visible range to [0, 1), so a persisted
-  // visible-range-start counter correctly includes the cycle-0 edge again.
-  await expect(host.locator("[data-role='clock-edge-number'][data-edge-counter-id*=':0']")).toHaveCount(1);
+  // Open/New resets the transient range to the default Timeline range [2, 4), so a persisted visible-range-start
+  // counter restarts at the first clock edge inside it (cycle 2), not at the cycle-0 edge.
+  await expect(host.locator("[data-role='clock-edge-number'][data-edge-counter-id='edge:sig_cycle_clock:rising:2']")).toHaveCount(1);
+  await expect(host.locator("[data-role='clock-edge-number'][data-edge-counter-id='edge:sig_cycle_clock:rising:0']")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
