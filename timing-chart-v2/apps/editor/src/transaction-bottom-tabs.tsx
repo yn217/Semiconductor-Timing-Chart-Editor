@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { CanonicalDocument, Transaction, TransactionPhase } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 
@@ -20,6 +20,46 @@ const phaseDrafts = new Map<string, { readonly base: readonly TransactionPhase[]
 const phaseDraftListeners = new Set<() => void>();
 const notifyPhaseDrafts = () => { for (const listener of [...phaseDraftListeners]) listener(); };
 
+let phaseDraftVersion = 0;
+const bumpPhaseDrafts = () => { phaseDraftVersion += 1; notifyPhaseDrafts(); };
+const subscribePhaseDrafts = (listener: () => void) => { phaseDraftListeners.add(listener); return () => { phaseDraftListeners.delete(listener); }; };
+
+/** The session's unapplied Phase draft for a Transaction (shared by Bottom and Inspector), or undefined when none is pending. */
+export function pendingPhaseDraft(transaction: Transaction | undefined): readonly TransactionPhase[] | undefined {
+  if (!transaction) return undefined;
+  const draft = phaseDrafts.get(transaction.id);
+  if (!draft) return undefined;
+  // A commit (or Undo/Redo) changed the committed phases: the draft's base is stale and must not be resurrected later.
+  if (!phasesEqual(draft.base, transaction.phases ?? [])) { phaseDrafts.delete(transaction.id); return undefined; }
+  return phasesEqual(draft.rows, transaction.phases ?? []) ? undefined : draft.rows;
+}
+export function usePendingPhaseDraft(transaction: Transaction | undefined): readonly TransactionPhase[] | undefined {
+  useSyncExternalStore(subscribePhaseDrafts, () => phaseDraftVersion, () => 0);
+  return pendingPhaseDraft(transaction);
+}
+const draftRowsOrCommitted = (transaction: Transaction): readonly TransactionPhase[] => pendingPhaseDraft(transaction) ?? transaction.phases ?? [];
+export function canAddPhase(transaction: Transaction): boolean {
+  return Math.max(transaction.start, ...draftRowsOrCommitted(transaction).map((phase) => phase.end)) < transaction.end;
+}
+/** Append the next one-cycle Phase to the shared draft (no commit). */
+export function addPhaseToDraft(transaction: Transaction): void {
+  if (!canAddPhase(transaction)) return;
+  const rows = draftRowsOrCommitted(transaction).map((phase) => ({ ...phase }));
+  const nextStart = Math.max(transaction.start, ...rows.map((phase) => phase.end));
+  rows.push({ name: `Phase ${rows.length + 1}`, start: nextStart, end: nextStart + 1 });
+  phaseDrafts.set(transaction.id, { base: transaction.phases ?? [], rows });
+  bumpPhaseDrafts();
+}
+export function clearPhaseDraft(transactionId: string): void {
+  if (phaseDrafts.delete(transactionId)) bumpPhaseDrafts();
+}
+/** Validated, time-ordered rows ready to commit, or an error message. */
+export function commitPhaseRows(rows: readonly TransactionPhase[], start: number, end: number): { readonly rows: TransactionPhase[] } | { readonly error: string } {
+  const normalized = rows.map((phase) => ({ ...phase, name: phase.name.trim() })).sort((a, b) => a.start - b.start || a.end - b.end);
+  const problem = phaseError(normalized, start, end);
+  return problem ? { error: problem } : { rows: normalized };
+}
+
 function initialPhaseRows(transaction: Transaction | undefined): TransactionPhase[] {
   const base = transaction?.phases ?? [];
   const draft = transaction ? phaseDrafts.get(transaction.id) : undefined;
@@ -34,7 +74,7 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false 
     if (transaction) {
       const base = transaction.phases ?? [];
       if (phasesEqual(next, base)) phaseDrafts.delete(transaction.id); else phaseDrafts.set(transaction.id, { base, rows: next.map((phase) => ({ ...phase })) });
-      queueMicrotask(notifyPhaseDrafts);
+      queueMicrotask(bumpPhaseDrafts);
     }
     return next;
   });
@@ -79,10 +119,10 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false 
     <header className="transaction-bottom-phase-header">
       <strong>Phases ({rows.length})</strong><span>{transaction.name}</span>
       {changed && <span className="draft-unapplied-indicator" role="status" data-testid="transaction-bottom-phases-unapplied">Unapplied changes</span>}
-      <span className="bottom-sticky-buttons">
+      {!compact && <span className="bottom-sticky-buttons">
         <button type="button" onClick={() => { setRows(() => (transaction.phases ?? []).map((phase) => ({ ...phase }))); setError(""); }} disabled={!changed}>Revert</button>
         <button type="button" data-testid={compact ? "apply-transaction-phases" : "apply-bottom-transaction-phases"} onClick={apply} disabled={!changed}>Apply</button>
-      </span>
+      </span>}
     </header>
     {!compact && <p className="transaction-bottom-phase-context" data-testid="transaction-bottom-phase-context">Group: {transaction.groupId ?? "Ungrouped"} · Lane: {transaction.laneId ?? "lane_0"} · Start {transaction.start} · End {transaction.end} · Duration {duration} cycles · Coverage {covered} / {duration} · Remaining {Math.max(0, duration - covered)}</p>}
     {!compact && <div className="transaction-bottom-phase-timeline" data-testid="transaction-bottom-phase-timeline" role="img" aria-label={`Phase timeline ${transaction.start} to ${transaction.end}`}>
@@ -96,6 +136,7 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false 
     <div className="transaction-bottom-phase-table"><div className="transaction-bottom-phase-row transaction-bottom-phase-head"><span>Name</span><span>Start</span><span>End</span><span>Duration</span><span /></div>{rows.map((phase, index) => <div className="transaction-bottom-phase-row" key={`${transaction.id}-${index}`} data-phase-index={index}><input aria-label={`${compact ? "" : "Bottom "}Phase ${index + 1} name`} value={phase.name} onChange={(event) => updateRow(index, { name: event.target.value })} /><input aria-label={`${compact ? "" : "Bottom "}Phase ${index + 1} start`} type="number" value={phase.start} onChange={(event) => updateRow(index, { start: Number(event.target.value) })} /><input aria-label={`${compact ? "" : "Bottom "}Phase ${index + 1} end`} type="number" value={phase.end} onChange={(event) => updateRow(index, { end: Number(event.target.value) })} /><span>{phase.end - phase.start}</span><button type="button" aria-label={compact ? `Delete phase ${index + 1}` : `Delete bottom phase ${index + 1}`} onClick={() => setRows((current) => current.filter((_, itemIndex) => itemIndex !== index))}>×</button></div>)}</div>
     {rows.length === 0 && <p className="inspector-note">No phases defined. Add a phase within the Transaction range.</p>}
     <button type="button" data-testid={compact ? "add-transaction-phase" : "add-bottom-transaction-phase"} onClick={addPhase} disabled={Math.max(transaction.start, ...rows.map((phase) => phase.end)) >= transaction.end}>Add Phase</button>
+    {compact && rows.length > 0 && Math.max(transaction.start, ...rows.map((phase) => phase.end)) >= transaction.end && <p className="inspector-note" role="note">No unused cycles remain. Extend the Transaction or shorten a Phase to add another.</p>}
     {shownError && <p className="inspector-note" role="alert" data-testid="transaction-bottom-phase-error">{shownError}</p>}
   </section>;
 }

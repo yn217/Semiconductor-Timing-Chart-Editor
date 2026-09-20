@@ -19,7 +19,7 @@ test("Inspector Phases are editable in place and share one draft with the Bottom
   await bottom.getByLabel("Bottom Phase 1 name").fill("FROM_BOTTOM");
   await expect(editor.getByLabel("Phase 1 name")).toHaveValue("FROM_BOTTOM");
 
-  await editor.getByTestId("apply-transaction-phases").click();
+  await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(bottom.getByLabel("Bottom Phase 1 name")).toHaveValue("FROM_BOTTOM");
   await expect(page.getByTestId("transaction-bottom-phases-unapplied")).toHaveCount(0);

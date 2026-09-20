@@ -13,7 +13,7 @@ test("does not offer an invalid Add Phase when the existing phases fill the Tran
   await page.getByTestId("transaction-left-tree-row-txn_read0").click();
 
   const inspector = page.getByTestId("inspector");
-  const rows = inspector.getByTestId("transaction-phase-editor").locator(".transaction-phase-row:not(.transaction-phase-row-header)");
+  const rows = inspector.getByTestId("inspector-phase-editor").locator(".transaction-bottom-phase-row:not(.transaction-bottom-phase-head)");
   await expect(rows).toHaveCount(3);
   const revision = await page.getByTestId("revision-status").textContent();
   const history = await page.getByTestId("history-status").textContent();
@@ -38,7 +38,7 @@ test("commits an available Phase as one History unit and preserves it through Un
   await page.getByTestId("transaction-left-tree-row-txn_read0").click();
 
   const inspector = page.getByTestId("inspector");
-  const rows = inspector.getByTestId("transaction-phase-editor").locator(".transaction-phase-row:not(.transaction-phase-row-header)");
+  const rows = inspector.getByTestId("inspector-phase-editor").locator(".transaction-bottom-phase-row:not(.transaction-bottom-phase-head)");
   await inspector.getByLabel("Transaction end").fill("61");
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");

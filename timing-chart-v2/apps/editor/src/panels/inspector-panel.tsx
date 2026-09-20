@@ -24,7 +24,7 @@ import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbon
 import { buildCommandRejectionDiagnostics } from "../command-diagnostics.js";
 import { ContextMenuSurface } from "../context-menu-surface.js";
 import { TransactionLinkedSignals } from "../transaction-linked-signals.js";
-import { TransactionPhaseEditor } from "../transaction-bottom-tabs.js";
+import { addPhaseToDraft, canAddPhase, clearPhaseDraft, commitPhaseRows, TransactionPhaseEditor, usePendingPhaseDraft } from "../transaction-bottom-tabs.js";
 import { ExportDialog } from "../export-dialog.js";
 import { ReviewWorkflow } from "../review-workflow.js";
 import { ProblemsPanel } from "../problems-panel.js";
@@ -124,6 +124,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
   const [groupShowHeader, setGroupShowHeader] = useState(group?.style?.showHeader ?? true);
   const [visible, setVisible] = useState(signal?.display.visible !== false);
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings | undefined>(signal?.type === "clock" ? signal.edgeCounter : undefined);
+  const phaseDraft = usePendingPhaseDraft(transaction);
   const [transactionName, setTransactionName] = useState(transaction?.name ?? "");
   const [transactionStart, setTransactionStart] = useState(transaction?.start ?? 0);
   const [transactionEnd, setTransactionEnd] = useState(transaction?.end ?? 1);
@@ -259,7 +260,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
             identity owner. */}
         <label>Lane<span className="inspector-field-with-help"><input aria-label="Transaction lane" list="transaction-lane-options" value={transactionLane} onChange={(event) => setTransactionLane(event.target.value)} /><datalist id="transaction-lane-options">{[...new Set(document.transactions.map((item) => item.laneId ?? "lane_0"))].sort().map((laneId) => <option key={laneId} value={laneId} />)}</datalist><span className="field-help" tabIndex={0} title="A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track." aria-label="About Lane">ⓘ</span></span></label>
       </InspectorSection>
-      <InspectorSection sectionId="phases" title="Phases" count={transaction.phases?.length ?? 0} open={transactionSections.phases ?? true} onToggle={() => toggleTransactionSection("phases")}>
+      <InspectorSection sectionId="phases" title="Phases" count={phaseDraft?.length ?? transaction.phases?.length ?? 0} onAdd={() => addPhaseToDraft(transaction)} addDisabled={!canAddPhase(transaction)} open={transactionSections.phases ?? true} onToggle={() => toggleTransactionSection("phases")}>
         <TransactionPhaseEditor transaction={transaction} commands={commands} compact />
       </InspectorSection>
       <InspectorSection sectionId="linked-signals" title="Linked Signals" count={transaction.linkedSignals?.length ?? 0} onAdd={() => {}} open={transactionSections["linked-signals"] ?? true} onToggle={() => toggleTransactionSection("linked-signals")}>
@@ -268,7 +269,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
       {transactionStatus && <output role="status">{transactionStatus}</output>}
       <section><button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Transaction</button></section>
       </div>
-      <InspectorFooter onCancel={onCancel} onApply={() => { setTransactionStatus(""); const result = commands.updateTransaction({ transactionId: transaction.id, name: transactionName, start: transactionStart, end: transactionEnd, laneId: transactionLane, ...(transactionGroupId ? { groupId: transactionGroupId as TransactionGroup["id"] } : {}), ...(transactionColor ? { color: transactionColor } : {}), description: transactionDescription });
+      <InspectorFooter onCancel={() => { clearPhaseDraft(transaction.id); onCancel(); }} onApply={() => { setTransactionStatus(""); const phaseCommit = phaseDraft ? commitPhaseRows(phaseDraft, transactionStart, transactionEnd) : undefined; if (phaseCommit && "error" in phaseCommit) { setTransactionStatus(phaseCommit.error); return; } const result = commands.updateTransaction({ transactionId: transaction.id, name: transactionName, start: transactionStart, end: transactionEnd, laneId: transactionLane, ...(phaseCommit ? { phases: phaseCommit.rows } : {}), ...(transactionGroupId ? { groupId: transactionGroupId as TransactionGroup["id"] } : {}), ...(transactionColor ? { color: transactionColor } : {}), description: transactionDescription });
         // #454 Visual Quality Closure ("unclear draft state"): a rejected
         // Apply (e.g. End beyond the document's own cycle count) used to
         // fail silently -- the draft stayed on-screen looking applied
@@ -277,7 +278,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
         // wrong. Surface it the exact same way the Phases validation just
         // above already does -- one shared status output, not a second
         // error-reporting mechanism.
-        if (!result.ok && result.reason !== "no-op") setTransactionStatus(result.problems[0]?.message ?? "Could not apply Transaction changes."); }} applyDisabled={transactionName === transaction.name && transactionStart === transaction.start && transactionEnd === transaction.end && transactionLane === (transaction.laneId ?? "lane_0") && transactionGroupId === (transaction.groupId ?? "") && transactionColor === (transaction.color ?? "") && transactionDescription === (transaction.description ?? "")} applyTestId="apply-inspector-transaction" />
+        if (!result.ok && result.reason !== "no-op") setTransactionStatus(result.problems[0]?.message ?? "Could not apply Transaction changes."); }} applyDisabled={transactionName === transaction.name && transactionStart === transaction.start && transactionEnd === transaction.end && transactionLane === (transaction.laneId ?? "lane_0") && transactionGroupId === (transaction.groupId ?? "") && transactionColor === (transaction.color ?? "") && transactionDescription === (transaction.description ?? "") && phaseDraft === undefined} applyTestId="apply-inspector-transaction" />
     </>}
     <MiniMap document={document} viewport={viewport} mode={minimapMode} />
   </aside>;
