@@ -621,10 +621,6 @@ export function useEditorSecondarySurfaces(
       onClose={() => dialog.setInspectorVisible(false)}
       onDeleteBookmark={input.actions.deleteBottomBookmark}
       onToggleTransactionSignal={input.actions.toggleTransactionSignal}
-      onEditTransactionPhases={() => {
-        input.workspace.selectBottomTab("Phases");
-        input.setBottomVisible(true);
-      }}
       onGroupPreview={(groupId, style) =>
         refreshGroupStylePreview(
           refs.host.current!,
