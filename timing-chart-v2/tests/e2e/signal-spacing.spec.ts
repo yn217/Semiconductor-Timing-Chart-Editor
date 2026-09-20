@@ -93,7 +93,7 @@ test("edits Group and Signal spacing independently and together with exact persi
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "More", exact: true }).click();
-  await page.getByRole("menu", { name: "More Home Commands" }).getByRole("button", { name: "Clear Selection", exact: true }).click();
+  await page.getByRole("menu", { name: "More Home Commands" }).getByRole("menuitem", { name: "Clear Selection", exact: true }).click();
   await expect(page.getByTestId("inspector-layout-editor")).toBeVisible();
   await page.getByTestId("inspector-layout-editor").getByLabel("Inspector signal spacing").fill("6");
   await page.getByTestId("inspector-layout-editor").getByTestId("apply-inspector-layout").click();

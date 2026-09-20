@@ -73,7 +73,7 @@ test("auto fits a long rendered signal label through one layout command", async 
   await expect(host.locator("[data-role='frozen-signal-name']").filter({ hasText: "A_VERY_LONG_SIGNAL_NAME_FOR_LAYOUT_AUTOFIT" })).toHaveCount(1);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "More", exact: true }).click();
-  await page.getByRole("menu", { name: "More Home Commands" }).getByRole("button", { name: "Clear Selection", exact: true }).click();
+  await page.getByRole("menu", { name: "More Home Commands" }).getByRole("menuitem", { name: "Clear Selection", exact: true }).click();
   const layout = page.getByTestId("inspector-layout-editor");
   const before = Number(await layout.getByLabel("Inspector signal name width").inputValue());
   await layout.getByTestId("auto-fit-inspector-layout").click();
