@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 // #426 Visual Quality Closure ("clipping" / "scrollbar/panel collision"):
 // the Group and Transaction Inspector variants (packages/editor's

@@ -19,10 +19,12 @@ test("Event Table controls never silently fall back to the browser's native font
   }
 
   // They must match the shared --font-ui token, same baseline as the Inspector.
-  const tokenValue = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--font-ui").trim());
+  const tokenValue = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--ds-font-size").trim());
+  const scale = await page.evaluate(() => ["--ds-font-size", "--ds-font-size-caption", "--ds-font-size-label", "--ds-font-size-section", "--ds-font-size-small"].map((name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()));
   const inspectorInputSize = await fontSizeOf(".inspector input");
   expect(inspectorInputSize).toBe(tokenValue);
   for (const selector of [".event-row input", ".event-actions button", ".transition-form-actions button[type='submit']", ".quick-values button"]) {
-    expect(await fontSizeOf(selector)).toBe(tokenValue);
+    // #721: the typography scale has several ds sizes (body 11px, caption/small 10px, ...); a control must sit on that scale.
+    expect(scale).toContain(await fontSizeOf(selector));
   }
 });
