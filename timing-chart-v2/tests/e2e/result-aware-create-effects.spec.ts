@@ -21,7 +21,7 @@ test("does not select an annotation rejected by import", async ({ page }) => {
     mimeType: "application/json",
     buffer: Buffer.from(JSON.stringify([{ id: "annotation_invalid", type: "text", label: "Invalid", visible: true, anchor: { signalId: "missing", cycle: 999, point: "cycle-start" } }])),
   });
-  await expect(page.getByTestId("annotation-import-status")).not.toHaveText(/Imported/);
+  await expect(page.getByTestId("annotation-collection-status")).not.toHaveText(/Imported/);
   await expect(list.locator("[data-selected='true']")).toHaveAttribute("data-annotation-list-id", selectedBefore!);
   await expect(host).toHaveAttribute("data-canonical-revision", revisionBefore!);
   await expect(page.getByTestId("history-status")).toHaveText(historyBefore!);
