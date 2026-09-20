@@ -14,5 +14,7 @@
 @import "./styles/bottom-editor.css";
 @import "./styles/minimap.css";
 @import "./styles/status-bar.css";
+@import "./styles/mode-transaction.css";
+@import "./styles/mode-combined.css";
 @import "./styles/legacy.css";
 @import "./styles/responsive.css";

@@ -1,0 +1,61 @@
+/* Transaction Mode workspace owner: every rule scoped by .cycle-panel.mode-transaction, moved here
+   from app-shell/center-columns/bottom-editor so the mode has one stylesheet (#593). */
+/* Transaction mode's tree header is 58px tall (line 140), not the plain
+   37px `.column-headings` height every other mode uses -- `.cycle-viewport`
+   kept the flat 37px offset, so its bottom 21px (exactly enough to swallow
+   the horizontal scrollbar) sat past `.cycle-panel`'s own `overflow: hidden`
+   bottom edge and was clipped, leaving Transaction mode with no visible
+   horizontal scrollbar despite `.transaction-lanes` being far wider than the
+   viewport. Mirrors the `.transaction-signal-tree` override two lines up. */
+.editor-shell .cycle-panel.mode-transaction .cycle-viewport { height: 100%; }
+.cycle-panel.mode-transaction .surface-host { visibility: hidden; }
+.cycle-panel.mode-transaction .transaction-left-tree {
+  position: absolute;
+  z-index: 18;
+  /* Standalone Transaction tree is a sibling of `.cycle-viewport`, not a
+     child of its horizontally scrolling surface. Keep it fixed below the
+     58px Transaction header while the shared time surface scrolls behind it. */
+  top: 58px;
+  /* Leave the native horizontal scrollbar unobscured; the tree is a fixed
+     overlay sibling and must not cover the scrollbar's starting thumb. */
+  bottom: 16px;
+  left: 0;
+  width: var(--gui-left-width);
+  overflow: auto;
+  border-right: 1px solid #cbd4df;
+  background: #f8fafc;
+}
+.cycle-panel.mode-transaction .transaction-lane-labels {
+  left: var(--gui-left-width);
+  width: var(--gui-frozen-width, 210px);
+}
+.cycle-panel.mode-transaction .transaction-lane-label-row { display: none; }
+.cycle-panel.mode-transaction .transaction-lanes { min-height: calc(100% - 34px); }
+/* Transaction Mode owns its tree in the outer left rail.  The center
+   timeline must therefore not reserve the legacy left/frozen columns a
+   second time.  Keep this scoped to Transaction Mode; Combined/Split still
+   use the embedded transaction pane layout. */
+.editor-shell .cycle-panel.mode-transaction .transaction-lanes {
+  width: var(--wave-width, 640px);
+}
+.editor-shell .cycle-panel.mode-transaction .transaction-lane-labels {
+  left: 0;
+  width: var(--wave-width, 640px);
+}
+.editor-shell .cycle-panel.mode-transaction .cycle-ruler {
+  --time-domain-left: 0px;
+  left: 0;
+  width: 100%;
+}
+.editor-shell .cycle-panel.mode-transaction .geometry-grid {
+  left: 0;
+  width: var(--wave-width, 640px);
+}
+.editor-shell .cycle-panel.mode-transaction .transaction-track {
+  left: 0;
+  width: var(--wave-width, 640px);
+}
+.editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row > button { height: 28px; }
+.editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row-editor { min-height: 28px; }
+.editor-shell:has(.cycle-panel.mode-transaction) .bottom-tabs { flex-basis: 36px; height: 36px; }
+.editor-shell:has(.cycle-panel.mode-transaction) .bottom-tabs button { height: 35px; }

@@ -285,30 +285,7 @@
 .transaction-track > .transaction-lane > button { z-index: 4; }
 .transaction-lane > button[data-selected="true"] { outline: 2px solid var(--ds-selection-border, #287ac0); background: color-mix(in srgb, var(--transaction-color, #2e70ad) 45%, white); }
 .transaction-lane > button > i { height: 100%; cursor: ew-resize; }
-.transaction-lane span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: grab; }
-
-.cycle-panel.mode-transaction .surface-host { visibility: hidden; }
-.cycle-panel.mode-transaction .transaction-left-tree {
-  position: absolute;
-  z-index: 18;
-  /* Standalone Transaction tree is a sibling of `.cycle-viewport`, not a
-     child of its horizontally scrolling surface. Keep it fixed below the
-     58px Transaction header while the shared time surface scrolls behind it. */
-  top: 58px;
-  /* Leave the native horizontal scrollbar unobscured; the tree is a fixed
-     overlay sibling and must not cover the scrollbar's starting thumb. */
-  bottom: 16px;
-  left: 0;
-  width: var(--gui-left-width);
-  overflow: auto;
-  border-right: 1px solid #cbd4df;
-  background: #f8fafc;
-}.cycle-panel.mode-transaction .transaction-lane-labels {
-  left: var(--gui-left-width);
-  width: var(--gui-frozen-width, 210px);
-}
-.cycle-panel.mode-transaction .transaction-lane-label-row { display: none; }
-.transaction-left-tree-root {
+.transaction-lane span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: grab; }.transaction-left-tree-root {
   display: flex;
   align-items: center;
   min-height: 30px;
@@ -386,100 +363,7 @@
 .transaction-left-tree-visibility:hover, .transaction-left-tree-visibility:focus-visible, .transaction-left-tree-more:hover, .transaction-left-tree-more:focus-visible { outline: 1px solid #8bb8e8; outline-offset: -1px; background: #e7f1fb; color: #1769aa; }
 .transaction-left-tree-visibility:hover, .transaction-left-tree-visibility:focus-visible { color: #1769aa; }
 .transaction-left-tree-row:hover { background: var(--ds-hover-bg, #f3f8fd); color: #155ca0; }
-.transaction-left-tree-row[data-selected="true"] { background: var(--ds-selection-bg, #e5f2ff); color: #155ca0; box-shadow: inset 2px 0 0 var(--ds-selection-border, #287ac0); }
-.cycle-panel.mode-transaction .transaction-lanes { min-height: calc(100% - 34px); }/* #397: `.surface-host`'s padding-top must clear `.transaction-lanes`'s own
-   bottom edge (its `top` from the base rule above + this max-height) or a
-   multi-Group/multi-lane Transaction set (more content than one lane needs)
-   renders the Lanes region's bottom ~26px into the waveform surface below
-   it -- reproduced with a real 2-Group/2-lane sample in Split mode. Kept as
-   one shared var so the two rules can't drift apart again. */
-.cycle-panel.mode-split { --split-lanes-height: 112px; }
-/* #573: Combined is a stacked Transaction-over-Cycle workspace. The two
-   panes share the horizontal time viewport while vertical scrolling stays
-   local to each pane. */
-.cycle-panel.mode-split .cycle-viewport.split-signal-pane {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  flex: 1 1 auto;
-  overflow-x: auto;
-  overflow-y: hidden;
-}
-.cycle-panel.mode-split .split-transaction-pane {
-  position: relative;
-  width: max-content;
-  min-width: 100%;
-  min-height: 0;
-  /* Combined's horizontal splitter uses the same view-only ratio owner as
-     the workspace resize actions. Keep the actual pane allocation driven by
-     that ratio; a fixed 42% made the splitter appear draggable while the
-     panes themselves never changed size. */
-  flex: 0 0 clamp(160px, calc(var(--gui-signal-split-upper-ratio, 0.5) * 100%), 280px);
-  overflow-y: auto;
-  overflow-x: visible;
-  border-bottom: 1px solid var(--ds-border-subtle, #b7c4d2);
-}
-.cycle-panel.mode-split .split-signal-content {
-  position: relative;
-  width: max-content;
-  min-width: 100%;
-  min-height: 0;
-  flex: 1 1 auto;
-  min-height: 220px;
-  overflow-y: auto;
-  overflow-x: visible;
-  overscroll-behavior: contain;
-}
-.cycle-panel.mode-split .split-transaction-pane {
-  overscroll-behavior: contain;
-  z-index: 20;
-}
-.cycle-panel.mode-split .combined-split-divider {
-  flex: 0 0 8px;
-  cursor: row-resize;
-  border-top: 1px solid var(--ds-border-subtle, #b7c4d2);
-  border-bottom: 1px solid var(--ds-border-subtle, #b7c4d2);
-  background: var(--ds-surface-muted, #edf2f7);
-  z-index: 30;
-}
-.cycle-panel.mode-split .combined-split-divider:focus-visible {
-  outline: 2px solid var(--ds-focus-color, #2678bc);
-  outline-offset: -2px;
-}
-.cycle-panel.mode-split .split-transaction-pane .transaction-lanes {
-  position: relative;
-  top: 0;
-  width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px) + var(--wave-width, 640px));
-  min-height: 100%;
-  max-height: none;
-  overflow: visible;
-}
-.cycle-panel.mode-split .split-signal-pane .surface-host { padding-top: 34px; }
-/* Combined left column, upper: the same production Transaction Tree used
-   standalone -- sticky (not absolute) so it stays put during the shared
-   horizontal scroll exactly like `.transaction-lane-labels` already does,
-   spanning the full left+frozen width (one unified tree column, not the
-   left-width/frozen-width split standalone Transaction Mode uses alongside
-   its own narrower `.transaction-lane-labels` strip). Sits above that strip
-   (which stays mounted for lane-bar row math but has its own label rows
-   hidden below) via a higher local z-index within the pane's own stacking
-   context. */
-.cycle-panel.mode-split .split-transaction-pane .transaction-left-tree {
-  position: absolute;
-  /* Above `.transaction-lanes` (z-index: 17) and its own group headers,
-     which otherwise intercept pointer events meant for this tree. */
-  z-index: 21;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px));
-  overflow: auto;
-  border-right: 1px solid #cbd4df;
-  background: #f8fafc;
-}
-.cycle-panel.mode-split .transaction-lane-label-row { display: none; }
-/* #407: Split active pane indicator -- `cycle-viewport[data-active-pane]`
+.transaction-left-tree-row[data-selected="true"] { background: var(--ds-selection-bg, #e5f2ff); color: #155ca0; box-shadow: inset 2px 0 0 var(--ds-selection-border, #287ac0); }/* #407: Split active pane indicator -- `cycle-viewport[data-active-pane]`
    is set imperatively (minimal-cycle-view.tsx; the element itself is
    editor-workspace-view.tsx's JSX, not this file's), one 2px inset border
    on whichever of the two existing Split regions was last clicked/focused.
@@ -550,31 +434,7 @@
 .editor-shell[data-show-group-background="false"] .surface-host [data-role$="-row"]:not([data-selected="true"]):not([data-transaction-linked="true"]) { background-color: transparent !important; }
 
 /* Transaction presentation belongs to the center timing surface. */
-.transaction-track { position: absolute; z-index: 3; top: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); width: var(--wave-width, 640px); height: 100%; transform-origin: 0 0; scale: var(--transaction-zoom) 1; }
-/* Transaction Mode owns its tree in the outer left rail.  The center
-   timeline must therefore not reserve the legacy left/frozen columns a
-   second time.  Keep this scoped to Transaction Mode; Combined/Split still
-   use the embedded transaction pane layout. */
-.editor-shell .cycle-panel.mode-transaction .transaction-lanes {
-  width: var(--wave-width, 640px);
-}
-.editor-shell .cycle-panel.mode-transaction .transaction-lane-labels {
-  left: 0;
-  width: var(--wave-width, 640px);
-}
-.editor-shell .cycle-panel.mode-transaction .cycle-ruler {
-  --time-domain-left: 0px;
-  left: 0;
-  width: 100%;
-}
-.editor-shell .cycle-panel.mode-transaction .geometry-grid {
-  left: 0;
-  width: var(--wave-width, 640px);
-}
-.editor-shell .cycle-panel.mode-transaction .transaction-track {
-  left: 0;
-  width: var(--wave-width, 640px);
-}.transaction-geometry-line { position: absolute; top: 0; bottom: 0; width: 1px; border-left: 1px solid #dce4ed; pointer-events: none; }
+.transaction-track { position: absolute; z-index: 3; top: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); width: var(--wave-width, 640px); height: 100%; transform-origin: 0 0; scale: var(--transaction-zoom) 1; }.transaction-geometry-line { position: absolute; top: 0; bottom: 0; width: 1px; border-left: 1px solid #dce4ed; pointer-events: none; }
 .transaction-left-tree-more { display: inline-flex; align-items: center; justify-content: center; width: 22px; min-width: 22px; height: 24px; margin: 0; padding: 0; border: 0; background: transparent; color: #52677f; cursor: pointer; }
 .transaction-left-tree-group-menu { position: fixed; z-index: 1200; display: grid; width: 216px; min-width: min(216px, calc(100vw - 16px)); max-width: calc(100vw - 16px); padding: 4px; border: 1px solid #b8c7d8; border-radius: 3px; background: #fff; box-shadow: 0 4px 12px rgb(30 55 80 / 18%); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
 .transaction-left-tree-group-menu button { box-sizing: border-box; width: 100%; min-width: 0; min-height: 27px; padding: 5px 8px; border: 0; background: transparent; color: #29425e; text-align: left; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
@@ -614,12 +474,8 @@
    with every other row (and with the header) the moment two rows' text
    lengths differ. Fixed widths make every row (and the header, which
    repeats this exact template) share identical column boundaries. */
-.transaction-list-row > button { flex: 1 1 auto; min-width: 0; height: 30px; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #c2cfdd; border-radius: 0; text-align: left; padding-inline: 0; overflow: hidden; }
-.editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row > button { height: 28px; }
-.transaction-list-row > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: #5c687c; }
-.transaction-list-row-editor { flex: 1 1 auto; min-width: 0; min-height: 30px; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #287ac0; background: #e5f2ff; color: #163756; }
-.editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row-editor { min-height: 28px; }
-.transaction-list-row-editor > * { min-width: 0; width: 100%; height: 24px; box-sizing: border-box; padding: 2px 4px; border: 0; border-right: 1px solid #c7d8e8; border-radius: 0; background: transparent; color: #163756; font: inherit; font-size: 10px; }
+.transaction-list-row > button { flex: 1 1 auto; min-width: 0; height: 30px; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #c2cfdd; border-radius: 0; text-align: left; padding-inline: 0; overflow: hidden; }.transaction-list-row > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: #5c687c; }
+.transaction-list-row-editor { flex: 1 1 auto; min-width: 0; min-height: 30px; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #287ac0; background: #e5f2ff; color: #163756; }.transaction-list-row-editor > * { min-width: 0; width: 100%; height: 24px; box-sizing: border-box; padding: 2px 4px; border: 0; border-right: 1px solid #c7d8e8; border-radius: 0; background: transparent; color: #163756; font: inherit; font-size: 10px; }
 .transaction-list-row-editor > input[type="color"] { padding: 2px 4px; }
 .transaction-list-row-editor > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .transaction-list-row-editor > *:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; background: #fff; }
