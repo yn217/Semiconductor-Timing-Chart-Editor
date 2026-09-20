@@ -29,10 +29,12 @@ export function useActivePaneTracking(
       if ((event.target as HTMLElement | null)?.closest(".transaction-left-tree")) setterRef.current("transaction");
     };
     document.addEventListener("pointerdown", onTreeInteraction, true);
+    document.addEventListener("focusin", onTreeInteraction, true); // keyboard focus in the Transaction Tree claims the pane too
     root.addEventListener("pointerdown", onPointerDownCapture, { capture: true });
     root.addEventListener("focusin", onFocusIn);
     return () => {
       document.removeEventListener("pointerdown", onTreeInteraction, true);
+      document.removeEventListener("focusin", onTreeInteraction, true);
       root.removeEventListener("pointerdown", onPointerDownCapture, { capture: true });
       root.removeEventListener("focusin", onFocusIn);
     };

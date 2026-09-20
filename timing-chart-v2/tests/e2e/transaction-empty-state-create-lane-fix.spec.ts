@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 // Found while adding the Bottom Panel toolbar's "Add" button: the
 // empty-state "Create Transaction" form (shown when no Transaction is

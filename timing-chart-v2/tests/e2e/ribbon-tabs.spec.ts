@@ -1,7 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 async function ready(page: Page) {
   await page.goto("/");
@@ -136,6 +136,6 @@ test("AI preview cancels and rejects stale revision without mutation", async ({ 
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(ai.getByRole("button", { name: "Apply Preview" })).toHaveCount(1);
   await ai.getByRole("button", { name: "Apply Preview" }).click();
-  await expect(ai.getByTestId("ai-status")).toContainText("Conflict · preview revision");
+  await expect(ai.getByTestId("ai-status")).toContainText("Preview is out of date. Regenerate it.");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
