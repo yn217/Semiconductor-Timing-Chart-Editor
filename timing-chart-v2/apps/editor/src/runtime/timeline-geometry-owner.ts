@@ -187,10 +187,15 @@ export class TimelineGeometryOwner {
     // subset to replace the bounded geometry window would discard offscreen
     // navigation boundaries on the next render.  DOM remains virtualized;
     // this minimum applies only to the source-time geometry artifact.
-    if (document.timeline.cycleCount > 4096 && boundedEnd - boundedStart < 512) {
-      const span = Math.min(512, document.timeline.cycleCount);
-      const centered = Math.max(0, Math.min(boundedStart, document.timeline.cycleCount - span));
-      return { start: centered, end: centered + span };
+    if (document.timeline.cycleCount > 4096) {
+      // Quantize the window to a grid: a window that starts exactly at the viewport start changes on every
+      // scroll step, so a sustained drag re-rendered every mounted WaveDrom owner continuously (#621/#637).
+      // With a 256-cycle grid the source window only changes when the viewport crosses a grid line.
+      const grid = 256;
+      const start = Math.max(0, Math.floor(boundedStart / grid) * grid);
+      const span = Math.min(document.timeline.cycleCount, Math.max(512, Math.ceil((boundedEnd - start) / grid) * grid));
+      const clampedStart = Math.max(0, Math.min(start, document.timeline.cycleCount - span));
+      return { start: clampedStart, end: clampedStart + span };
     }
     return { start: boundedStart, end: boundedEnd };
   }

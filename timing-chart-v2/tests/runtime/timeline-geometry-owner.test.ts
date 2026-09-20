@@ -115,7 +115,10 @@ describe("TimelineGeometryOwner", () => {
       onSnapIndexBuilt: () => undefined,
     });
     owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
-    expect(owner.sourceWindowForLocalRange(document, 50_000, 50_100)).toEqual({ start: 49_998, end: 50_510 });
+    expect(owner.sourceWindowForLocalRange(document, 50_000, 50_100)).toEqual({ start: 49_920, end: 50_432 });
+    // Small scroll steps must not change the window (grid-quantized, #621).
+    const base = owner.sourceWindowForLocalRange(document, 50_000, 50_100);
+    for (const shift of [1, 5, 20, 40]) expect(owner.sourceWindowForLocalRange(document, 50_000 + shift, 50_100 + shift)).toEqual(base);
   });
 
   it("projects off-window source boundaries from the shared ruler geometry", () => {
