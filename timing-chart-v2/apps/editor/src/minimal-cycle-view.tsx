@@ -23,6 +23,7 @@ import { useEditorPresentationState } from "./application/use-editor-presentatio
 import { useEditorResizeActions } from "./application/use-editor-resize-actions.js";
 import { useEditorWorkspaceActions } from "./application/use-editor-workspace-actions.js";
 import { EditorShellView } from "./editor-shell-view.js";
+import { useViewModeTransition } from "./runtime/use-view-mode-transition.js";
 import { EditorDialogLayer } from "./editor-dialog-layer.js";
 import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { deriveSelectionCapabilities, useSelectionOwner } from "./application/use-selection-owner.js";
@@ -430,28 +431,7 @@ export function MinimalCycleView() {
     signalSplitRatio,
     viewMode,
   });
-  // #613: `getSourceWindow` (timeline-surface-controller.ts) reads the live
-  // `data-view-mode` DOM attribute and returns a different bounded window for
-  // Cycle vs. Transaction/Combined (Cycle excludes the shared
-  // transactionExtent padding). Switching View Mode is pure React state --
-  // `setViewMode` never touches the renderer -- so that window mismatch sits
-  // stale until whatever `renderer.update()` call happens to come next, which
-  // then gets blamed for a WaveDrom re-render it didn't actually cause.
-  // Force the same canonical/history/dirty-neutral reproject Signal Split
-  // already uses for its own pure view-state toggle (forceUpperReprojectRef,
-  // see timeline-surface-controller.ts) so the window reconciles at the
-  // moment View Mode actually changes instead of leaking into later updates.
-  const viewModeMounted = useRef(false);
-  useEffect(() => {
-    if (!viewModeMounted.current) { viewModeMounted.current = true; return; }
-    forceUpperReprojectRef.current();
-    // #614 taught us the ruler and each wave-owner's window/width must be
-    // reconciled together through the ruler's one authoritative rebuild --
-    // reprojecting the wave owners alone (above) without also rebuilding the
-    // ruler leaves the ruler's cached tick positions stale against the new
-    // window, misaligning the grid/ruler from the waveform edges.
-    timelineRuntimeRef.current?.refreshRuler();
-  }, [viewMode]);
+  useViewModeTransition(viewMode, forceUpperReprojectRef, timelineRuntimeRef);
   useEffect(() => {
     refreshPlayhead.current();
   }, [selectedCycle, playheadPresentationRevision, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
