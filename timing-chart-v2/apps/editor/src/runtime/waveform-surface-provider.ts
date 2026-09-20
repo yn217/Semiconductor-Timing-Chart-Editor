@@ -1,3 +1,5 @@
+import { paintWaveCanvas, isCanvasWavePrototypeEnabled } from "./canvas-wave-painter.js";
+import { ImmutableLocalGeometryMap, uniformCycleBoundaryEntries, WAVEDROM_CYCLE_WIDTH, WAVEDROM_ORIGIN_X } from "@timing-chart-v2/geometry";
 import type { EditorSessionController } from "./editor-session-controller.js";
 import type { CanonicalDocument, Signal, SignalId, SignalValueChange } from "@timing-chart-v2/schema";
 import { valueSignalWaveDomain } from "@timing-chart-v2/schema";
@@ -165,7 +167,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           item.request.owner.style.removeProperty("left");
         }
       }
-      const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean }> = [];
+      const canvasPrototype = isCanvasWavePrototypeEnabled();
+      const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean; readonly canvasPainted?: boolean }> = [];
       for (const item of prepared) {
         if (item.deferred) {
           renderResults.push({ ...item, rendered: undefined });
@@ -174,6 +177,15 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         if (!isCurrent(item.request)) renderResults.push({ ...item, rendered: undefined, stale: true });
         else if (item.error || !item.waveJson) renderResults.push({ ...item, rendered: undefined });
         else {
+          if (canvasPrototype) {
+            paintWaveCanvas(item.request.owner, item.waveJson);
+            const sourceCycles = item.waveJson.geometrySourceCycles ?? Array.from({ length: item.waveJson.wave.length + 1 }, (_, index) => (item.waveJson?.sourceWindow?.start ?? 0) + index);
+            context.geometryRegistry.maps.set(item.request.signalId, new ImmutableLocalGeometryMap(item.request.signalId, uniformCycleBoundaryEntries({ sourceCycles, originX: WAVEDROM_ORIGIN_X, cycleWidth: WAVEDROM_CYCLE_WIDTH, rowY: 15 }), []));
+            context.invalidateSnapIndex();
+            context.markOpenPhase("first-visible-wave-painted");
+            renderResults.push({ ...item, rendered: undefined, canvasPainted: true });
+            continue;
+          }
           try { renderResults.push({ ...item, rendered: await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues) }); }
           catch (error: unknown) { renderResults.push({ ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) }); }
         }
@@ -184,6 +196,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           return { signalId: item.request.signalId, result: { waveDromRenders: 0, localGeometryBuilds: 0 } };
         }
         if (item.stale === true || !isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
+        if (item.canvasPainted === true) return { signalId: item.request.signalId, result: { waveDromRenders: 0, localGeometryBuilds: 1 } };
         if (item.error || !item.rendered) return { signalId: item.request.signalId, error: item.error ?? new Error("Waveform render did not produce an SVG.") };
         try {
           if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
