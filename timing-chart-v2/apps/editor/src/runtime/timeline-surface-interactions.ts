@@ -109,11 +109,24 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     lowerCanvasClickRef, menuOriginRef, suppressCanvasClickRef, setRangeSelectionActive, setRange, setSelectedCycle,
     setContextMenu, closeContextMenu, setArrowPickStatus, publishState, refreshRangePreview,
   } = input;
+  // #738: pointer X is interpreted in the SAME coordinate system the ruler ticks are drawn in -- the ruler content's own
+  // origin -- not the (possibly hidden/offset) Cycle wave layer, so Transaction mode (whose Cycle surface is hidden and laid
+  // out elsewhere) resolves the same time as Cycle mode. Falls back to the wave layer only before a ruler exists.
+  const timeOriginLeft = (): number | undefined => {
+    const ruler = rulerElement.getBoundingClientRect();
+    if (ruler.width > 0) return ruler.left;
+    return rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']")?.getBoundingClientRect().left;
+  };
   const cycleBoundaryAtX = (clientX: number): number | undefined => {
-    const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
-    if (!waveLayer) return undefined;
-    const bounds = waveLayer.getBoundingClientRect();
-    return timelineGeometry.cycleBoundaryAtScreenX(clientX, bounds.left, timelineNavigation.getZoom(), snapEnabledRef.current);
+    const left = timeOriginLeft();
+    return left === undefined ? undefined : timelineGeometry.cycleBoundaryAtScreenX(clientX, left, timelineNavigation.getZoom(), snapEnabledRef.current);
+  };
+  /** The ruler cell [start, end) containing the pointer: deterministic floor, never snapped to the nearest tick or glyph. */
+  const rulerCellAtX = (clientX: number): number | undefined => {
+    const left = timeOriginLeft();
+    // Boundary rule: cells are [start, end) -- a pointer exactly on a tick boundary belongs to the cell that starts there
+    // (the 0.01px slack absorbs sub-pixel float error in the ruler/viewport transforms).
+    return left === undefined ? undefined : timelineGeometry.cycleBoundaryAtScreenX(clientX, left - 0.01, timelineNavigation.getZoom(), false);
   };
   const timeDomainExclusions = [
     "[data-role='left-tree-rows']", "[data-role='frozen-label-rows']", "[data-role='annotation-owner']",
@@ -125,7 +138,9 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     const target = event.target instanceof Element ? event.target : undefined;
     if (!target || target.closest(timeDomainExclusions)) return false;
     const bounds = viewportElement.getBoundingClientRect();
-    const left = bounds.left + getTimelineOffset();
+    // #738: the ruler viewport is entirely time domain (it has no frozen columns of its own, in any mode); only the
+    // waveform viewport reserves the Cycle left + frozen columns.
+    const left = bounds.left + (rulerViewportElement.contains(target) ? 0 : getTimelineOffset());
     if (event.clientX < left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) return false;
     // Cycle ownership is scoped to the Cycle renderer or its ruler. Transaction
     // lanes are siblings in the viewport and must never be filtered by a growing
@@ -146,10 +161,10 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
   let rangeInteractions!: TimelineRangeInteractionOwner;
   const onRulerSelect = (event: MouseEvent) => {
     if (rangeInteractions.consumeRulerClickSuppression()) return;
+    // #738: the whole ruler cell is the hit target; the label glyph never owns the interaction.
     const tick = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-cycle]") : null;
-    if (!tick) return;
-    const cycle = Number(tick.dataset.sourceCycle ?? tick.dataset.cycle);
-    if (!Number.isInteger(cycle) || cycle > getSnapshot().document.timeline.cycleCount) return;
+    const cycle = rulerCellAtX(event.clientX) ?? (tick ? Number(tick.dataset.sourceCycle ?? tick.dataset.cycle) : undefined);
+    if (cycle === undefined || !Number.isInteger(cycle) || cycle > getSnapshot().document.timeline.cycleCount) return;
     selectedEdgeRef.current = undefined;
     setRangeSelectionActive(true);
     setSelectedCycle(cycle);
@@ -203,6 +218,7 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     rendererHost,
     isTimeDomainPointerTarget,
     cycleBoundaryAtX,
+    rulerCellAtX,
     getCycleCount: () => getSnapshot().document.timeline.cycleCount,
     getRange: () => timelineRangeRef.current,
     getSelectedCycle: () => selectedCycleRef.current,
