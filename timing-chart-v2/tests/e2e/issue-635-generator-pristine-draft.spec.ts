@@ -19,6 +19,8 @@ test("a pristine binary Signal Generator is not presented as an unapplied user D
   const start = generator.getByLabel("Signal generator start");
   const cancel = generator.getByTestId("cancel-signal-generator");
   const generate = generator.getByTestId("apply-signal-generator");
+  const disclosure = page.getByTestId("signal-editor").getByTestId("signal-generator-disclosure");
+  if ((await disclosure.getAttribute("aria-expanded")) !== "true") await disclosure.click();
   await expect(generator).toBeVisible();
   await expect(status).toHaveCount(0);
   await expect(cancel).toBeDisabled();
