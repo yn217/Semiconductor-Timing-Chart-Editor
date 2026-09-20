@@ -205,7 +205,7 @@ export class TimelineGeometryOwner {
     const sourceWindow = this.sourceWindowForLocalRange(document, localStart, localEnd, 2);
     const before = sourceWindow.start;
     const after = sourceWindow.end;
-    return createDisplayTimeViewport(mapping, mapping.sourceToDisplay[before] ?? 0, mapping.sourceToDisplay[after] ?? 0, 2, rowStart, rowEnd, generation, pinnedIds);
+    return createDisplayTimeViewport(mapping, mapping.sourceToDisplay[before] ?? 0, mapping.sourceToDisplay[after] ?? (after >= mapping.sourceToDisplay.length ? mapping.displayCycleCount : 0), 2, rowStart, rowEnd, generation, pinnedIds);
   }
 
   screenToLocal(point: Point, zoom: number, scrollX = 0, scrollY = 0): Point {

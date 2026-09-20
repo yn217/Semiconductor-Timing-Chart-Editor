@@ -267,16 +267,39 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     // `projectionCoordinator.setPane()`, using the CURRENT document (not a
     // change -- Split toggling itself is view-only, so this must never
     // touch history/dirty/canonical state).
+    const surfaceViewMode = () => rendererHost.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode;
+    let lastReprojectViewMode = surfaceViewMode();
     forceUpperReprojectRef.current = () => {
       if (!active) return;
+      // Transaction mode defers every non-reference waveform (see
+      // waveform-surface-provider). Leaving it must re-queue those signals or
+      // they stay blank until an unrelated edit: the renderer only paints
+      // dirty/new owners, and the deferred batch already cleared their dirty flag.
+      const viewMode = surfaceViewMode();
+      const leavingDeferredMode = lastReprojectViewMode === "Transaction" && viewMode !== "Transaction";
+      lastReprojectViewMode = viewMode;
+      // The Cycle viewport has zero height while another mode is active, so a
+      // window built then hides every row/annotation candidate; rebuild it now.
+      if (leavingDeferredMode) window = buildViewportWindow(viewportElement, sessionController.snapshot().document.timeline.referenceClock);
       // An empty changeSet is correct here, not `fullDocumentReplace` --
       // `projectionCoordinator.setPane()` already nulled the cached layout,
       // so the very next `project()` call rebuilds regardless of changeSet
       // flags. Declaring a fake full-document-replace would incorrectly
       // advance documentEpoch and clear annotation preview state for a
       // toggle that must be canonical/history/dirty-neutral.
-      projection = projectionCoordinator.project({ snapshot: sessionController.snapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+      const reprojectSnapshot = sessionController.snapshot();
+      projection = projectionCoordinator.project({ snapshot: reprojectSnapshot, changeSet: leavingDeferredMode ? { waveSemantics: reprojectSnapshot.document.signals.map((signal) => signal.id) } : {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);
+      // Horizontal scroll re-publishes the previous projection; do not carry the
+      // one-shot wave invalidation into every later scroll frame.
+      if (projection.waveSignalIds.length > 0) projection = { ...projection, waveSignalIds: [] };
+      // A mode/pane-only reproject can make deferred signal waves renderable.
+      // Annotation anchors depend on those signal geometry maps, so refresh
+      // overlays after the renderer batch finishes rather than resolving
+      // against stale pre-batch geometry and waiting for an unrelated edit.
+      void renderer.whenIdle().then(() => {
+        if (active) timelineRuntimeRef.current?.refreshOverlays();
+      });
     };
     let rulerBuilds = 0;
     let edgeCounterResolvePasses = 0;

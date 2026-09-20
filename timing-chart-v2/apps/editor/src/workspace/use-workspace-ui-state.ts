@@ -10,6 +10,22 @@ export type TransactionTreeFilterMode = "all" | "grouped" | "ungrouped" | "phase
 
 export type SemanticCursor = number | undefined;
 
+const VIEW_MODE_PREFERENCE_KEY = "timing-chart-v2.view-mode";
+
+export function readPreferredViewMode(fallback: ViewMode): ViewMode {
+  try {
+    const saved = window.localStorage.getItem(VIEW_MODE_PREFERENCE_KEY);
+    return saved === "Cycle" || saved === "Transaction" || saved === "Split" ? saved : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function savePreferredViewMode(mode: ViewMode): void {
+  try { window.localStorage.setItem(VIEW_MODE_PREFERENCE_KEY, mode); }
+  catch { /* Workspace preferences are best-effort and never block mode changes. */ }
+}
+
 /** #403/#404: which pane/entity family the Ribbon and other chrome should
  * treat as "active" for contextual command surfaces -- deliberately its
  * own state, separate from `ViewMode` (Cycle/Transaction/Split are
@@ -66,6 +82,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   // Selection change alone must never call this -- only a real ViewMode
   // change may normalize ActiveContext.
   const setViewMode = (next: ViewMode) => {
+    savePreferredViewMode(next);
     if (viewMode === "Cycle" || viewMode === "Transaction") {
       followSelectionByModeRef.current[viewMode] = followSelectionRef.current;
       bottomPinnedByModeRef.current[viewMode] = bottomPinnedRef.current;
