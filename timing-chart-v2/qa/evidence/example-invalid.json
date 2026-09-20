@@ -1,0 +1,8 @@
+{
+  "issue": 703,
+  "commit": "bad",
+  "reproduction": { "status": "unknown" },
+  "failingTest": { "name": "", "observedRed": false },
+  "rootCause": {},
+  "verification": { "independent": false, "freshStart": false, "productionPath": false }
+}

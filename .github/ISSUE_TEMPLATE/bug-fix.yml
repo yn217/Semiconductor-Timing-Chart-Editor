@@ -1,0 +1,57 @@
+name: Bug fix
+description: Report a reproducible correction with its acceptance contract.
+title: "[BUG] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Complete the reproduction before proposing a fix. If a field is not applicable, explain why.
+  - type: textarea
+    id: intent
+    attributes:
+      label: Intent
+      description: Why is this behavior wrong or harmful?
+    validations: { required: true }
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Fresh-state production UI steps, commit/environment, and observed result.
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+      description: Expected visible and semantic result.
+    validations: { required: true }
+  - type: textarea
+    id: forbidden
+    attributes:
+      label: Forbidden result or shortcut
+      description: Behavior or workaround that must not be used to satisfy the Issue.
+    validations: { required: true }
+  - type: textarea
+    id: invariants
+    attributes:
+      label: Invariants
+      description: Canonical, History, Dirty, identity, ownership, geometry, or accessibility invariants.
+    validations: { required: true }
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Screenshots/videos/links. Mark each USE FOR or DO NOT COPY.
+    validations: { required: true }
+  - type: textarea
+    id: journey
+    attributes:
+      label: Acceptance journey
+      description: Production actions and expected result, including relevant interruption variants.
+    validations: { required: true }
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Required evidence
+      description: Tests, browser artifact, independent verifier, and remaining uncertainty required for closure.
+    validations: { required: true }
