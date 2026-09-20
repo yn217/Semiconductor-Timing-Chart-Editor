@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 async function ready(page: import("@playwright/test").Page): Promise<void> {
   await page.goto("/");

@@ -1,4 +1,7 @@
 import { expect, test, type Locator } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("keeps text glyph aspect ratio and X-axis alignment constant across Zoom levels 50/100/150/200%", async ({ page }) => {
   await page.goto("/");

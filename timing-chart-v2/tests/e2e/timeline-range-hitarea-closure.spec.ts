@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 type Point = Readonly<{ x: number; y: number }>;
 

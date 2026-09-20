@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
 import { readFile } from "node:fs/promises";
+
+startInCycleMode(test);
 
 test("Group Band Inspector preserves scope/style, derived spacing, persistence and export", async ({ page }) => {
   await page.goto("/");

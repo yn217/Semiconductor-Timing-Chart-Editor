@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #222: covers the acceptance items spacer.spec.ts / spacer-row.spec.ts don't --
 // Insert Ribbon creation, Duplicate, Copy/Paste, and same-Group drag reorder

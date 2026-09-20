@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 function largeTransactionDocument(signalCount: number) {
   const signals = Array.from({ length: signalCount }, (_, index) => ({

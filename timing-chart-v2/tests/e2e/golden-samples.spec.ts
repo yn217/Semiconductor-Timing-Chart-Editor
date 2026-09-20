@@ -3,9 +3,12 @@ import { mkdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { expect, test, type Locator } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
 import { parseDocument, type CanonicalDocument } from "@timing-chart-v2/schema";
 import { assertGoldenCoverageContract, assertGoldenSemanticContract, assertGoldenSvgContract, type GoldenExportFormat, type GoldenVisualGate } from "../golden/golden-contract.js";
 import { captureScenarioReview } from "../../harness/gui/ai-review-bundle.mjs";
+
+startInCycleMode(test);
 
 type GoldenSample = {
   readonly file: string;

@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("Event Table controls never silently fall back to the browser's native font size", async ({ page }) => {
   await page.goto("/");

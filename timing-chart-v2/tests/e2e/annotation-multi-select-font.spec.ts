@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #331 P2: Ribbon Font edits must apply to every selected Annotation
 // (multi-selection), as one atomic History entry, each preserving its own

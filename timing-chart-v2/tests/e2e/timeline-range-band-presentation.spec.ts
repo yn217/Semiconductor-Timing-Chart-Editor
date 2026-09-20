@@ -1,4 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test.use({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 

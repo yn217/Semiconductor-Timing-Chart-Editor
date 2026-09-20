@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("creates a first-class Spacer from the Tree Add surface", async ({ page }) => {
   await page.goto("/");

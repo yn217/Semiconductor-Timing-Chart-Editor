@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 const clock = {
   id: "sig_clk", name: "CLK", type: "clock", role: "input",

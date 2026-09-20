@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
 import { readFile } from "node:fs/promises";
+
+startInCycleMode(test);
 
 test("edits individual signal spacing through Inspector with local row invalidation and Save/Open", async ({ page }) => {
   await page.goto("/");

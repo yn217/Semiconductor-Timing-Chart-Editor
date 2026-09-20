@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #331 P1 UX/history item: Font Family / Size / Color must each be one
 // completed edit = one History entry, not one entry per keystroke/drag

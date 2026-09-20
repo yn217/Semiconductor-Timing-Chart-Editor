@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("Review filters and navigates the shared Problems diagnostics without mutation", async ({ page }) => {
   await page.goto("/");

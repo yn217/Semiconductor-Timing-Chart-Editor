@@ -1,5 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("Export respects a collapsed TimeGroup: shorter SVG width, no hidden cycle numbers, source data unchanged", async ({ page }) => {
   await page.goto("/");

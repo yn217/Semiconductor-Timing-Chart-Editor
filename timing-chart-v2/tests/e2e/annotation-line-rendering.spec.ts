@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("renders distinct connector paths and SVG arrowheads for every line type", async ({ page }) => {
   await page.goto("/");

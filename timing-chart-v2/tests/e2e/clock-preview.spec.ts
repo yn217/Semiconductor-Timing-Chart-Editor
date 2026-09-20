@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #332 item B: Clock "Preview" must actually render a transient draft
 // waveform (Period/Duty/Phase, etc.), not just flip a boolean status

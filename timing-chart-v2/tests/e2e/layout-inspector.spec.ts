@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("edits global row layout through one semantic operation and preserves it through Save/Open", async ({ page }) => {
   await page.goto("/");

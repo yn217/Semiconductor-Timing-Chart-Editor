@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #426/#431 item 3 ("Apply/Cancel乱立の整理"): Comment Row's Line Spacing
 // field used to dispatch `commands.updateCommentRow` directly from its own

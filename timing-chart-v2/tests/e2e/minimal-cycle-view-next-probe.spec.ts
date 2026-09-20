@@ -1,4 +1,7 @@
 import { test, expect } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("parallel replacement has an isolated opt-in mount", async ({ page }) => {
   await page.goto("/?implementation=next");

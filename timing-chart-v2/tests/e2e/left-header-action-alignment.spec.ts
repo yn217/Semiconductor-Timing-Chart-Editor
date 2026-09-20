@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 async function readHeaderLayout(page: import("@playwright/test").Page) {
   return page.locator(".left-column-heading").evaluate((header) => {

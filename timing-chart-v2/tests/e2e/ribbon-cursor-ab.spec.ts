@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #431/#459: Cursor A/B is source-time workspace state (use-workspace-ui-
 // state.ts) that had a fully-built API -- setCursor/clearCursor/moveCursor/

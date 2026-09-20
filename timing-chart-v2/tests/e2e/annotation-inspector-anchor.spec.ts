@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("Annotation Inspector edits the selected endpoint offset through one semantic command", async ({ page }) => {
   await page.goto("/");

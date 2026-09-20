@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("navigates the projected signal tree with keyboard semantics without mutating the document", async ({ page }) => {
   await page.goto("/");

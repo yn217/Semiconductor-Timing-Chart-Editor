@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #418: a Measurement anchored on the top-row Signal placed its dimension
 // line/label 18px-per-lane *above* the anchor by default -- which, for a

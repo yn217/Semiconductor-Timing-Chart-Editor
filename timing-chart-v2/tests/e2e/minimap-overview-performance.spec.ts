@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 async function readState(page: import("@playwright/test").Page) {
   return page.evaluate(() => {

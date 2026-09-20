@@ -1,5 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 const clock = {
   id: "sig_reference_clk", name: "REFERENCE_CLK", type: "clock", role: "input",

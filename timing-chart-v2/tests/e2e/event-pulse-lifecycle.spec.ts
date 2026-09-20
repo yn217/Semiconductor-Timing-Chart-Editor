@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
 import type { CanonicalDocument, GroupId, SignalId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
+
+startInCycleMode(test);
 
 // #400: Pulse is no longer an independently creatable Signal type -- the
 // Insert Ribbon and Left Tree Add menu never offer it (see the dedicated

@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("rejects production Signal delete when the only dependency is Ghost Trace sourceSignalId", async ({ page }) => {
   await page.goto("/");

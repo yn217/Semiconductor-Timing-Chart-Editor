@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #421: dragging an Arrow's end/to handle must move only that endpoint --
 // both during the drag preview and after commit -- never the whole Arrow

@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("keeps WaveDrom DOM writes and Local Geometry reads inside one render batch", async ({ page }) => {
   await page.goto("/");

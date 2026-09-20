@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("same-named Signal selection cannot transfer an uncommitted rename", async ({ page }) => {
   const errors: string[] = [];

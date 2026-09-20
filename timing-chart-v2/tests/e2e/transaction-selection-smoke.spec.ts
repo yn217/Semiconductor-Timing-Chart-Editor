@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("Transaction tree selection opens the selected canonical transaction in Inspector", async ({ page }) => {
   await page.goto("/");

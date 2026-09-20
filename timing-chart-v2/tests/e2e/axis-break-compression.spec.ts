@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("a collapsed TimeGroup genuinely compresses the axis instead of overlaying a band on the original width", async ({ page }) => {
   await page.goto("/");

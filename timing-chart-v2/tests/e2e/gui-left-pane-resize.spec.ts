@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("Signal/Group pane splitter resizes the derived columns without mutation", async ({ page }) => {
   await page.goto("/");

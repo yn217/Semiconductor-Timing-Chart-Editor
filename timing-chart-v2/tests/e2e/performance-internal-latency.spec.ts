@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 type LatencySummary = { samples: number[]; median: number; p95: number; max: number };
 type LatencyEvidence = { interactions: Record<string, LatencySummary>; longTasks: { count: number; duration: number } };
