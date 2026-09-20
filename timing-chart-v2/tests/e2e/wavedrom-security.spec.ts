@@ -1,5 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 async function openJson(page: Page, document: unknown): Promise<void> {
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
