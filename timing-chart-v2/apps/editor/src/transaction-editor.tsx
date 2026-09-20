@@ -66,10 +66,12 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
     // all three). Every field this editor doesn't expose its own control
     // for must still round-trip the currently committed value, exactly like
     // colorSelected below already does for groupId/phases.
-    commands.updateTransactionFromBottom({ transactionId: transaction.id, name: editName.trim() || "Transaction", start: editStart, end: editEnd, laneId: editLaneId, ...(editGroupId === undefined ? { clearGroupId: true } : { groupId: editGroupId }), ...(editColor.trim() === "" ? { clearColor: true } : { color: editColor.trim() }), ...(editDescription.trim() === "" ? { clearDescription: true } : { description: editDescription }) });
+    const applyResult = commands.updateTransactionFromBottom({ transactionId: transaction.id, name: editName.trim() || "Transaction", start: editStart, end: editEnd, laneId: editLaneId, ...(editGroupId === undefined ? { clearGroupId: true } : { groupId: editGroupId }), ...(editColor.trim() === "" ? { clearColor: true } : { color: editColor.trim() }), ...(editDescription.trim() === "" ? { clearDescription: true } : { description: editDescription }) });
+    setApplyError(applyResult.ok ? "" : applyResult.problems[0]?.message ?? "The Transaction change was rejected.");
   };
   const resetTransactionDraft = () => {
     if (!transaction) return;
+    setApplyError("");
     setEditName(transaction.name);
     setEditStart(transaction.start);
     setEditEnd(transaction.end);
@@ -87,6 +89,8 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<"document" | "start" | "end" | "name">("document");
   const [sortDescending, setSortDescending] = useState(false);
+  const [applyError, setApplyError] = useState("");
+  useEffect(() => setApplyError(""), [transaction?.id]);
   const [expandedPhaseTransactionIds, setExpandedPhaseTransactionIds] = useState<ReadonlySet<TransactionId>>(new Set());
   const groupNameById = new Map(document.transactionGroups?.map((group) => [group.id, group.name]) ?? []);
   const needle = search.trim().toLocaleLowerCase();
@@ -275,7 +279,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   // Transaction details belong to the Inspector. The Bottom panel remains
   // table-first after a row is selected; only the zero-Transaction state uses
   // the compact create form below.
-  if (transaction) return <section className="transaction-editor" data-testid="transaction-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); if (hasChanges) resetTransactionDraft(); else onCancel(); } }}>{toolbarAndTable}<div className="bottom-sticky-actions" data-testid="transaction-inline-draft-actions">{hasChanges && <DraftStatus testId="transaction-properties-unapplied" />}<span className="bottom-sticky-buttons"><button type="button" data-testid="revert-transaction-properties" onClick={resetTransactionDraft} disabled={!hasChanges}>Revert</button><button type="button" data-testid="apply-transaction-properties" onClick={applyTransactionDraft} disabled={!hasChanges}>Apply</button></span></div></section>;
+  if (transaction) return <section className="transaction-editor" data-testid="transaction-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); if (hasChanges) resetTransactionDraft(); else onCancel(); } }}>{toolbarAndTable}{applyError && hasChanges && <p className="inspector-note editor-problem" role="alert" data-testid="transaction-apply-error">{applyError}</p>}<div className="bottom-sticky-actions" data-testid="transaction-inline-draft-actions">{hasChanges && <DraftStatus testId="transaction-properties-unapplied" />}<span className="bottom-sticky-buttons"><button type="button" data-testid="revert-transaction-properties" onClick={resetTransactionDraft} disabled={!hasChanges}>Revert</button><button type="button" data-testid="apply-transaction-properties" onClick={applyTransactionDraft} disabled={!hasChanges}>Apply</button></span></div></section>;
   return <section className="transaction-editor" data-testid="transaction-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}><header><strong>Transaction Editor</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button></header>{/* #534: the zero-Transaction state is the create form below (part of toolbarAndTable), shown directly -- no separate "No Transactions yet" onboarding block. */}{toolbarAndTable}{transaction ? <><form id="transaction-properties-form" onSubmit={(event) => { event.preventDefault(); applyTransactionDraft(); }}><label>Name<input aria-label="Transaction name" value={editName} onChange={(event) => setEditName(event.target.value)} /></label><label>Start<input aria-label="Transaction start" type="number" min="0" max={editEnd - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={editStart + 1} max={document.timeline.cycleCount} value={editEnd} onChange={(event) => setEditEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="Transaction lane" value={editLaneId} onChange={(event) => setEditLaneId(event.target.value)} /><span className="inspector-note">A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track.</span></label>
       </form>
       {/* #426: Linked Signals -- the exact same component + immediate-commit
