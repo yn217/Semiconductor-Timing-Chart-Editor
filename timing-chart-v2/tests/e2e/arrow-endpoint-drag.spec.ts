@@ -68,6 +68,8 @@ test("dragging the Arrow end handle moves only the end anchor; the start handle 
   expect(await host.getAttribute("data-canonical-revision")).not.toBe(beforeRevision);
 
   // Undo reverts only the end-endpoint move; start stays exactly as after.
+  // Undo/Redo live on the Home tab.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 1");
   const undoStartBox = (await startHandle.boundingBox())!;
