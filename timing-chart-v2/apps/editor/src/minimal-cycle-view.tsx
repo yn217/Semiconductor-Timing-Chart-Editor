@@ -23,6 +23,7 @@ import { useEditorPresentationState } from "./application/use-editor-presentatio
 import { useEditorResizeActions } from "./application/use-editor-resize-actions.js";
 import { useEditorWorkspaceActions } from "./application/use-editor-workspace-actions.js";
 import { EditorShellView } from "./editor-shell-view.js";
+import { composeMode } from "./workspace/mode-composition.js";
 import { useViewModeTransition } from "./runtime/use-view-mode-transition.js";
 import { useActivePaneTracking } from "./runtime/use-active-pane-tracking.js";
 import { useOverlayPresentationRefresh } from "./runtime/use-overlay-presentation-refresh.js";
@@ -155,13 +156,10 @@ export function MinimalCycleView() {
   const timelineNavigation = useTimelineNavigationOwner(viewMode);
   const zoom = timelineNavigation.zoom;
   useEffect(() => {
-    if (typeof window !== "undefined" && viewMode !== "Split") window.localStorage.setItem("timing-chart-v2.view-mode", viewMode);
+    if (typeof window !== "undefined" && modeComposition.persistsAsDefault) window.localStorage.setItem("timing-chart-v2.view-mode", viewMode);
   }, [viewMode]);
-  const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Phases" | "Linked Signals" | "Bookmarks" | "AI" | "Problems" | "JSON")[] = viewMode === "Cycle"
-    ? ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]
-    : viewMode === "Transaction"
-      ? ["Transaction", "Phases", "Linked Signals", "Bookmarks", "AI", "Problems", "JSON"]
-      : ["Signal", "Transaction", "Annotation", "Bookmarks", "AI", "Problems", "JSON"];
+  const modeComposition = composeMode(viewMode);
+  const bottomTabs = modeComposition.bottomTabs;
   const workspaceActions = useEditorWorkspaceActions({
     workspacePreset,
     setWorkspacePreset,
@@ -802,7 +800,7 @@ export function MinimalCycleView() {
   };
   return <EditorShellView
     viewModel={{
-      style: { "--gui-left-width": `${viewMode === "Transaction" ? 246 : leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio), "--transaction-tree-row-height": viewMode === "Transaction" ? "29px" : undefined } as React.CSSProperties,
+      style: { "--gui-left-width": `${modeComposition.fixedLeftWidth ?? leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio), "--transaction-tree-row-height": viewMode === "Transaction" ? "29px" : undefined } as React.CSSProperties,
       density, workspacePreset, inspectorVisible, bottomVisible, viewMode, rulerEnabled, minimapEnabled, signalTreeVisible,
       showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground,
       layoutOverflow: snapshot.document.layout.overflow, leftPaneWidth, frozenPaneWidth, bottomHeight, inspectorWidth,
