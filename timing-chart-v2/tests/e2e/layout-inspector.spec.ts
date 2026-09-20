@@ -76,6 +76,7 @@ test("auto fits a long rendered signal label through one layout command", async 
   await page.getByRole("menu", { name: "More Home Commands" }).getByRole("menuitem", { name: "Clear Selection", exact: true }).click();
   const layout = page.getByTestId("inspector-layout-editor");
   const before = Number(await layout.getByLabel("Inspector signal name width").inputValue());
+  await expect(layout.getByTestId("layout-draft-note")).toContainText("only change this draft");
   await layout.getByTestId("auto-fit-inspector-layout").click();
   // Auto Fit only fills the Layout draft (no Canonical change) -- Apply commits it as one command.
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
