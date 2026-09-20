@@ -1,9 +1,20 @@
 {
   "path": "references/v2-gui-reference-v8/golden-home-cycle-1672x941.png",
-  "sha256": "AD1FD459F24E3E24473FD06B16740B08F6DA07C88BBB9F3897A6EE12DA84A078",
-  "viewport": { "width": 1672, "height": 941 },
+  "sha256": "BB1FEDCE244912084B75DE4672A369B8D3841AD7C8365FCC2714DA41F3F84090",
+  "viewport": {
+    "width": 1672,
+    "height": 941
+  },
   "deviceScaleFactor": 1,
   "visualThreshold": 0.05,
   "geometryTolerancePx": 2,
-  "pixelDeltaThreshold": 24
+  "pixelDeltaThreshold": 24,
+  "history": [
+    {
+      "date": "2026-09-21",
+      "previousSha256": "AD1FD459F24E3E24473FD06B16740B08F6DA07C88BBB9F3897A6EE12DA84A078",
+      "previousFile": "references/v2-gui-reference-v8/golden-v8-2026-09-05-DEPRECATED.png",
+      "reason": "Approved re-baseline (#626): production UI moved on by issue-driven redesigns (#570 Combined label, type badges, Find & Replace/Auto Space ribbon regrouping, Inspector header + sticky Revert/Apply #698/#751, Bottom tabs/Follow pill, MiniMap in Inspector). Two candidate regressions were fixed first: Bottom Clock Apply generator restored to the controls row and Convert Clock kept above the Inspector footer at 1672x941; guard issue-626-primary-actions-visible."
+    }
+  ]
 }

@@ -149,6 +149,9 @@
 
 .editor-shell .signal-editor:has(.clock-editor) .clock-generator { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: end; gap: 10px; padding: 10px 12px 14px; }
 
+/* Primary actions stay on the controls row (V8 placement); derived frequency / errors / draft status follow on a full-width row. */
+.editor-shell .signal-editor:has(.clock-editor) .clock-generator-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.editor-shell .signal-editor:has(.clock-editor) .clock-generator > .clock-derived-frequency, .editor-shell .signal-editor:has(.clock-editor) .clock-generator > .editor-problem, .editor-shell .signal-editor:has(.clock-editor) .clock-generator > [data-testid="clock-generator-unapplied"] { grid-column: 1 / -1; }
 .editor-shell .signal-editor:has(.clock-editor) .clock-generator input,
 .editor-shell .signal-editor:has(.clock-editor) .clock-generator select { width: 100%; }
 
