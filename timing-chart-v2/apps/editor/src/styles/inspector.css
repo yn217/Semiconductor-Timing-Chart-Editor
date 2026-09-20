@@ -267,3 +267,6 @@
 .inspector-style-checks .property-toggle { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
 
 .editor-shell .inspector-section-toggle .inspector-section-chevron { display: block; flex: 0 0 15px; width: 15px; height: 15px; color: #405c78; }
+.inspector-layout-utilities { display: grid; grid-template-columns: max-content 1fr; gap: 4px 10px; align-items: center; margin-top: 6px; }
+.inspector-layout-utilities > strong { font-size: 11px; color: #43536a; }
+.inspector-layout-utilities > button { justify-self: start; }
