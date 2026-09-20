@@ -266,9 +266,7 @@
 .surface-host [data-role="tree-signal-role"] .comment-icon,
 .surface-host [data-role="signal-role"] .comment-icon { width: 15px; height: 15px; flex: 0 0 15px; }
 
-.editor-shell .surface-host [data-role="tree-signal-role"][data-signal-type] { width: 28px; min-width: 28px; box-sizing: border-box; padding-inline: 2px; }
-/* Frozen role badges use the same compact width as the Left Tree badges (c1c3c0e2), so both columns share geometry. */
-.editor-shell .surface-host [data-role="signal-role"][data-presentation="internal"] { width: 28px; min-width: 28px; box-sizing: border-box; padding-inline: 2px; }
+.editor-shell .surface-host [data-role="tree-signal-role"][data-signal-type]:not([data-presentation="internal"]) { width: 28px; min-width: 28px; box-sizing: border-box; padding-inline: 2px; }
 
 .surface-host [data-role="tree-signal-name"],
 .surface-host [data-role="frozen-signal-name"] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
