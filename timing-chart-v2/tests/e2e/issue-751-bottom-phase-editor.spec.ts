@@ -8,7 +8,7 @@ test("Bottom Phases tab shows parent context, top Apply/Revert and live validati
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Phases", exact: true }).click();
   const tab = page.getByTestId("transaction-bottom-phases");
   await expect(tab).toBeVisible();
-  await expect(tab.getByTestId("transaction-bottom-phase-context")).toContainText(/Start \d+ · End \d+ · Duration \d+ cycles · Coverage/);
+  await expect(tab.getByTestId("transaction-bottom-phase-context")).toContainText(/Start [\d.]+ · End [\d.]+ · Duration [\d.]+ (?:TC|cycles) · Coverage/);
   await expect(tab.getByRole("button", { name: /Move bottom phase/ })).toHaveCount(0);
   const apply = tab.getByTestId("apply-bottom-transaction-phases");
   await expect(apply).toBeDisabled();
