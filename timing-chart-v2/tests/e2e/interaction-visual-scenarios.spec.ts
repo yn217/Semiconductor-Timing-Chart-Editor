@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 import { mkdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
@@ -7,7 +7,7 @@ import { captureScenarioReview } from "../../harness/gui/ai-review-bundle.mjs";
 import { reversiblePixelRegionReport } from "../../harness/gui/mechanical-diagnostics.mjs";
 import { PNG } from "pngjs";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 test("captures Signal visibility before/after/undo/redo visual bundles", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1672, height: 941 });

@@ -1,8 +1,8 @@
 import { expect, test, type CDPSession, type Page, type TestInfo } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 import { generatePerformanceDocument, summarizePerformance, type BrowserPerformanceSample, type PerformanceFixtureSpec } from "@timing-chart-v2/testing";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 test.describe.configure({ mode: "serial" });
 test.setTimeout(120_000);

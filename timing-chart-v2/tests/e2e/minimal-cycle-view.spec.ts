@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 test("projects canonical rows into aligned tree, frozen labels, and waveform surfaces", async ({ page }) => {
   await page.goto("/");
