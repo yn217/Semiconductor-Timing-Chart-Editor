@@ -39,10 +39,10 @@ External, subscription/account-authenticated agents reach the Editor through the
 provider API key and calls no usage-billed provider API. Enforced by `tests/security/ai-provider-policy.test.ts`
 and `tests/security/ai-bridge-security.test.ts`.
 
-## 5. Open deltas (not decided here)
+## 5. Resolved / open deltas
 
-- Schema still carries the legacy per-signal `display.splitPane` (`upper|lower|both`) with a planner command path
-  (`signal.updateProperties`) and projection support. #570 says Signal Split is "same list in two viewports", so
-  this Upper/Lower/Both assignment is a legacy remnant. No editor UI sets it. Removing it is a schema/migration
-  decision (saved documents may contain it) and needs the owner's call.
+- Resolved (owner decision): the legacy per-signal `display.splitPane` (`upper|lower|both`) is removed. Old
+  documents that still carry it open normally (the value is ignored) and Save never writes it back; the schema
+  property, `SignalDisplay` field and the `signal.updateProperties` option no longer exist
+  (`tests/schema/legacy-split-pane.test.ts`).
 - Older issues that still describe Signal Split as Upper/Lower/Both assignment should be annotated as superseded.
