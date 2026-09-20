@@ -51,6 +51,7 @@ export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, p
           </select>
         </label>
         <button type="button" data-testid="move-signal-to-group" disabled={!resolvedTargetGroupId || resolvedTargetGroupId === currentGroup?.id} onClick={() => onDropToGroup("signal", signal.id, resolvedTargetGroupId as GroupId)}>Move</button>
+        <span className="signal-scope-actions" role="group" aria-label="Signal actions (affect the whole signal)"><button type="button" onClick={() => onVisibility(signal.id, signal.display.visible === false)} data-testid="signal-visibility">{signal.display.visible === false ? "Show signal" : "Hide signal"}</button><button type="button" className="danger" onClick={onDelete} data-testid="signal-delete">Delete signal</button></span>
       </div>}
       {/* Visual Quality Closure follow-up (#402/#426): Undo/Redo/Cancel/
           Hide aren't Transition-editing's primary action (Add/Save are) --
@@ -62,9 +63,8 @@ export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, p
       <span className="editor-tabbar-secondary">
         <button type="button" onClick={onUndo} disabled={!history.canUndo} data-testid="editor-undo">Undo</button>
         <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button>
-        {signal && <><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button><button type="button" onClick={() => onVisibility(signal.id, signal.display.visible === false)} data-testid="signal-visibility">{signal.display.visible === false ? "Show signal" : "Hide signal"}</button></>}
+        {signal && <><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button></>}
       </span>
-      {signal && <button type="button" className="danger" onClick={onDelete} data-testid="signal-delete">Delete signal</button>}
     </div>
     {problem && <div className="editor-problem" role="alert" data-testid="editor-problem">{problem}</div>}
     {!signal ? <div className="editor-empty">Choose a row in Signal Tree or Role / Signal to open its canonical data.</div> : <>
