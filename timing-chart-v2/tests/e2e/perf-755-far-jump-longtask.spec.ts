@@ -22,6 +22,7 @@ test("far jump long-task measurement (100 signals x 10000 cycles, Combined)", as
   const max = await viewport.evaluate((el) => el.scrollWidth - el.clientWidth);
   const fs = await import('node:fs');
   await page.context().browser()!.startTracing(page, { path: 'test-results/p755-trace.json', categories: ['devtools.timeline', 'disabled-by-default-devtools.timeline'] });
+  const batchesBefore = JSON.parse((await surface.getAttribute('data-session-counters'))!).waveBatchCount as number;
   const started = Date.now();
   await viewport.evaluate((el, left) => { el.scrollLeft = left; }, Math.floor(max / 2));
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
@@ -30,5 +31,5 @@ test("far jump long-task measurement (100 signals x 10000 cycles, Combined)", as
   void fs;
   const tasks = await page.evaluate(() => (window as unknown as { __tasks: number[] }).__tasks);
   const longest = Math.max(0, ...tasks);
-  console.log(JSON.stringify({ metric: "far-jump", settleMs, longestTaskMs: Math.round(longest), longTaskCount: tasks.length, blockedMs: Math.round(tasks.reduce((a, b) => a + b, 0)) }));
+  console.log(JSON.stringify({ metric: "far-jump", settleMs, waveBatches: (JSON.parse((await surface.getAttribute('data-session-counters'))!).waveBatchCount as number) - batchesBefore, longestTaskMs: Math.round(longest), longTaskCount: tasks.length, blockedMs: Math.round(tasks.reduce((a, b) => a + b, 0)) }));
 });
