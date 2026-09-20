@@ -212,7 +212,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
         event.preventDefault();
         commands.updateValue(signal.id, start, value, comment);
       }}>
-        <h2>Add / Edit Transition</h2>
+        <h2 data-testid="transition-form-mode" data-mode={signal.values.some((change) => change.start === start) ? "edit" : "add"}>{signal.values.some((change) => change.start === start) ? `Editing transition at cycle ${start}` : "Add new transition"}</h2>
         {/* Density fix (#402/#426 follow-up): Start/Value/Comment used to
             stack as three full-height labels; laid out side by side in one
             row instead, since the panel already has ~570px of horizontal
