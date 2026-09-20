@@ -263,7 +263,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
       <h2>Transitions <span>({signal.values.length})</span></h2>
     </div>
     <div className="event-toolbar" role="toolbar" aria-label="Signal event commands" data-testid="signal-event-toolbar">
-      <button type="button" onClick={duplicateRow} disabled={!selected || !canDuplicate} data-testid="event-duplicate">Duplicate</button>
+      <span className="event-selected-status" data-testid="event-selected-status" role="status">{selected ? `Selected: transition at cycle ${selected.start}` : "No transition selected"}</span><button type="button" onClick={duplicateRow} disabled={!selected || !canDuplicate} data-testid="event-duplicate">Duplicate</button>
       <button type="button" onClick={addRow} data-testid="event-add-row">Add Row</button>
       <button type="button" className="danger" onClick={() => selected && commands.removeValue(signal.id, selected.start)} disabled={!selected || signal.values.length === 1} data-testid="event-delete-row">Delete</button>
     </div>

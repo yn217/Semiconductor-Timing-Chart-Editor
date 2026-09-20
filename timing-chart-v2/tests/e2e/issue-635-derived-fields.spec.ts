@@ -13,3 +13,12 @@ test("End and Duration in the Signal transition table are marked derived and rea
   expect(await row.evaluate((el) => el.tagName)).toBe("OUTPUT");
   await expect(editor.locator("[data-testid^='event-row-duration-']").first()).toBeVisible();
 });
+
+test("the transition table names the selected row its toolbar actions apply to", async ({ page }) => {
+  await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.getByTestId("cycle-surface").locator("[data-role='frozen-row'][data-row-id='sig_cycle_reset_n']").click();
+  const status = page.getByTestId("signal-editor").getByTestId("event-selected-status");
+  await expect(status).toHaveText(/^Selected: transition at cycle \d+$/);
+  await expect(page.getByTestId("signal-editor").getByTestId("event-duplicate")).toBeVisible();
+});
