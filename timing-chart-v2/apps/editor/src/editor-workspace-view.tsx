@@ -1,6 +1,53 @@
-import { useEffect, type KeyboardEventHandler, type PointerEventHandler, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, type KeyboardEventHandler, type PointerEventHandler, type ReactNode, type RefObject } from "react";
 import { LEFT_PANE_MAX_WIDTH, LEFT_PANE_MIN_WIDTH, type ViewMode } from "./workspace/use-workspace-ui-state.js";
 import { composeMode } from "./workspace/mode-composition.js";
+
+/**
+ * #625: the horizontal scroll track belongs to the Timeline only. The viewport's native horizontal scrollbar is hidden and this
+ * track -- positioned from the time-domain origin (ruler left edge) to the viewport's right edge -- drives the same scrollLeft, so
+ * the scrollbar never extends beneath Signals / Groups, Role or Signal / Annotation.
+ */
+function TimelineHorizontalScrollbar({ viewport }: { readonly viewport: RefObject<HTMLDivElement | null> }) {
+  const track = useRef<HTMLDivElement>(null);
+  const inner = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const view = viewport.current;
+    const bar = track.current;
+    const filler = inner.current;
+    if (!view || !bar || !filler) return undefined;
+    view.dataset.ownHscroll = "true";
+    let syncing = false;
+    const layout = () => {
+      const panel = bar.parentElement;
+      if (!panel) return;
+      const viewRect = view.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const ruler = view.querySelector<HTMLElement>(".cycle-ruler");
+      const originLeft = ruler && !ruler.hidden ? ruler.getBoundingClientRect().left : viewRect.left;
+      const offset = Math.max(0, originLeft - viewRect.left + view.scrollLeft * 0);
+      bar.style.left = `${viewRect.left - panelRect.left + offset}px`;
+      bar.style.top = `${viewRect.bottom - panelRect.top - 15}px`; // overlays the strip the native bar used to occupy
+      bar.style.width = `${Math.max(0, view.clientWidth - offset)}px`;
+      filler.style.width = `${Math.max(0, view.scrollWidth - offset)}px`;
+      bar.dataset.timelineLeft = String(Math.round(originLeft));
+      bar.hidden = view.scrollWidth <= view.clientWidth;
+      if (!syncing) bar.scrollLeft = view.scrollLeft;
+    };
+    const onViewScroll = () => { if (syncing) return; syncing = true; bar.scrollLeft = view.scrollLeft; syncing = false; };
+    const onBarScroll = () => { if (syncing) return; syncing = true; view.scrollLeft = bar.scrollLeft; syncing = false; };
+    layout();
+    view.addEventListener("scroll", onViewScroll, { passive: true });
+    bar.addEventListener("scroll", onBarScroll, { passive: true });
+    const observer = new ResizeObserver(layout);
+    observer.observe(view);
+    if (view.firstElementChild) observer.observe(view.firstElementChild);
+    window.addEventListener("resize", layout);
+    const mutation = new MutationObserver(layout);
+    mutation.observe(view, { attributes: true, subtree: true, attributeFilter: ["style", "hidden"] });
+    return () => { view.removeEventListener("scroll", onViewScroll); bar.removeEventListener("scroll", onBarScroll); observer.disconnect(); mutation.disconnect(); window.removeEventListener("resize", layout); delete view.dataset.ownHscroll; };
+  });
+  return <div className="timeline-hscroll" ref={track} data-testid="timeline-hscroll" role="scrollbar" aria-orientation="horizontal" aria-label="Timeline horizontal scroll" hidden><div ref={inner} style={{ height: 1 }} /></div>;
+}
 
 export interface EditorWorkspaceViewModel {
   readonly view: { readonly viewMode: string; readonly signalSplitEnabled: boolean; readonly signalSplitRatio: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly zoom?: number; readonly cursorPresentationRevision?: number; readonly cursor: { readonly a?: number; readonly b?: number; readonly deltaCycles?: number } };
@@ -248,6 +295,7 @@ export function EditorWorkspaceView({
           <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
         </div>
       </div>
+      <TimelineHorizontalScrollbar viewport={viewport} />
       {signalSplitEnabled && viewMode === "Cycle" && <CycleSignalSplitPane signalSplitRatio={signalSplitRatio} gridEnabled={gridEnabled} rulerEnabled={rulerEnabled} viewportLower={viewportLower} gridLayerLower={gridLayerLower} rulerLower={rulerLower} hostLower={hostLower} onViewportKeyDown={onViewportKeyDown} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} />}
     </section>
     <div className={`left-workspace-rail mode-${viewMode.toLowerCase()}`} data-testid="left-workspace-rail">

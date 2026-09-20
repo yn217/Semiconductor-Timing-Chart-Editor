@@ -26,3 +26,8 @@
   content: ""; grid-column: 1; grid-row: 2 / 4; z-index: 1; pointer-events: none;
   background: #f9fbfd; border-top: 1px solid #b9c4d2; border-right: 1px solid #b9c4d2; box-sizing: border-box;
 }
+
+/* #625: Timeline-only horizontal scrollbar (the viewport's native horizontal bar is hidden). */
+.cycle-viewport[data-own-hscroll]::-webkit-scrollbar:horizontal { height: 0; display: none; }
+.cycle-panel > .timeline-hscroll { position: absolute; height: 15px; overflow-x: scroll; overflow-y: hidden; z-index: 30; }
+.cycle-panel > .timeline-hscroll[hidden] { display: none; }
