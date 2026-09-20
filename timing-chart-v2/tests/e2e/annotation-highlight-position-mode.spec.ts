@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 // #419 -- Highlight "Cycle Snap / Free positioning" mode. Zero GUI existed
 // anywhere despite `annotation.setPositionMode` already being a fully-
