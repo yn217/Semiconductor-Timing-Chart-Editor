@@ -1,5 +1,6 @@
 import { useEffect, type KeyboardEventHandler, type PointerEventHandler, type ReactNode, type RefObject } from "react";
-import { LEFT_PANE_MAX_WIDTH, LEFT_PANE_MIN_WIDTH } from "./workspace/use-workspace-ui-state.js";
+import { LEFT_PANE_MAX_WIDTH, LEFT_PANE_MIN_WIDTH, type ViewMode } from "./workspace/use-workspace-ui-state.js";
+import { composeMode } from "./workspace/mode-composition.js";
 
 export interface EditorWorkspaceViewModel {
   readonly view: { readonly viewMode: string; readonly signalSplitEnabled: boolean; readonly signalSplitRatio: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly zoom?: number; readonly cursorPresentationRevision?: number; readonly cursor: { readonly a?: number; readonly b?: number; readonly deltaCycles?: number } };
@@ -28,6 +29,7 @@ export function EditorWorkspaceView({
   viewModel,
 }: EditorWorkspaceViewProps) {
   const { viewMode, signalSplitEnabled, signalSplitRatio, gridEnabled, snapEnabled, rulerEnabled, zoom, cursorPresentationRevision, cursor } = viewModel.view;
+  const composition = composeMode(viewMode as ViewMode);
   const { leftPaneWidth, frozenPaneMinWidth, frozenPaneWidth, bottomVisible, bottomHeight, inspectorVisible, inspectorWidth } = viewModel.layout;
   const { viewport, gridLayer, ruler, host, viewportLower, rulerLower, hostLower, gridLayerLower } = viewModel.refs;
   const { header, transactionTree, viewportContent, viewportLegend, leftRail, bottom, inspector } = viewModel.content;
@@ -199,9 +201,9 @@ export function EditorWorkspaceView({
     };
   }, [ruler, rulerLower, cursor.a, cursor.b, cursorPresentationRevision, zoom, viewport, viewportLower]);
   return <div className="desktop-workspace">
-    {viewMode !== "Cycle" && <div className="workspace-header">{header}</div>}
+    {composition.headerPlacement === "above" && <div className="workspace-header">{header}</div>}
     <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode === "Split" ? "Combined" : viewMode} View`} data-view-mode={viewMode} data-signal-split={String(signalSplitEnabled && viewMode === "Cycle")}>
-      {viewMode !== "Transaction" && <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={LEFT_PANE_MIN_WIDTH} aria-valuemax={LEFT_PANE_MAX_WIDTH} aria-valuenow={leftPaneWidth} tabIndex={0} onKeyDown={onLeftPaneKeyDown} onPointerDown={onLeftPanePointerDown} onPointerMove={onLeftPanePointerMove} onPointerUp={onLeftPanePointerUp} onPointerCancel={onLeftPanePointerUp} />}
+      {composition.hasLeftPaneResizer && <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={LEFT_PANE_MIN_WIDTH} aria-valuemax={LEFT_PANE_MAX_WIDTH} aria-valuenow={leftPaneWidth} tabIndex={0} onKeyDown={onLeftPaneKeyDown} onPointerDown={onLeftPanePointerDown} onPointerMove={onLeftPanePointerMove} onPointerUp={onLeftPanePointerUp} onPointerCancel={onLeftPanePointerUp} />}
       {/* Transaction Mode GUI realignment: this splitter's whole purpose is
           separating Cycle Mode's frozen Role/Signal-name columns from the
           waveform canvas -- Transaction Mode has no such split (its Tree
@@ -211,8 +213,8 @@ export function EditorWorkspaceView({
           (top:0/bottom:0) hit target landed inside the Transaction Tree
           panel with no corresponding column boundary to resize -- reported
           as a stray vertical line bleeding through the Tree's content. */}
-      {viewMode === "Cycle" && <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={frozenPaneMinWidth} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onKeyDown={onFrozenPaneKeyDown} onPointerDown={onFrozenPanePointerDown} onPointerMove={onFrozenPanePointerMove} onPointerUp={onFrozenPanePointerUp} onPointerCancel={onFrozenPanePointerUp} />}
-      {viewMode === "Cycle" && header}
+      {composition.hasFrozenPaneResizer && <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={frozenPaneMinWidth} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onKeyDown={onFrozenPaneKeyDown} onPointerDown={onFrozenPanePointerDown} onPointerMove={onFrozenPanePointerMove} onPointerUp={onFrozenPanePointerUp} onPointerCancel={onFrozenPanePointerUp} />}
+      {composition.headerPlacement === "panel" && header}
       <div className={`cycle-viewport${viewMode === "Split" ? " split-signal-pane" : ""}`} ref={viewport} data-testid="cycle-viewport" data-pane={viewMode === "Split" ? "signal" : undefined} tabIndex={0} aria-label="Timing canvas navigation" onKeyDown={onViewportKeyDown}>
         {viewMode === "Split" && <div className="split-transaction-pane" data-pane="transaction" tabIndex={0} aria-label="Transaction pane">{viewportContent}</div>}
         {viewMode === "Split" && <div className="combined-split-divider" data-testid="combined-split-divider" role="separator" aria-label="Resize Transaction and Cycle panes" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(signalSplitRatio * 100)} tabIndex={0} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} onPointerCancel={onSignalSplitPointerUp} />}
@@ -235,8 +237,8 @@ export function EditorWorkspaceView({
       </>}
     </section>
     <div className={`left-workspace-rail mode-${viewMode.toLowerCase()}`} data-testid="left-workspace-rail">
-      {(viewMode === "Transaction" || viewMode === "Split") && transactionTree}
-      {viewMode !== "Transaction" && viewMode !== "Split" && leftRail}
+      {composition.leftRail === "transactions" && transactionTree}
+      {composition.leftRail === "signals" && leftRail}
     </div>
     {bottomVisible && <div className="bottom-resize-track" data-testid="bottom-resizer" role="separator" aria-label="Resize bottom editor" aria-orientation="horizontal" aria-valuemin={180} aria-valuemax={420} aria-valuenow={bottomHeight} tabIndex={0} title="Drag to resize; double-click to reset" onDoubleClick={onBottomReset} onKeyDown={onBottomKeyDown} onPointerDown={onBottomPointerDown} onPointerMove={onBottomPointerMove} onPointerUp={onBottomPointerUp} onPointerCancel={onBottomPointerUp} />}
     {bottomVisible && bottom}
