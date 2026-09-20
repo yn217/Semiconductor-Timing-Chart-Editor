@@ -19,7 +19,10 @@ test("builds six transactions through normal GUI selection transitions", async (
     await inspector.getByLabel("Transaction description", { exact: true }).fill("GUI authored transaction");
     await inspector.getByTestId("apply-inspector-transaction").click();
   }
-  for (let index = 0; index < 3; index++) await page.getByTestId("add-transaction-group-tree").click();
+  for (let index = 0; index < 3; index++) {
+    await page.getByTestId("transaction-tree-more").click();
+    await page.getByTestId("add-transaction-group-tree").click();
+  }
   await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").first().click();
   await inspector.getByLabel("Transaction group", { exact: true }).selectOption({ label: "Group 1" });
   await expect(inspector.getByLabel("Transaction group", { exact: true })).toHaveValue(/.+/);

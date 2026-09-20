@@ -23,7 +23,8 @@ for (const [width, height] of [[1672, 941], [1280, 720]] as const) {
     await page.getByRole("tab", { name: "Transaction", exact: true }).click();
     await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
 
-    await page.getByTestId("add-transaction-group-tree").click();
+    await page.getByTestId("transaction-tree-more").click();
+  await page.getByTestId("add-transaction-group-tree").click();
     const create = page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true });
     await create.click();
     await create.click();

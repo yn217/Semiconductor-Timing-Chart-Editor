@@ -18,6 +18,7 @@ test("Bottom Panel toolbar Add creates a Transaction and Ungroup clears its Grou
   const bottomEditor = page.getByTestId("transaction-editor");
   await expect(bottomEditor.getByTestId("bottom-transaction-ungroup")).toBeDisabled();
 
+  await page.getByTestId("transaction-tree-more").click();
   await page.getByTestId("add-transaction-group-tree").click();
   const groupSelect = bottomEditor.getByLabel("Move selected transaction to group");
   await groupSelect.selectOption({ label: "Group 1" });
