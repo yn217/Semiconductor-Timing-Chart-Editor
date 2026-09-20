@@ -11,6 +11,12 @@ startInCycleSample(test);
 // export as their own shape), a real visible Lock indicator, and Lock's
 // mixed-selection batch-atomicity fix.
 
+async function openStyleSection(editor: import("@playwright/test").Locator): Promise<void> {
+  // Style (Font, Stroke, Fill) lives in the Inspector's collapsible "Style" section (closed by default).
+  const toggle = editor.getByRole("button", { name: /^Style/ });
+  if (await toggle.count() > 0 && (await toggle.first().getAttribute("aria-expanded")) === "false") await toggle.first().click();
+}
+
 async function addAnnotation(page: import("@playwright/test").Page, type: string) {
   await page.getByLabel("Annotation type").selectOption(type);
   await page.getByRole("button", { name: "Add annotation" }).click();
@@ -47,10 +53,11 @@ test("Range Stroke/Fill controls have real canonical + rendered + exported effec
 
   const range = await addAnnotation(page, "range");
   const editor = page.getByTestId("annotation-editor");
-  const strokeWidth = editor.getByTestId("annotation-stroke-fill-stroke-width");
-  const strokeStyle = editor.getByTestId("annotation-stroke-fill-stroke-style");
-  const fillColor = editor.getByTestId("annotation-stroke-fill-fill-color");
-  const fillOpacity = editor.getByTestId("annotation-stroke-fill-fill-opacity");
+  await openStyleSection(editor);
+  const strokeWidth = editor.getByTestId("inspector-stroke-fill-stroke-width");
+  const strokeStyle = editor.getByTestId("inspector-stroke-fill-stroke-style");
+  const fillColor = editor.getByTestId("inspector-stroke-fill-fill-color");
+  const fillOpacity = editor.getByTestId("inspector-stroke-fill-fill-opacity");
   await expect(strokeWidth).toBeEnabled();
   await expect(fillColor).toBeEnabled();
 
@@ -109,8 +116,9 @@ test("Text has no Stroke/Fill controls enabled -- disabled with a truthful reaso
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await addAnnotation(page, "text");
   const editor = page.getByTestId("annotation-editor");
-  await expect(editor.getByTestId("annotation-stroke-fill-stroke-width")).toBeDisabled();
-  await expect(editor.getByTestId("annotation-stroke-fill-fill-color")).toBeDisabled();
+  await openStyleSection(editor);
+  await expect(editor.getByTestId("inspector-stroke-fill-stroke-width")).toBeDisabled();
+  await expect(editor.getByTestId("inspector-stroke-fill-fill-color")).toBeDisabled();
   await expect(page.locator(".stroke-fill-group").first()).toHaveAttribute("title", /text/);
 });
 

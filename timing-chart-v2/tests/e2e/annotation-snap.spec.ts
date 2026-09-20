@@ -4,6 +4,18 @@ import { canonicalFixture } from "../fixtures/canonical.js";
 
 startInCycleSample(test);
 
+async function ribbonHistory(page: import("@playwright/test").Page, name: "Undo" | "Redo"): Promise<void> {
+  // Undo/Redo live on the Home tab; the Inspector's annotation editor has no history buttons of its own.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name, exact: true }).click();
+}
+
+async function openStyleSection(editor: import("@playwright/test").Locator): Promise<void> {
+  // Style (Font, Stroke, Fill) lives in the Inspector's collapsible "Style" section (closed by default).
+  const toggle = editor.getByRole("button", { name: /^Style/ });
+  if (await toggle.count() > 0 && (await toggle.first().getAttribute("aria-expanded")) === "false") await toggle.first().click();
+}
+
 async function createAnnotation(page: import("@playwright/test").Page, type: string) {
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption(type);
@@ -102,6 +114,7 @@ test("edits a linked Ghost Trace and Timing Region without WaveDrom regeneration
   await expect(ghost.locator("[data-role='ghost-trace-path']")).toHaveCount(1);
   await ghost.locator("[data-role='annotation-label']").click({ force: true });
   const editor = page.getByTestId("annotation-editor");
+  await openStyleSection(editor);
   await editor.getByLabel("Ghost Trace cycle offset").fill("2");
   await editor.getByLabel("Annotation opacity").fill("0.35");
   await editor.getByTestId("apply-annotation-properties").click();
@@ -166,6 +179,7 @@ test("updates Annotation style and label offset without waveform regeneration", 
   const surface = host.locator("[data-role='timing-chart-surface']");
   const waveCounters = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   const editor = page.getByTestId("annotation-editor");
+  await openStyleSection(editor);
   await editor.getByLabel("Annotation label", { exact: true }).fill("REQ to READY");
   await editor.getByLabel("Annotation color").fill("#3366cc");
   await editor.getByLabel("Annotation line type").selectOption("curve");
@@ -177,7 +191,7 @@ test("updates Annotation style and label offset without waveform regeneration", 
   const labelBefore = await owner.locator("[data-role='annotation-label']").evaluate((element) => (element as HTMLElement).style.transform);
   await editor.getByLabel("Annotation label X").fill("12");
   await editor.getByLabel("Annotation label Y").fill("-20");
-  await editor.locator(".annotation-label-offset-row").getByRole("button", { name: "Apply Annotation", exact: true }).click();
+  await page.getByTestId("apply-annotation-properties").click();
   const labelAfter = await owner.locator("[data-role='annotation-label']").evaluate((element) => (element as HTMLElement).style.transform);
   const x = (value: string) => Number.parseFloat(value.match(/translate\(([-\d.]+)px/)?.[1] ?? "NaN");
   expect(x(labelAfter) - x(labelBefore)).toBe(12);
@@ -404,6 +418,7 @@ test("edits Measurement semantics with one history step and preserves them throu
   expect(ownerId).toBeTruthy();
   const owner = host.locator(`[data-role='annotation-owner'][data-annotation-id='${ownerId}']`);
   const editor = page.getByTestId("annotation-editor");
+  await openStyleSection(editor);
   await editor.getByLabel("Measurement profile").selectOption("custom");
   await editor.getByLabel("Measurement anchor kind").selectOption("ratio");
   await editor.getByLabel("Custom measurement start").fill("17");
@@ -421,9 +436,9 @@ test("edits Measurement semantics with one history step and preserves them throu
   await expect(owner.locator("[data-role='measurement-marker'][data-marker-kind='arrow']")).toHaveCount(2);
   await expect(owner.locator("[data-role='measurement-extension']")).toHaveCount(2);
   await expect(page.getByTestId("history-status")).toHaveText(`History ${Number(historyBefore?.match(/History (\d+)/)?.[1] ?? 0) + 1} / Redo 0`);
-  await editor.getByTestId("editor-undo").click();
+  await ribbonHistory(page, "Undo");
   await expect(owner).toHaveAttribute("aria-label", /30%→70%.*threshold/);
-  await editor.getByTestId("editor-redo").click();
+  await ribbonHistory(page, "Redo");
   await expect(owner).toHaveAttribute("aria-label", /17%→83%.*ratio/);
   const save = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
@@ -497,16 +512,17 @@ test("ripples and clamps Annotation anchors through Timeline edits with Undo and
   await page.getByRole("button", { name: "Delete range" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   expect(Math.abs((await handle.boundingBox())!.x - originalX)).toBeLessThan(1);
-  await page.getByTestId("editor-undo").click();
+  await ribbonHistory(page, "Undo");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline insert count").fill("2");
   await page.getByRole("button", { name: "Insert before" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   expect((await handle.boundingBox())!.x).toBeGreaterThan(originalX);
-  await page.getByTestId("editor-undo").click();
+  await ribbonHistory(page, "Undo");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   expect(Math.abs((await handle.boundingBox())!.x - originalX)).toBeLessThan(1);
-  await page.getByTestId("editor-redo").click();
+  await ribbonHistory(page, "Redo");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   expect((await handle.boundingBox())!.x).toBeGreaterThan(originalX);
 });
