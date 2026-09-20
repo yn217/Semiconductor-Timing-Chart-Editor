@@ -464,9 +464,17 @@ export function MinimalCycleView() {
       const target = event.target as HTMLElement | null;
       setActivePaneRef.current(target?.closest(".transaction-lanes, .split-transaction-pane") ? "transaction" : "signal");
     };
+    // The Transaction Tree lives in the left workspace rail, outside .cycle-panel, so interacting
+    // with it must also make Transaction the active pane (Combined routes the Inspector by it).
+    const onTreeInteraction = (event: Event) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest(".transaction-left-tree")) setActivePaneRef.current("transaction");
+    };
+    document.addEventListener("pointerdown", onTreeInteraction, true);
     root.addEventListener("pointerdown", onPointerDownCapture, { capture: true });
     root.addEventListener("focusin", onFocusIn);
     return () => {
+      document.removeEventListener("pointerdown", onTreeInteraction, true);
       root.removeEventListener("pointerdown", onPointerDownCapture, { capture: true });
       root.removeEventListener("focusin", onFocusIn);
     };
