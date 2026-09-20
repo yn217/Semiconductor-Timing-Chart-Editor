@@ -288,7 +288,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // advance documentEpoch and clear annotation preview state for a
       // toggle that must be canonical/history/dirty-neutral.
       const reprojectSnapshot = sessionController.snapshot();
-      projection = projectionCoordinator.project({ snapshot: reprojectSnapshot, changeSet: leavingDeferredMode ? { waveSemantics: reprojectSnapshot.document.signals.map((signal) => signal.id) } : {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+      // Only owners that never received an SVG (deferred while Transaction mode was active) need a paint;
+      // already-painted waves must not re-render on every mode round trip.
+      const paintedSignalIds = new Set(leavingDeferredMode ? [...rendererHost.querySelectorAll<HTMLElement>("[data-role='wave-owner'][data-signal-id]")].filter((owner) => owner.querySelector("svg") !== null).map((owner) => owner.dataset.signalId as SignalId) : []);
+      const unpaintedSignalIds = leavingDeferredMode ? reprojectSnapshot.document.signals.map((signal) => signal.id).filter((id) => !paintedSignalIds.has(id)) : [];
+      projection = projectionCoordinator.project({ snapshot: reprojectSnapshot, changeSet: unpaintedSignalIds.length > 0 ? { waveSemantics: unpaintedSignalIds } : {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);
       // Horizontal scroll re-publishes the previous projection; do not carry the
       // one-shot wave invalidation into every later scroll frame.

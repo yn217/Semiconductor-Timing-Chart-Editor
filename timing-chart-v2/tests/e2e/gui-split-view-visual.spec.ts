@@ -36,7 +36,11 @@ test("captures the stacked Combined composition with both contexts and zero view
   expect(signalBox).not.toBeNull();
   expect(transactionBox!.y).toBeLessThan(signalBox!.y);
   expect(transactionBox!.x).toBeCloseTo(signalBox!.x, 0);
-  expect(transactionBox!.width).toBeCloseTo(signalBox!.width, 0);
+  // The Transaction pane also contains the sticky label gutter (left + frozen columns); the shared
+  // time axis is the track, which must be exactly as wide as the Cycle signal content.
+  const trackBox = await page.locator(".transaction-track").first().boundingBox();
+  expect(trackBox).not.toBeNull();
+  expect(trackBox!.width).toBeCloseTo(signalBox!.width, 0);
   const divider = page.getByTestId("combined-split-divider");
   await expect(divider).toBeVisible();
   const beforeResizeHeight = transactionBox!.height;
@@ -68,5 +72,14 @@ test("captures the stacked Combined composition with both contexts and zero view
   await expect(surface).toHaveAttribute("data-canonical-revision", before.revision!);
   await expect(surface).toHaveAttribute("data-history-depth", before.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
-  await expect(surface.locator("[data-role='timing-chart-surface']")).toHaveAttribute("data-render-counters", before.counters!);
+  // Transaction mode defers non-reference waves, so the first reveal (Combined) paints them once;
+  // that is a presentation paint, not a document change. A further round trip must add none.
+  const counters = surface.locator("[data-role='timing-chart-surface']");
+  await expect(surface).toHaveAttribute("data-editor-idle", "true");
+  const afterReveal = await counters.getAttribute("data-render-counters");
+  expect(JSON.parse(afterReveal!).waveDromRenders).toBeGreaterThanOrEqual(JSON.parse(before.counters!).waveDromRenders);
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByRole("button", { name: "Combined", exact: true }).click();
+  await expect(surface).toHaveAttribute("data-editor-idle", "true");
+  expect(JSON.parse((await counters.getAttribute("data-render-counters"))!).waveDromRenders).toBe(JSON.parse(afterReveal!).waveDromRenders);
 });
