@@ -112,10 +112,18 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
   // #738: pointer X is interpreted in the SAME coordinate system the ruler ticks are drawn in -- the ruler content's own
   // origin -- not the (possibly hidden/offset) Cycle wave layer, so Transaction mode (whose Cycle surface is hidden and laid
   // out elsewhere) resolves the same time as Cycle mode. Falls back to the wave layer only before a ruler exists.
-  const timeOriginLeft = (): number | undefined => {
+  const rulerOriginLeft = (): number | undefined => {
     const ruler = rulerElement.getBoundingClientRect();
     if (ruler.width > 0) return ruler.left;
     return rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']")?.getBoundingClientRect().left;
+  };
+  // Canvas pointer X uses the visible Cycle wave layer when there is one (native scroll makes its rect exact at once, even
+  // before the ruler's own scroll transform has synced); when the Cycle surface is hidden (Transaction mode) it falls back to
+  // the ruler's origin, which is the coordinate system the time ticks are drawn in.
+  const timeOriginLeft = (): number | undefined => {
+    const hostHidden = getComputedStyle(rendererHost).visibility === "hidden";
+    const waveLeft = hostHidden ? undefined : rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']")?.getBoundingClientRect().left;
+    return waveLeft ?? rulerOriginLeft();
   };
   const cycleBoundaryAtX = (clientX: number): number | undefined => {
     const left = timeOriginLeft();
@@ -123,7 +131,7 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
   };
   /** The ruler cell [start, end) containing the pointer: deterministic floor, never snapped to the nearest tick or glyph. */
   const rulerCellAtX = (clientX: number): number | undefined => {
-    const left = timeOriginLeft();
+    const left = rulerOriginLeft();
     // Boundary rule: cells are [start, end) -- a pointer exactly on a tick boundary belongs to the cell that starts there
     // (the 0.01px slack absorbs sub-pixel float error in the ruler/viewport transforms).
     return left === undefined ? undefined : timelineGeometry.cycleBoundaryAtScreenX(clientX, left - 0.01, timelineNavigation.getZoom(), false);

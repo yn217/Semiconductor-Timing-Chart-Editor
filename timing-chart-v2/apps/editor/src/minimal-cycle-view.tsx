@@ -43,10 +43,17 @@ import { attachMenuKeyboardNavigation } from "./runtime/interaction-controller.j
 import { refreshRendererOverlays } from "./runtime/render-coordinator.js";
 import { applyRendererHostSizing } from "./runtime/renderer-host-sizing.js";
 import { refreshRulerRangeSelection, refreshTransactionLinkedRows } from "./runtime/editor-dom-bridge.js";
+function readStartupDocumentPreference(): string | null {
+  try { return window.localStorage.getItem("timing-chart-v2.startup-document"); } catch { return null; }
+}
+
 export function MinimalCycleView() {
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : undefined;
   const visualReference = searchParams?.has("visual-reference") === true;
-  const initialDocument = visualReference ? v1ReferenceDocument : transactionDemoDocument;
+  // Dev/test entry points for the plain 24-cycle Cycle sample (no demo Transactions/Bookmarks/Annotations): `?cycle-sample` or the
+  // `timing-chart-v2.startup-document=cycle` preference. The product default remains the Transaction demo document.
+  const cycleSample = searchParams?.has("cycle-sample") === true || readStartupDocumentPreference() === "cycle";
+  const initialDocument = visualReference ? v1ReferenceDocument : cycleSample ? cycleDocument : transactionDemoDocument;
   const application = useEditorApplicationOwner(initialDocument);
   const documentLifecycle = useDocumentLifecycle({ application, productTemplate: cycleDocument, persistText: downloadText });
   const exportController = useMemo(() => createEditorExportController(), []);

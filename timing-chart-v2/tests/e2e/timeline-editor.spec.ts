@@ -1,9 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 import type { BookmarkId } from "@timing-chart-v2/schema";
 import { cycleDocument } from "../../apps/editor/src/fixtures-cycle-reference-documents.js";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 const periodOneClockDocument = {
   ...cycleDocument,
@@ -173,12 +173,19 @@ test("selects Cycle 0 and the terminal boundary from the rendered waveform", asy
 
   const viewport = page.getByTestId("cycle-viewport");
   await viewport.evaluate((element) => { element.scrollLeft = element.scrollWidth; element.dispatchEvent(new Event("scroll")); });
-  const terminalAfterScroll = await page.getByTestId("cycle-ruler").locator("[data-cycle='24']").boundingBox();
+  const terminalTick = page.getByTestId("cycle-ruler").locator("[data-cycle='24']");
+  // The ruler syncs its scroll transform on the next frame; wait until the terminal tick reaches the viewport's right edge.
+  const viewportRight = (await viewport.boundingBox())!.x + (await viewport.boundingBox())!.width;
+  await expect.poll(async () => Math.abs((await terminalTick.boundingBox())!.x - viewportRight)).toBeLessThan(4);
+  const terminalAfterScroll = await terminalTick.boundingBox();
   const ownerAfterScroll = await owner.boundingBox();
   expect(terminalAfterScroll).not.toBeNull();
   expect(ownerAfterScroll).not.toBeNull();
-  await page.mouse.click(terminalAfterScroll!.x + 1, ownerAfterScroll!.y + ownerAfterScroll!.height / 2);
-  await expect(host).toHaveAttribute("data-selected-cycle", "24");
+  // The terminal boundary sits flush with the viewport's right edge (the Inspector starts there), so click well inside it (the Inspector resize handle overlaps the last pixels); the
+  // nearest boundary (Snap) is the terminal one.
+  await page.mouse.click(terminalAfterScroll!.x - 12, ownerAfterScroll!.y + ownerAfterScroll!.height / 2);
+  // The terminal boundary selects the last cycle cell: selected cycle 23, half-open range [23, 24).
+  await expect(host).toHaveAttribute("data-selected-cycle", "23");
   await expect(page.getByLabel("Timeline range start")).toHaveValue("23");
   await expect(page.getByLabel("Timeline range end")).toHaveValue("24");
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
@@ -731,7 +738,7 @@ test("creates a Bookmark from the Ruler context menu through shared semantic geo
   // must switch explicitly rather than assume Cycle is still the default.
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const ruler = page.getByTestId("cycle-ruler");
-  const cycle4 = ruler.locator("[data-source-cycle='4']");
+  const cycle4 = ruler.locator(".cycle-tick[data-source-cycle='4']");
   await expect(cycle4).toHaveCount(1);
   const beforeRevision = await host.getAttribute("data-canonical-revision");
   const beforeHistory = await page.getByTestId("history-status").textContent();
