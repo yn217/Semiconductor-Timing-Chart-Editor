@@ -315,6 +315,35 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   }, [documentEpoch]);
   const toggleGroupCollapsed = (key: string) => setCollapsedGroups((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   const owner = useRef<HTMLElement>(null);
+  // Selecting a Transaction from the fixed Tree must reveal its actual
+  // projected bar in the shared horizontal viewport. Use the rendered bar's
+  // geometry (owned by the shared TimeAxis projection) so folded display time,
+  // zoom, and pane origins are already reflected; never invent a local cycle
+  // mapper here. Keep a fully visible bar stationary and move only enough to
+  // reveal an offscreen bar. A selected Transaction wholly inside a collapsed
+  // fold has no visible bar to reveal.
+  useLayoutEffect(() => {
+    if (!selectedId || (viewMode !== "Transaction" && viewMode !== "Split")) return;
+    const laneRoot = owner.current;
+    const viewport = laneRoot?.closest<HTMLElement>(".cycle-viewport");
+    const target = laneRoot?.querySelector<HTMLElement>(`[data-transaction-id="${CSS.escape(selectedId)}"]`);
+    if (!viewport || !target || target.dataset.hiddenInFold === "true") return;
+    const viewportRect = viewport.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const visibleLeft = viewportRect.left + viewport.clientLeft;
+    const visibleRight = visibleLeft + viewport.clientWidth;
+    let deltaX = 0;
+    if (targetRect.width > visibleRight - visibleLeft) {
+      deltaX = targetRect.left - visibleLeft;
+    } else if (targetRect.left < visibleLeft) {
+      deltaX = targetRect.left - visibleLeft;
+    } else if (targetRect.right > visibleRight) {
+      deltaX = targetRect.right - visibleRight;
+    }
+    if (Math.abs(deltaX) > 1) {
+      viewport.scrollLeft = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, viewport.scrollLeft + deltaX));
+    }
+  }, [documentEpoch, selectedId, viewMode]);
   const { cycleXs, boundaryXByCycle } = useMemo(() => {
     const foldBoundaryCycles = (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).flatMap((group) => [group.start, group.end]);
     const relevantCycles = [...new Set([...document.transactions.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).flatMap(phase => [phase.start, phase.end])]), ...bookmarks.map((bookmark) => bookmark.start), ...foldBoundaryCycles])].sort((left, right) => left - right);
@@ -491,8 +520,9 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     // Combined mode owns a nested vertical scroller for the transaction pane;
     // the outer cycle viewport only owns the shared horizontal surface there.
     // Keep the standalone Transaction mode fallback on its cycle viewport.
+    const panel = laneRoot?.closest<HTMLElement>(".cycle-panel");
     const viewport = laneRoot?.closest<HTMLElement>(".split-transaction-pane")
-      ?? laneRoot?.parentElement?.closest<HTMLElement>(".cycle-viewport")?.querySelector<HTMLElement>(".transaction-left-tree")
+      ?? panel?.querySelector<HTMLElement>(".transaction-left-tree")
       ?? laneRoot?.closest<HTMLElement>(".cycle-viewport");
     if (!viewport) return;
     const update = () => setVirtualWindow({ top: viewport.scrollTop, height: viewport.clientHeight || 900 });
