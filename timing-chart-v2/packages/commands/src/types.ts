@@ -151,6 +151,8 @@ export interface ChangeSet {
   readonly waveSemantics?: readonly SignalId[];
   readonly geometryLocal?: readonly SignalId[];
   readonly timelineSemantics?: boolean;
+  /** Transaction cycles-per-TC presentation scale changed (#750): ruler/grid labels rebuild; canonical cycles do not move. */
+  readonly transactionTimeScale?: boolean;
   readonly geometryScreenX?: boolean;
   readonly geometryScreenY?: readonly SignalId[];
   readonly annotationPosition?: readonly AnnotationId[];

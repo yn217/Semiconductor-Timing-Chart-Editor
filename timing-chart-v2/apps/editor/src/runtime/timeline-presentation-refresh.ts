@@ -25,7 +25,9 @@ export function rebuildRulerPresentation(ruler: HTMLElement, document: Canonical
   const timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
   const mapping = mappingCache.get(document.timeline, document.timeGroups);
   const referenceViewBoxWidth = referenceSvg?.viewBox.baseVal.width;
-  const { scale, targetWidth, waveOriginPx } = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, previousScale, undefined, timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth);
+  // #750: Transaction presentation labels the ruler in TC; Cycle and Combined keep system cycles (Combined shares one ruler with the Cycle pane).
+  const tcScale = ruler.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? (document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1) : 1;
+  const { scale, targetWidth, waveOriginPx } = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, previousScale, undefined, timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth, tcScale);
   const waveWidthPxPerDisplayCycle = mapping.displayCycleCount > 0 ? targetWidth / mapping.displayCycleCount : undefined;
   return { timeAxis, scale, waveWidthPxPerDisplayCycle, waveOriginPx };
 }

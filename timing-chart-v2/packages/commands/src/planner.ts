@@ -1230,7 +1230,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
         : { ...currentScale, ...command.scale };
       if (!Number.isFinite(scale.clockCyclesPerTransactionCycle) || scale.clockCyclesPerTransactionCycle <= 0 || !Number.isInteger(scale.majorInterval) || scale.majorInterval < 1 || !Number.isInteger(scale.minorInterval) || scale.minorInterval < 1) return fail("invalid", "INVALID_TRANSACTION_TIME_SCALE", "$.scale", "Transaction time scale must use positive finite ratio and positive integer intervals.");
       if (semanticEqual(currentScale ?? {}, scale)) return fail("no-op", "NO_OP", "$", "Transaction time scale is unchanged.");
-      return { ok: true, document: { ...document, transactionTimeScale: scale }, changeSet: { transactionSemantics: document.transactions.map((item) => item.id) }, inverseChangeSet: { transactionSemantics: document.transactions.map((item) => item.id) } };
+      return { ok: true, document: { ...document, transactionTimeScale: scale }, changeSet: { transactionSemantics: document.transactions.map((item) => item.id), transactionTimeScale: true }, inverseChangeSet: { transactionSemantics: document.transactions.map((item) => item.id), transactionTimeScale: true } };
     }
     case "annotation.updateAnchor": {
       const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);

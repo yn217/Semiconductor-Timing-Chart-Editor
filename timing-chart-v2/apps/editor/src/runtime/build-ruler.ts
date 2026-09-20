@@ -5,7 +5,7 @@ import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { presentationCycles } from "../presentation-cycles.js";
 import { displayWindowForSource } from "./display-boundary.js";
 
-export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0, viewportElement?: HTMLElement, referenceViewBoxWidth?: number): Readonly<{ scale: number; targetWidth: number; waveOriginPx: number }> {
+export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0, viewportElement?: HTMLElement, referenceViewBoxWidth?: number, tcScale = 1): Readonly<{ scale: number; targetWidth: number; waveOriginPx: number }> {
   element.dataset.axisMode = axisMode;
   if (!geometry || !axisOwnerSignalId) {
     element.dataset.geometryError = "Time-axis geometry unavailable";
@@ -174,7 +174,15 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     tick.className = "cycle-tick";
     tick.style.left = `${point.x * scale}px`;
     tick.style.top = `${outlineHeight}px`;
-    tick.textContent = String(mapping.labelFor(display));
+    // #750: in Transaction presentation the Transaction Cycle (TC) is the ruler unit -- label only the ticks that sit
+    // on a TC boundary with sourceCycle / cyclesPerTC (canonical time stays in system cycles; every tick element and its
+    // data-source-cycle stay, so hit-testing and geometry are unchanged).
+    if (tcScale > 1) {
+      tick.dataset.tcScale = String(tcScale);
+      tick.textContent = sourceCycle % tcScale === 0 ? String(sourceCycle / tcScale) : "";
+    } else {
+      tick.textContent = String(mapping.labelFor(display));
+    }
     ticks.push(tick);
     finalX = point.x;
   }
