@@ -241,7 +241,7 @@ test("applies Annotation Inspector drafts through one semantic command", async (
   const inspector = page.getByTestId("inspector");
   const surface = host.locator("[data-role='timing-chart-surface']");
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
-  await inspector.getByLabel("Annotation label").fill("Inspector Note");
+  await inspector.getByLabel("Annotation label", { exact: true }).fill("Inspector Note");
   await inspector.getByLabel("Inspector annotation color").fill("#114477");
   await inspector.getByTestId("apply-annotation-properties").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
@@ -277,14 +277,14 @@ test("edits Header and Footer metadata through Document Properties and reopens i
   expect(after.waveDromRenders).toBe(before.waveDromRenders);
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
   await properties.getByRole("button", { name: "Close properties" }).click();
-  await expect(page.locator(".app-titlebar h1")).toHaveText("Timing Review");
+  await expect(page.locator(".app-titlebar h1")).toHaveText(/^Timing Review\*?$/); // #729: dirty documents show a trailing *
   const downloadPromise = page.waitForEvent("download");
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
   const download = await downloadPromise;
   const path = await download.path();
   expect(path).toBeTruthy();
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
-  await expect(page.locator(".app-titlebar h1")).toHaveText("Timing Review");
+  await expect(page.locator(".app-titlebar h1")).toHaveText(/^Timing Review\*?$/); // #729: dirty documents show a trailing *
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
   const reopenedProperties = page.getByRole("dialog", { name: "Document Properties" });
@@ -338,7 +338,7 @@ test("Document Properties keeps Header and Legend edits in one Apply/Cancel tran
   await properties.getByTestId("apply-document-properties").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(page.getByTestId("editor-legend")).toBeVisible();
-  await expect(page.locator(".app-titlebar h1")).toHaveText("Applied Properties");
+  await expect(page.locator(".app-titlebar h1")).toHaveText(/^Applied Properties\*?$/); // #729
 });
 
 test("Save As downloads the canonical document with a requested filename without mutation", async ({ page }) => {

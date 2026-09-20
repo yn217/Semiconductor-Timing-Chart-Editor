@@ -824,9 +824,14 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
         })();
       const waveformChanged = signal.type !== nextType || currentFormat !== nextFormat || currentWidth !== nextWidth;
       const spacingChanged = signal.spacingBefore !== nextSpacingBefore || signal.spacingAfter !== nextSpacingAfter;
+      // Visibility changes the derived row layout exactly like signal.setVisibility: the rows below compact, so their screen Y,
+      // dependent annotations and the MiniMap must be invalidated too (otherwise wave owners stay one row off their labels).
+      const visibilityChanged = currentVisible !== nextVisible;
+      const nextForLayout = replaceSignal(document, index, next);
+      const visibilityRows = visibilityChanged ? changedPositions(orderedVisibleTimingRows(document), orderedVisibleTimingRows(nextForLayout)) : [];
       const changeSet: ChangeSet = {
         rowPresentation: [signal.id],
-        ...(spacingChanged ? { geometryScreenY: geometryRowsFrom(document, signal.id) } : {}),
+        ...(visibilityChanged ? { geometryScreenY: [...new Set([...(spacingChanged ? geometryRowsFrom(document, signal.id) : []), ...visibilityRows])], annotationPosition: annotationsForSignals(document, [...new Set([signal.id, ...visibilityRows])]), minimapOverview: true } : spacingChanged ? { geometryScreenY: geometryRowsFrom(document, signal.id) } : {}),
         ...(waveformChanged ? { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: dependentAnnotations(document, signal.id).map((annotation) => annotation.id) } : {}),
       };
       return { ok: true, document: replaceSignal(document, index, next), changeSet, inverseChangeSet: changeSet };
