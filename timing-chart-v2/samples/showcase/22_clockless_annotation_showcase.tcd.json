@@ -36,102 +36,1436 @@
     {
       "id": "g22_notes",
       "name": "Notes",
-      "rows": ["c22_intro"],
-      "style": {"showHeader": true}
+      "rows": [
+        "c22_intro"
+      ],
+      "style": {
+        "showHeader": true
+      }
     },
     {
       "id": "g22_inputs",
       "name": "Inputs",
-      "rows": ["in_req","in_reset_n","in_mode","in_addr","in_wdata"],
+      "rows": [
+        "in_req",
+        "in_reset_n",
+        "in_mode",
+        "in_addr",
+        "in_wdata"
+      ],
       "spacingAfter": 10,
-      "style": {"showBackground": true,"background": "#EEF5FF","opacity": 0.15,"extend": "both","showHeader": true}
+      "style": {
+        "showBackground": true,
+        "background": "#EEF5FF",
+        "opacity": 0.15,
+        "extend": "both",
+        "showHeader": true
+      }
     },
     {
       "id": "g22_ctrl",
       "name": "Control / Internal",
-      "rows": ["wire_accept","wire_busy","wire_state","wire_opcode","wire_error","wire_event","wire_pulse"],
-      "style": {"showHeader": true}
+      "rows": [
+        "wire_accept",
+        "wire_busy",
+        "wire_state",
+        "wire_opcode",
+        "wire_error",
+        "wire_event",
+        "wire_pulse"
+      ],
+      "style": {
+        "showHeader": true
+      }
     },
     {
       "id": "g22_pipe",
       "name": "Pipeline",
-      "rows": ["pipe_v0","pipe_data0","pipe_v1","pipe_data1","pipe_v2","pipe_data2"],
-      "style": {"showHeader": true}
+      "rows": [
+        "pipe_v0",
+        "pipe_data0",
+        "pipe_v1",
+        "pipe_data1",
+        "pipe_v2",
+        "pipe_data2"
+      ],
+      "style": {
+        "showHeader": true
+      }
     },
     {
       "id": "g22_outputs",
       "name": "Outputs / Debug",
-      "rows": ["out_ack","out_rdata","out_status","out_irq","debug_counter"],
-      "style": {"showHeader": true}
+      "rows": [
+        "out_ack",
+        "out_rdata",
+        "out_status",
+        "out_irq",
+        "debug_counter"
+      ],
+      "style": {
+        "showHeader": true
+      }
     }
   ],
   "signals": [
-    {"id":"c22_intro","name":"Clockless subsystem","type":"commentRow","role":"internal","source":{"instancePath":["soc","clockless"],"signalName":"Clockless subsystem"},"display":{"name":"Clockless subsystem","visible":true},"title":"Clockless subsystem","body":"No Clock Signal is present. Ruler/Grid/Annotations use cycle axis."},
-    {"id":"in_req","name":"req","type":"binary","role":"input","source":{"instancePath":["soc","ifc"],"signalName":"req"},"display":{"name":"req","visible":true},"values":[{"start":0,"value":0},{"start":4,"value":1},{"start":6,"value":0},{"start":20,"value":1},{"start":24,"value":0},{"start":50,"value":1},{"start":52,"value":0}]},
-    {"id":"in_reset_n","name":"reset_n","type":"binary","role":"input","source":{"instancePath":["soc","ifc"],"signalName":"reset_n"},"display":{"name":"reset_n","visible":true},"values":[{"start":0,"value":0},{"start":3,"value":1},{"start":70,"value":0},{"start":72,"value":1}]},
-    {"id":"in_mode","name":"mode","type":"state","role":"input","source":{"instancePath":["soc","ifc"],"signalName":"mode"},"display":{"name":"mode","visible":true},"values":[{"start":0,"value":"BOOT"},{"start":8,"value":"NORMAL"},{"start":64,"value":"LOW_POWER"},{"start":80,"value":"NORMAL"}]},
-    {"id":"in_addr","name":"addr[31:0]","type":"bus","role":"input","source":{"instancePath":["soc","ifc"],"signalName":"addr[31:0]","msb":31,"lsb":0},"display":{"name":"addr[31:0]","visible":true},"values":[{"start":0,"value":"X"},{"start":4,"value":"0x10000000"},{"start":20,"value":"0x10000040"},{"start":50,"value":"0x20000000"}],"width":32,"displayFormat":"hex"},
-    {"id":"in_wdata","name":"wdata[31:0]","type":"bus","role":"input","source":{"instancePath":["soc","ifc"],"signalName":"wdata[31:0]","msb":31,"lsb":0},"display":{"name":"wdata[31:0]","visible":true},"values":[{"start":0,"value":"X"},{"start":5,"value":"0xDEADBEEF"},{"start":21,"value":"0x12345678"},{"start":51,"value":"0xCAFEBABE"}],"width":32,"displayFormat":"hex"},
-    {"id":"wire_accept","name":"accept","type":"binary","role":"internal","source":{"instancePath":["soc","ctrl"],"signalName":"accept"},"display":{"name":"accept","visible":true},"values":[{"start":0,"value":0},{"start":5,"value":1},{"start":7,"value":0},{"start":21,"value":1},{"start":25,"value":0},{"start":51,"value":1},{"start":53,"value":0}]},
-    {"id":"wire_busy","name":"busy","type":"binary","role":"internal","source":{"instancePath":["soc","ctrl"],"signalName":"busy"},"display":{"name":"busy","visible":true},"values":[{"start":0,"value":0},{"start":4,"value":1},{"start":10,"value":0},{"start":20,"value":1},{"start":28,"value":0},{"start":50,"value":1},{"start":56,"value":0}]},
-    {"id":"wire_state","name":"ctrl_state","type":"state","role":"internal","source":{"instancePath":["soc","ctrl"],"signalName":"ctrl_state"},"display":{"name":"ctrl_state","visible":true},"values":[{"start":0,"value":"RESET"},{"start":3,"value":"IDLE"},{"start":4,"value":"DECODE"},{"start":6,"value":"EXEC"},{"start":10,"value":"IDLE"},{"start":20,"value":"DECODE"},{"start":22,"value":"WAIT"},{"start":28,"value":"IDLE"},{"start":50,"value":"DECODE"},{"start":52,"value":"EXEC"},{"start":56,"value":"IDLE"}]},
-    {"id":"wire_opcode","name":"opcode[7:0]","type":"bus","role":"internal","source":{"instancePath":["soc","ctrl"],"signalName":"opcode[7:0]","msb":7,"lsb":0},"display":{"name":"opcode[7:0]","visible":true},"values":[{"start":0,"value":"X"},{"start":4,"value":"0xA1"},{"start":20,"value":"0xB2"},{"start":50,"value":"0xC3"}],"width":8,"displayFormat":"hex"},
-    {"id":"wire_error","name":"error","type":"logic","role":"internal","source":{"instancePath":["soc","ctrl"],"signalName":"error"},"display":{"name":"error","visible":true},"values":[{"start":0,"value":"0"},{"start":36,"value":"x"},{"start":40,"value":"0"},{"start":74,"value":"z"},{"start":76,"value":"0"}]},
-    {"id":"wire_event","name":"irq_event","type":"event","role":"internal","source":{"instancePath":["soc","ctrl"],"signalName":"irq_event"},"display":{"name":"irq_event","visible":true},"values":[{"start":0,"value":"NONE"},{"start":12,"value":"RISE"},{"start":13,"value":"NONE"},{"start":44,"value":"FALL"},{"start":45,"value":"NONE"},{"start":88,"value":"RISE"}]},
-    {"id":"wire_pulse","name":"done_pulse","type":"pulse","role":"internal","source":{"instancePath":["soc","ctrl"],"signalName":"done_pulse"},"display":{"name":"done_pulse","visible":true},"values":[{"start":0,"value":"0"},{"start":9,"value":"1"},{"start":10,"value":"0"},{"start":27,"value":"1"},{"start":28,"value":"0"},{"start":55,"value":"1"},{"start":56,"value":"0"}]},
-    {"id":"pipe_v0","name":"stage0_valid","type":"binary","role":"internal","source":{"instancePath":["soc","pipe"],"signalName":"stage0_valid"},"display":{"name":"stage0_valid","visible":true},"values":[{"start":0,"value":0},{"start":5,"value":1},{"start":7,"value":0},{"start":21,"value":1},{"start":25,"value":0},{"start":51,"value":1},{"start":53,"value":0}]},
-    {"id":"pipe_v1","name":"stage1_valid","type":"binary","role":"internal","source":{"instancePath":["soc","pipe"],"signalName":"stage1_valid"},"display":{"name":"stage1_valid","visible":true},"values":[{"start":0,"value":0},{"start":6,"value":1},{"start":8,"value":0},{"start":22,"value":1},{"start":26,"value":0},{"start":52,"value":1},{"start":54,"value":0}]},
-    {"id":"pipe_v2","name":"stage2_valid","type":"binary","role":"internal","source":{"instancePath":["soc","pipe"],"signalName":"stage2_valid"},"display":{"name":"stage2_valid","visible":true},"values":[{"start":0,"value":0},{"start":7,"value":1},{"start":9,"value":0},{"start":23,"value":1},{"start":27,"value":0},{"start":53,"value":1},{"start":55,"value":0}]},
-    {"id":"pipe_data0","name":"stage0_data[15:0]","type":"bus","role":"internal","source":{"instancePath":["soc","pipe"],"signalName":"stage0_data[15:0]","msb":15,"lsb":0},"display":{"name":"stage0_data[15:0]","visible":true},"values":[{"start":0,"value":"X"},{"start":5,"value":"0x1001"},{"start":21,"value":"0x2002"},{"start":51,"value":"0x3003"}],"width":16,"displayFormat":"hex"},
-    {"id":"pipe_data1","name":"stage1_data[15:0]","type":"bus","role":"internal","source":{"instancePath":["soc","pipe"],"signalName":"stage1_data[15:0]","msb":15,"lsb":0},"display":{"name":"stage1_data[15:0]","visible":true},"values":[{"start":0,"value":"X"},{"start":6,"value":"0x1001"},{"start":22,"value":"0x2002"},{"start":52,"value":"0x3003"}],"width":16,"displayFormat":"hex"},
-    {"id":"pipe_data2","name":"stage2_data[15:0]","type":"bus","role":"internal","source":{"instancePath":["soc","pipe"],"signalName":"stage2_data[15:0]","msb":15,"lsb":0},"display":{"name":"stage2_data[15:0]","visible":true},"values":[{"start":0,"value":"X"},{"start":7,"value":"0x1001"},{"start":23,"value":"0x2002"},{"start":53,"value":"0x3003"}],"width":16,"displayFormat":"hex"},
-    {"id":"out_ack","name":"ack","type":"binary","role":"output","source":{"instancePath":["soc","ifc"],"signalName":"ack"},"display":{"name":"ack","visible":true},"values":[{"start":0,"value":0},{"start":8,"value":1},{"start":9,"value":0},{"start":26,"value":1},{"start":27,"value":0},{"start":54,"value":1},{"start":55,"value":0}]},
-    {"id":"out_rdata","name":"rdata[31:0]","type":"bus","role":"output","source":{"instancePath":["soc","ifc"],"signalName":"rdata[31:0]","msb":31,"lsb":0},"display":{"name":"rdata[31:0]","visible":true},"values":[{"start":0,"value":"X"},{"start":8,"value":"0x00001001"},{"start":26,"value":"0x00002002"},{"start":54,"value":"0x00003003"}],"width":32,"displayFormat":"hex"},
-    {"id":"out_status","name":"status","type":"state","role":"output","source":{"instancePath":["soc","ifc"],"signalName":"status"},"display":{"name":"status","visible":true},"values":[{"start":0,"value":"RESET"},{"start":3,"value":"READY"},{"start":4,"value":"BUSY"},{"start":10,"value":"READY"},{"start":20,"value":"BUSY"},{"start":28,"value":"READY"},{"start":50,"value":"BUSY"},{"start":56,"value":"READY"}]},
-    {"id":"out_irq","name":"irq","type":"binary","role":"output","source":{"instancePath":["soc","ifc"],"signalName":"irq"},"display":{"name":"irq","visible":true},"values":[{"start":0,"value":0},{"start":12,"value":1},{"start":16,"value":0},{"start":88,"value":1},{"start":92,"value":0}]},
-    {"id":"debug_counter","name":"debug_count[15:0]","type":"bus","role":"internal","source":{"instancePath":["soc","debug"],"signalName":"debug_count[15:0]","msb":15,"lsb":0},"display":{"name":"debug_count[15:0]","visible":true},"values":[{"start":0,"value":"0x0000"},{"start":16,"value":"0x0010"},{"start":32,"value":"0x0020"},{"start":48,"value":"0x0030"},{"start":64,"value":"0x0040"},{"start":80,"value":"0x0050"}],"width":16,"displayFormat":"hex"}
+    {
+      "id": "c22_intro",
+      "name": "Clockless subsystem",
+      "type": "commentRow",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "clockless"
+        ],
+        "signalName": "Clockless subsystem"
+      },
+      "display": {
+        "name": "Clockless subsystem",
+        "visible": true
+      },
+      "title": "Clockless subsystem",
+      "body": "No Clock Signal is present. Ruler/Grid/Annotations use cycle axis."
+    },
+    {
+      "id": "in_req",
+      "name": "req",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ifc"
+        ],
+        "signalName": "req"
+      },
+      "display": {
+        "name": "req",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 4,
+          "value": 1
+        },
+        {
+          "start": 6,
+          "value": 0
+        },
+        {
+          "start": 20,
+          "value": 1
+        },
+        {
+          "start": 24,
+          "value": 0
+        },
+        {
+          "start": 50,
+          "value": 1
+        },
+        {
+          "start": 52,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "in_reset_n",
+      "name": "reset_n",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ifc"
+        ],
+        "signalName": "reset_n"
+      },
+      "display": {
+        "name": "reset_n",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 3,
+          "value": 1
+        },
+        {
+          "start": 70,
+          "value": 0
+        },
+        {
+          "start": 72,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "in_mode",
+      "name": "mode",
+      "type": "state",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ifc"
+        ],
+        "signalName": "mode"
+      },
+      "display": {
+        "name": "mode",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "BOOT"
+        },
+        {
+          "start": 8,
+          "value": "NORMAL"
+        },
+        {
+          "start": 64,
+          "value": "LOW_POWER"
+        },
+        {
+          "start": 80,
+          "value": "NORMAL"
+        }
+      ]
+    },
+    {
+      "id": "in_addr",
+      "name": "addr[31:0]",
+      "type": "bus",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ifc"
+        ],
+        "signalName": "addr[31:0]",
+        "msb": 31,
+        "lsb": 0
+      },
+      "display": {
+        "name": "addr[31:0]",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "X"
+        },
+        {
+          "start": 4,
+          "value": "0x10000000"
+        },
+        {
+          "start": 20,
+          "value": "0x10000040"
+        },
+        {
+          "start": 50,
+          "value": "0x20000000"
+        }
+      ],
+      "width": 32,
+      "displayFormat": "hex"
+    },
+    {
+      "id": "in_wdata",
+      "name": "wdata[31:0]",
+      "type": "bus",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ifc"
+        ],
+        "signalName": "wdata[31:0]",
+        "msb": 31,
+        "lsb": 0
+      },
+      "display": {
+        "name": "wdata[31:0]",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "X"
+        },
+        {
+          "start": 5,
+          "value": "0xDEADBEEF"
+        },
+        {
+          "start": 21,
+          "value": "0x12345678"
+        },
+        {
+          "start": 51,
+          "value": "0xCAFEBABE"
+        }
+      ],
+      "width": 32,
+      "displayFormat": "hex"
+    },
+    {
+      "id": "wire_accept",
+      "name": "accept",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ctrl"
+        ],
+        "signalName": "accept"
+      },
+      "display": {
+        "name": "accept",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 5,
+          "value": 1
+        },
+        {
+          "start": 7,
+          "value": 0
+        },
+        {
+          "start": 21,
+          "value": 1
+        },
+        {
+          "start": 25,
+          "value": 0
+        },
+        {
+          "start": 51,
+          "value": 1
+        },
+        {
+          "start": 53,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "wire_busy",
+      "name": "busy",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ctrl"
+        ],
+        "signalName": "busy"
+      },
+      "display": {
+        "name": "busy",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 4,
+          "value": 1
+        },
+        {
+          "start": 10,
+          "value": 0
+        },
+        {
+          "start": 20,
+          "value": 1
+        },
+        {
+          "start": 28,
+          "value": 0
+        },
+        {
+          "start": 50,
+          "value": 1
+        },
+        {
+          "start": 56,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "wire_state",
+      "name": "ctrl_state",
+      "type": "state",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ctrl"
+        ],
+        "signalName": "ctrl_state"
+      },
+      "display": {
+        "name": "ctrl_state",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "RESET"
+        },
+        {
+          "start": 3,
+          "value": "IDLE"
+        },
+        {
+          "start": 4,
+          "value": "DECODE"
+        },
+        {
+          "start": 6,
+          "value": "EXEC"
+        },
+        {
+          "start": 10,
+          "value": "IDLE"
+        },
+        {
+          "start": 20,
+          "value": "DECODE"
+        },
+        {
+          "start": 22,
+          "value": "WAIT"
+        },
+        {
+          "start": 28,
+          "value": "IDLE"
+        },
+        {
+          "start": 50,
+          "value": "DECODE"
+        },
+        {
+          "start": 52,
+          "value": "EXEC"
+        },
+        {
+          "start": 56,
+          "value": "IDLE"
+        }
+      ]
+    },
+    {
+      "id": "wire_opcode",
+      "name": "opcode[7:0]",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ctrl"
+        ],
+        "signalName": "opcode[7:0]",
+        "msb": 7,
+        "lsb": 0
+      },
+      "display": {
+        "name": "opcode[7:0]",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "X"
+        },
+        {
+          "start": 4,
+          "value": "0xA1"
+        },
+        {
+          "start": 20,
+          "value": "0xB2"
+        },
+        {
+          "start": 50,
+          "value": "0xC3"
+        }
+      ],
+      "width": 8,
+      "displayFormat": "hex"
+    },
+    {
+      "id": "wire_error",
+      "name": "error",
+      "type": "logic",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ctrl"
+        ],
+        "signalName": "error"
+      },
+      "display": {
+        "name": "error",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "0"
+        },
+        {
+          "start": 36,
+          "value": "x"
+        },
+        {
+          "start": 40,
+          "value": "0"
+        },
+        {
+          "start": 74,
+          "value": "z"
+        },
+        {
+          "start": 76,
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "id": "wire_event",
+      "name": "irq_event",
+      "type": "event",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ctrl"
+        ],
+        "signalName": "irq_event"
+      },
+      "display": {
+        "name": "irq_event",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "rise"
+        },
+        {
+          "start": 12,
+          "value": "rise"
+        },
+        {
+          "start": 13,
+          "value": "rise"
+        },
+        {
+          "start": 44,
+          "value": "rise"
+        },
+        {
+          "start": 45,
+          "value": "rise"
+        },
+        {
+          "start": 88,
+          "value": "rise"
+        }
+      ]
+    },
+    {
+      "id": "wire_pulse",
+      "name": "done_pulse",
+      "type": "pulse",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ctrl"
+        ],
+        "signalName": "done_pulse"
+      },
+      "display": {
+        "name": "done_pulse",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "0"
+        },
+        {
+          "start": 9,
+          "value": "1"
+        },
+        {
+          "start": 10,
+          "value": "0"
+        },
+        {
+          "start": 27,
+          "value": "1"
+        },
+        {
+          "start": 28,
+          "value": "0"
+        },
+        {
+          "start": 55,
+          "value": "1"
+        },
+        {
+          "start": 56,
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "id": "pipe_v0",
+      "name": "stage0_valid",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "pipe"
+        ],
+        "signalName": "stage0_valid"
+      },
+      "display": {
+        "name": "stage0_valid",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 5,
+          "value": 1
+        },
+        {
+          "start": 7,
+          "value": 0
+        },
+        {
+          "start": 21,
+          "value": 1
+        },
+        {
+          "start": 25,
+          "value": 0
+        },
+        {
+          "start": 51,
+          "value": 1
+        },
+        {
+          "start": 53,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "pipe_v1",
+      "name": "stage1_valid",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "pipe"
+        ],
+        "signalName": "stage1_valid"
+      },
+      "display": {
+        "name": "stage1_valid",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 6,
+          "value": 1
+        },
+        {
+          "start": 8,
+          "value": 0
+        },
+        {
+          "start": 22,
+          "value": 1
+        },
+        {
+          "start": 26,
+          "value": 0
+        },
+        {
+          "start": 52,
+          "value": 1
+        },
+        {
+          "start": 54,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "pipe_v2",
+      "name": "stage2_valid",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "pipe"
+        ],
+        "signalName": "stage2_valid"
+      },
+      "display": {
+        "name": "stage2_valid",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 7,
+          "value": 1
+        },
+        {
+          "start": 9,
+          "value": 0
+        },
+        {
+          "start": 23,
+          "value": 1
+        },
+        {
+          "start": 27,
+          "value": 0
+        },
+        {
+          "start": 53,
+          "value": 1
+        },
+        {
+          "start": 55,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "pipe_data0",
+      "name": "stage0_data[15:0]",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "pipe"
+        ],
+        "signalName": "stage0_data[15:0]",
+        "msb": 15,
+        "lsb": 0
+      },
+      "display": {
+        "name": "stage0_data[15:0]",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "X"
+        },
+        {
+          "start": 5,
+          "value": "0x1001"
+        },
+        {
+          "start": 21,
+          "value": "0x2002"
+        },
+        {
+          "start": 51,
+          "value": "0x3003"
+        }
+      ],
+      "width": 16,
+      "displayFormat": "hex"
+    },
+    {
+      "id": "pipe_data1",
+      "name": "stage1_data[15:0]",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "pipe"
+        ],
+        "signalName": "stage1_data[15:0]",
+        "msb": 15,
+        "lsb": 0
+      },
+      "display": {
+        "name": "stage1_data[15:0]",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "X"
+        },
+        {
+          "start": 6,
+          "value": "0x1001"
+        },
+        {
+          "start": 22,
+          "value": "0x2002"
+        },
+        {
+          "start": 52,
+          "value": "0x3003"
+        }
+      ],
+      "width": 16,
+      "displayFormat": "hex"
+    },
+    {
+      "id": "pipe_data2",
+      "name": "stage2_data[15:0]",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "pipe"
+        ],
+        "signalName": "stage2_data[15:0]",
+        "msb": 15,
+        "lsb": 0
+      },
+      "display": {
+        "name": "stage2_data[15:0]",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "X"
+        },
+        {
+          "start": 7,
+          "value": "0x1001"
+        },
+        {
+          "start": 23,
+          "value": "0x2002"
+        },
+        {
+          "start": 53,
+          "value": "0x3003"
+        }
+      ],
+      "width": 16,
+      "displayFormat": "hex"
+    },
+    {
+      "id": "out_ack",
+      "name": "ack",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ifc"
+        ],
+        "signalName": "ack"
+      },
+      "display": {
+        "name": "ack",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 8,
+          "value": 1
+        },
+        {
+          "start": 9,
+          "value": 0
+        },
+        {
+          "start": 26,
+          "value": 1
+        },
+        {
+          "start": 27,
+          "value": 0
+        },
+        {
+          "start": 54,
+          "value": 1
+        },
+        {
+          "start": 55,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "out_rdata",
+      "name": "rdata[31:0]",
+      "type": "bus",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ifc"
+        ],
+        "signalName": "rdata[31:0]",
+        "msb": 31,
+        "lsb": 0
+      },
+      "display": {
+        "name": "rdata[31:0]",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "X"
+        },
+        {
+          "start": 8,
+          "value": "0x00001001"
+        },
+        {
+          "start": 26,
+          "value": "0x00002002"
+        },
+        {
+          "start": 54,
+          "value": "0x00003003"
+        }
+      ],
+      "width": 32,
+      "displayFormat": "hex"
+    },
+    {
+      "id": "out_status",
+      "name": "status",
+      "type": "state",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ifc"
+        ],
+        "signalName": "status"
+      },
+      "display": {
+        "name": "status",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "RESET"
+        },
+        {
+          "start": 3,
+          "value": "READY"
+        },
+        {
+          "start": 4,
+          "value": "BUSY"
+        },
+        {
+          "start": 10,
+          "value": "READY"
+        },
+        {
+          "start": 20,
+          "value": "BUSY"
+        },
+        {
+          "start": 28,
+          "value": "READY"
+        },
+        {
+          "start": 50,
+          "value": "BUSY"
+        },
+        {
+          "start": 56,
+          "value": "READY"
+        }
+      ]
+    },
+    {
+      "id": "out_irq",
+      "name": "irq",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "soc",
+          "ifc"
+        ],
+        "signalName": "irq"
+      },
+      "display": {
+        "name": "irq",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 12,
+          "value": 1
+        },
+        {
+          "start": 16,
+          "value": 0
+        },
+        {
+          "start": 88,
+          "value": 1
+        },
+        {
+          "start": 92,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "debug_counter",
+      "name": "debug_count[15:0]",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "debug"
+        ],
+        "signalName": "debug_count[15:0]",
+        "msb": 15,
+        "lsb": 0
+      },
+      "display": {
+        "name": "debug_count[15:0]",
+        "visible": true
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "0x0000"
+        },
+        {
+          "start": 16,
+          "value": "0x0010"
+        },
+        {
+          "start": 32,
+          "value": "0x0020"
+        },
+        {
+          "start": 48,
+          "value": "0x0030"
+        },
+        {
+          "start": 64,
+          "value": "0x0040"
+        },
+        {
+          "start": 80,
+          "value": "0x0050"
+        }
+      ],
+      "width": 16,
+      "displayFormat": "hex"
+    }
   ],
   "bookmarks": [
-    {"id":"bm22_start","name":"First request","start":4},
-    {"id":"bm22_reset","name":"Software reset","start":70},
-    {"id":"bm22_irq","name":"IRQ","start":88}
+    {
+      "id": "bm22_start",
+      "name": "First request",
+      "start": 4
+    },
+    {
+      "id": "bm22_reset",
+      "name": "Software reset",
+      "start": 70
+    },
+    {
+      "id": "bm22_irq",
+      "name": "IRQ",
+      "start": 88
+    }
   ],
   "timeGroups": [
-    {"id":"tg22_idle","name":"Long idle interval","category":"idle","start":56,"end":80,"presentation":{"collapsed":true,"foldStyle":"axis-break","foldLabel":"idle +24 cycles","resumeLabelAnchorId":"la22_resume"}}
+    {
+      "id": "tg22_idle",
+      "name": "Long idle interval",
+      "category": "idle",
+      "start": 56,
+      "end": 80,
+      "presentation": {
+        "collapsed": true,
+        "foldStyle": "axis-break",
+        "foldLabel": "idle +24 cycles",
+        "resumeLabelAnchorId": "la22_resume"
+      }
+    }
   ],
-  "annotationGroups":[],"annotations": [
-    {"id":"a22_text","type":"text","label":"Clockless axis","visible":true,"anchor":{"cycle":2,"point":"cycle-center"}},
-    {"id":"a22_callout","type":"callout","label":"Request accepted","visible":true,"anchor":{"signalId":"wire_accept","cycle":5,"point":"rising-edge"}},
-    {"id":"a22_vline","type":"verticalLine","label":"SW reset","visible":true,"anchor":{"cycle":70,"point":"cycle-start"}},
-    {"id":"a22_range","type":"range","label":"Transaction window","visible":true,"start":{"cycle":20,"point":"cycle-start"},"end":{"cycle":28,"point":"cycle-end"}},
-    {"id":"a22_bracket","type":"bracket","label":"Pipeline latency","visible":true,"start":{"signalId":"pipe_v0","cycle":21,"point":"rising-edge"},"end":{"signalId":"pipe_v2","cycle":23,"point":"rising-edge"}},
-    {"id":"a22_highlight","type":"highlight","label":"Low power","visible":true,"start":{"cycle":64,"point":"cycle-start"},"end":{"cycle":80,"point":"cycle-end"}},
-    {"id":"a22_marker","type":"marker","label":"IRQ","visible":true,"anchor":{"signalId":"out_irq","cycle":88,"point":"rising-edge"}},
-    {"id":"a22_measure","type":"measurement","label":"Response 4 cyc","visible":true,"start":{"signalId":"in_req","cycle":50,"point":"rising-edge"},"end":{"signalId":"out_ack","cycle":54,"point":"rising-edge"}},
-    {"id":"a22_arrow","type":"arrow","label":"req -> ack","visible":true,"from":{"signalId":"in_req","cycle":4,"point":"rising-edge"},"to":{"signalId":"out_ack","cycle":8,"point":"rising-edge"},"arrowhead":"end"},
-    {"id":"a22_dep","type":"dependency","label":"stage dependency","visible":true,"from":{"signalId":"pipe_v0","cycle":21,"point":"rising-edge"},"to":{"signalId":"pipe_v2","cycle":23,"point":"rising-edge"},"lineType":"orthogonal","arrowhead":"end"},
-    {"id":"a22_region","type":"timingRegion","label":"Maintenance","visible":true,"start":{"cycle":68,"point":"cycle-start"},"end":{"cycle":76,"point":"cycle-end"},"opacity":0.12},
-    {"id":"a22_ghost","type":"ghostTrace","label":"Previous req","visible":true,"start":{"signalId":"in_req","cycle":20,"point":"row-center"},"end":{"signalId":"in_req","cycle":28,"point":"row-center"},"sourceSignalId":"in_req","traceOffsetCycles":-16,"opacity":0.35}
+  "annotationGroups": [],
+  "annotations": [
+    {
+      "id": "a22_text",
+      "type": "text",
+      "label": "Clockless axis",
+      "visible": true,
+      "anchor": {
+        "cycle": 2,
+        "point": "cycle-center"
+      }
+    },
+    {
+      "id": "a22_callout",
+      "type": "callout",
+      "label": "Request accepted",
+      "visible": true,
+      "anchor": {
+        "signalId": "wire_accept",
+        "cycle": 5,
+        "point": "rising-edge"
+      }
+    },
+    {
+      "id": "a22_vline",
+      "type": "verticalLine",
+      "label": "SW reset",
+      "visible": true,
+      "anchor": {
+        "cycle": 70,
+        "point": "cycle-start"
+      }
+    },
+    {
+      "id": "a22_range",
+      "type": "range",
+      "label": "Transaction window",
+      "visible": true,
+      "start": {
+        "cycle": 20,
+        "point": "cycle-start"
+      },
+      "end": {
+        "cycle": 28,
+        "point": "cycle-end"
+      }
+    },
+    {
+      "id": "a22_bracket",
+      "type": "bracket",
+      "label": "Pipeline latency",
+      "visible": true,
+      "start": {
+        "signalId": "pipe_v0",
+        "cycle": 21,
+        "point": "rising-edge"
+      },
+      "end": {
+        "signalId": "pipe_v2",
+        "cycle": 23,
+        "point": "rising-edge"
+      }
+    },
+    {
+      "id": "a22_highlight",
+      "type": "highlight",
+      "label": "Low power",
+      "visible": true,
+      "start": {
+        "cycle": 64,
+        "point": "cycle-start"
+      },
+      "end": {
+        "cycle": 80,
+        "point": "cycle-end"
+      }
+    },
+    {
+      "id": "a22_marker",
+      "type": "marker",
+      "label": "IRQ",
+      "visible": true,
+      "anchor": {
+        "signalId": "out_irq",
+        "cycle": 88,
+        "point": "rising-edge"
+      }
+    },
+    {
+      "id": "a22_measure",
+      "type": "measurement",
+      "label": "Response 4 cyc",
+      "visible": true,
+      "start": {
+        "signalId": "in_req",
+        "cycle": 50,
+        "point": "rising-edge"
+      },
+      "end": {
+        "signalId": "out_ack",
+        "cycle": 54,
+        "point": "rising-edge"
+      }
+    },
+    {
+      "id": "a22_arrow",
+      "type": "arrow",
+      "label": "req -> ack",
+      "visible": true,
+      "from": {
+        "signalId": "in_req",
+        "cycle": 4,
+        "point": "rising-edge"
+      },
+      "to": {
+        "signalId": "out_ack",
+        "cycle": 8,
+        "point": "rising-edge"
+      },
+      "arrowhead": "end"
+    },
+    {
+      "id": "a22_dep",
+      "type": "dependency",
+      "label": "stage dependency",
+      "visible": true,
+      "from": {
+        "signalId": "pipe_v0",
+        "cycle": 21,
+        "point": "rising-edge"
+      },
+      "to": {
+        "signalId": "pipe_v2",
+        "cycle": 23,
+        "point": "rising-edge"
+      },
+      "lineType": "orthogonal",
+      "arrowhead": "end"
+    },
+    {
+      "id": "a22_region",
+      "type": "timingRegion",
+      "label": "Maintenance",
+      "visible": true,
+      "start": {
+        "cycle": 68,
+        "point": "cycle-start"
+      },
+      "end": {
+        "cycle": 76,
+        "point": "cycle-end"
+      },
+      "opacity": 0.12
+    },
+    {
+      "id": "a22_ghost",
+      "type": "ghostTrace",
+      "label": "Previous req",
+      "visible": true,
+      "start": {
+        "signalId": "in_req",
+        "cycle": 20,
+        "point": "row-center"
+      },
+      "end": {
+        "signalId": "in_req",
+        "cycle": 28,
+        "point": "row-center"
+      },
+      "sourceSignalId": "in_req",
+      "traceOffsetCycles": -16,
+      "opacity": 0.35
+    }
   ],
   "legend": {
     "show": true,
     "orientation": "horizontal",
     "usedRolesOnly": true,
-    "position": {"x":24,"y":12},
+    "position": {
+      "x": 24,
+      "y": 12
+    },
     "items": [
-      {"id":"legend_input","role":"input","label":"Input","visible":true,"order":0},
-      {"id":"legend_output","role":"output","label":"Output","visible":true,"order":1},
-      {"id":"legend_internal","role":"internal","label":"Internal","visible":true,"order":2}
+      {
+        "id": "legend_input",
+        "role": "input",
+        "label": "Input",
+        "visible": true,
+        "order": 0
+      },
+      {
+        "id": "legend_output",
+        "role": "output",
+        "label": "Output",
+        "visible": true,
+        "order": 1
+      },
+      {
+        "id": "legend_internal",
+        "role": "internal",
+        "label": "Internal",
+        "visible": true,
+        "order": 2
+      }
     ]
   },
-  "layout": {"roleColumnWidth":64,"signalNameWidth":220,"signalNameAlign":"right","rowHeight":26,"signalSpacing":4,"overflow":"ellipsis"},
+  "layout": {
+    "roleColumnWidth": 64,
+    "signalNameWidth": 220,
+    "signalNameAlign": "right",
+    "rowHeight": 26,
+    "signalSpacing": 4,
+    "overflow": "ellipsis"
+  },
   "transactions": [
-    {"id":"tx22_a","name":"MMIO Write A","source":"CPU","destination":"CTRL","start":4,"end":10,"phases":[{"name":"request","start":4,"end":6},{"name":"execute","start":6,"end":8},{"name":"response","start":8,"end":10}],"laneId":"mmio","linkedSignals":["in_req","in_addr","in_wdata","out_ack"]},
-    {"id":"tx22_b","name":"MMIO Write B","source":"CPU","destination":"CTRL","start":20,"end":28,"phases":[{"name":"request","start":20,"end":22},{"name":"wait","start":22,"end":26},{"name":"response","start":26,"end":28}],"laneId":"mmio","linkedSignals":["in_req","in_addr","in_wdata","out_ack"]}
+    {
+      "id": "tx22_a",
+      "name": "MMIO Write A",
+      "source": "CPU",
+      "destination": "CTRL",
+      "start": 4,
+      "end": 10,
+      "phases": [
+        {
+          "name": "request",
+          "start": 4,
+          "end": 6
+        },
+        {
+          "name": "execute",
+          "start": 6,
+          "end": 8
+        },
+        {
+          "name": "response",
+          "start": 8,
+          "end": 10
+        }
+      ],
+      "laneId": "mmio",
+      "linkedSignals": [
+        "in_req",
+        "in_addr",
+        "in_wdata",
+        "out_ack"
+      ]
+    },
+    {
+      "id": "tx22_b",
+      "name": "MMIO Write B",
+      "source": "CPU",
+      "destination": "CTRL",
+      "start": 20,
+      "end": 28,
+      "phases": [
+        {
+          "name": "request",
+          "start": 20,
+          "end": 22
+        },
+        {
+          "name": "wait",
+          "start": 22,
+          "end": 26
+        },
+        {
+          "name": "response",
+          "start": 26,
+          "end": 28
+        }
+      ],
+      "laneId": "mmio",
+      "linkedSignals": [
+        "in_req",
+        "in_addr",
+        "in_wdata",
+        "out_ack"
+      ]
+    }
   ],
   "constraints": [
-    {"id":"con22_clockless","type":"clockless-axis","data":{"required":true}},
-    {"id":"con22_latency","type":"max-latency","data":{"cycles":8,"from":"in_req","to":"out_ack"}}
+    {
+      "id": "con22_clockless",
+      "type": "clockless-axis",
+      "data": {
+        "required": true
+      }
+    },
+    {
+      "id": "con22_latency",
+      "type": "max-latency",
+      "data": {
+        "cycles": 8,
+        "from": "in_req",
+        "to": "out_ack"
+      }
+    }
   ],
-  "checkSettings": {"enabledCategories":["timing","signal-role","annotation","transaction"]}
+  "checkSettings": {
+    "enabledCategories": [
+      "timing",
+      "signal-role",
+      "annotation",
+      "transaction"
+    ]
+  }
 }
