@@ -42,7 +42,7 @@ test("matches the locked desktop pane geometry at the Golden viewport", async ({
   const inspector = await page.getByTestId("inspector").boundingBox();
   expect(ribbon).toMatchObject({ y: 65, height: 102 });
   expect(workspace).toMatchObject({ y: 167 });
-  expect(bottom).toMatchObject({ x: 0, height: 240 });
+  expect(bottom).toMatchObject({ x: 265, height: 240 }); // #756: Bottom belongs to the center stack, right of the continuous left rail
   expect(inspector).toMatchObject({ x: 1375, width: 297 });
   await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction" })).toHaveCount(0);
   // Renamed from .ribbon-group to .ribbon-major-group by the PowerPoint-style
