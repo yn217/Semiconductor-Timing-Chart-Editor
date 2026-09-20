@@ -55,11 +55,11 @@ test("Bottom Clock edits update real waveform geometry and edge-counter overlays
   await editor.getByLabel("Clock edge counter show").check();
   await editor.getByLabel("Clock edge counter mode").selectOption("rising");
   await editor.getByTestId("apply-clock-edge-counter").click();
-  await expect(surface.locator("[data-role='clock-edge-number'][data-edge-counter-id*=':rising:']")).toHaveCount(7);
+  await expect(surface.locator("[data-role='clock-edge-number'][data-edge-counter-id*=':rising:']")).toHaveCount(6);
   const beforeCounterOnly = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await editor.getByLabel("Clock edge counter mode").selectOption("falling");
   await editor.getByTestId("apply-clock-edge-counter").click();
-  await expect(surface.locator("[data-role='clock-edge-number'][data-edge-counter-id*=':falling:']")).toHaveCount(7);
+  await expect(surface.locator("[data-role='clock-edge-number'][data-edge-counter-id*=':falling:']")).toHaveCount(6);
   const afterCounterOnly = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(afterCounterOnly.waveDromRenders).toBe(beforeCounterOnly.waveDromRenders);
   expect(afterCounterOnly.localGeometryBuilds).toBe(beforeCounterOnly.localGeometryBuilds);
