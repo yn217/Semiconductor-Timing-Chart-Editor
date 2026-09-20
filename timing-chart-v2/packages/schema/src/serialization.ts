@@ -39,7 +39,17 @@ export function migrateDocument(input: unknown): { document: CanonicalDocument; 
   if (!migrated) return undefined;
   const document = cloneUnknown(migrated.value) as CanonicalDocument;
   dropLegacySplitPane(document);
+  defaultAdditiveCollections(document);
   return { document, warnings: migrated.warnings };
+}
+
+/**
+ * Additive canonical collections introduced after v2 files were already being written (annotationGroups). A v2 file that
+ * predates them is still a valid document: open it with the collection empty instead of rejecting it. Save always writes it.
+ */
+function defaultAdditiveCollections(document: CanonicalDocument): void {
+  const record = document as unknown as Record<string, unknown>;
+  if (record.annotationGroups === undefined && Array.isArray(record.annotations)) record.annotationGroups = [];
 }
 
 /** #570: the per-signal Upper/Lower/Both assignment is legacy; it is read and ignored, never kept or written back. */

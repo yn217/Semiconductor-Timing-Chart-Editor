@@ -18,6 +18,7 @@ test("Cycle ruler labels increment by 1 at 100% zoom on a document with more tha
   const source = canonicalFixture();
   const longDocument = { ...source, timeline: { ...source.timeline, end: 160, cycleCount: 160 } };
   await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "long-document.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(longDocument)) });
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-editor-idle", "true");

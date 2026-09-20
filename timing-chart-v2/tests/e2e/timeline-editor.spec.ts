@@ -21,6 +21,7 @@ const largeBookmarkDocument = {
 
 async function openPeriodOneClockDocument(page: Page): Promise<void> {
   await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "timeline-period-one.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(periodOneClockDocument)) });
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   // 49f904cd made Transaction the default startup mode; this whole file
@@ -847,6 +848,7 @@ test("keeps Bookmark flags aligned with their rendered Ruler cycle through zoom 
 
 test("keeps 100 Bookmarks distinct and navigation view-only in a long document", async ({ page }) => {
   await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "100-bookmarks.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(largeBookmarkDocument)) });
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
