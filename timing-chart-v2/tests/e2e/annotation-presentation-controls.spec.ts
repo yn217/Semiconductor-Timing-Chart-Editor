@@ -141,7 +141,7 @@ test("Lock shows a real visible indicator, blocks drag, and Unlock restores it -
   const menu = page.locator(".arrange-menu");
 
   // Lock only the first annotation.
-  await first.locator("[data-role='annotation-label']").click();
+  await first.locator("[data-role='annotation-label']").click({ force: true }); // the second annotation is drawn over the first's anchor
   await openMenu();
   await menu.getByRole("menuitem", { name: "Lock", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
@@ -161,7 +161,7 @@ test("Lock shows a real visible indicator, blocks drag, and Unlock restores it -
   // Mixed selection (first locked, second unlocked): clicking Lock in the
   // Arrange menu used to send an atomic batch that failed entirely because
   // the first was already locked -- now it must lock only the second.
-  await first.locator("[data-role='annotation-label']").click();
+  await first.locator("[data-role='annotation-label']").click({ force: true }); // the second annotation is drawn over the first's anchor
   await second.locator("[data-role='annotation-label']").click({ modifiers: ["Control"] });
   await expect(first).toHaveAttribute("data-selected", "true");
   await expect(second).toHaveAttribute("data-selected", "true");
