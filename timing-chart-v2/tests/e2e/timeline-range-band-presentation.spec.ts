@@ -1,7 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 test.use({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 
@@ -164,9 +164,11 @@ test("keeps range geometry aligned when inserting before the first selected cycl
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   const cycleCountBefore = Number(await page.locator(".editor-shell").getAttribute("data-cycle-count"));
+  // The sample Clock has period 2, so a start insert must be a whole number of periods or the edit is rejected.
+  await page.getByLabel("Timeline insert count").fill("2");
   await page.getByTestId("timeline-editor").getByRole("button", { name: "Insert before", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(page.locator(".editor-shell")).toHaveAttribute("data-cycle-count", String(cycleCountBefore + 1));
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-cycle-count", String(cycleCountBefore + 2));
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await assertBand(page, 0, 2);
   await expect(await tick(page, 0)).toHaveCount(1);

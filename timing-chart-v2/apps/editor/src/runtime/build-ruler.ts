@@ -68,8 +68,11 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
         ?? mapping.sourceToDisplay[group.end]
         ?? 0;
       const endDisplay = mapping.sourceToDisplay[group.end] ?? mapping.displayCycleCount;
-      const startPoint = startDisplay === undefined ? undefined : geometry.find({ signalId: axisOwnerSignalId, cycle: startDisplay, point: "cycle-start" })?.point;
-      const endPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: endDisplay, point: "cycle-start" })?.point;
+      // Local geometry is keyed by SOURCE cycle; a collapsed group leaves holes in that keying, so resolve the display
+      // boundaries back to source cycles exactly as the tick loop below does.
+      const sourceOfDisplay = (display: number) => display === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[display] ?? display);
+      const startPoint = startDisplay === undefined ? undefined : geometry.find({ signalId: axisOwnerSignalId, cycle: sourceOfDisplay(startDisplay), point: "cycle-start" })?.point;
+      const endPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: sourceOfDisplay(endDisplay), point: "cycle-start" })?.point;
       if (!startPoint || !endPoint) continue;
       const item = element.ownerDocument.createElement("span");
       item.className = "time-outline-item";

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
   test(`keeps Insert and Timeline groups usable at ${viewport.width}px`, async ({ page }) => {
@@ -51,7 +51,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(timeline.locator("[data-timeline-group='Insert']")).toBeVisible();
     await expect(timeline.locator("[data-timeline-group='Range Edit']")).toBeVisible();
     await expect(timeline.locator("[data-timeline-group='Bookmark']")).toBeVisible();
-    await expect(timeline.locator("[data-timeline-group='Fold / Break']")).toBeVisible();
+    await expect(timeline.locator("[data-timeline-group='Outline']")).toBeVisible();
     await expect(timeline.getByLabel("Timeline range start")).toBeVisible();
     await expect(timeline.getByLabel("Timeline insert count")).toBeVisible();
     await expect(timeline.getByLabel("Timeline destination")).toBeVisible();
@@ -70,9 +70,11 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     expect(timelineGeometry).toEqual({ overflow: false, groupsInside: true });
 
     const cycleCountBeforeTimelineInsert = Number(await page.locator(".editor-shell").getAttribute("data-cycle-count"));
+    // The sample Clock has period 2: a start insert must be a whole number of periods.
+    await timeline.getByLabel("Timeline insert count").fill("2");
     await timeline.getByRole("button", { name: "Insert before", exact: true }).click();
     await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
-    await expect(page.locator(".editor-shell")).toHaveAttribute("data-cycle-count", String(cycleCountBeforeTimelineInsert + 1));
+    await expect(page.locator(".editor-shell")).toHaveAttribute("data-cycle-count", String(cycleCountBeforeTimelineInsert + 2));
     await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 
     await tabs.getByRole("button", { name: "Home", exact: true }).click();
@@ -170,7 +172,8 @@ test("Time Group outline rows expose mapped spans and shared collapse controls a
   const outline = ruler.locator(".time-outline-row");
   await expect(outline).toHaveCount(1);
   await expect(outline).toHaveAttribute("aria-label", "Outline level 1");
-  await expect(outline.getByRole("button", { name: "Show outline level 1", exact: true })).toBeVisible();
+  // A flat (single-level) outline has no level control (e9cddc55): the group toggle is the only affordance.
+  await expect(outline.getByRole("button", { name: /Show time-group outline level/ })).toHaveCount(0);
   const item = outline.locator("[data-outline-time-group-id]");
   await expect(item).toHaveCount(1);
   await expect(item.getByRole("button", { name: "Collapse Group 2-4", exact: true })).toBeVisible();
