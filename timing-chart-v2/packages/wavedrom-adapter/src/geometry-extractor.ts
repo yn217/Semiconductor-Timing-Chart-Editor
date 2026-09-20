@@ -3,14 +3,14 @@ import type { AnchorPoint } from "@timing-chart-v2/schema";
 import { WaveDromAdapterError, type GeometryExtractionMetrics, type RenderedWave } from "./types.js";
 
 interface MatrixLike { readonly a: number; readonly b: number; readonly c: number; readonly d: number; readonly e: number; readonly f: number }
-interface Segment { readonly start: Point; readonly end: Point; readonly control1?: Point; readonly control2?: Point }
+export interface Segment { readonly start: Point; readonly end: Point; readonly control1?: Point; readonly control2?: Point }
 
 const numberPattern = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i;
 const pathTokens = (path: string): string[] => path.match(/[A-Za-z]|[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?/gi) ?? [];
 const point = (x: number, y: number): Point => ({ x, y });
 const transformPoint = (matrix: MatrixLike, value: Point): Point => ({ x: matrix.a * value.x + matrix.c * value.y + matrix.e, y: matrix.b * value.x + matrix.d * value.y + matrix.f });
 
-function parsePrimaryStroke(path: string): Segment[] {
+export function parsePrimaryStroke(path: string): Segment[] {
   const tokens = pathTokens(path);
   const segments: Segment[] = [];
   let index = 0;
@@ -177,7 +177,7 @@ export function createGeometryEntryAccumulator(): GeometryEntryAccumulator {
   };
 }
 
-function interpolateSegment(segment: Segment, fraction: number): Point {
+export function interpolateSegment(segment: Segment, fraction: number): Point {
   const clamped = Math.max(0, Math.min(1, fraction));
   if (segment.control1 && segment.control2) {
     const inverse = 1 - clamped;

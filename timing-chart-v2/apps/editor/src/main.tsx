@@ -20,6 +20,10 @@ if (probe === "geometry") {
   void import("./probes/geometry-probe.js").then(({ ArchitectureProbe }) => {
     createRoot(root).render(<StrictMode><ArchitectureProbe /></StrictMode>);
   });
+} else if (probe === "geometry-equivalence") {
+  void import("./probes/geometry-equivalence-probe.js").then(({ GeometryEquivalenceProbe }) => {
+    createRoot(root).render(<GeometryEquivalenceProbe />);
+  });
 } else if (probe === "stable") {
   void import("./probes/stable-surface-probe.js").then(({ StableSurfaceProbe }) => {
     createRoot(root).render(<StrictMode><StableSurfaceProbe /></StrictMode>);
