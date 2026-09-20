@@ -1,5 +1,5 @@
 import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
-import { waveOwnerPlacement } from "./wave-owner-placement.js";
+import { waveDomainPaddingPx, waveOwnerPlacement } from "./wave-owner-placement.js";
 import { buildTimeGroupHierarchy, type CanonicalDocument, type SignalId } from "@timing-chart-v2/schema";
 import type { DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
@@ -258,7 +258,10 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     ? referenceViewBoxWidth!
     : finalX + 24);
   const targetWidth = Math.max(Math.ceil(geometryWidth * scale), Math.ceil(minimumWidth));
-  element.style.width = `${targetWidth}px`;
+  // The time-domain box is the whole rendered SVG: the cycle span plus WaveDrom's left/right margins (the ticks start one
+  // left margin in), so the terminal boundary and the last cycle cell stay inside the ruler/overlay/interactive layers.
+  const timeDomainWidth = targetWidth + waveDomainPaddingPx(scale);
+  element.style.width = `${timeDomainWidth}px`;
   // #366: `element` (the ruler content div) is not guaranteed to already be
   // attached under `[data-testid='cycle-viewport']` at every call time (its
   // ref can resolve before React has finished committing the surrounding
@@ -276,7 +279,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   // moment; `.closest()` remains only as a defensive fallback for any other
   // caller.
   const widthOwner = viewportElement ?? element.closest<HTMLElement>("[data-testid='cycle-viewport']") ?? element.parentElement;
-  widthOwner?.style.setProperty("--wave-width", `${targetWidth}px`);
+  widthOwner?.style.setProperty("--wave-width", `${timeDomainWidth}px`);
   // Renderer host sizing may have left a viewport-width inline value behind
   // before this ruler pass established the authoritative shared wave width.
   // Clear that stale override so the host and its timing surface consume the

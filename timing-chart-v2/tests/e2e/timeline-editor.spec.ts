@@ -176,14 +176,15 @@ test("selects Cycle 0 and the terminal boundary from the rendered waveform", asy
   const terminalTick = page.getByTestId("cycle-ruler").locator("[data-cycle='24']");
   // The ruler syncs its scroll transform on the next frame; wait until the terminal tick reaches the viewport's right edge.
   const viewportRight = (await viewport.boundingBox())!.x + (await viewport.boundingBox())!.width;
-  await expect.poll(async () => Math.abs((await terminalTick.boundingBox())!.x - viewportRight)).toBeLessThan(4);
+  // The waveform keeps WaveDrom's ~20px right margin, so the terminal boundary rests one margin inside the right edge.
+  await expect.poll(async () => Math.abs((await terminalTick.boundingBox())!.x - (viewportRight - 20.5))).toBeLessThan(4);
   const terminalAfterScroll = await terminalTick.boundingBox();
   const ownerAfterScroll = await owner.boundingBox();
   expect(terminalAfterScroll).not.toBeNull();
   expect(ownerAfterScroll).not.toBeNull();
   // The terminal boundary sits flush with the viewport's right edge (the Inspector starts there), so click well inside it (the Inspector resize handle overlaps the last pixels); the
   // nearest boundary (Snap) is the terminal one.
-  await page.mouse.click(terminalAfterScroll!.x - 12, ownerAfterScroll!.y + ownerAfterScroll!.height / 2);
+  await page.mouse.click(terminalAfterScroll!.x - 30, ownerAfterScroll!.y + ownerAfterScroll!.height / 2);
   // The terminal boundary selects the last cycle cell: selected cycle 23, half-open range [23, 24).
   await expect(host).toHaveAttribute("data-selected-cycle", "23");
   await expect(page.getByLabel("Timeline range start")).toHaveValue("23");
@@ -306,10 +307,12 @@ test("keeps transaction source-cycle edges aligned after a collapsed TimeGroup",
   await page.getByRole("button", { name: "Axis Break", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const tick = page.getByTestId("cycle-ruler").locator("[data-cycle='8']");
-  const before = await tick.boundingBox();
-  expect(before).not.toBeNull();
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
+  // Cycle and Transaction have different left offsets (frozen columns), so the folded boundary is measured in the mode
+  // where the Transaction bar is drawn.
+  const before = await tick.boundingBox();
+  expect(before).not.toBeNull();
   await page.getByLabel("New Transaction name").fill("Folded transfer");
   await page.getByLabel("New Transaction start").fill("4");
   await page.getByLabel("New Transaction end").fill("8");
@@ -641,7 +644,8 @@ test("creates geometry-positioned Marker without waveform regeneration and a Gap
   // hidden range (bookmark start=2) is no longer shown either.
   await expect(ruler.locator("[data-cycle='2']")).toHaveCount(0);
   await expect(ruler.locator("[data-cycle='3']")).toHaveCount(0);
-  await expect(ruler.locator("[data-bookmark-id]")).toHaveCount(0);
+  // The Marker inside the collapsed range stays discoverable: it is drawn as a hidden-in-fold marker at the fold boundary.
+  await expect(ruler.locator("[data-bookmark-id].timeline-marker-hidden[data-inside-collapsed]")).toHaveCount(1);
   // cycle 4's label is preserved (labelAnchors/label mapping keeps the true source number)
   // but it now renders at the position immediately after the fold, where the gap marker sits.
   await expect(ruler.locator("[data-cycle='4']")).toHaveCount(1);
@@ -821,7 +825,7 @@ test("keeps Bookmark flags aligned with their rendered Ruler cycle through zoom 
   const ruler = page.getByTestId("cycle-ruler");
   const viewport = page.getByTestId("cycle-viewport");
   const marker = ruler.locator("[data-bookmark-id]").first();
-  const tick = ruler.locator("[data-source-cycle='2']");
+  const tick = ruler.locator(".cycle-tick[data-source-cycle='2']");
   await expect(marker).toBeVisible();
   await expect(tick).toHaveCount(1);
   const beforeRevision = await host.getAttribute("data-canonical-revision");
@@ -932,12 +936,13 @@ test("Timeline's History group reuses the global Undo/Redo owner, and the Bookma
   // The Bottom Bookmarks panel's own Duplicate creates a fresh stable ID.
   await timeline.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
   const panel = page.getByTestId("bookmark-editor-panel");
-  await expect(panel.getByTestId(/bookmark-row-/)).toHaveCount(10);
+  // The Cycle sample starts with no Bookmarks, so the five just-created ones are all there is.
+  await expect(panel.getByTestId(/bookmark-row-/)).toHaveCount(5);
   const firstRow = panel.getByTestId(/bookmark-row-/).first();
   const firstId = await firstRow.getAttribute("data-testid");
   await firstRow.click();
   await panel.getByRole("button", { name: "Duplicate", exact: true }).click();
-  await expect(panel.getByTestId(/bookmark-row-/)).toHaveCount(11);
+  await expect(panel.getByTestId(/bookmark-row-/)).toHaveCount(6);
   await expect(page.getByTestId("history-status")).toHaveText("History 6 / Redo 0");
   const duplicatedIds = await panel.getByTestId(/bookmark-row-/).evaluateAll((rows) => rows.map((row) => row.getAttribute("data-testid")));
   expect(new Set(duplicatedIds).size).toBe(duplicatedIds.length);

@@ -27,3 +27,8 @@ export function waveOwnerPlacement(input: {
     width: viewBoxWidth * scale,
   };
 }
+
+/** Extra time-domain width (px) the SVG margins add around the cycle span at the given presentation scale. */
+export function waveDomainPaddingPx(scale: number): number {
+  return WAVEDROM_HORIZONTAL_PADDING * scale;
+}
