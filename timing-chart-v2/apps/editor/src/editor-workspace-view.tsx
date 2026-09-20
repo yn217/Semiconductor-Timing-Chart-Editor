@@ -25,6 +25,29 @@ export interface EditorWorkspaceViewProps {
 }
 
 /** Owns the stable cycle/transaction workspace DOM; runtime owners only supply refs and callbacks. */
+type SplitDividerHandlers = Readonly<{ signalSplitRatio: number; onKeyDown: KeyboardEventHandler<HTMLElement>; onPointerDown: PointerEventHandler<HTMLElement>; onPointerMove: PointerEventHandler<HTMLElement>; onPointerUp: PointerEventHandler<HTMLElement> }>;
+
+/** Combined-only (internal ViewMode "Split") panes: the Transaction pane and the pane divider (#615). */
+function CombinedModePanes({ transactionContent, signalSplitRatio, onKeyDown: onSignalSplitKeyDown, onPointerDown: onSignalSplitPointerDown, onPointerMove: onSignalSplitPointerMove, onPointerUp: onSignalSplitPointerUp }: SplitDividerHandlers & Readonly<{ transactionContent: ReactNode }>) {
+  return <>
+    <div className="split-transaction-pane" data-pane="transaction" tabIndex={0} aria-label="Transaction pane">{transactionContent}</div>
+    <div className="combined-split-divider" data-testid="combined-split-divider" role="separator" aria-label="Resize Transaction and Cycle panes" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(signalSplitRatio * 100)} tabIndex={0} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} onPointerCancel={onSignalSplitPointerUp} />
+  </>;
+}
+
+/** Cycle-only Signal Split lower viewport and its divider (#615). */
+function CycleSignalSplitPane({ signalSplitRatio, gridEnabled, rulerEnabled, viewportLower, gridLayerLower, rulerLower, hostLower, onViewportKeyDown, onKeyDown: onSignalSplitKeyDown, onPointerDown: onSignalSplitPointerDown, onPointerMove: onSignalSplitPointerMove, onPointerUp: onSignalSplitPointerUp }: SplitDividerHandlers & Readonly<{ gridEnabled: boolean; rulerEnabled: boolean; viewportLower: RefObject<HTMLDivElement | null>; gridLayerLower: RefObject<HTMLDivElement | null>; rulerLower: RefObject<HTMLDivElement | null>; hostLower: RefObject<HTMLDivElement | null>; onViewportKeyDown: KeyboardEventHandler<HTMLDivElement> | undefined }>) {
+  return <>
+    <div className="signal-split-divider" data-testid="signal-split-divider" role="separator" aria-label="Signal Split divider" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(signalSplitRatio * 100)} tabIndex={0} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} onPointerCancel={onSignalSplitPointerUp} />
+    <div className="cycle-viewport signal-split-lower" ref={viewportLower} data-testid="cycle-viewport-lower" data-pane="lower" tabIndex={0} aria-label="Lower pane timing canvas navigation" onKeyDown={onViewportKeyDown}>
+      <div className="geometry-grid" ref={gridLayerLower} data-testid="geometry-grid-lower" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
+      <div className="cycle-ruler" data-testid="cycle-ruler-lower" aria-label="Lower pane cycle ruler" hidden={!rulerEnabled}><div className="cycle-ruler-content" ref={rulerLower} /></div>
+      <div className="range-selection-band" data-role="range-selection-band" data-testid="range-selection-band-lower" aria-hidden="true" hidden />
+      <div className="surface-host" ref={hostLower} data-testid="cycle-surface-lower" />
+    </div>
+  </>;
+}
+
 export function EditorWorkspaceView({
   viewModel,
 }: EditorWorkspaceViewProps) {
@@ -216,8 +239,7 @@ export function EditorWorkspaceView({
       {composition.hasFrozenPaneResizer && <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={frozenPaneMinWidth} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onKeyDown={onFrozenPaneKeyDown} onPointerDown={onFrozenPanePointerDown} onPointerMove={onFrozenPanePointerMove} onPointerUp={onFrozenPanePointerUp} onPointerCancel={onFrozenPanePointerUp} />}
       {composition.headerPlacement === "panel" && header}
       <div className={`cycle-viewport${viewMode === "Split" ? " split-signal-pane" : ""}`} ref={viewport} data-testid="cycle-viewport" data-pane={viewMode === "Split" ? "signal" : undefined} tabIndex={0} aria-label="Timing canvas navigation" onKeyDown={onViewportKeyDown}>
-        {viewMode === "Split" && <div className="split-transaction-pane" data-pane="transaction" tabIndex={0} aria-label="Transaction pane">{viewportContent}</div>}
-        {viewMode === "Split" && <div className="combined-split-divider" data-testid="combined-split-divider" role="separator" aria-label="Resize Transaction and Cycle panes" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(signalSplitRatio * 100)} tabIndex={0} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} onPointerCancel={onSignalSplitPointerUp} />}
+        {viewMode === "Split" && <CombinedModePanes transactionContent={viewportContent} signalSplitRatio={signalSplitRatio} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} />}
         <div className={`split-signal-content${viewMode === "Split" ? "" : " non-split-signal-content"}`}>
           <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
           <div className="cycle-ruler" data-testid="cycle-ruler" aria-label="Cycle ruler" hidden={!rulerEnabled}><div className="cycle-ruler-content" ref={ruler} /></div>
@@ -226,15 +248,7 @@ export function EditorWorkspaceView({
           <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
         </div>
       </div>
-      {signalSplitEnabled && viewMode === "Cycle" && <>
-        <div className="signal-split-divider" data-testid="signal-split-divider" role="separator" aria-label="Signal Split divider" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(signalSplitRatio * 100)} tabIndex={0} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} onPointerCancel={onSignalSplitPointerUp} />
-        <div className="cycle-viewport signal-split-lower" ref={viewportLower} data-testid="cycle-viewport-lower" data-pane="lower" tabIndex={0} aria-label="Lower pane timing canvas navigation" onKeyDown={onViewportKeyDown}>
-          <div className="geometry-grid" ref={gridLayerLower} data-testid="geometry-grid-lower" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
-          <div className="cycle-ruler" data-testid="cycle-ruler-lower" aria-label="Lower pane cycle ruler" hidden={!rulerEnabled}><div className="cycle-ruler-content" ref={rulerLower} /></div>
-          <div className="range-selection-band" data-role="range-selection-band" data-testid="range-selection-band-lower" aria-hidden="true" hidden />
-          <div className="surface-host" ref={hostLower} data-testid="cycle-surface-lower" />
-        </div>
-      </>}
+      {signalSplitEnabled && viewMode === "Cycle" && <CycleSignalSplitPane signalSplitRatio={signalSplitRatio} gridEnabled={gridEnabled} rulerEnabled={rulerEnabled} viewportLower={viewportLower} gridLayerLower={gridLayerLower} rulerLower={rulerLower} hostLower={hostLower} onViewportKeyDown={onViewportKeyDown} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} />}
     </section>
     <div className={`left-workspace-rail mode-${viewMode.toLowerCase()}`} data-testid="left-workspace-rail">
       {composition.leftRail === "transactions" && transactionTree}
