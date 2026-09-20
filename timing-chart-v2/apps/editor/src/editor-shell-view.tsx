@@ -9,6 +9,7 @@ export interface EditorShellViewModel {
   readonly workspacePreset: string;
   readonly inspectorVisible: boolean;
   readonly bottomVisible: boolean;
+  readonly viewMode: "Cycle" | "Transaction" | "Split";
   readonly rulerEnabled: boolean;
   readonly minimapEnabled: boolean;
   readonly signalTreeVisible: boolean;
@@ -48,7 +49,7 @@ export function EditorShellView({
   viewModel, titleBar, ribbon, workspace, dialogs, status,
 }: EditorShellViewProps) {
   const {
-    style, density, workspacePreset, inspectorVisible, bottomVisible, rulerEnabled,
+    style, density, workspacePreset, inspectorVisible, bottomVisible, viewMode, rulerEnabled,
     minimapEnabled, signalTreeVisible, showSignalNames, showRoles, showAnnotations,
     showTransactions, showGroupBackground, layoutOverflow, leftPaneWidth,
     frozenPaneWidth, bottomHeight, inspectorWidth, cycleCount, signalCount,
@@ -70,6 +71,7 @@ export function EditorShellView({
     data-workspace-preset={workspacePreset}
     data-inspector-visible={String(inspectorVisible)}
     data-bottom-visible={String(bottomVisible)}
+    data-view-mode={viewMode}
     data-ruler-enabled={String(rulerEnabled)}
     data-minimap-enabled={String(minimapEnabled)}
     data-signal-tree-visible={String(signalTreeVisible)}

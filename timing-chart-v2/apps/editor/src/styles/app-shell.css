@@ -178,18 +178,18 @@ button, input, select { font: inherit; font-size: var(--ds-font-size); }
 /* Cycle Mode still owns its WaveDrom frozen label columns inside the timeline
    surface. Keep that established owner intact while Transaction/Combined use
    the real left-column + center-column composition above. */
-.editor-shell:has(.cycle-panel.mode-cycle) .desktop-workspace {
+.editor-shell[data-view-mode="Cycle"] .desktop-workspace {
   grid-template-rows: minmax(260px, 1fr) 10px var(--gui-bottom-height);
 }
-.editor-shell[data-bottom-visible="false"]:has(.cycle-panel.mode-cycle) .desktop-workspace {
+.editor-shell[data-bottom-visible="false"][data-view-mode="Cycle"] .desktop-workspace {
   grid-template-rows: minmax(0, 1fr) 0 0;
 }
-.editor-shell:has(.cycle-panel.mode-cycle) .workspace-header { display: none; }
-.editor-shell:has(.cycle-panel.mode-cycle) .cycle-panel { grid-column: 1 / 3; grid-row: 1; }
-.editor-shell:has(.cycle-panel.mode-cycle) .left-workspace-rail { grid-column: 1; grid-row: 1 / 4; }
-.editor-shell:has(.cycle-panel.mode-cycle) .inspector-shell { grid-column: 3; grid-row: 1 / 4; }
-.editor-shell:has(.cycle-panel.mode-cycle) .bottom-resize-track { grid-column: 2; grid-row: 2; }
-.editor-shell:has(.cycle-panel.mode-cycle) .bottom-editor { grid-column: 2; grid-row: 3; }
-.editor-shell:has(.cycle-panel.mode-cycle) .cycle-panel .cycle-viewport { height: calc(100% - 37px); }
-.editor-shell:has(.cycle-panel.mode-cycle) .left-workspace-rail { pointer-events: none; background: transparent; }
-.editor-shell:has(.cycle-panel.mode-cycle) .left-workspace-rail > .left-panel-tail { pointer-events: auto; }
+.editor-shell[data-view-mode="Cycle"] .workspace-header { display: none; }
+.editor-shell[data-view-mode="Cycle"] .cycle-panel { grid-column: 1 / 3; grid-row: 1; }
+.editor-shell[data-view-mode="Cycle"] .left-workspace-rail { grid-column: 1; grid-row: 1 / 4; }
+.editor-shell[data-view-mode="Cycle"] .inspector-shell { grid-column: 3; grid-row: 1 / 4; }
+.editor-shell[data-view-mode="Cycle"] .bottom-resize-track { grid-column: 2; grid-row: 2; }
+.editor-shell[data-view-mode="Cycle"] .bottom-editor { grid-column: 2; grid-row: 3; }
+.editor-shell[data-view-mode="Cycle"] .cycle-panel .cycle-viewport { height: calc(100% - 37px); }
+.editor-shell[data-view-mode="Cycle"] .left-workspace-rail { pointer-events: none; background: transparent; }
+.editor-shell[data-view-mode="Cycle"] .left-workspace-rail > .left-panel-tail { pointer-events: auto; }
