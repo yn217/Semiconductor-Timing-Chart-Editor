@@ -181,6 +181,10 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
   const browserBefore = await cdpMetrics(cdp);
   const renderBeforeSelection = await counters(page);
   const sessionBeforeSelection = await sessionCounters(page);
+  // The published session counters lag the renderer (they refresh on the next diagnostics publish), so the "selection does no
+  // wave/geometry work" invariant is asserted on the pulled renderer snapshot as well.
+  const pull = () => surface.evaluate((element) => (element as HTMLElement & { requestPerformanceSnapshot: () => Record<string, unknown> }).requestPerformanceSnapshot());
+  const pulledBeforeSelection = await pull();
   const geometryBeforeSelection = sessionBeforeSelection.geometryExtraction as { totalUsesVisited: number; totalGeometryEntriesEmitted: number; totalDuplicateKeyChecks: number; totalDuplicateKeyCollisions: number; totalTransitionBrickLookups: number; totalSkinPathParses: number; totalMatrixReads: number; totalDurationMs: number };
   // #755: the production path derives local geometry analytically from WaveJson, so the SVG geometry extractor stays idle
   // (it remains available behind ?geometrySource=svg and is covered by the analytic-equivalence probe).
@@ -207,7 +211,7 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
   const sessionAfterSelection = await sessionCounters(page);
   const { hits: _selectionBeforeHits, ...stableSessionBeforeSelection } = sessionBeforeSelection;
   const { hits: _selectionAfterHits, ...stableSessionAfterSelection } = sessionAfterSelection;
-  expect(stableSessionAfterSelection).toEqual(stableSessionBeforeSelection);
+  expect(await pull()).toEqual(pulledBeforeSelection);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 
   const reorderBefore = await counters(page);
