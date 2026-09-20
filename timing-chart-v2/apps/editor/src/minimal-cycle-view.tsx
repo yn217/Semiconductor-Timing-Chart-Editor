@@ -24,6 +24,7 @@ import { useEditorResizeActions } from "./application/use-editor-resize-actions.
 import { useEditorWorkspaceActions } from "./application/use-editor-workspace-actions.js";
 import { EditorShellView } from "./editor-shell-view.js";
 import { useViewModeTransition } from "./runtime/use-view-mode-transition.js";
+import { useActivePaneTracking } from "./runtime/use-active-pane-tracking.js";
 import { EditorDialogLayer } from "./editor-dialog-layer.js";
 import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { deriveSelectionCapabilities, useSelectionOwner } from "./application/use-selection-owner.js";
@@ -444,49 +445,7 @@ export function MinimalCycleView() {
     refreshTransactionLinkedRows(host, new Set(selectedTransaction?.linkedSignals ?? []));
   }, [selectedTransactionId, selectedLinkedSignalKey]);
 
-  // #407: Split active pane -- click-delegated (rather than a JSX onClick)
-  // because the Split panes are owned/rendered by editor-workspace-view.tsx
-  // (Codex's shell-decomposition file), not this one; a delegated listener
-  // on the cycle panel reads which pane was clicked without touching that
-  // file's JSX at all. `setActivePaneRef` keeps the listener attached once
-  // (rather than resubscribing every render) while still calling whichever
-  // `setActivePane` closure is current.
-  const setActivePaneRef = useRef(setActivePane);
-  setActivePaneRef.current = setActivePane;
-  useEffect(() => {
-    const root = viewport.current?.closest<HTMLElement>(".cycle-panel");
-    if (!root) return;
-    const onPointerDownCapture = (event: PointerEvent) => {
-      const target = event.target as HTMLElement | null;
-      setActivePaneRef.current(target?.closest(".transaction-lanes, .split-transaction-pane") ? "transaction" : "signal");
-    };
-    const onFocusIn = (event: FocusEvent) => {
-      const target = event.target as HTMLElement | null;
-      setActivePaneRef.current(target?.closest(".transaction-lanes, .split-transaction-pane") ? "transaction" : "signal");
-    };
-    // The Transaction Tree lives in the left workspace rail, outside .cycle-panel, so interacting
-    // with it must also make Transaction the active pane (Combined routes the Inspector by it).
-    const onTreeInteraction = (event: Event) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.closest(".transaction-left-tree")) setActivePaneRef.current("transaction");
-    };
-    document.addEventListener("pointerdown", onTreeInteraction, true);
-    root.addEventListener("pointerdown", onPointerDownCapture, { capture: true });
-    root.addEventListener("focusin", onFocusIn);
-    return () => {
-      document.removeEventListener("pointerdown", onTreeInteraction, true);
-      root.removeEventListener("pointerdown", onPointerDownCapture, { capture: true });
-      root.removeEventListener("focusin", onFocusIn);
-    };
-  }, []);
-  // View-only presentation of `activePane` -- an imperative DOM attribute
-  // (same reasoning as above: `cycle-viewport` isn't this file's JSX) so
-  // CSS alone can show which Split region is active, only meaningful while
-  // `viewMode === "Split"`.
-  useEffect(() => {
-    const root = viewport.current;
-    if (root) root.dataset.activePane = viewMode === "Split" ? activePane : "";
-  }, [activePane, viewMode]);
+  useActivePaneTracking(viewport, setActivePane, activePane, viewMode);
 
   const actions = useEditorActions({
     document: snapshot.document,
