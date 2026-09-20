@@ -261,9 +261,12 @@ test("Transaction canvas body and edge drags commit through the semantic command
   const body = bar.locator(":scope > span").first();
   const bodyBox = await body.boundingBox();
   expect(bodyBox).not.toBeNull();
-  await page.mouse.move(bodyBox!.x + bodyBox!.width / 2, bodyBox!.y + bodyBox!.height / 2);
+  // At 10 cycles/TC the 50-cycle bar is wider than the viewport, so grab a visible point and drop on a visible ruler tick
+  // (a body drag moves the Transaction so its start lands under the pointer's Snap cycle).
+  const tickX = async (cycle: number) => (await page.getByTestId("cycle-ruler").locator(`[data-cycle='${cycle}']`).boundingBox())!.x + 1;
+  await page.mouse.move(bodyBox!.x + 200, bodyBox!.y + bodyBox!.height / 2);
   await page.mouse.down();
-  await page.mouse.move(bodyBox!.x + bodyBox!.width / 2 + 24, bodyBox!.y + bodyBox!.height / 2, { steps: 3 });
+  await page.mouse.move(await tickX(20), bodyBox!.y + bodyBox!.height / 2, { steps: 6 });
   await page.mouse.up();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await expect(inspector.getByLabel("Transaction start")).not.toHaveValue(initialStart);
@@ -274,19 +277,20 @@ test("Transaction canvas body and edge drags commit through the semantic command
   const beforeResize = await inspector.getByLabel("Transaction start").inputValue();
   await page.mouse.move(startBox!.x + startBox!.width / 2, startBox!.y + startBox!.height / 2);
   await page.mouse.down();
-  await page.mouse.move(startBox!.x + 12, startBox!.y + startBox!.height / 2, { steps: 3 });
+  await page.mouse.move(await tickX(24), startBox!.y + startBox!.height / 2, { steps: 6 });
   await page.mouse.up();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   // #551: an edge-attached first Phase follows a valid Transaction start resize.
   await expect(inspector.getByLabel("Transaction start")).not.toHaveValue(beforeResize);
 
   const endHandle = bar.locator(":scope > i[data-edge='end']");
+  await endHandle.scrollIntoViewIfNeeded();
   const endBox = await endHandle.boundingBox();
   expect(endBox).not.toBeNull();
   const beforeEndResize = await inspector.getByLabel("Transaction end").inputValue();
   await page.mouse.move(endBox!.x + endBox!.width / 2, endBox!.y + endBox!.height / 2);
   await page.mouse.down();
-  await page.mouse.move(endBox!.x + 14, endBox!.y + endBox!.height / 2, { steps: 3 });
+  await page.mouse.move(await tickX(66), endBox!.y + endBox!.height / 2, { steps: 6 });
   await page.mouse.up();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await expect(inspector.getByLabel("Transaction end")).not.toHaveValue(beforeEndResize);
@@ -510,8 +514,8 @@ test("Center additive selection projects to Tree and Bottom", async ({ page }) =
   await expect(write).toHaveAttribute("data-selected", "true");
   await expect(page.getByTestId("transaction-left-tree-row-demo_txn_read")).toHaveAttribute("data-selected", "true");
   await expect(page.getByTestId("transaction-left-tree-row-demo_txn_write")).toHaveAttribute("data-selected", "true");
-  await expect(page.locator('.transaction-list-row[data-transaction-row-id="demo_txn_read"] > button')).toHaveAttribute("data-selected", "true");
-  await expect(page.locator('.transaction-list-row[data-transaction-row-id="demo_txn_write"] > button')).toHaveAttribute("data-selected", "true");
+  await expect(page.locator('.transaction-list-row[data-transaction-row-id="demo_txn_read"] > [data-selected="true"]')).toHaveAttribute("data-selected", "true");
+  await expect(page.locator('.transaction-list-row[data-transaction-row-id="demo_txn_write"] > [data-selected="true"]')).toHaveAttribute("data-selected", "true");
 });
 
 test("focused Transaction Tree row supports Delete shortcut", async ({ page }) => {
