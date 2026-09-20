@@ -48,8 +48,9 @@ test("Bottom Clock edits update real waveform geometry and edge-counter overlays
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   expect(await clock.locator("svg").innerHTML()).not.toBe(beforeWave);
   const afterDuty = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
-  expect(afterDuty.waveDromRenders).toBe(before.waveDromRenders + mountedWaveOwnerCount);
-  expect(afterDuty.localGeometryBuilds).toBe(before.localGeometryBuilds + mountedWaveOwnerCount);
+  // Only the edited Clock owner regenerates; the other mounted owners keep their SVG (their WaveJson is unchanged).
+  expect(afterDuty.waveDromRenders).toBe(before.waveDromRenders + 1);
+  expect(afterDuty.localGeometryBuilds).toBe(before.localGeometryBuilds + 1);
 
   await editor.getByLabel("Clock edge counter show").check();
   await editor.getByLabel("Clock edge counter mode").selectOption("rising");
