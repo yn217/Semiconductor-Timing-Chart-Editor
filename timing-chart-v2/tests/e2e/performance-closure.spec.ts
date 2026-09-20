@@ -132,7 +132,9 @@ async function openFixture(page: Page, spec: PerformanceFixtureSpec) {
   let previous = -1, stable = 0;
   for (let attempt = 0; attempt < 60 && stable < 5; attempt += 1) {
     const current = (await counters(page)).waveDromRenders;
-    stable = current === previous ? stable + 1 : 0; previous = current;
+    // Also require every mounted wave owner to have its rendered SVG, so a queued (not yet rendered) owner cannot land mid-measurement.
+    const pending = await page.evaluate(() => Array.from(document.querySelectorAll("[data-role='wave-owner']")).filter((owner) => owner.querySelector("svg") === null).length);
+    stable = current === previous && pending === 0 ? stable + 1 : 0; previous = current;
     await page.waitForTimeout(100);
   }
   return document;
@@ -180,11 +182,14 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
   const renderBeforeSelection = await counters(page);
   const sessionBeforeSelection = await sessionCounters(page);
   const geometryBeforeSelection = sessionBeforeSelection.geometryExtraction as { totalUsesVisited: number; totalGeometryEntriesEmitted: number; totalDuplicateKeyChecks: number; totalDuplicateKeyCollisions: number; totalTransitionBrickLookups: number; totalSkinPathParses: number; totalMatrixReads: number; totalDurationMs: number };
-  expect(geometryBeforeSelection.totalUsesVisited).toBeGreaterThan(0);
-  expect(geometryBeforeSelection.totalGeometryEntriesEmitted).toBeGreaterThan(0);
+  // #755: the production path derives local geometry analytically from WaveJson, so the SVG geometry extractor stays idle
+  // (it remains available behind ?geometrySource=svg and is covered by the analytic-equivalence probe).
+  expect(geometryBeforeSelection.totalUsesVisited).toBe(0);
+  expect(geometryBeforeSelection.totalGeometryEntriesEmitted).toBe(0);
   expect(geometryBeforeSelection.totalDuplicateKeyChecks).toBeGreaterThanOrEqual(geometryBeforeSelection.totalGeometryEntriesEmitted);
+  expect(renderBeforeSelection.localGeometryBuilds).toBeGreaterThan(0);
   expect(geometryBeforeSelection.totalDuplicateKeyCollisions).toBeLessThanOrEqual(geometryBeforeSelection.totalDuplicateKeyChecks);
-  expect(geometryBeforeSelection.totalMatrixReads).toBeGreaterThanOrEqual(2);
+  expect(geometryBeforeSelection.totalMatrixReads).toBe(0); // #755: no SVG matrix reads on the analytic path
   const samples: BrowserPerformanceSample[] = [];
   for (let trial = 0; trial < 10; trial += 1) {
     const index = trial % 5 + 1;
@@ -265,8 +270,8 @@ test("1000x1000 virtualization mounts viewport-scale rows and avoids duplicate b
   await start(page);
   await openFixture(page, { signalCount: 1000, cycleCount: 1000 });
   const geometry = (await sessionCounters(page)).geometryExtraction as { totalUsesVisited: number; totalGeometryEntriesEmitted: number; totalDuplicateKeyChecks: number; totalDuplicateKeyCollisions: number; totalDurationMs: number };
-  expect(geometry.totalUsesVisited).toBeGreaterThan(0);
-  expect(geometry.totalGeometryEntriesEmitted).toBeGreaterThan(0);
+  expect(geometry.totalUsesVisited).toBe(0); // #755: analytic geometry, extractor idle
+  expect(geometry.totalGeometryEntriesEmitted).toBe(0);
   expect(geometry.totalDuplicateKeyCollisions).toBeLessThanOrEqual(geometry.totalDuplicateKeyChecks);
   console.log(`[geometry-1000] ${JSON.stringify(geometry)}`);
   let diagnostic = await diagnostics(page);

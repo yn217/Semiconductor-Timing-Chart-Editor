@@ -4,6 +4,8 @@ import { startInCycleSample } from "./cycle-startup.js";
 startInCycleSample(test);
 
 test("parallel replacement has an isolated opt-in mount", async ({ page }) => {
+  // The opt-in probe mount is laid out for the locked 1672x941 evidence viewport (its tree starts below the 720px fold).
+  await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/?implementation=next");
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-next-owner", "ui");
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-application-owner", "application");
