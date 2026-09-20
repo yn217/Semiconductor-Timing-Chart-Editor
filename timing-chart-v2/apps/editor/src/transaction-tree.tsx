@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import type {
@@ -16,6 +16,39 @@ type TransactionTreeMenu = Readonly<
   | { kind: "transaction"; id: TransactionId }
 >;
 type TransactionTreeMenuItem = Readonly<{ label: string; run: () => void; disabled?: boolean; submenu?: readonly TransactionTreeMenuItem[]; movesFocus?: boolean }>;
+
+const TREE_ROW_HEIGHT = 29;
+const TREE_WINDOWING_THRESHOLD = 150;
+
+/**
+ * Fixed-height row windowing for large Transaction groups: only the rows intersecting the tree's scroll viewport (plus a small
+ * overscan) are mounted; a spacer keeps the scroll extent exact. Small groups render every row as before.
+ */
+function WindowedTreeRows<T>({ items, render }: { readonly items: readonly T[]; readonly render: (item: T) => ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [range, setRange] = useState({ start: 0, end: 60 });
+  const windowed = items.length > TREE_WINDOWING_THRESHOLD;
+  useEffect(() => {
+    if (!windowed) return undefined;
+    const element = box.current;
+    const scroller = element?.closest<HTMLElement>(".transaction-left-tree");
+    if (!element || !scroller) return undefined;
+    const update = () => {
+      const offset = scroller.getBoundingClientRect().top - element.getBoundingClientRect().top;
+      const start = Math.max(0, Math.floor(offset / TREE_ROW_HEIGHT) - 10);
+      const end = Math.min(items.length, Math.ceil((offset + scroller.clientHeight) / TREE_ROW_HEIGHT) + 10);
+      setRange((current) => (current.start === start && current.end === end ? current : { start, end }));
+    };
+    update();
+    scroller.addEventListener("scroll", update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(scroller);
+    return () => { scroller.removeEventListener("scroll", update); observer.disconnect(); };
+  }, [windowed, items.length]);
+  if (!windowed) return <>{items.map(render)}</>;
+  const end = Math.max(range.end, Math.min(items.length, range.start + 1));
+  return <div ref={box} data-tree-windowed="true" style={{ position: "relative", height: items.length * TREE_ROW_HEIGHT }}><div style={{ position: "absolute", left: 0, right: 0, top: range.start * TREE_ROW_HEIGHT }}>{items.slice(range.start, end).map(render)}</div></div>;
+}
 
 export function TransactionTree({
   document,
@@ -630,7 +663,7 @@ export function TransactionTree({
                     <EditorIcon name="more" className="transaction-left-tree-icon" />
                   </button>
                 </div>
-                {!isCollapsed && items.map(renderTransaction)}
+                {!isCollapsed && <WindowedTreeRows items={items} render={renderTransaction} />}
               </div>
             );
           })}
@@ -662,7 +695,7 @@ export function TransactionTree({
                   <span className="transaction-left-tree-group-count">({items.length})</span>
                   <span className="transaction-left-tree-action-placeholder" aria-hidden="true" />
                 </div>
-                {!isCollapsed && items.map(renderTransaction)}
+                {!isCollapsed && <WindowedTreeRows items={items} render={renderTransaction} />}
               </div>
             );
           })()}
