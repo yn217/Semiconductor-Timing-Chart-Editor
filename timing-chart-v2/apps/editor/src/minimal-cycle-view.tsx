@@ -25,6 +25,7 @@ import { useEditorWorkspaceActions } from "./application/use-editor-workspace-ac
 import { EditorShellView } from "./editor-shell-view.js";
 import { useViewModeTransition } from "./runtime/use-view-mode-transition.js";
 import { useActivePaneTracking } from "./runtime/use-active-pane-tracking.js";
+import { useOverlayPresentationRefresh } from "./runtime/use-overlay-presentation-refresh.js";
 import { EditorDialogLayer } from "./editor-dialog-layer.js";
 import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { deriveSelectionCapabilities, useSelectionOwner } from "./application/use-selection-owner.js";
@@ -433,17 +434,11 @@ export function MinimalCycleView() {
     viewMode,
   });
   useViewModeTransition(viewMode, forceUpperReprojectRef, timelineRuntimeRef);
-  useEffect(() => {
-    refreshPlayhead.current();
-  }, [selectedCycle, playheadPresentationRevision, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
-  useEffect(() => {
-    refreshRangeSelectionBand.current();
-  }, [rangePresentationRevision, timelineRange, rangeSelectionActive, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
-
-  const selectedLinkedSignalKey = selectedTransaction?.linkedSignals?.join("\u0000") ?? "";
-  useEffect(() => {
-    refreshTransactionLinkedRows(host, new Set(selectedTransaction?.linkedSignals ?? []));
-  }, [selectedTransactionId, selectedLinkedSignalKey]);
+  useOverlayPresentationRefresh({
+    refreshPlayhead, refreshRangeSelectionBand, host, selectedCycle, playheadPresentationRevision, rangePresentationRevision,
+    timelineRange, rangeSelectionActive, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth, selectedTransactionId,
+    selectedLinkedSignals: selectedTransaction?.linkedSignals,
+  });
 
   useActivePaneTracking(viewport, setActivePane, activePane, viewMode);
 
