@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 // #378: Stroke/Fill/Lock are the concrete gaps this issue's audit found --
 // LabelOffset/Multiline/Z-order/Visibility were already real, generic,

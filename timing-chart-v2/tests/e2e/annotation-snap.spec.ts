@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 async function createAnnotation(page: import("@playwright/test").Page, type: string) {
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
