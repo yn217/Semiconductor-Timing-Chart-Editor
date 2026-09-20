@@ -59,3 +59,10 @@
 .editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row-editor { min-height: 28px; }
 .editor-shell:has(.cycle-panel.mode-transaction) .bottom-tabs { flex-basis: 36px; height: 36px; }
 .editor-shell:has(.cycle-panel.mode-transaction) .bottom-tabs button { height: 35px; }
+/* The lane-label layer spans the whole time surface in standalone Transaction Mode. As a sticky z-2 stacking context it sat
+   under the bar track (z 3), which made every Group header control (collapse chevron, inline rename, Ungroup) unclickable.
+   Lift the (transparent, non-interactive) layer above the track and let only the header controls take pointer input, so bars
+   underneath stay directly clickable. */
+.editor-shell .cycle-panel.mode-transaction .transaction-lane-labels { z-index: 4; background: transparent; pointer-events: none; }
+.editor-shell .cycle-panel.mode-transaction .transaction-group-header { background: transparent; }
+.editor-shell .cycle-panel.mode-transaction .transaction-group-header > * { pointer-events: auto; }

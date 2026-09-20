@@ -260,7 +260,7 @@
 .transaction-group-header input:hover, .transaction-group-header input:focus { border-color: #9fb3c7; background: #fff; }
 .transaction-group-header-delete { flex: none; margin-left: auto; width: 16px; height: 16px; padding: 0; border: 0; background: transparent; color: #8a97a8; font-size: 12px; line-height: 1; cursor: pointer; }
 .transaction-group-header-delete:hover { color: #b2382c; }
-.transaction-group-header-band { background: #eef2f7ad; border-bottom: 1px solid #c7d2de; }
+.transaction-group-header-band { background: #eef2f7ad; border-bottom: 1px solid #c7d2de; pointer-events: none; /* decorative: must never intercept the Group header controls */ }
 .transaction-lane { position: absolute; left: 0; width: 100%; border-bottom: 1px solid #c9d6e3; }
 .transaction-lane:hover { background: rgb(214 229 245 / 45%); }
 .transaction-lane > button:has(.transaction-phases) { height: 32px; align-items: start; }
