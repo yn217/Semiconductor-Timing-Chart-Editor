@@ -126,6 +126,14 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(bounded.wave.slice(1)).toMatch(/^\.*$/);
   });
 
+  it("expands a bounded non-50% duty clock window without flipping its inactive initial level", () => {
+    const base = canonicalFixture().signals[0] as ClockSignal;
+    const clock = { ...base, generator: { ...base.generator, start: 0, period: 2, duty: 0.25, initial: 0, polarity: "positive" } } as ClockSignal;
+    const full = toWaveJson({ signal: clock, cycleCount: 8 });
+    const bounded = toWaveJsonWindow({ signal: clock, cycleCount: 8 }, 0, 8);
+    expect(bounded.wave).toBe(full.wave);
+  });
+
   it("keeps renderer-aligned geometry origin separate from the requested source window", () => {
     const clock = canonicalFixture().signals[0] as ClockSignal;
     const bounded = toWaveJsonWindow({ signal: clock, cycleCount: 100 }, 4, 20, { start: 5, end: 20 }, { start: 4, end: 20 });
