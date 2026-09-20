@@ -47,7 +47,7 @@ test("Insert Ribbon and Left Tree Add menu never offer Pulse; Event is still a r
 
   await eventRow.click();
   const editor = page.getByTestId("signal-editor");
-  await expect(editor).toContainText("EVENT_9 · event");
+  await expect(editor).toContainText("EVENT_9 · Event");
   const eventFirstRow = editor.locator("form.event-row").first();
   await eventFirstRow.getByRole("button", { name: /Edit transition/ }).click();
   await eventFirstRow.getByLabel("Value 0").fill("RISE");
@@ -79,7 +79,7 @@ test("loads, edits, persists and exports a legacy Pulse Signal without breaking 
 
   await pulseRow.click();
   const editor = page.getByTestId("signal-editor");
-  await expect(editor).toContainText("PULSE_LEGACY · pulse");
+  await expect(editor).toContainText("PULSE_LEGACY · Pulse");
   // Bottom Panel Visual Reference pass (#402/#426): Type moved to
   // Inspector, its sole owner now -- Bottom's own duplicate Type field
   // was removed. Inspector's Type field must still show the legacy value
