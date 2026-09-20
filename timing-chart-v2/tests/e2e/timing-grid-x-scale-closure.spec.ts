@@ -80,7 +80,7 @@ test("keeps Grid and Ruler on the actual WaveDrom X geometry across scale and sc
   await fileInput.setInputFiles({ name: "geometry-closure.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(longReferenceClockDocument())) });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await page.getByRole("button", { name: "Cycle", exact: true }).click();
-  await expect(page.locator("[data-view-mode='Cycle']")).toBeVisible();
+  await expect(page.locator(".cycle-panel[data-view-mode='Cycle'], .cycle-viewport[data-view-mode='Cycle']").first()).toBeVisible();
   await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='128']")).toHaveCount(1);
   await waitForPresentation(page);
   const cycles = [0, 12, 24] as const;

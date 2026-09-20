@@ -8,6 +8,7 @@ import { analyticLocalGeometry, toWaveJsonWindow, type RenderedWave, type WaveDr
 import type { DisplayTimeMappingCache } from "@timing-chart-v2/projection";
 import type { GeometryRegistry } from "./geometry-registry.js";
 import { displayWindowForSource } from "./display-boundary.js";
+import { waveOwnerPlacement } from "./wave-owner-placement.js";
 
 function nextBrowserFrame(): Promise<void> {
   return new Promise((resolve) => {
@@ -147,7 +148,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const waveOriginPx = context.getWaveOriginPx?.() ?? 0;
       for (const item of prepared) {
         if (pxPerDisplayCycle !== undefined && item.rendererStart !== undefined && item.rendererEnd !== undefined && item.rendererEnd > item.rendererStart) {
-          item.request.owner.style.width = `${(item.rendererEnd - item.rendererStart) * pxPerDisplayCycle}px`;
+          const placement = waveOwnerPlacement({ displayStart: item.rendererStart, displayEnd: item.rendererEnd, pxPerDisplayCycle, waveOriginPx });
+          item.request.owner.style.width = `${placement.width}px`;
           // The shared wave-owner layer (`stable-waveform-surface`) is one
           // element as wide as the whole document (`--wave-width`), scrolled
           // natively; `place()` (stable-surface.ts) only ever sets each
@@ -161,7 +163,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           // `waveOriginPx` carries the ruler's own coordinate-system origin
           // (WaveDrom's fixed left margin) so this lines up with ruler ticks
           // exactly, not just proportionally (#620).
-          item.request.owner.style.left = `${item.rendererStart * pxPerDisplayCycle + waveOriginPx}px`;
+          item.request.owner.style.left = `${placement.left}px`;
         } else {
           item.request.owner.style.removeProperty("width");
           item.request.owner.style.removeProperty("left");

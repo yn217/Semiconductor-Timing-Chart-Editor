@@ -1,4 +1,5 @@
 import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
+import { waveOwnerPlacement } from "./wave-owner-placement.js";
 import { buildTimeGroupHierarchy, type CanonicalDocument, type SignalId } from "@timing-chart-v2/schema";
 import type { DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
@@ -308,14 +309,15 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
         ? displayWindowForSource(mapping, { sourceStart, sourceEnd }, document.timeline.cycleCount)
         : undefined;
       if (displayWindow) {
-        owner.style.width = `${(displayWindow.displayEnd - displayWindow.displayStart) * pxPerDisplayCycle}px`;
+        const placement = waveOwnerPlacement({ displayStart: displayWindow.displayStart, displayEnd: displayWindow.displayEnd, pxPerDisplayCycle, waveOriginPx, viewBoxWidth: owner.querySelector<SVGSVGElement>(":scope > svg")?.viewBox.baseVal.width });
+        owner.style.width = `${placement.width}px`;
         // See the matching comment in waveform-surface-provider.ts: a
         // windowed owner's horizontal position must reflect where its own
         // window starts within the whole document -- `place()` only ever
         // sets vertical position, so this is the only place it gets set.
         // `waveOriginPx` carries the ruler's own coordinate-system origin so
         // this lines up with tick positions exactly, not just proportionally.
-        owner.style.left = `${displayWindow.displayStart * pxPerDisplayCycle + waveOriginPx}px`;
+        owner.style.left = `${placement.left}px`;
       } else {
         owner.style.removeProperty("width");
         owner.style.removeProperty("left");
