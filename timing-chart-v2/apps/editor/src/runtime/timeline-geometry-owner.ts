@@ -135,7 +135,7 @@ export class TimelineGeometryOwner {
     // offscreen range. Large documents still use bounded source windows below.
     if (document.timeline.cycleCount <= 4_096) return { start: 0, end: document.timeline.cycleCount };
     if (this.#requestedSourceCycle !== undefined) {
-      const span = Math.min(2048, document.timeline.cycleCount);
+      const span = Math.min(512, document.timeline.cycleCount);
       const start = Math.max(0, Math.min(this.#requestedSourceCycle - Math.floor(span / 2), document.timeline.cycleCount - span));
       return { start, end: Math.min(document.timeline.cycleCount, start + span) };
     }
@@ -187,8 +187,8 @@ export class TimelineGeometryOwner {
     // subset to replace the bounded geometry window would discard offscreen
     // navigation boundaries on the next render.  DOM remains virtualized;
     // this minimum applies only to the source-time geometry artifact.
-    if (document.timeline.cycleCount > 4096 && boundedEnd - boundedStart < 2048) {
-      const span = Math.min(2048, document.timeline.cycleCount);
+    if (document.timeline.cycleCount > 4096 && boundedEnd - boundedStart < 512) {
+      const span = Math.min(512, document.timeline.cycleCount);
       const centered = Math.max(0, Math.min(boundedStart, document.timeline.cycleCount - span));
       return { start: centered, end: centered + span };
     }

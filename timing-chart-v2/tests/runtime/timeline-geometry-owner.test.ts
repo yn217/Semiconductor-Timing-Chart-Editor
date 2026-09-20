@@ -115,7 +115,7 @@ describe("TimelineGeometryOwner", () => {
       onSnapIndexBuilt: () => undefined,
     });
     owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
-    expect(owner.sourceWindowForLocalRange(document, 50_000, 50_100)).toEqual({ start: 49_998, end: 52_046 });
+    expect(owner.sourceWindowForLocalRange(document, 50_000, 50_100)).toEqual({ start: 49_998, end: 50_510 });
   });
 
   it("projects off-window source boundaries from the shared ruler geometry", () => {
