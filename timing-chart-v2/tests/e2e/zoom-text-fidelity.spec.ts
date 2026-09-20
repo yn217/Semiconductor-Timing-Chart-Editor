@@ -1,7 +1,7 @@
 import { expect, test, type Locator } from "@playwright/test";
-import { startInCycleMode } from "./cycle-startup.js";
+import { startInCycleSample } from "./cycle-startup.js";
 
-startInCycleMode(test);
+startInCycleSample(test);
 
 test("keeps text glyph aspect ratio and X-axis alignment constant across Zoom levels 50/100/150/200%", async ({ page }) => {
   await page.goto("/");
@@ -187,7 +187,7 @@ test("keeps ruler clipping and frozen-column ownership through scroll positions 
       });
       expect(Math.abs(geometry.ruler.y - geometry.viewport.y), `zoom=${zoom} fraction=${fraction}`).toBeLessThanOrEqual(1);
       expect(Math.abs(geometry.ruler.left - geometry.frozen.right), `zoom=${zoom} fraction=${fraction}`).toBeLessThanOrEqual(1);
-      expect(geometry.contentOverflow).toBe("hidden");
+      expect(["hidden", "clip"]).toContain(geometry.contentOverflow); // the ruler is a clip box (no programmatic scroll)
       const visibleTicks = geometry.ticks.filter((tick) => Math.min(tick.right, geometry.ruler.right) - Math.max(tick.left, geometry.ruler.left) > 0);
       expect(visibleTicks.length, `zoom=${zoom} fraction=${fraction}`).toBeGreaterThan(0);
     }
