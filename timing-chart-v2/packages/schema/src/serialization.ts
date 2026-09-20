@@ -37,7 +37,19 @@ export function migrateDocument(input: unknown): { document: CanonicalDocument; 
   if (input === null || typeof input !== "object" || Array.isArray(input)) return undefined;
   const migrated = migrateThroughRegistry(input, 2);
   if (!migrated) return undefined;
-  return { document: cloneUnknown(migrated.value) as CanonicalDocument, warnings: migrated.warnings };
+  const document = cloneUnknown(migrated.value) as CanonicalDocument;
+  dropLegacySplitPane(document);
+  return { document, warnings: migrated.warnings };
+}
+
+/** #570: the per-signal Upper/Lower/Both assignment is legacy; it is read and ignored, never kept or written back. */
+function dropLegacySplitPane(document: CanonicalDocument): void {
+  const signals: unknown = (document as { signals?: unknown }).signals;
+  if (!Array.isArray(signals)) return;
+  for (const signal of signals) {
+    const display = signal !== null && typeof signal === "object" ? (signal as { display?: unknown }).display : undefined;
+    if (display !== null && typeof display === "object" && "splitPane" in display) delete (display as Record<string, unknown>).splitPane;
+  }
 }
 
 export type JsonInputResult = Readonly<{ ok: true; value: unknown } | { ok: false; problems: readonly DocumentProblem[] }>;

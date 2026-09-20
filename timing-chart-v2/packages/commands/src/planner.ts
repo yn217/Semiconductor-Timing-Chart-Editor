@@ -798,7 +798,6 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (command.width !== undefined && (nextType !== "bus" || !Number.isInteger(command.width) || command.width < 1)) return fail("invalid", "INVALID_SIGNAL_WIDTH", "$.width", "Width must be a positive integer and applies only to bus signals.");
       if (command.displayAlign !== undefined && !["left", "center", "right"].includes(command.displayAlign)) return fail("invalid", "INVALID_DISPLAY_ALIGN", "$.displayAlign", "Display alignment is invalid.");
       if (command.displayOverflow !== undefined && !["expand", "ellipsis", "wrap"].includes(command.displayOverflow)) return fail("invalid", "INVALID_DISPLAY_OVERFLOW", "$.displayOverflow", "Display overflow is invalid.");
-      if (command.splitPane !== undefined && !["upper", "lower", "both"].includes(command.splitPane)) return fail("invalid", "INVALID_SPLIT_PANE", "$.splitPane", "Signal Split pane assignment is invalid.");
       if ((command.spacingBefore !== undefined && (!Number.isFinite(command.spacingBefore) || command.spacingBefore < 0)) || (command.spacingAfter !== undefined && (!Number.isFinite(command.spacingAfter) || command.spacingAfter < 0))) return fail("invalid", "INVALID_SIGNAL_SPACING", "$.spacing", "Signal spacing must be finite and non-negative.");
       const currentFormat = signal.type === "bus" ? signal.displayFormat : undefined;
       const currentWidth = signal.type === "bus" ? signal.width : undefined;
@@ -806,18 +805,16 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const currentAlign = signal.display.align;
       const currentOverflow = signal.display.overflow;
       const currentStyle = signal.display.style;
-      const currentSplitPane = signal.display.splitPane;
       const nextFormat = nextType === "bus" ? command.displayFormat ?? currentFormat : undefined;
       const nextWidth = nextType === "bus" ? command.width ?? currentWidth : undefined;
       const nextVisible = command.visible ?? currentVisible;
       const nextAlign = command.displayAlign ?? currentAlign;
       const nextOverflow = command.displayOverflow ?? currentOverflow;
       const nextStyle = command.displayStyle ?? currentStyle;
-      const nextSplitPane = command.splitPane ?? currentSplitPane;
       const nextSpacingBefore = command.spacingBefore ?? signal.spacingBefore;
       const nextSpacingAfter = command.spacingAfter ?? signal.spacingAfter;
-      if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth && currentVisible === nextVisible && currentAlign === nextAlign && currentOverflow === nextOverflow && currentSplitPane === nextSplitPane && signal.spacingBefore === nextSpacingBefore && signal.spacingAfter === nextSpacingAfter && semanticEqual(currentStyle, nextStyle)) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
-      const nextDisplay = { ...signal.display, name, visible: nextVisible, ...(nextAlign === undefined ? {} : { align: nextAlign }), ...(nextOverflow === undefined ? {} : { overflow: nextOverflow }), ...(nextStyle === undefined ? {} : { style: nextStyle }), ...(nextSplitPane === undefined ? {} : { splitPane: nextSplitPane }) };
+      if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth && currentVisible === nextVisible && currentAlign === nextAlign && currentOverflow === nextOverflow && signal.spacingBefore === nextSpacingBefore && signal.spacingAfter === nextSpacingAfter && semanticEqual(currentStyle, nextStyle)) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
+      const nextDisplay = { ...signal.display, name, visible: nextVisible, ...(nextAlign === undefined ? {} : { align: nextAlign }), ...(nextOverflow === undefined ? {} : { overflow: nextOverflow }), ...(nextStyle === undefined ? {} : { style: nextStyle }) };
       const next: Signal = signal.type === "clock"
         ? { ...signal, name, role: command.role, display: nextDisplay, ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) }
         : (() => {

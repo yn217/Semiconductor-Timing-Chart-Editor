@@ -145,7 +145,7 @@ describe("migrateV1", () => {
     expect(validateCanonicalDocument(document)).toHaveLength(0);
   });
 
-  it("round-trips a valid Signal Split pane assignment and silently drops a garbage one (#200)", () => {
+  it("drops the legacy per-signal Signal Split pane assignment on load (#570)", () => {
     const source = v1Document({
       signals: [
         { id: "sig_upper", name: "UPPER", type: "binary", role: "input", display: { name: "UPPER", splitPane: "upper" }, values: [{ start: 0, value: 0 }] },
@@ -153,8 +153,8 @@ describe("migrateV1", () => {
       ],
     });
     const { document } = migrateV1(source);
-    expect(document.signals[0]!.display.splitPane).toBe("upper");
-    expect(document.signals[1]!.display.splitPane).toBeUndefined();
+    expect((document.signals[0]!.display as Record<string, unknown>).splitPane).toBeUndefined();
+    expect((document.signals[1]!.display as Record<string, unknown>).splitPane).toBeUndefined();
     expect(validateCanonicalDocument(document)).toHaveLength(0);
   });
 

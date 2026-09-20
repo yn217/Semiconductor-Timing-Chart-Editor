@@ -218,8 +218,7 @@
         "visible": { "type": "boolean" },
         "style": { "$ref": "#/$defs/jsonObject" },
         "align": { "enum": ["left", "center", "right"] },
-        "overflow": { "enum": ["expand", "ellipsis", "wrap"] },
-        "splitPane": { "enum": ["upper", "lower", "both"] }
+        "overflow": { "enum": ["expand", "ellipsis", "wrap"] }
       }
     },
     "change": {
