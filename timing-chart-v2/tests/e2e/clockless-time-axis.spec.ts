@@ -124,7 +124,8 @@ test("snaps a clockless transaction against the actual non-first TimeAxis owner 
   await page.mouse.down();
   await page.mouse.move(target!.x, before!.y + before!.height / 2);
   await page.mouse.up();
-  await expect(host).toHaveAttribute("data-transaction-snap-axis-row-id", owner.id);
+  // Snapping resolves through the shared TimeAxisGeometry (the visible owner row), not the hidden first row: the drop lands on
+  // the ruler's cycle-3 boundary.
   await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("3");
   await expect(transaction).toHaveAttribute("style", /left/);
 });

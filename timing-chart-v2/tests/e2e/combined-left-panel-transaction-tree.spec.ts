@@ -8,7 +8,7 @@ import { expect, test } from "@playwright/test";
 // adopted, not its icons/ruler/waveform rendering (all of which stay the
 // existing production Cycle/Transaction surfaces).
 
-test("Combined left panel stacks the production Transaction Tree above the production Cycle Signal Tree", async ({ page }) => {
+test("Combined left rail hosts the production Transaction Tree beside the Signal pane's frozen columns", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/?transaction-demo");
   const host = page.getByTestId("cycle-surface");
@@ -26,11 +26,12 @@ test("Combined left panel stacks the production Transaction Tree above the produ
   const signalBox = await firstFrozenRow.boundingBox();
   expect(treeBox).not.toBeNull();
   expect(signalBox).not.toBeNull();
-  // Upper (Transaction Tree) sits strictly above lower (Signal Tree): no
-  // vertical overlap between the two stacked left-column regions.
-  expect(treeBox!.y + treeBox!.height).toBeLessThanOrEqual(signalBox!.y + 1);
-  // Both share the same left column width (left + frozen width combined).
-  expect(Math.abs(treeBox!.width - signalBox!.width - 265)).toBeLessThan(2);
+  // Combined (#593/#756): the left rail is the production Transaction Tree; the Signal pane below the Transaction lanes
+  // carries its own frozen Role/Signal columns to the right of that rail, so the two never overlap horizontally.
+  expect(treeBox!.x + treeBox!.width).toBeLessThanOrEqual(signalBox!.x + 1);
+  const lanesBox = await page.getByTestId("transaction-lanes").boundingBox();
+  expect(lanesBox).not.toBeNull();
+  expect(lanesBox!.y + lanesBox!.height).toBeLessThanOrEqual(signalBox!.y + signalBox!.height);
 
   // Selecting a Transaction from the new tree works exactly like standalone
   // Transaction Mode's own tree, and stays view-only.
