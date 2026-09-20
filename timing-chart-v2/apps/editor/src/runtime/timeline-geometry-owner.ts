@@ -127,6 +127,7 @@ export class TimelineGeometryOwner {
     return waveOriginPx + displayCycle * pixelsPerDisplayCycle;
   }
 
+  #lastBoundedWindow: { start: number; end: number; cycleCount: number } | undefined;
   /** Resolve a local time viewport to canonical source cycles using semantic geometry. */
   sourceWindowForLocalRange(document: CanonicalDocument, localStart: number, localEnd: number, overscan = 2): Readonly<{ start: number; end: number }> {
     // Small/medium documents already fit comfortably in one WaveDrom artifact.
@@ -191,11 +192,16 @@ export class TimelineGeometryOwner {
       // Quantize the window to a grid: a window that starts exactly at the viewport start changes on every
       // scroll step, so a sustained drag re-rendered every mounted WaveDrom owner continuously (#621/#637).
       // With a 256-cycle grid the source window only changes when the viewport crosses a grid line.
-      const grid = 256;
+      // Tile-style reuse (#621): while the visible range (with overscan) still lies inside the
+    // window handed out last, return that same window so unchanged owners are not re-rendered.
+    const last = this.#lastBoundedWindow;
+    if (last && last.cycleCount === document.timeline.cycleCount && boundedStart >= last.start && boundedEnd <= last.end) return { start: last.start, end: last.end };
+    const grid = 256;
       const start = Math.max(0, Math.floor(boundedStart / grid) * grid);
       const span = Math.min(document.timeline.cycleCount, Math.max(512, Math.ceil((boundedEnd - start) / grid) * grid));
       const clampedStart = Math.max(0, Math.min(start, document.timeline.cycleCount - span));
-      return { start: clampedStart, end: clampedStart + span };
+      this.#lastBoundedWindow = { start: clampedStart, end: clampedStart + span, cycleCount: document.timeline.cycleCount };
+    return { start: clampedStart, end: clampedStart + span };
     }
     return { start: boundedStart, end: boundedEnd };
   }
