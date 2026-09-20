@@ -31,94 +31,9 @@ export interface MinimalCycleViewUiSource {
   readonly statusBarUi: ReactNode;
 }
 
-export function MinimalCycleViewUi({
-  source,
-  application,
-  timeline,
-}: {
-  readonly source: MinimalCycleViewUiSource;
-  readonly application: MinimalCycleApplicationPort;
-  readonly timeline: MinimalCycleTimelinePort;
-}) {
-  // Keep these reads deliberate.  They make the coarse ownership boundary
-  // visible to TypeScript even before every UI block consumes the ports.
-  void application;
-  void timeline;
-
-  return (
-    <main
-      className="editor-shell"
-      data-next-owner="ui"
-      data-application-owner="application"
-      data-timeline-owner="timeline"
-      data-next-zoom={String(timeline.state.zoom)}
-      data-next-revision={String(application.snapshot.revision)}
-      data-next-selected-cycle={String(timeline.state.selectedCycle)}
-      data-next-selected-signal={application.selection.signalId ?? ""}
-      data-cycle-count={application.snapshot.document.timeline.cycleCount}
-      data-signal-count={application.snapshot.document.signals.length}
-      data-transaction-count={application.snapshot.document.transactions.length}
-    >
-      {source.titleBarUi}
-      {source.ribbonTabsUi}
-      <MinimalCycleViewNextRibbon application={application} timeline={timeline} />
-
-      <div className="next-timeline-controls" data-testid="next-timeline-controls" aria-label="Next timeline controls">
-        <button type="button" data-testid="next-zoom-out" onClick={() => timeline.view.zoomBy(-0.1)}>Zoom Out</button>
-        <button type="button" data-testid="next-zoom-in" onClick={() => timeline.view.zoomBy(0.1)}>Zoom In</button>
-        <button type="button" data-testid="next-fit-all" onClick={() => timeline.view.fitAll()}>Fit All</button>
-        <button type="button" data-testid="next-fit-selection" onClick={() => timeline.view.fitSelection()}>Fit Selection</button>
-        <button type="button" data-testid="next-cycle-next" onClick={() => timeline.view.navigateToCycle(timeline.state.selectedCycle + 1)}>Next Cycle</button>
-      </div>
-
-      <MinimalCycleViewPanels
-        workspace={source.signalTreeAndCanvasUi}
-        bottom={source.bottomEditorUi}
-        inspector={source.inspectorShellUi}
-        overlays={source.dialogsUi}
-        status={source.statusBarUi}
-      />
-    </main>
-  );
-}
-
 export function MinimalCycleViewRibbonTabs({ ribbonTab, setRibbonTab, viewMode, setViewMode }: any) {
   const tabs = [{ key: "File", label: "File" }, { key: "Home", label: "Home" }, { key: "Insert", label: "Insert" }, { key: "Timeline", label: "Timeline" }, { key: "Annotation", label: "Annotation" }, { key: "View", label: "View" }, { key: "Review", label: "Check" }, { key: "AI", label: "AI" }] as const;
   return <nav className="ribbon-tabs" aria-label="Ribbon tabs">{tabs.map((tab) => <button type="button" key={tab.key} aria-label={tab.label} className={ribbonTab === tab.key ? "active" : ""} onClick={() => startTransition(() => setRibbonTab(tab.key))}>{tab.label}</button>)}<div className="view-mode"><span>View Mode:</span>{(["Cycle", "Transaction", "Split"] as const).map((mode) => { const label = mode === "Split" ? "Combined" : mode; return <button type="button" key={mode} aria-label={label} title={mode === "Split" ? "Combined Cycle + Transaction view" : undefined} className={viewMode === mode ? "active" : ""} onClick={() => setViewMode(mode)}>{label}</button>; })}</div></nav>;
-}
-
-export function MinimalCycleViewSignalTreeCanvas({ document, selectedSignalId, onSelect, surfaceHostRef, rulerRef, gridLayerRef }: { readonly document: Readonly<CanonicalDocument>; readonly selectedSignalId?: SignalId | undefined; readonly onSelect: (id: SignalId) => void; readonly surfaceHostRef: RefObject<HTMLDivElement | null>; readonly rulerRef: RefObject<HTMLDivElement | null>; readonly gridLayerRef: RefObject<HTMLDivElement | null> }) {
-  return <section className="cycle-panel" data-testid="next-signal-tree-canvas" aria-label="Next signal tree and canvas">
-    <div className="next-signal-tree" data-role="timing-tree" role="tree" aria-label="Signals">
-      {document.signals.map((signal) => <button type="button" role="treeitem" key={signal.id} data-row-id={signal.id} aria-selected={signal.id === selectedSignalId} onClick={() => onSelect(signal.id)}>{signal.display.name}</button>)}
-    </div>
-    <div className="cycle-viewport" data-testid="next-cycle-viewport" aria-label="Next timing canvas"><div className="geometry-grid" ref={gridLayerRef} data-testid="next-geometry-grid" aria-hidden="true" /><div className="cycle-ruler" data-testid="next-cycle-ruler" aria-label="Cycle ruler"><div ref={rulerRef} /></div><div className="range-selection-band" data-testid="next-range-band" aria-hidden="true" /><div className="surface-host" ref={surfaceHostRef} data-testid="next-surface-host" /></div>
-  </section>;
-}
-
-export function MinimalCycleViewBottomEditor({ tab, onTabChange, followSelection, onFollowSelectionChange, pinned, onPinnedChange }: { readonly tab: string; readonly onTabChange: (tab: string) => void; readonly followSelection: boolean; readonly onFollowSelectionChange: (value: boolean) => void; readonly pinned: boolean; readonly onPinnedChange: (value: boolean) => void }) {
-  const tabs = ["Signal", "Annotation", "Transaction", "Problems", "JSON"];
-  const onTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, current: string) => {
-    const index = tabs.indexOf(current);
-    const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : event.key === "ArrowRight" ? (index + 1) % tabs.length : event.key === "ArrowLeft" ? (index - 1 + tabs.length) % tabs.length : -1;
-    if (nextIndex < 0) return;
-    event.preventDefault();
-    const next = tabs[nextIndex]!;
-    onTabChange(next);
-    requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`[data-testid='next-bottom-editor'] [data-bottom-tab='${next}']`)?.focus());
-  };
-  return <section className="bottom-editor" data-testid="next-bottom-editor">
-    <nav className="bottom-tabs" role="tablist" aria-label="Next bottom context panels">{tabs.map((item) => <button type="button" role="tab" key={item} data-bottom-tab={item} tabIndex={tab === item ? 0 : -1} aria-selected={tab === item} className={tab === item ? "active" : ""} onClick={() => onTabChange(item)} onKeyDown={(event) => onTabKeyDown(event, item)}>{item}</button>)}<span /><label><input data-testid="next-follow-selection" type="checkbox" checked={followSelection} onChange={(event) => onFollowSelectionChange(event.target.checked)} /> Follow Selection</label><button type="button" data-testid="next-bottom-pin" aria-pressed={pinned} onClick={() => onPinnedChange(!pinned)}>{pinned ? "Unpin" : "Pin"}</button></nav>
-    <div className="bottom-content" role="tabpanel" data-testid="next-bottom-content"><strong>{tab}</strong> context</div>
-  </section>;
-}
-
-export function MinimalCycleViewNextStatusBar({ document, revision, history }: { readonly document: Readonly<CanonicalDocument>; readonly revision: number; readonly history: HistoryState }) {
-  return <footer className="status-bar" data-testid="next-status" aria-label="Next editor status"><span>Signals: {document.signals.length}</span><span>Transactions: {document.transactions.length}</span><span>Revision: {revision}</span><span data-testid="next-dirty-status">{history.dirty ? "Modified" : "Clean"}</span></footer>;
-}
-
-export function MinimalCycleViewNextRibbon({ application, timeline }: { readonly application: MinimalCycleApplicationPort; readonly timeline: MinimalCycleTimelinePort }) {
-  return <div className="ribbon" data-testid="next-ribbon"><div className="next-ribbon-group" aria-label="Edit"><button type="button" onClick={application.command.undo} disabled={!application.history.canUndo}>Undo</button><button type="button" onClick={application.command.redo} disabled={!application.history.canRedo}>Redo</button><button type="button" onClick={application.clipboard.delete}>Delete</button></div><div className="next-ribbon-group" aria-label="Timeline"><button type="button" onClick={() => timeline.view.zoomBy(-0.1)}>Zoom Out</button><button type="button" onClick={() => timeline.view.zoomBy(0.1)}>Zoom In</button><button type="button" onClick={timeline.view.fitAll}>Fit All</button></div></div>;
 }
 
 export function refreshTreeCollapsedMetadata(host: RefObject<HTMLDivElement | null>, collapsedGroups: ReadonlySet<string>): void { const root = host.current; if (root) root.dataset.collapsedGroups = [...collapsedGroups].join(","); }
