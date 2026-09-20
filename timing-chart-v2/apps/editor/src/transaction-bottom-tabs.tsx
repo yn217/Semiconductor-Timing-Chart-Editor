@@ -67,7 +67,7 @@ function initialPhaseRows(transaction: Transaction | undefined): TransactionPhas
   return (draft && phasesEqual(draft.base, base) ? draft.rows : base).map((phase) => ({ ...phase }));
 }
 
-export function TransactionPhaseEditor({ transaction, commands, compact = false, cyclesPerTc: perTc = 1 }: { readonly transaction: Transaction | undefined; readonly commands: EditorSurfaceCommandController; readonly compact?: boolean; readonly cyclesPerTc?: number }) {
+export function TransactionPhaseEditor({ transaction, commands, compact = false, cyclesPerTc: perTc = 1, parentRange }: { readonly transaction: Transaction | undefined; readonly commands: EditorSurfaceCommandController; readonly compact?: boolean; readonly cyclesPerTc?: number; /** Draft parent Start/End (Inspector): Phases validate against the range that Apply will commit together with them. */ readonly parentRange?: Readonly<{ start: number; end: number }> }) {
   const [rows, setRowsRaw] = useState<TransactionPhase[]>(() => initialPhaseRows(transaction));
   const [error, setError] = useState("");
   const setRows = (update: (current: TransactionPhase[]) => TransactionPhase[]) => setRowsRaw((current) => {
@@ -93,10 +93,12 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false,
     setError("");
   }, [transaction?.id, transaction?.start, transaction?.end, transaction?.phases]);
   if (!transaction) return <section className="transaction-bottom-summary" data-testid="transaction-bottom-phases"><p className="inspector-note">Select a Transaction to edit phases.</p></section>;
+  const rangeStart = parentRange?.start ?? transaction.start;
+  const rangeEnd = parentRange?.end ?? transaction.end;
   const changed = !phasesEqual(rows, transaction.phases ?? []);
   const addPhase = () => {
-    const nextStart = Math.max(transaction.start, ...rows.map((phase) => phase.end));
-    if (nextStart >= transaction.end) return;
+    const nextStart = Math.max(rangeStart, ...rows.map((phase) => phase.end));
+    if (nextStart >= rangeEnd) return;
     setRows((current) => [...current, { name: `Phase ${current.length + 1}`, start: nextStart, end: nextStart + 1 }]);
   };
   const apply = () => {
@@ -108,11 +110,11 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false,
     commands.updateTransactionFromBottom({ transactionId: transaction.id, name: transaction.name, start: transaction.start, end: transaction.end, ...(transaction.laneId === undefined ? {} : { laneId: transaction.laneId }), ...(transaction.groupId === undefined ? { clearGroupId: true } : { groupId: transaction.groupId }), ...(transaction.color === undefined ? { clearColor: true } : { color: transaction.color }), ...(transaction.description === undefined ? { clearDescription: true } : { description: transaction.description }), phases: normalized });
   };
   const covered = rows.reduce((sum, phase) => sum + Math.max(0, phase.end - phase.start), 0);
-  const duration = transaction.end - transaction.start;
-  const liveError = changed ? phaseError(rows.map((phase) => ({ ...phase, name: phase.name.trim() })), transaction.start, transaction.end) : undefined;
+  const duration = rangeEnd - rangeStart;
+  const liveError = changed ? phaseError(rows.map((phase) => ({ ...phase, name: phase.name.trim() })), rangeStart, rangeEnd) : undefined;
   const ordered = [...rows].sort((a, b) => a.start - b.start || a.end - b.end);
   const overlaps = ordered.some((phase, index) => index > 0 && phase.start < ordered[index - 1]!.end);
-  const outside = rows.some((phase) => phase.start < transaction.start || phase.end > transaction.end);
+  const outside = rows.some((phase) => phase.start < rangeStart || phase.end > rangeEnd);
   const coverageProblem = rows.length === 0 ? "No phases defined" : outside ? "Phase exceeds the Transaction range" : overlaps ? "Phases overlap" : covered < duration ? `Uncovered time: ${cyclesToTc(duration - covered, perTc)} ${perTc === 1 ? "cycles" : "TC"}` : undefined;
   const shownError = error || liveError || "";
   const updateRow = (index: number, patch: Partial<TransactionPhase>) => setRows((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
@@ -128,7 +130,7 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false,
     {!compact && <p className="transaction-bottom-phase-context" data-testid="transaction-bottom-phase-context">Group: {transaction.groupId ?? "Ungrouped"} · Lane: {transaction.laneId ?? "lane_0"} · Start {cyclesToTc(transaction.start, perTc)} · End {cyclesToTc(transaction.end, perTc)} · Duration {cyclesToTc(duration, perTc)} {perTc === 1 ? "cycles" : "TC"} · Coverage {cyclesToTc(covered, perTc)} / {cyclesToTc(duration, perTc)} · Remaining {cyclesToTc(Math.max(0, duration - covered), perTc)}</p>}
     {!compact && <div className="transaction-bottom-phase-timeline" data-testid="transaction-bottom-phase-timeline" role="img" aria-label={`Phase timeline ${cyclesToTc(transaction.start, perTc)} to ${cyclesToTc(transaction.end, perTc)}`}>
       {[...rows].map((phase, index) => ({ phase, index })).sort((a, b) => a.phase.start - b.phase.start).map(({ phase, index }) => {
-        const left = Math.max(0, Math.min(100, 100 * (phase.start - transaction.start) / Math.max(1, duration)));
+        const left = Math.max(0, Math.min(100, 100 * (phase.start - rangeStart) / Math.max(1, duration)));
         const width = Math.max(0.5, Math.min(100 - left, 100 * (phase.end - phase.start) / Math.max(1, duration)));
         return <span key={index} className="transaction-bottom-phase-segment" data-phase-index={index} title={`${phase.name}: ${cyclesToTc(phase.start, perTc)}–${cyclesToTc(phase.end, perTc)}`} style={{ left: `${left}%`, width: `${width}%` }}>{phase.name}</span>;
       })}
@@ -136,8 +138,8 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false,
     <p className={`transaction-bottom-phase-coverage${coverageProblem ? " is-warning" : ""}`} data-testid="transaction-bottom-phase-coverage">{coverageProblem ?? "✓ Full Transaction range is covered"}</p>
     <div className="transaction-bottom-phase-table"><div className="transaction-bottom-phase-row transaction-bottom-phase-head"><span>Name</span><span>{perTc === 1 ? "Start" : "Start (TC)"}</span><span>{perTc === 1 ? "End" : "End (TC)"}</span><span>{perTc === 1 ? "Duration" : "Duration (TC)"}</span><span /></div>{rows.map((phase, index) => <div className="transaction-bottom-phase-row" key={`${transaction.id}-${index}`} data-phase-index={index}><input aria-label={`${compact ? "" : "Bottom "}Phase ${index + 1} name`} value={phase.name} onChange={(event) => updateRow(index, { name: event.target.value })} /><input aria-label={`${compact ? "" : "Bottom "}Phase ${index + 1} start`} type="number" step={perTc === 1 ? 1 : 1 / perTc} value={cyclesToTc(phase.start, perTc)} onChange={(event) => updateRow(index, { start: tcToCycles(Number(event.target.value), perTc) })} /><input aria-label={`${compact ? "" : "Bottom "}Phase ${index + 1} end`} type="number" step={perTc === 1 ? 1 : 1 / perTc} value={cyclesToTc(phase.end, perTc)} onChange={(event) => updateRow(index, { end: tcToCycles(Number(event.target.value), perTc) })} /><span>{cyclesToTc(phase.end - phase.start, perTc)}</span><button type="button" aria-label={compact ? `Delete phase ${index + 1}` : `Delete bottom phase ${index + 1}`} onClick={() => setRows((current) => current.filter((_, itemIndex) => itemIndex !== index))}>×</button></div>)}</div>
     {rows.length === 0 && <p className="inspector-note">No phases defined. Add a phase within the Transaction range.</p>}
-    <button type="button" data-testid={compact ? "add-transaction-phase" : "add-bottom-transaction-phase"} onClick={addPhase} disabled={Math.max(transaction.start, ...rows.map((phase) => phase.end)) >= transaction.end}>Add Phase</button>
-    {compact && rows.length > 0 && Math.max(transaction.start, ...rows.map((phase) => phase.end)) >= transaction.end && <p className="inspector-note" role="note">No unused cycles remain. Extend the Transaction or shorten a Phase to add another.</p>}
+    <button type="button" data-testid={compact ? "add-transaction-phase" : "add-bottom-transaction-phase"} onClick={addPhase} disabled={Math.max(rangeStart, ...rows.map((phase) => phase.end)) >= rangeEnd}>Add Phase</button>
+    {compact && rows.length > 0 && Math.max(rangeStart, ...rows.map((phase) => phase.end)) >= rangeEnd && <p className="inspector-note" role="note">No unused cycles remain. Extend the Transaction or shorten a Phase to add another.</p>}
     {shownError && <p className="inspector-note" role="alert" data-testid="transaction-bottom-phase-error">{shownError}</p>}
   </section>;
 }
