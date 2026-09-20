@@ -106,3 +106,5 @@ input[type="checkbox"]:disabled { opacity: var(--ds-disabled-opacity, .5); curso
    owner. */
 .modal-backdrop { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; background: #16263b55; }
 .ds-icon-box > svg { flex: 0 0 18px; width: 18px; height: 18px; }
+/* #724: a non-default Transaction tree filter is visibly active (accent outline) on the left-pane header. */
+.editor-shell select[data-filter-active="true"] { outline: 2px solid #2f6fda; outline-offset: -1px; }

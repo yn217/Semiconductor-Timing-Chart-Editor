@@ -555,6 +555,9 @@ export function TransactionTree({
         <strong>All Transactions</strong>
         <span>({document.transactions.length})</span>
       </div>
+      {document.transactions.length > 0 && (needle.length > 0 || filterMode !== "all") && !document.transactions.some(matches) && (
+        <p className="inspector-note" role="status" data-testid="transaction-tree-no-match">No transactions match the active tree filter{needle.length > 0 ? ` “${filter.trim()}”` : ""}{filterMode !== "all" ? ` (${filterMode})` : ""}. Clear the search / choose All to see them.</p>
+      )}
       {!collapsed.has("__all__") && (
         <div className="transaction-left-tree-groups">
           {groups.map((group) => {
