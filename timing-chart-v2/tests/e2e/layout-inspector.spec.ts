@@ -77,6 +77,9 @@ test("auto fits a long rendered signal label through one layout command", async 
   const layout = page.getByTestId("inspector-layout-editor");
   const before = Number(await layout.getByLabel("Inspector signal name width").inputValue());
   await layout.getByTestId("auto-fit-inspector-layout").click();
+  // Auto Fit only fills the Layout draft (no Canonical change) -- Apply commits it as one command.
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await page.getByTestId("apply-inspector-layout").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   const after = Number(await page.getByTestId("inspector-layout-editor").getByLabel("Inspector signal name width").inputValue());
   expect(after).toBeGreaterThan(before);
