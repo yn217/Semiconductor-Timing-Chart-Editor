@@ -3,197 +3,180 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-18 JST
-# Observed main: 2908001b3c8bc778a7eebf7fffca742e97d445b1
+# Last reconciled by ChatGPT: 2026-09-22 JST
 #
 # Codex implements on main and only READS codex-control.
 # Never merge/cherry-pick codex-control into main.
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line.
 #
-# Claude is unavailable until the user re-enables it (expected Sunday morning).
-# Do NOT wait/poll Claude for issues whose expected behavior is already decided.
-# Product-decision-only issues remain HOLD and must not be guessed.
+# One Issue = one active implementation owner.
+# Claude owns independent QA / visual review / product evidence unless explicitly handed implementation.
 #
 # ============================================================================
-# CURRENT CODEX EXECUTABLE QUEUE — CORRECTNESS / USER-VISIBLE REGRESSIONS FIRST
+# CURRENT CODEX EXECUTABLE QUEUE — CURRENT OPEN PRODUCT WORK ONLY
 # ============================================================================
 #
-# 1) #625 — Cycle fixed left columns / horizontal scroll ownership.
-#    CURRENT USER VIDEO OVERRIDES NARROWER TEST PASS.
-#    User still sees Timeline content moving behind/through the fixed left pane during real scrollbar drag.
-#    This is a PRODUCTION STRUCTURE FIX, not another test-only PR.
-#    Required target:
-#      CycleWorkspace
-#      ├─ FixedColumns        <- never horizontally transformed
-#      └─ TimelineViewport    <- sole overflow-x / scroll owner
-#    Do not close with z-index/background masking or a few-pixel offset tweak.
-#    Require real native-thumb drag on actual main at 1672x941 and 1280x720 and frame-sampled proof.
-625
+# 1) #737 — Transaction Bottom tree-grid Phase child rows are misaligned.
+#    Latest user screenshot is authoritative evidence.
+#    Header / Transaction parent row / Phase child row MUST consume one shared column-definition owner.
+#    Phase indentation belongs inside Name only; Start/End/Duration must align to the same X boundaries.
+#    One horizontal scroll owner; no per-row margin/padding magic-number fix.
+#    Require pre-fix FAIL -> post-fix PASS geometry test at 1280x720 and 1672x941.
+737
 #
-# 2) #646 — Transaction Tree fixed during horizontal timeline scroll.
-#    PR #652 is independently verified PASS but is still not on main.
-#    Rebase/land the production fix safely onto current main, then repeat real pointer scrollbar drag
-#    on actual main at 1672x941 and 1280x720.
-#    #647 owns Y-correspondence policy; #650 owns selection reveal. Do not wait for #647 to fix X ownership.
-646
+# 2) #752 — TransactionEditor selection-keyed remount discards draft/table state.
+#    Fix lifecycle ownership before adding more Bottom behavior that depends on persistent draft/selection state.
+#    Stable component identity must not depend on selected Transaction ID.
+#    Preserve draft, expansion, sort/filter and table UI state according to Issue contract.
+752
 #
-# 3) #637 — Sustained Cycle horizontal scrollbar drag blanks waveform canvas.
-#    User video reproduces a frame-visible blank/empty waveform during scroll.
-#    Implement the code-level contract in the latest #637 comment:
-#    small/medium documents do not re-window on scroll; large documents use retained-window hysteresis;
-#    renderer queue is latest-window-wins; replacement WaveDrom renders off-DOM and swaps atomically;
-#    stale/transient replacement must preserve the last-good visible SVG.
-637
+# 3) #703 — Transaction Bottom inline Draft -> Apply editing.
+#    Keep one draft owner and one Apply = one semantic command / History unit.
+#    Do not directly mutate Canonical from cell edits.
+#    Must coexist with multi-selection and Phase hierarchy.
+703
 #
-# 4) #624 — Cycle restore/mode-entry projection completeness.
-#    PR #670 is independently verified PASS. Rebase/land safely and require main-branch re-Acceptance.
-624
+# 4) #747 — Transaction Bottom UX consolidation.
+#    Unify Add/Create, expose Start/End sorting, move behavior settings behind gear,
+#    and stabilize Phase tree-grid layout without duplicating #737's column owner.
+#    Treat #737/#752/#703 as lower-level prerequisites/constraints.
+747
 #
-# 5) #676 — Annotation Canvas drag moves geometry but Inspector anchor fields remain stale.
-#    Trace pointer-up -> semantic/canonical anchor update -> History -> selected stable ID ->
-#    Inspector/Bottom projection refresh. One drag = one semantic operation. No DOM-pixel truth.
-676
+# 5) #770 — Hidden-selection safety under filtering.
+#    Prevent destructive bulk operations from silently including hidden selected Transactions.
+#    Make scope explicit before Delete/Group/Ungroup/Color/Duplicate.
+#    Use stable selected IDs and current visible/filter projection; do not infer from DOM rows.
+770
 #
-# 6) #626 — Visual / geometry / interaction regression harness.
-#    PR #671 is Phase 1 only. Extend the harness specifically to catch the failures the user is finding:
-#    - fixed-pane X/width invariance during real scrollbar drag
-#    - timeline paint bounds must not enter fixed-pane screen region
-#    - Cycle/Transaction cross-mode geometry isolation
-#    - before/after changed-region report
-#    Do not weaken baselines/thresholds/masks.
-626
+# 6) #769 — Transaction Tree virtualization + keyboard/a11y after group topology changes.
+#    Recompute visible windows after expand/collapse/filter/group mutations.
+#    Preserve keyboard traversal, focus and stable-ID selection across virtualization changes.
+769
 #
-# 7) #650 — Selecting a Transaction resets horizontal scroll to 0 instead of minimally revealing it.
-#    Use semantic start/end + current viewport geometry. Already-visible selection must not move.
-650
-#
-# 8) #632 — First Cycle Signal selection causes one-time full waveform cache replacement.
-#    Source-trace invalidation/epoch ownership; do not paper over with memoization only.
-632
-#
-# 9) #593 — Cycle / Transaction / Combined workspace presentation isolation.
-#    This is the architecture follow-through for repeated cross-mode regressions.
-#    Standalone Cycle and Transaction layout/presentation owners must be isolated.
-#    Combined explicitly owns the shared horizontal semantic-time viewport.
+# 7) #593 — Mode presentation/layout-owner isolation.
+#    Reopened. Consolidate the architecture follow-through after current Bottom/tree correctness work.
+#    Cycle, Transaction and Combined must not silently share stale layout/presentation owners.
+#    Combined explicitly owns its shared horizontal time viewport.
 593
 #
-# 10) #615 — Passive View + hierarchical Mediator/state-machine ownership.
-#    Continue incrementally using concrete current failures (#625/#646/#676/#632) as evidence.
-615
-#
-# 11) #639 — Cycle-mode Transaction creation leaves Bottom in an invalid Transaction tab/state.
-#     Fix production route, not only test setup.
-639
-#
-# 12) #651 — Dialog focus restoration.
-#     Dialog close must return focus to invoking control or explicit fallback; preserve working focus trap.
-651
-#
-# 13) #623 — Cycle startup/mode-entry visually settles multiple times.
-#     Existing evidence already identifies full-width fallback -> bounded width correction.
-#     Implement only after the higher-priority geometry/ownership fixes above; no timeout/debounce/opacity masking.
-623
-#
-# 14) #599 — Transaction startup/reload performance closure.
-#     Re-measure after correctness/ownership work; optimize only measured duplicate/avoidable work.
-599
+# 8) #573 — Combined stacked Transaction-over-Cycle layout.
+#    Reopened. Restore/maintain stacked layout with one shared horizontal semantic-time axis.
+#    Coordinate with #593; do not create a second horizontal owner.
+573
 #
 # ============================================================================
-# ANTI-MICRO-TUNING / ROOT-CAUSE EXECUTION RULE
+# QA INFRASTRUCTURE QUEUE — AFTER CURRENT USER-VISIBLE CORRECTNESS WORK
 # ============================================================================
 #
-# Repeated "change a few pixels -> rerun -> change a few pixels again" loops are NOT acceptable.
+# #681 is the umbrella. Reconcile existing PRs before writing duplicate implementation.
+# Complete children first, then close umbrella only when workflow is actually enforced.
 #
-# For geometry/layout/scroll issues (#625/#646/#593/#623 especially):
+# 9) #682 — mandatory bug-fix contract / Issue template / PR evidence / taxonomy.
+682
 #
-# 1. Before editing, identify the authoritative owner and first divergence.
-#    Record:
-#      expected owner/state
-#      actual owner/state
-#      first function/component where they diverge
+# 10) #683 — machine-readable journey/contract/evidence schemas and mechanical gates.
+683
 #
-# 2. Prefer ownership/coordinate-space fixes over numeric tuning.
-#    Forbidden as a primary fix unless the Issue explicitly defines a product constant:
-#      - arbitrary +N/-N px offsets
-#      - repeated CSS left/width nudges
-#      - screenshot-matching magic numbers
-#      - z-index/background concealment of a wrong scroll surface
+# 11) #684 — blind fresh-state bug-hunt journeys + independent verifier protocol.
+684
 #
-# 3. Two-strike rule:
-#    If two consecutive localized numeric/CSS adjustments fail to satisfy the same acceptance,
-#    STOP tuning. Revert the speculative adjustment and escalate to root-cause/owner restructuring.
-#
-# 4. Every geometry fix must state which invariant becomes true, e.g.:
-#      fixedPane.screenX == constant
-#      fixedPane.width == constant
-#      timelinePaint.left >= fixedPane.right
-#      Cycle pitch before scroll == Cycle pitch after scroll
-#      same source cycle -> same X
-#
-# 5. Do not create a new PR whose only effect is a tiny offset correction after another tiny offset PR
-#    for the same root cause. Fold the work into one root-cause branch until the acceptance is coherent.
-#
-# 6. User-visible real-browser evidence overrides narrower automated PASS.
-#    A passing programmatic scrollLeft test does not close a defect that still reproduces with a real pointer.
+# 12) #681 — umbrella closure after #682/#683/#684 are integrated and proven in real use.
+681
 #
 # ============================================================================
-# VERIFIED / MERGE COORDINATION — NOT EXECUTABLE ISSUE LINES
+# NEEDS REPRO / EVIDENCE — DO NOT LOOP; NOT EXECUTABLE QUEUE LINES
 # ============================================================================
-# - PR #652 fixes #646 and is independently PASS; main re-Acceptance still required after merge.
-# - PR #670 fixes #624 comprehensively; main re-Acceptance still required after merge.
-# - PR #671 is only Phase 1 of #626.
-# - PR #668/#669 cover #635 sub-slices; reconcile overlapping paths intentionally if/when resumed.
-# - PR #667 exposes #676; do not treat a test PR as production closure.
-# - PR #654 does not prove current-main #639 production closure.
+# #738 Transaction ruler/hit-area/orphan-line:
+#   OPEN, but latest Claude reproduction matrix could not reproduce the reported stale-origin failure.
+#   Resume only with materially new repro evidence (exact input path/document/zoom/gesture or video evidence).
+#
+# #753 Bookmark blank/navigation crash:
+#   OPEN, but randomized operations and fresh-state checks did not reproduce.
+#   Resume with exact video operation sequence, console/page error, or deterministic repro.
+#
+# #754 Transaction video-regression umbrella:
+#   Claude QA tracks child regressions. Do not implement the umbrella directly.
 #
 # ============================================================================
-# CLAUDE / PRODUCT-DECISION HOLD — CODEX MUST NOT GUESS
+# CURRENTLY OPEN PR / MERGE COORDINATION
 # ============================================================================
-# Claude is temporarily unavailable. These remain non-executable until user/product decision is explicit:
-# - #647 Tree/Lane correspondence model
-# - #677 Pinned Annotation collection-vs-detail routing
-# - #631 Transaction visual hierarchy / Bookmark prominence
-# - #431 broad exploratory UX audit
-# - #426 broad Bottom UX review beyond already-decided implementation slices
-# - #441 Ribbon adaptive/high-density review
-# - #554 broad fresh-document exploratory audit
+# PR #762 is a large Claude branch containing multiple already-implemented slices
+# (Cycle fixed columns/left rail, Transaction TC compression, Combined wheel,
+#  Group disclosure, Phase/Inspector work).
+# Do NOT blindly merge it as one truth source.
+# Before any merge:
+#   - compare each diff to current main;
+#   - drop/rebase slices already superseded by main;
+#   - preserve only still-needed commits;
+#   - run each original Issue journey on actual main after integration.
 #
-# If a currently executing correctness issue touches one of these, fix only the already-decided
-# correctness boundary and leave the undecided product policy unchanged.
-#
-# ============================================================================
-# RECENTLY CLOSED / PRESERVE
-# ============================================================================
-# #627 Add Phase semantic commit — CLOSED after real fix verification.
-# #628 Annotation Bottom double-scroll/reflow — CLOSED after main re-Acceptance.
-# #629 stale cross-mode Inspector — CLOSED.
-# #630 stale title mode suffix — CLOSED.
-# #614 waveform scale mismatch — resolved/merged previously.
+# Existing historical/open PRs may be stale relative to current main.
+# Always read latest Issue comments + current main before using them.
 #
 # ============================================================================
-# HOLD / REFERENCE / EXTERNAL
+# RECENTLY CLOSED / REMOVE FROM EXECUTABLE QUEUE
 # ============================================================================
-# #570 current cross-feature Product Spec authority.
-# #569 AI subscription/external-agent policy authority.
-# #272 external GitHub Actions runner allocation/billing/policy block; do not loop on it.
-# #415 explicitly skipped until user re-enables it.
-# #611 product decision hold where reference/production visual contract conflicts.
+# #615 completed: stable slot-based shell accepted; no portal/per-mode-root rewrite.
+# #621 closed not-planned: current WaveDrom optimization path exhausted; do not revive tiling by default.
+# #624 closed.
+# #625 closed.
+# #623 closed.
+# #626 closed.
+# #632 closed.
+# #637 closed.
+# #639 closed.
+# #646 closed.
+# #651 closed.
+# #676 closed.
+# #599 closed.
+# #698 closed.
+# #748 closed after left-pane parity work.
+# #750 closed.
+# #751 closed.
+# #756 closed.
+# #759 closed.
+# #760 closed.
+# #763 closed.
+# #764 closed.
+# #765 closed.
+# #766 closed.
+#
+# Closed state is not stronger than fresh user-visible evidence.
+# If the exact defect reappears in current main, reopen with new evidence instead of creating a duplicate.
 #
 # ============================================================================
-# GLOBAL EXECUTION RULES
+# CLAUDE / PRODUCT REVIEW — NOT CODEX EXECUTABLE LINES
 # ============================================================================
-# - Read latest origin/main, Issue body, comments and open PRs before editing.
-# - Complete/record one child Issue, then immediately continue to the next executable line.
-# - CHILD_BLOCKED does NOT block the queue; record evidence and continue to the next independent Issue.
-# - "no new user instruction", "state unchanged", and repeated status-only messages are not stop reasons.
-# - User-visible real-browser failure overrides narrower automated PASS.
-# - Regression guard should demonstrate base/pre-fix FAIL -> fix PASS when practical.
-# - PR branch PASS is not final closure: rerun original journey on actual main after merge.
-# - Pointer/D&D/scroll acceptance uses real browser pointer interaction.
-# - Treat stale Vite/HMR/long-lived-tab artifacts separately from product bugs; retry fresh tab/server.
-# - Never weaken Golden/reference/threshold/mask merely to pass.
-# - Never reset/stash/clean/delete unrelated user/agent work.
-# - Stable opaque IDs; no array-index/name/DOM-order semantic identity.
+# #426 Bottom Panel UX epic — Claude product/UX review.
+# #431 broad usability epic — Claude visual/product review.
+# #554 fresh-document real-user journey audit — Claude.
+# #754 video-regression umbrella — Claude.
+#
+# Closed product decisions #631/#647/#677 remain closed unless new contradictory evidence appears.
+#
+# ============================================================================
+# FIXED HOLD / EXTERNAL
+# ============================================================================
+# #272 BLOCKED_EXTERNAL — runner_id=0 / steps=0 / no logs; do not loop.
+# #415 SKIPPED_BY_USER — do not implement until explicitly re-enabled.
+# #633 AWAITING_CLEANUP_APPROVAL — inventory only; no deletion without explicit approval.
+#
+# ============================================================================
+# ROOT-CAUSE / EXECUTION RULES
+# ============================================================================
+# - Read latest origin/main + Issue body/comments + relevant open PRs before editing.
+# - User-visible real-browser evidence overrides narrower automated PASS.
+# - Regression guard should demonstrate pre-fix/base FAIL -> fix PASS when practical.
+# - PR branch PASS is not final closure: re-run original journey on actual main after merge.
+# - Pointer/D&D/scroll acceptance uses real production interactions.
+# - Stable opaque IDs; no array index/name/DOM-order semantic identity.
 # - DOM/ruler pixels are not semantic authority.
 # - View-only operations keep Canonical/History/Dirty delta = 0.
 # - Canonical -> Semantic Commands / History -> Projection -> Renderer -> DOM.
+# - No z-index/background concealment of wrong ownership.
+# - No arbitrary +N/-N px micro-tuning as a root fix.
+# - Two failed local numeric/CSS tweaks => stop, revert speculation, trace owner/coordinate space.
+# - Never weaken Golden/reference/threshold/mask merely to pass.
+# - Never reset/stash/clean/delete unrelated user/agent work.
+# - CHILD_BLOCKED does not block the queue; record evidence and continue to next independent Issue.
+# - "state unchanged" / "waiting for user" is not a stop reason while another executable Issue exists.
