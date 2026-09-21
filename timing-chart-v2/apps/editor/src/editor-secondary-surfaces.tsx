@@ -1,3 +1,4 @@
+import { useTransactionDisclosure } from "./workspace/use-transaction-disclosure.js";
 import { useCallback } from "react";
 import type {
   Dispatch,
@@ -429,8 +430,11 @@ export function useEditorSecondarySurfaces(
     (cycle: number) => refs.transactionBoundaryX.current(cycle),
     [refs.transactionBoundaryX],
   );
+  // #759: one Group disclosure owner for the Left Tree and the center Group headers.
+  const disclosure = useTransactionDisclosure(input.document, input.documentEpoch);
   const workspaceViewportContent = workspace.viewMode !== "Cycle" ? (
     <TransactionLanes
+        disclosure={disclosure}
         document={input.document}
         documentEpoch={input.documentEpoch}
         viewMode={workspace.viewMode}
@@ -464,6 +468,7 @@ export function useEditorSecondarySurfaces(
     // the Cycle Signal Tree (lower), never a second tree implementation.
     (workspace.viewMode === "Transaction" || workspace.viewMode === "Split") ? (
       <TransactionTree
+        disclosure={disclosure}
         document={input.document}
         documentEpoch={input.documentEpoch}
         filter={workspace.transactionTreeFilter}

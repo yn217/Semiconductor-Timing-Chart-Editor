@@ -1,3 +1,4 @@
+import { UNGROUPED_DISCLOSURE_KEY, type TransactionDisclosure } from "../workspace/use-transaction-disclosure.js";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { Bookmark, BookmarkId, CanonicalDocument, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { EditorIcon } from "../editor-icon.js";
@@ -274,7 +275,7 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   return <button ref={buttonRef} type="button" data-transaction-id={transaction.id} data-selected={String(selected)} data-drag-preview={String(preview !== undefined)} style={{ left: startX, width: endX - startX, top: 4 + row * LANE_ROW_HEIGHT, ...(color ? { "--transaction-color": color } as CSSProperties : {}) }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)} onContextMenu={(event) => { event.preventDefault(); onSelect(transaction.id); onContextMenu?.(event, transaction.id); }} onPointerMove={updatePreview} onPointerUp={finish} onPointerCancel={cancel}><i data-edge="start" onPointerDown={(event) => begin(event, "start")} />{startHiddenFold && <i className="transaction-fold-affordance" data-fold-affordance="start-hidden" title="Transaction starts inside collapsed range" aria-label="Transaction start hidden in collapsed range" /> }<span onPointerDown={(event) => begin(event, "body")}>{transaction.name}</span>{visibleSegments.length > 1 && visibleSegments.map((segment, index) => { const from = resolveSegmentBoundary(segment.start, 1); const to = resolveSegmentBoundary(segment.end, -1); return from === undefined || to === undefined ? null : <i key={`segment-${index}`} className="transaction-axis-segment" data-transaction-segment="true" aria-hidden="true" style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }} />; })}{gaps.map((gap, index) => <i key={`axis-break-${index}`} className="transaction-axis-break-gap" style={gap} aria-hidden="true" />)}<div className="transaction-phases" aria-hidden="true">{phases?.flatMap((phase) => phaseSegments(phase).map((segment, index) => { const from = resolveSegmentBoundary(segment.start, 1); const to = resolveSegmentBoundary(segment.end, -1); if (from === undefined || to === undefined || endX <= startX) return null; return <small key={`${phase.start}:${phase.end}:${phase.name}:${index}`} data-phase-segment="true" title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }}>{phase.name}</small>; }))}</div>{endHiddenFold && <i className="transaction-fold-affordance" data-fold-affordance="end-hidden" title="Transaction ends inside collapsed range" aria-label="Transaction end hidden in collapsed range" /> }<i data-edge="end" onPointerDown={(event) => begin(event, "end")} /></button>;
 }
 
-export function TransactionLanes({ document: rawDocument, documentEpoch, viewMode, presentationRevision, zoom, selectedId, selectedIds, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu, bookmarks = [], onNavigateBookmark }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly viewMode: "Cycle" | "Transaction" | "Split"; readonly presentationRevision?: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly selectedIds?: ReadonlySet<TransactionId>; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSnap: (clientX: number, surfaceLeft?: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void; readonly bookmarks?: readonly Bookmark[]; readonly onNavigateBookmark?: (cycle: number, bookmarkId?: BookmarkId) => void }) {
+export function TransactionLanes({ document: rawDocument, documentEpoch, viewMode, presentationRevision, zoom, selectedId, selectedIds, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu, bookmarks = [], onNavigateBookmark, disclosure }: { /** #759: workspace-level Group disclosure owner shared with the Left Tree. */ readonly disclosure: TransactionDisclosure; readonly document: CanonicalDocument; readonly documentEpoch: number; readonly viewMode: "Cycle" | "Transaction" | "Split"; readonly presentationRevision?: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly selectedIds?: ReadonlySet<TransactionId>; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSnap: (clientX: number, surfaceLeft?: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void; readonly bookmarks?: readonly Bookmark[]; readonly onNavigateBookmark?: (cycle: number, bookmarkId?: BookmarkId) => void }) {
   const isTransactionSelected = (id: TransactionId) => selectedId === id || selectedIds?.has(id) === true;
   const mountSerial = useRef(++transactionLanesMountSerial);
   const laneIndexBuilds = useRef(0);
@@ -301,19 +302,10 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     if (needle.length === 0) return visible.length === rawDocument.transactions.length ? rawDocument : { ...rawDocument, transactions: visible };
     return { ...rawDocument, transactions: visible.filter((transaction) => transaction.name.toLocaleLowerCase().includes(needle) || (transaction.groupId !== undefined && (groupNameById.get(transaction.groupId) ?? "").toLocaleLowerCase().includes(needle))) };
   }, [groupNameById, needle, rawDocument, rawDocument.transactions, selectedId]);
-  // #397 Transaction Mode GUI Closure: Group collapse/expand -- purely
-  // local, transient presentation state (never persisted, never touches
-  // Canonical), same "view-only toggle" shape as the Signal Tree's own
-  // Group collapse. Kept local to this component rather than lifted into
-  // shared workspace state since nothing else needs to read it.
-  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(new Set());
-  const previousDocumentEpoch = useRef(documentEpoch);
-  useEffect(() => {
-    if (previousDocumentEpoch.current === documentEpoch) return;
-    previousDocumentEpoch.current = documentEpoch;
-    setCollapsedGroups(new Set());
-  }, [documentEpoch]);
-  const toggleGroupCollapsed = (key: string) => setCollapsedGroups((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; });
+  // #759: Group disclosure is a view-only presentation state owned once at the workspace level and shared with the Left Tree
+  // (never persisted, never touches Canonical/History/Dirty).
+  const collapsedGroups = disclosure.collapsed;
+  const toggleGroupCollapsed = disclosure.toggle;
   const owner = useRef<HTMLElement>(null);
   // Selecting a Transaction from the fixed Tree must reveal its actual
   // projected bar in the shared horizontal viewport. Use the rendered bar's
@@ -463,7 +455,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     let labelCursor = 0;
     let trackCursor = 0;
     for (const section of sections) {
-    const sectionKey = section.groupId ?? "ungrouped";
+    const sectionKey = section.groupId ?? UNGROUPED_DISCLOSURE_KEY;
     const collapsed = section.label !== undefined && collapsedGroups.has(sectionKey);
     if (section.label !== undefined) {
       const count = transactionCountByGroup.get(section.groupId) ?? 0;
@@ -572,7 +564,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
         return <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" data-transaction-group-id={header.groupId ?? "ungrouped"} data-collapsed={String(header.collapsed)} style={{ top: header.labelTop, height: GROUP_HEADER_HEIGHT }}>
-          <button type="button" className="transaction-group-header-chevron" aria-label={header.collapsed ? `Expand ${header.label}` : `Collapse ${header.label}`} aria-expanded={!header.collapsed} onClick={() => toggleGroupCollapsed(header.groupId ?? "ungrouped")}><EditorIcon name={header.collapsed ? "right" : "down"} /></button>
+          <button type="button" className="transaction-group-header-chevron" aria-label={header.collapsed ? `Expand ${header.label}` : `Collapse ${header.label}`} aria-expanded={!header.collapsed} onClick={() => toggleGroupCollapsed(header.groupId ?? UNGROUPED_DISCLOSURE_KEY)}><EditorIcon name={header.collapsed ? "right" : "down"} /></button>
           {header.color && <i className="transaction-group-swatch" aria-hidden="true" style={{ background: header.color }} />}
           {/* #397 Transaction Mode GUI Closure: rename/delete had zero GUI
               entry point (commands already existed) -- "Ungrouped" is a

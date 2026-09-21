@@ -1,3 +1,4 @@
+import { type TransactionDisclosure } from "./workspace/use-transaction-disclosure.js";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { CommandResult } from "@timing-chart-v2/commands";
@@ -71,6 +72,7 @@ export function TransactionTree({
   onDeleteGroup,
   onDuplicateTransaction,
   onRenameTransaction,
+  disclosure,
 }: {
   readonly document: CanonicalDocument;
   readonly documentEpoch: number;
@@ -113,8 +115,10 @@ export function TransactionTree({
   readonly onDeleteGroup?: (groupId: TransactionGroup["id"]) => void;
   readonly onDuplicateTransaction?: (transactionId: TransactionId) => void;
   readonly onRenameTransaction?: (transactionId: TransactionId, name: string) => CommandResult;
+  /** #759: workspace-level Group disclosure owner (shared with the center Group headers). */
+  readonly disclosure: TransactionDisclosure;
 }) {
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const { collapsed, toggle } = disclosure;
   const [dragOverGroup, setDragOverGroup] = useState<string>();
   const [editingGroupId, setEditingGroupId] = useState<string>();
   const [openMenu, setOpenMenu] = useState<TransactionTreeMenu>();
@@ -126,7 +130,6 @@ export function TransactionTree({
   const isTransactionSelected = (id: TransactionId) =>
     selectedId === id || selectedIds?.has(id) === true;
   useEffect(() => {
-    setCollapsed(new Set());
     setDragOverGroup(undefined);
     setEditingGroupId(undefined);
     setOpenMenu(undefined);
@@ -454,13 +457,6 @@ export function TransactionTree({
     event.preventDefault();
     items[next]?.focus();
   };
-  const toggle = (key: string) =>
-    setCollapsed((current) => {
-      const next = new Set(current);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
   const rename = (group: TransactionGroup) => setEditingGroupId(group.id);
   const renderTransaction = (transaction: Transaction) => (
     <div className="transaction-left-tree-row-wrap" key={transaction.id}>
