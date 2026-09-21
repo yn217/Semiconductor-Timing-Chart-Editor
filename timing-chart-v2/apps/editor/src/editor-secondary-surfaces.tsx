@@ -555,7 +555,7 @@ export function useEditorSecondarySurfaces(
         ) : workspace.bottomTab === "Transaction" ? (
           transactionEditor
         ) : workspace.bottomTab === "Phases" ? (
-          <TransactionPhaseSummary transaction={selected.transaction} commands={surfaceCommands} cyclesPerTc={input.document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1} />
+          <TransactionPhaseSummary transaction={selected.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={input.document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1} />
         ) : workspace.bottomTab === "Linked Signals" ? (
           <TransactionLinkedSummary
             transaction={selected.transaction}

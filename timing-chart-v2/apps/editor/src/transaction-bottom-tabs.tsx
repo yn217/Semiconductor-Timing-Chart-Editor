@@ -28,6 +28,18 @@ export function pendingPhaseDraft(transaction: Transaction | undefined): readonl
   if (!phasesEqual(draft.base, transaction.phases ?? [])) { phaseDrafts.delete(transaction.id); return undefined; }
   return phasesEqual(draft.rows, transaction.phases ?? []) ? undefined : draft.rows;
 }
+/** #763: Transactions other than `exceptId` that still hold an unapplied Phase draft. Drafts of deleted Transactions (or whose committed
+ * Phases changed underneath) are dropped here, so a deleted Transaction never leaves a hidden draft behind. */
+export function retainedPhaseDrafts(transactions: readonly Transaction[], exceptId: string | undefined): { readonly id: string; readonly name: string }[] {
+  const kept: { id: string; name: string }[] = [];
+  for (const [id, draft] of [...phaseDrafts]) {
+    const transaction = transactions.find((item) => item.id === id);
+    if (!transaction || !phasesEqual(draft.base, transaction.phases ?? [])) { phaseDrafts.delete(id); queueMicrotask(bumpPhaseDrafts); continue; }
+    if (id === exceptId || phasesEqual(draft.rows, transaction.phases ?? [])) continue;
+    kept.push({ id, name: transaction.name });
+  }
+  return kept;
+}
 export function usePendingPhaseDraft(transaction: Transaction | undefined): readonly DraftPhase[] | undefined {
   useSyncExternalStore(subscribePhaseDrafts, () => phaseDraftVersion, () => 0);
   return pendingPhaseDraft(transaction);
@@ -61,9 +73,14 @@ function initialPhaseRows(transaction: Transaction | undefined): DraftPhase[] {
   return draft && phasesEqual(draft.base, base) ? draft.rows.map((phase) => ({ ...phase })) : toDraftPhases(base);
 }
 
-export function TransactionPhaseEditor({ transaction, commands, compact = false, cyclesPerTc: perTc = 1, parentRange }: { readonly transaction: Transaction | undefined; readonly commands: EditorSurfaceCommandController; readonly compact?: boolean; readonly cyclesPerTc?: number; /** Draft parent Start/End (Inspector): Phases validate against the range that Apply will commit together with them. */ readonly parentRange?: Readonly<{ start: number; end: number }> }) {
+export function TransactionPhaseEditor({ transaction, commands, compact = false, cyclesPerTc: perTc = 1, parentRange, transactions }: { readonly transaction: Transaction | undefined; readonly transactions?: readonly Transaction[]; readonly commands: EditorSurfaceCommandController; readonly compact?: boolean; readonly cyclesPerTc?: number; /** Draft parent Start/End (Inspector): Phases validate against the range that Apply will commit together with them. */ readonly parentRange?: Readonly<{ start: number; end: number }> }) {
   const [rows, setRowsRaw] = useState<DraftPhase[]>(() => initialPhaseRows(transaction));
   const [error, setError] = useState("");
+  // #763: a draft that was already pending when this Transaction was (re)selected is a RETAINED draft and says so; drafts kept for other
+  // Transactions are listed (both surfaces mount this one editor over the one shared store) with an explicit Discard.
+  const [retainedFor, setRetainedFor] = useState<string | undefined>(() => (transaction && pendingPhaseDraft(transaction) !== undefined ? transaction.id : undefined));
+  useSyncExternalStore(subscribePhaseDrafts, () => phaseDraftVersion, () => 0);
+  const otherDrafts = transactions ? retainedPhaseDrafts(transactions, transaction?.id) : [];
   const setRows = (update: (current: DraftPhase[]) => DraftPhase[]) => setRowsRaw((current) => {
     const next = update(current);
     if (transaction) {
@@ -86,6 +103,12 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false,
     setRowsRaw(initialPhaseRows(transaction));
     setError("");
   }, [transaction?.id, transaction?.start, transaction?.end, transaction?.phases]);
+  const lastTransactionId = useRef<string | undefined>(transaction?.id);
+  useEffect(() => {
+    if (lastTransactionId.current === transaction?.id) return;
+    lastTransactionId.current = transaction?.id;
+    setRetainedFor(transaction && pendingPhaseDraft(transaction) !== undefined ? transaction.id : undefined);
+  }, [transaction?.id]);
   if (!transaction) return <section className="transaction-bottom-summary" data-testid="transaction-bottom-phases"><p className="inspector-note">Select a Transaction to edit phases.</p></section>;
   const rangeStart = parentRange?.start ?? transaction.start;
   const rangeEnd = parentRange?.end ?? transaction.end;
@@ -124,12 +147,13 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false,
   return <section className={`transaction-bottom-summary transaction-bottom-phase-editor${compact ? " is-compact" : ""}`} data-testid={compact ? "inspector-phase-editor" : "transaction-bottom-phases"}>
     <header className="transaction-bottom-phase-header">
       <strong>Phases ({rows.length})</strong><span>{transaction.name}</span>
-      {changed && <span className="draft-unapplied-indicator" role="status" data-testid="transaction-bottom-phases-unapplied">Unapplied changes</span>}
+      {changed && <span className="draft-unapplied-indicator" role="status" data-testid="transaction-bottom-phases-unapplied" data-retained={String(retainedFor === transaction.id)}>{retainedFor === transaction.id ? "Unapplied changes (kept from earlier)" : "Unapplied changes"}</span>}
       {!compact && <span className="bottom-sticky-buttons">
         <button type="button" onClick={() => { setRows(() => toDraftPhases(transaction.phases ?? [])); setError(""); }} disabled={!changed}>Revert</button>
         <button type="button" data-testid={compact ? "apply-transaction-phases" : "apply-bottom-transaction-phases"} onClick={apply} disabled={!changed}>Apply</button>
       </span>}
     </header>
+    {otherDrafts.length > 0 && <p className="transaction-retained-drafts" role="status" data-testid="transaction-retained-drafts">Unapplied Phase drafts are kept for: {otherDrafts.map((item) => <span key={item.id} className="transaction-retained-draft" data-transaction-id={item.id}>{item.name} <button type="button" aria-label={`Discard the unapplied Phase draft for ${item.name}`} onClick={() => clearPhaseDraft(item.id)}>Discard</button></span>)}</p>}
     {!compact && <p className="transaction-bottom-phase-context" data-testid="transaction-bottom-phase-context">Group: {transaction.groupId ?? "Ungrouped"} · Lane: {transaction.laneId ?? "lane_0"} · Start {cyclesToTc(transaction.start, perTc)} · End {cyclesToTc(transaction.end, perTc)} · Duration {cyclesToTc(duration, perTc)} {perTc === 1 ? "cycles" : "TC"} · Coverage {cyclesToTc(covered, perTc)} / {cyclesToTc(duration, perTc)} · Remaining {cyclesToTc(Math.max(0, duration - covered), perTc)}</p>}
     {!compact && <div className="transaction-bottom-phase-timeline" data-testid="transaction-bottom-phase-timeline" role="img" aria-label={`Phase timeline ${cyclesToTc(transaction.start, perTc)} to ${cyclesToTc(transaction.end, perTc)}`}>
       {displayRows.map((phase, index) => {
@@ -147,8 +171,8 @@ export function TransactionPhaseEditor({ transaction, commands, compact = false,
   </section>;
 }
 
-export function TransactionPhaseSummary({ transaction, commands, cyclesPerTc }: { readonly transaction: Transaction | undefined; readonly commands: EditorSurfaceCommandController; readonly cyclesPerTc?: number }) {
-  return <TransactionPhaseEditor transaction={transaction} commands={commands} {...(cyclesPerTc === undefined ? {} : { cyclesPerTc })} />;
+export function TransactionPhaseSummary({ transaction, transactions, commands, cyclesPerTc }: { readonly transaction: Transaction | undefined; readonly transactions?: readonly Transaction[]; readonly commands: EditorSurfaceCommandController; readonly cyclesPerTc?: number }) {
+  return <TransactionPhaseEditor transaction={transaction} {...(transactions === undefined ? {} : { transactions })} commands={commands} {...(cyclesPerTc === undefined ? {} : { cyclesPerTc })} />;
 }
 
 export function TransactionLinkedSummary({ transaction, document }: { readonly transaction: Transaction | undefined; readonly document: CanonicalDocument }) {
