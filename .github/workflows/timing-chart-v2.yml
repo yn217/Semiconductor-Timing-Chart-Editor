@@ -26,6 +26,10 @@ on:
   pull_request:
     paths: ["timing-chart-v2/**", ".github/workflows/timing-chart-v2.yml"]
 
+# Least privilege: the gate only reads the repository (artifact upload uses the run token, not repo write).
+permissions:
+  contents: read
+
 jobs:
   visual-baseline-bootstrap:
     if: github.event_name == 'workflow_dispatch' && inputs.update_visual_baselines == true
