@@ -512,3 +512,6 @@
 .transaction-list-row > button[data-selected="true"]:hover, .bookmark-list > button[data-selected="true"]:hover { background: #d8ecfd; }
 .transaction-list-row > button:focus-visible, .bookmark-list > button:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; z-index: 1; }
 .transaction-list-row > button:disabled, .bookmark-list > button:disabled { color: #8b97a8; background: #f3f5f8; border-color: #d7dee7; cursor: not-allowed; }
+
+/* #746: visible Group creation next to the Tree Add control (same createTransactionGroup path as Bottom/Ribbon). */
+.tree-add-group-button { height: var(--ds-control-height, 22px); padding: 0 6px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; font-size: 10px; font-weight: 650; white-space: nowrap; }
