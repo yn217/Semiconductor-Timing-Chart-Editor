@@ -578,7 +578,7 @@
 /* Home packs more buttons per group than Insert/View -- one shared compact
    density rule (not a per-group override list) keeps every Home button the
    same tighter size instead of drifting group by group. */
-.editor-shell [data-ribbon-home] .ds-ribbon-button { width: 44px; min-width: 44px; padding-inline: 3px; font-size: 9px; }
+.editor-shell [data-ribbon-home] .ds-ribbon-button { width: auto; min-width: max(44px, min-content); padding-inline: 3px; font-size: 9px; }
 
 /* #439: the one shared size class a Home label can opt into (via
    RibbonItemSpec's `size: "wide"`) when its label contains a single word
