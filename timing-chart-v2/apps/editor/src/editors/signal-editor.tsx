@@ -61,8 +61,8 @@ export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, p
           stays outside this wrapper -- a danger action reads as itself,
           not folded into "secondary". */}
       <span className="editor-tabbar-secondary">
-        <button type="button" onClick={onUndo} disabled={!history.canUndo} data-testid="editor-undo">Undo</button>
-        <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button>
+        <button type="button" onClick={onUndo} disabled={!history.canUndo} title={history.canUndo ? "Undo" : "Nothing to undo"} data-testid="editor-undo">Undo</button>
+        <button type="button" onClick={onRedo} disabled={!history.canRedo} title={history.canRedo ? "Redo" : "Nothing to redo"} data-testid="editor-redo">Redo</button>
         {signal && <><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button></>}
       </span>
     </div>
