@@ -33,3 +33,14 @@ describe("retained Phase drafts (#763)", () => {
     expect(pendingPhaseDraft(changed)).toBeUndefined();
   });
 });
+
+describe("document replacement (#763)", () => {
+  it("clearAllPhaseDrafts drops every retained draft", async () => {
+    const { clearAllPhaseDrafts } = await import("../../apps/editor/src/transaction-bottom-tabs.js");
+    const a = transaction("r1"); const b = transaction("r2");
+    addPhaseToDraft(a); addPhaseToDraft(b);
+    expect(retainedPhaseDrafts([a, b], undefined)).toHaveLength(2);
+    clearAllPhaseDrafts();
+    expect(retainedPhaseDrafts([a, b], undefined)).toEqual([]);
+  });
+});

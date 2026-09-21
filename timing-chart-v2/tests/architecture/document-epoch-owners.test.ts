@@ -33,6 +33,12 @@ const owners: readonly EpochOwner[] = [
     markers: [/documentEpoch/, /setCollapsed\(new Set\(\)\)/],
   },
   {
+    // #763: unapplied Phase drafts are document-relative; a DocumentEpoch change drops them all.
+    owner: "retained transaction phase drafts",
+    file: "apps/editor/src/editor-secondary-surfaces.tsx",
+    markers: [/clearAllPhaseDrafts\(\)/, /\[input\.documentEpoch\]/],
+  },
+  {
     owner: "bookmark selection state",
     file: "apps/editor/src/application/use-editor-actions.ts",
     markers: [/input\.documentEpoch/, /selectedBookmarkId/],
@@ -56,6 +62,7 @@ describe("document-relative transient state ownership", () => {
       "entity editor and inspector drafts",
       "transaction group and drag state",
       "transaction group disclosure",
+      "retained transaction phase drafts",
       "bookmark selection state",
       "document-relative UI reset",
     ]));

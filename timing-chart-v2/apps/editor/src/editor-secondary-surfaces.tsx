@@ -1,5 +1,5 @@
 import { useTransactionDisclosure } from "./workspace/use-transaction-disclosure.js";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import type {
   Dispatch,
   KeyboardEvent,
@@ -46,6 +46,7 @@ import { TransactionTree } from "./transaction-tree.js";
 import {
   TransactionLinkedSummary,
   TransactionPhaseSummary,
+  clearAllPhaseDrafts,
 } from "./transaction-bottom-tabs.js";
 import { InspectorPanel } from "./panels/inspector-panel.js";
 import { LegendView } from "./legend-view.js";
@@ -433,6 +434,8 @@ export function useEditorSecondarySurfaces(
   );
   // #759: one Group disclosure owner for the Left Tree and the center Group headers.
   const disclosure = useTransactionDisclosure(input.document, input.documentEpoch);
+  // #763: unapplied Phase drafts belong to one document; a replacement (New/Open) drops them all so an identical ID in the next document cannot inherit one.
+  useEffect(() => { clearAllPhaseDrafts(); }, [input.documentEpoch]);
   const workspaceViewportContent = workspace.viewMode !== "Cycle" ? (
     <TransactionLanes
         disclosure={disclosure}

@@ -57,6 +57,12 @@ export function addPhaseToDraft(transaction: Transaction): void {
   phaseDrafts.set(transaction.id, { base: transaction.phases ?? [], rows });
   bumpPhaseDrafts();
 }
+/** #763: drop every unapplied Phase draft (document replacement). */
+export function clearAllPhaseDrafts(): void {
+  if (phaseDrafts.size === 0) return;
+  phaseDrafts.clear();
+  bumpPhaseDrafts();
+}
 export function clearPhaseDraft(transactionId: string): void {
   if (phaseDrafts.delete(transactionId)) bumpPhaseDrafts();
 }

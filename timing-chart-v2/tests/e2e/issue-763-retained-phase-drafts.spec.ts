@@ -54,3 +54,20 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     expect(errors).toEqual([]);
   });
 }
+
+test("opening another document drops every retained Phase draft", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByTestId("transaction-left-tree-row-demo_txn_read").click();
+  await openPhases(page);
+  await page.getByTestId("transaction-bottom-phases").getByLabel("Bottom Phase 1 name").fill("DRAFT_A");
+  await page.getByTestId("transaction-left-tree-row-demo_txn_write").click();
+  await expect(page.getByTestId("transaction-retained-drafts")).toContainText("Read_0");
+  // Reload the same demo through Open (same Transaction IDs and Phases): the retained draft must not carry over.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
+  const discard = page.getByTestId("unsaved-discard");
+  if (await discard.isVisible().catch(() => false)) await discard.click();
+  await expect(page.getByTestId("transaction-retained-drafts")).toHaveCount(0);
+});
