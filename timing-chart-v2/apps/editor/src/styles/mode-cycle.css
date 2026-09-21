@@ -31,3 +31,24 @@
 .cycle-viewport[data-own-hscroll]::-webkit-scrollbar:horizontal { height: 0; display: none; }
 .cycle-panel > .timeline-hscroll { position: absolute; height: 15px; overflow-x: scroll; overflow-y: hidden; z-index: 30; }
 .cycle-panel > .timeline-hscroll[hidden] { display: none; }
+
+/* #625 (Cycle only): FixedColumns (left tree + frozen labels) are plain grid columns that never scroll horizontally. The
+   TimelineViewport wrapper is the sole horizontal scroll owner; its local X starts at 0 and its scrollWidth excludes the fixed
+   widths. Transaction/Combined keep the wrapper as `display: contents`, so their geometry is untouched. */
+.surface-host [data-role="timeline-viewport"] { display: contents; }
+.editor-shell[data-view-mode="Cycle"] .surface-host { width: 100% !important; }
+.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="timing-chart-surface"] { width: 100% !important; grid-template-columns: var(--gui-left-width) var(--gui-frozen-width) minmax(0, 1fr) !important; }
+.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="left-tree-rows"],
+.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="frozen-label-rows"] { position: relative !important; left: auto !important; }
+.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="timeline-viewport"] {
+  display: grid !important; position: relative !important; grid-column: 3; grid-row: 1; min-width: 0;
+  grid-template-columns: var(--timeline-min-width, var(--wave-width, 640px)); overflow-x: scroll; overflow-y: hidden; scrollbar-width: none;
+  transform: translateY(-35px);
+}
+.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="timeline-viewport"]::-webkit-scrollbar { display: none; }
+.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="timeline-viewport"] > [data-role] { grid-column: 1; grid-row: 1; transform: none; }
+.editor-shell[data-view-mode="Cycle"] .cycle-viewport { overflow-x: hidden; }
+/* The grid follows the Timeline owner's scroll and is clipped to the visible Timeline column (clip bounds are in the grid's own,
+   pre-scale coordinates: scroll/zoom and scroll+width/zoom, published with --timeline-scroll-left). */
+.editor-shell[data-view-mode="Cycle"] .geometry-grid { translate: calc(-1px * var(--timeline-scroll-left, 0)) 0; clip-path: inset(0 calc(100% - var(--grid-clip-right, 1000000px)) 0 var(--grid-clip-left, 0px)); }
+.editor-shell[data-view-mode="Cycle"] .range-selection-band { translate: calc(-1px * var(--timeline-scroll-left, 0)) 0; }

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { timelineOwner } from "./timeline-scroll.js";
 
 /**
  * #684 blind fresh-state journeys (production path, no injected state): every test starts from a fresh browser context (default
@@ -97,14 +98,14 @@ test("J7/J8/J15 far horizontal + vertical scroll -> select, zoom -> scroll -> mo
   await fresh(page); await mode(page, "Cycle").click();
   const host = page.getByTestId("cycle-surface");
   const viewport = page.getByTestId("cycle-viewport");
-  await viewport.evaluate((element) => { element.scrollLeft = element.scrollWidth; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
-  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await timelineOwner(page).evaluate((element) => { element.scrollLeft = element.scrollWidth; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
   await viewport.evaluate((element) => { element.scrollTop = element.scrollHeight; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
   await host.locator("[data-role='frozen-row']").last().click();
   await expect(page.getByTestId("selection-status")).not.toHaveText("None");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
-  await viewport.evaluate((element) => { element.scrollLeft = Math.floor(element.scrollWidth / 2); element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await timelineOwner(page).evaluate((element) => { element.scrollLeft = Math.floor(element.scrollWidth / 2); element.dispatchEvent(new Event("scroll", { bubbles: true })); });
   await mode(page, "Transaction").click();
   await mode(page, "Cycle").click();
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");

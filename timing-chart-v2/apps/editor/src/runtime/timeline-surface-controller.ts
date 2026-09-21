@@ -21,7 +21,8 @@ import { scheduleInitialTimelineRefresh } from "./document-lifecycle-controller.
 import { refreshRendererForReason } from "./render-coordinator.js";
 import { createWaveformSurfaceProvider } from "./waveform-surface-provider.js";
 import { mountInitialTimelineProjection, projectViewportWindow } from "./viewport-projection.js";
-import { refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshTimelinePresentation, syncFrozenColumnScroll, syncPresentationScale, syncRulerScroll } from "./timeline-presentation-refresh.js";
+import { fixedColumnsOutsideTimeline, timelineScrollOwner } from "./timeline-scroll-owner.js";
+import { refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshTimelinePresentation, syncPresentationScale, syncRulerScroll } from "./timeline-presentation-refresh.js";
 import { attachTimelineSurfaceInteractions, createTimelineCycleBoundaryResolver, createTimelineViewportKeyDownHandler, type TimelineSurfaceInteractionHandle } from "./timeline-surface-interactions.js";
 import { collectWaveRenderErrors, createOpenPhaseTracker } from "./runtime-diagnostics.js";
 import { publishRendererState } from "./runtime-diagnostics.js";
@@ -220,7 +221,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       invalidateSnapIndex: () => timelineGeometry.invalidateSnapIndex(),
       getViewMode: () => input.viewMode,
       getSourceWindow: (owner) => {
-        const viewport = owner.closest<HTMLElement>(".cycle-viewport") ?? viewportElement;
+        const viewport = timelineScrollOwner(owner.closest<HTMLElement>(".cycle-viewport") ?? viewportElement);
         const document = sessionController.snapshot().document;
         const window = timelineGeometry.sourceWindowForLocalRange(document, viewport.scrollLeft / timelineGeometry.presentationScale, (viewport.scrollLeft + viewport.clientWidth) / timelineGeometry.presentationScale);
         // Transaction bars are projected from the same Cycle geometry. For a
@@ -351,9 +352,9 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       clearRequestedSourceCycle: () => timelineGeometry.clearRequestedSourceCycle(),
         localXToScreenX: (localX) => localX,
       },
-      viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: viewportElement.clientWidth, leftInset: metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: viewportElement.scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) viewportElement.scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: timelineNavigation.getZoom, setZoom: timelineNavigation.setZoom },
+      viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: timelineScrollOwner(viewportElement).clientWidth, leftInset: fixedColumnsOutsideTimeline(viewportElement) ? 0 : metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: timelineScrollOwner(viewportElement).scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) timelineScrollOwner(viewportElement).scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: timelineNavigation.getZoom, setZoom: timelineNavigation.setZoom },
       document: { getSnapshot: () => sessionController.snapshot().document, getCanonicalRevision: () => sessionController.snapshot().revision, getDocumentEpoch: () => documentEpoch.current() },
-      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; const viewportQuery = timelineGeometry.viewportForLocalRange(viewportElement.scrollLeft / timelineGeometry.presentationScale, (viewportElement.scrollLeft + viewportElement.clientWidth) / timelineGeometry.presentationScale, viewportElement.scrollTop, viewportElement.scrollTop + viewportElement.clientHeight, documentEpoch.current(), selectedAnnotationRef.current ? [selectedAnnotationRef.current] : []); refreshRendererForReason(renderer, host, reason, sessionController.snapshot().document, projection, geometryMaps, mappingCache, timelineGeometry.presentationScale, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current, edgeCounterMetrics, viewportQuery); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
+      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; const viewportQuery = timelineGeometry.viewportForLocalRange(timelineScrollOwner(viewportElement).scrollLeft / timelineGeometry.presentationScale, (timelineScrollOwner(viewportElement).scrollLeft + timelineScrollOwner(viewportElement).clientWidth) / timelineGeometry.presentationScale, viewportElement.scrollTop, viewportElement.scrollTop + viewportElement.clientHeight, documentEpoch.current(), selectedAnnotationRef.current ? [selectedAnnotationRef.current] : []); refreshRendererForReason(renderer, host, reason, sessionController.snapshot().document, projection, geometryMaps, mappingCache, timelineGeometry.presentationScale, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current, edgeCounterMetrics, viewportQuery); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
       lifecycle: { isCurrentEpoch: (epoch) => documentEpoch.isCurrent(epoch) },
     });
     timelineRuntimeRef.current = timelineRuntime;
@@ -361,7 +362,6 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       rendererHost.dataset.timelineRefreshReason = reason;
       if (reason === "scroll") {
         syncRulerScroll(rulerElement, viewportElement, timelineNavigation.getZoom());
-        syncFrozenColumnScroll(viewportElement, rendererHost, viewMetricsOwner.snapshot().leftPaneWidth);
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(() => projectViewportWindow({
           viewport: viewportElement,
@@ -445,14 +445,12 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       timelineOffset,
       getPresentationScale: () => timelineGeometry.presentationScale,
       syncPresentationScale,
-      syncFrozenColumns: () => syncFrozenColumnScroll(viewportElement, rendererHost, viewMetricsOwner.snapshot().leftPaneWidth),
       getDocument: () => sessionController.snapshot().document,
       getRange: () => timelineRangeRef.current,
       setSelectedCycle,
       setRange: setTimelineRange,
       publishState,
     });
-    syncFrozenColumnScroll(viewportElement, rendererHost, viewMetricsOwner.snapshot().leftPaneWidth);
     const cycleBoundaryAtX = createTimelineCycleBoundaryResolver({ rendererHost, timelineGeometry, getZoom: timelineNavigation.getZoom, isSnapEnabled: () => snapEnabledRef.current });
     const transactionSnapAxisY = (() => {
       const axisOwner = timelineGeometry.timeAxis.ownerSignalId;
@@ -614,6 +612,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // Open/New owns a deterministic viewport policy. Apply it before the
       // first projection so the previous document cannot seed stale rows.
       viewportElement.scrollLeft = 0;
+      timelineScrollOwner(viewportElement).scrollLeft = 0;
       viewportElement.scrollTop = 0;
         window = buildViewportWindow(viewportElement, canonicalDocument.timeline.referenceClock);
       projection = projectionCoordinator.project({ snapshot: sessionController.snapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });

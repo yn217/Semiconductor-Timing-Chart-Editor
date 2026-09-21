@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { timelineOwner } from "./timeline-scroll.js";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
 // #755 step 1: the renderer-independent uniform cycle grid must reproduce the SVG-derived cycle boundaries.
@@ -42,7 +43,7 @@ test("analytic cycle grid equals SVG-derived boundaries (bounded window on a >40
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
-  const viewport = page.getByTestId("cycle-viewport");
+  const viewport = timelineOwner(page);
   await viewport.evaluate((el) => { el.scrollLeft = 200_000; });
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
   await expect.poll(async () => (await boundaryReport(page)).some((report) => report.cycles[0]! > 0), { timeout: 30_000, message: "a far jump must rebase at least one owner's window" }).toBe(true);

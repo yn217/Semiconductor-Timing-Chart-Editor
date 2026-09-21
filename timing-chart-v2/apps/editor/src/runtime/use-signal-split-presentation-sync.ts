@@ -1,3 +1,4 @@
+import { timelineScrollOwner } from "./timeline-scroll-owner.js";
 import { useEffect } from "react";
 import type { TimelineSurfaceRuntimeInput } from "./timeline-surface-controller.js";
 export function useSignalSplitPresentationSync(input: TimelineSurfaceRuntimeInput): void {
@@ -13,6 +14,10 @@ export function useSignalSplitPresentationSync(input: TimelineSurfaceRuntimeInpu
       const upperRulerContent = ruler.current;
       const lowerRulerContent = rulerLower.current;
       if (upperRulerContent && lowerRulerContent) lowerRulerContent.style.transform = upperRulerContent.style.transform;
+      // #625: Lower has the same Timeline scroll extent as Upper (Cycle: each pane's TimelineViewport owns its own horizontal scroll).
+      const upperOwner = timelineScrollOwner(upperViewport);
+      const lowerOwner = timelineScrollOwner(lowerViewport);
+      if (lowerOwner !== lowerViewport && upperOwner !== upperViewport) lowerOwner.style.setProperty("--timeline-min-width", `${upperOwner.scrollWidth}px`);
       if (host.current && hostLower.current) {
         hostLower.current.style.width = host.current.style.width;
         const scale = host.current.style.getPropertyValue("--presentation-x-scale");
@@ -32,19 +37,23 @@ export function useSignalSplitPresentationSync(input: TimelineSurfaceRuntimeInpu
     // writing that back to Upper would silently clobber the user's actual
     // scroll position with Lower's still-settling one.
     const onUpperScroll = () => {
-      if (lowerViewport.scrollLeft !== upperViewport.scrollLeft) lowerViewport.scrollLeft = upperViewport.scrollLeft;
+      const upperOwner = timelineScrollOwner(upperViewport);
+      const lowerOwner = timelineScrollOwner(lowerViewport);
+      if (lowerOwner.scrollLeft !== upperOwner.scrollLeft) lowerOwner.scrollLeft = upperOwner.scrollLeft;
       mirrorPresentation();
     };
     const onLowerScroll = () => {
-      if (lowerViewport.scrollLeft !== upperViewport.scrollLeft) lowerViewport.scrollLeft = upperViewport.scrollLeft;
+      const upperOwner = timelineScrollOwner(upperViewport);
+      const lowerOwner = timelineScrollOwner(lowerViewport);
+      if (lowerOwner.scrollLeft !== upperOwner.scrollLeft) lowerOwner.scrollLeft = upperOwner.scrollLeft;
       mirrorPresentation();
     };
-    upperViewport.addEventListener("scroll", onUpperScroll);
-    lowerViewport.addEventListener("scroll", onLowerScroll);
+    upperViewport.addEventListener("scroll", onUpperScroll, true);
+    lowerViewport.addEventListener("scroll", onLowerScroll, true);
     mirrorPresentation();
     return () => {
-      upperViewport.removeEventListener("scroll", onUpperScroll);
-      lowerViewport.removeEventListener("scroll", onLowerScroll);
+      upperViewport.removeEventListener("scroll", onUpperScroll, true);
+      lowerViewport.removeEventListener("scroll", onLowerScroll, true);
     };
   }, [signalSplitEnabled, zoom]);
 

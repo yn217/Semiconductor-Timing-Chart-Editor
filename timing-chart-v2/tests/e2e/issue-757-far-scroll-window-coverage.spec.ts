@@ -13,9 +13,9 @@ test("a far scrollLeft jump repaints the window at the viewport, not from cycle 
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
-  const viewport = page.getByTestId("cycle-viewport");
+  const viewport = page.locator("[data-role='timeline-viewport']");
   const covers = () => page.evaluate(() => {
-    const vp = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!;
+    const vp = document.querySelector<HTMLElement>("[data-role='timeline-viewport']")!; // #625: the Timeline owns horizontal scroll in Cycle
     const owner = [...document.querySelectorAll<HTMLElement>("[data-role='wave-owner']")].find((o) => o.querySelector("svg, canvas[data-wave-canvas]"))!;
     const left = parseFloat(owner.style.left || "0");
     const width = parseFloat(owner.style.width || "0");

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { hoverTimelineArea, timelineOwner } from "./timeline-scroll.js";
 
 for (const viewportSize of [
   { width: 1672, height: 941 },
@@ -29,12 +30,12 @@ for (const viewportSize of [
     const rulerPitch = async () => (await x(ruler.locator("[data-cycle='4']")) - await x(ruler.locator("[data-cycle='2']"))) / 2;
     const gridPitch = async () => (await x(grid.locator("[data-role='geometry-grid-line'][data-cycle='4']")) - await x(grid.locator("[data-role='geometry-grid-line'][data-cycle='2']"))) / 2;
 
-    const initialScrollLeft = await viewport.evaluate((element) => element.scrollLeft);
+    const initialScrollLeft = await timelineOwner(page).evaluate((element) => element.scrollLeft);
     const initialRulerPitch = await rulerPitch();
     const initialGridPitch = await gridPitch();
-    await surface.hover({ position: { x: 300, y: 30 } });
+    await hoverTimelineArea(page);
     await page.mouse.wheel(240, 0);
-    await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(initialScrollLeft);
+    await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft)).toBeGreaterThan(initialScrollLeft);
 
     expect(Math.abs(await rulerPitch() - initialRulerPitch)).toBeLessThan(0.75);
     expect(Math.abs(await gridPitch() - initialGridPitch)).toBeLessThan(0.75);

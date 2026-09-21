@@ -1,6 +1,7 @@
 import { useEffect, useRef, type KeyboardEventHandler, type PointerEventHandler, type ReactNode, type RefObject } from "react";
 import { LEFT_PANE_MAX_WIDTH, LEFT_PANE_MIN_WIDTH, type ViewMode } from "./workspace/use-workspace-ui-state.js";
 import { composeMode } from "./workspace/mode-composition.js";
+import { timelineScrollOwner } from "./runtime/timeline-scroll-owner.js";
 
 /**
  * #625: the horizontal scroll track belongs to the Timeline only. The viewport's native horizontal scrollbar is hidden and this
@@ -24,27 +25,31 @@ function TimelineHorizontalScrollbar({ viewport }: { readonly viewport: RefObjec
       const panelRect = panel.getBoundingClientRect();
       const ruler = view.querySelector<HTMLElement>(".cycle-ruler");
       const originLeft = ruler && !ruler.hidden ? ruler.getBoundingClientRect().left : viewRect.left;
-      const offset = Math.max(0, originLeft - viewRect.left + view.scrollLeft * 0);
-      bar.style.left = `${viewRect.left - panelRect.left + offset}px`;
+      const owner = timelineScrollOwner(view);
+      const offset = owner === view ? Math.max(0, originLeft - viewRect.left) : 0;
+      bar.style.left = `${(owner === view ? viewRect.left : owner.getBoundingClientRect().left) - panelRect.left + offset}px`;
       bar.style.top = `${viewRect.bottom - panelRect.top - 15}px`; // overlays the strip the native bar used to occupy
-      bar.style.width = `${Math.max(0, view.clientWidth - offset)}px`;
-      filler.style.width = `${Math.max(0, view.scrollWidth - offset)}px`;
+      bar.style.width = `${Math.max(0, owner.clientWidth - offset)}px`;
+      filler.style.width = `${Math.max(0, owner.scrollWidth - offset)}px`;
       bar.dataset.timelineLeft = String(Math.round(originLeft));
-      bar.hidden = view.scrollWidth <= view.clientWidth;
-      if (!syncing) bar.scrollLeft = view.scrollLeft;
+      bar.hidden = owner.scrollWidth <= owner.clientWidth;
+      if (!syncing) bar.scrollLeft = owner.scrollLeft;
     };
-    const onViewScroll = () => { if (syncing) return; syncing = true; bar.scrollLeft = view.scrollLeft; syncing = false; };
-    const onBarScroll = () => { if (syncing) return; syncing = true; view.scrollLeft = bar.scrollLeft; syncing = false; };
+    const onViewScroll = () => { if (syncing) return; syncing = true; bar.scrollLeft = timelineScrollOwner(view).scrollLeft; syncing = false; };
+    const onBarScroll = () => { if (syncing) return; syncing = true; timelineScrollOwner(view).scrollLeft = bar.scrollLeft; syncing = false; };
     layout();
-    view.addEventListener("scroll", onViewScroll, { passive: true });
+    view.addEventListener("scroll", onViewScroll, { passive: true, capture: true });
     bar.addEventListener("scroll", onBarScroll, { passive: true });
+    // Size changes of the viewport, its content, the Timeline owner and its layers (zoom / --wave-width) re-lay the track out;
+    // zoom also announces itself through `timeline-viewport-resize`.
     const observer = new ResizeObserver(layout);
     observer.observe(view);
     if (view.firstElementChild) observer.observe(view.firstElementChild);
+    const owner = timelineScrollOwner(view);
+    if (owner !== view) { observer.observe(owner); for (const child of owner.children) observer.observe(child); }
     window.addEventListener("resize", layout);
-    const mutation = new MutationObserver(layout);
-    mutation.observe(view, { attributes: true, subtree: true, attributeFilter: ["style", "hidden"] });
-    return () => { view.removeEventListener("scroll", onViewScroll); bar.removeEventListener("scroll", onBarScroll); observer.disconnect(); mutation.disconnect(); window.removeEventListener("resize", layout); delete view.dataset.ownHscroll; };
+    view.addEventListener("timeline-viewport-resize", layout);
+    return () => { view.removeEventListener("scroll", onViewScroll, true); bar.removeEventListener("scroll", onBarScroll); observer.disconnect(); window.removeEventListener("resize", layout); view.removeEventListener("timeline-viewport-resize", layout); delete view.dataset.ownHscroll; };
   });
   return <div className="timeline-hscroll" ref={track} data-testid="timeline-hscroll" role="scrollbar" aria-orientation="horizontal" aria-label="Timeline horizontal scroll" hidden><div ref={inner} style={{ height: 1 }} /></div>;
 }
@@ -160,7 +165,7 @@ export function EditorWorkspaceView({
     const update = () => {
       for (const [viewportElement, rulerElement] of viewports) {
         if (!viewportElement || !rulerElement) continue;
-        shiftCachedTicks(rulerElement, viewportElement);
+        shiftCachedTicks(rulerElement, timelineScrollOwner(viewportElement) as HTMLDivElement);
         let overlay = viewportElement.querySelector<HTMLElement>("[data-role='cursor-overlay']");
         if (!overlay) {
           overlay = viewportElement.ownerDocument.createElement("div");
@@ -259,10 +264,10 @@ export function EditorWorkspaceView({
       viewportElement.addEventListener("pointerdown", onPointerDown, true);
       dragHandlers.push([viewportElement, onPointerDown]);
     }
-    for (const target of scrollTargets) target.addEventListener("scroll", update, { passive: true });
+    for (const target of scrollTargets) target.addEventListener("scroll", update, { passive: true, capture: true });
     window.addEventListener("resize", update);
     return () => {
-      for (const target of scrollTargets) target.removeEventListener("scroll", update);
+      for (const target of scrollTargets) target.removeEventListener("scroll", update, true);
       cancelAnimationFrame(deferredUpdate);
       rulerResizeObserver?.disconnect();
       for (const [target, handler] of dragHandlers) target.removeEventListener("pointerdown", handler, true);

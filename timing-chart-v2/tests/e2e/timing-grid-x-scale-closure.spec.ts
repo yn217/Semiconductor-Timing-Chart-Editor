@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { revealRulerTick, timelineOwner } from "./timeline-scroll.js";
 import { startInCycleSample } from "./cycle-startup.js";
 
 startInCycleSample(test);
@@ -99,8 +100,7 @@ test("keeps Grid and Ruler on the actual WaveDrom X geometry across scale and sc
     assertAligned(await boundaries(page, [0, 2, 10, 32, 64, 128]));
   }
 
-  const viewport = page.getByTestId("cycle-viewport");
-  await viewport.evaluate((element) => { element.scrollLeft = Math.min(220, element.scrollWidth); });
+  await timelineOwner(page).evaluate((element) => { element.scrollLeft = Math.min(220, element.scrollWidth); });
   await waitForPresentation(page);
   assertAligned(await boundaries(page, [0, 2, 10, 32, 64, 128]));
 
@@ -108,6 +108,7 @@ test("keeps Grid and Ruler on the actual WaveDrom X geometry across scale and sc
   await waitForPresentation(page);
   assertAligned(await boundaries(page, [0, 2, 10, 32, 64, 128]));
 
+  await revealRulerTick(page, 8);
   await page.getByTestId("cycle-ruler").locator("[data-cycle='8']").click();
   await expect(page.getByTestId("range-status")).toHaveText("Range: [8, 9)");
   await page.getByTestId("ribbon").getByRole("button", { name: "Fit Selection", exact: true }).click();

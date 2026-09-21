@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { timelineOwner } from "./timeline-scroll.js";
 
 test.use({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
 
@@ -17,13 +18,13 @@ async function readMetrics(page: Page) {
     const contentRect = content.getBoundingClientRect();
     return {
       scrollTop: viewport.scrollTop,
-      scrollLeft: viewport.scrollLeft,
+      scrollLeft: (document.querySelector<HTMLElement>(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']") ?? viewport).scrollLeft,
       maxScrollTop: Math.max(0, viewport.scrollHeight - viewport.clientHeight),
-      maxScrollLeft: Math.max(0, viewport.scrollWidth - viewport.clientWidth),
+      maxScrollLeft: Math.max(0, (document.querySelector<HTMLElement>(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']") ?? viewport).scrollWidth - (document.querySelector<HTMLElement>(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']") ?? viewport).clientWidth),
       viewportHeight: viewport.clientHeight,
-      viewportWidth: viewport.clientWidth,
+      viewportWidth: (document.querySelector<HTMLElement>(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']") ?? viewport).clientWidth,
       scrollHeight: viewport.scrollHeight,
-      scrollWidth: viewport.scrollWidth,
+      scrollWidth: (document.querySelector<HTMLElement>(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']") ?? viewport).scrollWidth,
       top: Number(minimap.dataset.viewportTop),
       ratio: Number(minimap.dataset.viewportRatio),
       left: Number(minimap.dataset.viewportLeft),
@@ -73,7 +74,7 @@ test("MiniMap viewport indicator follows live scroll, resize, pan and remount st
   expect(vertical.rect.y).toBeCloseTo(vertical.contentRect.y + vertical.top * vertical.contentRect.height, 1);
   expectIndicatorInside(vertical);
 
-  await viewport.evaluate((element) => { element.scrollLeft = Math.round((element.scrollWidth - element.clientWidth) * 0.55); });
+  await timelineOwner(page).evaluate((element) => { element.scrollLeft = Math.round((element.scrollWidth - element.clientWidth) * 0.55); });
   await expect.poll(async () => (await readMetrics(page)).scrollLeft).toBeGreaterThan(0);
   await expect.poll(async () => metricError(await readMetrics(page))).toBeLessThan(0.002);
   const horizontal = await readMetrics(page);
@@ -81,7 +82,8 @@ test("MiniMap viewport indicator follows live scroll, resize, pan and remount st
   expect(horizontal.rect.x).toBeCloseTo(horizontal.contentRect.x + horizontal.left * horizontal.contentRect.width, 1);
   expectIndicatorInside(horizontal);
 
-  await viewport.evaluate((element) => { element.scrollTop = element.scrollHeight; element.scrollLeft = element.scrollWidth; });
+  await viewport.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+  await timelineOwner(page).evaluate((element) => { element.scrollLeft = element.scrollWidth; });
   await expect.poll(async () => (await readMetrics(page)).scrollTop).toBeGreaterThan(0.5);
   await expect.poll(async () => metricError(await readMetrics(page))).toBeLessThan(0.002);
   const edge = await readMetrics(page);
@@ -143,7 +145,7 @@ test("MiniMap viewport indicator follows live scroll, resize, pan and remount st
 
   await page.getByTestId("view-panel-minimap").click();
   await expect(minimap).toBeHidden();
-  const currentScroll = await viewport.evaluate((element) => ({ top: element.scrollTop, left: element.scrollLeft }));
+  const currentScroll = { top: await viewport.evaluate((element) => element.scrollTop), left: await timelineOwner(page).evaluate((element) => element.scrollLeft) };
   await page.getByTestId("view-panel-minimap").click();
   await expect(page.getByTestId("minimap")).toBeVisible();
   await expect.poll(async () => metricError(await readMetrics(page))).toBeLessThan(0.002);

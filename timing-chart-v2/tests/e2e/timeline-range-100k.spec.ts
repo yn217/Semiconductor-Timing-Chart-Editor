@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { timelineOwner } from "./timeline-scroll.js";
 import { startInCycleSample } from "./cycle-startup.js";
 
 startInCycleSample(test);
@@ -47,7 +48,7 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
   await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   // The wave window is viewport-bounded (#757), so bring cycle 1000 into view first; the window then rebases around it.
-  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollLeft = 1000 * 40 - 806; element.dispatchEvent(new Event("scroll", { bubbles: true })); }); // cycle 1000 lands inside the Timeline viewport, left of the Inspector
+  await timelineOwner(page).evaluate((element) => { element.scrollLeft = 1000 * 40 - 806; element.dispatchEvent(new Event("scroll", { bubbles: true })); }); // cycle 1000 lands inside the Timeline viewport, left of the Inspector
   await expect.poll(async () => page.locator("[data-role='wave-owner'][data-signal-id]").first().getAttribute("data-cycle-boundary-geometry"), { timeout: 120_000 }).toContain("\"1000\"");
   await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
 
@@ -136,10 +137,10 @@ test("re-evaluates mounted waveform source windows after horizontal scroll", asy
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "range-scroll-windowed.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(scaleDocument)) });
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
-  const viewport = page.getByTestId("cycle-viewport");
+  const viewport = timelineOwner(page);
   const owner = page.locator("[data-role='wave-owner'][data-signal-id]").first();
   const before = await page.evaluate(() => {
-    const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
+    const viewport = document.querySelector<HTMLElement>(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']");
     const owner = document.querySelector<HTMLElement>("[data-role='wave-owner'][data-signal-id]");
     if (!viewport || !owner) throw new Error("waveform owner unavailable");
     return { scrollLeft: viewport.scrollLeft, start: owner.dataset.renderedSourceWindowStart, end: owner.dataset.renderedSourceWindowEnd };

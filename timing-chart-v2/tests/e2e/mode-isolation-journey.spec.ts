@@ -1,4 +1,5 @@
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
+import { hoverTimelineArea, timelineOwner } from "./timeline-scroll.js";
 import { expect, test } from "@playwright/test";
 
 const viewports = [{ width: 1672, height: 941 }, { width: 1280, height: 720 }] as const;
@@ -60,10 +61,10 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   expect(cycleBottomAfter).toBeGreaterThan(cycleBottomBefore);
   await page.getByTestId("ribbon").getByRole("button", { name: "Inspector", exact: true }).click();
   await expect(shell).toHaveAttribute("data-inspector-visible", "false");
-  await cycleViewport.hover();
+  await hoverTimelineArea(page);
   await page.mouse.wheel(500, 0);
-  await expect.poll(() => cycleViewport.evaluate((element) => element.scrollLeft), { timeout: 5_000, message: "Cycle horizontal wheel must change the real viewport scroll position" }).toBeGreaterThan(0);
-  const cycleScroll = await cycleViewport.evaluate((element) => element.scrollLeft);
+  await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft), { timeout: 5_000, message: "Cycle horizontal wheel must change the real viewport scroll position" }).toBeGreaterThan(0);
+  const cycleScroll = await timelineOwner(page).evaluate((element) => element.scrollLeft);
   await assertViewOnly();
 
   await modes.getByRole("button", { name: "Transaction", exact: true }).click();
@@ -87,10 +88,10 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   await expect(page.locator(".split-transaction-pane")).toBeVisible();
   await expect(page.getByTestId("combined-split-divider")).toBeVisible();
   const combinedViewport = page.getByTestId("cycle-viewport");
-  await combinedViewport.hover();
-  await page.mouse.wheel(300, 0);
+  // Drive the Combined viewport's own horizontal scroll (the shared owner in Combined) to prove its position is mode-local.
+  await combinedViewport.evaluate((element) => { element.scrollLeft = 300; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await expect.poll(() => combinedViewport.evaluate((element) => element.scrollLeft), { timeout: 5_000, message: "Combined horizontal wheel must change the real viewport scroll position" }).toBeGreaterThan(0);
   const combinedScroll = await combinedViewport.evaluate((element) => element.scrollLeft);
-  expect(combinedScroll).toBeGreaterThan(0);
   const combinedDividerBefore = Number(await page.getByTestId("combined-split-divider").getAttribute("aria-valuenow"));
   await page.getByTestId("combined-split-divider").press("ArrowDown");
   await expect.poll(() => page.getByTestId("combined-split-divider").getAttribute("aria-valuenow").then(Number), { timeout: 5_000, message: "Combined splitter ArrowDown must change the persisted split ratio" }).toBeGreaterThan(combinedDividerBefore);

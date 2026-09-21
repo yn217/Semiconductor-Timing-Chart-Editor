@@ -1,3 +1,4 @@
+import { timelineScrollOwner } from "./timeline-scroll-owner.js";
 import type { MutableRefObject } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { RenderProjection } from "@timing-chart-v2/projection";
@@ -75,7 +76,8 @@ export function createTimelineViewportKeyDownHandler(viewportElement: HTMLElemen
   return (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target?.closest("[data-testid='cycle-viewport']") || target.closest("input, textarea, select, button, [contenteditable='true']")) return;
-    const horizontalStep = Math.max(48, Math.round(viewportElement.clientWidth * 0.18));
+    const scroller = timelineScrollOwner(viewportElement);
+    const horizontalStep = Math.max(48, Math.round(scroller.clientWidth * 0.18));
     const verticalStep = Math.max(48, Math.round(viewportElement.clientHeight * 0.75));
     let left: number | undefined;
     let top: number | undefined;
@@ -83,11 +85,12 @@ export function createTimelineViewportKeyDownHandler(viewportElement: HTMLElemen
     else if (event.key === "ArrowRight") left = horizontalStep;
     else if (event.key === "PageUp") top = -verticalStep;
     else if (event.key === "PageDown") top = verticalStep;
-    else if (event.key === "Home") left = -viewportElement.scrollWidth;
-    else if (event.key === "End") left = viewportElement.scrollWidth;
+    else if (event.key === "Home") left = -scroller.scrollWidth;
+    else if (event.key === "End") left = scroller.scrollWidth;
     if (left === undefined && top === undefined) return;
     event.preventDefault();
-    viewportElement.scrollBy({ ...(left === undefined ? {} : { left }), ...(top === undefined ? {} : { top }), behavior: "auto" });
+    if (left !== undefined) scroller.scrollBy({ left, behavior: "auto" });
+    if (top !== undefined) viewportElement.scrollBy({ top, behavior: "auto" });
   };
 }
 
@@ -295,7 +298,7 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
   };
   const detach = attachEditorEventBindings([
     ...(() => { const tree = rendererHost.querySelector<HTMLElement>("[data-role='left-tree-rows']"); return tree ? [{ target: tree, type: "keydown", listener: onTreeKeyDown as EventListener }] : []; })(),
-    { target: viewportElement, type: "scroll", listener: onScroll as EventListener, options: { passive: true } },
+    { target: viewportElement, type: "scroll", listener: onScroll as EventListener, options: { passive: true, capture: true } },
     { target: viewportElement, type: "keydown", listener: onViewportKeyDown as EventListener },
     { target: rendererHost, type: "click", listener: onCanvasClick as EventListener },
     { target: rendererHost, type: "pointerdown", listener: rangeInteractions.pointerDown as EventListener },

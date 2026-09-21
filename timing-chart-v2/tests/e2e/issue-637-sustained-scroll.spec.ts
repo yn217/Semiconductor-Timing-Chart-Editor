@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { timelineOwner } from "./timeline-scroll.js";
 
 test("sustained horizontal scrolling never blanks the waveform canvas or re-renders waves", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -6,7 +7,7 @@ test("sustained horizontal scrolling never blanks the waveform canvas or re-rend
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const surface = page.getByTestId("cycle-surface");
   await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
-  const viewport = page.getByTestId("cycle-viewport");
+  const viewport = timelineOwner(page);
   const counters = async () => JSON.parse((await page.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters"))!).waveDromRenders as number;
   const renderedOwners = () => page.locator("[data-role='wave-owner'] svg").count();
   await expect.poll(() => page.locator("[data-role='wave-owner']").evaluateAll((owners) => owners.filter((owner) => owner.querySelector("svg") === null).length)).toBe(0);

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { timelineOwner } from "./timeline-scroll.js";
 import { startInCycleSample } from "./cycle-startup.js";
 import { readFile } from "node:fs/promises";
 
@@ -735,10 +736,10 @@ test("Fit Selection is a view-only navigation action backed by ruler geometry", 
   const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(after.waveDromRenders).toBe(before.waveDromRenders);
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
-  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollLeft = element.scrollWidth; });
-  await expect.poll(() => page.getByTestId("cycle-viewport").evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await timelineOwner(page).evaluate((element) => { element.scrollLeft = element.scrollWidth; });
+  await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
   await page.getByTestId("ribbon").getByRole("button", { name: "Fit All", exact: true }).click();
-  await expect.poll(() => page.getByTestId("cycle-viewport").evaluate((element) => element.scrollLeft)).toBe(0);
+  await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft)).toBe(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(host).toHaveAttribute("data-canonical-revision", "0");
   const afterFitAll = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
@@ -852,10 +853,10 @@ test("Canvas keyboard navigation pans the viewport without canonical or render m
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await viewport.focus();
   await viewport.press("End");
-  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-  const atEnd = await viewport.evaluate((element) => element.scrollLeft);
+  await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  const atEnd = await timelineOwner(page).evaluate((element) => element.scrollLeft);
   await viewport.press("Home");
-  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBe(0);
+  await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft)).toBe(0);
   await viewport.press("PageDown");
   await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
   expect(atEnd).toBeGreaterThan(0);

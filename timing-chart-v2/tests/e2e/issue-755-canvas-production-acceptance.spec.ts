@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { timelineOwner } from "./timeline-scroll.js";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
 /**
@@ -17,7 +18,7 @@ async function openLarge(page: Page, query = "/") {
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 90_000 });
   return surface;
 }
-const viewportOf = (page: Page) => page.getByTestId("cycle-viewport");
+const viewportOf = (page: Page) => timelineOwner(page);
 const scrollTo = async (page: Page, left: number) => {
   await viewportOf(page).evaluate((element, target) => { element.scrollLeft = target; element.dispatchEvent(new Event("scroll", { bubbles: true })); }, left);
   await expect.poll(() => viewportOf(page).evaluate((element) => element.scrollLeft)).toBe(left);

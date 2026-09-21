@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { setTimelineScrollLeft, timelineOwner } from "./timeline-scroll.js";
 import { startInCycleSample } from "./cycle-startup.js";
 import type { BookmarkId } from "@timing-chart-v2/schema";
 import { cycleDocument } from "../../apps/editor/src/fixtures-cycle-reference-documents.js";
@@ -65,6 +66,8 @@ test("selects a cycle from Canvas geometry and the exclusive terminal boundary f
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  // The ruler is outside the Timeline scroll owner: reveal the terminal boundary by scrolling the owner (as a user would).
+  await setTimelineScrollLeft(page, 99_999);
   const terminalTick = page.getByTestId("cycle-ruler").locator("[data-cycle='24']");
   const terminalBox = await terminalTick.boundingBox();
   expect(terminalBox).not.toBeNull();
@@ -171,7 +174,7 @@ test("selects Cycle 0 and the terminal boundary from the rendered waveform", asy
   await expect(page.getByLabel("Timeline range start")).toHaveValue("0");
   await expect(page.getByLabel("Timeline range end")).toHaveValue("1");
 
-  const viewport = page.getByTestId("cycle-viewport");
+  const viewport = timelineOwner(page);
   await viewport.evaluate((element) => { element.scrollLeft = element.scrollWidth; element.dispatchEvent(new Event("scroll")); });
   const terminalTick = page.getByTestId("cycle-ruler").locator("[data-cycle='24']");
   // The ruler syncs its scroll transform on the next frame; wait until the terminal tick reaches the viewport's right edge.
@@ -410,7 +413,7 @@ test("ruler range drag cancels without mutation and remains semantic after scrol
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   const ruler = page.getByTestId("cycle-ruler");
-  const viewport = page.getByTestId("cycle-viewport");
+  const viewport = timelineOwner(page);
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const tick2 = await ruler.locator("[data-cycle='2']").boundingBox();
@@ -823,7 +826,7 @@ test("keeps Bookmark flags aligned with their rendered Ruler cycle through zoom 
   await page.getByRole("button", { name: "Add marker" }).click();
 
   const ruler = page.getByTestId("cycle-ruler");
-  const viewport = page.getByTestId("cycle-viewport");
+  const viewport = timelineOwner(page);
   const marker = ruler.locator("[data-bookmark-id]").first();
   const tick = ruler.locator(".cycle-tick[data-source-cycle='2']");
   await expect(marker).toBeVisible();

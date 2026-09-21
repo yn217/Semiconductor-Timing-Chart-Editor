@@ -1,3 +1,4 @@
+import { fixedColumnsOutsideTimeline } from "./timeline-scroll-owner.js";
 import type { RefObject } from "react";
 
 export type RendererHostSizingContext = {
@@ -17,5 +18,8 @@ export function applyRendererHostSizing({ host, viewport, metrics }: RendererHos
   const timingSurface = rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']");
   timingSurface?.style.setProperty("width", `${width}px`);
   timingSurface?.style.setProperty("grid-template-columns", `${metrics.leftPaneWidth}px ${metrics.frozenPaneWidth}px var(--wave-width, 640px)`);
-  rendererHost.querySelector<HTMLElement>("[data-role='frozen-label-rows']")?.style.setProperty("left", `${metrics.leftPaneWidth}px`, "important");
+  // #625: in Cycle the frozen column is a plain grid column (no sticky offset to publish).
+  const frozen = rendererHost.querySelector<HTMLElement>("[data-role='frozen-label-rows']");
+  if (fixedColumnsOutsideTimeline(viewportElement)) frozen?.style.removeProperty("left");
+  else frozen?.style.setProperty("left", `${metrics.leftPaneWidth}px`, "important");
 }

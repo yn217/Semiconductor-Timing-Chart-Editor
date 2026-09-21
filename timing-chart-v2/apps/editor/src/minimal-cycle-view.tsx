@@ -1,3 +1,4 @@
+import { timelineScrollOwner } from "./runtime/timeline-scroll-owner.js";
 import { startTransition, useEffect, useMemo, useRef } from "react";
 import type { RefObject } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
@@ -771,8 +772,9 @@ export function MinimalCycleView() {
       resolveCursorCycleAtClientX: (clientX: number, viewportElement: HTMLDivElement) => {
         const runtime = timelineRuntimeRef.current;
         if (!runtime) return undefined;
-        const rect = viewportElement.getBoundingClientRect();
-        const scrollLeft = viewportElement.scrollLeft;
+        const scroller = timelineScrollOwner(viewportElement);
+        const rect = scroller.getBoundingClientRect();
+        const scrollLeft = scroller.scrollLeft;
         return runtime.screenXToSourceCycle(clientX - rect.left + scrollLeft);
       },
     },

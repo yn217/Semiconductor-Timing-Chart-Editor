@@ -1,3 +1,4 @@
+import { timelineScrollOwner } from "./timeline-scroll-owner.js";
 import type { DisplayTimeMappingCache, RenderProjection } from "@timing-chart-v2/projection";
 import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { resolveTimeAxisGeometry, type LocalGeometryMap, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
@@ -97,26 +98,14 @@ export function syncRulerScroll(ruler: HTMLElement, viewport: HTMLElement, zoom:
   // transform from the already-transformed bounding box can lose the ruler's
   // horizontal correction during synthetic/high-frequency scroll events,
   // leaving annotation overlays and cycle ticks 1:1 out of alignment.
-  ruler.style.translate = `${-viewport.scrollLeft}px 0`;
+  // #625: in Cycle the TimelineViewport wrapper owns horizontal scroll; the (non-scrolling) viewport needs no frame compensation.
+  const owner = timelineScrollOwner(viewport);
+  const scrollLeft = owner.scrollLeft;
+  ruler.style.translate = `${-scrollLeft}px 0`;
   ruler.style.transform = `scaleX(${zoom})`;
   const rulerFrame = ruler.parentElement;
-  if (rulerFrame) rulerFrame.style.translate = `${viewport.scrollLeft}px 0`;
-  ruler.dataset.scrollLeft = String(viewport.scrollLeft);
-}
-
-export function syncFrozenColumnScroll(viewport: HTMLElement, host: HTMLElement, leftPaneWidth: number): void {
-  const viewportRect = viewport.getBoundingClientRect();
-  const targets: readonly [string, number][] = [
-    ["[data-role='left-tree-rows']", viewportRect.left],
-    ["[data-role='frozen-label-rows']", viewportRect.left + leftPaneWidth],
-  ];
-  for (const [selector, targetLeft] of targets) {
-    const element = host.querySelector<HTMLElement>(selector);
-    if (!element) continue;
-    const currentTranslateX = Number.parseFloat(element.style.getPropertyValue("translate")) || 0;
-    const baseLeft = element.getBoundingClientRect().left - currentTranslateX;
-    const nextTranslateX = targetLeft - baseLeft;
-    if (Math.abs(nextTranslateX) < 0.01) element.style.removeProperty("translate");
-    else element.style.setProperty("translate", `${nextTranslateX}px 0`);
-  }
+  if (rulerFrame) rulerFrame.style.translate = owner === viewport ? `${scrollLeft}px 0` : "0px 0";
+  viewport.style.setProperty("--timeline-scroll-left", owner === viewport ? "0" : String(scrollLeft));
+  if (owner !== viewport && zoom > 0) { viewport.style.setProperty("--grid-clip-left", `${scrollLeft / zoom}px`); viewport.style.setProperty("--grid-clip-right", `${(scrollLeft + owner.clientWidth) / zoom}px`); }
+  ruler.dataset.scrollLeft = String(scrollLeft);
 }

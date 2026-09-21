@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { timelineOwner } from "./timeline-scroll.js";
+
+// Classic (non-overlay) scrollbars so the Timeline track exposes a real native thumb to drag.
+test.use({ launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] } });
 
 for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
   test(`Cycle fixed columns stay stationary through native scrollbar drag at ${viewportSize.width}x${viewportSize.height}`, async ({ page }) => {
@@ -11,16 +15,20 @@ for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height:
     await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
 
-    const viewport = page.getByTestId("cycle-viewport");
+    // The Timeline owns horizontal scroll (fixed columns are outside it); its real scrollbar is the Timeline track.
+    const viewport = timelineOwner(page);
+    const track = page.getByTestId("timeline-hscroll");
     const frozenClock = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']");
     const leftHeader = page.locator(".column-headings > .left-column-heading");
     const roleHeader = page.locator(".column-headings > [aria-label='Role']");
     const signalHeader = page.locator(".column-headings > [aria-label='Signal / Annotation']");
     await expect(frozenClock).toBeVisible();
-    const initial = await viewport.evaluate((element) => {
-      const node = element as HTMLElement;
-      const rect = node.getBoundingClientRect();
-      return { left: rect.left + node.clientLeft, bottom: rect.bottom, width: node.clientWidth, scrollWidth: node.scrollWidth, scrollbarHeight: node.offsetHeight - node.clientHeight, scrollLeft: node.scrollLeft };
+    await expect(track).toBeVisible();
+    const initial = await page.evaluate(() => {
+      const node = document.querySelector<HTMLElement>("[data-role='timeline-viewport']")!;
+      const bar = document.querySelector<HTMLElement>("[data-testid='timeline-hscroll']")!;
+      const rect = bar.getBoundingClientRect();
+      return { left: rect.left + bar.clientLeft, bottom: rect.bottom, width: node.clientWidth, scrollWidth: node.scrollWidth, scrollbarHeight: bar.offsetHeight - bar.clientHeight, scrollLeft: node.scrollLeft };
     });
     expect(initial.scrollWidth).toBeGreaterThan(initial.width);
     expect(initial.scrollLeft).toBe(0);
