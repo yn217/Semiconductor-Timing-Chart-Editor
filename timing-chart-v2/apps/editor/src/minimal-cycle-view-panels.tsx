@@ -144,9 +144,9 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
       </label>}
       {<select aria-label="Transaction filter mode" title="Filters the Transaction Tree (left) by kind" data-filter-active={String(transactionMode.filterMode !== "all")} value={transactionMode.filterMode} onChange={(event) => transactionMode.onFilterModeChange(event.target.value as typeof transactionMode.filterMode)}><option value="all">All</option><option value="grouped">Grouped</option><option value="ungrouped">Ungrouped</option><option value="phases">Has Phases</option><option value="no-phases">No Phases</option><option value="linked">Has Linked Signals</option><option value="visible">Visible</option><option value="hidden">Hidden</option></select>}
       {<span className="left-column-actions">
-        <button type="button" className="tree-add-button" aria-label="Add Transaction" data-testid="add-transaction-tree" onClick={transactionMode.onAdd}><EditorIcon name="plus" /></button>
+        <button type="button" className="tree-add-button" aria-label="Add Transaction" title="Add Transaction" data-testid="add-transaction-tree" onClick={transactionMode.onAdd}><EditorIcon name="plus" /></button>
         <button type="button" className="tree-add-group-button" aria-label="New Transaction Group" title="New Transaction Group" data-testid="add-transaction-group-tree-visible" onClick={transactionMode.onAddGroup}>+ Group</button>
-        <button type="button" className="tree-more-button" aria-label="More tree actions" aria-expanded={transactionMoreOpen} aria-haspopup="menu" data-testid="transaction-tree-more" onClick={() => setTransactionMoreOpen((open) => !open)}><EditorIcon name="more" /></button>
+        <button type="button" className="tree-more-button" aria-label="More tree actions" title="More tree actions" aria-expanded={transactionMoreOpen} aria-haspopup="menu" data-testid="transaction-tree-more" onClick={() => setTransactionMoreOpen((open) => !open)}><EditorIcon name="more" /></button>
       </span>}
       {transactionMoreOpen && <div className="tree-header-menu" role="menu" aria-label="More tree actions" data-testid="transaction-tree-more-menu">
         <button type="button" role="menuitem" data-testid="add-transaction-group-tree" onClick={() => { transactionMode.onAddGroup(); setTransactionMoreOpen(false); }}>Add Transaction Group</button>
@@ -169,8 +169,8 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
         {treeFilter && <button type="button" aria-label="Clear signal tree filter" onMouseDown={(event) => event.preventDefault()} onClick={onClearTreeFilter}><EditorIcon name="close" /></button>}
       </label>
       <span className="left-column-actions">
-        <button type="button" className="tree-add-button" aria-label="Add signal or group" aria-expanded={addMenuOpen} onClick={(event) => onToggleAddMenu(event.currentTarget)}><EditorIcon name="plus" /></button>
-        <button type="button" className="tree-more-button" aria-label="More tree actions" aria-expanded={moreMenuOpen} onClick={(event) => onToggleMoreMenu(event.currentTarget)}><EditorIcon name="more" /></button>
+        <button type="button" className="tree-add-button" aria-label="Add signal or group" title="Add signal or group" aria-expanded={addMenuOpen} onClick={(event) => onToggleAddMenu(event.currentTarget)}><EditorIcon name="plus" /></button>
+        <button type="button" className="tree-more-button" aria-label="More tree actions" title="More tree actions" aria-expanded={moreMenuOpen} onClick={(event) => onToggleMoreMenu(event.currentTarget)}><EditorIcon name="more" /></button>
       </span>
       {addMenuOpen && <div className="tree-add-menu" role="menu" aria-label="Add signal or group">
         {/* #474: labels come from the same signal-type-registry.ts table
