@@ -30,7 +30,7 @@ const owners: readonly EpochOwner[] = [
     // #759: Group disclosure moved out of TransactionLanes/TransactionTree into one workspace-level owner.
     owner: "transaction group disclosure",
     file: "apps/editor/src/workspace/use-transaction-disclosure.ts",
-    markers: [/documentEpoch/, /setCollapsed(new Set())/],
+    markers: [/documentEpoch/, /setCollapsed\(new Set\(\)\)/],
   },
   {
     owner: "bookmark selection state",
