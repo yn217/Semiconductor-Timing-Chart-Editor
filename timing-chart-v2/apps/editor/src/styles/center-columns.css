@@ -243,6 +243,8 @@
 .transaction-lane-label-swatch { flex: none; width: 7px; height: 7px; border-radius: 2px; }
 .transaction-group-header, .transaction-group-header-band { position: absolute; left: 0; right: 0; }
 .transaction-group-header { display: flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 1px solid #c7d2de; background: #eef2f7; color: #2c4257; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+/* #764: sticky context layer -- pinned to the scroll owner's left edge; the header band itself still scrolls with the lanes. */
+.transaction-group-header-context { position: sticky; left: 0; display: flex; align-items: center; gap: 6px; height: 100%; padding-right: 8px; background: #eef2f7; min-width: 0; max-width: 100%; }
 .transaction-group-swatch { flex: none; width: 8px; height: 8px; border-radius: 2px; }
 /* #397: collapse/expand chevron -- same shape/interaction as the Signal
    Tree's own Group collapse control (icon-only toggle, no layout shift

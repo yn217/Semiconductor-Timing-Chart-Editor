@@ -569,6 +569,8 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
         return <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" data-transaction-group-id={header.groupId ?? "ungrouped"} data-collapsed={String(header.collapsed)} style={{ top: header.labelTop, height: GROUP_HEADER_HEIGHT }}>
+          {/* #764: label/controls are a sticky context layer pinned to the Timeline viewport's left edge, so horizontal scrolling never leaves half-cut glyphs. */}
+          <div className="transaction-group-header-context">
           <button type="button" className="transaction-group-header-chevron" aria-label={header.collapsed ? `Expand ${header.label}` : `Collapse ${header.label}`} aria-expanded={!header.collapsed} onClick={() => toggleGroupCollapsed(header.groupId ?? UNGROUPED_DISCLOSURE_KEY)}><EditorIcon name={header.collapsed ? "right" : "down"} /></button>
           {header.color && <i className="transaction-group-swatch" aria-hidden="true" style={{ background: header.color }} />}
           {/* #397 Transaction Mode GUI Closure: rename/delete had zero GUI
@@ -579,6 +581,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
           {group ? <InlineNameInput target={group} value={group.name} ariaLabel={`Rename Group ${group.name}`} onRename={(name) => commands.renameTransactionGroup(group.id, name)} /> : <span>{header.label}</span>}
           <span className="transaction-group-header-count">({header.count})</span>
           {group && <button type="button" className="transaction-group-header-delete" aria-label={`Ungroup ${group.name}`} title="Ungroup (deletes the Group, keeps its Transactions)" onClick={() => commands.deleteTransactionGroup(group.id)}><EditorIcon name="close" /></button>}
+          </div>
         </div>;
       })}
       {visibleLaneBands.map((band) => {
