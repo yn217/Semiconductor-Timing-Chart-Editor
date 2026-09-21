@@ -67,15 +67,18 @@ describe("document-relative transient state ownership", () => {
       "document-relative UI reset",
     ]));
   });
-  // #743: the epoch advances only after the authoritative session replacement succeeds (a throwing replaceSession must leave the epoch untouched).
-  it("advances the document epoch strictly after session replacement", () => {
-    const source = readFileSync(resolve(workspace, "apps/editor/src/application/use-document-lifecycle.ts"), "utf8");
-    const replace = source.indexOf("application.replaceSession(");
-    const advance = source.indexOf("documentEpoch.advance()");
-    const effects = source.indexOf("applyReplacement({");
+  // #743: the failure boundary is commitDocumentReplacement (behaviour tested in tests/editor/document-replacement.test.ts); here we pin that the
+  // lifecycle hook goes through it and advances the epoch nowhere else, and that inside it the epoch advance follows the session replacement.
+  it("routes every replacement through commitDocumentReplacement (epoch advance strictly after session replacement, once)", () => {
+    const lifecycle = readFileSync(resolve(workspace, "apps/editor/src/application/use-document-lifecycle.ts"), "utf8");
+    const boundary = readFileSync(resolve(workspace, "apps/editor/src/application/document-replacement.ts"), "utf8");
+    expect(lifecycle).toContain("commitDocumentReplacement(");
+    expect(lifecycle.split("documentEpoch.advance()")).toHaveLength(2);
+    expect(lifecycle.indexOf("commitDocumentReplacement(")).toBeLessThan(lifecycle.indexOf("applyReplacement({"));
+    const replace = boundary.indexOf("port.replaceSession(");
+    const advance = boundary.indexOf("port.advanceEpoch()");
     expect(replace).toBeGreaterThan(-1);
     expect(advance).toBeGreaterThan(replace);
-    expect(effects).toBeGreaterThan(advance);
-    expect(source.match(/documentEpoch.advance()/g)).toHaveLength(1);
+    expect(boundary.split("port.advanceEpoch()")).toHaveLength(2);
   });
 });
