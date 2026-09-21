@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { RefObject } from "react";
 import { getGestureHint, subscribeGestureHint } from "./runtime/active-gesture-cancellation.js";
+import { cycleUnitWord } from "./transaction-tc.js";
 import type { GroupId, SignalGroup, SpacerId } from "@timing-chart-v2/schema";
 import { ContextMenuSurface } from "./context-menu-surface.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
@@ -156,7 +157,7 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
     </span>
     <span className="role-column-heading" aria-label="Group">Group</span><span className="signal-column-heading" aria-label="Transaction">Transaction</span>
     <span className="frozen-pane-heading-gutter" aria-hidden="true" />
-    <span className="transaction-time-scale-readout">Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = {transactionMode.timeScale ? <select data-testid="transaction-tc-scale" aria-label="Cycles per TC" value={transactionMode.timeScale.cyclesPerTc} onChange={(event) => transactionMode.timeScale?.onChange(Number(event.target.value))}>{[...new Set([...TC_SCALE_PRESETS, transactionMode.timeScale.cyclesPerTc])].sort((a, b) => a - b).map((value) => <option key={value} value={value}>{value}</option>)}</select> : timeScaleLabel} Cycles)</span>
+    <span className="transaction-time-scale-readout">Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = {transactionMode.timeScale ? <select data-testid="transaction-tc-scale" aria-label="Cycles per TC" value={transactionMode.timeScale.cyclesPerTc} onChange={(event) => transactionMode.timeScale?.onChange(Number(event.target.value))}>{[...new Set([...TC_SCALE_PRESETS, transactionMode.timeScale.cyclesPerTc])].sort((a, b) => a - b).map((value) => <option key={value} value={value}>{value}</option>)}</select> : timeScaleLabel} {cycleUnitWord(transactionMode.timeScale?.cyclesPerTc ?? 1)})</span>
   </div>;
   }
   return <div className="column-headings">

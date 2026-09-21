@@ -19,6 +19,9 @@ export function tcToCycles(tc: number, perTc: number): number {
   return Math.round(tc * perTc);
 }
 
+/** Quantity-aware unit word for the cycles-per-TC relationship: "1 TC = 1 cycle", "1 TC = 10 cycles" (#766). */
+export const cycleUnitWord = (count: number): string => (count === 1 ? "cycle" : "cycles");
+
 export const tcUnitLabel = (perTc: number): string => (perTc === 1 ? "cycles" : "TC");
 /** Column/field label carrying its unit, e.g. "Start (TC)". */
 export const tcFieldLabel = (name: string, perTc: number): string => `${name} (${tcUnitLabel(perTc)})`;

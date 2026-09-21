@@ -64,6 +64,7 @@ import {
   refreshGroupStylePreview,
 } from "./runtime/presentation-preview.js";
 import type { ContextMenuState } from "./workspace/use-dialog-menu-state.js";
+import { cycleUnitWord } from "./transaction-tc.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type Ref<T> = RefObject<T | null>;
@@ -396,7 +397,7 @@ export function useEditorSecondarySurfaces(
               const perTc =
                 input.document.transactionTimeScale
                   ?.clockCyclesPerTransactionCycle ?? 1;
-              return `Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = ${perTc} Cycle${perTc === 1 ? "" : "s"})`;
+              return `Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = ${perTc} ${cycleUnitWord(perTc)})`;
             })()
           : input.document.timeline.referenceClock
             ? `Time Scale: Cycle    Reference: ${input.referenceClockName ?? input.document.timeline.referenceClock}`
