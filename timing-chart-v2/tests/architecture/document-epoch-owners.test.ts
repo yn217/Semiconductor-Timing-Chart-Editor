@@ -24,7 +24,13 @@ const owners: readonly EpochOwner[] = [
   {
     owner: "transaction group and drag state",
     file: "apps/editor/src/runtime/transaction-lanes.tsx",
-    markers: [/documentEpoch/, /previousDocumentEpoch/],
+    markers: [/documentEpoch/, /drag.documentEpoch/],
+  },
+  {
+    // #759: Group disclosure moved out of TransactionLanes/TransactionTree into one workspace-level owner.
+    owner: "transaction group disclosure",
+    file: "apps/editor/src/workspace/use-transaction-disclosure.ts",
+    markers: [/documentEpoch/, /setCollapsed(new Set())/],
   },
   {
     owner: "bookmark selection state",
@@ -49,6 +55,7 @@ describe("document-relative transient state ownership", () => {
       "timeline presentation collapse state",
       "entity editor and inspector drafts",
       "transaction group and drag state",
+      "transaction group disclosure",
       "bookmark selection state",
       "document-relative UI reset",
     ]));
