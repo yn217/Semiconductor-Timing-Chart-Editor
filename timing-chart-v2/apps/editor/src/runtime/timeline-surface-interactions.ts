@@ -17,7 +17,7 @@ import { TreeDragInteractionOwner } from "./tree-drag-interaction-owner.js";
 import type { TimelineGeometryOwner } from "./timeline-geometry-owner.js";
 import { attachEditorEventBindings } from "./interaction-controller.js";
 import { routeGlobalShortcut } from "./keyboard-shortcut-router.js";
-import { cancelActiveGesture } from "./active-gesture-cancellation.js";
+import { cancelActiveGesture, registerActiveGestureCancel } from "./active-gesture-cancellation.js";
 import { nextCommandId } from "../command-id.js";
 
 type Session = ReturnType<EditorApplicationOwner["runtime"]["session"]["current"]>;
@@ -241,6 +241,12 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     refreshRange: refreshRangePreview,
     refreshPlayhead: () => timelineRuntime.refreshPlayhead(),
   });
+  // #720: while an Annotation drag is active the status bar explains the gesture (shared active-gesture hint channel; view-only).
+  let annotationHintRelease: (() => void) | undefined;
+  const syncAnnotationHint = () => {
+    if (annotationInteraction.active && annotationHintRelease === undefined) annotationHintRelease = registerActiveGestureCancel(() => annotationInteraction.cancel(), "Move annotation - drag; Esc cancels");
+    else if (!annotationInteraction.active && annotationHintRelease !== undefined) { annotationHintRelease(); annotationHintRelease = undefined; }
+  };
   const treeDrag = new TreeDragInteractionOwner({ rendererHost, getDocument: () => getSnapshot().document, execute });
   const annotationInteraction = new AnnotationInteractionOwner({
     rendererHost, renderer, timelineGeometry, documentEpoch, getZoom: timelineNavigation.getZoom,
@@ -327,12 +333,16 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     { target: rendererHost, type: "pointermove", listener: annotationInteraction.onPointerMove as EventListener },
     { target: rendererHost, type: "pointerup", listener: annotationInteraction.onPointerUp as EventListener },
     { target: rendererHost, type: "pointercancel", listener: annotationInteraction.cancel as EventListener },
+    { target: rendererHost, type: "pointerdown", listener: syncAnnotationHint as EventListener },
+    { target: rendererHost, type: "pointermove", listener: syncAnnotationHint as EventListener },
+    { target: rendererHost, type: "pointerup", listener: syncAnnotationHint as EventListener },
+    { target: rendererHost, type: "pointercancel", listener: syncAnnotationHint as EventListener },
     { target: rendererHost, type: "contextmenu", listener: onContextMenu as EventListener },
     { target: rendererHost.ownerDocument, type: "keydown", listener: onGlobalKeyDown as EventListener },
   ]);
   return {
     cancel: () => { rangeInteractions.cancel(); treeDrag.cancel(); annotationInteraction.cancel(); },
-    detach: () => { detach(); lowerCanvasClickRef.current = () => undefined; rangeInteractions.cancel(); treeDrag.cancel(); annotationInteraction.cancel(); },
+    detach: () => { detach(); lowerCanvasClickRef.current = () => undefined; rangeInteractions.cancel(); treeDrag.cancel(); annotationInteraction.cancel(); syncAnnotationHint(); },
     consumeRulerClickSuppression: () => rangeInteractions.consumeRulerClickSuppression(),
   };
 }

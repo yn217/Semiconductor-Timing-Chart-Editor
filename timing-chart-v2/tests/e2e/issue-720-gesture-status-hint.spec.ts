@@ -34,3 +34,29 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(tool).not.toContainText("Esc cancels");
   });
 }
+
+// Annotation drag publishes the same kind of hint and clears it on Escape / release.
+test("Annotation drag shows a status hint that clears on Escape", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("text");
+  await page.getByRole("button", { name: "Add annotation" }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const history = await page.getByTestId("history-status").innerText();
+  const tool = page.getByTestId("tool-status");
+  const label = host.locator("[data-role='annotation-owner'] [data-role='annotation-label']").last();
+  const box = (await label.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 60, box.y + 30, { steps: 5 });
+  await expect(tool).toContainText("Esc cancels");
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(tool).not.toContainText("Esc cancels");
+  await expect(page.getByTestId("history-status")).toHaveText(history);
+});
