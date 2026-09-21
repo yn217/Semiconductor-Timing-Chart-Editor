@@ -37,3 +37,48 @@ test("Bottom Phases tab shows parent context, top Apply/Revert and live validati
   await tab.getByRole("button", { name: "Revert" }).click();
   await expect(tab.getByLabel("Bottom Phase 1 name")).not.toHaveValue("KEEP_ME");
 });
+
+// #751 identity + ordering + shared validation: rows are shown in Start-time order, edits/deletes follow the Phase (not the displayed
+// position), and Bottom and Inspector share one draft and one validation result.
+test("Phase rows follow Start-time order; edit and delete resolve the Phase, not the display index; validation wording is TC-safe", async ({ page }) => {
+  await page.goto("/?transaction-demo");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByTestId("transaction-left-tree-row-demo_txn_read").click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Phases", exact: true }).click();
+  const tab = page.getByTestId("transaction-bottom-phases");
+  const rows = tab.locator(".transaction-bottom-phase-table .transaction-bottom-phase-row[data-phase-uid]");
+  const count = await rows.count();
+  expect(count).toBeGreaterThanOrEqual(2);
+  const names = () => rows.evaluateAll((elements) => elements.map((element) => (element.querySelector("input") as HTMLInputElement).value));
+  const starts = () => rows.evaluateAll((elements) => elements.map((element) => Number((element.querySelectorAll("input")[1] as HTMLInputElement).value)));
+  const initialNames = await names();
+  const initialStarts = await starts();
+  expect([...initialStarts].sort((a, b) => a - b)).toEqual(initialStarts);
+  const history = await page.getByTestId("history-status").innerText();
+
+  // Move the LAST phase's Start before everything else: it must jump to the top of the Start-time projection, keeping its name.
+  const lastUid = await rows.nth(count - 1).getAttribute("data-phase-uid");
+  const lastName = initialNames[count - 1]!;
+  await rows.nth(count - 1).locator("input").nth(1).fill(String(initialStarts[0]! - 0));
+  // The visible order is held while the row is being edited and re-projects once focus leaves it.
+  await tab.getByTestId("transaction-bottom-phase-coverage").click();
+  await tab.locator("input").first().evaluate((element) => (document.activeElement as HTMLElement | null)?.blur());
+  await expect.poll(async () => { const values = await starts(); return JSON.stringify([...values].sort((x, y) => x - y)) === JSON.stringify(values); }).toBe(true);
+  const reordered = await starts();
+  expect([...reordered].sort((a, b) => a - b)).toEqual(reordered);
+  await expect(tab.locator(`.transaction-bottom-phase-row[data-phase-uid="${lastUid}"] input`).first()).toHaveValue(lastName);
+
+  // Delete by the displayed first row that belongs to that phase: exactly that phase disappears.
+  await tab.locator(`.transaction-bottom-phase-row[data-phase-uid="${lastUid}"] button`).click();
+  await expect(tab.locator(`.transaction-bottom-phase-row[data-phase-uid="${lastUid}"]`)).toHaveCount(0);
+  expect(await names()).toEqual(initialNames.slice(0, count - 1));
+
+  // Validation: a blank name is one shared structured message, without the old "integer-cycle" wording.
+  await tab.getByLabel("Bottom Phase 1 name").fill("");
+  await expect(tab.getByTestId("transaction-bottom-phase-error")).toHaveText("Every Phase needs a name.");
+  await expect(tab.getByTestId("transaction-bottom-phase-error")).not.toContainText(/integer-cycle/i);
+  await expect(page.getByTestId("history-status")).toHaveText(history);
+  await tab.getByRole("button", { name: "Revert" }).click();
+  await expect(tab.getByTestId("transaction-bottom-phase-error")).toHaveCount(0);
+});

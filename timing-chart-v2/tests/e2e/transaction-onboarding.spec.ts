@@ -33,7 +33,8 @@ async function createReadRequestTransaction(page: Page, { withLinks = false }: {
   const inspector = page.getByTestId("inspector");
   const phases: readonly [string, number, number][] = [["Request", 0.2, 0.5], ["Processing", 0.5, 0.9], ["Response", 0.9, 1.2]]; // TC = cycles 2-5, 5-9, 9-12
   for (let i = 0; i < phases.length; i++) await inspector.getByTestId("add-transaction-phase").click();
-  for (let i = 0; i < phases.length; i++) {
+  // Rows are shown in Start-time order (#751): fill from the last row so re-projection after each row never shifts the rows still to edit.
+  for (let i = phases.length - 1; i >= 0; i--) {
     const [name, start, end] = phases[i]!;
     await inspector.getByLabel(`Phase ${i + 1} name`).fill(name);
     await inspector.getByLabel(`Phase ${i + 1} start`).fill(String(start));
