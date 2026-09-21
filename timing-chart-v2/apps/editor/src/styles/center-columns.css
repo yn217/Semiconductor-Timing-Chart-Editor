@@ -461,7 +461,7 @@
 .transaction-disclosure-slot { box-sizing: border-box; min-height: 28px; padding: 0; border: 0; border-right: 1px solid #dfe7ef; background: #f7fafd; color: #55708d; font-size: 12px; line-height: 1; cursor: pointer; }
 .transaction-disclosure-slot:hover { background: #e7f1fb; color: #163756; }
 .transaction-disclosure-slot:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; z-index: 1; }
-.transaction-phase-row { display: flex; align-items: stretch; min-height: 26px; background: #f8fbfe; color: #5c687c; }
+.transaction-table-phase-row { display: flex; align-items: stretch; min-height: 26px; background: #f8fbfe; color: #5c687c; }
 .transaction-phase-indent { flex: 0 0 28px; width: 28px; min-width: 28px; border-right: 1px solid #dfe7ef; background: #f1f6fa; }
 .transaction-phase-cells { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border-bottom: 1px solid #e4ebf2; }
 .transaction-phase-cells > span { min-width: 0; padding-inline: 4px; border-right: 1px solid #e7edf3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
