@@ -239,8 +239,11 @@ export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelec
   useEffect(() => {
     if (!settingsOpen) return;
     const close = (event: PointerEvent) => { if (!(event.target instanceof Node) || !settingsRef.current?.contains(event.target)) setSettingsOpen(false); };
+    // #747: Escape closes the popover from anywhere (focus normally stays on the gear) and hands focus back to it.
+    const escape = (event: KeyboardEvent) => { if (event.key !== "Escape") return; setSettingsOpen(false); settingsRef.current?.querySelector<HTMLElement>(".bottom-settings-button")?.focus(); };
     document.addEventListener("pointerdown", close, true);
-    return () => document.removeEventListener("pointerdown", close, true);
+    document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("pointerdown", close, true); document.removeEventListener("keydown", escape); };
   }, [settingsOpen]);
   return <section className="bottom-editor" data-testid="bottom-editor">
     <nav className="bottom-tabs" data-testid="bottom-tabs" role="tablist" aria-label="Bottom context panels">
@@ -258,7 +261,7 @@ export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelec
           shows-Bookmark moment reads as intentional, not stale. */}
       <output className="bottom-follow-status" data-testid="bottom-follow-status">{pinned ? `Pinned: ${activeTab}` : "Following Selection"}</output>
       <span className="bottom-settings-anchor" ref={settingsRef}>
-        <button type="button" className="bottom-settings-button" data-testid="bottom-settings" aria-label="Bottom panel settings" aria-haspopup="true" aria-expanded={settingsOpen} title="Bottom panel behavior: Follow Selection, Pin" onClick={() => setSettingsOpen((open) => !open)}>{"⚙"}</button>
+        <button type="button" className="bottom-settings-button" data-testid="bottom-settings" aria-label="Bottom Panel settings" aria-haspopup="true" aria-expanded={settingsOpen} title="Bottom panel behavior: Follow Selection, Pin" onClick={() => setSettingsOpen((open) => !open)}>{"⚙"}</button>
         <div className="bottom-settings-popover" data-testid="bottom-settings-popover" role="group" aria-label="Bottom panel behavior" hidden={!settingsOpen} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); setSettingsOpen(false); } }}>
         <label><input data-testid="follow-selection" type="checkbox" checked={followSelection} onChange={(event) => onFollowSelectionChange(event.target.checked)} /> Follow Selection</label>
         <button type="button" data-testid="bottom-pin" aria-label={pinned ? "Unpin" : "Pin"} aria-pressed={pinned} onClick={onTogglePinned}><span className="bottom-pin-label" data-v1-label={pinned ? "Unpin" : "Pin"}>{pinned ? "Unpin" : "Pin"}</span></button>
