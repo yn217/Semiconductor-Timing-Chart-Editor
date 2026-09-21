@@ -34,7 +34,9 @@ test("Transaction, Combined and Cycle geometry is unchanged by the Cycle-only sp
           const heightChangedInCycle = mode === "Cycle" && /^(left|frozen|viewport|grid)$/.test(path);
           // #750: standalone Transaction now compresses time by cyclesPerTC, so only its time-domain items moved (layout regions stay pinned).
           if (mode === "Transaction" && /^(ticks|waveOwners|lanes|grid|transactionLanes)/.test(path)) return;
-          (a as number[]).forEach((value, index) => heightChangedInCycle && index === 3 ? undefined : expect(Math.abs(value - (b as number[])[index]!), `${viewport.width}x${viewport.height} ${mode} ${path}[${index}]`).toBeLessThanOrEqual(1));
+          // #765: in standalone Transaction the Cycle tree-row plane is visibility:hidden and intentionally has zero height so it cannot inflate the
+          // timeline's scroll extent; its (invisible) height is not part of the visible-geometry contract. x / y / width stay pinned.
+          (a as number[]).forEach((value, index) => (heightChangedInCycle && index === 3) || (mode === "Transaction" && path === "left" && index === 3) ? undefined : expect(Math.abs(value - (b as number[])[index]!), `${viewport.width}x${viewport.height} ${mode} ${path}[${index}]`).toBeLessThanOrEqual(1));
         } else if (Array.isArray(a)) (a as unknown[]).forEach((item, index) => compare(item, (b as unknown[])[index], `${path}.${index}`));
         else if (a === null) expect(b, path).toBeNull();
       };

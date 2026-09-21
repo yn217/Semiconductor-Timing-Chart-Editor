@@ -177,7 +177,10 @@
 
 .cycle-ruler .cycle-tick, .cycle-ruler .timeline-marker, .surface-host [data-role="annotation-label"], .surface-host [data-role="snap-cycle-label"], .surface-host [data-role="clock-edge-number"] { transform-origin: 0 50%; scale: calc(1 / var(--zoom-x, 1)) 1; }
 
-.transaction-lane > button > span { transform-origin: 50% 50%; scale: calc(1 / var(--zoom-x, 1)) 1; }
+/* #750 follow-up: a narrow bar drops its label text, but the label element is also the body-drag handle; keep it filling the bar so a
+   narrow Transaction can still be moved by dragging its body (it had collapsed to 0px height). */
+.transaction-lane > button > span[data-label-compact="true"] { align-self: stretch; height: 100%; min-height: 16px; }
+/* #767: no counter-scale -- the track is no longer CSS-scaled, zoom re-lays the bar geometry out, so bar names keep their natural aspect. */
 
 .surface-host { width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px) + var(--wave-width, 640px)); }
 
@@ -436,7 +439,7 @@
 .editor-shell[data-show-group-background="false"] .surface-host [data-role$="-row"]:not([data-selected="true"]):not([data-transaction-linked="true"]) { background-color: transparent !important; }
 
 /* Transaction presentation belongs to the center timing surface. */
-.transaction-track { position: absolute; z-index: 3; top: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); width: var(--wave-width, 640px); height: 100%; transform-origin: 0 0; scale: var(--transaction-zoom) 1; }.transaction-geometry-line { position: absolute; top: 0; bottom: 0; width: 1px; border-left: 1px solid #dce4ed; pointer-events: none; }
+.transaction-track { position: absolute; z-index: 3; top: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); width: calc(var(--wave-width, 640px) * var(--transaction-zoom, 1)); height: 100%; }.transaction-geometry-line { position: absolute; top: 0; bottom: 0; width: 1px; border-left: 1px solid #dce4ed; pointer-events: none; }
 .transaction-left-tree-more { display: inline-flex; align-items: center; justify-content: center; width: 22px; min-width: 22px; height: 24px; margin: 0; padding: 0; border: 0; background: transparent; color: #52677f; cursor: pointer; }
 .transaction-left-tree-group-menu { position: fixed; z-index: 1200; display: grid; width: 216px; min-width: min(216px, calc(100vw - 16px)); max-width: calc(100vw - 16px); padding: 4px; border: 1px solid #b8c7d8; border-radius: 3px; background: #fff; box-shadow: 0 4px 12px rgb(30 55 80 / 18%); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
 .transaction-left-tree-group-menu button { box-sizing: border-box; width: 100%; min-width: 0; min-height: 27px; padding: 5px 8px; border: 0; background: transparent; color: #29425e; text-align: left; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }

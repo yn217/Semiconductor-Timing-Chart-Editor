@@ -1,5 +1,5 @@
 import { UNGROUPED_DISCLOSURE_KEY, type TransactionDisclosure } from "../workspace/use-transaction-disclosure.js";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { Bookmark, BookmarkId, CanonicalDocument, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { EditorIcon } from "../editor-icon.js";
 import type { TransactionLaneCommandActions } from "../application/editor-surface-command-controller.js";
@@ -341,12 +341,15 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       viewport.scrollLeft = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, viewport.scrollLeft + deltaX));
     }
   }, [documentEpoch, selectedId, viewMode]);
+  // #767: zoom re-lays the geometry out (X scaled here) instead of CSS-scaling the whole track, which stretched every glyph horizontally.
+  const zoomFactor = Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
+  const getScaledBoundaryX = useCallback((cycle: number) => { const px = getBoundaryX(cycle); return px === undefined ? undefined : px * zoomFactor; }, [getBoundaryX, zoomFactor]);
   const { cycleXs, boundaryXByCycle } = useMemo(() => {
     const foldBoundaryCycles = (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).flatMap((group) => [group.start, group.end]);
     const relevantCycles = [...new Set([...document.transactions.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).flatMap(phase => [phase.start, phase.end])]), ...bookmarks.map((bookmark) => bookmark.start), ...foldBoundaryCycles])].sort((left, right) => left - right);
-    const cycleXs = relevantCycles.flatMap((cycle) => { const x = getBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
+    const cycleXs = relevantCycles.flatMap((cycle) => { const x = getScaledBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
     return { cycleXs, boundaryXByCycle: new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const)) };
-  }, [bookmarks, document.transactions, getBoundaryX, presentationRevision]);
+  }, [bookmarks, document.transactions, getScaledBoundaryX, presentationRevision]);
   const x = (cycle: number) => boundaryXByCycle.get(cycle);
   const foldRanges = useMemo<readonly (readonly [number, number])[]>(() => {
     const ranges = (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const).sort((left, right) => left[0] - right[0] || left[1] - right[1]);
@@ -626,7 +629,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
           // inline style -- the same interaction-priority bug already
           // fixed for Signal rows under #472.
           const resolvedColor = transaction.color ?? (transaction.groupId === undefined ? undefined : transactionGroupById.get(transaction.groupId)?.color);
-          return <TransactionBar key={transaction.id} transaction={transaction} documentEpoch={documentEpoch} viewMode={viewMode} row={row} color={resolvedColor} selected={isTransactionSelected(transaction.id)} cycleCount={document.timeline.cycleCount} getBoundaryX={getBoundaryX} boundaryXByCycle={boundaryXByCycle} visibleBoundaryXs={cycleXs} foldRanges={foldRanges} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
+          return <TransactionBar key={transaction.id} transaction={transaction} documentEpoch={documentEpoch} viewMode={viewMode} row={row} color={resolvedColor} selected={isTransactionSelected(transaction.id)} cycleCount={document.timeline.cycleCount} getBoundaryX={getScaledBoundaryX} boundaryXByCycle={boundaryXByCycle} visibleBoundaryXs={cycleXs} foldRanges={foldRanges} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
         })}
       </div>)}
     </div>

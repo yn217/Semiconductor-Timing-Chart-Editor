@@ -53,7 +53,7 @@
 }
 .editor-shell .cycle-panel.mode-transaction .transaction-track {
   left: 0;
-  width: var(--wave-width, 640px);
+  width: calc(var(--wave-width, 640px) * var(--transaction-zoom, 1));
 }
 .editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row > button { height: 28px; }
 .editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row-editor { min-height: 28px; }
@@ -71,9 +71,12 @@
    columns, so the scroll extent is exactly the presented content. */
 .editor-shell[data-view-mode="Transaction"] .surface-host { overflow-x: clip; }
 
-/* #765: the Cycle signal-row plane is invisible in standalone Transaction; keep it laid out for mode round-trips but stop it from
-   contributing its height to the timeline's scrollable overflow (a phantom vertical scrollbar when the lanes fit). */
-.cycle-panel.mode-transaction .split-signal-content { height: 0; min-height: 0; overflow: clip; }
+/* #765: the Cycle signal-row plane (surface host + its left tree rows) is invisible in standalone Transaction; keep it laid out for mode
+   round-trips but stop it from contributing its height to the timeline's scrollable overflow (a phantom vertical scrollbar when the lanes fit).
+   Scoped to those two planes only: the ruler, lanes and Bookmark markers share the .split-signal-content wrapper and must not be clipped.
+   overflow: clip (not hidden) so it never becomes a sticky scroll container. */
+.cycle-panel.mode-transaction .surface-host,
+.cycle-panel.mode-transaction [data-role='left-tree-rows'] { height: 0; min-height: 0; overflow: clip; }
 
 /* #764: the track is scaled by --transaction-zoom, so the label plane (Group header bands + their sticky context) must span the same presented
    extent; at 1x this is identical to --wave-width. */
