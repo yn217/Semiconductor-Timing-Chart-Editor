@@ -164,7 +164,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   const waveOriginPx = firstFoundPoint && firstFoundDisplay !== undefined && windowLocalPixelsPerCycle !== undefined
     ? (firstFoundPoint.x - firstFoundDisplay * windowLocalPixelsPerCycle) * scale
     : 0;
-  for (const display of presentationCycles(semanticDisplayCycleCount, pixelsPerCycle, rulerTickBudget)) {
+  for (const display of presentationCycles(semanticDisplayCycleCount, pixelsPerCycle, rulerTickBudget, tcScale > 1 ? tcScale : 1)) {
     const sourceCycle = display === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[display] ?? display);
     const resolvedPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: sourceCycle, point: "cycle-start" })?.point;
     const point = resolvedPoint ?? (firstFoundPoint && firstFoundDisplay !== undefined && windowLocalPixelsPerCycle !== undefined
@@ -206,7 +206,10 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     if (containingFold !== undefined) marker.dataset.insideCollapsed = containingFold.name;
     marker.style.left = `${point.x * scale}px`;
     marker.style.top = `${outlineHeight + 19}px`;
-    marker.textContent = containingFold === undefined ? `◆ ${bookmark.name}` : `◆ ${bookmark.name} (inside ${containingFold.name})`;
+    // #750: under cyclesPerTC compression neighbouring markers sit a few pixels apart; show the diamond only (name stays in title / aria-label)
+    // so labels cannot cover each other.
+    marker.textContent = containingFold === undefined ? (tcScale > 1 ? "◆" : `◆ ${bookmark.name}`) : `◆ ${bookmark.name} (inside ${containingFold.name})`;
+    marker.setAttribute("aria-label", bookmark.name);
     marker.title = containingFold === undefined ? `${bookmark.name}: cycle ${bookmark.start}` : `${bookmark.name}: cycle ${bookmark.start} inside collapsed ${containingFold.name}`;
     overlays.push(marker);
   }

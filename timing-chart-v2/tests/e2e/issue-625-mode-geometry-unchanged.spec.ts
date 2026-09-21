@@ -32,6 +32,8 @@ test("Transaction, Combined and Cycle geometry is unchanged by the Cycle-only sp
           expect(Array.isArray(b), path).toBe(true);
           // #756: in Cycle the panel/tree/grid columns now span Main + Bottom, so only their heights changed (x/y/width are pinned).
           const heightChangedInCycle = mode === "Cycle" && /^(left|frozen|viewport|grid)$/.test(path);
+          // #750: standalone Transaction now compresses time by cyclesPerTC, so only its time-domain items moved (layout regions stay pinned).
+          if (mode === "Transaction" && /^(ticks|waveOwners|lanes|grid|transactionLanes)/.test(path)) return;
           (a as number[]).forEach((value, index) => heightChangedInCycle && index === 3 ? undefined : expect(Math.abs(value - (b as number[])[index]!), `${viewport.width}x${viewport.height} ${mode} ${path}[${index}]`).toBeLessThanOrEqual(1));
         } else if (Array.isArray(a)) (a as unknown[]).forEach((item, index) => compare(item, (b as unknown[])[index], `${path}.${index}`));
         else if (a === null) expect(b, path).toBeNull();

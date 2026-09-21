@@ -109,17 +109,20 @@ test("showcase Transaction bars stay aligned with Cycle boundaries through horiz
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
 
   const bar = page.getByTestId("transaction-lanes").locator("[data-transaction-id='demo_txn_fetch']");
-  const cycleBoundary = page.locator(".cycle-tick[data-source-cycle='15']");
+  // #750: Transaction ticks sit on TC boundaries only; cycle 15's X is derived from the cycle 0 / cycle 10 ticks.
+  const tickAt = (cycle: number) => page.locator(`.cycle-tick[data-source-cycle='${cycle}']`);
   await expect(bar).toBeVisible();
-  await expect(cycleBoundary).toHaveCount(1);
+  await expect(tickAt(0)).toHaveCount(1);
+  await expect(tickAt(10)).toHaveCount(1);
   const viewport = page.locator(".cycle-viewport").first();
   await expect.poll(() => viewport.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeGreaterThan(0);
 
   const alignmentDelta = async () => {
-    const [barBox, tickBox] = await Promise.all([bar.boundingBox(), cycleBoundary.boundingBox()]);
+    const [barBox, zeroBox, tenBox] = await Promise.all([bar.boundingBox(), tickAt(0).boundingBox(), tickAt(10).boundingBox()]);
     expect(barBox).not.toBeNull();
-    expect(tickBox).not.toBeNull();
-    return Math.abs(barBox!.x - tickBox!.x);
+    expect(zeroBox).not.toBeNull();
+    expect(tenBox).not.toBeNull();
+    return Math.abs(barBox!.x - (zeroBox!.x + (tenBox!.x - zeroBox!.x) * 1.5));
   };
   await expect.poll(alignmentDelta).toBeLessThanOrEqual(1);
 

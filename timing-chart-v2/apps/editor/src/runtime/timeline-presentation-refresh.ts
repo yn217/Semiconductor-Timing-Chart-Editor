@@ -28,14 +28,18 @@ export function rebuildRulerPresentation(ruler: HTMLElement, document: Canonical
   const referenceViewBoxWidth = referenceSvg?.viewBox.baseVal.width;
   // #750: Transaction presentation labels the ruler in TC; Cycle and Combined keep system cycles (Combined shares one ruler with the Cycle pane).
   const tcScale = ruler.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? (document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1) : 1;
-  const { scale, targetWidth, waveOriginPx } = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, previousScale, undefined, timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth, tcScale);
+  // #750: cyclesPerTC is a horizontal display-time COMPRESSION factor in standalone Transaction Mode (1 TC occupies what 1 cycle does in
+  // Cycle Mode). The geometry scale is the single presentation authority, so ruler, grid, bars, Phases, Bookmarks, snap and scroll extent
+  // all follow it; Cycle and Combined stay 1:1 with source cycles.
+  const geometryScale = tcScale > 1 ? 1 / tcScale : (previousScale !== undefined && previousScale >= 1 ? previousScale : 1);
+  const { scale, targetWidth, waveOriginPx } = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, geometryScale, undefined, timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth, tcScale);
   const waveWidthPxPerDisplayCycle = mapping.displayCycleCount > 0 ? targetWidth / mapping.displayCycleCount : undefined;
   return { timeAxis, scale, waveWidthPxPerDisplayCycle, waveOriginPx };
 }
 
 export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, enabled: boolean, totalHeight: number, viewportWidth: number, screenGeometryScale: number): void {
   const timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
-  renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, totalHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode);
+  renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, totalHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode, grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? Math.max(1, Math.round(document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1)) : 1);
 }
 
 export function refreshPlayheadPresentation(ruler: HTMLElement, cycle: number, boundaryToLocalX: (cycle: number) => number | undefined): void {

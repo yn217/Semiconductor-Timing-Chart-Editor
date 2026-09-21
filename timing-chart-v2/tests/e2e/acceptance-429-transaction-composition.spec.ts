@@ -261,10 +261,11 @@ test("Transaction canvas body and edge drags commit through the semantic command
   const body = bar.locator(":scope > span").first();
   const bodyBox = await body.boundingBox();
   expect(bodyBox).not.toBeNull();
-  // At 10 cycles/TC the 50-cycle bar is wider than the viewport, so grab a visible point and drop on a visible ruler tick
+  // Grab a point inside the bar and drop on a visible ruler tick
   // (a body drag moves the Transaction so its start lands under the pointer's Snap cycle).
-  const tickX = async (cycle: number) => (await page.getByTestId("cycle-ruler").locator(`[data-cycle='${cycle}']`).boundingBox())!.x + 1;
-  await page.mouse.move(bodyBox!.x + 200, bodyBox!.y + bodyBox!.height / 2);
+  // #750: Transaction ticks sit on TC boundaries only (cyclesPerTC compresses time), so derive a cycle's X from the cycle 0 / cycle 10 ticks.
+  const tickX = async (cycle: number) => { const zero = (await page.getByTestId("cycle-ruler").locator("[data-source-cycle='0']").boundingBox())!.x; const ten = (await page.getByTestId("cycle-ruler").locator("[data-source-cycle='10']").boundingBox())!.x; return zero + (ten - zero) * cycle / 10 + 1; };
+  await page.mouse.move(bodyBox!.x + Math.min(200, bodyBox!.width / 2), bodyBox!.y + bodyBox!.height / 2); // compressed bars (#750) can be narrower than 200px
   await page.mouse.down();
   await page.mouse.move(await tickX(20), bodyBox!.y + bodyBox!.height / 2, { steps: 6 });
   await page.mouse.up();
@@ -387,9 +388,9 @@ test("Resizing a folded Transaction preserves the opposite source boundary and u
   // Move across a real source boundary. A fixed pixel delta can remain in
   // the same cycle at different viewport/zoom configurations and would make
   // this acceptance assert a resize that the geometry never requested.
-  const nextBoundary = await page.getByTestId("cycle-ruler").locator("[data-source-cycle='9']").boundingBox();
-  expect(nextBoundary).not.toBeNull();
-  await page.mouse.move(nextBoundary!.x + 1, barBox!.y + barBox!.height / 2, { steps: 3 });
+  const rulerTick = async (cycle: number) => (await page.getByTestId("cycle-ruler").locator(`[data-source-cycle='${cycle}']`).boundingBox())!.x;
+  const nextBoundaryX = (await rulerTick(0)) + ((await rulerTick(10)) - (await rulerTick(0))) * 9 / 10; // TC ticks only (#750)
+  await page.mouse.move(nextBoundaryX + 1, barBox!.y + barBox!.height / 2, { steps: 3 });
   await page.mouse.up();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await expect(inspector.getByLabel("Transaction end")).toHaveValue("6"); // 60 cycles

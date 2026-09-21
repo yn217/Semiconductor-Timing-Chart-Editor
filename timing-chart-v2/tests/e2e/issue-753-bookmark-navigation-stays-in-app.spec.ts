@@ -55,9 +55,10 @@ for (const mode of ["Cycle", "Transaction", "Combined"] as const) {
 
     const marker = page.locator("[data-bookmark-id]").first();
     if (await marker.count() > 0 && await marker.isVisible()) {
-      await marker.click();
+      // Under cyclesPerTC compression (#750) neighbouring markers are a few px apart: hit the marker's own left edge.
+      await marker.click({ position: { x: 1, y: 4 } });
       await expectEditorAlive(page, origin, state, "ruler marker click");
-      await marker.dblclick();
+      await marker.dblclick({ position: { x: 1, y: 4 } });
       await expectEditorAlive(page, origin, state, "ruler marker double-click");
     }
   });

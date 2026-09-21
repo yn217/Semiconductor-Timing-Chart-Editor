@@ -7,6 +7,9 @@ for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height:
     await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
     const tree = page.getByTestId("transaction-left-tree");
     const viewport = page.getByTestId("cycle-viewport");
+    // cyclesPerTC compresses the demo to ~16 TC (#750); zoom in (view-only) so there is a real horizontal extent to scroll.
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+    await page.getByLabel("Zoom preset").selectOption("800");
     const bar = page.locator(".transaction-lane > button[data-transaction-id]").first();
     await expect(tree).toBeVisible();
     await expect(bar).toBeVisible();

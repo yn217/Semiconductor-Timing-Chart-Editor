@@ -27,8 +27,11 @@ test("navigates the projected signal tree with keyboard semantics without mutati
   await firstControlRow.press("ArrowLeft");
   await expect(control).toBeFocused();
   await control.press("End");
-  await expect(tree.locator("[role='treeitem'][data-row-id='sig_cycle_state']")).toBeFocused();
-  await tree.locator("[role='treeitem'][data-row-id='sig_cycle_state']").dispatchEvent("keydown", { key: "Home", bubbles: true, cancelable: true });
+  // End goes to the LAST tree item. The Cycle window now spans Main + Bottom (#756), so the whole tree is mounted and the last item
+  // is the trailing empty Scratch group header rather than the last Signal.
+  const lastItem = tree.locator("[role='treeitem']:not([hidden])").last();
+  await expect(lastItem).toBeFocused();
+  await lastItem.dispatchEvent("keydown", { key: "Home", bubbles: true, cancelable: true });
   await expect(control).toBeFocused();
 
   const signal = tree.locator("[role='treeitem'][data-row-id='sig_cycle_request']");

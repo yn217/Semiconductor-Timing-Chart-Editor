@@ -27,3 +27,14 @@ describe("#750 Transaction display-time axis", () => {
     expect([fallback.cyclesPerTc, fallback.pxPerTc, fallback.zoom]).toEqual([1, 1, 1]);
   });
 });
+
+import { presentationCycles } from "../../apps/editor/src/presentation-cycles.js";
+describe("#750 TC-aligned ruler thinning", () => {
+  it("keeps only TC boundaries when the per-cycle pitch is tiny and strideMultiple is the TC size", () => {
+    const cycles = presentationCycles(160, 4, Infinity, 10);
+    expect(cycles.every((cycle) => cycle % 10 === 0 || cycle === 160)).toBe(true);
+    expect(cycles.slice(0, 4)).toEqual([0, 10, 20, 30]);
+    // Without the multiple the stride is not TC-aligned (the pre-fix defect: 0, 7, 14 ...).
+    expect(presentationCycles(160, 4, Infinity, 1).slice(0, 3)).not.toEqual([0, 10, 20]);
+  });
+});

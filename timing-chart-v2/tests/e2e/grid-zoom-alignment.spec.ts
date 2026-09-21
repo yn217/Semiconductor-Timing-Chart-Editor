@@ -12,8 +12,8 @@ test("keeps geometry Grid aligned with the Ruler through view-only zoom", async 
     history: await host.getAttribute("data-history-depth"),
     counters: await surface.getAttribute("data-render-counters"),
   };
-  const rulerTick = page.getByTestId("cycle-ruler").locator("[data-cycle='5']");
-  const gridLine = page.getByTestId("geometry-grid").locator("[data-role='geometry-grid-line'][data-cycle='5']");
+  const rulerTick = page.getByTestId("cycle-ruler").locator("[data-cycle='10']");
+  const gridLine = page.getByTestId("geometry-grid").locator("[data-role='geometry-grid-line'][data-cycle='10']");
   const aligned = async () => {
     const rulerBox = await rulerTick.boundingBox();
     const gridBox = await gridLine.boundingBox();
