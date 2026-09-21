@@ -11,8 +11,28 @@ const ROW_HEIGHT = 30;
 const HIGH = 6;
 const LOW = 24;
 
-export function isCanvasWavePrototypeEnabled(): boolean {
-  try { return typeof location !== "undefined" && new URLSearchParams(location.search).has("canvas755"); } catch { return false; }
+/**
+ * Wave renderer selection (#755). `?wave=svg` / `?wave=canvas` force one; `?canvas755` is the legacy spelling of canvas. Without a
+ * query the renderer is chosen by document size: documents whose signals x cycles reach the large-document budget paint with the
+ * viewport-bounded Canvas (no per-cycle SVG DOM, so a far jump no longer blocks for seconds); everything smaller keeps the SVG path,
+ * which stays the export/fallback renderer.
+ */
+export const CANVAS_WAVE_AUTO_BUDGET = 250_000;
+
+export function isCanvasWaveRendererSelected(document: { readonly signals: readonly unknown[]; readonly timeline: { readonly cycleCount: number } }): boolean {
+  try {
+    if (typeof location !== "undefined") {
+      const params = new URLSearchParams(location.search);
+      const forced = params.get("wave");
+      if (forced === "canvas" || params.has("canvas755")) return canvasSupported();
+      if (forced === "svg") return false;
+    }
+  } catch { /* fall through to auto */ }
+  return document.signals.length * document.timeline.cycleCount >= CANVAS_WAVE_AUTO_BUDGET && canvasSupported();
+}
+
+function canvasSupported(): boolean {
+  try { return typeof document !== "undefined" && document.createElement("canvas").getContext("2d") !== null; } catch { return false; }
 }
 
 /**

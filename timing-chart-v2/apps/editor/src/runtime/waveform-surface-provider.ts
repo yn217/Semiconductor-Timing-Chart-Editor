@@ -1,5 +1,6 @@
-import { paintWaveCanvas, isCanvasWavePrototypeEnabled } from "./canvas-wave-painter.js";
-import { ImmutableLocalGeometryMap, uniformCycleBoundaryEntries, WAVEDROM_CYCLE_WIDTH, WAVEDROM_ORIGIN_X } from "@timing-chart-v2/geometry";
+import { paintWaveCanvas, isCanvasWaveRendererSelected } from "./canvas-wave-painter.js";
+import { LazyAnalyticGeometryMap } from "./lazy-analytic-geometry.js";
+import { OffsetLocalGeometryMap, WAVEDROM_CYCLE_WIDTH, type LocalGeometryMap } from "@timing-chart-v2/geometry";
 import type { EditorSessionController } from "./editor-session-controller.js";
 import type { CanonicalDocument, Signal, SignalId, SignalValueChange } from "@timing-chart-v2/schema";
 import { valueSignalWaveDomain } from "@timing-chart-v2/schema";
@@ -170,8 +171,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           item.request.owner.style.removeProperty("left");
         }
       }
-      const canvasPrototype = isCanvasWavePrototypeEnabled();
-      const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean; readonly canvasPainted?: boolean }> = [];
+      const canvasPrototype = isCanvasWaveRendererSelected(document);
+      const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean; readonly canvasPainted?: boolean; readonly rendererStart?: number | undefined }> = [];
       for (const item of prepared) {
         if (item.deferred) {
           renderResults.push({ ...item, rendered: undefined });
@@ -183,7 +184,9 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           if (canvasPrototype) {
             paintWaveCanvas(item.request.owner, item.waveJson);
             const sourceCycles = item.waveJson.geometrySourceCycles ?? Array.from({ length: item.waveJson.wave.length + 1 }, (_, index) => (item.waveJson?.sourceWindow?.start ?? 0) + index);
-            context.geometryRegistry.maps.set(item.request.signalId, new ImmutableLocalGeometryMap(item.request.signalId, uniformCycleBoundaryEntries({ sourceCycles, originX: WAVEDROM_ORIGIN_X, cycleWidth: WAVEDROM_CYCLE_WIDTH, rowY: 15 }), []));
+            const canvasGeometry = new LazyAnalyticGeometryMap(item.request.signalId, item.waveJson, sourceCycles);
+            setBoundaryDebugAttribute(item.request.owner, canvasGeometry);
+            context.geometryRegistry.maps.set(item.request.signalId, absoluteWindowGeometry(canvasGeometry, item.rendererStart));
             context.invalidateSnapIndex();
             context.markOpenPhase("first-visible-wave-painted");
             renderResults.push({ ...item, rendered: undefined, canvasPainted: true });
@@ -219,7 +222,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           // the rendered SVG DOM (getScreenCTM / <use> walk). `?geometrySource=svg` restores DOM extraction for comparison.
           const geometry = useDomGeometrySource() ? context.adapter.extractLocalGeometry(item.rendered) : analyticLocalGeometry(item.request.signalId, item.rendered.waveJson);
           if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
-          context.geometryRegistry.maps.set(item.request.signalId, geometry);
+          context.geometryRegistry.maps.set(item.request.signalId, absoluteWindowGeometry(geometry, item.rendererStart));
           context.geometryRegistry.svgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
           const boundaryGeometry = geometry.cycleBoundaryEntries?.();
           if (boundaryGeometry && boundaryGeometry.length > 0) {
@@ -251,4 +254,20 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
 
 function useDomGeometrySource(): boolean {
   try { return typeof location !== "undefined" && new URLSearchParams(location.search).get("geometrySource") === "svg"; } catch { return false; }
+}
+
+/**
+ * Owner-relative geometry (first boundary at the WaveDrom margin) -> document-absolute local X. Consumers (snap index, hit-test,
+ * overlays) all work in absolute X, so a window starting past cycle 0 is shifted by its display offset (100k-cycle far-window
+ * selection mapped pointer X onto the window's relative X and landed hundreds of cycles away).
+ */
+function absoluteWindowGeometry(geometry: LocalGeometryMap, displayStart: number | undefined): LocalGeometryMap {
+  return displayStart === undefined || displayStart <= 0 ? geometry : new OffsetLocalGeometryMap(geometry, displayStart * WAVEDROM_CYCLE_WIDTH);
+}
+
+/** The owner-relative boundary map stays published on the owner as a debug/test hook (screen X = owner box X + value). */
+function setBoundaryDebugAttribute(owner: HTMLElement, geometry: LocalGeometryMap): void {
+  const boundaries = geometry.cycleBoundaryEntries?.();
+  if (boundaries && boundaries.length > 0) owner.dataset.cycleBoundaryGeometry = JSON.stringify(Object.fromEntries(boundaries.map((entry) => [entry.cycle, entry.position.x])));
+  else delete owner.dataset.cycleBoundaryGeometry;
 }

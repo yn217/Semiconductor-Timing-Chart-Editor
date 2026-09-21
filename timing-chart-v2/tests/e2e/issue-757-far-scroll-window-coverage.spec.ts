@@ -16,7 +16,7 @@ test("a far scrollLeft jump repaints the window at the viewport, not from cycle 
   const viewport = page.getByTestId("cycle-viewport");
   const covers = () => page.evaluate(() => {
     const vp = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!;
-    const owner = [...document.querySelectorAll<HTMLElement>("[data-role='wave-owner']")].find((o) => o.querySelector("svg"))!;
+    const owner = [...document.querySelectorAll<HTMLElement>("[data-role='wave-owner']")].find((o) => o.querySelector("svg, canvas[data-wave-canvas]"))!;
     const left = parseFloat(owner.style.left || "0");
     const width = parseFloat(owner.style.width || "0");
     return { scrollLeft: vp.scrollLeft, clientWidth: vp.clientWidth, ownerLeft: left, ownerRight: left + width };

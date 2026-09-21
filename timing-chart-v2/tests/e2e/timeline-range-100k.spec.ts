@@ -37,6 +37,8 @@ const scaleDocument = {
 
 test("selects an unsampled 100k-cycle boundary through shared geometry", async ({ page }) => {
   test.setTimeout(120_000);
+  // The 20-cycle drag (800px) must fit inside the Timeline viewport, which needs the locked wide viewport.
+  await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/");
   await page.getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
@@ -44,7 +46,10 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  // The wave window is viewport-bounded (#757), so bring cycle 1000 into view first; the window then rebases around it.
+  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollLeft = 1000 * 40 - 806; element.dispatchEvent(new Event("scroll", { bubbles: true })); }); // cycle 1000 lands inside the Timeline viewport, left of the Inspector
   await expect.poll(async () => page.locator("[data-role='wave-owner'][data-signal-id]").first().getAttribute("data-cycle-boundary-geometry"), { timeout: 120_000 }).toContain("\"1000\"");
+  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
 
   const before = await host.evaluate((element) => ({
     revision: element.getAttribute("data-canonical-revision"),
@@ -64,8 +69,6 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
     if (!viewport || !viewportBox || !waveBox) throw new Error("100k semantic geometry unavailable");
     const endX = waveBox.x + (boundaries["1000"] ?? NaN);
     if (!Number.isFinite(endX)) throw new Error("100k semantic geometry unavailable");
-    viewport.scrollLeft = Math.max(0, endX - 1400);
-    viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
     const scrolledWaveBox = wave?.getBoundingClientRect();
     if (!scrolledWaveBox) throw new Error("100k semantic geometry unavailable after scroll");
     return {

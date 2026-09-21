@@ -145,6 +145,44 @@ export class ImmutableLocalGeometryMap implements LocalGeometryMap {
   }
 }
 
+/**
+ * A windowed owner's geometry is produced in the window's own coordinates (first boundary at the WaveDrom margin). Every consumer
+ * (snap index, hit-test, overlays, ruler) works in document-absolute local X, so a window that starts past cycle 0 is shifted by
+ * its display offset. Delegating and lazy: no entry is copied unless a consumer asks for the entry list.
+ */
+export class OffsetLocalGeometryMap implements LocalGeometryMap {
+  readonly signalId: SignalId;
+  readonly #inner: LocalGeometryMap;
+  readonly #dx: number;
+  #boundaries: readonly LocalGeometryEntry[] | undefined;
+  #edges: readonly LocalGeometryEntry[] | undefined;
+
+  constructor(inner: LocalGeometryMap, dx: number) {
+    this.signalId = inner.signalId;
+    this.#inner = inner;
+    this.#dx = dx;
+  }
+
+  #shift(entries: readonly LocalGeometryEntry[]): readonly LocalGeometryEntry[] {
+    return Object.freeze(entries.map((entry) => ({ ...entry, position: { x: entry.position.x + this.#dx, y: entry.position.y } })));
+  }
+
+  find(anchor: SemanticAnchor): LocalAnchorGeometry | undefined {
+    const found = this.#inner.find(anchor);
+    return found === undefined ? undefined : Object.freeze({ ...found, point: Object.freeze({ x: found.point.x + this.#dx, y: found.point.y }) });
+  }
+
+  cycleBoundaryEntries(): readonly LocalGeometryEntry[] {
+    if (this.#boundaries === undefined) this.#boundaries = this.#shift(this.#inner.cycleBoundaryEntries?.() ?? []);
+    return this.#boundaries;
+  }
+
+  edgeEntries(): readonly LocalGeometryEntry[] {
+    if (this.#edges === undefined) this.#edges = this.#shift(this.#inner.edgeEntries?.() ?? []);
+    return this.#edges;
+  }
+}
+
 export interface ScreenGeometryProjector {
   toScreen(local: LocalAnchorGeometry, transform: ViewTransform): Point;
   fromScreen(screen: Point, transform: ViewTransform): Point;
