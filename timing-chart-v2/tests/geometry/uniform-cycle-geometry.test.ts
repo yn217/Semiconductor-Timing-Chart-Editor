@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ImmutableLocalGeometryMap, UniformCycleLocalGeometryMap, uniformCycleBoundaryEntries, WAVEDROM_CYCLE_WIDTH, WAVEDROM_ORIGIN_X } from "@timing-chart-v2/geometry";
+import { ImmutableLocalGeometryMap, OffsetLocalGeometryMap, UniformCycleLocalGeometryMap, uniformCycleBoundaryEntries, WAVEDROM_CYCLE_WIDTH, WAVEDROM_ORIGIN_X } from "@timing-chart-v2/geometry";
 import type { SignalId } from "@timing-chart-v2/schema";
 
 describe("uniformCycleBoundaryEntries (#755, renderer-independent cycle grid)", () => {
@@ -43,4 +43,18 @@ describe("UniformCycleLocalGeometryMap (#755, allocation-free equivalent of the 
       expect(lazy.find({ signalId: "other" as SignalId, cycle: sourceCycles[0]!, point: "cycle-start" } as never)).toBeUndefined();
     });
   }
+});
+
+describe("OffsetLocalGeometryMap (#757, window-relative -> document-absolute X)", () => {
+  const id = "sig" as SignalId;
+  const inner = new UniformCycleLocalGeometryMap(id, { sourceCycles: [500, 501, 502], originX: 20.5, cycleWidth: 40, rowY: 15 });
+  const shifted = new OffsetLocalGeometryMap(inner, 500 * 40);
+  it("shifts every anchor and entry by the window display offset and never mutates the inner map", () => {
+    expect(inner.find({ signalId: id, cycle: 501, point: "cycle-start" })?.point.x).toBe(60.5);
+    expect(shifted.find({ signalId: id, cycle: 501, point: "cycle-start" })?.point.x).toBe(20_060.5);
+    expect(shifted.find({ signalId: id, cycle: 501, point: "cycle-start" })?.point.y).toBe(15);
+    expect(shifted.cycleBoundaryEntries().map((entry) => entry.position.x)).toEqual([20_020.5, 20_060.5, 20_100.5]);
+    expect(shifted.edgeEntries()).toEqual([]);
+    expect(shifted.find({ signalId: id, cycle: 9, point: "cycle-start" })).toBeUndefined();
+  });
 });
