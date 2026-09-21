@@ -105,6 +105,17 @@ export type SignalTreeColumnHeaderProps = {
   readonly transactionMode?: { readonly filter: string; readonly onFilterChange: (value: string) => void; readonly filterMode: TransactionTreeFilterMode; readonly onFilterModeChange: (value: TransactionTreeFilterMode) => void; readonly onAdd: () => void; readonly onAddGroup: () => void; readonly onExpandAll: () => void; readonly onCollapseAll: () => void; readonly onShowAll: () => void; readonly onHideAll: () => void; readonly timeScale?: { readonly cyclesPerTc: number; readonly onChange: (cyclesPerTc: number) => void } } | undefined;
 };
 
+/** #748: the one left-pane header action chrome (primary + Add, optional extra actions, top-right More). Cycle and Transaction pass their own labels,
+ * commands and menus; size, spacing, focus and accessible-name wiring are shared so the two headers cannot drift. */
+type HeaderButton = { readonly label: string; readonly testId?: string; readonly expanded?: boolean; readonly popup?: "menu"; readonly onClick: (event: React.MouseEvent<HTMLButtonElement>) => void };
+export function LeftPaneHeaderActions({ add, more, children }: { readonly add: HeaderButton; readonly more: HeaderButton & { readonly buttonRef?: React.RefObject<HTMLButtonElement | null> }; readonly children?: ReactNode }) {
+  return <span className="left-column-actions">
+    <button type="button" className="tree-add-button" aria-label={add.label} title={add.label} {...(add.testId ? { "data-testid": add.testId } : {})} {...(add.expanded === undefined ? {} : { "aria-expanded": add.expanded })} onClick={add.onClick}><EditorIcon name="plus" /></button>
+    {children}
+    <button ref={more.buttonRef} type="button" className="tree-more-button" aria-label={more.label} title={more.label} {...(more.testId ? { "data-testid": more.testId } : {})} {...(more.expanded === undefined ? {} : { "aria-expanded": more.expanded })} {...(more.popup ? { "aria-haspopup": more.popup } : {})} onClick={more.onClick}><EditorIcon name="more" /></button>
+  </span>;
+}
+
 /** The Signal/Group tree's column header: type/text filter, the Add and
  * More popup menus, and the Role/Signal/Time-Scale column labels. Presents
  * state owned by `use-workspace-ui-state.ts` (filters) and
@@ -148,11 +159,12 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
         {transactionMode.filter && <button type="button" aria-label="Clear transaction tree filter" onMouseDown={(event) => event.preventDefault()} onClick={() => transactionMode.onFilterChange("")}><EditorIcon name="close" /></button>}
       </label>}
       {<select aria-label="Filter transactions" title="Filters the Transaction Tree (left) by kind" data-filter-active={String(transactionMode.filterMode !== "all")} value={transactionMode.filterMode} onChange={(event) => transactionMode.onFilterModeChange(event.target.value as typeof transactionMode.filterMode)}><option value="all">All</option><option value="grouped">Grouped</option><option value="ungrouped">Ungrouped</option><option value="phases">Has Phases</option><option value="no-phases">No Phases</option><option value="linked">Has Linked Signals</option><option value="visible">Visible</option><option value="hidden">Hidden</option></select>}
-      {<span className="left-column-actions">
-        <button type="button" className="tree-add-button" aria-label="Add transaction" title="Add transaction" data-testid="add-transaction-tree" onClick={transactionMode.onAdd}><EditorIcon name="plus" /></button>
+      <LeftPaneHeaderActions
+        add={{ label: "Add transaction", testId: "add-transaction-tree", onClick: transactionMode.onAdd }}
+        more={{ label: "Transaction tree actions", testId: "transaction-tree-more", expanded: transactionMoreOpen, popup: "menu", buttonRef: transactionMoreButton, onClick: () => setTransactionMoreOpen((open) => !open) }}
+      >
         <button type="button" className="tree-add-group-button" aria-label="New Transaction Group" title="New Transaction Group" data-testid="add-transaction-group-tree-visible" onClick={transactionMode.onAddGroup}>+ Group</button>
-        <button ref={transactionMoreButton} type="button" className="tree-more-button" aria-label="Transaction tree actions" title="Transaction tree actions" aria-expanded={transactionMoreOpen} aria-haspopup="menu" data-testid="transaction-tree-more" onClick={() => setTransactionMoreOpen((open) => !open)}><EditorIcon name="more" /></button>
-      </span>}
+      </LeftPaneHeaderActions>
       {transactionMoreOpen && <div className="tree-header-menu" role="menu" aria-label="Transaction tree actions" data-testid="transaction-tree-more-menu">
         <button type="button" role="menuitem" data-testid="transaction-tree-expand-all" onClick={() => { transactionMode.onExpandAll(); setTransactionMoreOpen(false); }}>Expand All</button>
         <button type="button" role="menuitem" data-testid="transaction-tree-collapse-all" onClick={() => { transactionMode.onCollapseAll(); setTransactionMoreOpen(false); }}>Collapse All</button>
@@ -180,10 +192,10 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
         <input data-testid="signal-tree-search-top" aria-label="Signal tree filter" value={treeFilter} onChange={(event) => onTreeFilterChange(event.target.value)} placeholder="Filter signals..." />
         {treeFilter && <button type="button" aria-label="Clear signal tree filter" onMouseDown={(event) => event.preventDefault()} onClick={onClearTreeFilter}><EditorIcon name="close" /></button>}
       </label>
-      <span className="left-column-actions">
-        <button type="button" className="tree-add-button" aria-label="Add signal or group" title="Add signal or group" aria-expanded={addMenuOpen} onClick={(event) => onToggleAddMenu(event.currentTarget)}><EditorIcon name="plus" /></button>
-        <button type="button" className="tree-more-button" aria-label="More tree actions" title="More tree actions" aria-expanded={moreMenuOpen} onClick={(event) => onToggleMoreMenu(event.currentTarget)}><EditorIcon name="more" /></button>
-      </span>
+      <LeftPaneHeaderActions
+        add={{ label: "Add signal or group", expanded: addMenuOpen, onClick: (event) => onToggleAddMenu(event.currentTarget) }}
+        more={{ label: "More tree actions", expanded: moreMenuOpen, onClick: (event) => onToggleMoreMenu(event.currentTarget) }}
+      />
       {addMenuOpen && <div className="tree-add-menu" role="menu" aria-label="Add signal or group">
         {/* #474: labels come from the same signal-type-registry.ts table
             Inspector's own Type dropdown reads -- previously each hardcoded
