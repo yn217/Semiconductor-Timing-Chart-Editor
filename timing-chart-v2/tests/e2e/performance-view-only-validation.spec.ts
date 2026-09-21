@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { timelineOwner } from "./timeline-scroll.js";
 import { startInCycleMode } from "./cycle-startup.js";
 
 startInCycleMode(test);
@@ -101,7 +102,9 @@ test("view-only GUI operations do not validate or semantically rerender the docu
     await page.mouse.up();
   });
   await observe("viewport scroll", async () => {
-    await page.getByTestId("cycle-viewport").evaluate((element) => element.scrollBy({ left: 120, top: 40, behavior: "auto" }));
-    await expect.poll(async () => await page.getByTestId("cycle-viewport").evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    // #625: vertical on the shared viewport, horizontal on the Timeline owner.
+    await page.getByTestId("cycle-viewport").evaluate((element) => element.scrollBy({ top: 40, behavior: "auto" }));
+    await timelineOwner(page).evaluate((element) => element.scrollBy({ left: 120, behavior: "auto" }));
+    await expect.poll(async () => await timelineOwner(page).evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
   });
 });
