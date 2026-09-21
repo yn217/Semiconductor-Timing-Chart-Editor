@@ -263,7 +263,7 @@
 .event-toolbar button:hover:not(:disabled) { border-color: #2c78bb; background: #eaf3fb; }
 
 .event-toolbar button:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; }
-.event-toolbar input[aria-label="Search transactions"] { margin-left: auto; min-width: 180px; max-width: 280px; height: var(--ds-control-height); }
+.event-toolbar input[aria-label="Search transactions table"] { margin-left: auto; min-width: 180px; max-width: 280px; height: var(--ds-control-height); }
 .event-row[draggable="true"] { cursor: grab; }
 .event-row[draggable="true"]:active { cursor: grabbing; }
 .event-row-drag-handle { display: inline-flex; width: 18px; min-width: 18px; align-items: center; justify-content: center; color: #71839a; cursor: grab; user-select: none; }

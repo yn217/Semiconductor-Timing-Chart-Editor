@@ -102,7 +102,7 @@ export type SignalTreeColumnHeaderProps = {
   // component so both stay visually identical (row density, Add-button
   // placement, filter-input styling) without a second header primitive.
   // field here.
-  readonly transactionMode?: { readonly filter: string; readonly onFilterChange: (value: string) => void; readonly filterMode: TransactionTreeFilterMode; readonly onFilterModeChange: (value: TransactionTreeFilterMode) => void; readonly onAdd: () => void; readonly onAddGroup: () => void; readonly timeScale?: { readonly cyclesPerTc: number; readonly onChange: (cyclesPerTc: number) => void } } | undefined;
+  readonly transactionMode?: { readonly filter: string; readonly onFilterChange: (value: string) => void; readonly filterMode: TransactionTreeFilterMode; readonly onFilterModeChange: (value: TransactionTreeFilterMode) => void; readonly onAdd: () => void; readonly onAddGroup: () => void; readonly onExpandAll: () => void; readonly onCollapseAll: () => void; readonly onShowAll: () => void; readonly onHideAll: () => void; readonly timeScale?: { readonly cyclesPerTc: number; readonly onChange: (cyclesPerTc: number) => void } } | undefined;
 };
 
 /** The Signal/Group tree's column header: type/text filter, the Add and
@@ -124,10 +124,13 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
     return () => cancelAnimationFrame(frame);
   }, [addMenuOpen, moreMenuOpen]);
   const [transactionMoreOpen, setTransactionMoreOpen] = useState(false);
+  const transactionMoreButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!transactionMoreOpen) return;
     const close = (event: Event) => {
       if (event instanceof KeyboardEvent && event.key !== "Escape") return;
+      // #748: Escape hands focus back to the invoker.
+      if (event instanceof KeyboardEvent) transactionMoreButton.current?.focus();
       if (event instanceof MouseEvent && (event.target as Element | null)?.closest("[data-testid='transaction-tree-more-menu'], [data-testid='transaction-tree-more']")) return;
       setTransactionMoreOpen(false);
     };
@@ -140,18 +143,25 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
     <span className="left-column-heading">
       <span className="transaction-tree-title" data-testid="transaction-tree-title">Transactions</span>
       {<label className="tree-filter-controls">
-        <span className="visually-hidden">Transaction tree filter</span>
-        <input data-testid="transaction-tree-search" aria-label="Search transaction tree" title="Searches the Transaction Tree (left). The Bottom table has its own search." value={transactionMode.filter} onChange={(event) => transactionMode.onFilterChange(event.target.value)} placeholder="Search tree…" />
+        <span className="visually-hidden">Search transactions</span>
+        <input data-testid="transaction-tree-search" aria-label="Search transactions" title="Searches the Transaction Tree (left). The Bottom table has its own search." value={transactionMode.filter} onChange={(event) => transactionMode.onFilterChange(event.target.value)} placeholder="Search transactions…" />
         {transactionMode.filter && <button type="button" aria-label="Clear transaction tree filter" onMouseDown={(event) => event.preventDefault()} onClick={() => transactionMode.onFilterChange("")}><EditorIcon name="close" /></button>}
       </label>}
-      {<select aria-label="Transaction filter mode" title="Filters the Transaction Tree (left) by kind" data-filter-active={String(transactionMode.filterMode !== "all")} value={transactionMode.filterMode} onChange={(event) => transactionMode.onFilterModeChange(event.target.value as typeof transactionMode.filterMode)}><option value="all">All</option><option value="grouped">Grouped</option><option value="ungrouped">Ungrouped</option><option value="phases">Has Phases</option><option value="no-phases">No Phases</option><option value="linked">Has Linked Signals</option><option value="visible">Visible</option><option value="hidden">Hidden</option></select>}
+      {<select aria-label="Filter transactions" title="Filters the Transaction Tree (left) by kind" data-filter-active={String(transactionMode.filterMode !== "all")} value={transactionMode.filterMode} onChange={(event) => transactionMode.onFilterModeChange(event.target.value as typeof transactionMode.filterMode)}><option value="all">All</option><option value="grouped">Grouped</option><option value="ungrouped">Ungrouped</option><option value="phases">Has Phases</option><option value="no-phases">No Phases</option><option value="linked">Has Linked Signals</option><option value="visible">Visible</option><option value="hidden">Hidden</option></select>}
       {<span className="left-column-actions">
-        <button type="button" className="tree-add-button" aria-label="Add Transaction" title="Add Transaction" data-testid="add-transaction-tree" onClick={transactionMode.onAdd}><EditorIcon name="plus" /></button>
+        <button type="button" className="tree-add-button" aria-label="Add transaction" title="Add transaction" data-testid="add-transaction-tree" onClick={transactionMode.onAdd}><EditorIcon name="plus" /></button>
         <button type="button" className="tree-add-group-button" aria-label="New Transaction Group" title="New Transaction Group" data-testid="add-transaction-group-tree-visible" onClick={transactionMode.onAddGroup}>+ Group</button>
-        <button type="button" className="tree-more-button" aria-label="More tree actions" title="More tree actions" aria-expanded={transactionMoreOpen} aria-haspopup="menu" data-testid="transaction-tree-more" onClick={() => setTransactionMoreOpen((open) => !open)}><EditorIcon name="more" /></button>
+        <button ref={transactionMoreButton} type="button" className="tree-more-button" aria-label="Transaction tree actions" title="Transaction tree actions" aria-expanded={transactionMoreOpen} aria-haspopup="menu" data-testid="transaction-tree-more" onClick={() => setTransactionMoreOpen((open) => !open)}><EditorIcon name="more" /></button>
       </span>}
-      {transactionMoreOpen && <div className="tree-header-menu" role="menu" aria-label="More tree actions" data-testid="transaction-tree-more-menu">
-        <button type="button" role="menuitem" data-testid="add-transaction-group-tree" onClick={() => { transactionMode.onAddGroup(); setTransactionMoreOpen(false); }}>Add Transaction Group</button>
+      {transactionMoreOpen && <div className="tree-header-menu" role="menu" aria-label="Transaction tree actions" data-testid="transaction-tree-more-menu">
+        <button type="button" role="menuitem" data-testid="transaction-tree-expand-all" onClick={() => { transactionMode.onExpandAll(); setTransactionMoreOpen(false); }}>Expand All</button>
+        <button type="button" role="menuitem" data-testid="transaction-tree-collapse-all" onClick={() => { transactionMode.onCollapseAll(); setTransactionMoreOpen(false); }}>Collapse All</button>
+        <hr role="separator" />
+        <button type="button" role="menuitem" data-testid="transaction-tree-show-all" onClick={() => { transactionMode.onShowAll(); setTransactionMoreOpen(false); }}>Show All</button>
+        <button type="button" role="menuitem" data-testid="transaction-tree-hide-all" onClick={() => { transactionMode.onHideAll(); setTransactionMoreOpen(false); }}>Hide All</button>
+        <hr role="separator" />
+        <button type="button" role="menuitem" data-testid="add-transaction-group-tree" onClick={() => { transactionMode.onAddGroup(); setTransactionMoreOpen(false); }}>Add Group…</button>
+        <hr role="separator" />
         <button type="button" role="menuitem" disabled={transactionMode.filter === ""} onClick={() => { transactionMode.onFilterChange(""); setTransactionMoreOpen(false); }}>Clear Filter</button>
       </div>}
     </span>

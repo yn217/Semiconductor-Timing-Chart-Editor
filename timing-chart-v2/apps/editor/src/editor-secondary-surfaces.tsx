@@ -413,6 +413,10 @@ export function useEditorSecondarySurfaces(
               onFilterModeChange: workspace.setTransactionTreeFilterMode,
               onAdd: input.actions.createTransaction,
               onAddGroup: input.actions.createTransactionGroup,
+              onExpandAll: () => disclosure.expandAll(),
+              onCollapseAll: () => disclosure.collapseAll(),
+              onShowAll: () => setAllTransactionVisibility(true),
+              onHideAll: () => setAllTransactionVisibility(false),
               timeScale: {
                 cyclesPerTc: input.document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1,
                 onChange: (cyclesPerTc: number) => {
@@ -434,6 +438,14 @@ export function useEditorSecondarySurfaces(
   );
   // #759: one Group disclosure owner for the Left Tree and the center Group headers.
   const disclosure = useTransactionDisclosure(input.document, input.documentEpoch);
+  // #748: Tree menu Show All / Hide All -- the same selection + visibility command path the per-Group toggle uses (one History unit).
+  const setAllTransactionVisibility = (visible: boolean) => {
+    const items = input.document.transactions;
+    if (items.length === 0) return;
+    input.actions.selectTransaction(items[0]!.id);
+    items.slice(1).forEach((transaction) => input.actions.selectTransaction(transaction.id, true));
+    input.actions.setSelectionVisibility(visible);
+  };
   // #763: unapplied Phase drafts belong to one document; a replacement (New/Open) drops them all so an identical ID in the next document cannot inherit one.
   useEffect(() => { clearAllPhaseDrafts(); }, [input.documentEpoch]);
   const workspaceViewportContent = workspace.viewMode !== "Cycle" ? (

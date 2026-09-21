@@ -94,7 +94,7 @@ test("Transaction Mode shows the create form directly and does not mutate the do
 test("Transaction search empty state is reserved for an active no-match filter", async ({ page }) => {
   await openTransactionMode(page);
   await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
-  const search = page.getByLabel("Search transactions");
+  const search = page.getByLabel("Search transactions table");
   await search.fill("no-such-transaction");
   await expect(page.getByText("No Transactions match this search.")).toBeVisible();
 });

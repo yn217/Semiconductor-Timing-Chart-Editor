@@ -7,10 +7,10 @@ test("Transaction left-pane header has title, + Add, ⋮ More menu, search + fil
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   const header = page.getByTestId("transaction-tree-header");
   await expect(page.getByTestId("transaction-tree-title")).toHaveText("Transactions");
-  await expect(header.getByRole("button", { name: "Add Transaction", exact: true })).toBeVisible();
-  await expect(header.getByRole("button", { name: "More tree actions", exact: true })).toBeVisible();
-  await expect(header.getByRole("textbox", { name: "Search transaction tree" })).toBeVisible();
-  await expect(header.getByRole("combobox", { name: "Transaction filter mode" })).toBeVisible();
+  await expect(header.getByRole("button", { name: "Add transaction", exact: true })).toBeVisible();
+  await expect(header.getByRole("button", { name: "Transaction tree actions", exact: true })).toBeVisible();
+  await expect(header.getByRole("textbox", { name: "Search transactions" })).toBeVisible();
+  await expect(header.getByRole("combobox", { name: "Filter transactions" })).toBeVisible();
   await expect(page.getByTestId("left-workspace-rail").getByRole("tab", { name: "Signals" })).toHaveCount(0);
   await expect(page.getByTestId("left-workspace-rail").getByRole("button", { name: "Signals", exact: true })).toHaveCount(0);
 
@@ -18,13 +18,13 @@ test("Transaction left-pane header has title, + Add, ⋮ More menu, search + fil
   await expect(menu).toHaveCount(0);
   await page.getByTestId("transaction-tree-more").click();
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole("menuitem", { name: "Add Transaction Group" })).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "Add Group…" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(menu).toHaveCount(0);
   // The menu is view-only until an item runs.
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await page.getByTestId("transaction-tree-more").click();
-  await menu.getByRole("menuitem", { name: "Add Transaction Group" }).click();
+  await menu.getByRole("menuitem", { name: "Add Group…" }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(menu).toHaveCount(0);
 });

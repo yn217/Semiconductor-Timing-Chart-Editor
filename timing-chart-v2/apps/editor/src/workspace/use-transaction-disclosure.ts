@@ -9,6 +9,9 @@ export const ALL_DISCLOSURE_KEY = "__all__";
 export interface TransactionDisclosure {
   readonly collapsed: ReadonlySet<string>;
   readonly toggle: (key: string) => void;
+  /** #748: Tree menu 'Expand All' / 'Collapse All' (Groups, the Ungrouped section and the All Transactions root). */
+  readonly expandAll: () => void;
+  readonly collapseAll: () => void;
 }
 
 /**
@@ -31,5 +34,7 @@ export function useTransactionDisclosure(document: CanonicalDocument, documentEp
     });
   }, [groupIds]);
   const toggle = useCallback((key: string) => setCollapsed((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; }), []);
-  return useMemo(() => ({ collapsed, toggle }), [collapsed, toggle]);
+  const expandAll = useCallback(() => setCollapsed(new Set()), []);
+  const collapseAll = useCallback(() => setCollapsed(new Set([...groupIds, UNGROUPED_DISCLOSURE_KEY, ALL_DISCLOSURE_KEY])), [groupIds]);
+  return useMemo(() => ({ collapsed, toggle, expandAll, collapseAll }), [collapsed, toggle, expandAll, collapseAll]);
 }
