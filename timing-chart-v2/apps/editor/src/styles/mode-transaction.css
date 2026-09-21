@@ -55,10 +55,10 @@
   left: 0;
   width: calc(var(--wave-width, 640px) * var(--transaction-zoom, 1));
 }
-.editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row > button { height: 28px; }
-.editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row-editor { min-height: 28px; }
-.editor-shell:has(.cycle-panel.mode-transaction) .bottom-tabs { flex-basis: 36px; height: 36px; }
-.editor-shell:has(.cycle-panel.mode-transaction) .bottom-tabs button { height: 35px; }
+.editor-shell[data-view-mode="Transaction"] .transaction-list-row > button { height: 28px; }
+.editor-shell[data-view-mode="Transaction"] .transaction-list-row-editor { min-height: 28px; }
+.editor-shell[data-view-mode="Transaction"] .bottom-tabs { flex-basis: 36px; height: 36px; }
+.editor-shell[data-view-mode="Transaction"] .bottom-tabs button { height: 35px; }
 /* The lane-label layer spans the whole time surface in standalone Transaction Mode. As a sticky z-2 stacking context it sat
    under the bar track (z 3), which made every Group header control (collapse chevron, inline rename, Ungroup) unclickable.
    Lift the (transparent, non-interactive) layer above the track and let only the header controls take pointer input, so bars
