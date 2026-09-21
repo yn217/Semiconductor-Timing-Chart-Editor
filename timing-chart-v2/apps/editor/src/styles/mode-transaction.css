@@ -66,3 +66,7 @@
 .editor-shell .cycle-panel.mode-transaction .transaction-lane-labels { z-index: 4; background: transparent; pointer-events: none; }
 .editor-shell .cycle-panel.mode-transaction .transaction-group-header { background: transparent; }
 .editor-shell .cycle-panel.mode-transaction .transaction-group-header > * { pointer-events: auto; }
+
+/* #750: standalone Transaction shows only the lanes; the (hidden) Cycle surface must not widen the scroll area with its left/frozen
+   columns, so the scroll extent is exactly the presented content. */
+.editor-shell[data-view-mode="Transaction"] .surface-host { overflow-x: clip; }

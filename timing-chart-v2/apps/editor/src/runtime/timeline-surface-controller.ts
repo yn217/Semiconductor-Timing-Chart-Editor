@@ -411,7 +411,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       timelineGeometry.updatePresentation(presentation.timeAxis, presentation.screenGeometryScale, presentation.waveWidthPxPerDisplayCycle, presentation.waveOriginPx);
       // #750: a changed geometry scale (cyclesPerTC compression on/off or a new factor) moves every Transaction X; bars/Phases/Bookmarks
       // are memoized on the presentation revision, so publish it.
-      if (Math.abs(timelineGeometry.presentationScale - scaleBefore) > 1e-9) setTransactionPresentationRevision((value) => value + 1);
+      if (Math.abs(timelineGeometry.presentationScale - scaleBefore) > 1e-9) { setTransactionPresentationRevision((value) => value + 1); requestAnimationFrame(() => timelineNavigation.setZoom(timelineNavigation.getZoom())); }
       rulerInitialized = presentation.rulerInitialized;
       // Timeline presentation refreshes are view-only. The canonical command path
       // already submits the changed projection once; replaying that projection for

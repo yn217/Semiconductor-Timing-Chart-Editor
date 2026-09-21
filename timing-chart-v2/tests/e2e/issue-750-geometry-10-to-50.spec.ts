@@ -53,3 +53,30 @@ for (const size of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }])
     await expect.poll(async () => (await barBox(page)).width).toBeCloseTo(barWidthBefore, 0);
   });
 }
+
+// #750 presentation contract around the compressed geometry: narrow bars never show clipped text (full name stays in aria-label/title),
+// and the scroll extent is the presented content -- a document narrower than the viewport gets NO artificial horizontal scrolling and
+// no stretched TC geometry (blank space to the right is valid).
+for (const size of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+  test(`compressed Transaction: no clipped labels and no artificial scroll extent at ${size.width}x${size.height}`, async ({ page }) => {
+    await page.setViewportSize(size);
+    await page.goto("/?transaction-demo");
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+    await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+    await page.getByTestId("transaction-tc-scale").selectOption("50");
+    await expect.poll(async () => (await barBox(page)).width).toBeLessThan(60);
+    const info = await page.evaluate(() => {
+      const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!;
+      const bars = [...document.querySelectorAll<HTMLElement>("[data-testid='transaction-lanes'] [data-transaction-id]")];
+      return {
+        clientWidth: viewport.clientWidth, scrollWidth: viewport.scrollWidth,
+        clipped: bars.filter((bar) => { const label = bar.querySelector<HTMLElement>(":scope > span"); return !!label && label.textContent !== "" && label.scrollWidth > bar.clientWidth + 1; }).map((bar) => bar.dataset.transactionId),
+        narrowWithoutName: bars.filter((bar) => bar.getBoundingClientRect().width < 56 && (!bar.getAttribute("aria-label") || bar.querySelector(":scope > span")?.textContent !== "")).map((bar) => bar.dataset.transactionId),
+      };
+    });
+    expect(info.clipped).toEqual([]);
+    expect(info.narrowWithoutName).toEqual([]);
+    // Presented content (~3 TC) is far narrower than the viewport: no artificial horizontal scrolling (<=1px rounding).
+    expect(info.scrollWidth - info.clientWidth).toBeLessThanOrEqual(2);
+  });
+}

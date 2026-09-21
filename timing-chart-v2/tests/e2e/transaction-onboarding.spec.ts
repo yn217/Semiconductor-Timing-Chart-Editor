@@ -159,7 +159,8 @@ test("A Transaction built with phases and Linked Signals survives Save/Open exac
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(7);
-  await expect(page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`)).toContainText("Read Request v2");
+  // Narrow (compressed, #750) bars omit the inline label; the accessible name / title always carries the full name.
+  await expect(page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`)).toHaveAttribute("aria-label", "Read Request v2");
 });
 
 // #393 item C: normal Phase authoring must not require raw JSON. Add/Edit/

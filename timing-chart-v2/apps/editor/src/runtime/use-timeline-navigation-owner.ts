@@ -87,6 +87,11 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
         inspectorWidth: context.viewMetrics.snapshot().inspectorWidth,
         viewportWidth: globalThis.innerWidth,
         timelineOffset: context.timelineOffset(),
+        presentationBaseWidth: () => {
+          if (activeModeRef.current !== "Transaction") return undefined;
+          const wave = Number.parseFloat(context.viewport.style.getPropertyValue("--wave-width"));
+          return Number.isFinite(wave) && wave > 0 ? wave : undefined;
+        },
         onPresentationScale: (nextZoom) => context.syncPresentationScale(context.viewport, context.rendererHost, context.rulerViewport, nextZoom, context.getPresentationScale()),
         onZoom: (nextZoom) => {
           zoomRef.current = nextZoom;

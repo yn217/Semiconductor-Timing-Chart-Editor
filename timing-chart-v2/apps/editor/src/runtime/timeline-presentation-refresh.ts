@@ -77,7 +77,9 @@ export function refreshTimelinePresentation(context: {
   if (context.reason === "ruler" || context.reason === "resize") {
     context.metricsOwner.update({ viewportWidth: context.viewport.clientWidth });
     const metrics = context.metricsOwner.snapshot();
-    const minimumWaveWidth = Math.max(160, metrics.viewportWidth - metrics.leftPaneWidth - metrics.frozenPaneWidth);
+    // Standalone Transaction has no Cycle left/frozen columns inside the timeline area (#750): the presented time domain may use the full width.
+    const inTransaction = context.ruler.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction";
+    const minimumWaveWidth = Math.max(160, inTransaction ? metrics.viewportWidth : metrics.viewportWidth - metrics.leftPaneWidth - metrics.frozenPaneWidth);
     const currentTimeAxis = resolveTimeAxisGeometry(context.document, context.geometryMaps);
     const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, currentTimeAxis.ownerSignalId ? context.geometrySvgs.get(currentTimeAxis.ownerSignalId) : undefined, metrics.zoom, minimumWaveWidth, context.viewport);
     timeAxis = rebuilt.timeAxis; screenGeometryScale = rebuilt.scale; waveWidthPxPerDisplayCycle = rebuilt.waveWidthPxPerDisplayCycle; waveOriginPx = rebuilt.waveOriginPx; rulerInitialized = true; context.markOpenPhase("ruler-painted"); syncPresentationScale(context.viewport, context.host, context.rulerViewport, context.currentZoom, screenGeometryScale);
