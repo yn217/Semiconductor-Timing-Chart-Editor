@@ -1,4 +1,4 @@
-import { timelineScrollOwner } from "./timeline-scroll-owner.js";
+import { fixedColumnsOutsideTimeline, timelineScrollOwner } from "./timeline-scroll-owner.js";
 import type { MutableRefObject } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { RenderProjection } from "@timing-chart-v2/projection";
@@ -300,6 +300,8 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     ...(() => { const tree = rendererHost.querySelector<HTMLElement>("[data-role='left-tree-rows']"); return tree ? [{ target: tree, type: "keydown", listener: onTreeKeyDown as EventListener }] : []; })(),
     { target: viewportElement, type: "scroll", listener: onScroll as EventListener, options: { passive: true, capture: true } },
     { target: viewportElement, type: "keydown", listener: onViewportKeyDown as EventListener },
+    // #625: in Cycle the shared viewport never scrolls horizontally (the Timeline owner does); undo programmatic scrolls (focus / scrollIntoView) so nothing slides under the fixed columns.
+    { target: viewportElement, type: "scroll", listener: (() => { if (viewportElement.scrollLeft !== 0 && fixedColumnsOutsideTimeline(viewportElement)) viewportElement.scrollLeft = 0; }) as EventListener },
     { target: rendererHost, type: "click", listener: onCanvasClick as EventListener },
     { target: rendererHost, type: "pointerdown", listener: rangeInteractions.pointerDown as EventListener },
     { target: rendererHost, type: "pointermove", listener: rangeInteractions.pointerMove as EventListener },
