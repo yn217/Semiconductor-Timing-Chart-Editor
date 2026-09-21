@@ -6,7 +6,11 @@ async function geometry(page: Page) {
   return page.evaluate(() => {
     const ws = document.querySelector(".desktop-workspace")!.getBoundingClientRect();
     const viewport = document.querySelector(".cycle-viewport")!.getBoundingClientRect();
-    return { gap: ws.bottom - viewport.bottom };
+    // #756: the Cycle panel now spans Main + Bottom (the left tree column continues below the timing area); the visible timing
+    // canvas ends where the Bottom splitter starts, or at the workspace bottom when Bottom is hidden.
+    const splitter = document.querySelector(".bottom-resize-track")?.getBoundingClientRect();
+    const tree = document.querySelector("[data-role='left-tree-rows']")!.getBoundingClientRect();
+    return { gap: ws.bottom - (splitter ? splitter.top : viewport.bottom), treeGap: ws.bottom - tree.bottom };
   });
 }
 

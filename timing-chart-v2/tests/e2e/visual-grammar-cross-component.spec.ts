@@ -17,11 +17,15 @@ async function auditContext(page: Page, label: string) {
 
   const regionBoxes = await page.evaluate(() => {
     const rect = (sel: string) => document.querySelector(sel)?.getBoundingClientRect() ?? null;
+    // #756: the Cycle panel spans Main + Bottom by design (the left tree continues under Bottom); the visible timing canvas ends at the
+    // Bottom splitter, so collision is audited against that visible area.
+    const splitterTop = document.querySelector(".bottom-resize-track")?.getBoundingClientRect().top;
+    const visibleViewport = (): DOMRect | null => { const box = rect('[data-testid="cycle-viewport"], [data-testid="cycle-surface"]'); if (!box || splitterTop === undefined || box.bottom <= splitterTop) return box; return new DOMRect(box.x, box.y, box.width, Math.max(0, splitterTop - box.y)); };
     return {
       ribbon: rect('[data-testid="ribbon"]'),
       inspector: rect('[data-testid="inspector-shell"]'),
       bottom: rect('[data-testid="bottom-editor"]'),
-      viewport: rect('[data-testid="cycle-viewport"], [data-testid="cycle-surface"]'),
+      viewport: visibleViewport(),
     };
   });
   const boxes = Object.entries(regionBoxes).filter(([, box]) => box !== null) as [string, DOMRect][];

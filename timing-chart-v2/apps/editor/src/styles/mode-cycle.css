@@ -52,3 +52,21 @@
    pre-scale coordinates: scroll/zoom and scroll+width/zoom, published with --timeline-scroll-left). */
 .editor-shell[data-view-mode="Cycle"] .geometry-grid { translate: calc(-1px * var(--timeline-scroll-left, 0)) 0; clip-path: inset(0 calc(100% - var(--grid-clip-right, 1000000px)) 0 var(--grid-clip-left, 0px)); }
 .editor-shell[data-view-mode="Cycle"] .range-selection-band { translate: calc(-1px * var(--timeline-scroll-left, 0)) 0; }
+
+/* #756: the Signals / Groups rail is one column spanning Main + Bottom. The Cycle panel (fixed columns + Timeline) spans the whole
+   content height; the opaque Bottom splitter/editor (center column) sits above the timing area, and the left tree column simply
+   continues below it. */
+.editor-shell[data-view-mode="Cycle"] .cycle-panel { grid-row: 1 / 4; }
+.editor-shell[data-view-mode="Cycle"] .desktop-workspace::after { display: none; }
+.editor-shell[data-view-mode="Cycle"] .bottom-resize-track,
+.editor-shell[data-view-mode="Cycle"] .bottom-editor { position: relative; z-index: 40; }
+/* 28px = the rail's count/scope footer, which always overlays the bottom of the tree column. */
+.editor-shell[data-view-mode="Cycle"] { --cycle-bottom-cover: 0px; --cycle-cover: calc(var(--cycle-bottom-cover) + 28px); }
+.editor-shell[data-view-mode="Cycle"][data-bottom-visible="true"] { --cycle-bottom-cover: calc(var(--gui-bottom-height) + 10px); }
+/* The column resize handles cover only the visible Main area (Bottom sits above the rest of the panel). */
+.editor-shell[data-view-mode="Cycle"] .left-pane-resize-handle, .editor-shell[data-view-mode="Cycle"] .frozen-pane-resize-handle { bottom: var(--cycle-bottom-cover); }
+/* The surface fills the whole viewport (--cycle-fill, published by the Timeline track owner) so the rail columns reach the bottom; the
+   cover is padding so the last rows stay reachable above Bottom, and the rail layers extend over it. */
+.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="timing-chart-surface"] { box-sizing: content-box; padding-bottom: var(--cycle-cover); min-height: calc(var(--cycle-fill, 0px) - var(--cycle-cover)); }
+.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="left-tree-rows"],
+.editor-shell[data-view-mode="Cycle"] .surface-host [data-role="frozen-label-rows"] { margin-bottom: calc(-1 * var(--cycle-cover)); }

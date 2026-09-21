@@ -28,7 +28,11 @@ function TimelineHorizontalScrollbar({ viewport }: { readonly viewport: RefObjec
       const owner = timelineScrollOwner(view);
       const offset = owner === view ? Math.max(0, originLeft - viewRect.left) : 0;
       bar.style.left = `${(owner === view ? viewRect.left : owner.getBoundingClientRect().left) - panelRect.left + offset}px`;
-      bar.style.top = `${viewRect.bottom - panelRect.top - 15}px`; // overlays the strip the native bar used to occupy
+      // The Cycle panel spans Main + Bottom (#756); the Timeline track sits at the bottom of the visible Main area, above Bottom.
+      const bottomTrack = panel.parentElement?.querySelector<HTMLElement>(".bottom-resize-track");
+      const cover = bottomTrack && owner !== view ? Math.max(0, viewRect.bottom - bottomTrack.getBoundingClientRect().top) : 0; // Bottom + splitter only (not the rail footer)
+      view.style.setProperty("--cycle-fill", `${Math.max(0, view.clientHeight - 34)}px`);
+      bar.style.top = `${viewRect.bottom - panelRect.top - 15 - cover}px`; // overlays the strip the native bar used to occupy
       bar.style.width = `${Math.max(0, owner.clientWidth - offset)}px`;
       filler.style.width = `${Math.max(0, owner.scrollWidth - offset)}px`;
       bar.dataset.timelineLeft = String(Math.round(originLeft));
@@ -196,7 +200,10 @@ export function EditorWorkspaceView({
           line.style.position = "absolute";
           line.style.top = "0";
           line.style.width = "2px";
-          line.style.height = `${Math.max(viewportElement.clientHeight, 250)}px`;
+          // #756: the Cycle viewport spans Main + Bottom; the guide ends at the Bottom splitter so it stays grabbable (not under Bottom).
+          const splitterTop = viewportElement.closest(".cycle-panel")?.parentElement?.querySelector(".bottom-resize-track")?.getBoundingClientRect().top;
+          const visibleHeight = splitterTop !== undefined && splitterTop > viewportRect.top && splitterTop < viewportRect.bottom ? splitterTop - viewportRect.top : viewportElement.clientHeight;
+          line.style.height = `${Math.max(visibleHeight, 250)}px`;
           line.style.pointerEvents = "auto";
           line.style.left = `${tickRect.left - viewportRect.left}px`;
           line.dataset.cycle = String(cycle);

@@ -30,7 +30,9 @@ test("Transaction, Combined and Cycle geometry is unchanged by the Cycle-only sp
       const compare = (a: unknown, b: unknown, path: string): void => {
         if (Array.isArray(a) && (a.length === 0 || typeof a[0] === "number")) {
           expect(Array.isArray(b), path).toBe(true);
-          (a as number[]).forEach((value, index) => expect(Math.abs(value - (b as number[])[index]!), `${viewport.width}x${viewport.height} ${mode} ${path}[${index}]`).toBeLessThanOrEqual(1));
+          // #756: in Cycle the panel/tree/grid columns now span Main + Bottom, so only their heights changed (x/y/width are pinned).
+          const heightChangedInCycle = mode === "Cycle" && /^(left|frozen|viewport|grid)$/.test(path);
+          (a as number[]).forEach((value, index) => heightChangedInCycle && index === 3 ? undefined : expect(Math.abs(value - (b as number[])[index]!), `${viewport.width}x${viewport.height} ${mode} ${path}[${index}]`).toBeLessThanOrEqual(1));
         } else if (Array.isArray(a)) (a as unknown[]).forEach((item, index) => compare(item, (b as unknown[])[index], `${path}.${index}`));
         else if (a === null) expect(b, path).toBeNull();
       };

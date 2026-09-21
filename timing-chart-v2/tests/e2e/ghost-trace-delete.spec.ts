@@ -10,9 +10,12 @@ test("rejects production Signal delete when the only dependency is Ghost Trace s
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("ghostTrace");
+  // The sample already carries a ghostTrace that the taller Cycle window now mounts too; the new one is the added owner.
+  const ghosts = host.locator("[data-role='annotation-owner'][data-annotation-type='ghostTrace']");
+  const ghostsBefore = await ghosts.count();
   await page.getByRole("button", { name: "Add annotation" }).click();
-  await expect(host.locator("[data-role='annotation-owner'][data-annotation-type='ghostTrace']")).toHaveCount(1);
-  await expect(host.locator("[data-role='annotation-owner'][data-annotation-type='ghostTrace']")).toHaveAttribute("data-source-signal-id", "sig_cycle_request");
+  await expect(ghosts).toHaveCount(ghostsBefore + 1);
+  await expect(host.locator("[data-role='annotation-owner'][data-annotation-type='ghostTrace'][data-source-signal-id='sig_cycle_request']")).not.toHaveCount(0);
   const revisionBefore = await host.getAttribute("data-canonical-revision");
   const dirtyBefore = await page.getByTestId("dirty-status").textContent();
   const countersBefore = await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters");

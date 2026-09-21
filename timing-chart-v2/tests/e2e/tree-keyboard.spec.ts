@@ -10,7 +10,8 @@ test("navigates the projected signal tree with keyboard semantics without mutati
   const tree = surface.locator("[data-role='left-tree-rows']");
   await expect(tree).toHaveAttribute("role", "tree");
   const items = tree.locator("[role='treeitem']");
-  await expect(items).toHaveCount(10);
+  // 3 Groups + 8 Signals: the Cycle window now spans Main + Bottom (#756), so the whole projected tree is mounted.
+  await expect(items).toHaveCount(11);
 
   const before = {
     revision: await surface.getAttribute("data-canonical-revision"),

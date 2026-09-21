@@ -23,7 +23,9 @@ for (const size of SIZES) {
     const hidden = await rect(page, ".cycle-panel");
     // The timing canvas now reaches the workspace bottom: no reserved band the size of Bottom + splitter.
     expect(Math.abs(hidden!.bottom - workspace!.bottom), "cycle panel bottom == workspace bottom").toBeLessThanOrEqual(1);
-    expect(hidden!.height).toBeGreaterThan(visible!.height + 100);
+    // #756: the panel spans Main + Bottom in both states, so hiding Bottom does not change its height; the visible timing canvas
+    // (down to the Bottom splitter) is what grows -- covered by issue-740-cycle-bottom-hidden.
+    expect(Math.abs(hidden!.height - visible!.height)).toBeLessThanOrEqual(1);
     await expect(page.getByTestId("bottom-resizer")).toHaveCount(0);
     // View-only.
     await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
@@ -41,21 +43,28 @@ test("#741 Transaction fixed-width sidebar exposes no focusable ghost resizer an
 });
 
 for (const size of SIZES) {
-  test(`#756 Cycle left rail continues below the tree as one closed footer panel at ${size.width}x${size.height}`, async ({ page }) => {
+  test(`#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at ${size.width}x${size.height}`, async ({ page }) => {
     await page.setViewportSize(size);
     await toCycle(page);
-    const info = await page.evaluate(() => {
-      const workspace = document.querySelector<HTMLElement>(".desktop-workspace")!;
-      const bottom = document.querySelector<HTMLElement>(".bottom-editor")!.getBoundingClientRect();
-      const style = getComputedStyle(workspace, "::after");
-      return { content: style.content, bg: style.backgroundColor, height: parseFloat(style.height), width: parseFloat(style.width), bottomHeight: bottom.height, borderTop: style.borderTopWidth, borderRight: style.borderRightWidth };
+    const measure = () => page.evaluate(() => {
+      const box = (s: string) => { const e = document.querySelector<HTMLElement>(s); if (!e) return null; const b = e.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom }; };
+      return { tree: box("[data-role='left-tree-rows']"), bottom: box(".bottom-editor"), splitter: box(".bottom-resize-track"), track: box("[data-testid='timeline-hscroll']"), workspace: box(".desktop-workspace"), rail: box(".left-workspace-rail"), panel: box(".cycle-panel") };
     });
-    expect(info.content).not.toBe("none");
-    expect(info.bg).toBe("rgb(249, 251, 253)");
-    expect(info.borderRight).toBe("1px");
-    // Spans the splitter row + Bottom rows (approved --gui-bottom-height + 10px).
-    expect(info.height).toBeGreaterThanOrEqual(info.bottomHeight);
-    expect(Math.abs(info.height - (info.bottomHeight + 10))).toBeLessThanOrEqual(2);
-    expect(info.width).toBeGreaterThan(200);
+    const visible = await measure();
+    // The tree column is not clipped at the Main area: it continues under the Bottom row, down to the workspace bottom.
+    expect(visible.tree!.bottom).toBeGreaterThanOrEqual(visible.bottom!.bottom - 2);
+    expect(visible.tree!.right).toBeLessThanOrEqual(visible.bottom!.left + 1);
+    // No detached tinted footer block any more.
+    expect(await page.evaluate(() => getComputedStyle(document.querySelector(".desktop-workspace")!, "::after").display)).toBe("none");
+    // The Timeline scrollbar stays above Bottom (not beneath it, not under the fixed columns).
+    if (visible.track) expect(visible.track.bottom).toBeLessThanOrEqual(visible.splitter!.top + 1);
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+    await page.getByTestId("ribbon").getByRole("button", { name: "Bottom Editor", exact: true }).click();
+    await expect(page.locator("main.editor-shell")).toHaveAttribute("data-bottom-visible", "false");
+    // The surface refills the released rows on the next layout tick.
+    await expect.poll(async () => { const m = await measure(); return m.workspace!.bottom - m.tree!.bottom; }).toBeLessThanOrEqual(30);
+    const hidden = await measure();
+    expect(Math.abs(hidden.panel!.bottom - hidden.workspace!.bottom)).toBeLessThanOrEqual(1);
+    await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   });
 }
