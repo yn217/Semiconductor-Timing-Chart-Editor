@@ -152,5 +152,5 @@ export function HomeOverflow(props: HomeOverflowProps) {
     {sections.map((section) => <div key={section.label} className="home-overflow-section" role="group" aria-label={section.label}><strong aria-hidden="true">{section.label}</strong>{section.commands.map((command) => <button key={command.label} type="button" role="menuitem" onClick={action(command.onClick)} disabled={command.disabled}>{command.label}</button>)}</div>)}
   </div>, window.document.body) : null;
 
-  return <><button ref={triggerRef} type="button" className="ds-ribbon-button home-overflow-trigger" aria-expanded={open} aria-controls={open ? "home-overflow-menu" : undefined} onClick={() => setOpen((value) => !value)}><DsIconBox><RibbonIcon name="i-more" /></DsIconBox><span className="ds-ribbon-label">More</span></button>{menu}</>;
+  return <><button ref={triggerRef} type="button" className="ds-ribbon-button home-overflow-trigger" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? "home-overflow-menu" : undefined} onClick={() => setOpen((value) => !value)}><DsIconBox><RibbonIcon name="i-more" /></DsIconBox><span className="ds-ribbon-label">More</span></button>{menu}</>;
 }
