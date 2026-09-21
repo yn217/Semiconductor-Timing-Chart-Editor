@@ -76,11 +76,10 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     // newly introduced timing warning disappear until the user manually ran
     // Refresh Checks. Undo/Redo use this same accepted-result path, so their
     // diagnostics stay aligned with the resulting document as well.
-    validatorInvocationsRef.current += 1;
-    setValidationDiagnostics([
-      ...validateCanonicalDocument(result.snapshot.document),
-      ...deriveTimingDiagnostics(result.snapshot.document),
-    ]);
+    // #744: the DocumentSession already ran the ONE authoritative canonical validation for this commit (execute / batch / Undo / Redo)
+    // and rejects any candidate with a problem, so an accepted snapshot has no canonical problems by construction. Do not rescan the
+    // structure here (validatorInvocations stays put); only the timing diagnostics are derived again.
+    setValidationDiagnostics(deriveTimingDiagnostics(result.snapshot.document));
     setProblem("");
     setRuntimeDiagnostics(withoutCommandRejectionDiagnostics);
     acceptedHandlerRef.current?.(result, context);
