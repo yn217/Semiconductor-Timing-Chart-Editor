@@ -77,7 +77,8 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   expect((await page.locator("[data-role='tree-signal-role'][data-presentation='input']").first().boundingBox())?.width).toBe(28);
   expect((await page.locator("[data-role='signal-role'][data-presentation='input']").first().boundingBox())?.width).toBe(28);
   const firstWave = await page.locator("[data-role='wave-owner']").first().boundingBox();
-  expect(firstWave?.width ?? 0).toBeGreaterThan(890);
+  // The wave owner is the SVG at its natural scale (10 cycles x 40 + margins), aligned with the ruler ticks -- not stretched to the viewport.
+  expect(firstWave?.width ?? 0).toBeGreaterThan(400);
   await expect(page.getByTestId("selection-status")).toHaveText("clk");
   await expect(page.getByTestId("tool-status")).toHaveText("Ready · Tool: Select");
   await expect(page.getByTestId("signal-count-status")).toHaveText("Signals: 10");
