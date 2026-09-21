@@ -1,3 +1,4 @@
+import { resolveTransactionColor } from "./transaction-color.js";
 import { type TransactionDisclosure } from "./workspace/use-transaction-disclosure.js";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -494,10 +495,7 @@ export function TransactionTree({
           aria-hidden="true"
           style={{
             background:
-              transaction.color ??
-              (transaction.groupId === undefined
-                ? "#8895a7"
-                : (groupById.get(transaction.groupId)?.color ?? "#8895a7")),
+              resolveTransactionColor(document, transaction),
           }}
         />
         {transaction.name}

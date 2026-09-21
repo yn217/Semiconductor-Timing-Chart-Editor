@@ -273,3 +273,19 @@
 
 /* #626: the Clock Inspector keeps Convert Clock above the sticky footer at 1672x941 (dense section rhythm). */
 .editor-shell .inspector[data-inspector-context="clock"] section { padding-block: 4px 5px; }
+
+/* #698: compact colour row (swatch + inline "Use group color" checkbox) and an Inspector-specific two-line Phase row that keeps every
+   primary control inside the narrow Inspector (Name + Delete on line 1; Start / End / Duration on line 2). */
+.inspector-color-inline { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.inspector-inline-check { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: #43536a; white-space: nowrap; }
+.inspector-inline-check input[type="checkbox"] { margin: 0; }
+.transaction-bottom-phase-editor.is-compact .transaction-bottom-phase-head { display: none; }
+.transaction-bottom-phase-editor.is-compact .transaction-bottom-phase-row { grid-template-columns: repeat(3, minmax(0, 1fr)) 24px; column-gap: 6px; row-gap: 2px; padding: 4px 0; min-width: 0; }
+.transaction-bottom-phase-editor.is-compact .transaction-bottom-phase-row > .phase-cell { display: flex; flex-direction: column; min-width: 0; }
+.transaction-bottom-phase-editor.is-compact .transaction-bottom-phase-row > .phase-cell::before { content: attr(data-caption); color: #7c8ba0; font-size: 9px; line-height: 1.2; }
+.transaction-bottom-phase-editor.is-compact .transaction-bottom-phase-row > .phase-cell input { width: 100%; min-width: 0; box-sizing: border-box; }
+.transaction-bottom-phase-editor.is-compact .transaction-bottom-phase-row > .phase-cell:nth-child(1) { grid-column: 1 / 4; grid-row: 1; }
+.transaction-bottom-phase-editor.is-compact .transaction-bottom-phase-row > button { grid-column: 4; grid-row: 1; align-self: end; }
+.transaction-bottom-phase-editor.is-compact .transaction-bottom-phase-row > .phase-cell:nth-child(2) { grid-column: 1; grid-row: 2; }
+.transaction-bottom-phase-editor.is-compact .transaction-bottom-phase-row > .phase-cell:nth-child(3) { grid-column: 2; grid-row: 2; }
+.transaction-bottom-phase-editor.is-compact .transaction-bottom-phase-row > .phase-cell:nth-child(4) { grid-column: 3; grid-row: 2; }
