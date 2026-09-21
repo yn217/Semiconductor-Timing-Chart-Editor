@@ -60,4 +60,15 @@ describe("document-relative transient state ownership", () => {
       "document-relative UI reset",
     ]));
   });
+  // #743: the epoch advances only after the authoritative session replacement succeeds (a throwing replaceSession must leave the epoch untouched).
+  it("advances the document epoch strictly after session replacement", () => {
+    const source = readFileSync(resolve(workspace, "apps/editor/src/application/use-document-lifecycle.ts"), "utf8");
+    const replace = source.indexOf("application.replaceSession(");
+    const advance = source.indexOf("documentEpoch.advance()");
+    const effects = source.indexOf("applyReplacement({");
+    expect(replace).toBeGreaterThan(-1);
+    expect(advance).toBeGreaterThan(replace);
+    expect(effects).toBeGreaterThan(advance);
+    expect(source.match(/documentEpoch.advance()/g)).toHaveLength(1);
+  });
 });
