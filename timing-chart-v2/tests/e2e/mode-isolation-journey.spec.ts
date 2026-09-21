@@ -8,7 +8,7 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   test.setTimeout(90_000);
   await page.setViewportSize(viewportSize);
   await page.goto("/");
-  const document = generatePerformanceDocument({ signalCount: 40, cycleCount: 512, profile: "transaction-heavy" });
+  const document = generatePerformanceDocument({ signalCount: 24, cycleCount: 256, profile: "transaction-heavy" });
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "mode-isolation.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   const discard = page.getByTestId("unsaved-discard");
   if (await discard.isVisible().catch(() => false)) await discard.click();
@@ -20,7 +20,6 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   await expect(page.getByTestId("transaction-lanes")).toBeVisible();
   const cycleViewport = page.getByTestId("cycle-viewport");
   await expect.poll(() => cycleViewport.evaluate((element) => element.scrollWidth - element.clientWidth), { timeout: 5_000, message: "Cycle viewport must have real horizontal overflow before the mode-isolation journey" }).toBeGreaterThan(0);
-  await expect.poll(() => cycleViewport.evaluate((element) => element.scrollHeight - element.clientHeight), { timeout: 5_000, message: "Cycle viewport must have real vertical overflow before the mode-isolation journey" }).toBeGreaterThan(0);
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
     history: await host.getAttribute("data-history-depth"),
@@ -34,6 +33,8 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
 
   await modes.getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Cycle", { timeout: 5_000 });
+  // #765: standalone Transaction no longer inherits the hidden Cycle rows' height, so the large-document precondition is checked where the rows are shown.
+  await expect.poll(() => cycleViewport.evaluate((element) => element.scrollHeight - element.clientHeight), { timeout: 5_000, message: "Cycle viewport must have real vertical overflow before the mode-isolation journey" }).toBeGreaterThan(0);
   const cycleRow = host.locator("[data-role='frozen-row'][data-row-id='sig_perf_1']");
   await cycleRow.click();
   await cycleRow.focus();

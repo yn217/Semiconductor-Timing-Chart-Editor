@@ -70,3 +70,7 @@
 /* #750: standalone Transaction shows only the lanes; the (hidden) Cycle surface must not widen the scroll area with its left/frozen
    columns, so the scroll extent is exactly the presented content. */
 .editor-shell[data-view-mode="Transaction"] .surface-host { overflow-x: clip; }
+
+/* #765: the Cycle signal-row plane is invisible in standalone Transaction; keep it laid out for mode round-trips but stop it from
+   contributing its height to the timeline's scrollable overflow (a phantom vertical scrollbar when the lanes fit). */
+.cycle-panel.mode-transaction .split-signal-content { height: 0; min-height: 0; overflow: hidden; }
