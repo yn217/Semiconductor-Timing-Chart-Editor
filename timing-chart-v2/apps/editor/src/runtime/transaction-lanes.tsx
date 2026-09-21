@@ -177,7 +177,7 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
       pendingPreviewClientX.current = undefined;
       setDrag(undefined);
       setPreview(undefined);
-    });
+    }, drag.edge === "body" ? "Move Transaction - drag horizontally; Esc cancels" : "Resize Transaction - drag the edge; Esc cancels");
   }, [drag, documentEpoch]);
 
   if (containingFold) {

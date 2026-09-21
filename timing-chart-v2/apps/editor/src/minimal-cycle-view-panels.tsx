@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { RefObject } from "react";
+import { getGestureHint, subscribeGestureHint } from "./runtime/active-gesture-cancellation.js";
 import type { GroupId, SignalGroup, SpacerId } from "@timing-chart-v2/schema";
 import { ContextMenuSurface } from "./context-menu-surface.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
@@ -298,9 +299,10 @@ export type EditorStatusBarProps = {
  * Geometry/Navigation, Workspace UI State) -- no state or logic of its own. */
 export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, annotationCount, rangeStatus, selectedCycle, zoom, snapEnabled, viewMode, statusContext, hideRevisionDetail, revision, undoDepth, redoDepth, timeAxisStatus, dirty, problemsCount, waveDromHasError, cursorStatus, activePaneStatus }: EditorStatusBarProps) {
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const gestureHint = useSyncExternalStore(subscribeGestureHint, getGestureHint);
   const diagnosticClass = hideRevisionDetail ? "status-detail-hidden" : diagnosticsOpen ? undefined : "visually-hidden";
   return <footer className="status-bar" aria-label="Editor status">
-    <span data-testid="tool-status">{toolStatus}</span>
+    <span data-testid="tool-status">{gestureHint ?? toolStatus}</span>
     <button type="button" className="status-diagnostics-toggle" data-testid="status-diagnostics-toggle" aria-pressed={diagnosticsOpen} title="Show developer diagnostics (Canonical revision, History counters, renderer state)" onClick={() => setDiagnosticsOpen((open) => !open)}>Diagnostics</button>
     {cursorStatus && <span data-testid="cursor-status">{cursorStatus}</span>}
     {activePaneStatus && <span data-testid="active-pane-status">{activePaneStatus}</span>}
