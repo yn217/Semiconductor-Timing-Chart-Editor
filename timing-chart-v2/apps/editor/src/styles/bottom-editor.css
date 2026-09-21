@@ -399,7 +399,9 @@
 .transition-form-panel { display: flex; flex-direction: column; gap: 4px; }
 .transition-form-row { display: flex; gap: 8px; }
 .transition-form-row .field-inline { flex: 1 1 auto; }
-.transition-form-row .transition-field-start { flex: 0 1 108px; }
+.transition-form-row .transition-field-start { flex: 0 0 auto; }
+/* #761: the caption keeps its natural width; the numeric input gets a readable 76px (>=64px) so 3-5 digit cycles fit. */
+.transition-form-row .transition-field-start > input { flex: 0 0 76px; width: 76px; min-width: 64px; }
 .transition-form-row .transition-field-value { flex: 0 1 120px; }
 .transition-form-row .transition-field-comment { flex: 2 1 auto; }
 .transition-form-actions { display: flex; gap: 6px; margin-top: 0; }
