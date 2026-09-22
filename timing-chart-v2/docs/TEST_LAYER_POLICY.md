@@ -33,3 +33,25 @@ Avoid expected values computed by the same production helper under test.
 Prefer independent anchors, round-trip/monotonicity properties, semantic
 selection/results, and cross-surface alignment over duplicated implementation
 formulas or assertions tied only to private DOM/CSS topology.
+
+## Current execution profiles
+
+In `timing-chart-v2`, the current commands are:
+
+- `npm run test:fast` — static architecture checks and the Vitest unit/contract suite.
+- `npm run test:focused -- tests/e2e/<spec>.spec.ts` — a developer-selected focused Playwright target.
+- `npm run test:e2e:pr` — explicitly reviewed PR browser cases.
+- `npm run test:pr` — repository check gate plus reviewed PR browser cases.
+- `npm run test:integration` — reviewed Save/Open and cross-surface journeys.
+- `npm run test:visual` — reviewed geometry contract plus visual acceptance.
+- `npm run test:performance` — the existing PR-scale performance suite.
+- `npm run test:nightly` — complete E2E suite plus nightly performance tests.
+- `npm run test:all` — repository checks, complete E2E, and nightly performance.
+
+The profile runner reads per-case reviewed metadata from
+`qa/test-suite-review.json`; it does not infer a tier from a filename. The
+machine-readable collection is regenerated before profile execution and fails
+if a curated case no longer matches the Playwright test list. Until review is
+complete, only explicitly reviewed cases enter the focused profiles. The full
+E2E suite remains in the scheduled/manual nightly path so unreviewed coverage
+is not dropped from automation.

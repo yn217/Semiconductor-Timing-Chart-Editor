@@ -1,349 +1,528 @@
 # Playwright test inventory
 
 Generated from Playwright collection (1.62.1); 337 spec files and 988 test cases. Collection does not execute tests.
+Semantic review progress: 22/988 cases reviewed.
 
-> This is a complete name/location inventory, not a completed semantic review. Every row remains `UNREVIEWED` until its product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
+## Curated profile membership
+
+These counts include only explicitly reviewed cases; unreviewed cases are not silently assigned to a profile.
+
+| Profile | Reviewed cases |
+| --- | ---: |
+| `integration` | 2 |
+| `performance` | 6 |
+| `pr` | 13 |
+| `visual` | 1 |
+
+> This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
 | Spec file | Cases | Review status |
 | --- | ---: | --- |
-| `acceptance-397-sample-a.spec.ts` | 4 | UNREVIEWED |
-| `acceptance-397-sample-c.spec.ts` | 3 | UNREVIEWED |
-| `acceptance-397-sample-d.spec.ts` | 4 | UNREVIEWED |
-| `acceptance-429-transaction-colors.spec.ts` | 4 | UNREVIEWED |
-| `acceptance-429-transaction-composition.spec.ts` | 32 | UNREVIEWED |
-| `advanced-json-diagnostic.spec.ts` | 7 | UNREVIEWED |
-| `ai-bridge.spec.ts` | 5 | UNREVIEWED |
-| `ai-domain-coverage.spec.ts` | 1 | UNREVIEWED |
-| `ai-proposal-workflow.spec.ts` | 10 | UNREVIEWED |
-| `annotation-bottom-list.spec.ts` | 1 | UNREVIEWED |
-| `annotation-highlight-position-mode.spec.ts` | 2 | UNREVIEWED |
-| `annotation-inspector-anchor.spec.ts` | 1 | UNREVIEWED |
-| `annotation-line-rendering.spec.ts` | 4 | UNREVIEWED |
-| `annotation-marker-vertical-span.spec.ts` | 1 | UNREVIEWED |
-| `annotation-multi-select-font.spec.ts` | 1 | UNREVIEWED |
-| `annotation-multiline-and-export-shapes.spec.ts` | 4 | UNREVIEWED |
-| `annotation-presentation-controls.spec.ts` | 6 | UNREVIEWED |
-| `annotation-presentation.spec.ts` | 1 | UNREVIEWED |
-| `annotation-preview-update.spec.ts` | 3 | UNREVIEWED |
-| `annotation-snap.spec.ts` | 18 | UNREVIEWED |
-| `annotation-virtualization-closure.spec.ts` | 3 | UNREVIEWED |
-| `architecture-probe.spec.ts` | 1 | UNREVIEWED |
-| `arrange-disabled-reasons.spec.ts` | 1 | UNREVIEWED |
-| `arrange-menu-keyboard-nav.spec.ts` | 1 | UNREVIEWED |
-| `arrow-endpoint-drag.spec.ts` | 2 | UNREVIEWED |
-| `axis-break-compression.spec.ts` | 1 | UNREVIEWED |
-| `badge-parity.spec.ts` | 2 | UNREVIEWED |
-| `badge-visual-evidence.spec.ts` | 1 | UNREVIEWED |
-| `bottom-bookmark-navigation.spec.ts` | 2 | UNREVIEWED |
-| `bottom-context.spec.ts` | 5 | UNREVIEWED |
-| `bottom-editor-row-contrast.spec.ts` | 3 | UNREVIEWED |
-| `bottom-panel-cancel-apply-height.spec.ts` | 1 | UNREVIEWED |
-| `bottom-panel-full-width.spec.ts` | 2 | UNREVIEWED |
-| `bottom-splitter-interaction-closure.spec.ts` | 4 | UNREVIEWED |
-| `bottom-tab-header-visibility.spec.ts` | 2 | UNREVIEWED |
-| `bulk-registration-strict.spec.ts` | 2 | UNREVIEWED |
-| `callout-body-anchor-drag.spec.ts` | 3 | UNREVIEWED |
-| `checkbox-dark-color-scheme.spec.ts` | 1 | UNREVIEWED |
-| `clipboard-entity-parity.spec.ts` | 4 | UNREVIEWED |
-| `clock-generator-toolbar-icon-size.spec.ts` | 1 | UNREVIEWED |
-| `clock-presentation-closure.spec.ts` | 2 | UNREVIEWED |
-| `clock-preview.spec.ts` | 4 | UNREVIEWED |
-| `clockless-time-axis.spec.ts` | 7 | UNREVIEWED |
-| `combined-column-resize-alignment.spec.ts` | 1 | UNREVIEWED |
-| `combined-left-panel-transaction-tree.spec.ts` | 2 | UNREVIEWED |
-| `combined-long-fixture-acceptance.spec.ts` | 2 | UNREVIEWED |
-| `command-parity-delete.spec.ts` | 1 | UNREVIEWED |
-| `comment-row-draft-consistency.spec.ts` | 1 | UNREVIEWED |
-| `cycle-default-pitch.spec.ts` | 1 | UNREVIEWED |
-| `cycle-frozen-columns-scroll.spec.ts` | 2 | UNREVIEWED |
-| `cycle-ruler-long-document-pitch.spec.ts` | 1 | UNREVIEWED |
-| `cycle-scroll-pitch-invariant.spec.ts` | 2 | UNREVIEWED |
-| `design-system-foundation.spec.ts` | 1 | UNREVIEWED |
-| `diagnostic-aggregator.spec.ts` | 8 | UNREVIEWED |
-| `dialog-esc-lifecycle.spec.ts` | 1 | UNREVIEWED |
-| `document-properties.spec.ts` | 1 | UNREVIEWED |
-| `edge-counter-compact.spec.ts` | 5 | UNREVIEWED |
-| `edit-commit-contract.spec.ts` | 5 | UNREVIEWED |
-| `empty-group-tree-projection.spec.ts` | 3 | UNREVIEWED |
-| `event-pulse-lifecycle.spec.ts` | 2 | UNREVIEWED |
-| `export-diagnostics.spec.ts` | 2 | UNREVIEWED |
-| `export-fold-mapping.spec.ts` | 1 | UNREVIEWED |
-| `export-user-text-boundary.spec.ts` | 1 | UNREVIEWED |
-| `feature-showcase-startup.spec.ts` | 3 | UNREVIEWED |
-| `file-beforeunload-dirty-guard.spec.ts` | 1 | UNREVIEWED |
-| `file-ribbon-blank-controls.spec.ts` | 1 | UNREVIEWED |
-| `font-style-commit-contract.spec.ts` | 1 | UNREVIEWED |
-| `full-gui.spec.ts` | 46 | UNREVIEWED |
-| `ghost-trace-delete.spec.ts` | 1 | UNREVIEWED |
-| `golden-samples.spec.ts` | 3 | UNREVIEWED |
-| `grid-zoom-alignment.spec.ts` | 1 | UNREVIEWED |
-| `group-band.spec.ts` | 3 | UNREVIEWED |
-| `group-clipboard-parity.spec.ts` | 2 | UNREVIEWED |
-| `gui-bottom-resize.spec.ts` | 1 | UNREVIEWED |
-| `gui-density-tokens.spec.ts` | 1 | UNREVIEWED |
-| `gui-inspector-resize.spec.ts` | 1 | UNREVIEWED |
-| `gui-left-pane-resize.spec.ts` | 2 | UNREVIEWED |
-| `gui-reference-v8.spec.ts` | 3 | UNREVIEWED |
-| `gui-split-view-visual.spec.ts` | 1 | UNREVIEWED |
-| `gui-v1-home-vocabulary.spec.ts` | 1 | UNREVIEWED |
-| `gui-v1-pane-vocabulary.spec.ts` | 1 | UNREVIEWED |
-| `gui-v1-ribbon-labels.spec.ts` | 1 | UNREVIEWED |
-| `gui-visual-acceptance.spec.ts` | 1 | UNREVIEWED |
-| `history-retention.spec.ts` | 1 | UNREVIEWED |
-| `home-command-surface.spec.ts` | 24 | UNREVIEWED |
-| `home-ribbon-timegroup-cleanup.spec.ts` | 1 | UNREVIEWED |
-| `icon-button-dialog-close.spec.ts` | 5 | UNREVIEWED |
-| `incremental-invalidation-matrix.spec.ts` | 1 | UNREVIEWED |
-| `insert-icon-semantics.spec.ts` | 3 | UNREVIEWED |
-| `insert-timeline-ribbon.spec.ts` | 10 | UNREVIEWED |
-| `inspector-accordion.spec.ts` | 2 | UNREVIEWED |
-| `inspector-capability.spec.ts` | 2 | UNREVIEWED |
-| `inspector-group-transaction-scroll.spec.ts` | 1 | UNREVIEWED |
-| `inspector-hide-compacts-rows.spec.ts` | 1 | UNREVIEWED |
-| `inspector-multi-selection.spec.ts` | 3 | UNREVIEWED |
-| `inspector-waveform-style.spec.ts` | 2 | UNREVIEWED |
-| `interaction-visual-scenarios.spec.ts` | 11 | UNREVIEWED |
-| `issue-441-ribbon-label-integrity.spec.ts` | 9 | UNREVIEWED |
-| `issue-554-transaction-journey.spec.ts` | 2 | UNREVIEWED |
-| `issue-573-combined-divider-pinned.spec.ts` | 1 | UNREVIEWED |
-| `issue-573-combined-shared-time-axis.spec.ts` | 3 | UNREVIEWED |
-| `issue-593-mode-layout-isolation.spec.ts` | 2 | UNREVIEWED |
-| `issue-621-far-jump-no-rewindow-storm.spec.ts` | 1 | UNREVIEWED |
-| `issue-623-cycle-entry-settles-once.spec.ts` | 1 | UNREVIEWED |
-| `issue-624-cycle-reload-mode.spec.ts` | 2 | UNREVIEWED |
-| `issue-625-cycle-fixed-columns-scroll.spec.ts` | 2 | UNREVIEWED |
-| `issue-625-mode-geometry-unchanged.spec.ts` | 1 | UNREVIEWED |
-| `issue-625-no-bleed-under-fixed-columns.spec.ts` | 2 | UNREVIEWED |
-| `issue-625-timeline-only-hscroll.spec.ts` | 2 | UNREVIEWED |
-| `issue-626-primary-actions-visible.spec.ts` | 2 | UNREVIEWED |
-| `issue-628-annotation-bottom-collection.spec.ts` | 2 | UNREVIEWED |
-| `issue-629-combined-tree-inspector.spec.ts` | 1 | UNREVIEWED |
-| `issue-629-inspector-mode-context.spec.ts` | 2 | UNREVIEWED |
-| `issue-630-active-mode-title.spec.ts` | 2 | UNREVIEWED |
-| `issue-631-transaction-vertical-lines.spec.ts` | 1 | UNREVIEWED |
-| `issue-635-derived-fields.spec.ts` | 2 | UNREVIEWED |
-| `issue-635-generator-pristine-draft.spec.ts` | 1 | UNREVIEWED |
-| `issue-635-signal-scope-actions.spec.ts` | 1 | UNREVIEWED |
-| `issue-635-transition-draft-signal-scope.spec.ts` | 1 | UNREVIEWED |
-| `issue-635-transition-form-mode.spec.ts` | 1 | UNREVIEWED |
-| `issue-637-sustained-scroll.spec.ts` | 1 | UNREVIEWED |
-| `issue-639-mode-scoped-bottom-selection.spec.ts` | 1 | UNREVIEWED |
-| `issue-639-transaction-create-cycle-bottom-tab.spec.ts` | 1 | UNREVIEWED |
-| `issue-646-tree-fixed-scroll.spec.ts` | 2 | UNREVIEWED |
-| `issue-650-transaction-select-reveal.spec.ts` | 2 | UNREVIEWED |
-| `issue-651-bulk-dialog-focus.spec.ts` | 2 | UNREVIEWED |
-| `issue-676-canvas-inspector-refresh.spec.ts` | 2 | UNREVIEWED |
-| `issue-698-color-toggle-and-compact-phases.spec.ts` | 2 | UNREVIEWED |
-| `issue-698-inspector-phases.spec.ts` | 1 | UNREVIEWED |
-| `issue-701-layout-return.spec.ts` | 1 | UNREVIEWED |
-| `issue-703-inline-row-apply.spec.ts` | 2 | UNREVIEWED |
-| `issue-704-shared-chevron.spec.ts` | 1 | UNREVIEWED |
-| `issue-714-table-header-and-swatch.spec.ts` | 2 | UNREVIEWED |
-| `issue-720-control-affordance-audit.spec.ts` | 6 | UNREVIEWED |
-| `issue-720-cursor-and-disabled-audit.spec.ts` | 6 | UNREVIEWED |
-| `issue-720-disabled-reasons.spec.ts` | 1 | UNREVIEWED |
-| `issue-720-gesture-status-hint.spec.ts` | 3 | UNREVIEWED |
-| `issue-720-keyboard-parity.spec.ts` | 3 | UNREVIEWED |
-| `issue-720-menu-dialog-affordance.spec.ts` | 2 | UNREVIEWED |
-| `issue-721-visual-channels.spec.ts` | 3 | UNREVIEWED |
-| `issue-722-display-scale-125.spec.ts` | 2 | UNREVIEWED |
-| `issue-722-splitter-discoverability.spec.ts` | 2 | UNREVIEWED |
-| `issue-722-splitter-reset.spec.ts` | 1 | UNREVIEWED |
-| `issue-723-status-diagnostics.spec.ts` | 2 | UNREVIEWED |
-| `issue-724-search-scope.spec.ts` | 1 | UNREVIEWED |
-| `issue-725-draft-markers.spec.ts` | 1 | UNREVIEWED |
-| `issue-725-escape-revert.spec.ts` | 1 | UNREVIEWED |
-| `issue-725-f2-edit.spec.ts` | 1 | UNREVIEWED |
-| `issue-725-keyboard-journey.spec.ts` | 2 | UNREVIEWED |
-| `issue-726-lane-hover.spec.ts` | 1 | UNREVIEWED |
-| `issue-726-marker-hierarchy.spec.ts` | 1 | UNREVIEWED |
-| `issue-727-minimap-affordance.spec.ts` | 1 | UNREVIEWED |
-| `issue-728-group-double-click.spec.ts` | 1 | UNREVIEWED |
-| `issue-729-dirty-title.spec.ts` | 1 | UNREVIEWED |
-| `issue-737-bottom-sort.spec.ts` | 1 | UNREVIEWED |
-| `issue-737-multi-select.spec.ts` | 1 | UNREVIEWED |
-| `issue-737-selection-gestures.spec.ts` | 3 | UNREVIEWED |
-| `issue-738-ruler-hit-area.spec.ts` | 4 | UNREVIEWED |
-| `issue-738-ruler-origin-after-scroll-return.spec.ts` | 7 | UNREVIEWED |
-| `issue-738-stress-real-input.spec.ts` | 2 | UNREVIEWED |
-| `issue-738-stress-rebase.spec.ts` | 4 | UNREVIEWED |
-| `issue-740-741-756-cycle-layout.spec.ts` | 5 | UNREVIEWED |
-| `issue-740-cycle-bottom-hidden-geometry.spec.ts` | 2 | UNREVIEWED |
-| `issue-740-cycle-bottom-hidden.spec.ts` | 2 | UNREVIEWED |
-| `issue-741-transaction-no-left-resizer.spec.ts` | 1 | UNREVIEWED |
-| `issue-744-diagnostics-freshness.spec.ts` | 2 | UNREVIEWED |
-| `issue-746-visible-group-create.spec.ts` | 2 | UNREVIEWED |
-| `issue-747-a11y-and-sort-matrix.spec.ts` | 2 | UNREVIEWED |
-| `issue-747-bottom-settings.spec.ts` | 1 | UNREVIEWED |
-| `issue-747-geometry-acceptance.spec.ts` | 2 | UNREVIEWED |
-| `issue-748-add-and-focus-journey.spec.ts` | 2 | UNREVIEWED |
-| `issue-748-transaction-left-header.spec.ts` | 1 | UNREVIEWED |
-| `issue-748-tree-menu-and-parity.spec.ts` | 2 | UNREVIEWED |
-| `issue-749-move-to-group-submenu.spec.ts` | 2 | UNREVIEWED |
-| `issue-750-custom-tc-scale.spec.ts` | 1 | UNREVIEWED |
-| `issue-750-geometry-10-to-50.spec.ts` | 4 | UNREVIEWED |
-| `issue-750-ruler-follows-tc-scale.spec.ts` | 1 | UNREVIEWED |
-| `issue-750-tc-scale-selector.spec.ts` | 1 | UNREVIEWED |
-| `issue-751-bottom-phase-editor.spec.ts` | 2 | UNREVIEWED |
-| `issue-752-bottom-remount.spec.ts` | 1 | UNREVIEWED |
-| `issue-753-bookmark-gesture-fuzz.spec.ts` | 5 | UNREVIEWED |
-| `issue-753-bookmark-navigation-stays-in-app.spec.ts` | 3 | UNREVIEWED |
-| `issue-753-stress-classified.spec.ts` | 3 | UNREVIEWED |
-| `issue-755-analytic-geometry-equivalence.spec.ts` | 2 | UNREVIEWED |
-| `issue-755-analytic-transition-equivalence.spec.ts` | 1 | UNREVIEWED |
-| `issue-755-canvas-production-acceptance.spec.ts` | 5 | UNREVIEWED |
-| `issue-757-far-scroll-window-coverage.spec.ts` | 1 | UNREVIEWED |
-| `issue-759-group-disclosure-shared.spec.ts` | 1 | UNREVIEWED |
-| `issue-760-combined-horizontal-wheel.spec.ts` | 2 | UNREVIEWED |
-| `issue-761-start-input-width.spec.ts` | 2 | UNREVIEWED |
-| `issue-763-retained-phase-drafts.spec.ts` | 3 | UNREVIEWED |
-| `issue-764-group-header-sticky.spec.ts` | 2 | UNREVIEWED |
-| `issue-765-transaction-no-phantom-vscroll.spec.ts` | 3 | UNREVIEWED |
-| `issue-766-cycle-plural.spec.ts` | 2 | UNREVIEWED |
-| `issue-767-zoom-keeps-glyph-shape.spec.ts` | 4 | UNREVIEWED |
-| `issue-768-mode-switch-budget.spec.ts` | 1 | UNREVIEWED |
-| `issue-769-tree-virtualization-keyboard.spec.ts` | 5 | UNREVIEWED |
-| `issue-770-filtered-selection-scope.spec.ts` | 2 | UNREVIEWED |
-| `issue-771-many-small-groups-virtualized.spec.ts` | 1 | UNREVIEWED |
-| `issue-772-retained-bookmark-drafts.spec.ts` | 1 | UNREVIEWED |
-| `issue-773-bottom-tab-round-trip.spec.ts` | 1 | UNREVIEWED |
-| `issue-774-visibility-preserves-selection.spec.ts` | 2 | UNREVIEWED |
-| `issue-775-annotation-draft-isolation.spec.ts` | 1 | UNREVIEWED |
-| `issue-776-signal-inspector-draft-sync.spec.ts` | 2 | UNREVIEWED |
-| `issue-777-current-v2-samples-acceptance.spec.ts` | 10 | UNREVIEWED |
-| `keyboard-shortcut-router.spec.ts` | 4 | UNREVIEWED |
-| `keyboard-tabs-resizers.spec.ts` | 2 | UNREVIEWED |
-| `label-anchor-source-display.spec.ts` | 1 | UNREVIEWED |
-| `layout-inspector.spec.ts` | 4 | UNREVIEWED |
-| `left-header-action-alignment.spec.ts` | 1 | UNREVIEWED |
-| `left-pane-constraint.spec.ts` | 2 | UNREVIEWED |
-| `left-tree-action-icons.spec.ts` | 1 | UNREVIEWED |
-| `left-tree-compact-footer.spec.ts` | 2 | UNREVIEWED |
-| `left-tree-critical-icons.spec.ts` | 1 | UNREVIEWED |
-| `left-tree-interaction.spec.ts` | 3 | UNREVIEWED |
-| `left-tree-menu-contrast.spec.ts` | 1 | UNREVIEWED |
-| `left-tree-projection-policy-correction.spec.ts` | 2 | UNREVIEWED |
-| `left-tree-type-filter.spec.ts` | 2 | UNREVIEWED |
-| `listener-lifecycle.spec.ts` | 2 | UNREVIEWED |
-| `local-geometry-dom-batch.spec.ts` | 1 | UNREVIEWED |
-| `measurement-anchor-drag.spec.ts` | 5 | UNREVIEWED |
-| `measurement-dimension-layout.spec.ts` | 1 | UNREVIEWED |
-| `measurement-export-matrix.spec.ts` | 1 | UNREVIEWED |
-| `measurement-lane-stacking.spec.ts` | 3 | UNREVIEWED |
-| `measurement-top-row-clip.spec.ts` | 2 | UNREVIEWED |
-| `mechanical-visual-diagnostics.spec.ts` | 1 | UNREVIEWED |
-| `minimal-cycle-view.spec.ts` | 3 | UNREVIEWED |
-| `minimap-overview-performance.spec.ts` | 2 | UNREVIEWED |
-| `minimap-viewport-closure.spec.ts` | 1 | UNREVIEWED |
-| `mode-isolation-journey.spec.ts` | 2 | UNREVIEWED |
-| `name-draft-identity.spec.ts` | 1 | UNREVIEWED |
-| `open-progressive-wave-yield.spec.ts` | 3 | UNREVIEWED |
-| `open-validation-handoff.spec.ts` | 3 | UNREVIEWED |
-| `perf-755-far-jump-longtask.spec.ts` | 1 | UNREVIEWED |
-| `performance-closure.spec.ts` | 11 | UNREVIEWED |
-| `performance-internal-latency.spec.ts` | 1 | UNREVIEWED |
-| `performance-view-only-validation.spec.ts` | 1 | UNREVIEWED |
-| `pinned-bottom-target.spec.ts` | 4 | UNREVIEWED |
-| `production-presentation-equivalence.spec.ts` | 1 | UNREVIEWED |
-| `qa-cross-mode-journey.spec.ts` | 2 | UNREVIEWED |
-| `qa-fresh-state-journeys.spec.ts` | 10 | UNREVIEWED |
-| `reference-clock-conversion.spec.ts` | 4 | UNREVIEWED |
-| `reorder-visibility.spec.ts` | 8 | UNREVIEWED |
-| `reset-semantics-inspector.spec.ts` | 2 | UNREVIEWED |
-| `resource-budget-ui-routes.spec.ts` | 7 | UNREVIEWED |
-| `result-aware-create-effects.spec.ts` | 2 | UNREVIEWED |
-| `review-checks-refresh.spec.ts` | 2 | UNREVIEWED |
-| `review-workflow.spec.ts` | 2 | UNREVIEWED |
-| `ribbon-caption-layout.spec.ts` | 2 | UNREVIEWED |
-| `ribbon-cursor-ab.spec.ts` | 2 | UNREVIEWED |
-| `ribbon-layout.spec.ts` | 2 | UNREVIEWED |
-| `ribbon-more-popover-closure.spec.ts` | 6 | UNREVIEWED |
-| `ribbon-responsive-overflow.spec.ts` | 3 | UNREVIEWED |
-| `ribbon-tabs.spec.ts` | 5 | UNREVIEWED |
-| `ribbon-transaction-context.spec.ts` | 3 | UNREVIEWED |
-| `ribbon-visual-scenario-matrix.spec.ts` | 2 | UNREVIEWED |
-| `ruler-reference-clock.spec.ts` | 2 | UNREVIEWED |
-| `ruler-terminal-boundary.spec.ts` | 1 | UNREVIEWED |
-| `runtime-owner-acceptance.spec.ts` | 2 | UNREVIEWED |
-| `signal-editor-draft-survives-unrelated-edit.spec.ts` | 1 | UNREVIEWED |
-| `signal-editor-group-dropdown.spec.ts` | 2 | UNREVIEWED |
-| `signal-editor.spec.ts` | 18 | UNREVIEWED |
-| `signal-event-table-draft-hint.spec.ts` | 1 | UNREVIEWED |
-| `signal-filter-clear-affordance.spec.ts` | 1 | UNREVIEWED |
-| `signal-generator.spec.ts` | 5 | UNREVIEWED |
-| `signal-spacing.spec.ts` | 3 | UNREVIEWED |
-| `signal-split-no-assignment-control.spec.ts` | 1 | UNREVIEWED |
-| `signal-split-render-routing.spec.ts` | 3 | UNREVIEWED |
-| `signal-split.spec.ts` | 2 | UNREVIEWED |
-| `signal-type-label-registry.spec.ts` | 2 | UNREVIEWED |
-| `signal-visibility-recover.spec.ts` | 1 | UNREVIEWED |
-| `spacer-clipboard-reorder.spec.ts` | 1 | UNREVIEWED |
-| `spacer-row.spec.ts` | 1 | UNREVIEWED |
-| `spacer.spec.ts` | 1 | UNREVIEWED |
-| `split-active-pane.spec.ts` | 6 | UNREVIEWED |
-| `stable-id-collision.spec.ts` | 1 | UNREVIEWED |
-| `stable-surface.spec.ts` | 1 | UNREVIEWED |
-| `status-context.spec.ts` | 4 | UNREVIEWED |
-| `time-group-lifecycle.spec.ts` | 1 | UNREVIEWED |
-| `time-mapping-scale-closure.spec.ts` | 1 | UNREVIEWED |
-| `timeline-editor.spec.ts` | 29 | UNREVIEWED |
-| `timeline-range-100k.spec.ts` | 3 | UNREVIEWED |
-| `timeline-range-band-presentation.spec.ts` | 9 | UNREVIEWED |
-| `timeline-range-edit-readability.spec.ts` | 3 | UNREVIEWED |
-| `timeline-range-hitarea-closure.spec.ts` | 5 | UNREVIEWED |
-| `timing-grid-x-scale-closure.spec.ts` | 1 | UNREVIEWED |
-| `titlebar-controls.spec.ts` | 1 | UNREVIEWED |
-| `transaction-bottom-panel-table-first.spec.ts` | 1 | UNREVIEWED |
-| `transaction-bottom-panel-table.spec.ts` | 2 | UNREVIEWED |
-| `transaction-bottom-phase-linked-signals.spec.ts` | 1 | UNREVIEWED |
-| `transaction-bottom-toolbar-add-ungroup.spec.ts` | 1 | UNREVIEWED |
-| `transaction-drag.spec.ts` | 11 | UNREVIEWED |
-| `transaction-empty-state-create-lane-fix.spec.ts` | 1 | UNREVIEWED |
-| `transaction-export.spec.ts` | 16 | UNREVIEWED |
-| `transaction-group-management.spec.ts` | 4 | UNREVIEWED |
-| `transaction-gui-authoring.spec.ts` | 2 | UNREVIEWED |
-| `transaction-inspector-apply-validation.spec.ts` | 3 | UNREVIEWED |
-| `transaction-inspector-bottom-draft-sync.spec.ts` | 1 | UNREVIEWED |
-| `transaction-inspector-duration-tc.spec.ts` | 1 | UNREVIEWED |
-| `transaction-inspector-lane-suggestions.spec.ts` | 1 | UNREVIEWED |
-| `transaction-lane-labels-visible.spec.ts` | 1 | UNREVIEWED |
-| `transaction-lane-scaling.spec.ts` | 8 | UNREVIEWED |
-| `transaction-minimap-overview.spec.ts` | 2 | UNREVIEWED |
-| `transaction-onboarding.spec.ts` | 7 | UNREVIEWED |
-| `transaction-partial-update-preserves-fields.spec.ts` | 1 | UNREVIEWED |
-| `transaction-phase-bars.spec.ts` | 4 | UNREVIEWED |
-| `transaction-ribbon-groups.spec.ts` | 1 | UNREVIEWED |
-| `transaction-selection-smoke.spec.ts` | 1 | UNREVIEWED |
-| `transaction-signal-picker.spec.ts` | 4 | UNREVIEWED |
-| `transaction-startup-fixture-matrix.spec.ts` | 4 | UNREVIEWED |
-| `transaction-startup-large-fixture.spec.ts` | 2 | UNREVIEWED |
-| `transaction-startup-metrics.spec.ts` | 2 | UNREVIEWED |
-| `transaction-time-scale.spec.ts` | 3 | UNREVIEWED |
-| `transaction-tree-control-parity.spec.ts` | 2 | UNREVIEWED |
-| `transaction-tree-filter.spec.ts` | 1 | UNREVIEWED |
-| `transaction-tree-long-name.spec.ts` | 1 | UNREVIEWED |
-| `transaction-tree-menu-overlay.spec.ts` | 2 | UNREVIEWED |
-| `transaction-tree-no-frozen-pane-handle.spec.ts` | 1 | UNREVIEWED |
-| `transaction-viewport-hscroll.spec.ts` | 1 | UNREVIEWED |
-| `tree-drag-drop.spec.ts` | 5 | UNREVIEWED |
-| `tree-keyboard.spec.ts` | 2 | UNREVIEWED |
-| `undo-redo-selection-context.spec.ts` | 3 | UNREVIEWED |
-| `unsaved-file-dialog.spec.ts` | 12 | UNREVIEWED |
-| `v8-gui-contract-coverage.spec.ts` | 1 | UNREVIEWED |
-| `value-label-layout.spec.ts` | 1 | UNREVIEWED |
-| `value-signal-compatibility.spec.ts` | 7 | UNREVIEWED |
-| `view-metrics-owner.spec.ts` | 1 | UNREVIEWED |
-| `view-mode-readability.spec.ts` | 3 | UNREVIEWED |
-| `view-ribbon-slot.spec.ts` | 7 | UNREVIEWED |
-| `visual-grammar-cross-component.spec.ts` | 2 | UNREVIEWED |
-| `visual-reference-lifecycle.spec.ts` | 1 | UNREVIEWED |
-| `visual-regression-modes.spec.ts` | 6 | UNREVIEWED |
-| `wavedrom-security.spec.ts` | 1 | UNREVIEWED |
-| `workspace-preset-density.spec.ts` | 1 | UNREVIEWED |
-| `workspace-zoom-isolation.spec.ts` | 2 | UNREVIEWED |
-| `zoom-cross-surface-alignment.spec.ts` | 1 | UNREVIEWED |
-| `zoom-text-fidelity.spec.ts` | 5 | UNREVIEWED |
+| `acceptance-397-sample-a.spec.ts` | 4 | 0/4 reviewed |
+| `acceptance-397-sample-c.spec.ts` | 3 | 0/3 reviewed |
+| `acceptance-397-sample-d.spec.ts` | 4 | 0/4 reviewed |
+| `acceptance-429-transaction-colors.spec.ts` | 4 | 0/4 reviewed |
+| `acceptance-429-transaction-composition.spec.ts` | 32 | 0/32 reviewed |
+| `advanced-json-diagnostic.spec.ts` | 7 | 0/7 reviewed |
+| `ai-bridge.spec.ts` | 5 | 0/5 reviewed |
+| `ai-domain-coverage.spec.ts` | 1 | 0/1 reviewed |
+| `ai-proposal-workflow.spec.ts` | 10 | 0/10 reviewed |
+| `annotation-bottom-list.spec.ts` | 1 | 0/1 reviewed |
+| `annotation-highlight-position-mode.spec.ts` | 2 | 0/2 reviewed |
+| `annotation-inspector-anchor.spec.ts` | 1 | 0/1 reviewed |
+| `annotation-line-rendering.spec.ts` | 4 | 0/4 reviewed |
+| `annotation-marker-vertical-span.spec.ts` | 1 | 0/1 reviewed |
+| `annotation-multi-select-font.spec.ts` | 1 | 0/1 reviewed |
+| `annotation-multiline-and-export-shapes.spec.ts` | 4 | 0/4 reviewed |
+| `annotation-presentation-controls.spec.ts` | 6 | 0/6 reviewed |
+| `annotation-presentation.spec.ts` | 1 | 0/1 reviewed |
+| `annotation-preview-update.spec.ts` | 3 | 2/3 reviewed |
+| `annotation-snap.spec.ts` | 18 | 0/18 reviewed |
+| `annotation-virtualization-closure.spec.ts` | 3 | 0/3 reviewed |
+| `architecture-probe.spec.ts` | 1 | 0/1 reviewed |
+| `arrange-disabled-reasons.spec.ts` | 1 | 0/1 reviewed |
+| `arrange-menu-keyboard-nav.spec.ts` | 1 | 0/1 reviewed |
+| `arrow-endpoint-drag.spec.ts` | 2 | 0/2 reviewed |
+| `axis-break-compression.spec.ts` | 1 | 0/1 reviewed |
+| `badge-parity.spec.ts` | 2 | 0/2 reviewed |
+| `badge-visual-evidence.spec.ts` | 1 | 0/1 reviewed |
+| `bottom-bookmark-navigation.spec.ts` | 2 | 0/2 reviewed |
+| `bottom-context.spec.ts` | 5 | 0/5 reviewed |
+| `bottom-editor-row-contrast.spec.ts` | 3 | 0/3 reviewed |
+| `bottom-panel-cancel-apply-height.spec.ts` | 1 | 0/1 reviewed |
+| `bottom-panel-full-width.spec.ts` | 2 | 0/2 reviewed |
+| `bottom-splitter-interaction-closure.spec.ts` | 4 | 0/4 reviewed |
+| `bottom-tab-header-visibility.spec.ts` | 2 | 0/2 reviewed |
+| `bulk-registration-strict.spec.ts` | 2 | 0/2 reviewed |
+| `callout-body-anchor-drag.spec.ts` | 3 | 0/3 reviewed |
+| `checkbox-dark-color-scheme.spec.ts` | 1 | 0/1 reviewed |
+| `clipboard-entity-parity.spec.ts` | 4 | 0/4 reviewed |
+| `clock-generator-toolbar-icon-size.spec.ts` | 1 | 0/1 reviewed |
+| `clock-presentation-closure.spec.ts` | 2 | 0/2 reviewed |
+| `clock-preview.spec.ts` | 4 | 2/4 reviewed |
+| `clockless-time-axis.spec.ts` | 7 | 0/7 reviewed |
+| `combined-column-resize-alignment.spec.ts` | 1 | 0/1 reviewed |
+| `combined-left-panel-transaction-tree.spec.ts` | 2 | 0/2 reviewed |
+| `combined-long-fixture-acceptance.spec.ts` | 2 | 0/2 reviewed |
+| `command-parity-delete.spec.ts` | 1 | 0/1 reviewed |
+| `comment-row-draft-consistency.spec.ts` | 1 | 0/1 reviewed |
+| `cycle-default-pitch.spec.ts` | 1 | 0/1 reviewed |
+| `cycle-frozen-columns-scroll.spec.ts` | 2 | 0/2 reviewed |
+| `cycle-ruler-long-document-pitch.spec.ts` | 1 | 0/1 reviewed |
+| `cycle-scroll-pitch-invariant.spec.ts` | 2 | 0/2 reviewed |
+| `design-system-foundation.spec.ts` | 1 | 0/1 reviewed |
+| `diagnostic-aggregator.spec.ts` | 8 | 0/8 reviewed |
+| `dialog-esc-lifecycle.spec.ts` | 1 | 0/1 reviewed |
+| `document-properties.spec.ts` | 1 | 0/1 reviewed |
+| `edge-counter-compact.spec.ts` | 5 | 0/5 reviewed |
+| `edit-commit-contract.spec.ts` | 5 | 0/5 reviewed |
+| `empty-group-tree-projection.spec.ts` | 3 | 0/3 reviewed |
+| `event-pulse-lifecycle.spec.ts` | 2 | 0/2 reviewed |
+| `export-diagnostics.spec.ts` | 2 | 0/2 reviewed |
+| `export-fold-mapping.spec.ts` | 1 | 0/1 reviewed |
+| `export-user-text-boundary.spec.ts` | 1 | 0/1 reviewed |
+| `feature-showcase-startup.spec.ts` | 3 | 0/3 reviewed |
+| `file-beforeunload-dirty-guard.spec.ts` | 1 | 0/1 reviewed |
+| `file-ribbon-blank-controls.spec.ts` | 1 | 0/1 reviewed |
+| `font-style-commit-contract.spec.ts` | 1 | 0/1 reviewed |
+| `full-gui.spec.ts` | 46 | 0/46 reviewed |
+| `ghost-trace-delete.spec.ts` | 1 | 0/1 reviewed |
+| `golden-samples.spec.ts` | 3 | 0/3 reviewed |
+| `grid-zoom-alignment.spec.ts` | 1 | 0/1 reviewed |
+| `group-band.spec.ts` | 3 | 0/3 reviewed |
+| `group-clipboard-parity.spec.ts` | 2 | 0/2 reviewed |
+| `gui-bottom-resize.spec.ts` | 1 | 1/1 reviewed |
+| `gui-density-tokens.spec.ts` | 1 | 0/1 reviewed |
+| `gui-inspector-resize.spec.ts` | 1 | 1/1 reviewed |
+| `gui-left-pane-resize.spec.ts` | 2 | 0/2 reviewed |
+| `gui-reference-v8.spec.ts` | 3 | 0/3 reviewed |
+| `gui-split-view-visual.spec.ts` | 1 | 0/1 reviewed |
+| `gui-v1-home-vocabulary.spec.ts` | 1 | 0/1 reviewed |
+| `gui-v1-pane-vocabulary.spec.ts` | 1 | 0/1 reviewed |
+| `gui-v1-ribbon-labels.spec.ts` | 1 | 0/1 reviewed |
+| `gui-visual-acceptance.spec.ts` | 1 | 0/1 reviewed |
+| `history-retention.spec.ts` | 1 | 0/1 reviewed |
+| `home-command-surface.spec.ts` | 24 | 0/24 reviewed |
+| `home-ribbon-timegroup-cleanup.spec.ts` | 1 | 0/1 reviewed |
+| `icon-button-dialog-close.spec.ts` | 5 | 0/5 reviewed |
+| `incremental-invalidation-matrix.spec.ts` | 1 | 0/1 reviewed |
+| `insert-icon-semantics.spec.ts` | 3 | 0/3 reviewed |
+| `insert-timeline-ribbon.spec.ts` | 10 | 0/10 reviewed |
+| `inspector-accordion.spec.ts` | 2 | 0/2 reviewed |
+| `inspector-capability.spec.ts` | 2 | 0/2 reviewed |
+| `inspector-group-transaction-scroll.spec.ts` | 1 | 0/1 reviewed |
+| `inspector-hide-compacts-rows.spec.ts` | 1 | 0/1 reviewed |
+| `inspector-multi-selection.spec.ts` | 3 | 0/3 reviewed |
+| `inspector-waveform-style.spec.ts` | 2 | 0/2 reviewed |
+| `interaction-visual-scenarios.spec.ts` | 11 | 0/11 reviewed |
+| `issue-441-ribbon-label-integrity.spec.ts` | 9 | 0/9 reviewed |
+| `issue-554-transaction-journey.spec.ts` | 2 | 2/2 reviewed |
+| `issue-573-combined-divider-pinned.spec.ts` | 1 | 0/1 reviewed |
+| `issue-573-combined-shared-time-axis.spec.ts` | 3 | 0/3 reviewed |
+| `issue-593-mode-layout-isolation.spec.ts` | 2 | 0/2 reviewed |
+| `issue-621-far-jump-no-rewindow-storm.spec.ts` | 1 | 0/1 reviewed |
+| `issue-623-cycle-entry-settles-once.spec.ts` | 1 | 0/1 reviewed |
+| `issue-624-cycle-reload-mode.spec.ts` | 2 | 0/2 reviewed |
+| `issue-625-cycle-fixed-columns-scroll.spec.ts` | 2 | 0/2 reviewed |
+| `issue-625-mode-geometry-unchanged.spec.ts` | 1 | 0/1 reviewed |
+| `issue-625-no-bleed-under-fixed-columns.spec.ts` | 2 | 0/2 reviewed |
+| `issue-625-timeline-only-hscroll.spec.ts` | 2 | 0/2 reviewed |
+| `issue-626-primary-actions-visible.spec.ts` | 2 | 0/2 reviewed |
+| `issue-628-annotation-bottom-collection.spec.ts` | 2 | 0/2 reviewed |
+| `issue-629-combined-tree-inspector.spec.ts` | 1 | 0/1 reviewed |
+| `issue-629-inspector-mode-context.spec.ts` | 2 | 0/2 reviewed |
+| `issue-630-active-mode-title.spec.ts` | 2 | 0/2 reviewed |
+| `issue-631-transaction-vertical-lines.spec.ts` | 1 | 0/1 reviewed |
+| `issue-635-derived-fields.spec.ts` | 2 | 0/2 reviewed |
+| `issue-635-generator-pristine-draft.spec.ts` | 1 | 0/1 reviewed |
+| `issue-635-signal-scope-actions.spec.ts` | 1 | 0/1 reviewed |
+| `issue-635-transition-draft-signal-scope.spec.ts` | 1 | 0/1 reviewed |
+| `issue-635-transition-form-mode.spec.ts` | 1 | 0/1 reviewed |
+| `issue-637-sustained-scroll.spec.ts` | 1 | 0/1 reviewed |
+| `issue-639-mode-scoped-bottom-selection.spec.ts` | 1 | 0/1 reviewed |
+| `issue-639-transaction-create-cycle-bottom-tab.spec.ts` | 1 | 0/1 reviewed |
+| `issue-646-tree-fixed-scroll.spec.ts` | 2 | 0/2 reviewed |
+| `issue-650-transaction-select-reveal.spec.ts` | 2 | 0/2 reviewed |
+| `issue-651-bulk-dialog-focus.spec.ts` | 2 | 0/2 reviewed |
+| `issue-676-canvas-inspector-refresh.spec.ts` | 2 | 0/2 reviewed |
+| `issue-698-color-toggle-and-compact-phases.spec.ts` | 2 | 0/2 reviewed |
+| `issue-698-inspector-phases.spec.ts` | 1 | 0/1 reviewed |
+| `issue-701-layout-return.spec.ts` | 1 | 0/1 reviewed |
+| `issue-703-inline-row-apply.spec.ts` | 2 | 0/2 reviewed |
+| `issue-704-shared-chevron.spec.ts` | 1 | 0/1 reviewed |
+| `issue-714-table-header-and-swatch.spec.ts` | 2 | 0/2 reviewed |
+| `issue-720-control-affordance-audit.spec.ts` | 6 | 0/6 reviewed |
+| `issue-720-cursor-and-disabled-audit.spec.ts` | 6 | 0/6 reviewed |
+| `issue-720-disabled-reasons.spec.ts` | 1 | 0/1 reviewed |
+| `issue-720-gesture-status-hint.spec.ts` | 3 | 0/3 reviewed |
+| `issue-720-keyboard-parity.spec.ts` | 3 | 0/3 reviewed |
+| `issue-720-menu-dialog-affordance.spec.ts` | 2 | 0/2 reviewed |
+| `issue-721-visual-channels.spec.ts` | 3 | 0/3 reviewed |
+| `issue-722-display-scale-125.spec.ts` | 2 | 0/2 reviewed |
+| `issue-722-splitter-discoverability.spec.ts` | 2 | 0/2 reviewed |
+| `issue-722-splitter-reset.spec.ts` | 1 | 0/1 reviewed |
+| `issue-723-status-diagnostics.spec.ts` | 2 | 0/2 reviewed |
+| `issue-724-search-scope.spec.ts` | 1 | 0/1 reviewed |
+| `issue-725-draft-markers.spec.ts` | 1 | 0/1 reviewed |
+| `issue-725-escape-revert.spec.ts` | 1 | 0/1 reviewed |
+| `issue-725-f2-edit.spec.ts` | 1 | 0/1 reviewed |
+| `issue-725-keyboard-journey.spec.ts` | 2 | 0/2 reviewed |
+| `issue-726-lane-hover.spec.ts` | 1 | 0/1 reviewed |
+| `issue-726-marker-hierarchy.spec.ts` | 1 | 0/1 reviewed |
+| `issue-727-minimap-affordance.spec.ts` | 1 | 0/1 reviewed |
+| `issue-728-group-double-click.spec.ts` | 1 | 0/1 reviewed |
+| `issue-729-dirty-title.spec.ts` | 1 | 0/1 reviewed |
+| `issue-737-bottom-sort.spec.ts` | 1 | 0/1 reviewed |
+| `issue-737-multi-select.spec.ts` | 1 | 0/1 reviewed |
+| `issue-737-selection-gestures.spec.ts` | 3 | 0/3 reviewed |
+| `issue-738-ruler-hit-area.spec.ts` | 4 | 0/4 reviewed |
+| `issue-738-ruler-origin-after-scroll-return.spec.ts` | 7 | 0/7 reviewed |
+| `issue-738-stress-real-input.spec.ts` | 2 | 0/2 reviewed |
+| `issue-738-stress-rebase.spec.ts` | 4 | 0/4 reviewed |
+| `issue-740-741-756-cycle-layout.spec.ts` | 5 | 0/5 reviewed |
+| `issue-740-cycle-bottom-hidden-geometry.spec.ts` | 2 | 0/2 reviewed |
+| `issue-740-cycle-bottom-hidden.spec.ts` | 2 | 0/2 reviewed |
+| `issue-741-transaction-no-left-resizer.spec.ts` | 1 | 0/1 reviewed |
+| `issue-744-diagnostics-freshness.spec.ts` | 2 | 0/2 reviewed |
+| `issue-746-visible-group-create.spec.ts` | 2 | 0/2 reviewed |
+| `issue-747-a11y-and-sort-matrix.spec.ts` | 2 | 0/2 reviewed |
+| `issue-747-bottom-settings.spec.ts` | 1 | 0/1 reviewed |
+| `issue-747-geometry-acceptance.spec.ts` | 2 | 0/2 reviewed |
+| `issue-748-add-and-focus-journey.spec.ts` | 2 | 0/2 reviewed |
+| `issue-748-transaction-left-header.spec.ts` | 1 | 0/1 reviewed |
+| `issue-748-tree-menu-and-parity.spec.ts` | 2 | 0/2 reviewed |
+| `issue-749-move-to-group-submenu.spec.ts` | 2 | 0/2 reviewed |
+| `issue-750-custom-tc-scale.spec.ts` | 1 | 0/1 reviewed |
+| `issue-750-geometry-10-to-50.spec.ts` | 4 | 0/4 reviewed |
+| `issue-750-ruler-follows-tc-scale.spec.ts` | 1 | 0/1 reviewed |
+| `issue-750-tc-scale-selector.spec.ts` | 1 | 0/1 reviewed |
+| `issue-751-bottom-phase-editor.spec.ts` | 2 | 0/2 reviewed |
+| `issue-752-bottom-remount.spec.ts` | 1 | 0/1 reviewed |
+| `issue-753-bookmark-gesture-fuzz.spec.ts` | 5 | 0/5 reviewed |
+| `issue-753-bookmark-navigation-stays-in-app.spec.ts` | 3 | 0/3 reviewed |
+| `issue-753-stress-classified.spec.ts` | 3 | 0/3 reviewed |
+| `issue-755-analytic-geometry-equivalence.spec.ts` | 2 | 0/2 reviewed |
+| `issue-755-analytic-transition-equivalence.spec.ts` | 1 | 0/1 reviewed |
+| `issue-755-canvas-production-acceptance.spec.ts` | 5 | 0/5 reviewed |
+| `issue-757-far-scroll-window-coverage.spec.ts` | 1 | 0/1 reviewed |
+| `issue-759-group-disclosure-shared.spec.ts` | 1 | 0/1 reviewed |
+| `issue-760-combined-horizontal-wheel.spec.ts` | 2 | 0/2 reviewed |
+| `issue-761-start-input-width.spec.ts` | 2 | 0/2 reviewed |
+| `issue-763-retained-phase-drafts.spec.ts` | 3 | 0/3 reviewed |
+| `issue-764-group-header-sticky.spec.ts` | 2 | 0/2 reviewed |
+| `issue-765-transaction-no-phantom-vscroll.spec.ts` | 3 | 0/3 reviewed |
+| `issue-766-cycle-plural.spec.ts` | 2 | 0/2 reviewed |
+| `issue-767-zoom-keeps-glyph-shape.spec.ts` | 4 | 0/4 reviewed |
+| `issue-768-mode-switch-budget.spec.ts` | 1 | 0/1 reviewed |
+| `issue-769-tree-virtualization-keyboard.spec.ts` | 5 | 0/5 reviewed |
+| `issue-770-filtered-selection-scope.spec.ts` | 2 | 0/2 reviewed |
+| `issue-771-many-small-groups-virtualized.spec.ts` | 1 | 0/1 reviewed |
+| `issue-772-retained-bookmark-drafts.spec.ts` | 1 | 0/1 reviewed |
+| `issue-773-bottom-tab-round-trip.spec.ts` | 1 | 0/1 reviewed |
+| `issue-774-visibility-preserves-selection.spec.ts` | 2 | 0/2 reviewed |
+| `issue-775-annotation-draft-isolation.spec.ts` | 1 | 0/1 reviewed |
+| `issue-776-signal-inspector-draft-sync.spec.ts` | 2 | 0/2 reviewed |
+| `issue-777-current-v2-samples-acceptance.spec.ts` | 10 | 0/10 reviewed |
+| `keyboard-shortcut-router.spec.ts` | 4 | 0/4 reviewed |
+| `keyboard-tabs-resizers.spec.ts` | 2 | 0/2 reviewed |
+| `label-anchor-source-display.spec.ts` | 1 | 0/1 reviewed |
+| `layout-inspector.spec.ts` | 4 | 0/4 reviewed |
+| `left-header-action-alignment.spec.ts` | 1 | 0/1 reviewed |
+| `left-pane-constraint.spec.ts` | 2 | 0/2 reviewed |
+| `left-tree-action-icons.spec.ts` | 1 | 0/1 reviewed |
+| `left-tree-compact-footer.spec.ts` | 2 | 0/2 reviewed |
+| `left-tree-critical-icons.spec.ts` | 1 | 0/1 reviewed |
+| `left-tree-interaction.spec.ts` | 3 | 0/3 reviewed |
+| `left-tree-menu-contrast.spec.ts` | 1 | 0/1 reviewed |
+| `left-tree-projection-policy-correction.spec.ts` | 2 | 0/2 reviewed |
+| `left-tree-type-filter.spec.ts` | 2 | 0/2 reviewed |
+| `listener-lifecycle.spec.ts` | 2 | 0/2 reviewed |
+| `local-geometry-dom-batch.spec.ts` | 1 | 0/1 reviewed |
+| `measurement-anchor-drag.spec.ts` | 5 | 0/5 reviewed |
+| `measurement-dimension-layout.spec.ts` | 1 | 0/1 reviewed |
+| `measurement-export-matrix.spec.ts` | 1 | 0/1 reviewed |
+| `measurement-lane-stacking.spec.ts` | 3 | 0/3 reviewed |
+| `measurement-top-row-clip.spec.ts` | 2 | 0/2 reviewed |
+| `mechanical-visual-diagnostics.spec.ts` | 1 | 0/1 reviewed |
+| `minimal-cycle-view.spec.ts` | 3 | 0/3 reviewed |
+| `minimap-overview-performance.spec.ts` | 2 | 0/2 reviewed |
+| `minimap-viewport-closure.spec.ts` | 1 | 0/1 reviewed |
+| `mode-isolation-journey.spec.ts` | 2 | 0/2 reviewed |
+| `name-draft-identity.spec.ts` | 1 | 0/1 reviewed |
+| `open-progressive-wave-yield.spec.ts` | 3 | 0/3 reviewed |
+| `open-validation-handoff.spec.ts` | 3 | 0/3 reviewed |
+| `perf-755-far-jump-longtask.spec.ts` | 1 | 0/1 reviewed |
+| `performance-closure.spec.ts` | 11 | 0/11 reviewed |
+| `performance-internal-latency.spec.ts` | 1 | 0/1 reviewed |
+| `performance-view-only-validation.spec.ts` | 1 | 0/1 reviewed |
+| `pinned-bottom-target.spec.ts` | 4 | 0/4 reviewed |
+| `production-presentation-equivalence.spec.ts` | 1 | 0/1 reviewed |
+| `qa-cross-mode-journey.spec.ts` | 2 | 0/2 reviewed |
+| `qa-fresh-state-journeys.spec.ts` | 10 | 6/10 reviewed |
+| `reference-clock-conversion.spec.ts` | 4 | 0/4 reviewed |
+| `reorder-visibility.spec.ts` | 8 | 0/8 reviewed |
+| `reset-semantics-inspector.spec.ts` | 2 | 0/2 reviewed |
+| `resource-budget-ui-routes.spec.ts` | 7 | 0/7 reviewed |
+| `result-aware-create-effects.spec.ts` | 2 | 0/2 reviewed |
+| `review-checks-refresh.spec.ts` | 2 | 0/2 reviewed |
+| `review-workflow.spec.ts` | 2 | 0/2 reviewed |
+| `ribbon-caption-layout.spec.ts` | 2 | 0/2 reviewed |
+| `ribbon-cursor-ab.spec.ts` | 2 | 0/2 reviewed |
+| `ribbon-layout.spec.ts` | 2 | 0/2 reviewed |
+| `ribbon-more-popover-closure.spec.ts` | 6 | 0/6 reviewed |
+| `ribbon-responsive-overflow.spec.ts` | 3 | 0/3 reviewed |
+| `ribbon-tabs.spec.ts` | 5 | 0/5 reviewed |
+| `ribbon-transaction-context.spec.ts` | 3 | 0/3 reviewed |
+| `ribbon-visual-scenario-matrix.spec.ts` | 2 | 0/2 reviewed |
+| `ruler-reference-clock.spec.ts` | 2 | 0/2 reviewed |
+| `ruler-terminal-boundary.spec.ts` | 1 | 0/1 reviewed |
+| `runtime-owner-acceptance.spec.ts` | 2 | 0/2 reviewed |
+| `signal-editor-draft-survives-unrelated-edit.spec.ts` | 1 | 0/1 reviewed |
+| `signal-editor-group-dropdown.spec.ts` | 2 | 0/2 reviewed |
+| `signal-editor.spec.ts` | 18 | 0/18 reviewed |
+| `signal-event-table-draft-hint.spec.ts` | 1 | 0/1 reviewed |
+| `signal-filter-clear-affordance.spec.ts` | 1 | 0/1 reviewed |
+| `signal-generator.spec.ts` | 5 | 0/5 reviewed |
+| `signal-spacing.spec.ts` | 3 | 0/3 reviewed |
+| `signal-split-no-assignment-control.spec.ts` | 1 | 0/1 reviewed |
+| `signal-split-render-routing.spec.ts` | 3 | 0/3 reviewed |
+| `signal-split.spec.ts` | 2 | 0/2 reviewed |
+| `signal-type-label-registry.spec.ts` | 2 | 0/2 reviewed |
+| `signal-visibility-recover.spec.ts` | 1 | 0/1 reviewed |
+| `spacer-clipboard-reorder.spec.ts` | 1 | 0/1 reviewed |
+| `spacer-row.spec.ts` | 1 | 0/1 reviewed |
+| `spacer.spec.ts` | 1 | 0/1 reviewed |
+| `split-active-pane.spec.ts` | 6 | 0/6 reviewed |
+| `stable-id-collision.spec.ts` | 1 | 0/1 reviewed |
+| `stable-surface.spec.ts` | 1 | 0/1 reviewed |
+| `status-context.spec.ts` | 4 | 0/4 reviewed |
+| `time-group-lifecycle.spec.ts` | 1 | 0/1 reviewed |
+| `time-mapping-scale-closure.spec.ts` | 1 | 0/1 reviewed |
+| `timeline-editor.spec.ts` | 29 | 0/29 reviewed |
+| `timeline-range-100k.spec.ts` | 3 | 0/3 reviewed |
+| `timeline-range-band-presentation.spec.ts` | 9 | 0/9 reviewed |
+| `timeline-range-edit-readability.spec.ts` | 3 | 0/3 reviewed |
+| `timeline-range-hitarea-closure.spec.ts` | 5 | 0/5 reviewed |
+| `timing-grid-x-scale-closure.spec.ts` | 1 | 0/1 reviewed |
+| `titlebar-controls.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-bottom-panel-table-first.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-bottom-panel-table.spec.ts` | 2 | 0/2 reviewed |
+| `transaction-bottom-phase-linked-signals.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-bottom-toolbar-add-ungroup.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-drag.spec.ts` | 11 | 0/11 reviewed |
+| `transaction-empty-state-create-lane-fix.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-export.spec.ts` | 16 | 0/16 reviewed |
+| `transaction-group-management.spec.ts` | 4 | 0/4 reviewed |
+| `transaction-gui-authoring.spec.ts` | 2 | 0/2 reviewed |
+| `transaction-inspector-apply-validation.spec.ts` | 3 | 0/3 reviewed |
+| `transaction-inspector-bottom-draft-sync.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-inspector-duration-tc.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-inspector-lane-suggestions.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-lane-labels-visible.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-lane-scaling.spec.ts` | 8 | 0/8 reviewed |
+| `transaction-minimap-overview.spec.ts` | 2 | 0/2 reviewed |
+| `transaction-onboarding.spec.ts` | 7 | 0/7 reviewed |
+| `transaction-partial-update-preserves-fields.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-phase-bars.spec.ts` | 4 | 0/4 reviewed |
+| `transaction-ribbon-groups.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-selection-smoke.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-signal-picker.spec.ts` | 4 | 0/4 reviewed |
+| `transaction-startup-fixture-matrix.spec.ts` | 4 | 4/4 reviewed |
+| `transaction-startup-large-fixture.spec.ts` | 2 | 2/2 reviewed |
+| `transaction-startup-metrics.spec.ts` | 2 | 0/2 reviewed |
+| `transaction-time-scale.spec.ts` | 3 | 0/3 reviewed |
+| `transaction-tree-control-parity.spec.ts` | 2 | 0/2 reviewed |
+| `transaction-tree-filter.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-tree-long-name.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-tree-menu-overlay.spec.ts` | 2 | 0/2 reviewed |
+| `transaction-tree-no-frozen-pane-handle.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-viewport-hscroll.spec.ts` | 1 | 0/1 reviewed |
+| `tree-drag-drop.spec.ts` | 5 | 0/5 reviewed |
+| `tree-keyboard.spec.ts` | 2 | 0/2 reviewed |
+| `undo-redo-selection-context.spec.ts` | 3 | 0/3 reviewed |
+| `unsaved-file-dialog.spec.ts` | 12 | 0/12 reviewed |
+| `v8-gui-contract-coverage.spec.ts` | 1 | 1/1 reviewed |
+| `value-label-layout.spec.ts` | 1 | 0/1 reviewed |
+| `value-signal-compatibility.spec.ts` | 7 | 0/7 reviewed |
+| `view-metrics-owner.spec.ts` | 1 | 0/1 reviewed |
+| `view-mode-readability.spec.ts` | 3 | 0/3 reviewed |
+| `view-ribbon-slot.spec.ts` | 7 | 0/7 reviewed |
+| `visual-grammar-cross-component.spec.ts` | 2 | 0/2 reviewed |
+| `visual-reference-lifecycle.spec.ts` | 1 | 0/1 reviewed |
+| `visual-regression-modes.spec.ts` | 6 | 0/6 reviewed |
+| `wavedrom-security.spec.ts` | 1 | 0/1 reviewed |
+| `workspace-preset-density.spec.ts` | 1 | 0/1 reviewed |
+| `workspace-zoom-isolation.spec.ts` | 2 | 0/2 reviewed |
+| `zoom-cross-surface-alignment.spec.ts` | 1 | 0/1 reviewed |
+| `zoom-text-fidelity.spec.ts` | 5 | 0/5 reviewed |
 
-Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json).
+## Static review candidates
+
+The following source-pattern signals are triage hints only; they do not prove that a test is invalid or implementation-coupled. Inspect the case and protected contract before deciding.
+
+| Spec file | Candidate signals |
+| --- | --- |
+| `acceptance-397-sample-a.spec.ts` | geometryRead |
+| `acceptance-397-sample-c.spec.ts` | querySelector |
+| `acceptance-397-sample-d.spec.ts` | dataset |
+| `acceptance-429-transaction-colors.spec.ts` | getComputedStyle |
+| `annotation-multi-select-font.spec.ts` | querySelector, dataset |
+| `annotation-presentation-controls.spec.ts` | querySelector, getComputedStyle |
+| `badge-parity.spec.ts` | querySelector, getComputedStyle, geometryRead |
+| `badge-visual-evidence.spec.ts` | geometryRead |
+| `bottom-editor-row-contrast.spec.ts` | getComputedStyle |
+| `bottom-panel-cancel-apply-height.spec.ts` | geometryRead |
+| `bottom-panel-full-width.spec.ts` | geometryRead |
+| `bottom-splitter-interaction-closure.spec.ts` | getComputedStyle |
+| `bottom-tab-header-visibility.spec.ts` | getComputedStyle, elementContains, dataset, geometryRead |
+| `checkbox-dark-color-scheme.spec.ts` | getComputedStyle |
+| `clockless-time-axis.spec.ts` | dataset, geometryRead |
+| `cycle-default-pitch.spec.ts` | querySelector, getComputedStyle, geometryRead, explicitWait |
+| `cycle-frozen-columns-scroll.spec.ts` | getComputedStyle |
+| `design-system-foundation.spec.ts` | querySelector, getComputedStyle, directDomMutation, geometryRead |
+| `document-properties.spec.ts` | querySelector |
+| `edge-counter-compact.spec.ts` | querySelector, geometryRead |
+| `empty-group-tree-projection.spec.ts` | dataset, explicitWait |
+| `feature-showcase-startup.spec.ts` | geometryRead |
+| `file-ribbon-blank-controls.spec.ts` | getComputedStyle, geometryRead |
+| `full-gui.spec.ts` | geometryRead |
+| `gui-density-tokens.spec.ts` | getComputedStyle |
+| `gui-left-pane-resize.spec.ts` | getComputedStyle, geometryRead |
+| `gui-reference-v8.spec.ts` | getComputedStyle, dataset, geometryRead |
+| `gui-visual-acceptance.spec.ts` | getComputedStyle, geometryRead |
+| `home-command-surface.spec.ts` | querySelector, dataset, geometryRead |
+| `insert-icon-semantics.spec.ts` | querySelector, geometryRead |
+| `insert-timeline-ribbon.spec.ts` | getComputedStyle, dataset, geometryRead |
+| `inspector-hide-compacts-rows.spec.ts` | dataset, geometryRead |
+| `inspector-waveform-style.spec.ts` | getComputedStyle |
+| `issue-441-ribbon-label-integrity.spec.ts` | getComputedStyle, geometryRead |
+| `issue-573-combined-shared-time-axis.spec.ts` | geometryRead, explicitWait |
+| `issue-623-cycle-entry-settles-once.spec.ts` | querySelector, geometryRead |
+| `issue-624-cycle-reload-mode.spec.ts` | querySelector |
+| `issue-625-cycle-fixed-columns-scroll.spec.ts` | geometryRead, explicitWait |
+| `issue-625-mode-geometry-unchanged.spec.ts` | querySelector, geometryRead, explicitWait |
+| `issue-625-no-bleed-under-fixed-columns.spec.ts` | querySelector, geometryRead, explicitWait |
+| `issue-625-timeline-only-hscroll.spec.ts` | querySelector, getComputedStyle, elementContains, styleMutation, geometryRead |
+| `issue-628-annotation-bottom-collection.spec.ts` | getComputedStyle, geometryRead |
+| `issue-631-transaction-vertical-lines.spec.ts` | querySelector, getComputedStyle, geometryRead |
+| `issue-637-sustained-scroll.spec.ts` | querySelector |
+| `issue-650-transaction-select-reveal.spec.ts` | geometryRead |
+| `issue-698-color-toggle-and-compact-phases.spec.ts` | geometryRead |
+| `issue-714-table-header-and-swatch.spec.ts` | querySelector, getComputedStyle, geometryRead |
+| `issue-720-control-affordance-audit.spec.ts` | querySelector, getComputedStyle, geometryRead |
+| `issue-720-cursor-and-disabled-audit.spec.ts` | getComputedStyle, geometryRead |
+| `issue-720-menu-dialog-affordance.spec.ts` | geometryRead |
+| `issue-721-visual-channels.spec.ts` | getComputedStyle |
+| `issue-722-display-scale-125.spec.ts` | geometryRead |
+| `issue-722-splitter-discoverability.spec.ts` | getComputedStyle, explicitWait |
+| `issue-723-status-diagnostics.spec.ts` | querySelector, geometryRead |
+| `issue-725-keyboard-journey.spec.ts` | geometryRead |
+| `issue-726-lane-hover.spec.ts` | getComputedStyle |
+| `issue-726-marker-hierarchy.spec.ts` | getComputedStyle |
+| `issue-737-bottom-sort.spec.ts` | querySelector |
+| `issue-737-selection-gestures.spec.ts` | getComputedStyle |
+| `issue-738-ruler-origin-after-scroll-return.spec.ts` | dataset, geometryRead |
+| `issue-738-stress-real-input.spec.ts` | dataset, geometryRead |
+| `issue-738-stress-rebase.spec.ts` | dataset, geometryRead |
+| `issue-740-741-756-cycle-layout.spec.ts` | querySelector, getComputedStyle, geometryRead |
+| `issue-740-cycle-bottom-hidden-geometry.spec.ts` | getComputedStyle, geometryRead |
+| `issue-740-cycle-bottom-hidden.spec.ts` | querySelector, geometryRead |
+| `issue-746-visible-group-create.spec.ts` | querySelector, geometryRead |
+| `issue-747-a11y-and-sort-matrix.spec.ts` | querySelector |
+| `issue-747-geometry-acceptance.spec.ts` | querySelector, geometryRead |
+| `issue-748-tree-menu-and-parity.spec.ts` | geometryRead |
+| `issue-750-geometry-10-to-50.spec.ts` | querySelector, dataset, geometryRead |
+| `issue-750-ruler-follows-tc-scale.spec.ts` | dataset |
+| `issue-751-bottom-phase-editor.spec.ts` | querySelector |
+| `issue-753-bookmark-gesture-fuzz.spec.ts` | querySelector, explicitWait |
+| `issue-755-analytic-geometry-equivalence.spec.ts` | dataset |
+| `issue-755-canvas-production-acceptance.spec.ts` | querySelector, dataset, geometryRead |
+| `issue-757-far-scroll-window-coverage.spec.ts` | querySelector |
+| `issue-759-group-disclosure-shared.spec.ts` | querySelector |
+| `issue-760-combined-horizontal-wheel.spec.ts` | querySelector |
+| `issue-761-start-input-width.spec.ts` | geometryRead |
+| `issue-764-group-header-sticky.spec.ts` | querySelector, elementContains, geometryRead |
+| `issue-765-transaction-no-phantom-vscroll.spec.ts` | styleMutation, explicitWait |
+| `issue-767-zoom-keeps-glyph-shape.spec.ts` | getComputedStyle, dataset, geometryRead |
+| `issue-768-mode-switch-budget.spec.ts` | querySelector |
+| `issue-770-filtered-selection-scope.spec.ts` | querySelector |
+| `issue-771-many-small-groups-virtualized.spec.ts` | querySelector |
+| `keyboard-shortcut-router.spec.ts` | dataset |
+| `layout-inspector.spec.ts` | geometryRead |
+| `left-header-action-alignment.spec.ts` | querySelector, geometryRead |
+| `left-tree-action-icons.spec.ts` | getComputedStyle |
+| `left-tree-compact-footer.spec.ts` | geometryRead |
+| `left-tree-critical-icons.spec.ts` | querySelector |
+| `left-tree-interaction.spec.ts` | dataset |
+| `left-tree-menu-contrast.spec.ts` | getComputedStyle |
+| `left-tree-projection-policy-correction.spec.ts` | dataset |
+| `left-tree-type-filter.spec.ts` | dataset |
+| `listener-lifecycle.spec.ts` | dataset |
+| `local-geometry-dom-batch.spec.ts` | querySelector, dataset |
+| `measurement-anchor-drag.spec.ts` | explicitWait |
+| `measurement-export-matrix.spec.ts` | dataset |
+| `measurement-lane-stacking.spec.ts` | dataset |
+| `mechanical-visual-diagnostics.spec.ts` | geometryRead |
+| `minimal-cycle-view.spec.ts` | dataset, geometryRead |
+| `minimap-overview-performance.spec.ts` | querySelector, dataset, explicitWait |
+| `minimap-viewport-closure.spec.ts` | dataset, geometryRead |
+| `open-progressive-wave-yield.spec.ts` | querySelector, dataset, explicitWait |
+| `perf-755-far-jump-longtask.spec.ts` | querySelector |
+| `performance-closure.spec.ts` | querySelector, dataset, geometryRead, explicitWait |
+| `production-presentation-equivalence.spec.ts` | getComputedStyle, geometryRead |
+| `qa-cross-mode-journey.spec.ts` | querySelector |
+| `reorder-visibility.spec.ts` | dataset, geometryRead |
+| `review-workflow.spec.ts` | getComputedStyle, geometryRead |
+| `ribbon-caption-layout.spec.ts` | querySelector, getComputedStyle, geometryRead |
+| `ribbon-layout.spec.ts` | geometryRead |
+| `ribbon-more-popover-closure.spec.ts` | geometryRead |
+| `runtime-owner-acceptance.spec.ts` | getComputedStyle |
+| `signal-editor.spec.ts` | geometryRead |
+| `signal-split.spec.ts` | getComputedStyle |
+| `stable-id-collision.spec.ts` | querySelector |
+| `stable-surface.spec.ts` | dataset |
+| `timeline-editor.spec.ts` | dataset, geometryRead |
+| `timeline-range-100k.spec.ts` | querySelector, dataset, geometryRead |
+| `timeline-range-edit-readability.spec.ts` | geometryRead |
+| `timing-grid-x-scale-closure.spec.ts` | dataset, geometryRead |
+| `transaction-bottom-panel-table.spec.ts` | geometryRead |
+| `transaction-drag.spec.ts` | geometryRead |
+| `transaction-lane-labels-visible.spec.ts` | getComputedStyle |
+| `transaction-lane-scaling.spec.ts` | querySelector |
+| `transaction-minimap-overview.spec.ts` | getComputedStyle |
+| `transaction-phase-bars.spec.ts` | geometryRead |
+| `transaction-ribbon-groups.spec.ts` | dataset |
+| `transaction-startup-fixture-matrix.spec.ts` | querySelector |
+| `transaction-startup-large-fixture.spec.ts` | querySelector, dataset |
+| `transaction-startup-metrics.spec.ts` | dataset |
+| `transaction-tree-control-parity.spec.ts` | querySelector, geometryRead |
+| `transaction-viewport-hscroll.spec.ts` | geometryRead |
+| `tree-drag-drop.spec.ts` | dataset |
+| `unsaved-file-dialog.spec.ts` | explicitWait |
+| `v8-gui-contract-coverage.spec.ts` | geometryRead |
+| `value-label-layout.spec.ts` | querySelector |
+| `view-metrics-owner.spec.ts` | dataset, geometryRead |
+| `view-mode-readability.spec.ts` | getComputedStyle |
+| `view-ribbon-slot.spec.ts` | getComputedStyle, dataset, geometryRead |
+| `visual-grammar-cross-component.spec.ts` | querySelector, geometryRead |
+| `zoom-text-fidelity.spec.ts` | getComputedStyle, dataset, geometryRead, explicitWait |
+
+## Exact-title duplicate candidates
+
+No exact normalized cross-file title duplicates found.
+
+## Similar-title candidates
+
+Title similarity is only a discovery heuristic. It does not establish duplicate coverage; review the setup, assertions, and protected invariant before merging or moving tests.
+
+- **0.78** — DISTINCT_CONTRACTS: `annotation-preview-update.spec.ts:67` “Apply commits the previewed draft as one real SemanticCommand” ↔ `clock-preview.spec.ts:80` “Apply after Preview commits exactly the previewed draft as one real SemanticCommand”
+- **0.75** — DISTINCT_CONTRACTS: `annotation-preview-update.spec.ts:43` “Annotation Preview Update reverts even without an explicit Cancel, when selection moves away” ↔ `clock-preview.spec.ts:63` “Clock Preview reverts even without an explicit Cancel, when selection moves away”
+- **0.73** — DISTINCT_CONTRACTS: `gui-bottom-resize.spec.ts:3` “Bottom Editor splitter resizes and collapses without changing document or render state” ↔ `gui-inspector-resize.spec.ts:3` “Inspector splitter resizes and collapses without changing document or render state”
+- **0.7** — DISTINCT_CONTRACTS: `transaction-startup-fixture-matrix.spec.ts:8` “Transaction Open reaches first useful paint for medium fixture at 1280x720” ↔ `transaction-startup-large-fixture.spec.ts:5` “500-Transaction Open reaches first useful Transaction paint at 1280x720”
+- **0.7** — DISTINCT_CONTRACTS: `transaction-startup-fixture-matrix.spec.ts:8` “Transaction Open reaches first useful paint for medium fixture at 1672x941” ↔ `transaction-startup-large-fixture.spec.ts:5` “500-Transaction Open reaches first useful Transaction paint at 1672x941”
+- **0.7** — DISTINCT_CONTRACTS: `transaction-startup-fixture-matrix.spec.ts:8` “Transaction Open reaches first useful paint for small fixture at 1280x720” ↔ `transaction-startup-large-fixture.spec.ts:5` “500-Transaction Open reaches first useful Transaction paint at 1280x720”
+- **0.7** — DISTINCT_CONTRACTS: `transaction-startup-fixture-matrix.spec.ts:8` “Transaction Open reaches first useful paint for small fixture at 1672x941” ↔ `transaction-startup-large-fixture.spec.ts:5` “500-Transaction Open reaches first useful Transaction paint at 1672x941”
+
+Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 
 Regenerate with `npm run test:inventory` after installing workspace dependencies.
