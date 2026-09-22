@@ -105,6 +105,8 @@ export function syncPresentationScale(viewport: HTMLElement, host: HTMLElement, 
 
 const scrollVariableConsumerCache = new WeakMap<HTMLElement, readonly HTMLElement[]>();
 function scrollVariableConsumers(viewport: HTMLElement): readonly HTMLElement[] {
+  // Unit-test doubles are not DOM elements; there is nothing to publish to without a DOM.
+  if (typeof viewport.querySelectorAll !== "function") return [];
   const cached = scrollVariableConsumerCache.get(viewport);
   if (cached && cached.every((element) => element.isConnected)) return cached;
   const found = Array.from(viewport.querySelectorAll<HTMLElement>("[data-testid='geometry-grid'], [data-testid='range-selection-band']"));
