@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 335 spec files and 982 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 335 spec files and 981 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 76/982 cases reviewed.
+Semantic review progress: 102/981 cases reviewed.
 
 ## Curated profile membership
 
@@ -11,10 +11,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | Profile | Reviewed cases |
 | --- | ---: |
 | `integration` | 6 |
-| `nightly` | 9 |
-| `performance` | 6 |
-| `pr` | 34 |
-| `visual` | 10 |
+| `nightly` | 24 |
+| `performance` | 8 |
+| `pr` | 42 |
+| `visual` | 13 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -122,8 +122,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-573-combined-divider-pinned.spec.ts` | 1 | 0/1 reviewed |
 | `issue-573-combined-shared-time-axis.spec.ts` | 3 | 0/3 reviewed |
 | `issue-593-mode-layout-isolation.spec.ts` | 2 | 0/2 reviewed |
-| `issue-621-far-jump-no-rewindow-storm.spec.ts` | 1 | 0/1 reviewed |
-| `issue-623-cycle-entry-settles-once.spec.ts` | 1 | 0/1 reviewed |
+| `issue-621-far-jump-no-rewindow-storm.spec.ts` | 1 | 1/1 reviewed |
+| `issue-623-cycle-entry-settles-once.spec.ts` | 1 | 1/1 reviewed |
 | `issue-624-cycle-reload-mode.spec.ts` | 2 | 0/2 reviewed |
 | `issue-625-cycle-fixed-columns-scroll.spec.ts` | 2 | 2/2 reviewed |
 | `issue-625-mode-geometry-unchanged.spec.ts` | 1 | 1/1 reviewed |
@@ -139,7 +139,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-635-signal-scope-actions.spec.ts` | 1 | 0/1 reviewed |
 | `issue-635-transition-draft-signal-scope.spec.ts` | 1 | 0/1 reviewed |
 | `issue-635-transition-form-mode.spec.ts` | 1 | 0/1 reviewed |
-| `issue-637-sustained-scroll.spec.ts` | 1 | 0/1 reviewed |
+| `issue-637-sustained-scroll.spec.ts` | 1 | 1/1 reviewed |
 | `issue-639-mode-scoped-bottom-selection.spec.ts` | 1 | 0/1 reviewed |
 | `issue-639-transaction-create-cycle-bottom-tab.spec.ts` | 1 | 0/1 reviewed |
 | `issue-646-tree-fixed-scroll.spec.ts` | 2 | 0/2 reviewed |
@@ -176,10 +176,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-737-bottom-sort.spec.ts` | 1 | 1/1 reviewed |
 | `issue-737-multi-select.spec.ts` | 1 | 1/1 reviewed |
 | `issue-737-selection-gestures.spec.ts` | 2 | 2/2 reviewed |
-| `issue-738-ruler-hit-area.spec.ts` | 4 | 0/4 reviewed |
-| `issue-738-ruler-origin-after-scroll-return.spec.ts` | 7 | 0/7 reviewed |
-| `issue-738-stress-real-input.spec.ts` | 2 | 0/2 reviewed |
-| `issue-738-stress-rebase.spec.ts` | 4 | 0/4 reviewed |
+| `issue-738-ruler-hit-area.spec.ts` | 4 | 4/4 reviewed |
+| `issue-738-ruler-origin-after-scroll-return.spec.ts` | 7 | 7/7 reviewed |
+| `issue-738-stress-real-input.spec.ts` | 2 | 2/2 reviewed |
+| `issue-738-stress-rebase.spec.ts` | 4 | 4/4 reviewed |
 | `issue-740-741-756-cycle-layout.spec.ts` | 5 | 0/5 reviewed |
 | `issue-740-cycle-bottom-hidden-geometry.spec.ts` | 2 | 0/2 reviewed |
 | `issue-740-cycle-bottom-hidden.spec.ts` | 2 | 0/2 reviewed |
@@ -193,10 +193,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-748-transaction-left-header.spec.ts` | 1 | 0/1 reviewed |
 | `issue-748-tree-menu-and-parity.spec.ts` | 2 | 0/2 reviewed |
 | `issue-749-move-to-group-submenu.spec.ts` | 2 | 0/2 reviewed |
-| `issue-750-custom-tc-scale.spec.ts` | 1 | 0/1 reviewed |
-| `issue-750-geometry-10-to-50.spec.ts` | 4 | 0/4 reviewed |
-| `issue-750-ruler-follows-tc-scale.spec.ts` | 1 | 0/1 reviewed |
-| `issue-750-tc-scale-selector.spec.ts` | 1 | 0/1 reviewed |
+| `issue-750-custom-tc-scale.spec.ts` | 1 | 1/1 reviewed |
+| `issue-750-geometry-10-to-50.spec.ts` | 3 | 3/3 reviewed |
+| `issue-750-ruler-follows-tc-scale.spec.ts` | 1 | 1/1 reviewed |
+| `issue-750-tc-scale-selector.spec.ts` | 1 | 1/1 reviewed |
 | `issue-751-bottom-phase-editor.spec.ts` | 2 | 0/2 reviewed |
 | `issue-752-bottom-remount.spec.ts` | 1 | 0/1 reviewed |
 | `issue-753-bookmark-gesture-fuzz.spec.ts` | 5 | 5/5 reviewed |
@@ -529,6 +529,7 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-625-timeline-only-hscroll.spec.ts` “Cycle FixedColumns sit outside the horizontal scroll owner at 1672x941” → `issue-625-cycle-fixed-columns-scroll.spec.ts` “Cycle fixed columns stay stationary through native scrollbar drag at 1672x941”. **Invariant:** Timeline-only horizontal scrolling keeps fixed columns stationary and the visible scrollbar aligned to the time-domain region. **Reason:** Removed the implementation-coupled browser case that forced --wave-width, asserted overflow/DOM ancestry, and re-derived scroll-owner topology. The production-path native-scroll journey now also measures visible scrollbar alignment at this width; check:cycle-scroll-owner protects the structural owner contract without launching a browser.
 - `issue-755-analytic-geometry-equivalence.spec.ts` “analytic cycle grid equals SVG-derived boundaries (unwindowed document)” → `issue-755-analytic-transition-equivalence.spec.ts` “analytic Local Geometry equals the SVG extractor for every anchor across token/brick cases”. **Invariant:** Analytic geometry agrees with an independent SVG DOM extraction for cycle boundaries and all anchor kinds. **Reason:** The removed assertion compared the production geometry to a duplicated 20.5 + 40 * index formula rather than to SVG-derived geometry. The replacement probe directly compares analytic LocalGeometry against the independent production SVG extractor across token/brick cases, while uniformCycleGeometry.test.ts retains cheap known-anchor/property coverage.
 - `issue-755-analytic-geometry-equivalence.spec.ts` “analytic cycle grid equals SVG-derived boundaries (bounded window on a >4096-cycle document)” → `issue-755-analytic-transition-equivalence.spec.ts` “analytic Local Geometry equals the SVG extractor for every anchor across token/brick cases”. **Invariant:** Rebased/windowed analytic cycle geometry preserves source-cycle identity and boundary X, without a local-index identity assumption. **Reason:** The equivalence probe includes rebased-window cases and compares each semantic anchor with SVG extraction; issue-757-far-scroll-window-coverage.spec.ts separately proves a real >4096-cycle far jump paints the viewport. The previous check reconstructed a uniform pitch in browser code, adding a second copy of production geometry math.
+- `issue-750-geometry-10-to-50.spec.ts` “1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (1672x941)” → `issue-750-geometry-10-to-50.spec.ts` “1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (1280x720)”. **Invariant:** Changing cycles-per-TC compresses a fixed source span by the inverse ratio, preserves displayed TC ruler pitch, leaves canonical source duration unchanged, and Undo restores the prior display. **Reason:** The geometry ratio and source-time semantics are viewport-independent. The compact test retains the complete Journey, while both viewports remain covered by the distinct clipped-label and scroll-extent acceptance where width is relevant.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 

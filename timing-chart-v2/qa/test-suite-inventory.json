@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-22T23:26:42.798Z",
+  "generatedAt": "2026-09-22T23:33:56.884Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,14 +12,14 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 335,
-  "caseCount": 982,
-  "reviewedCaseCount": 76,
+  "caseCount": 981,
+  "reviewedCaseCount": 102,
   "curatedProfileCounts": {
     "integration": 6,
-    "nightly": 9,
-    "performance": 6,
-    "pr": 34,
-    "visual": 10
+    "nightly": 24,
+    "performance": 8,
+    "pr": 42,
+    "visual": 13
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -8184,18 +8184,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "far-jump-render-scheduling",
+      "originIssue": 621,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A single far jump on a 6,000-cycle Combined document adds no more than the accepted bounded number of waveform batches and leaves rendered waveform owners available.",
+      "duplicateGroup": "large-document-far-jump",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This checks work-count and renderer availability under a large-document far jump, not only visual geometry. It belongs in the performance gate rather than every focused PR run; runtime is pending a measured run.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "issue-623-cycle-entry-settles-once.spec.ts",
@@ -8206,18 +8210,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-entry-layout-stability",
+      "originIssue": 623,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Once Cycle mode reports ready, render counters and ruler/frozen-column/wave-owner/tick geometry remain stable through deferred animation frames.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The product contract is post-ready visual stability; the spec measures representative rendered geometry and deferred settling rather than implementation ancestry. Keep it in visual validation, separate from ordinary semantic tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-624-cycle-reload-mode.spec.ts",
@@ -8749,18 +8756,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "sustained-scroll-render-cost",
+      "originIssue": 637,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Twenty-one timeline positions during sustained scroll keep waveform owners rendered without increasing WaveDrom render count or changing History.",
+      "duplicateGroup": "sustained-scroll-render-cost",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This protects a no-rerender performance invariant across a real scroll sequence; it directly reads renderer counters and is therefore a performance/architecture sentinel rather than a regular product E2E journey. Runtime remains unmeasured.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "issue-639-mode-scoped-bottom-selection.spec.ts",
@@ -10267,90 +10278,102 @@
     {
       "file": "issue-738-ruler-hit-area.spec.ts",
       "suitePath": [],
-      "line": 26,
+      "line": 30,
       "title": "ruler cell is the hit target, in Cycle at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "domain": "ruler-hit-target-and-range-selection",
+      "originIssue": 738,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": 15000,
+      "primaryContract": "Whitespace and vertical positions within Cycle ruler cells select the intended source cell; left-to-right and right-to-left drags select the same view-only range.",
+      "duplicateGroup": "ruler-hit-area-738",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This protects a real pointer hit target and range-selection journey that cannot be proven without the rendered ruler; compact viewport covers this mode's own ruler/time origin. Pointer coordinates are based on adjacent rendered tick spacing, not a copied pitch constant.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-738-ruler-hit-area.spec.ts",
       "suitePath": [],
-      "line": 26,
+      "line": 30,
       "title": "ruler cell is the hit target, in Cycle at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "domain": "ruler-hit-target-and-range-selection",
+      "originIssue": 738,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": 15200,
+      "primaryContract": "Whitespace and vertical positions within Cycle ruler cells select the intended source cell; left-to-right and right-to-left drags select the same view-only range.",
+      "duplicateGroup": "ruler-hit-area-738",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the desktop-width counterpart because ruler origin/available cell geometry is width-dependent; it protects the same visible Cycle-mode pointer gesture at the documented full viewport.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-738-ruler-hit-area.spec.ts",
       "suitePath": [],
-      "line": 26,
+      "line": 30,
       "title": "ruler cell is the hit target, in Transaction at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "domain": "ruler-hit-target-and-range-selection",
+      "originIssue": 738,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 9500,
+      "primaryContract": "Whitespace and vertical positions within compressed Transaction ruler cells resolve through the shared mapping; either drag direction selects the same view-only range.",
+      "duplicateGroup": "ruler-hit-area-738",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Transaction ruler hit testing has a distinct compressed time mapping from Cycle mode, and the compact viewport exercises its own origin/available cells. Coordinates are derived from rendered ruler ticks.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-738-ruler-hit-area.spec.ts",
       "suitePath": [],
-      "line": 26,
+      "line": 30,
       "title": "ruler cell is the hit target, in Transaction at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "domain": "ruler-hit-target-and-range-selection",
+      "originIssue": 738,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 9700,
+      "primaryContract": "Whitespace and vertical positions within compressed Transaction ruler cells resolve through the shared mapping; either drag direction selects the same view-only range.",
+      "duplicateGroup": "ruler-hit-area-738",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The desktop counterpart protects compressed Transaction ruler hit testing at the full viewport; responsive ruler origin is width-dependent, so this variant remains distinct.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
@@ -10361,18 +10384,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "ruler-origin-after-rebase-stress",
+      "originIssue": 738,
+      "type": "ISSUE_REGRESSION",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After repeated far/stepped/native-scroll/zoom returns to scrollLeft zero, ruler source origin remains cycle zero and aligned to the waveform origin.",
+      "duplicateGroup": "ruler-origin-rebase-738",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This seven-case stress matrix includes 100,000-cycle input, native scrollbar-thumb interaction, and three zoom variants; it must remain automatically executable but not inflate the normal PR path. Its exact runtime is not yet measured on this branch.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
@@ -10383,18 +10409,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "ruler-origin-after-rebase-stress",
+      "originIssue": 738,
+      "type": "ISSUE_REGRESSION",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After repeated far/stepped/native-scroll/zoom returns to scrollLeft zero, ruler source origin remains cycle zero and aligned to the waveform origin.",
+      "duplicateGroup": "ruler-origin-rebase-738",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This seven-case stress matrix includes 100,000-cycle input, native scrollbar-thumb interaction, and three zoom variants; it must remain automatically executable but not inflate the normal PR path. Its exact runtime is not yet measured on this branch.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
@@ -10405,18 +10434,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "ruler-origin-after-rebase-stress",
+      "originIssue": 738,
+      "type": "ISSUE_REGRESSION",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After repeated far/stepped/native-scroll/zoom returns to scrollLeft zero, ruler source origin remains cycle zero and aligned to the waveform origin.",
+      "duplicateGroup": "ruler-origin-rebase-738",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This seven-case stress matrix includes 100,000-cycle input, native scrollbar-thumb interaction, and three zoom variants; it must remain automatically executable but not inflate the normal PR path. Its exact runtime is not yet measured on this branch.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
@@ -10429,18 +10461,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "ruler-origin-after-rebase-stress",
+      "originIssue": 738,
+      "type": "ISSUE_REGRESSION",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After repeated far/stepped/native-scroll/zoom returns to scrollLeft zero, ruler source origin remains cycle zero and aligned to the waveform origin.",
+      "duplicateGroup": "ruler-origin-rebase-738",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This seven-case stress matrix includes 100,000-cycle input, native scrollbar-thumb interaction, and three zoom variants; it must remain automatically executable but not inflate the normal PR path. Its exact runtime is not yet measured on this branch.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
@@ -10451,18 +10486,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "ruler-origin-after-rebase-stress",
+      "originIssue": 738,
+      "type": "ISSUE_REGRESSION",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After repeated far/stepped/native-scroll/zoom returns to scrollLeft zero, ruler source origin remains cycle zero and aligned to the waveform origin.",
+      "duplicateGroup": "ruler-origin-rebase-738",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This seven-case stress matrix includes 100,000-cycle input, native scrollbar-thumb interaction, and three zoom variants; it must remain automatically executable but not inflate the normal PR path. Its exact runtime is not yet measured on this branch.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
@@ -10473,18 +10511,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "ruler-origin-after-rebase-stress",
+      "originIssue": 738,
+      "type": "ISSUE_REGRESSION",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After repeated far/stepped/native-scroll/zoom returns to scrollLeft zero, ruler source origin remains cycle zero and aligned to the waveform origin.",
+      "duplicateGroup": "ruler-origin-rebase-738",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This seven-case stress matrix includes 100,000-cycle input, native scrollbar-thumb interaction, and three zoom variants; it must remain automatically executable but not inflate the normal PR path. Its exact runtime is not yet measured on this branch.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
@@ -10495,18 +10536,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "ruler-origin-after-rebase-stress",
+      "originIssue": 738,
+      "type": "ISSUE_REGRESSION",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After repeated far/stepped/native-scroll/zoom returns to scrollLeft zero, ruler source origin remains cycle zero and aligned to the waveform origin.",
+      "duplicateGroup": "ruler-origin-rebase-738",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This seven-case stress matrix includes 100,000-cycle input, native scrollbar-thumb interaction, and three zoom variants; it must remain automatically executable but not inflate the normal PR path. Its exact runtime is not yet measured on this branch.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "issue-738-stress-real-input.spec.ts",
@@ -10517,18 +10561,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "ruler-origin-real-input-stress",
+      "originIssue": 738,
+      "type": "ISSUE_REGRESSION",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Real wheel bursts and native scrollbar-thumb drags preserve ruler origin, rendered-window coverage, and view-only state on SVG and Canvas renderers.",
+      "duplicateGroup": "ruler-origin-rebase-738",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Renderer-specific real-input paths are distinct from the programmatic rebase matrix, but repeated gestures are stress coverage. Preserve it in nightly; exact runtime is pending measurement.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "issue-738-stress-real-input.spec.ts",
@@ -10539,18 +10586,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "ruler-origin-real-input-stress",
+      "originIssue": 738,
+      "type": "ISSUE_REGRESSION",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Real wheel bursts and native scrollbar-thumb drags preserve ruler origin, rendered-window coverage, and view-only state on SVG and Canvas renderers.",
+      "duplicateGroup": "ruler-origin-rebase-738",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Renderer-specific real-input paths are distinct from the programmatic rebase matrix, but repeated gestures are stress coverage. Preserve it in nightly; exact runtime is pending measurement.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "issue-738-stress-rebase.spec.ts",
@@ -10561,18 +10611,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "ruler-origin-window-rebase-stress",
+      "originIssue": 738,
+      "type": "ISSUE_REGRESSION",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Repeated deterministic right-to-left rebase sequences keep ruler origin, visible source tick, rendered-window coverage, and canonical/history state consistent across SVG/Canvas and short/long documents.",
+      "duplicateGroup": "ruler-origin-rebase-738",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "It complements real-input scroll coverage with deterministic repeatable window and renderer combinations. Twenty rebases per case are stress workload, so keep it in the automated nightly tier; exact runtime is pending measurement.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "issue-738-stress-rebase.spec.ts",
@@ -10583,18 +10636,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "ruler-origin-window-rebase-stress",
+      "originIssue": 738,
+      "type": "ISSUE_REGRESSION",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Repeated deterministic right-to-left rebase sequences keep ruler origin, visible source tick, rendered-window coverage, and canonical/history state consistent across SVG/Canvas and short/long documents.",
+      "duplicateGroup": "ruler-origin-rebase-738",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "It complements real-input scroll coverage with deterministic repeatable window and renderer combinations. Twenty rebases per case are stress workload, so keep it in the automated nightly tier; exact runtime is pending measurement.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "issue-738-stress-rebase.spec.ts",
@@ -10605,18 +10661,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "ruler-origin-window-rebase-stress",
+      "originIssue": 738,
+      "type": "ISSUE_REGRESSION",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Repeated deterministic right-to-left rebase sequences keep ruler origin, visible source tick, rendered-window coverage, and canonical/history state consistent across SVG/Canvas and short/long documents.",
+      "duplicateGroup": "ruler-origin-rebase-738",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "It complements real-input scroll coverage with deterministic repeatable window and renderer combinations. Twenty rebases per case are stress workload, so keep it in the automated nightly tier; exact runtime is pending measurement.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "issue-738-stress-rebase.spec.ts",
@@ -10627,18 +10686,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "ruler-origin-window-rebase-stress",
+      "originIssue": 738,
+      "type": "ISSUE_REGRESSION",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Repeated deterministic right-to-left rebase sequences keep ruler origin, visible source tick, rendered-window coverage, and canonical/history state consistent across SVG/Canvas and short/long documents.",
+      "duplicateGroup": "ruler-origin-rebase-738",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "It complements real-input scroll coverage with deterministic repeatable window and renderer combinations. Twenty rebases per case are stress workload, so keep it in the automated nightly tier; exact runtime is pending measurement.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "issue-740-741-756-cycle-layout.spec.ts",
@@ -11211,106 +11273,96 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "domain": "transaction-tc-scale-validation",
+      "originIssue": 750,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 8700,
+      "primaryContract": "Custom cycles-per-TC accepts a valid positive integer; invalid/empty drafts disable Apply, explain the error, and do not create History.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The visible custom-input validation and Apply-enabled state belong to the user interaction boundary. Multiple invalid values are table-driven in one journey rather than separate browser cases.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-750-geometry-10-to-50.spec.ts",
       "suitePath": [],
-      "line": 11,
+      "line": 13,
       "title": "1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (1280x720)",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "domain": "transaction-tc-display-geometry",
+      "originIssue": 750,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 8800,
+      "primaryContract": "The same canonical Transaction span becomes one-fifth the physical width at 50 cycles/TC, TC ruler pitch remains stable, source duration stays unchanged, and Undo restores geometry.",
+      "duplicateGroup": "transaction-tc-10-to-50-geometry",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the representative production geometry journey; it measures the relative width change and canonical duration rather than reproducing the transform formula. The duplicate desktop run is mapped to this case; width-specific clipping remains separately tested at both viewports.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-750-geometry-10-to-50.spec.ts",
       "suitePath": [],
-      "line": 11,
-      "title": "1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (1672x941)",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-750-geometry-10-to-50.spec.ts",
-      "suitePath": [],
-      "line": 61,
+      "line": 63,
       "title": "compressed Transaction: no clipped labels and no artificial scroll extent at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "domain": "transaction-tc-compressed-responsive-layout",
+      "originIssue": 750,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 7800,
+      "primaryContract": "At compact width, compressed Transaction labels do not clip or disappear and scrollWidth reflects the presented content without artificial overflow.",
+      "duplicateGroup": "transaction-tc-compressed-responsive-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The contract is explicitly width-dependent: a narrow bar and compact viewport can expose clipping and false scroll extent not present at desktop size.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-750-geometry-10-to-50.spec.ts",
       "suitePath": [],
-      "line": 61,
+      "line": 63,
       "title": "compressed Transaction: no clipped labels and no artificial scroll extent at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "domain": "transaction-tc-compressed-responsive-layout",
+      "originIssue": 750,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 7800,
+      "primaryContract": "At desktop width, compressed Transaction labels do not clip or disappear and scrollWidth reflects the presented content without artificial overflow.",
+      "duplicateGroup": "transaction-tc-compressed-responsive-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The desktop counterpart is retained because width changes determine which short bars can display their names and whether the timeline acquires false overflow.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-750-ruler-follows-tc-scale.spec.ts",
@@ -11321,18 +11373,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "domain": "transaction-tc-ruler-units",
+      "originIssue": 750,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 9200,
+      "primaryContract": "Transaction ruler labels and source-cycle boundaries follow 10/5/1 cycles-per-TC, Undo restores the prior scale, and Cycle mode continues to label source cycles.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The mode-crossing ruler journey protects the shared display-unit contract, complementary to the bar-width/canonical geometry test; known label/source anchors are independent fixture expectations.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-750-tc-scale-selector.spec.ts",
@@ -11343,18 +11398,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "domain": "transaction-tc-scale-command-history",
+      "originIssue": 750,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 8300,
+      "primaryContract": "Changing the header cycles-per-TC selector updates displayed Bottom values while preserving entity identity, and creates exactly one Undoable view-setting history operation.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This verifies the actual ribbon selector to Bottom projection to Undo path; it is distinct from ruler-label progression and invalid custom draft validation.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-751-bottom-phase-editor.spec.ts",
@@ -22898,23 +22956,23 @@
     {
       "file": "issue-621-far-jump-no-rewindow-storm.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "621",
       "declaredTimeoutMs": 120,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-623-cycle-entry-settles-once.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "623",
       "declaredTimeoutMs": 3000,
       "candidateSignals": [
         "querySelector",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-624-cycle-reload-mode.spec.ts",
@@ -23074,13 +23132,13 @@
     {
       "file": "issue-637-sustained-scroll.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "637",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-639-mode-scoped-bottom-selection.spec.ts",
@@ -23446,47 +23504,47 @@
     {
       "file": "issue-738-ruler-hit-area.spec.ts",
       "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": "738",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
       "caseCount": 7,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 7,
       "originIssue": "738",
       "declaredTimeoutMs": 300,
       "candidateSignals": [
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-738-stress-real-input.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "738",
       "declaredTimeoutMs": 400,
       "candidateSignals": [
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-738-stress-rebase.spec.ts",
       "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": "738",
       "declaredTimeoutMs": 300,
       "candidateSignals": [
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-740-741-756-cycle-layout.spec.ts",
@@ -23628,16 +23686,16 @@
     {
       "file": "issue-750-custom-tc-scale.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "750",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-750-geometry-10-to-50.spec.ts",
-      "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
       "originIssue": "750",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23645,27 +23703,27 @@
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-750-ruler-follows-tc-scale.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "750",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-750-tc-scale-selector.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "750",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-751-bottom-phase-editor.spec.ts",
@@ -25452,6 +25510,18 @@
       },
       "protectedInvariant": "Rebased/windowed analytic cycle geometry preserves source-cycle identity and boundary X, without a local-index identity assumption.",
       "reason": "The equivalence probe includes rebased-window cases and compares each semantic anchor with SVG extraction; issue-757-far-scroll-window-coverage.spec.ts separately proves a real >4096-cycle far jump paints the viewport. The previous check reconstructed a uniform pitch in browser code, adding a second copy of production geometry math."
+    },
+    {
+      "from": {
+        "file": "issue-750-geometry-10-to-50.spec.ts",
+        "title": "1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (1672x941)"
+      },
+      "to": {
+        "file": "issue-750-geometry-10-to-50.spec.ts",
+        "title": "1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (1280x720)"
+      },
+      "protectedInvariant": "Changing cycles-per-TC compresses a fixed source span by the inverse ratio, preserves displayed TC ruler pitch, leaves canonical source duration unchanged, and Undo restores the prior display.",
+      "reason": "The geometry ratio and source-time semantics are viewport-independent. The compact test retains the complete Journey, while both viewports remain covered by the distinct clipped-label and scroll-extent acceptance where width is relevant."
     }
   ]
 }

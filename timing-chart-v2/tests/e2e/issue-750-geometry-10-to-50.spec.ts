@@ -7,7 +7,9 @@ const rulerLabelXs = (page: Page) => page.evaluate(() => [...document.querySelec
   .filter((tick) => (tick.textContent ?? "").trim() !== "").slice(0, 4).map((tick) => ({ label: (tick.textContent ?? "").trim(), source: Number(tick.dataset.sourceCycle), x: tick.getBoundingClientRect().x })));
 const barBox = (page: Page) => page.evaluate(() => { const bar = document.querySelector<HTMLElement>("[data-transaction-id='demo_txn_read']")!; const b = bar.getBoundingClientRect(); return { x: Math.round(b.x * 10) / 10, width: Math.round(b.width * 10) / 10 }; });
 
-for (const size of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+// The compression ratio, TC pitch, and canonical source-time invariants are width-independent.
+// Keep one compact viewport here; the separate clipping/scroll-extent contract below retains both widths.
+for (const size of [{ width: 1280, height: 720 }]) {
   test(`1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (${size.width}x${size.height})`, async ({ page }) => {
     await page.setViewportSize(size);
     await page.goto("/?transaction-demo");

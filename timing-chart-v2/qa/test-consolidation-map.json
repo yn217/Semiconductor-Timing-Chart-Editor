@@ -72,6 +72,18 @@
       },
       "protectedInvariant": "Rebased/windowed analytic cycle geometry preserves source-cycle identity and boundary X, without a local-index identity assumption.",
       "reason": "The equivalence probe includes rebased-window cases and compares each semantic anchor with SVG extraction; issue-757-far-scroll-window-coverage.spec.ts separately proves a real >4096-cycle far jump paints the viewport. The previous check reconstructed a uniform pitch in browser code, adding a second copy of production geometry math."
+    },
+    {
+      "from": {
+        "file": "issue-750-geometry-10-to-50.spec.ts",
+        "title": "1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (1672x941)"
+      },
+      "to": {
+        "file": "issue-750-geometry-10-to-50.spec.ts",
+        "title": "1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (1280x720)"
+      },
+      "protectedInvariant": "Changing cycles-per-TC compresses a fixed source span by the inverse ratio, preserves displayed TC ruler pitch, leaves canonical source duration unchanged, and Undo restores the prior display.",
+      "reason": "The geometry ratio and source-time semantics are viewport-independent. The compact test retains the complete Journey, while both viewports remain covered by the distinct clipped-label and scroll-extent acceptance where width is relevant."
     }
   ]
 }
