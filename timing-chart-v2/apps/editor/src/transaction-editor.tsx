@@ -101,6 +101,15 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
     const order = sortKey === "start" ? left.start - right.start || left.end - right.end : sortKey === "end" ? left.end - right.end || left.start - right.start : left.name.localeCompare(right.name);
     return sortDescending ? -order : order;
   });
+  // #770 Policy A (visible-scope selection): narrowing the filter must not leave a destructive bulk action operating on rows the user can
+  // no longer see. Pruning the shared selection to what the filter currently shows is itself view-only (Canonical/History/Dirty delta 0).
+  useEffect(() => {
+    if (needle.length === 0) return;
+    const visibleIds = new Set(visibleTransactions.map((item) => item.id));
+    const pruned = new Set([...selectedIds].filter((id) => visibleIds.has(id)));
+    if (pruned.size !== selectedIds.size) onSelectTransactions(pruned, transaction && pruned.has(transaction.id) ? transaction.id : undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on the filter text only; re-derives current selection/visibility from this render's closures.
+  }, [needle]);
   type TransactionListEntry = Readonly<{ kind: "transaction"; item: Transaction } | { kind: "phase"; transaction: Transaction; phase: TransactionPhase; index: number }>;
   const listEntries: readonly TransactionListEntry[] = visibleTransactions.flatMap((item) => [
     { kind: "transaction" as const, item },
