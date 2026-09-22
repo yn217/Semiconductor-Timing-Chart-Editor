@@ -149,6 +149,8 @@ export interface EditorSecondarySurfacesInput {
     readonly setTransactionTreeFilterMode: (
       value: TransactionTreeFilterMode,
     ) => void;
+    readonly cyclesPerTc: number;
+    readonly setCyclesPerTc: (value: number) => void;
     readonly setRibbonTab: (tab: string) => void;
   };
   readonly dialog: {
@@ -324,6 +326,7 @@ export function useEditorSecondarySurfaces(
       transaction={bottom.transaction}
       selectedTransactionIds={selected.transactionIds}
       document={input.document}
+      cyclesPerTc={workspace.cyclesPerTc}
       history={input.history}
       onSelect={input.actions.selectTransaction}
       onSelectTransactions={input.actions.selectTransactions}
@@ -396,9 +399,7 @@ export function useEditorSecondarySurfaces(
               // `document.transactionTimeScale` data this already read, just a
               // clearer two-part label (what TC means, then what it maps to in
               // real clock cycles) instead of the terser "1 TC = N Cycles".
-              const perTc =
-                input.document.transactionTimeScale
-                  ?.clockCyclesPerTransactionCycle ?? 1;
+              const perTc = workspace.cyclesPerTc;
               return `Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = ${perTc} ${cycleUnitWord(perTc)})`;
             })()
           : input.document.timeline.referenceClock
@@ -419,11 +420,8 @@ export function useEditorSecondarySurfaces(
               onShowAll: () => setAllTransactionVisibility(true),
               onHideAll: () => setAllTransactionVisibility(false),
               timeScale: {
-                cyclesPerTc: input.document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1,
-                onChange: (cyclesPerTc: number) => {
-                  const current = input.document.transactionTimeScale ?? { clockCyclesPerTransactionCycle: 1, majorInterval: 5, minorInterval: 1 };
-                  surfaceCommands.setTransactionTimeScale({ ...current, clockCyclesPerTransactionCycle: cyclesPerTc });
-                },
+                cyclesPerTc: workspace.cyclesPerTc,
+                onChange: workspace.setCyclesPerTc,
               },
             }
           : undefined
@@ -567,7 +565,7 @@ export function useEditorSecondarySurfaces(
         ) : workspace.bottomTab === "Transaction" ? (
           transactionEditor
         ) : workspace.bottomTab === "Phases" ? (
-          <TransactionPhaseSummary transaction={selected.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={input.document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1} />
+          <TransactionPhaseSummary transaction={selected.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={workspace.cyclesPerTc} />
         ) : workspace.bottomTab === "Linked Signals" ? (
           <TransactionLinkedSummary
             transaction={selected.transaction}
@@ -630,6 +628,7 @@ export function useEditorSecondarySurfaces(
       }
       registry={input.command.registry.current}
       document={input.document}
+      cyclesPerTc={workspace.cyclesPerTc}
       viewport={refs.viewport}
       commands={surfaceCommands}
       onReveal={input.actions.revealSelectedInHierarchy}

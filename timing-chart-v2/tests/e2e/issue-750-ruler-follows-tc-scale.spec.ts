@@ -4,7 +4,7 @@ import { expect, test, type Page } from "@playwright/test";
 const labels = (page: Page) => page.evaluate(() => [...document.querySelectorAll<HTMLElement>("[data-testid='cycle-ruler'] .cycle-tick")]
   .filter((tick) => (tick.textContent ?? "").trim() !== "").slice(0, 5).map((tick) => `${tick.dataset.sourceCycle}:${(tick.textContent ?? "").trim()}`));
 
-test("Transaction ruler labels follow cycles-per-TC (10 -> 5 -> 1 -> Undo) and Cycle mode stays in cycles", async ({ page }) => {
+test("Transaction ruler labels follow the view-only cycles-per-TC scale and Cycle mode stays in cycles", async ({ page }) => {
   await page.goto("/?transaction-demo");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -18,10 +18,9 @@ test("Transaction ruler labels follow cycles-per-TC (10 -> 5 -> 1 -> Undo) and C
   await select.selectOption("1");
   await expect.poll(() => labels(page), { message: "1 cycle/TC" }).toEqual(["0:0", "1:1", "2:2", "3:3", "4:4"]);
 
-  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
-  await expect(select).toHaveValue("5");
-  await expect.poll(() => labels(page), { message: "after Undo" }).toEqual(["0:0", "5:1", "10:2", "15:3", "20:4"]);
-
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await expect.poll(() => labels(page), { message: "Cycle keeps system cycles" }).toEqual(["0:0", "1:1", "2:2", "3:3", "4:4"]);
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
 });

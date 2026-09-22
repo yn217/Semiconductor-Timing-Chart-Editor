@@ -78,6 +78,7 @@ export interface TimelineSurfacePresentationPort {
   readonly treeFocusRowIdRef: MutableRefObject<string | undefined>;
   readonly suppressCanvasClickRef: MutableRefObject<boolean>;
   readonly menuOriginRef: MutableRefObject<HTMLElement | null>;
+  readonly transactionCyclesPerTcRef: MutableRefObject<number>;
 }
 
 export interface TimelineSurfaceStatePort {
@@ -138,7 +139,7 @@ export interface TimelineSurfaceController {
 export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInput): TimelineSurfaceController {
   const { application, documentLifecycle, selection, navigation: timelineNavigation, commandRegistry, executeBatch } = input;
   const { host, viewport, ruler, gridLayer, viewportLower, rulerLower, hostLower, gridLayerLower, signalSplitRuntimeRef } = input.dom;
-  const { collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef } = input.presentation;
+  const { collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef } = input.presentation;
   const { setRuntimeDiagnostics, setProblem, setTreePresentationRevision, setTransactionPresentationRevision, setRangePresentationRevision, setPlayheadPresentationRevision, setTimelineRange, setRangeSelectionActive, setSelectedCycle, setBottomPinned, setPinnedBottomSelection, setTreeFilter, setTreeTypeFilter, setTreeAddMenuOpen, setTreeMoreMenuOpen, setContextMenu, setArrowPickStatus, setRenameDialogOpen, setCollapsedGroups, toggleCollapsedGroup, closeContextMenu } = input.state;
   const viewMetricsOwner = input.viewMetricsOwner;
   const signalSplitEnabled = input.signalSplitEnabled;
@@ -387,6 +388,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       const presentation = refreshTimelinePresentation({
         reason,
         document,
+        cyclesPerTc: transactionCyclesPerTcRef.current,
         ruler: rulerElement,
         grid: gridElement,
         viewport: viewportElement,
@@ -424,7 +426,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // grid DOM outright.
       if (reason === "grid" && gridLayerLower.current && signalSplitRuntimeRef.current) {
         const metrics = viewMetricsOwner.snapshot();
-        refreshGridPresentation(gridLayerLower.current, document, geometryMaps, mappingCache, gridEnabledRef.current, signalSplitRuntimeRef.current.getTotalHeight(), globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, presentation.screenGeometryScale);
+        refreshGridPresentation(gridLayerLower.current, document, geometryMaps, mappingCache, gridEnabledRef.current, signalSplitRuntimeRef.current.getTotalHeight(), globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, presentation.screenGeometryScale, transactionCyclesPerTcRef.current);
       }
     };
     timelineRuntime.attach();

@@ -13,10 +13,10 @@ const DEFAULT_SCALE: TransactionTimeScale = { clockCyclesPerTransactionCycle: 1,
  * self-contained trigger + floating panel shell as FindReplacePanel
  * (find-replace-panel.tsx), scoped to this file rather than growing the
  * Ribbon function further. */
-export function TransactionTimeScalePanel({ document, onSetScale }: { readonly document: CanonicalDocument; readonly onSetScale: (scale: TransactionTimeScale) => void }) {
+export function TransactionTimeScalePanel({ document, cyclesPerTc: activeCyclesPerTc, onChangeCyclesPerTc, onSetScale }: { readonly document: CanonicalDocument; readonly cyclesPerTc: number; readonly onChangeCyclesPerTc: (value: number) => void; readonly onSetScale: (scale: TransactionTimeScale) => void }) {
   const [open, setOpen] = useState(false);
   const current = document.transactionTimeScale ?? DEFAULT_SCALE;
-  const [cyclesPerTc, setCyclesPerTc] = useState(current.clockCyclesPerTransactionCycle);
+  const [cyclesPerTc, setCyclesPerTc] = useState(activeCyclesPerTc);
   const [majorInterval, setMajorInterval] = useState(current.majorInterval);
   const [minorInterval, setMinorInterval] = useState(current.minorInterval);
   const [showSecondaryClock, setShowSecondaryClock] = useState(current.showSecondaryClock ?? false);
@@ -27,14 +27,14 @@ export function TransactionTimeScalePanel({ document, onSetScale }: { readonly d
 
   useEffect(() => {
     if (!open) return;
-    setCyclesPerTc(current.clockCyclesPerTransactionCycle);
+    setCyclesPerTc(activeCyclesPerTc);
     setMajorInterval(current.majorInterval);
     setMinorInterval(current.minorInterval);
     setShowSecondaryClock(current.showSecondaryClock ?? false);
     // Reopen should always reflect the document's actual current value,
     // not whatever was left over in a prior, cancelled edit session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [activeCyclesPerTc, open]);
 
   useLayoutEffect(() => {
     if (!open) { setPosition(undefined); return; }
@@ -83,22 +83,24 @@ export function TransactionTimeScalePanel({ document, onSetScale }: { readonly d
     };
   }, [open]);
 
-  const valid = Number.isFinite(cyclesPerTc) && cyclesPerTc > 0 && Number.isInteger(majorInterval) && majorInterval >= 1 && Number.isInteger(minorInterval) && minorInterval >= 1;
+  const valid = Number.isInteger(cyclesPerTc) && cyclesPerTc >= 1 && Number.isInteger(majorInterval) && majorInterval >= 1 && Number.isInteger(minorInterval) && minorInterval >= 1;
 
   const apply = () => {
     if (!valid) return;
-    onSetScale({ clockCyclesPerTransactionCycle: cyclesPerTc, majorInterval, minorInterval, showSecondaryClock });
+    onChangeCyclesPerTc(cyclesPerTc);
+    const semanticSettingsChanged = majorInterval !== current.majorInterval || minorInterval !== current.minorInterval || showSecondaryClock !== (current.showSecondaryClock ?? false);
+    if (semanticSettingsChanged) onSetScale({ ...current, majorInterval, minorInterval, showSecondaryClock });
     setOpen(false);
   };
 
   return <>
     <button ref={triggerRef} type="button" className="ds-ribbon-button" aria-expanded={open} aria-haspopup="dialog" data-testid="transaction-time-scale-trigger" onClick={() => setOpen((value) => !value)}><span className="ds-icon-box" aria-hidden="true"><RibbonIcon name="i-clock" /></span><span className="ds-ribbon-label">Time Scale</span></button>
     {open && createPortal(<div ref={panelRef} className="transaction-time-scale-panel" role="dialog" aria-label="Transaction Time Scale" data-testid="transaction-time-scale-panel" style={{ left: `${position?.left ?? 0}px`, top: `${position?.top ?? 0}px`, maxHeight: `${position?.maxHeight ?? 200}px`, visibility: position ? "visible" : "hidden" }}>
-      <label>Clock cycles per Transaction Cycle<input aria-label="Clock cycles per Transaction Cycle" type="number" min="0" step="any" value={cyclesPerTc} onChange={(event) => setCyclesPerTc(Number(event.target.value))} /></label>
+      <label>Clock cycles per Transaction Cycle<input aria-label="Clock cycles per Transaction Cycle" type="number" min="1" step="1" value={cyclesPerTc} onChange={(event) => setCyclesPerTc(Number(event.target.value))} /></label>
       <label>Major tick interval (TC)<input aria-label="Major tick interval" type="number" min="1" step="1" value={majorInterval} onChange={(event) => setMajorInterval(Number(event.target.value))} /></label>
       <label>Minor tick interval (TC)<input aria-label="Minor tick interval" type="number" min="1" step="1" value={minorInterval} onChange={(event) => setMinorInterval(Number(event.target.value))} /></label>
       <label><input aria-label="Show secondary clock" type="checkbox" checked={showSecondaryClock} onChange={(event) => setShowSecondaryClock(event.target.checked)} /> Show secondary clock</label>
-      {!valid && <output role="alert" data-testid="transaction-time-scale-error">Cycles per Transaction Cycle must be a positive number; tick intervals must be positive whole numbers.</output>}
+      {!valid && <output role="alert" data-testid="transaction-time-scale-error">Cycles per Transaction Cycle and tick intervals must be positive whole numbers.</output>}
       <div className="transaction-time-scale-actions">
         <button type="button" data-testid="transaction-time-scale-apply" disabled={!valid} onClick={apply}>Apply</button>
         <button type="button" onClick={() => setOpen(false)}>Cancel</button>

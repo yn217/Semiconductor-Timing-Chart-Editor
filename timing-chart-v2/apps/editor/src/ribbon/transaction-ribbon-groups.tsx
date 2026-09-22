@@ -13,6 +13,8 @@ export type TransactionRibbonContext = Readonly<{
   onTransactionCreated: (id: TransactionId) => void;
   viewMode: "Cycle" | "Transaction" | "Split";
   activeContext: ActiveContext;
+  cyclesPerTc: number;
+  onCyclesPerTcChange: (value: number) => void;
 }>;
 
 /**
@@ -21,7 +23,7 @@ export type TransactionRibbonContext = Readonly<{
  * Ribbon itself; the two are merged by composeRibbon.
  */
 export function buildTransactionRibbonGroups(context: TransactionRibbonContext): readonly RibbonGroupSpec[] {
-  const { document, range, commands, selectedTransactionId, onTransactionCreated, viewMode, activeContext } = context;
+  const { document, range, commands, selectedTransactionId, onTransactionCreated, viewMode, activeContext, cyclesPerTc, onCyclesPerTcChange } = context;
   const addTransaction = () => {
     const id = nextEntityId("transaction", document) as TransactionId;
     const result = commands.createTransaction({ id, name: `Transaction ${document.transactions.length + 1}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), laneId: "lane_0" });
@@ -70,7 +72,7 @@ export function buildTransactionRibbonGroups(context: TransactionRibbonContext):
     } as const] : []),
     ...(viewMode === "Transaction" || (viewMode === "Split" && activeContext === "Transaction") ? [{
       id: "transaction-time", majorGroup: "Transaction Time", caption: "Time Scale", items: [
-        { kind: "custom", id: "transaction-time-scale", render: () => <TransactionTimeScalePanel key="transaction-time-scale" document={document} onSetScale={commands.setTransactionTimeScale} /> },
+        { kind: "custom", id: "transaction-time-scale", render: () => <TransactionTimeScalePanel key="transaction-time-scale" document={document} cyclesPerTc={cyclesPerTc} onChangeCyclesPerTc={onCyclesPerTcChange} onSetScale={commands.setTransactionTimeScale} /> },
       ],
     } as const] : []),
   ];
