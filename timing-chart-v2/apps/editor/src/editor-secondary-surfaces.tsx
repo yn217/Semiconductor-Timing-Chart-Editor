@@ -36,7 +36,7 @@ import { useEditorAiAssistantModel } from "./application/use-editor-ai-assistant
 import { AnnotationCollectionPanel } from "./annotation-collection-panel.js";
 import { AIOperationPanel } from "./ai-operation-panel.js";
 import { AdvancedJsonPanel } from "./advanced-json-panel.js";
-import { BookmarkEditor } from "./bookmark-editor.js";
+import { BookmarkEditor, clearAllBookmarkDrafts } from "./bookmark-editor.js";
 import { BottomEditorPanel } from "./minimal-cycle-view-panels.js";
 import { SignalEditor } from "./editors/signal-editor.js";
 import { SignalTreeColumnHeader } from "./minimal-cycle-view-panels.js";
@@ -447,7 +447,7 @@ export function useEditorSecondarySurfaces(
     input.actions.setSelectionVisibility(visible);
   };
   // #763: unapplied Phase drafts belong to one document; a replacement (New/Open) drops them all so an identical ID in the next document cannot inherit one.
-  useEffect(() => { clearAllPhaseDrafts(); }, [input.documentEpoch]);
+  useEffect(() => { clearAllPhaseDrafts(); clearAllBookmarkDrafts(); }, [input.documentEpoch]);
   const workspaceViewportContent = workspace.viewMode !== "Cycle" ? (
     <TransactionLanes
         disclosure={disclosure}
