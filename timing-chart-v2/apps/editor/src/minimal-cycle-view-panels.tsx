@@ -1,5 +1,7 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { RefObject } from "react";
+import { getGestureHint, subscribeGestureHint } from "./runtime/active-gesture-cancellation.js";
+import { cycleUnitWord } from "./transaction-tc.js";
 import type { GroupId, SignalGroup, SpacerId } from "@timing-chart-v2/schema";
 import { ContextMenuSurface } from "./context-menu-surface.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
@@ -99,18 +101,52 @@ export type SignalTreeColumnHeaderProps = {
   // header (title/+Add/search) instead of the Signal one -- one shared
   // component so both stay visually identical (row density, Add-button
   // placement, filter-input styling) without a second header primitive.
-  // #429/#397 P0-2: `tab`/`onTabChange` add the "Transactions | Signals"
-  // tab pair -- pure presentation of `transactionTreeTab` state, decided by
-  // the caller (`use-workspace-ui-state.ts`), same pattern as every other
   // field here.
-  readonly transactionMode?: { readonly filter: string; readonly onFilterChange: (value: string) => void; readonly filterMode: TransactionTreeFilterMode; readonly onFilterModeChange: (value: TransactionTreeFilterMode) => void; readonly onAdd: () => void; readonly onAddGroup: () => void; readonly tab: "transactions" | "signals"; readonly onTabChange: (tab: "transactions" | "signals") => void } | undefined;
+  readonly transactionMode?: { readonly filter: string; readonly onFilterChange: (value: string) => void; readonly filterMode: TransactionTreeFilterMode; readonly onFilterModeChange: (value: TransactionTreeFilterMode) => void; readonly onAdd: () => void; readonly onAddGroup: () => void; readonly onExpandAll: () => void; readonly onCollapseAll: () => void; readonly onShowAll: () => void; readonly onHideAll: () => void; readonly timeScale?: { readonly cyclesPerTc: number; readonly onChange: (cyclesPerTc: number) => void } } | undefined;
 };
+
+/** #748: the one left-pane header action chrome (primary + Add, optional extra actions, top-right More). Cycle and Transaction pass their own labels,
+ * commands and menus; size, spacing, focus and accessible-name wiring are shared so the two headers cannot drift. */
+type HeaderButton = { readonly label: string; readonly testId?: string; readonly expanded?: boolean; readonly popup?: "menu"; readonly onClick: (event: React.MouseEvent<HTMLButtonElement>) => void };
+export function LeftPaneHeaderActions({ add, more, children }: { readonly add: HeaderButton; readonly more: HeaderButton & { readonly buttonRef?: React.RefObject<HTMLButtonElement | null> }; readonly children?: ReactNode }) {
+  return <span className="left-column-actions">
+    <button type="button" className="tree-add-button" aria-label={add.label} title={add.label} {...(add.testId ? { "data-testid": add.testId } : {})} {...(add.expanded === undefined ? {} : { "aria-expanded": add.expanded })} onClick={add.onClick}><EditorIcon name="plus" /></button>
+    {children}
+    <button ref={more.buttonRef} type="button" className="tree-more-button" aria-label={more.label} title={more.label} {...(more.testId ? { "data-testid": more.testId } : {})} {...(more.expanded === undefined ? {} : { "aria-expanded": more.expanded })} {...(more.popup ? { "aria-haspopup": more.popup } : {})} onClick={more.onClick}><EditorIcon name="more" /></button>
+  </span>;
+}
 
 /** The Signal/Group tree's column header: type/text filter, the Add and
  * More popup menus, and the Role/Signal/Time-Scale column labels. Presents
  * state owned by `use-workspace-ui-state.ts` (filters) and
  * `use-dialog-menu-state.ts` (menu open flags) -- every state transition is
  * still decided by the caller via these callbacks. */
+const TC_SCALE_PRESETS = [1, 2, 4, 5, 10, 20, 50] as const;
+
+/** #750 section 3: "Custom…" accepts a positive integer only; an invalid draft stays local and never becomes the active cyclesPerTC
+ * mapping (the select's own value is never set to an unvalidated number). */
+function TcScaleSelect({ cyclesPerTc, onChange }: { readonly cyclesPerTc: number; readonly onChange: (value: number) => void }) {
+  const isPreset = (TC_SCALE_PRESETS as readonly number[]).includes(cyclesPerTc);
+  const [customMode, setCustomMode] = useState(!isPreset);
+  const [customDraft, setCustomDraft] = useState(String(cyclesPerTc));
+  useEffect(() => { if (isPreset) { setCustomMode(false); setCustomDraft(String(cyclesPerTc)); } }, [cyclesPerTc, isPreset]);
+  const customValue = Number(customDraft);
+  const customValid = customDraft.trim().length > 0 && Number.isInteger(customValue) && customValue >= 1;
+  const options = [...new Set([...TC_SCALE_PRESETS, ...(isPreset ? [] : [cyclesPerTc])])].sort((a, b) => a - b);
+  if (!customMode) {
+    return <select data-testid="transaction-tc-scale" aria-label="Cycles per TC" value={cyclesPerTc} onChange={(event) => { if (event.target.value === "__custom__") { setCustomMode(true); setCustomDraft(String(cyclesPerTc)); return; } onChange(Number(event.target.value)); }}>
+      {options.map((value) => <option key={value} value={value}>{value}</option>)}
+      <option value="__custom__">Custom…</option>
+    </select>;
+  }
+  return <span className="transaction-tc-scale-custom">
+    <input aria-label="Custom cycles per TC" type="number" min="1" step="1" data-testid="transaction-tc-scale-custom-input" aria-invalid={customValid ? undefined : true} value={customDraft} onChange={(event) => setCustomDraft(event.target.value)}
+      onKeyDown={(event) => { if (event.key === "Enter" && customValid) onChange(customValue); if (event.key === "Escape") { setCustomMode(false); setCustomDraft(String(cyclesPerTc)); } }} />
+    <button type="button" data-testid="apply-transaction-tc-scale-custom" disabled={!customValid || customValue === cyclesPerTc} onClick={() => { onChange(customValue); setCustomMode(false); }}>Apply</button>
+    {!customValid && <span role="alert" className="editor-problem">Enter a whole number, 1 or greater.</span>}
+  </span>;
+}
+
 export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange, treeFilter, onTreeFilterChange, onClearTreeFilter, addMenuOpen, onToggleAddMenu, moreMenuOpen, onToggleMoreMenu, onAddEntity, onCloseAddMenu, onOpenBulkRegistration, onCollapseAllGroups, onExpandAllGroups, onOpenHierarchy, onCloseMoreMenu, timeScaleLabel, transactionMode }: SignalTreeColumnHeaderProps) {
   useEffect(() => {
     if (!addMenuOpen && !moreMenuOpen) return;
@@ -122,30 +158,52 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
     });
     return () => cancelAnimationFrame(frame);
   }, [addMenuOpen, moreMenuOpen]);
+  const [transactionMoreOpen, setTransactionMoreOpen] = useState(false);
+  const transactionMoreButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!transactionMoreOpen) return;
+    const close = (event: Event) => {
+      if (event instanceof KeyboardEvent && event.key !== "Escape") return;
+      // #748: Escape hands focus back to the invoker.
+      if (event instanceof KeyboardEvent) transactionMoreButton.current?.focus();
+      if (event instanceof MouseEvent && (event.target as Element | null)?.closest("[data-testid='transaction-tree-more-menu'], [data-testid='transaction-tree-more']")) return;
+      setTransactionMoreOpen(false);
+    };
+    document.addEventListener("keydown", close);
+    document.addEventListener("pointerdown", close);
+    return () => { document.removeEventListener("keydown", close); document.removeEventListener("pointerdown", close); };
+  }, [transactionMoreOpen]);
   if (transactionMode) {
-    const onTransactions = transactionMode.tab === "transactions";
     return <div className="column-headings" data-testid="transaction-tree-header">
     <span className="left-column-heading">
-      <span className="transaction-tree-tabs" role="tablist" aria-label="Transaction tree">
-        <button type="button" role="tab" aria-selected={onTransactions} data-testid="transaction-tree-tab-transactions" className={onTransactions ? "active" : ""} onClick={() => transactionMode.onTabChange("transactions")}>Transactions</button>
-        <button type="button" role="tab" aria-selected={!onTransactions} data-testid="transaction-tree-tab-signals" className={onTransactions ? "" : "active"} onClick={() => transactionMode.onTabChange("signals")}>Signals</button>
-      </span>
-      {onTransactions && <label className="tree-filter-controls">
-        <span className="visually-hidden">Transaction tree filter</span>
-        <input data-testid="transaction-tree-search" aria-label="Search transaction tree" value={transactionMode.filter} onChange={(event) => transactionMode.onFilterChange(event.target.value)} placeholder="Search tree…" />
+      <span className="transaction-tree-title" data-testid="transaction-tree-title">Transactions</span>
+      {<label className="tree-filter-controls">
+        <span className="visually-hidden">Search transactions</span>
+        <input data-testid="transaction-tree-search" aria-label="Search transactions" title="Searches the Transaction Tree (left). The Bottom table has its own search." value={transactionMode.filter} onChange={(event) => transactionMode.onFilterChange(event.target.value)} placeholder="Search transactions…" />
         {transactionMode.filter && <button type="button" aria-label="Clear transaction tree filter" onMouseDown={(event) => event.preventDefault()} onClick={() => transactionMode.onFilterChange("")}><EditorIcon name="close" /></button>}
       </label>}
-      {onTransactions && <select aria-label="Transaction filter mode" value={transactionMode.filterMode} onChange={(event) => transactionMode.onFilterModeChange(event.target.value as typeof transactionMode.filterMode)}><option value="all">All</option><option value="grouped">Grouped</option><option value="ungrouped">Ungrouped</option><option value="phases">Has Phases</option><option value="no-phases">No Phases</option><option value="linked">Has Linked Signals</option><option value="visible">Visible</option><option value="hidden">Hidden</option></select>}
-      {onTransactions && <span className="left-column-actions">
-        <button type="button" className="tree-add-button" aria-label="Add Transaction" data-testid="add-transaction-tree" onClick={transactionMode.onAdd}><EditorIcon name="plus" /></button>
-        <button type="button" className="tree-more-button" aria-label="Add Transaction Group" title="Add Transaction Group" data-testid="add-transaction-group-tree" onClick={transactionMode.onAddGroup}><EditorIcon name="plus" /></button>
-      </span>}
+      {<select aria-label="Filter transactions" title="Filters the Transaction Tree (left) by kind" data-filter-active={String(transactionMode.filterMode !== "all")} value={transactionMode.filterMode} onChange={(event) => transactionMode.onFilterModeChange(event.target.value as typeof transactionMode.filterMode)}><option value="all">All</option><option value="grouped">Grouped</option><option value="ungrouped">Ungrouped</option><option value="phases">Has Phases</option><option value="no-phases">No Phases</option><option value="linked">Has Linked Signals</option><option value="visible">Visible</option><option value="hidden">Hidden</option></select>}
+      <LeftPaneHeaderActions
+        add={{ label: "Add transaction", testId: "add-transaction-tree", onClick: transactionMode.onAdd }}
+        more={{ label: "Transaction tree actions", testId: "transaction-tree-more", expanded: transactionMoreOpen, popup: "menu", buttonRef: transactionMoreButton, onClick: () => setTransactionMoreOpen((open) => !open) }}
+      >
+        <button type="button" className="tree-add-group-button" aria-label="New Transaction Group" title="New Transaction Group" data-testid="add-transaction-group-tree-visible" onClick={transactionMode.onAddGroup}>+ Group</button>
+      </LeftPaneHeaderActions>
+      {transactionMoreOpen && <div className="tree-header-menu" role="menu" aria-label="Transaction tree actions" data-testid="transaction-tree-more-menu">
+        <button type="button" role="menuitem" data-testid="transaction-tree-expand-all" onClick={() => { transactionMode.onExpandAll(); setTransactionMoreOpen(false); }}>Expand All</button>
+        <button type="button" role="menuitem" data-testid="transaction-tree-collapse-all" onClick={() => { transactionMode.onCollapseAll(); setTransactionMoreOpen(false); }}>Collapse All</button>
+        <hr role="separator" />
+        <button type="button" role="menuitem" data-testid="transaction-tree-show-all" onClick={() => { transactionMode.onShowAll(); setTransactionMoreOpen(false); }}>Show All</button>
+        <button type="button" role="menuitem" data-testid="transaction-tree-hide-all" onClick={() => { transactionMode.onHideAll(); setTransactionMoreOpen(false); }}>Hide All</button>
+        <hr role="separator" />
+        <button type="button" role="menuitem" data-testid="add-transaction-group-tree" onClick={() => { transactionMode.onAddGroup(); setTransactionMoreOpen(false); }}>Add Group…</button>
+        <hr role="separator" />
+        <button type="button" role="menuitem" disabled={transactionMode.filter === ""} onClick={() => { transactionMode.onFilterChange(""); setTransactionMoreOpen(false); }}>Clear Filter</button>
+      </div>}
     </span>
-    {onTransactions
-      ? <><span className="role-column-heading" aria-label="Group">Group</span><span className="signal-column-heading" aria-label="Transaction">Transaction</span></>
-      : <span className="signal-column-heading" aria-label="Signal">Signal</span>}
+    <span className="role-column-heading" aria-label="Group">Group</span><span className="signal-column-heading" aria-label="Transaction">Transaction</span>
     <span className="frozen-pane-heading-gutter" aria-hidden="true" />
-    <span>{timeScaleLabel}</span>
+    <span className="transaction-time-scale-readout">Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = {transactionMode.timeScale ? <TcScaleSelect cyclesPerTc={transactionMode.timeScale.cyclesPerTc} onChange={(value) => transactionMode.timeScale?.onChange(value)} /> : timeScaleLabel} {cycleUnitWord(transactionMode.timeScale?.cyclesPerTc ?? 1)})</span>
   </div>;
   }
   return <div className="column-headings">
@@ -158,10 +216,10 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
         <input data-testid="signal-tree-search-top" aria-label="Signal tree filter" value={treeFilter} onChange={(event) => onTreeFilterChange(event.target.value)} placeholder="Filter signals..." />
         {treeFilter && <button type="button" aria-label="Clear signal tree filter" onMouseDown={(event) => event.preventDefault()} onClick={onClearTreeFilter}><EditorIcon name="close" /></button>}
       </label>
-      <span className="left-column-actions">
-        <button type="button" className="tree-add-button" aria-label="Add signal or group" aria-expanded={addMenuOpen} onClick={(event) => onToggleAddMenu(event.currentTarget)}><EditorIcon name="plus" /></button>
-        <button type="button" className="tree-more-button" aria-label="More tree actions" aria-expanded={moreMenuOpen} onClick={(event) => onToggleMoreMenu(event.currentTarget)}><EditorIcon name="more" /></button>
-      </span>
+      <LeftPaneHeaderActions
+        add={{ label: "Add signal or group", expanded: addMenuOpen, onClick: (event) => onToggleAddMenu(event.currentTarget) }}
+        more={{ label: "More tree actions", expanded: moreMenuOpen, onClick: (event) => onToggleMoreMenu(event.currentTarget) }}
+      />
       {addMenuOpen && <div className="tree-add-menu" role="menu" aria-label="Add signal or group">
         {/* #474: labels come from the same signal-type-registry.ts table
             Inspector's own Type dropdown reads -- previously each hardcoded
@@ -212,6 +270,17 @@ export type BottomEditorPanelProps<Tab extends string> = {
  * tab is decided by the caller (it depends on the current selection across
  * several owners) and passed in as `content`. */
 export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelectTab, onTabKeyDown, followSelection, onFollowSelectionChange, pinned, onTogglePinned, summary, content, contentClassName }: BottomEditorPanelProps<Tab>) {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const close = (event: PointerEvent) => { if (!(event.target instanceof Node) || !settingsRef.current?.contains(event.target)) setSettingsOpen(false); };
+    // #747: Escape closes the popover from anywhere (focus normally stays on the gear) and hands focus back to it.
+    const escape = (event: KeyboardEvent) => { if (event.key !== "Escape") return; setSettingsOpen(false); settingsRef.current?.querySelector<HTMLElement>(".bottom-settings-button")?.focus(); };
+    document.addEventListener("pointerdown", close, true);
+    document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("pointerdown", close, true); document.removeEventListener("keydown", escape); };
+  }, [settingsOpen]);
   return <section className="bottom-editor" data-testid="bottom-editor">
     <nav className="bottom-tabs" data-testid="bottom-tabs" role="tablist" aria-label="Bottom context panels">
       {tabs.map((tab) => {
@@ -227,8 +296,14 @@ export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelec
           the only clue, so a Transaction-selected-while-Bottom-still-
           shows-Bookmark moment reads as intentional, not stale. */}
       <output className="bottom-follow-status" data-testid="bottom-follow-status">{pinned ? `Pinned: ${activeTab}` : "Following Selection"}</output>
-      <label><input data-testid="follow-selection" type="checkbox" checked={followSelection} onChange={(event) => onFollowSelectionChange(event.target.checked)} /> Follow Selection</label>
-      <button type="button" data-testid="bottom-pin" aria-label={pinned ? "Unpin" : "Pin"} aria-pressed={pinned} onClick={onTogglePinned}><span className="bottom-pin-label" data-v1-label={pinned ? "Unpin" : "Pin"}>{pinned ? "Unpin" : "Pin"}</span></button>
+      <span className="bottom-settings-anchor" ref={settingsRef}>
+        <button type="button" className="bottom-settings-button" data-testid="bottom-settings" aria-label="Bottom Panel settings" aria-haspopup="true" aria-expanded={settingsOpen} title="Bottom panel behavior: Follow Selection, Pin" onClick={() => setSettingsOpen((open) => !open)}>{"⚙"}</button>
+        <div className="bottom-settings-popover" data-testid="bottom-settings-popover" role="group" aria-label="Bottom panel behavior" hidden={!settingsOpen} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); setSettingsOpen(false); } }}>
+        <label><input data-testid="follow-selection" type="checkbox" checked={followSelection} onChange={(event) => onFollowSelectionChange(event.target.checked)} /> Follow Selection</label>
+        <button type="button" data-testid="bottom-pin" aria-label={pinned ? "Unpin" : "Pin"} aria-pressed={pinned} onClick={onTogglePinned}><span className="bottom-pin-label" data-v1-label={pinned ? "Unpin" : "Pin"}>{pinned ? "Unpin" : "Pin"}</span></button>
+      
+        </div>
+      </span>
     </nav>
     <div className={`bottom-content${contentClassName ? ` ${contentClassName}` : ""}`} id="bottom-context-content" role="tabpanel" aria-labelledby={`bottom-tab-${activeTab.toLowerCase()}`}>{content}</div>
     {summary}
@@ -273,16 +348,20 @@ export type EditorStatusBarProps = {
  * computed by their owners (Application/History, Selection, Timeline
  * Geometry/Navigation, Workspace UI State) -- no state or logic of its own. */
 export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, annotationCount, rangeStatus, selectedCycle, zoom, snapEnabled, viewMode, statusContext, hideRevisionDetail, revision, undoDepth, redoDepth, timeAxisStatus, dirty, problemsCount, waveDromHasError, cursorStatus, activePaneStatus }: EditorStatusBarProps) {
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+  const gestureHint = useSyncExternalStore(subscribeGestureHint, getGestureHint);
+  const diagnosticClass = hideRevisionDetail ? "status-detail-hidden" : diagnosticsOpen ? undefined : "visually-hidden";
   return <footer className="status-bar" aria-label="Editor status">
-    <span data-testid="tool-status">{toolStatus}</span>
+    <span data-testid="tool-status">{gestureHint ?? toolStatus}</span>
+    <button type="button" className="status-diagnostics-toggle" data-testid="status-diagnostics-toggle" aria-pressed={diagnosticsOpen} title="Show developer diagnostics (Canonical revision, History counters, renderer state)" onClick={() => setDiagnosticsOpen((open) => !open)}>Diagnostics</button>
     {cursorStatus && <span data-testid="cursor-status">{cursorStatus}</span>}
     {activePaneStatus && <span data-testid="active-pane-status">{activePaneStatus}</span>}
     <span>Selected: <strong data-testid="selection-status">{selectionStatus}</strong></span>
     <span data-testid="signal-count-status">Signals: {signalCount}</span><span data-testid="annotation-count-status">Annotations: {annotationCount}</span><span data-testid="range-status">{rangeStatus}</span><span data-testid="cycle-status">Cycle {selectedCycle}</span><span data-testid="zoom-status-bar">Zoom: {Math.round(zoom * 100)}%</span><span data-testid="snap-status">Snap: {snapEnabled ? "On" : "Off"}</span><span data-testid="view-mode-status">Mode: {viewMode === "Split" ? "Combined" : viewMode}</span>
     <span className="status-context" data-testid="status-context">{statusContext}</span>
-    <span className={hideRevisionDetail ? "status-detail-hidden" : undefined} data-testid="revision-status">Canonical revision {revision}</span>
-    <span className={hideRevisionDetail ? "status-detail-hidden" : undefined} data-testid="history-status">History {undoDepth} / Redo {redoDepth}</span>
-    <span data-testid="time-axis-status">{timeAxisStatus}</span><span data-testid="dirty-status">{dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">Problems: {problemsCount}</span><span data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
+    <span className={diagnosticClass} data-testid="revision-status">Canonical revision {revision}</span>
+    <span className={diagnosticClass} data-testid="history-status">History {undoDepth} / Redo {redoDepth}</span>
+    <span data-testid="time-axis-status">{timeAxisStatus}</span><span data-testid="dirty-status">{dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">Problems: {problemsCount}</span><span className={waveDromHasError ? undefined : diagnosticClass} data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
   </footer>;
 }
 

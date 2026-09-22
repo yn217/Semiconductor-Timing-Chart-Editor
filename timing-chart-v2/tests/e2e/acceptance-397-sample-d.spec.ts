@@ -108,15 +108,18 @@ test("Signal Split ON shows the same 24-Signal row sequence in both panes with i
   // there is enough horizontal overflow at this cycle count to actually
   // scroll (a scrollLeft assignment clamps to 0 if scrollWidth <=
   // clientWidth).
-  await upper.evaluate((el) => { el.scrollLeft = 0; el.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  // #625: in Cycle each pane's Timeline owns its own horizontal scroll (fixed columns are outside it).
+  const upperTimeline = upper.locator("[data-role='timeline-viewport']");
+  const lowerTimeline = lower.locator("[data-role='timeline-viewport']");
+  await upperTimeline.evaluate((el) => { el.scrollLeft = 0; });
   await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
-  const upperScrollWidth = await upper.evaluate((el) => el.scrollWidth - el.clientWidth);
+  const upperScrollWidth = await upperTimeline.evaluate((el) => el.scrollWidth - el.clientWidth);
   expect(upperScrollWidth).toBeGreaterThan(20);
-  await upper.evaluate((el) => { el.scrollLeft = 40; el.dispatchEvent(new Event("scroll", { bubbles: true })); });
-  await expect.poll(() => upper.evaluate((el) => el.scrollLeft)).toBe(40);
-  await expect.poll(() => lower.evaluate((el) => el.scrollLeft)).toBe(40);
+  await upperTimeline.evaluate((el) => { el.scrollLeft = 40; });
+  await expect.poll(() => upperTimeline.evaluate((el) => el.scrollLeft)).toBe(40);
+  await expect.poll(() => lowerTimeline.evaluate((el) => el.scrollLeft)).toBe(40);
 
   // Shared Zoom: the earlier zoom-in clicks (needed to create horizontal
   // overflow above) already reflect in the one shared status bar, and both

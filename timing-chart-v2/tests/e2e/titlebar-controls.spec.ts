@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 test("browser title bar does not present inert window controls", async ({ page }) => {
   await page.goto("/");

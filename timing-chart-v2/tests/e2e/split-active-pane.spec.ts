@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #407: Split's own pane-level counterpart to #404's ActiveContext.
 // Non-goals explicitly exclude the horizontal side-by-side layout (#408)
@@ -34,7 +37,7 @@ test("Split active pane follows clicks on the Signal surface vs Transaction lane
   await expect(page.getByTestId("ribbon").locator("[data-major-group='Layout']")).toHaveCount(1);
 
   // Focusing a Transaction row also claims pane ownership.
-  await page.locator(".transaction-lane-label-row").first().focus();
+  await page.locator(".transaction-left-tree-row").first().focus();
   await expect(viewport).toHaveAttribute("data-active-pane", "transaction");
   await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Transaction");
   await expect(page.getByTestId("history-status")).toHaveText(before!);
@@ -73,9 +76,12 @@ test("Combined routes a real Transaction bar drag to the Transaction pane only",
   const beforeStart = await page.getByTestId("inspector").getByLabel("Transaction start").inputValue();
   const box = await bar.locator(":scope > span").boundingBox();
   expect(box).not.toBeNull();
-  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  // The bar is wider than the viewport (its centre sits under the Inspector), so grab a visible point of it.
+  await page.mouse.move(box!.x + 200, box!.y + box!.height / 2);
   await page.mouse.down();
-  await page.mouse.move(box!.x + box!.width / 2 + 24, box!.y + box!.height / 2, { steps: 3 });
+  // A body drag places the Transaction start on the Snap cycle under the pointer; drop on the cycle-20 tick (visible in Combined).
+  const cycle20 = (await page.getByTestId("cycle-ruler").locator("[data-cycle='20']").boundingBox())!;
+  await page.mouse.move(cycle20.x + 1, box!.y + box!.height / 2, { steps: 6 });
   await page.mouse.up();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("inspector").getByLabel("Transaction start")).not.toHaveValue(beforeStart);

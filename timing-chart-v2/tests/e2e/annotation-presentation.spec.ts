@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 async function addAnnotation(page: import("@playwright/test").Page, type: string) {
   await page.getByLabel("Annotation type").selectOption(type);

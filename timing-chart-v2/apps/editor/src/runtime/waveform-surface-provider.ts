@@ -1,11 +1,15 @@
+import { paintWaveCanvas, isCanvasWaveRendererSelected } from "./canvas-wave-painter.js";
+import { LazyAnalyticGeometryMap } from "./lazy-analytic-geometry.js";
+import { OffsetLocalGeometryMap, WAVEDROM_CYCLE_WIDTH, type LocalGeometryMap } from "@timing-chart-v2/geometry";
 import type { EditorSessionController } from "./editor-session-controller.js";
 import type { CanonicalDocument, Signal, SignalId, SignalValueChange } from "@timing-chart-v2/schema";
 import { valueSignalWaveDomain } from "@timing-chart-v2/schema";
 import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
-import { toWaveJsonWindow, type RenderedWave, type WaveDromAdapter, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
+import { analyticLocalGeometry, toWaveJsonWindow, type RenderedWave, type WaveDromAdapter, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 import type { DisplayTimeMappingCache } from "@timing-chart-v2/projection";
 import type { GeometryRegistry } from "./geometry-registry.js";
 import { displayWindowForSource } from "./display-boundary.js";
+import { waveOwnerPlacement } from "./wave-owner-placement.js";
 
 function nextBrowserFrame(): Promise<void> {
   return new Promise((resolve) => {
@@ -39,6 +43,7 @@ export type WaveformProviderContext = Readonly<{
    * every owner ends up offset from the ruler by WaveDrom's own fixed left
    * margin (#620). */
   getWaveOriginPx?: () => number | undefined;
+  getPresentationScale?: () => number;
   getViewMode?: () => "Cycle" | "Transaction" | "Split";
 }>;
 
@@ -145,7 +150,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const waveOriginPx = context.getWaveOriginPx?.() ?? 0;
       for (const item of prepared) {
         if (pxPerDisplayCycle !== undefined && item.rendererStart !== undefined && item.rendererEnd !== undefined && item.rendererEnd > item.rendererStart) {
-          item.request.owner.style.width = `${(item.rendererEnd - item.rendererStart) * pxPerDisplayCycle}px`;
+          const placement = waveOwnerPlacement({ displayStart: item.rendererStart, displayEnd: item.rendererEnd, pxPerDisplayCycle, waveOriginPx, presentationScale: context.getPresentationScale?.() ?? 1 });
+          item.request.owner.style.width = `${placement.width}px`;
           // The shared wave-owner layer (`stable-waveform-surface`) is one
           // element as wide as the whole document (`--wave-width`), scrolled
           // natively; `place()` (stable-surface.ts) only ever sets each
@@ -159,13 +165,14 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           // `waveOriginPx` carries the ruler's own coordinate-system origin
           // (WaveDrom's fixed left margin) so this lines up with ruler ticks
           // exactly, not just proportionally (#620).
-          item.request.owner.style.left = `${item.rendererStart * pxPerDisplayCycle + waveOriginPx}px`;
+          item.request.owner.style.left = `${placement.left}px`;
         } else {
           item.request.owner.style.removeProperty("width");
           item.request.owner.style.removeProperty("left");
         }
       }
-      const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean }> = [];
+      const canvasPrototype = isCanvasWaveRendererSelected(document);
+      const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean; readonly canvasPainted?: boolean; readonly rendererStart?: number | undefined }> = [];
       for (const item of prepared) {
         if (item.deferred) {
           renderResults.push({ ...item, rendered: undefined });
@@ -174,6 +181,17 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         if (!isCurrent(item.request)) renderResults.push({ ...item, rendered: undefined, stale: true });
         else if (item.error || !item.waveJson) renderResults.push({ ...item, rendered: undefined });
         else {
+          if (canvasPrototype) {
+            paintWaveCanvas(item.request.owner, item.waveJson);
+            const sourceCycles = item.waveJson.geometrySourceCycles ?? Array.from({ length: item.waveJson.wave.length + 1 }, (_, index) => (item.waveJson?.sourceWindow?.start ?? 0) + index);
+            const canvasGeometry = new LazyAnalyticGeometryMap(item.request.signalId, item.waveJson, sourceCycles);
+            setBoundaryDebugAttribute(item.request.owner, canvasGeometry);
+            context.geometryRegistry.maps.set(item.request.signalId, absoluteWindowGeometry(canvasGeometry, item.rendererStart));
+            context.invalidateSnapIndex();
+            context.markOpenPhase("first-visible-wave-painted");
+            renderResults.push({ ...item, rendered: undefined, canvasPainted: true });
+            continue;
+          }
           try { renderResults.push({ ...item, rendered: await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues) }); }
           catch (error: unknown) { renderResults.push({ ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) }); }
         }
@@ -184,6 +202,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           return { signalId: item.request.signalId, result: { waveDromRenders: 0, localGeometryBuilds: 0 } };
         }
         if (item.stale === true || !isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
+        if (item.canvasPainted === true) return { signalId: item.request.signalId, result: { waveDromRenders: 0, localGeometryBuilds: 1 } };
         if (item.error || !item.rendered) return { signalId: item.request.signalId, error: item.error ?? new Error("Waveform render did not produce an SVG.") };
         try {
           if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
@@ -199,9 +218,11 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           // satisfy the readiness gate or trigger a stale refresh.
           const currentReferenceClock = latestSnapshot.document.timeline.referenceClock;
           if (item.request.signalId === currentReferenceClock) context.markOpenPhase("reference-clock-painted");
-          const geometry = context.adapter.extractLocalGeometry(item.rendered);
+          // Renderer-independent Local Geometry (#755): computed from the WaveJson + pinned WaveDrom layout, not by reading
+          // the rendered SVG DOM (getScreenCTM / <use> walk). `?geometrySource=svg` restores DOM extraction for comparison.
+          const geometry = useDomGeometrySource() ? context.adapter.extractLocalGeometry(item.rendered) : analyticLocalGeometry(item.request.signalId, item.rendered.waveJson);
           if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
-          context.geometryRegistry.maps.set(item.request.signalId, geometry);
+          context.geometryRegistry.maps.set(item.request.signalId, absoluteWindowGeometry(geometry, item.rendererStart));
           context.geometryRegistry.svgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
           const boundaryGeometry = geometry.cycleBoundaryEntries?.();
           if (boundaryGeometry && boundaryGeometry.length > 0) {
@@ -229,4 +250,24 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
     },
     disposeWave(id) { context.adapter.dispose(id); context.geometryRegistry.remove(id); context.invalidateSnapIndex(); },
   };
+}
+
+function useDomGeometrySource(): boolean {
+  try { return typeof location !== "undefined" && new URLSearchParams(location.search).get("geometrySource") === "svg"; } catch { return false; }
+}
+
+/**
+ * Owner-relative geometry (first boundary at the WaveDrom margin) -> document-absolute local X. Consumers (snap index, hit-test,
+ * overlays) all work in absolute X, so a window starting past cycle 0 is shifted by its display offset (100k-cycle far-window
+ * selection mapped pointer X onto the window's relative X and landed hundreds of cycles away).
+ */
+function absoluteWindowGeometry(geometry: LocalGeometryMap, displayStart: number | undefined): LocalGeometryMap {
+  return displayStart === undefined || displayStart <= 0 ? geometry : new OffsetLocalGeometryMap(geometry, displayStart * WAVEDROM_CYCLE_WIDTH);
+}
+
+/** The owner-relative boundary map stays published on the owner as a debug/test hook (screen X = owner box X + value). */
+function setBoundaryDebugAttribute(owner: HTMLElement, geometry: LocalGeometryMap): void {
+  const boundaries = geometry.cycleBoundaryEntries?.();
+  if (boundaries && boundaries.length > 0) owner.dataset.cycleBoundaryGeometry = JSON.stringify(Object.fromEntries(boundaries.map((entry) => [entry.cycle, entry.position.x])));
+  else delete owner.dataset.cycleBoundaryGeometry;
 }

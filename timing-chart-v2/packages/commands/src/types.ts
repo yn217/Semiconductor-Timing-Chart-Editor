@@ -57,7 +57,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "signal.replaceValue"; signalId: SignalId; fromStart: number; start: number; value: SignalValue; comment?: string }>
   | Readonly<{ id: CommandId; type: "signal.moveValue"; signalId: SignalId; fromStart: number; toStart: number }>
   | Readonly<{ id: CommandId; type: "signal.removeValue"; signalId: SignalId; start: number }>
-  | Readonly<{ id: CommandId; type: "signal.updateProperties"; signalId: SignalId; name: string; role: SignalRole; signalType?: ValueSignal["type"]; width?: number; displayFormat?: ValueSignal["displayFormat"]; visible?: boolean; displayAlign?: Signal["display"]["align"]; displayOverflow?: Signal["display"]["overflow"]; displayStyle?: Signal["display"]["style"]; spacingBefore?: number; spacingAfter?: number; splitPane?: Signal["display"]["splitPane"] }>
+  | Readonly<{ id: CommandId; type: "signal.updateProperties"; signalId: SignalId; name: string; role: SignalRole; signalType?: ValueSignal["type"]; width?: number; displayFormat?: ValueSignal["displayFormat"]; visible?: boolean; displayAlign?: Signal["display"]["align"]; displayOverflow?: Signal["display"]["overflow"]; displayStyle?: Signal["display"]["style"]; spacingBefore?: number; spacingAfter?: number }>
   | Readonly<{ id: CommandId; type: "signal.convertClock"; signalId: SignalId; targetType: "binary" | "bus" | "state" }>
   | Readonly<{ id: CommandId; type: "commentRow.create"; commentRow: CommentRow; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "commentRow.update"; signalId: SignalId; title: string; body: string; spacingBefore?: number; spacingAfter?: number; displayStyle?: CommentRow["display"]["style"] }>
@@ -151,6 +151,8 @@ export interface ChangeSet {
   readonly waveSemantics?: readonly SignalId[];
   readonly geometryLocal?: readonly SignalId[];
   readonly timelineSemantics?: boolean;
+  /** Transaction cycles-per-TC presentation scale changed (#750): ruler/grid labels rebuild; canonical cycles do not move. */
+  readonly transactionTimeScale?: boolean;
   readonly geometryScreenX?: boolean;
   readonly geometryScreenY?: readonly SignalId[];
   readonly annotationPosition?: readonly AnnotationId[];

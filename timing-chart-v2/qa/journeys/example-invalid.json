@@ -1,0 +1,10 @@
+{
+  "id": "missing-production-path",
+  "relatedIssue": 703,
+  "preconditions": [],
+  "actions": [],
+  "expected": [],
+  "invariants": {},
+  "freshStart": false,
+  "productionPath": false
+}

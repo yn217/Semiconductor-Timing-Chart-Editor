@@ -2,8 +2,11 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
 import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
+
+startInCycleSample(test);
 
 test.setTimeout(120_000);
 
@@ -120,7 +123,7 @@ test("annotation import is rejected at the resource boundary without replacing t
     buffer: Buffer.from(JSON.stringify(annotations)),
   });
   const editor = page.getByTestId("annotation-editor");
-  await expect(editor.getByTestId("annotation-import-status")).toContainText("Document resource limit exceeded for annotations: 20,001 exceeds 20,000.");
+  await expect(page.getByTestId("annotation-collection-status")).toContainText("Document resource limit exceeded for annotations: 20,001 exceeds 20,000.");
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
   await expect(page.getByTestId("annotation-count-status")).toHaveText("Annotations: 1");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
@@ -142,7 +145,7 @@ test("annotation import rejects deeply nested JSON before migration or replaceme
   for (let index = 0; index < 140; index += 1) nested = { nested };
   await page.getByLabel("Import annotations").setInputFiles({ name: "deep-annotations.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(nested)) });
   const editor = page.getByTestId("annotation-editor");
-  await expect(editor.getByTestId("annotation-import-status")).toContainText("Document JSON nesting depth exceeds the import limit.");
+  await expect(page.getByTestId("annotation-collection-status")).toContainText("Document JSON nesting depth exceeds the import limit.");
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
 });
 

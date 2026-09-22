@@ -149,6 +149,9 @@
 
 .editor-shell .signal-editor:has(.clock-editor) .clock-generator { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: end; gap: 10px; padding: 10px 12px 14px; }
 
+/* Primary actions stay on the controls row (V8 placement); derived frequency / errors / draft status follow on a full-width row. */
+.editor-shell .signal-editor:has(.clock-editor) .clock-generator-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.editor-shell .signal-editor:has(.clock-editor) .clock-generator > .clock-derived-frequency, .editor-shell .signal-editor:has(.clock-editor) .clock-generator > .editor-problem, .editor-shell .signal-editor:has(.clock-editor) .clock-generator > [data-testid="clock-generator-unapplied"] { grid-column: 1 / -1; }
 .editor-shell .signal-editor:has(.clock-editor) .clock-generator input,
 .editor-shell .signal-editor:has(.clock-editor) .clock-generator select { width: 100%; }
 
@@ -160,15 +163,12 @@
 
 .editor-shell [data-testid="bottom-pin"][aria-pressed="true"] .bottom-pin-label::after { content: "Unpin"; }
 
-.transaction-editor { min-height: 100%; padding: 0 12px; }
-.editor-shell:has(.cycle-panel.mode-transaction) .bottom-tabs { flex-basis: 36px; height: 36px; }
-.editor-shell:has(.cycle-panel.mode-transaction) .bottom-tabs button { height: 35px; }
-.transaction-bottom-summary { min-height: 100%; padding: 10px 12px; color: #263d58; }
+.transaction-editor { min-height: 100%; padding: 0 12px; }.transaction-bottom-summary { min-height: 100%; padding: 10px 12px; color: #263d58; }
 .transaction-bottom-summary > header { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #d5dde7; padding-bottom: 7px; }
 .transaction-bottom-summary > header span { color: #718096; font-size: 10px; }
 .transaction-bottom-phase-table { display: grid; gap: 2px; margin-top: 8px; max-width: 620px; }
 .transaction-bottom-phase-row { display: grid; grid-template-columns: minmax(160px, 1fr) 80px 80px 80px; gap: 8px; min-height: 28px; align-items: center; padding: 0 8px; border: 1px solid #d5dde7; font-size: 10px; }
-.transaction-bottom-phase-editor .transaction-bottom-phase-row { grid-template-columns: minmax(160px, 1fr) 70px 70px 70px 28px 28px 28px; }
+.transaction-bottom-phase-editor .transaction-bottom-phase-row { grid-template-columns: minmax(160px, 1fr) 70px 70px 70px 28px; }
 .transaction-bottom-phase-editor input { min-width: 0; width: 100%; box-sizing: border-box; }
 .transaction-bottom-phase-head { background: #eef3f8; color: #5c687c; font-weight: 700; }
 .transaction-bottom-linked-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
@@ -263,7 +263,7 @@
 .event-toolbar button:hover:not(:disabled) { border-color: #2c78bb; background: #eaf3fb; }
 
 .event-toolbar button:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; }
-.event-toolbar input[aria-label="Search transactions"] { margin-left: auto; min-width: 180px; max-width: 280px; height: var(--ds-control-height); }
+.event-toolbar input[aria-label="Search transactions table"] { margin-left: auto; min-width: 180px; max-width: 280px; height: var(--ds-control-height); }
 .event-row[draggable="true"] { cursor: grab; }
 .event-row[draggable="true"]:active { cursor: grabbing; }
 .event-row-drag-handle { display: inline-flex; width: 18px; min-width: 18px; align-items: center; justify-content: center; color: #71839a; cursor: grab; user-select: none; }
@@ -399,7 +399,9 @@
 .transition-form-panel { display: flex; flex-direction: column; gap: 4px; }
 .transition-form-row { display: flex; gap: 8px; }
 .transition-form-row .field-inline { flex: 1 1 auto; }
-.transition-form-row .transition-field-start { flex: 0 1 108px; }
+.transition-form-row .transition-field-start { flex: 0 0 auto; }
+/* #761: the caption keeps its natural width; the numeric input gets a readable 76px (>=64px) so 3-5 digit cycles fit. */
+.transition-form-row .transition-field-start > input { flex: 0 0 76px; width: 76px; min-width: 64px; }
 .transition-form-row .transition-field-value { flex: 0 1 120px; }
 .transition-form-row .transition-field-comment { flex: 2 1 auto; }
 .transition-form-actions { display: flex; gap: 6px; margin-top: 0; }
@@ -589,3 +591,21 @@
 .json-toolbar button, .json-toolbar select { height: 27px; border: 1px solid #bdc8d5; border-radius: 3px; background: white; }
 .json-toolbar output { margin-left: auto; }
 .json-panel pre { flex: 1; margin: 0; padding: 10px 18px; overflow: auto; background: #fbfcfe; font: 11px/1.35 Consolas, monospace; }
+
+.transaction-bottom-phase-header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 4px 0; background: var(--gui-panel-bg, #fff); }
+.transaction-bottom-phase-header .bottom-sticky-buttons { margin-left: auto; display: inline-flex; gap: 6px; }
+.transaction-bottom-phase-context { margin: 2px 0 6px; color: #5c687c; font-size: 11px; }
+.transaction-bottom-phase-timeline { position: relative; height: 22px; margin: 4px 0; border: 1px solid #c3ceda; border-radius: 3px; background: #f4f7fa; overflow: hidden; }
+.transaction-bottom-phase-segment { position: absolute; top: 0; bottom: 0; box-sizing: border-box; padding: 0 4px; overflow: hidden; border-inline: 1px solid #5b86b3; background: #cfe2f6; color: #23405f; font-size: 10px; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.transaction-bottom-phase-coverage { margin: 0 0 6px; color: #2f6d4f; font-size: 11px; }
+.transaction-bottom-phase-coverage.is-warning { color: #a25a00; }
+.transaction-list-row-editor input[data-draft-dirty="true"] { background: #fff7e0; border-color: #d9a441; }
+.bottom-settings-anchor { position: relative; display: inline-flex; align-items: center; }
+.bottom-settings-button { height: 22px; min-width: 24px; padding: 0 5px; border: 1px solid #c3ceda; border-radius: 3px; background: #fff; color: #405c78; cursor: pointer; }
+.bottom-settings-popover { position: absolute; z-index: 40; top: 26px; right: 0; display: flex; flex-direction: column; gap: 6px; min-width: 160px; padding: 8px; border: 1px solid #b8c7d8; border-radius: 3px; background: #fff; box-shadow: 0 4px 12px rgb(30 55 80 / 18%); }
+.bottom-settings-popover[hidden] { display: none; }
+.signal-context-header .signal-scope-actions { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; padding-left: 12px; border-left: 1px solid #c3ceda; }
+.signal-context-header button.danger { border-color: #d39b9b; color: #a52b2b; background: #fff7f7; }
+.event-derived-column { font-style: italic; cursor: help; }
+.event-row output[data-testid^="event-row-end-"], .event-row output[data-testid^="event-row-duration-"] { color: #5c687c; }
+.event-selected-status { align-self: center; margin-right: 8px; color: #43536a; font-size: 11px; font-weight: 600; }

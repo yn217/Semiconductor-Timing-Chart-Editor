@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 const unloadState = (page: import("@playwright/test").Page) => page.evaluate(() => {
   const event = new Event("beforeunload", { cancelable: true }) as BeforeUnloadEvent;

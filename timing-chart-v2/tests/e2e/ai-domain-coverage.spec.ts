@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 async function applyAI(page: Page, query: string, expectedSummary: string, expectedStatus = "Applied · one atomic SemanticCommand transaction") {
   const ai = page.getByTestId("ai-operation-panel");
@@ -16,6 +19,8 @@ test("AI provider domains use one preview/apply SemanticCommand path", async ({ 
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.getByRole("button", { name: "Cycle", exact: true }).click();
+  const annotationsBefore = await host.locator("[data-role='annotation-owner'][data-annotation-id]").count();
+  const transactionsBefore = Number(await page.locator(".editor-shell").getAttribute("data-transaction-count"));
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
   await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
@@ -35,10 +40,9 @@ test("AI provider domains use one preview/apply SemanticCommand path", async ({ 
 
   await expect(host).toHaveAttribute("data-canonical-revision", "7");
   await expect(page.getByTestId("history-status")).toHaveText("History 7 / Redo 0");
-  // The production showcase already contains six annotations; this AI flow
-  // adds one more through the shared Preview/Validate/Apply path.
-  await expect(host.locator("[data-role='annotation-owner'][data-annotation-id]")).toHaveCount(7);
-  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "7");
+  // This AI flow adds one Annotation and one Transaction through the shared Preview/Validate/Apply path.
+  await expect(host.locator("[data-role='annotation-owner'][data-annotation-id]")).toHaveCount(annotationsBefore + 1);
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", String(transactionsBefore + 1));
 
   await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await expect(page.locator("[data-bookmark-id]").filter({ hasText: "Bookmark 4" })).toBeVisible();

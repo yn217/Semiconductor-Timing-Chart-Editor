@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("adds and edits a Spacer Row from the Group Inspector with Save/Open and Undo/Redo", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.getByLabel("Select Control group").click();
@@ -26,9 +27,17 @@ test("adds and edits a Spacer Row from the Group Inspector with Save/Open and Un
   await spacer.getByLabel(`Spacer height ${spacerId}`).fill("0");
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   expect(Math.round((await spacerRow.boundingBox())!.height)).toBe(spacerHeightBeforeDraft);
-  await spacer.getByRole("button", { name: "Apply Height" }).click();
-  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(spacer.getByRole("button", { name: "Apply Height" })).toBeDisabled();
   await expect(spacer.getByRole("alert")).toHaveText("Spacer height must be a finite positive number.");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  expect(Math.round((await spacerRow.boundingBox())!.height)).toBe(spacerHeightBeforeDraft);
+  await spacer.getByLabel(`Spacer height ${spacerId}`).fill("");
+  await expect(spacer.getByRole("button", { name: "Apply Height" })).toBeDisabled();
+  await expect(spacer.getByRole("alert")).toBeVisible();
+  await spacer.getByRole("button", { name: "Cancel" }).click();
+  await expect(spacer.getByRole("alert")).toHaveCount(0);
+  await expect(spacer.getByLabel(`Spacer height ${spacerId}`)).toHaveValue(String(spacerHeightBeforeDraft));
+  await spacer.getByLabel(`Spacer height ${spacerId}`).fill("0");
   await spacer.getByLabel(`Spacer height ${spacerId}`).fill("48");
   await spacer.getByRole("button", { name: "Apply Height" }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");

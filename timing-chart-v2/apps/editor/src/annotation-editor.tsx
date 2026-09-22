@@ -204,8 +204,8 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
       <span className="editor-tab">Signal</span><span className="editor-tab active">Annotation</span>
       <span className="editor-selection">{annotation.label} · {annotation.type}</span>
       <span className="editor-tabbar-secondary">
-        <button type="button" onClick={onUndo} disabled={!history.canUndo} data-testid="editor-undo">Undo</button>
-        <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button>
+        <button type="button" onClick={onUndo} disabled={!history.canUndo} title={history.canUndo ? "Undo" : "Nothing to undo"} data-testid="editor-undo">Undo</button>
+        <button type="button" onClick={onRedo} disabled={!history.canRedo} title={history.canRedo ? "Redo" : "Nothing to redo"} data-testid="editor-redo">Redo</button>
       </span>
       <button type="button" className="danger" onClick={onDelete} data-testid="delete-annotation">Delete</button>
     </div>

@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 // Bottom Panel Visual Reference pass (#402/#426): Name/Role/Type/Spacing
 // moved to Inspector (its sole owner now) -- Bottom's own duplicate
@@ -357,8 +360,11 @@ test("moves the rendered waveform transition to the edited Start cycle, not just
 
   const afterXs = await transitionXs();
   expect(afterXs.length).toBeGreaterThan(0);
-  expect(Math.abs(afterXs[0] - cycle4X)).toBeLessThan(3);
-  expect(Math.abs(beforeXs[0] - cycle4X)).toBeGreaterThan(2);
+  // The edited transition is one of the row's transitions (not necessarily the first): some transition now sits on cycle 4,
+  // and none did before the edit.
+  const nearest = (xs: readonly number[]) => Math.min(...xs.map((x) => Math.abs(x - cycle4X)));
+  expect(nearest(afterXs)).toBeLessThan(3);
+  expect(nearest(beforeXs)).toBeGreaterThan(2);
 });
 
 test("#402: Event row Save stays disabled until the Draft differs, and Cancel discards it back to canonical", async ({ page }) => {

@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("registers the Left Tree keydown handler exactly once per mount (no duplicate listener)", async ({ page }) => {
   await page.addInitScript(() => {

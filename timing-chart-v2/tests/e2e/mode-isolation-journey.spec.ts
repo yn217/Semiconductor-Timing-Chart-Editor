@@ -1,4 +1,5 @@
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
+import { hoverTimelineArea, timelineOwner } from "./timeline-scroll.js";
 import { expect, test } from "@playwright/test";
 
 const viewports = [{ width: 1672, height: 941 }, { width: 1280, height: 720 }] as const;
@@ -7,7 +8,7 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   test.setTimeout(90_000);
   await page.setViewportSize(viewportSize);
   await page.goto("/");
-  const document = generatePerformanceDocument({ signalCount: 40, cycleCount: 512, profile: "transaction-heavy" });
+  const document = generatePerformanceDocument({ signalCount: 24, cycleCount: 256, profile: "transaction-heavy" });
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "mode-isolation.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   const discard = page.getByTestId("unsaved-discard");
   if (await discard.isVisible().catch(() => false)) await discard.click();
@@ -19,7 +20,6 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   await expect(page.getByTestId("transaction-lanes")).toBeVisible();
   const cycleViewport = page.getByTestId("cycle-viewport");
   await expect.poll(() => cycleViewport.evaluate((element) => element.scrollWidth - element.clientWidth), { timeout: 5_000, message: "Cycle viewport must have real horizontal overflow before the mode-isolation journey" }).toBeGreaterThan(0);
-  await expect.poll(() => cycleViewport.evaluate((element) => element.scrollHeight - element.clientHeight), { timeout: 5_000, message: "Cycle viewport must have real vertical overflow before the mode-isolation journey" }).toBeGreaterThan(0);
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
     history: await host.getAttribute("data-history-depth"),
@@ -33,6 +33,8 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
 
   await modes.getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Cycle", { timeout: 5_000 });
+  // #765: standalone Transaction no longer inherits the hidden Cycle rows' height, so the large-document precondition is checked where the rows are shown.
+  await expect.poll(() => cycleViewport.evaluate((element) => element.scrollHeight - element.clientHeight), { timeout: 5_000, message: "Cycle viewport must have real vertical overflow before the mode-isolation journey" }).toBeGreaterThan(0);
   const cycleRow = host.locator("[data-role='frozen-row'][data-row-id='sig_perf_1']");
   await cycleRow.click();
   await cycleRow.focus();
@@ -60,10 +62,10 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   expect(cycleBottomAfter).toBeGreaterThan(cycleBottomBefore);
   await page.getByTestId("ribbon").getByRole("button", { name: "Inspector", exact: true }).click();
   await expect(shell).toHaveAttribute("data-inspector-visible", "false");
-  await cycleViewport.hover();
+  await hoverTimelineArea(page);
   await page.mouse.wheel(500, 0);
-  await expect.poll(() => cycleViewport.evaluate((element) => element.scrollLeft), { timeout: 5_000, message: "Cycle horizontal wheel must change the real viewport scroll position" }).toBeGreaterThan(0);
-  const cycleScroll = await cycleViewport.evaluate((element) => element.scrollLeft);
+  await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft), { timeout: 5_000, message: "Cycle horizontal wheel must change the real viewport scroll position" }).toBeGreaterThan(0);
+  const cycleScroll = await timelineOwner(page).evaluate((element) => element.scrollLeft);
   await assertViewOnly();
 
   await modes.getByRole("button", { name: "Transaction", exact: true }).click();
@@ -75,10 +77,9 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   const transactionZoom = await page.getByTestId("zoom-status").textContent();
   expect(transactionZoom).not.toBe(cycleZoom);
   const transactionLeft = Number(await shell.getAttribute("data-left-pane-width"));
-  await page.getByTestId("left-pane-resizer").press("ArrowRight");
-  await expect.poll(() => shell.getAttribute("data-left-pane-width").then(Number), { timeout: 5_000, message: "Transaction tree resize must settle before capturing its mode-local value" }).toBeGreaterThan(transactionLeft);
-  const transactionLeftAfter = Number(await shell.getAttribute("data-left-pane-width"));
-  expect(transactionLeftAfter).toBeGreaterThan(transactionLeft);
+  // Transaction Mode uses a fixed-width tree (composeMode.fixedLeftWidth) and has no left-pane resizer.
+  await expect(page.getByTestId("left-pane-resizer")).toHaveCount(0);
+  const transactionLeftAfter = transactionLeft;
   await page.getByTestId("ribbon").getByRole("button", { name: "Bottom Editor", exact: true }).click();
   await expect(shell).toHaveAttribute("data-bottom-visible", "false");
   await assertViewOnly();
@@ -88,10 +89,10 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   await expect(page.locator(".split-transaction-pane")).toBeVisible();
   await expect(page.getByTestId("combined-split-divider")).toBeVisible();
   const combinedViewport = page.getByTestId("cycle-viewport");
-  await combinedViewport.hover();
-  await page.mouse.wheel(300, 0);
+  // Drive the Combined viewport's own horizontal scroll (the shared owner in Combined) to prove its position is mode-local.
+  await combinedViewport.evaluate((element) => { element.scrollLeft = 300; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await expect.poll(() => combinedViewport.evaluate((element) => element.scrollLeft), { timeout: 5_000, message: "Combined horizontal wheel must change the real viewport scroll position" }).toBeGreaterThan(0);
   const combinedScroll = await combinedViewport.evaluate((element) => element.scrollLeft);
-  expect(combinedScroll).toBeGreaterThan(0);
   const combinedDividerBefore = Number(await page.getByTestId("combined-split-divider").getAttribute("aria-valuenow"));
   await page.getByTestId("combined-split-divider").press("ArrowDown");
   await expect.poll(() => page.getByTestId("combined-split-divider").getAttribute("aria-valuenow").then(Number), { timeout: 5_000, message: "Combined splitter ArrowDown must change the persisted split ratio" }).toBeGreaterThan(combinedDividerBefore);

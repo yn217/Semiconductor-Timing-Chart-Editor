@@ -13,7 +13,7 @@ export function InspectorSection({ sectionId, title, open, onToggle, count, onAd
   const contentId = `inspector-section-${sectionId}`;
   return <section className={`inspector-section${open ? " is-open" : " is-collapsed"}`} data-section-id={sectionId}>
     <h3 className="inspector-section-heading">
-      <button type="button" className="inspector-section-toggle" aria-expanded={open} aria-controls={contentId} onClick={onToggle}><EditorIcon name={open ? "down" : "right"} />{title}</button>
+      <button type="button" className="inspector-section-toggle" aria-expanded={open} aria-controls={contentId} onClick={onToggle}><EditorIcon name={open ? "chevron-down" : "chevron-right"} className="inspector-section-chevron" />{title}</button>
       {count !== undefined && <span className="inspector-section-count" data-testid={`inspector-section-count-${sectionId}`}>{count}</span>}
       {count !== undefined && !open && onAdd && <button type="button" className="inspector-section-add" aria-label={`Add to ${title}`} disabled={addDisabled} title={addDisabled ? "No unused cycles remain. Extend the Transaction or shorten a Phase to add another." : undefined} onClick={(event) => { event.stopPropagation(); if (!open) onToggle(); onAdd(); }}><EditorIcon name="plus" /></button>}
     </h3>
@@ -32,11 +32,11 @@ export function InspectorSection({ sectionId, title, open, onToggle, count, onAd
  * "● N changes"; omit it (undefined) for entities that don't have real
  * per-field dirty-tracking yet (Group/Transaction currently apply
  * unconditionally) rather than fake a count. */
-export function InspectorFooter({ changeCount, onCancel, onApply, applyDisabled, applyTestId }: { readonly changeCount?: number; readonly onCancel: () => void; readonly onApply: () => void; readonly applyDisabled: boolean; readonly applyTestId: string }) {
+export function InspectorFooter({ changeCount, onCancel, onApply, applyDisabled, applyTestId, cancelTestId = "cancel-inspector-draft" }: { readonly changeCount?: number; readonly onCancel: () => void; readonly onApply: () => void; readonly applyDisabled: boolean; readonly applyTestId: string; readonly cancelTestId?: string }) {
   return <div className="inspector-sticky-footer">
     {changeCount !== undefined && changeCount > 0 && <output className="draft-unapplied-indicator" data-testid="inspector-footer-unapplied">● {changeCount} change{changeCount === 1 ? "" : "s"}</output>}
     <span className="inspector-footer-buttons">
-      <button type="button" data-testid="cancel-inspector-draft" onClick={onCancel}>Revert</button>
+      <button type="button" data-testid={cancelTestId} onClick={onCancel}>Revert</button>
       <button type="button" data-testid={applyTestId} disabled={applyDisabled} onClick={onApply}>Apply</button>
     </span>
   </div>;

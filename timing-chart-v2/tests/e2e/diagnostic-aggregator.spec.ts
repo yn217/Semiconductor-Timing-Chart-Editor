@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
+
+startInCycleMode(test);
 
 test("surfaces a rejected Clock Generator update in the Problems panel, leaves the prior waveform untouched, and clears it once fixed", async ({ page }) => {
   await page.goto("/");

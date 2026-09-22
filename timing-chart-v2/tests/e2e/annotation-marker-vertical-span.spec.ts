@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 // #426 Visual Quality Closure -- Annotation type-aware editor audit:
 // "Marker=Cycle/Vertical span" per the Goal's own per-type field list.

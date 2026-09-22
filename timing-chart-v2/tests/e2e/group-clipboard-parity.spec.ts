@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 test("copies, pastes, and duplicates a group as one semantic batch", async ({ page }) => {
   await page.goto("/");

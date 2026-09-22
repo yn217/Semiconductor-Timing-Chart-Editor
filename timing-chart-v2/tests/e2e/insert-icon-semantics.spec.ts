@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+// Pulse creation was removed from the Insert ribbon (#400); the icon contract covers the remaining kinds.
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
   test(`uses deterministic semantic Insert icons at ${viewport.width}px`, async ({ page }) => {
@@ -15,14 +19,14 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
       signature: [...icon.querySelectorAll("path")].map((path) => path.getAttribute("d")).join("|"),
       box: [icon.getBoundingClientRect().width, icon.getBoundingClientRect().height],
     })));
-    expect(contract.map((item) => item.kind)).toEqual(["signal", "clock", "bus", "state", "logic", "event", "pulse", "marker", "range", "text", "dependency", "measurement", "highlight", "bracket", "verticalLine"]);
+    expect(contract.map((item) => item.kind)).toEqual(["signal", "clock", "bus", "state", "logic", "event", "marker", "range", "text", "dependency", "measurement", "highlight", "bracket", "verticalLine"]);
     expect(contract.every((item) => item.useCount === 0 && item.textCount === 0 && item.pathCount > 0 && item.box[0] > 0 && item.box[0] === item.box[1])).toBe(true);
     expect(new Set(contract.map((item) => item.box.join("x"))).size).toBe(1);
     const byKind = Object.fromEntries(contract.map((item) => [item.kind, item]));
     expect(new Set(contract.map((item) => item.signature)).size).toBe(contract.length);
     expect(byKind.clock.signature).not.toContain("a");
-    expect(byKind.clock.signature).not.toBe(byKind.pulse.signature);
-    expect(byKind.state.signature).not.toBe(byKind.pulse.signature);
+    expect(byKind.clock.signature).not.toBe(byKind.logic.signature);
+    expect(byKind.state.signature).not.toBe(byKind.logic.signature);
     expect(byKind.event.signature).not.toBe(byKind.state.signature);
     expect(byKind.text.pathCount).toBeGreaterThanOrEqual(2);
     const layout = await insert.evaluate((root) => {
@@ -47,7 +51,7 @@ test("keeps semantic Insert icons crisp at higher device scale", async ({ browse
       const box = icon.getBoundingClientRect();
       return { width: box.width, height: box.height, clipped: icon.scrollWidth < icon.clientWidth || icon.scrollHeight < icon.clientHeight };
     }));
-    expect(boxes.length).toBe(15);
+    expect(boxes.length).toBe(14);
     expect(boxes.every((box) => box.width === 18 && box.height === 18 && !box.clipped)).toBe(true);
     await testInfo.attach("insert-ribbon-dpr2.png", { body: await insert.screenshot(), contentType: "image/png" });
   } finally {

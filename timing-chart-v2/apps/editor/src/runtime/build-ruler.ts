@@ -1,11 +1,12 @@
 import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
+import { waveDomainPaddingPx, waveOwnerPlacement } from "./wave-owner-placement.js";
 import { buildTimeGroupHierarchy, type CanonicalDocument, type SignalId } from "@timing-chart-v2/schema";
 import type { DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { presentationCycles } from "../presentation-cycles.js";
 import { displayWindowForSource } from "./display-boundary.js";
 
-export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0, viewportElement?: HTMLElement, referenceViewBoxWidth?: number): Readonly<{ scale: number; targetWidth: number; waveOriginPx: number }> {
+export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0, viewportElement?: HTMLElement, referenceViewBoxWidth?: number, tcScale = 1): Readonly<{ scale: number; targetWidth: number; waveOriginPx: number }> {
   element.dataset.axisMode = axisMode;
   if (!geometry || !axisOwnerSignalId) {
     element.dataset.geometryError = "Time-axis geometry unavailable";
@@ -68,8 +69,11 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
         ?? mapping.sourceToDisplay[group.end]
         ?? 0;
       const endDisplay = mapping.sourceToDisplay[group.end] ?? mapping.displayCycleCount;
-      const startPoint = startDisplay === undefined ? undefined : geometry.find({ signalId: axisOwnerSignalId, cycle: startDisplay, point: "cycle-start" })?.point;
-      const endPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: endDisplay, point: "cycle-start" })?.point;
+      // Local geometry is keyed by SOURCE cycle; a collapsed group leaves holes in that keying, so resolve the display
+      // boundaries back to source cycles exactly as the tick loop below does.
+      const sourceOfDisplay = (display: number) => display === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[display] ?? display);
+      const startPoint = startDisplay === undefined ? undefined : geometry.find({ signalId: axisOwnerSignalId, cycle: sourceOfDisplay(startDisplay), point: "cycle-start" })?.point;
+      const endPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: sourceOfDisplay(endDisplay), point: "cycle-start" })?.point;
       if (!startPoint || !endPoint) continue;
       const item = element.ownerDocument.createElement("span");
       item.className = "time-outline-item";
@@ -160,7 +164,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   const waveOriginPx = firstFoundPoint && firstFoundDisplay !== undefined && windowLocalPixelsPerCycle !== undefined
     ? (firstFoundPoint.x - firstFoundDisplay * windowLocalPixelsPerCycle) * scale
     : 0;
-  for (const display of presentationCycles(semanticDisplayCycleCount, pixelsPerCycle, rulerTickBudget)) {
+  for (const display of presentationCycles(semanticDisplayCycleCount, pixelsPerCycle, rulerTickBudget, tcScale > 1 ? tcScale : 1)) {
     const sourceCycle = display === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[display] ?? display);
     const resolvedPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: sourceCycle, point: "cycle-start" })?.point;
     const point = resolvedPoint ?? (firstFoundPoint && firstFoundDisplay !== undefined && windowLocalPixelsPerCycle !== undefined
@@ -174,7 +178,15 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     tick.className = "cycle-tick";
     tick.style.left = `${point.x * scale}px`;
     tick.style.top = `${outlineHeight}px`;
-    tick.textContent = String(mapping.labelFor(display));
+    // #750: in Transaction presentation the Transaction Cycle (TC) is the ruler unit -- label only the ticks that sit
+    // on a TC boundary with sourceCycle / cyclesPerTC (canonical time stays in system cycles; every tick element and its
+    // data-source-cycle stay, so hit-testing and geometry are unchanged).
+    if (tcScale > 1) {
+      tick.dataset.tcScale = String(tcScale);
+      tick.textContent = sourceCycle % tcScale === 0 ? String(sourceCycle / tcScale) : "";
+    } else {
+      tick.textContent = String(mapping.labelFor(display));
+    }
     ticks.push(tick);
     finalX = point.x;
   }
@@ -194,7 +206,10 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     if (containingFold !== undefined) marker.dataset.insideCollapsed = containingFold.name;
     marker.style.left = `${point.x * scale}px`;
     marker.style.top = `${outlineHeight + 19}px`;
-    marker.textContent = containingFold === undefined ? `◆ ${bookmark.name}` : `◆ ${bookmark.name} (inside ${containingFold.name})`;
+    // #750: under cyclesPerTC compression neighbouring markers sit a few pixels apart; show the diamond only (name stays in title / aria-label)
+    // so labels cannot cover each other.
+    marker.textContent = containingFold === undefined ? (tcScale > 1 ? "◆" : `◆ ${bookmark.name}`) : `◆ ${bookmark.name} (inside ${containingFold.name})`;
+    marker.setAttribute("aria-label", bookmark.name);
     marker.title = containingFold === undefined ? `${bookmark.name}: cycle ${bookmark.start}` : `${bookmark.name}: cycle ${bookmark.start} inside collapsed ${containingFold.name}`;
     overlays.push(marker);
   }
@@ -246,7 +261,10 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     ? referenceViewBoxWidth!
     : finalX + 24);
   const targetWidth = Math.max(Math.ceil(geometryWidth * scale), Math.ceil(minimumWidth));
-  element.style.width = `${targetWidth}px`;
+  // The time-domain box is the whole rendered SVG: the cycle span plus WaveDrom's left/right margins (the ticks start one
+  // left margin in), so the terminal boundary and the last cycle cell stay inside the ruler/overlay/interactive layers.
+  const timeDomainWidth = targetWidth + waveDomainPaddingPx(scale);
+  element.style.width = `${timeDomainWidth}px`;
   // #366: `element` (the ruler content div) is not guaranteed to already be
   // attached under `[data-testid='cycle-viewport']` at every call time (its
   // ref can resolve before React has finished committing the surrounding
@@ -264,7 +282,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   // moment; `.closest()` remains only as a defensive fallback for any other
   // caller.
   const widthOwner = viewportElement ?? element.closest<HTMLElement>("[data-testid='cycle-viewport']") ?? element.parentElement;
-  widthOwner?.style.setProperty("--wave-width", `${targetWidth}px`);
+  widthOwner?.style.setProperty("--wave-width", `${timeDomainWidth}px`);
   // Renderer host sizing may have left a viewport-width inline value behind
   // before this ruler pass established the authoritative shared wave width.
   // Clear that stale override so the host and its timing surface consume the
@@ -297,14 +315,15 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
         ? displayWindowForSource(mapping, { sourceStart, sourceEnd }, document.timeline.cycleCount)
         : undefined;
       if (displayWindow) {
-        owner.style.width = `${(displayWindow.displayEnd - displayWindow.displayStart) * pxPerDisplayCycle}px`;
+        const placement = waveOwnerPlacement({ displayStart: displayWindow.displayStart, displayEnd: displayWindow.displayEnd, pxPerDisplayCycle, waveOriginPx, presentationScale: scale, viewBoxWidth: owner.querySelector<SVGSVGElement>(":scope > svg")?.viewBox.baseVal.width });
+        owner.style.width = `${placement.width}px`;
         // See the matching comment in waveform-surface-provider.ts: a
         // windowed owner's horizontal position must reflect where its own
         // window starts within the whole document -- `place()` only ever
         // sets vertical position, so this is the only place it gets set.
         // `waveOriginPx` carries the ruler's own coordinate-system origin so
         // this lines up with tick positions exactly, not just proportionally.
-        owner.style.left = `${displayWindow.displayStart * pxPerDisplayCycle + waveOriginPx}px`;
+        owner.style.left = `${placement.left}px`;
       } else {
         owner.style.removeProperty("width");
         owner.style.removeProperty("left");

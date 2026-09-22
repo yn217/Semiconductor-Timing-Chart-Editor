@@ -1,4 +1,7 @@
 import { expect, test, type Locator } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 const leftRowOrder = async (surface: Locator) =>
   surface.locator("[data-role='left-tree-rows'] [data-role='left-row'][data-row-id]")

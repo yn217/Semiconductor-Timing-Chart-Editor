@@ -13,7 +13,7 @@ export function mergeChangeSets(changeSets: readonly ChangeSet[]): ChangeSet {
     for (const changeSet of changeSets) values.push(...((changeSet[key] ?? []) as readonly unknown[]));
     if (values.length > 0) result[key] = [...new Set(values)];
   }
-  for (const key of ["fullDocumentReplace", "timelineSemantics", "geometryScreenX", "minimapOverview"] as const) {
+  for (const key of ["fullDocumentReplace", "timelineSemantics", "transactionTimeScale", "geometryScreenX", "minimapOverview"] as const) {
     if (changeSets.some((changeSet) => changeSet[key] === true)) result[key] = true;
   }
   return result as ChangeSet;

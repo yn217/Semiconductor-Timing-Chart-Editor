@@ -14,6 +14,7 @@ test("editing only Start via the Inspector does not silently clear a Transaction
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
 
+  await page.getByTestId("transaction-tree-more").click();
   await page.getByTestId("add-transaction-group-tree").click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
 

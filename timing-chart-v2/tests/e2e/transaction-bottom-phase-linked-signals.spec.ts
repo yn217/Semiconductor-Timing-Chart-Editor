@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 
 const samplePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../samples/acceptance-429/sample-transaction-mode-closure.tcd.json");
 
-test("Transaction detail editing stays in Inspector while Bottom remains table-first", async ({ page }) => {
+test("Transaction detail editing lives in the Inspector while Bottom stays table-first with a Draft->Apply row (#703)", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(samplePath);
@@ -15,7 +15,9 @@ test("Transaction detail editing stays in Inspector while Bottom remains table-f
   const bottom = page.getByTestId("transaction-editor");
   await expect(bottom.getByTestId("transaction-list-toolbar")).toBeVisible();
   await expect(bottom.locator(".transaction-list")).toBeVisible();
-  await expect(bottom.getByTestId("apply-transaction-properties")).toHaveCount(0);
-  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("10");
+  // #703: the active Bottom row is editable through one Draft -> Apply; with no edits Apply is disabled and no draft status shows.
+  await expect(bottom.getByTestId("apply-transaction-properties")).toBeDisabled();
+  await expect(bottom.getByTestId("transaction-properties-unapplied")).toHaveCount(0);
+  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("1"); // cycle 10 at 10 cycles/TC (#750)
   await expect(page.getByTestId("inspector").getByTestId("transaction-linked-signals")).toBeVisible();
 });

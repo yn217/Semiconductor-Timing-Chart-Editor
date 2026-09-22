@@ -7,11 +7,14 @@
 // cycle for waveform and interaction coordinates.
 const MIN_TICK_PITCH_PX = 28;
 
-export function presentationCycles(cycleCount: number, pixelsPerCycle = Infinity, maxTicks = Infinity): number[] {
+/** `strideMultiple` (#750): in TC presentation the stride is a whole number of TCs so every kept tick sits on a TC boundary. */
+export function presentationCycles(cycleCount: number, pixelsPerCycle = Infinity, maxTicks = Infinity, strideMultiple = 1): number[] {
   if (Number.isFinite(maxTicks) && maxTicks > 1 && cycleCount + 1 > maxTicks) {
     return Array.from({ length: maxTicks }, (_, index) => Math.round(index * cycleCount / (maxTicks - 1)));
   }
-  const stride = Number.isFinite(pixelsPerCycle) && pixelsPerCycle > 0 ? Math.max(1, Math.ceil(MIN_TICK_PITCH_PX / pixelsPerCycle)) : 1;
+  const rawStride = Number.isFinite(pixelsPerCycle) && pixelsPerCycle > 0 ? Math.max(1, Math.ceil(MIN_TICK_PITCH_PX / pixelsPerCycle)) : 1;
+  const multiple = Number.isInteger(strideMultiple) && strideMultiple > 1 ? strideMultiple : 1;
+  const stride = multiple > 1 ? Math.ceil(rawStride / multiple) * multiple : rawStride;
   if (stride <= 1) return Array.from({ length: cycleCount + 1 }, (_, cycle) => cycle);
   const cycles: number[] = [0];
   for (let cycle = stride; cycle < cycleCount; cycle += stride) cycles.push(cycle);

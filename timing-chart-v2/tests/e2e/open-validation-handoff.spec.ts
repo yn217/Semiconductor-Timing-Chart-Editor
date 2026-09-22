@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
 import { readFile } from "node:fs/promises";
 import { canonicalFixture } from "../fixtures/canonical.js";
+
+startInCycleMode(test);
 
 test("hands a validated Open document to the new session without duplicate session validation", async ({ page }) => {
   await page.goto("/");

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { openBottomSettings } from "./bottom-settings";
 
 async function ready(page: Page) {
   await page.goto("/");
@@ -19,6 +20,7 @@ test("Follow Selection OFF freezes the Bottom target; Pin locks in whatever is c
   const bottom = page.getByTestId("bottom-editor");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await expect(bottom).toContainText("REQUEST · Signal");
+  await openBottomSettings(page);
   await bottom.getByTestId("follow-selection").uncheck();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click();
   await expect(page.getByTestId("selection-status")).toHaveText("READY");
@@ -30,6 +32,7 @@ test("Follow Selection OFF freezes the Bottom target; Pin locks in whatever is c
   // Pin locks in whatever Bottom is CURRENTLY showing (REQUEST, the frozen
   // target) -- not the live selection (READY), which the user can no
   // longer see in the panel.
+  await openBottomSettings(page);
   await bottom.getByTestId("bottom-pin").click();
   await expect(bottom.getByTestId("bottom-pin")).toHaveText("Unpin");
   await expect(bottom).toContainText("REQUEST · Signal");
@@ -40,11 +43,13 @@ test("Follow Selection OFF freezes the Bottom target; Pin locks in whatever is c
   // Unpin with Follow Selection still off: stays frozen at REQUEST (does
   // not jump to the now-current VALID selection) -- Follow Selection OFF
   // still means "don't move".
+  await openBottomSettings(page);
   await bottom.getByTestId("bottom-pin").click();
   await expect(bottom.getByTestId("bottom-pin")).toHaveText("Pin");
   await expect(bottom).toContainText("REQUEST · Signal");
 
   // Turning Follow Selection back on resumes live tracking.
+  await openBottomSettings(page);
   await bottom.getByTestId("follow-selection").check();
   await expect(bottom).toContainText("VALID · Signal");
 });
@@ -67,6 +72,7 @@ test("Bottom Pin preserves a selected Group JSON context without view mutation",
   const editor = json.getByLabel("Advanced JSON");
   await expect(editor).toHaveValue(/"name": "Control"/);
 
+  await openBottomSettings(page);
   await bottom.getByTestId("bottom-pin").click();
   await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
   await host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_payload'] [data-role='tree-branch'][data-group-id='grp_cycle_payload']").first().click();
@@ -77,6 +83,7 @@ test("Bottom Pin preserves a selected Group JSON context without view mutation",
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
 
+  await openBottomSettings(page);
   await bottom.getByTestId("bottom-pin").click();
   await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
   await expect(editor).toHaveValue(/"name": "Payload"/);

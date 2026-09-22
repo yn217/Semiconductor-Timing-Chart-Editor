@@ -89,7 +89,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
       try {
         const parsedResult = parseJsonInput(String(reader.result));
         if (!parsedResult.ok) {
-          setImportStatus(parsedResult.problems[0]?.message ?? "Import rejected: invalid JSON.");
+          setImportStatus(`Import rejected: ${parsedResult.problems[0]?.message ?? "invalid JSON."}`);
           return;
         }
         const parsed: unknown = parsedResult.value;
@@ -212,7 +212,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
         event.preventDefault();
         commands.updateValue(signal.id, start, value, comment);
       }}>
-        <h2>Add / Edit Transition</h2>
+        <h2 data-testid="transition-form-mode" data-mode={signal.values.some((change) => change.start === start) ? "edit" : "add"}>{signal.values.some((change) => change.start === start) ? `Editing transition at cycle ${start}` : "Add new transition"}</h2>
         {/* Density fix (#402/#426 follow-up): Start/Value/Comment used to
             stack as three full-height labels; laid out side by side in one
             row instead, since the panel already has ~570px of horizontal
@@ -233,7 +233,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
           <label className="field-inline transition-field-value"><span>Value</span><ValueEditorControl signal={signal} value={value} onChange={setValue} ariaLabel="New event value" listId="add-edit-transition-value-options" /></label>
           <label className="field-inline transition-field-comment"><span>Comment</span><input aria-label="New event comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
         </div>
-        <span className="event-add-preview">End: {previewEnd} / Duration: {previewEnd - start} cycles</span>
+        <span className="event-add-preview" data-derived="true" title="Derived from the transitions after this Start; not editable">End: {previewEnd} / Duration: {previewEnd - start} cycles</span>
         <div className="transition-form-actions">
           <button type="submit" data-testid="add-signal-event">Add</button>
           <button type="button" data-testid="add-signal-event-continue" onClick={addAndContinue}>Add &amp; Continue</button>
@@ -263,7 +263,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
       <h2>Transitions <span>({signal.values.length})</span></h2>
     </div>
     <div className="event-toolbar" role="toolbar" aria-label="Signal event commands" data-testid="signal-event-toolbar">
-      <button type="button" onClick={duplicateRow} disabled={!selected || !canDuplicate} data-testid="event-duplicate">Duplicate</button>
+      <span className="event-selected-status" data-testid="event-selected-status" role="status">{selected ? `Selected: transition at cycle ${selected.start}` : "No transition selected"}</span><button type="button" onClick={duplicateRow} disabled={!selected || !canDuplicate} data-testid="event-duplicate">Duplicate</button>
       <button type="button" onClick={addRow} data-testid="event-add-row">Add Row</button>
       <button type="button" className="danger" onClick={() => selected && commands.removeValue(signal.id, selected.start)} disabled={!selected || signal.values.length === 1} data-testid="event-delete-row">Delete</button>
     </div>
@@ -273,7 +273,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
             tri-state checkbox (checked/indeterminate/unchecked) driving the
             exact same `checkedStarts` set each row's own checkbox feeds --
             not a decorative header cell. */}
-        <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span>End</span><span>Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
+        <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span className="event-derived-column" data-derived="true" title="Derived: End is the next transition's Start (or the last cycle). Edit Start to change it.">End</span><span className="event-derived-column" data-derived="true" title="Derived: End minus Start. Not directly editable.">Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
         <div aria-hidden="true" style={{ height: eventFirst * EVENT_ROW_HEIGHT }} />
         {renderedEvents.map((change, offset) => { const index = eventFirst + offset; const key = transitionIdentity(change); return <EventRow key={key} index={index + 1} signal={signal} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={key === selectedKey} checked={checkedKeys.has(key)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change)} onSelect={selectTransition} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedKeys.has(key) && checkedCount > 1 ? checkedKeys : [key]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
         <div aria-hidden="true" style={{ height: Math.max(0, indexed.ordered.length - eventLast) * EVENT_ROW_HEIGHT }} />

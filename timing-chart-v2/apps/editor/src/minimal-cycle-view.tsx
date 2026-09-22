@@ -1,3 +1,4 @@
+import { timelineScrollOwner } from "./runtime/timeline-scroll-owner.js";
 import { startTransition, useEffect, useMemo, useRef } from "react";
 import type { RefObject } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
@@ -23,12 +24,16 @@ import { useEditorPresentationState } from "./application/use-editor-presentatio
 import { useEditorResizeActions } from "./application/use-editor-resize-actions.js";
 import { useEditorWorkspaceActions } from "./application/use-editor-workspace-actions.js";
 import { EditorShellView } from "./editor-shell-view.js";
+import { composeMode } from "./workspace/mode-composition.js";
+import { useViewModeTransition } from "./runtime/use-view-mode-transition.js";
+import { useActivePaneTracking } from "./runtime/use-active-pane-tracking.js";
+import { useOverlayPresentationRefresh } from "./runtime/use-overlay-presentation-refresh.js";
 import { EditorDialogLayer } from "./editor-dialog-layer.js";
 import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { deriveSelectionCapabilities, useSelectionOwner } from "./application/use-selection-owner.js";
 import { useClipboardActions } from "./application/clipboard-actions.js";
 import { useTimelineNavigationOwner } from "./runtime/use-timeline-navigation-owner.js";
-import { useWorkspaceUiState } from "./workspace/use-workspace-ui-state.js";
+import { readPreferredViewMode, useWorkspaceUiState } from "./workspace/use-workspace-ui-state.js";
 import { useTimelinePresentationState } from "./workspace/use-timeline-presentation-state.js";
 import { useDialogMenuState } from "./workspace/use-dialog-menu-state.js";
 import { useTimelineSurfaceRuntime } from "./runtime/use-timeline-surface-runtime.js";
@@ -39,10 +44,17 @@ import { attachMenuKeyboardNavigation } from "./runtime/interaction-controller.j
 import { refreshRendererOverlays } from "./runtime/render-coordinator.js";
 import { applyRendererHostSizing } from "./runtime/renderer-host-sizing.js";
 import { refreshRulerRangeSelection, refreshTransactionLinkedRows } from "./runtime/editor-dom-bridge.js";
+function readStartupDocumentPreference(): string | null {
+  try { return window.localStorage.getItem("timing-chart-v2.startup-document"); } catch { return null; }
+}
+
 export function MinimalCycleView() {
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : undefined;
   const visualReference = searchParams?.has("visual-reference") === true;
-  const initialDocument = visualReference ? v1ReferenceDocument : transactionDemoDocument;
+  // Dev/test entry points for the plain 24-cycle Cycle sample (no demo Transactions/Bookmarks/Annotations): `?cycle-sample` or the
+  // `timing-chart-v2.startup-document=cycle` preference. The product default remains the Transaction demo document.
+  const cycleSample = searchParams?.has("cycle-sample") === true || readStartupDocumentPreference() === "cycle";
+  const initialDocument = visualReference ? v1ReferenceDocument : cycleSample ? cycleDocument : transactionDemoDocument;
   const application = useEditorApplicationOwner(initialDocument);
   const documentLifecycle = useDocumentLifecycle({ application, productTemplate: cycleDocument, persistText: downloadText });
   const exportController = useMemo(() => createEditorExportController(), []);
@@ -118,7 +130,7 @@ export function MinimalCycleView() {
   const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>({
     documentEpoch,
     cycleCount: snapshot.document.timeline.cycleCount,
-    initialViewMode: visualReference ? "Cycle" : "Transaction",
+    initialViewMode: visualReference ? "Cycle" : readPreferredViewMode("Transaction"),
   });
   const {
     ribbonTab, setRibbonTab,
@@ -140,7 +152,6 @@ export function MinimalCycleView() {
     inspectorWidth, setInspectorWidth, inspectorResizeRef,
     bottomHeight, setBottomHeight, bottomResizeRef,
     treeFilter, setTreeFilter, transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode,
-    transactionTreeTab, setTransactionTreeTab,
     treeTypeFilter, setTreeTypeFilter,
     followSelection, setFollowSelection, followSelectionRef,
     bottomPinned, setBottomPinned, bottomPinnedRef,
@@ -153,13 +164,10 @@ export function MinimalCycleView() {
   const timelineNavigation = useTimelineNavigationOwner(viewMode);
   const zoom = timelineNavigation.zoom;
   useEffect(() => {
-    if (typeof window !== "undefined" && viewMode !== "Split") window.localStorage.setItem("timing-chart-v2.view-mode", viewMode);
+    if (typeof window !== "undefined" && modeComposition.persistsAsDefault) window.localStorage.setItem("timing-chart-v2.view-mode", viewMode);
   }, [viewMode]);
-  const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Phases" | "Linked Signals" | "Bookmarks" | "AI" | "Problems" | "JSON")[] = viewMode === "Cycle"
-    ? ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]
-    : viewMode === "Transaction"
-      ? ["Transaction", "Phases", "Linked Signals", "Bookmarks", "AI", "Problems", "JSON"]
-      : ["Signal", "Transaction", "Annotation", "Bookmarks", "AI", "Problems", "JSON"];
+  const modeComposition = composeMode(viewMode);
+  const bottomTabs = modeComposition.bottomTabs;
   const workspaceActions = useEditorWorkspaceActions({
     workspacePreset,
     setWorkspacePreset,
@@ -431,75 +439,14 @@ export function MinimalCycleView() {
     signalSplitRatio,
     viewMode,
   });
-  // #613: `getSourceWindow` (timeline-surface-controller.ts) reads the live
-  // `data-view-mode` DOM attribute and returns a different bounded window for
-  // Cycle vs. Transaction/Combined (Cycle excludes the shared
-  // transactionExtent padding). Switching View Mode is pure React state --
-  // `setViewMode` never touches the renderer -- so that window mismatch sits
-  // stale until whatever `renderer.update()` call happens to come next, which
-  // then gets blamed for a WaveDrom re-render it didn't actually cause.
-  // Force the same canonical/history/dirty-neutral reproject Signal Split
-  // already uses for its own pure view-state toggle (forceUpperReprojectRef,
-  // see timeline-surface-controller.ts) so the window reconciles at the
-  // moment View Mode actually changes instead of leaking into later updates.
-  const viewModeMounted = useRef(false);
-  useEffect(() => {
-    if (!viewModeMounted.current) { viewModeMounted.current = true; return; }
-    forceUpperReprojectRef.current();
-    // #614 taught us the ruler and each wave-owner's window/width must be
-    // reconciled together through the ruler's one authoritative rebuild --
-    // reprojecting the wave owners alone (above) without also rebuilding the
-    // ruler leaves the ruler's cached tick positions stale against the new
-    // window, misaligning the grid/ruler from the waveform edges.
-    timelineRuntimeRef.current?.refreshRuler();
-  }, [viewMode]);
-  useEffect(() => {
-    refreshPlayhead.current();
-  }, [selectedCycle, playheadPresentationRevision, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
-  useEffect(() => {
-    refreshRangeSelectionBand.current();
-  }, [rangePresentationRevision, timelineRange, rangeSelectionActive, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
+  useViewModeTransition(viewMode, forceUpperReprojectRef, timelineRuntimeRef);
+  useOverlayPresentationRefresh({
+    refreshPlayhead, refreshRangeSelectionBand, host, selectedCycle, playheadPresentationRevision, rangePresentationRevision,
+    timelineRange, rangeSelectionActive, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth, selectedTransactionId,
+    selectedLinkedSignals: selectedTransaction?.linkedSignals,
+  });
 
-  const selectedLinkedSignalKey = selectedTransaction?.linkedSignals?.join("\u0000") ?? "";
-  useEffect(() => {
-    refreshTransactionLinkedRows(host, new Set(selectedTransaction?.linkedSignals ?? []));
-  }, [selectedTransactionId, selectedLinkedSignalKey]);
-
-  // #407: Split active pane -- click-delegated (rather than a JSX onClick)
-  // because the Split panes are owned/rendered by editor-workspace-view.tsx
-  // (Codex's shell-decomposition file), not this one; a delegated listener
-  // on the cycle panel reads which pane was clicked without touching that
-  // file's JSX at all. `setActivePaneRef` keeps the listener attached once
-  // (rather than resubscribing every render) while still calling whichever
-  // `setActivePane` closure is current.
-  const setActivePaneRef = useRef(setActivePane);
-  setActivePaneRef.current = setActivePane;
-  useEffect(() => {
-    const root = viewport.current?.closest<HTMLElement>(".cycle-panel");
-    if (!root) return;
-    const onPointerDownCapture = (event: PointerEvent) => {
-      const target = event.target as HTMLElement | null;
-      setActivePaneRef.current(target?.closest(".transaction-lanes, .split-transaction-pane") ? "transaction" : "signal");
-    };
-    const onFocusIn = (event: FocusEvent) => {
-      const target = event.target as HTMLElement | null;
-      setActivePaneRef.current(target?.closest(".transaction-lanes, .split-transaction-pane") ? "transaction" : "signal");
-    };
-    root.addEventListener("pointerdown", onPointerDownCapture, { capture: true });
-    root.addEventListener("focusin", onFocusIn);
-    return () => {
-      root.removeEventListener("pointerdown", onPointerDownCapture, { capture: true });
-      root.removeEventListener("focusin", onFocusIn);
-    };
-  }, []);
-  // View-only presentation of `activePane` -- an imperative DOM attribute
-  // (same reasoning as above: `cycle-viewport` isn't this file's JSX) so
-  // CSS alone can show which Split region is active, only meaningful while
-  // `viewMode === "Split"`.
-  useEffect(() => {
-    const root = viewport.current;
-    if (root) root.dataset.activePane = viewMode === "Split" ? activePane : "";
-  }, [activePane, viewMode]);
+  useActivePaneTracking(viewport, setActivePane, activePane, viewMode);
 
   const actions = useEditorActions({
     document: snapshot.document,
@@ -662,7 +609,7 @@ export function MinimalCycleView() {
     bottom: { signal: bottomSignal, group: bottomGroup, annotation: bottomAnnotation, transaction: bottomTransaction },
     timeline: { range: timelineRange, collapsedGroupIds, setCollapsedGroups, toggleCollapsedGroup },
     setBottomVisible,
-    workspace: { viewMode, activeContext, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionWithFreeze, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, transactionTreeTab, setTransactionTreeTab, setRibbonTab },
+    workspace: { viewMode, activeContext, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionWithFreeze, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, setRibbonTab },
     dialog: { treeAddMenuOpen, setTreeAddMenuOpen, treeMoreMenuOpen, setTreeMoreMenuOpen, bulkRegistrationText, setBulkRegistrationText, bulkRegistrationGroupId, setBulkRegistrationGroupId, bulkRegistrationStatus, setBulkRegistrationStatus, setBulkRegistrationVisible, setHierarchyVisible, contextMenu, setContextMenu, closeTreeAddMenu, closeTreeMoreMenu, bottomResetToken, setBottomResetToken, inspectorResetToken, setInspectorResetToken, setInspectorVisible },
     annotationTargetSignalId,
     referenceClockName: referenceClockSignal?.display.name,
@@ -817,6 +764,7 @@ export function MinimalCycleView() {
       onInspectorKeyDown: resizeInspectorByKeyboard, onInspectorPointerDown: startInspectorResize, onInspectorPointerMove: moveInspectorResize, onInspectorPointerUp: finishInspectorResize,
       onLeftPaneKeyDown: resizeLeftPaneByKeyboard, onLeftPanePointerDown: startLeftPaneResize, onLeftPanePointerMove: moveLeftPaneResize, onLeftPanePointerUp: finishLeftPaneResize,
       onFrozenPaneKeyDown: resizeFrozenPaneByKeyboard, onFrozenPanePointerDown: startFrozenPaneResize, onFrozenPanePointerMove: moveFrozenPaneResize, onFrozenPanePointerUp: finishFrozenPaneResize,
+      onBottomReset: () => setBottomHeight(240), onInspectorReset: () => setInspectorWidth(297),
       onBottomKeyDown: resizeBottomByKeyboard, onBottomPointerDown: startBottomResize, onBottomPointerMove: moveBottomResize, onBottomPointerUp: finishBottomResize,
       onSignalSplitKeyDown: resizeSignalSplitByKeyboard, onSignalSplitPointerDown: startSignalSplitResize, onSignalSplitPointerMove: moveSignalSplitResize, onSignalSplitPointerUp: finishSignalSplitResize,
       onViewportKeyDown: onCursorKeyDown,
@@ -824,8 +772,9 @@ export function MinimalCycleView() {
       resolveCursorCycleAtClientX: (clientX: number, viewportElement: HTMLDivElement) => {
         const runtime = timelineRuntimeRef.current;
         if (!runtime) return undefined;
-        const rect = viewportElement.getBoundingClientRect();
-        const scrollLeft = viewportElement.scrollLeft;
+        const scroller = timelineScrollOwner(viewportElement);
+        const rect = scroller.getBoundingClientRect();
+        const scrollLeft = scroller.scrollLeft;
         return runtime.screenXToSourceCycle(clientX - rect.left + scrollLeft);
       },
     },
@@ -860,8 +809,8 @@ export function MinimalCycleView() {
   };
   return <EditorShellView
     viewModel={{
-      style: { "--gui-left-width": `${viewMode === "Transaction" ? 246 : leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio), "--transaction-tree-row-height": viewMode === "Transaction" ? "29px" : undefined } as React.CSSProperties,
-      density, workspacePreset, inspectorVisible, bottomVisible, rulerEnabled, minimapEnabled, signalTreeVisible,
+      style: { "--gui-left-width": `${modeComposition.fixedLeftWidth ?? leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio), "--transaction-tree-row-height": viewMode === "Transaction" ? "29px" : undefined } as React.CSSProperties,
+      density, workspacePreset, inspectorVisible, bottomVisible, viewMode, rulerEnabled, minimapEnabled, signalTreeVisible,
       showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground,
       layoutOverflow: snapshot.document.layout.overflow, leftPaneWidth, frozenPaneWidth, bottomHeight, inspectorWidth,
       cycleCount: snapshot.document.timeline.cycleCount, signalCount: snapshot.document.signals.length, transactionCount: snapshot.document.transactions.length,

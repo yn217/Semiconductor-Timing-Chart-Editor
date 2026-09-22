@@ -19,7 +19,10 @@ test("builds six transactions through normal GUI selection transitions", async (
     await inspector.getByLabel("Transaction description", { exact: true }).fill("GUI authored transaction");
     await inspector.getByTestId("apply-inspector-transaction").click();
   }
-  for (let index = 0; index < 3; index++) await page.getByTestId("add-transaction-group-tree").click();
+  for (let index = 0; index < 3; index++) {
+    await page.getByTestId("transaction-tree-more").click();
+    await page.getByTestId("add-transaction-group-tree").click();
+  }
   await page.getByTestId("transaction-left-tree").locator("[data-transaction-tree-id]").first().click();
   await inspector.getByLabel("Transaction group", { exact: true }).selectOption({ label: "Group 1" });
   await expect(inspector.getByLabel("Transaction group", { exact: true })).toHaveValue(/.+/);
@@ -55,7 +58,8 @@ test("builds six transactions through normal GUI selection transitions", async (
   }
   await expect(page.getByTestId("transaction-editor").locator("[data-transaction-row-id]")).toHaveCount(6);
   await expect(page.getByTestId("transaction-editor")).toContainText("Read_0");
-  await expect(page.getByTestId("transaction-editor")).toContainText("lane_3");
+  // #703: the active (selected) Bottom row is editable, so its lane is an input value rather than cell text.
+  await expect(page.getByTestId("transaction-editor").getByLabel("Bottom Transaction lane")).toHaveValue("lane_3");
   await expect(page.getByTestId("transaction-editor").locator("[data-transaction-row-id]").first()).toContainText("GUI authored transaction");
   const save = page.waitForEvent("download");
   await ribbon.getByRole("button", { name: "Save", exact: true }).click();

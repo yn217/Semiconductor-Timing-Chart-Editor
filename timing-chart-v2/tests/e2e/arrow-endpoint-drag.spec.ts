@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 // #421: dragging an Arrow's end/to handle must move only that endpoint --
 // both during the drag preview and after commit -- never the whole Arrow
@@ -65,6 +68,8 @@ test("dragging the Arrow end handle moves only the end anchor; the start handle 
   expect(await host.getAttribute("data-canonical-revision")).not.toBe(beforeRevision);
 
   // Undo reverts only the end-endpoint move; start stays exactly as after.
+  // Undo/Redo live on the Home tab.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 1");
   const undoStartBox = (await startHandle.boundingBox())!;

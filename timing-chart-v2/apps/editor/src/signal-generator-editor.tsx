@@ -25,6 +25,7 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
   const [suppressedPeriods, setSuppressedPeriods] = useState("");
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  const [generatorOpen, setGeneratorOpen] = useState(false);
   // Density fix (#402/#426 follow-up): a native <details>/<summary> still
   // reserves its own closed-state row even collapsed; a plain toggle button
   // sitting on the same line as the heading below costs nothing extra when
@@ -37,27 +38,30 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
     setStart(0); setInitial(0); setActive(1); setWidthMode("width");
     setWidth(1); setDuty(0.5); setPeriod(4); setRepeatMode("finite");
     setRepeatCount(1); setPhase(0); setSuppressedPeriods("");
-    setError(""); setStatus(""); setAdvancedOpen(false);
+    setError(""); setStatus(""); setAdvancedOpen(false); setGeneratorOpen(false);
   }, [signal.id]);
   const effectiveWidth = widthMode === "duty" ? Math.min(period - 1, Math.max(1, Math.round(duty * period))) : width;
   const resetDraft = () => { setStart(0); setInitial(0); setActive(1); setWidthMode("width"); setWidth(1); setDuty(0.5); setPeriod(4); setRepeatMode("finite"); setRepeatCount(1); setPhase(0); setSuppressedPeriods(""); setError(""); setStatus(""); setAdvancedOpen(false); };
-  // #402: Draft->Apply -- Generate must stay disabled once the computed
-  // candidate waveform is byte-for-byte identical to the Signal's current
-  // `values`, so re-submitting an unchanged Draft can't manufacture an
-  // empty History entry. Computed only for the enabled/indicator check;
-  // Generate itself still always recomputes fresh from the live Draft on
-  // submit (this comparison is never itself dispatched as a command).
-  let hasChanges = true;
+  // #402: Candidate equality controls Generate eligibility, but it is not
+  // the user's Draft state: the default candidate can differ from Canonical
+  // before the user edits any parameter. Keep those two contracts separate.
+  let candidateDiffers = true;
   try {
     const candidate = generateSignalPulseValues({ start, initial, active, width: effectiveWidth, period, repeat: repeatMode === "infinite" ? "infinite" : repeatCount, phase, suppressedPeriods: parseSuppressedPeriods(suppressedPeriods), cycleCount });
-    hasChanges = JSON.stringify(candidate) !== JSON.stringify(signal.values);
-  } catch { hasChanges = true; } // an invalid Draft is always "changed" -- Apply itself will report the real validation error on submit.
+    candidateDiffers = JSON.stringify(candidate) !== JSON.stringify(signal.values);
+  } catch { candidateDiffers = true; } // Invalid candidates remain submittable so validation can explain the error.
+  const hasParameterDraft = start !== 0 || initial !== 0 || active !== 1 || widthMode !== "width" || width !== 1 || duty !== 0.5 || period !== 4 || repeatMode !== "finite" || repeatCount !== 1 || phase !== 0 || suppressedPeriods !== "";
+  const hasUnappliedDraft = hasParameterDraft && candidateDiffers;
   return <div className="signal-generator">
     <div className="signal-generator-head">
       <h2>Generate Waveform</h2>
+      <button type="button" className="signal-generator-advanced-toggle" aria-expanded={generatorOpen} aria-controls="signal-generator-form" data-testid="signal-generator-disclosure" onClick={() => setGeneratorOpen((open) => !open)}>{generatorOpen ? "Hide Generator" : "Show Generator"}</button>
+    </div>
+    <div hidden={!generatorOpen}>
+    <div className="signal-generator-head">
       <button type="button" className="signal-generator-advanced-toggle" aria-expanded={advancedOpen} data-testid="signal-generator-advanced-toggle" onClick={() => setAdvancedOpen((open) => !open)}>{advancedOpen ? "Hide advanced" : "Advanced"}</button>
     </div>
-    <form className="signal-generator-form" aria-label="Signal Generator" noValidate onSubmit={(event) => {
+    <form id="signal-generator-form" className="signal-generator-form" aria-label="Signal Generator" noValidate onSubmit={(event) => {
       event.preventDefault();
       try {
         const parsedSuppressed = parseSuppressedPeriods(suppressedPeriods);
@@ -121,9 +125,10 @@ export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readon
             applied) -- distinct from a Transition row's Draft and from
             Inspector's Signal Properties Draft, so its wording says which
             one it is instead of a bare, ambiguous "Unapplied changes". */}
-        {hasChanges && <DraftStatus testId="signal-generator-unapplied" label="Generator: unapplied changes" />}
-        <button type="button" data-testid="cancel-signal-generator" onClick={resetDraft} disabled={!hasChanges}>Cancel</button><button type="submit" data-testid="apply-signal-generator" disabled={!hasChanges}>Generate</button>
+        {hasUnappliedDraft && <DraftStatus testId="signal-generator-unapplied" label="Generator: unapplied changes" />}
+        <button type="button" data-testid="cancel-signal-generator" onClick={resetDraft} disabled={!hasParameterDraft}>Cancel</button><button type="submit" data-testid="apply-signal-generator" disabled={!candidateDiffers}>Generate</button>
       </div>
     </form>
+    </div>
   </div>;
 }

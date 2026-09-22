@@ -1,0 +1,8 @@
+{
+  "issue": 703,
+  "commit": "3b62d6f",
+  "reproduction": { "status": "confirmed", "journey": "qa/journeys/example-valid.json" },
+  "failingTest": { "name": "transaction-bottom-apply-undo", "observedRed": true },
+  "rootCause": { "bugClass": "DRAFT_SELECTION_RACE", "violatedInvariant": "Apply creates one History unit" },
+  "verification": { "independent": true, "freshStart": true, "productionPath": true }
+}

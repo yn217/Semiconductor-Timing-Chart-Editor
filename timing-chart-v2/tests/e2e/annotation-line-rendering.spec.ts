@@ -1,4 +1,14 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
+
+/** Line type and arrowhead live in the Inspector's collapsible Style section (closed by default). */
+async function styleSection(editor: Locator): Promise<Locator> {
+  const toggle = editor.getByRole("button", { name: /^Style/ });
+  if (await toggle.count() > 0 && (await toggle.first().getAttribute("aria-expanded")) === "false") await toggle.first().click();
+  return editor;
+}
 
 test("renders distinct connector paths and SVG arrowheads for every line type", async ({ page }) => {
   await page.goto("/");
@@ -10,7 +20,7 @@ test("renders distinct connector paths and SVG arrowheads for every line type", 
   await page.getByRole("button", { name: "Add annotation" }).click();
 
   const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='arrow']").last();
-  const editor = page.getByTestId("annotation-editor");
+  const editor = page.getByTestId("inspector");
   const path = owner.locator("[data-role='annotation-path']");
   const observed = new Map<string, { readonly d: string; readonly dash: string | null }>();
   // Visual Reference pass (#426): Apply Annotation now stays disabled while
@@ -23,7 +33,7 @@ test("renders distinct connector paths and SVG arrowheads for every line type", 
   await expect(owner).toHaveAttribute("data-line-type", "straight");
   observed.set("straight", { d: await path.getAttribute("d") ?? "", dash: await path.getAttribute("stroke-dasharray") });
   for (const lineType of ["diagonal", "curve", "orthogonal"] as const) {
-    await editor.getByLabel("Annotation line type").selectOption(lineType);
+    await (await styleSection(editor)).getByLabel("Annotation line type").selectOption(lineType);
     await editor.getByTestId("apply-annotation-properties").click();
     await expect(owner).toHaveAttribute("data-line-type", lineType);
     await expect(path).toHaveAttribute("data-line-type", lineType);
@@ -42,7 +52,7 @@ test("renders distinct connector paths and SVG arrowheads for every line type", 
   expect((observed.get("diagonal")?.d.match(/ L /g) ?? []).length).toBe(2);
   expect(observed.get("diagonal")?.d).not.toBe(observed.get("straight")?.d);
 
-  await editor.getByLabel("Annotation arrowhead").selectOption("bidirectional");
+  await (await styleSection(editor)).getByLabel("Annotation arrowhead").selectOption("bidirectional");
   await editor.getByTestId("apply-annotation-properties").click();
   await expect(path).toHaveAttribute("marker-start", /start/);
   await expect(path).toHaveAttribute("marker-end", /end/);
@@ -61,10 +71,10 @@ test("Dependency annotations expose and persist line presentation controls", asy
   await page.getByRole("button", { name: "Add annotation" }).click();
 
   const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='dependency']").last();
-  const editor = page.getByTestId("annotation-editor");
-  await expect(editor.getByLabel("Annotation line type")).toBeVisible();
-  await editor.getByLabel("Annotation line type").selectOption("curve");
-  await editor.getByLabel("Annotation arrowhead").selectOption("bidirectional");
+  const editor = page.getByTestId("inspector");
+  await expect((await styleSection(editor)).getByLabel("Annotation line type")).toBeVisible();
+  await (await styleSection(editor)).getByLabel("Annotation line type").selectOption("curve");
+  await (await styleSection(editor)).getByLabel("Annotation arrowhead").selectOption("bidirectional");
   await editor.getByTestId("apply-annotation-properties").click();
 
   await expect(owner).toHaveAttribute("data-line-type", "curve");
@@ -85,10 +95,10 @@ test("SVG export preserves a Dependency's route shape, arrow markers and label",
   await page.getByRole("button", { name: "Add annotation" }).click();
 
   const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='dependency']").last();
-  const editor = page.getByTestId("annotation-editor");
+  const editor = page.getByTestId("inspector");
   await editor.getByLabel("Annotation label", { exact: true }).fill("Req to Ready");
-  await editor.getByLabel("Annotation line type").selectOption("orthogonal");
-  await editor.getByLabel("Annotation arrowhead").selectOption("bidirectional");
+  await (await styleSection(editor)).getByLabel("Annotation line type").selectOption("orthogonal");
+  await (await styleSection(editor)).getByLabel("Annotation arrowhead").selectOption("bidirectional");
   await editor.getByTestId("apply-annotation-properties").click();
   await expect(owner).toHaveAttribute("data-line-type", "orthogonal");
   await expect(owner).toHaveAttribute("aria-label", /Req to Ready/);
@@ -139,8 +149,8 @@ test("SVG export preserves Diagonal's distinct elbow geometry, not Straight's si
   await page.getByRole("button", { name: "Add annotation" }).click();
 
   const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='dependency']").last();
-  const editor = page.getByTestId("annotation-editor");
-  await editor.getByLabel("Annotation line type").selectOption("diagonal");
+  const editor = page.getByTestId("inspector");
+  await (await styleSection(editor)).getByLabel("Annotation line type").selectOption("diagonal");
   await editor.getByTestId("apply-annotation-properties").click();
   await expect(owner).toHaveAttribute("data-line-type", "diagonal");
   const annotationId = await owner.getAttribute("data-annotation-id");

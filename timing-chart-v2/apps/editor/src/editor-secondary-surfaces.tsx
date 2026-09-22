@@ -1,4 +1,5 @@
-import { useCallback } from "react";
+import { useTransactionDisclosure } from "./workspace/use-transaction-disclosure.js";
+import { useCallback, useEffect } from "react";
 import type {
   Dispatch,
   KeyboardEvent,
@@ -22,8 +23,10 @@ import type {
   SignalGroup,
   SignalId,
   Transaction,
+  TransactionGroup,
   TransactionId,
 } from "@timing-chart-v2/schema";
+import { nextEntityId } from "./entity-id.js";
 import type { UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { EditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import type { EditorActions } from "./application/use-editor-actions.js";
@@ -33,17 +36,17 @@ import { useEditorAiAssistantModel } from "./application/use-editor-ai-assistant
 import { AnnotationCollectionPanel } from "./annotation-collection-panel.js";
 import { AIOperationPanel } from "./ai-operation-panel.js";
 import { AdvancedJsonPanel } from "./advanced-json-panel.js";
-import { BookmarkEditor } from "./bookmark-editor.js";
+import { BookmarkEditor, clearAllBookmarkDrafts } from "./bookmark-editor.js";
 import { BottomEditorPanel } from "./minimal-cycle-view-panels.js";
 import { SignalEditor } from "./editors/signal-editor.js";
 import { SignalTreeColumnHeader } from "./minimal-cycle-view-panels.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
-import { TransactionSignalTree } from "./transaction-signal-tree.js";
 import { TransactionTree } from "./transaction-tree.js";
 import {
   TransactionLinkedSummary,
   TransactionPhaseSummary,
+  clearAllPhaseDrafts,
 } from "./transaction-bottom-tabs.js";
 import { InspectorPanel } from "./panels/inspector-panel.js";
 import { LegendView } from "./legend-view.js";
@@ -62,6 +65,7 @@ import {
   refreshGroupStylePreview,
 } from "./runtime/presentation-preview.js";
 import type { ContextMenuState } from "./workspace/use-dialog-menu-state.js";
+import { cycleUnitWord } from "./transaction-tc.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type Ref<T> = RefObject<T | null>;
@@ -144,8 +148,6 @@ export interface EditorSecondarySurfacesInput {
     readonly setTransactionTreeFilterMode: (
       value: TransactionTreeFilterMode,
     ) => void;
-    readonly transactionTreeTab: "transactions" | "signals";
-    readonly setTransactionTreeTab: (tab: "transactions" | "signals") => void;
     readonly setRibbonTab: (tab: string) => void;
   };
   readonly dialog: {
@@ -208,7 +210,7 @@ export function useEditorSecondarySurfaces(
   // not keep editing a hidden-mode entity until the user returns to it.
   const inspectorContext: ActiveContext = workspace.viewMode === "Split"
     ? workspace.activeContext
-    : workspace.viewMode === "Transaction" && workspace.transactionTreeTab === "transactions"
+    : workspace.viewMode === "Transaction"
       ? "Transaction"
       : "Signal";
   const inspectorSignal = inspectorContext === "Signal" ? selected.signal : undefined;
@@ -317,7 +319,7 @@ export function useEditorSecondarySurfaces(
   />;
   const transactionEditor = (
     <TransactionEditor
-      key={`${input.documentEpoch}:${bottom.transaction?.id ?? "none"}:${dialog.bottomResetToken}`}
+      key={`${input.documentEpoch}:${dialog.bottomResetToken}`}
       transaction={bottom.transaction}
       selectedTransactionIds={selected.transactionIds}
       document={input.document}
@@ -396,7 +398,7 @@ export function useEditorSecondarySurfaces(
               const perTc =
                 input.document.transactionTimeScale
                   ?.clockCyclesPerTransactionCycle ?? 1;
-              return `Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = ${perTc} Cycle${perTc === 1 ? "" : "s"})`;
+              return `Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = ${perTc} ${cycleUnitWord(perTc)})`;
             })()
           : input.document.timeline.referenceClock
             ? `Time Scale: Cycle    Reference: ${input.referenceClockName ?? input.document.timeline.referenceClock}`
@@ -411,8 +413,17 @@ export function useEditorSecondarySurfaces(
               onFilterModeChange: workspace.setTransactionTreeFilterMode,
               onAdd: input.actions.createTransaction,
               onAddGroup: input.actions.createTransactionGroup,
-              tab: workspace.transactionTreeTab,
-              onTabChange: workspace.setTransactionTreeTab,
+              onExpandAll: () => disclosure.expandAll(),
+              onCollapseAll: () => disclosure.collapseAll(),
+              onShowAll: () => setAllTransactionVisibility(true),
+              onHideAll: () => setAllTransactionVisibility(false),
+              timeScale: {
+                cyclesPerTc: input.document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1,
+                onChange: (cyclesPerTc: number) => {
+                  const current = input.document.transactionTimeScale ?? { clockCyclesPerTransactionCycle: 1, majorInterval: 5, minorInterval: 1 };
+                  surfaceCommands.setTransactionTimeScale({ ...current, clockCyclesPerTransactionCycle: cyclesPerTc });
+                },
+              },
             }
           : undefined
       }
@@ -425,8 +436,18 @@ export function useEditorSecondarySurfaces(
     (cycle: number) => refs.transactionBoundaryX.current(cycle),
     [refs.transactionBoundaryX],
   );
+  // #759: one Group disclosure owner for the Left Tree and the center Group headers.
+  const disclosure = useTransactionDisclosure(input.document, input.documentEpoch);
+  // #748/#774: Tree menu Show All / Hide All -- explicit target IDs (one History unit), never Selection: routing bulk visibility
+  // through a temporary Selection used to silently replace the user's real selection, changing the scope of their next Delete/Group/Color.
+  const setAllTransactionVisibility = (visible: boolean) => {
+    input.actions.setTransactionsVisibility(input.document.transactions.map((transaction) => transaction.id), visible);
+  };
+  // #763: unapplied Phase drafts belong to one document; a replacement (New/Open) drops them all so an identical ID in the next document cannot inherit one.
+  useEffect(() => { clearAllPhaseDrafts(); clearAllBookmarkDrafts(); }, [input.documentEpoch]);
   const workspaceViewportContent = workspace.viewMode !== "Cycle" ? (
     <TransactionLanes
+        disclosure={disclosure}
         document={input.document}
         documentEpoch={input.documentEpoch}
         viewMode={workspace.viewMode}
@@ -454,19 +475,13 @@ export function useEditorSecondarySurfaces(
     <LegendView document={input.document} commands={surfaceCommands} />
   );
   const workspaceTransactionTree =
-    workspace.viewMode === "Transaction" && workspace.transactionTreeTab === "signals" ? (
-      <TransactionSignalTree
-        document={input.document}
-        selectedSignalId={selected.signal?.id}
-        onSelectSignal={input.actions.selectHierarchySignal}
-      />
-    ) :
     // Combined ("Split") reuses the exact same production Transaction Tree
     // component as standalone Transaction Mode -- see #598-adjacent mockup
     // review: the left column becomes Transaction Tree (upper) stacked over
     // the Cycle Signal Tree (lower), never a second tree implementation.
-    ((workspace.viewMode === "Transaction" && workspace.transactionTreeTab === "transactions") || workspace.viewMode === "Split") ? (
+    (workspace.viewMode === "Transaction" || workspace.viewMode === "Split") ? (
       <TransactionTree
+        disclosure={disclosure}
         document={input.document}
         documentEpoch={input.documentEpoch}
         filter={workspace.transactionTreeFilter}
@@ -483,8 +498,13 @@ export function useEditorSecondarySurfaces(
         onMoveToGroup={(transactionId, groupId) => {
           surfaceCommands.moveTransactionToGroup(transactionId, groupId);
         }}
+        onMoveToNewGroup={(transactionId) => {
+          const order = input.document.transactionGroups?.length ?? 0;
+          surfaceCommands.moveTransactionToNewGroup(transactionId, { id: nextEntityId("transactionGroup", input.document) as TransactionGroup["id"], name: `Group ${order + 1}`, order });
+        }}
         onContextMenu={openTransactionContextMenu}
         onCreateTransaction={input.actions.createTransaction}
+        onClearSelection={input.actions.clearSelection}
         onFocusTransaction={(transactionId) =>
           refs.viewport.current
             ?.querySelector<HTMLElement>(
@@ -497,11 +517,10 @@ export function useEditorSecondarySurfaces(
           input.actions.setSelectionVisibility(visible);
         }}
         onSetGroupVisibility={(groupId, visible) => {
-          const items = input.document.transactions.filter((transaction) => transaction.groupId === groupId);
-          if (items.length === 0) return;
-          input.actions.selectTransaction(items[0]!.id);
-          items.slice(1).forEach((transaction) => input.actions.selectTransaction(transaction.id, true));
-          input.actions.setSelectionVisibility(visible);
+          // #774: explicit target IDs, never a temporary Selection -- the user's real selection (and the scope of their next bulk
+          // command) must not silently become "every Transaction in this Group".
+          const ids = input.document.transactions.filter((transaction) => transaction.groupId === groupId).map((transaction) => transaction.id);
+          input.actions.setTransactionsVisibility(ids, visible);
         }}
         onDeleteGroup={(groupId) => {
           surfaceCommands.deleteTransactionGroup(groupId);
@@ -547,7 +566,7 @@ export function useEditorSecondarySurfaces(
         ) : workspace.bottomTab === "Transaction" ? (
           transactionEditor
         ) : workspace.bottomTab === "Phases" ? (
-          <TransactionPhaseSummary transaction={selected.transaction} commands={surfaceCommands} />
+          <TransactionPhaseSummary transaction={selected.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={input.document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1} />
         ) : workspace.bottomTab === "Linked Signals" ? (
           <TransactionLinkedSummary
             transaction={selected.transaction}
@@ -625,10 +644,6 @@ export function useEditorSecondarySurfaces(
       onClose={() => dialog.setInspectorVisible(false)}
       onDeleteBookmark={input.actions.deleteBottomBookmark}
       onToggleTransactionSignal={input.actions.toggleTransactionSignal}
-      onEditTransactionPhases={() => {
-        input.workspace.selectBottomTab("Phases");
-        input.setBottomVisible(true);
-      }}
       onGroupPreview={(groupId, style) =>
         refreshGroupStylePreview(
           refs.host.current!,

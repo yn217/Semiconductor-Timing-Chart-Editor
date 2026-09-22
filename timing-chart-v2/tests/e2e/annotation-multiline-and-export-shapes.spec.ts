@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #377: Marker/Callout/Bracket completeness -- three concrete gaps fixed:
 //  1. Annotation label could not hold multi-line text at all (a plain

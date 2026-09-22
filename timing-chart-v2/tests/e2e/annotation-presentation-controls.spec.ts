@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 // #378: Stroke/Fill/Lock are the concrete gaps this issue's audit found --
 // LabelOffset/Multiline/Z-order/Visibility were already real, generic,
@@ -7,6 +10,12 @@ import { expect, test } from "@playwright/test";
 // for Stroke/Fill (previously Range/Highlight/Vertical Line didn't even
 // export as their own shape), a real visible Lock indicator, and Lock's
 // mixed-selection batch-atomicity fix.
+
+async function openStyleSection(editor: import("@playwright/test").Locator): Promise<void> {
+  // Style (Font, Stroke, Fill) lives in the Inspector's collapsible "Style" section (closed by default).
+  const toggle = editor.getByRole("button", { name: /^Style/ });
+  if (await toggle.count() > 0 && (await toggle.first().getAttribute("aria-expanded")) === "false") await toggle.first().click();
+}
 
 async function addAnnotation(page: import("@playwright/test").Page, type: string) {
   await page.getByLabel("Annotation type").selectOption(type);
@@ -44,10 +53,11 @@ test("Range Stroke/Fill controls have real canonical + rendered + exported effec
 
   const range = await addAnnotation(page, "range");
   const editor = page.getByTestId("annotation-editor");
-  const strokeWidth = editor.getByTestId("annotation-stroke-fill-stroke-width");
-  const strokeStyle = editor.getByTestId("annotation-stroke-fill-stroke-style");
-  const fillColor = editor.getByTestId("annotation-stroke-fill-fill-color");
-  const fillOpacity = editor.getByTestId("annotation-stroke-fill-fill-opacity");
+  await openStyleSection(editor);
+  const strokeWidth = editor.getByTestId("inspector-stroke-fill-stroke-width");
+  const strokeStyle = editor.getByTestId("inspector-stroke-fill-stroke-style");
+  const fillColor = editor.getByTestId("inspector-stroke-fill-fill-color");
+  const fillOpacity = editor.getByTestId("inspector-stroke-fill-fill-opacity");
   await expect(strokeWidth).toBeEnabled();
   await expect(fillColor).toBeEnabled();
 
@@ -106,8 +116,9 @@ test("Text has no Stroke/Fill controls enabled -- disabled with a truthful reaso
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await addAnnotation(page, "text");
   const editor = page.getByTestId("annotation-editor");
-  await expect(editor.getByTestId("annotation-stroke-fill-stroke-width")).toBeDisabled();
-  await expect(editor.getByTestId("annotation-stroke-fill-fill-color")).toBeDisabled();
+  await openStyleSection(editor);
+  await expect(editor.getByTestId("inspector-stroke-fill-stroke-width")).toBeDisabled();
+  await expect(editor.getByTestId("inspector-stroke-fill-fill-color")).toBeDisabled();
   await expect(page.locator(".stroke-fill-group").first()).toHaveAttribute("title", /text/);
 });
 
@@ -120,6 +131,8 @@ test("Lock shows a real visible indicator, blocks drag, and Unlock restores it -
 
   const first = await addAnnotation(page, "text");
   const firstId = await first.getAttribute("data-annotation-id");
+  // Anchor the second Annotation on another Signal so the two labels do not overlap.
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid']").click();
   const second = await addAnnotation(page, "marker");
   const secondId = await second.getAttribute("data-annotation-id");
 
@@ -150,7 +163,7 @@ test("Lock shows a real visible indicator, blocks drag, and Unlock restores it -
   // Mixed selection (first locked, second unlocked): clicking Lock in the
   // Arrange menu used to send an atomic batch that failed entirely because
   // the first was already locked -- now it must lock only the second.
-  await first.locator("[data-role='annotation-label']").click();
+  await first.locator("[data-role='annotation-label']").click({ force: true }); // the second annotation is drawn over the first's anchor
   await second.locator("[data-role='annotation-label']").click({ modifiers: ["Control"] });
   await expect(first).toHaveAttribute("data-selected", "true");
   await expect(second).toHaveAttribute("data-selected", "true");

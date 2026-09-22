@@ -1,0 +1,101 @@
+/* Combined (Split) Mode workspace owner: every rule scoped by .cycle-panel.mode-split, gathered here
+   from the region files so the mode has one stylesheet (#593). */
+/* #397: `.surface-host`'s padding-top must clear `.transaction-lanes`'s own
+   bottom edge (its `top` from the base rule above + this max-height) or a
+   multi-Group/multi-lane Transaction set (more content than one lane needs)
+   renders the Lanes region's bottom ~26px into the waveform surface below
+   it -- reproduced with a real 2-Group/2-lane sample in Split mode. Kept as
+   one shared var so the two rules can't drift apart again. */
+.cycle-panel.mode-split { --split-lanes-height: 112px; }
+/* #573: Combined is a stacked Transaction-over-Cycle workspace. The two
+   panes share the horizontal time viewport while vertical scrolling stays
+   local to each pane. */
+.cycle-panel.mode-split .cycle-viewport.split-signal-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.cycle-panel.mode-split .split-transaction-pane {
+  position: relative;
+  width: max-content;
+  min-width: 100%;
+  min-height: 0;
+  /* Combined's horizontal splitter uses the same view-only ratio owner as
+     the workspace resize actions. Keep the actual pane allocation driven by
+     that ratio; a fixed 42% made the splitter appear draggable while the
+     panes themselves never changed size. */
+  flex: 0 0 clamp(160px, calc(var(--gui-signal-split-upper-ratio, 0.5) * 100%), 280px);
+  overflow-y: auto;
+  overflow-x: hidden; /* #760 */
+  border-bottom: 1px solid var(--ds-border-subtle, #b7c4d2);
+}
+.cycle-panel.mode-split .split-signal-content {
+  position: relative;
+  width: max-content;
+  min-width: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  min-height: 220px;
+  overflow-y: auto;
+  /* #760: horizontal overflow belongs to the single Combined viewport. `hidden` (not the `visible`->auto computation) keeps this pane
+     from latching horizontal wheel gestures; vertical stays local. */
+  overflow-x: hidden;
+  overscroll-behavior-x: auto;
+  overscroll-behavior-y: contain;
+}
+.cycle-panel.mode-split .split-transaction-pane {
+  overscroll-behavior-x: auto;
+  overscroll-behavior-y: contain;
+  z-index: 20;
+}
+.cycle-panel.mode-split .combined-split-divider {
+  flex: 0 0 8px;
+  cursor: row-resize;
+  border-top: 1px solid var(--ds-border-subtle, #b7c4d2);
+  border-bottom: 1px solid var(--ds-border-subtle, #b7c4d2);
+  background: var(--ds-surface-muted, #edf2f7);
+  z-index: 30;
+  /* The divider lives in the horizontally scrolling Combined viewport; keep it pinned to the visible left edge so it stays grabbable after any horizontal scroll. */
+  position: sticky;
+  left: 0;
+}
+.cycle-panel.mode-split .combined-split-divider:focus-visible {
+  outline: 2px solid var(--ds-focus-color, #2678bc);
+  outline-offset: -2px;
+}
+.cycle-panel.mode-split .split-transaction-pane .transaction-lanes {
+  position: relative;
+  top: 0;
+  width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px) + var(--wave-width, 640px));
+  min-height: 100%;
+  max-height: none;
+  overflow: visible;
+}
+.cycle-panel.mode-split .split-signal-pane .surface-host { padding-top: 34px; }
+/* Combined left column, upper: the same production Transaction Tree used
+   standalone -- sticky (not absolute) so it stays put during the shared
+   horizontal scroll exactly like `.transaction-lane-labels` already does,
+   spanning the full left+frozen width (one unified tree column, not the
+   left-width/frozen-width split standalone Transaction Mode uses alongside
+   its own narrower `.transaction-lane-labels` strip). Sits above that strip
+   (which stays mounted for lane-bar row math but has its own label rows
+   hidden below) via a higher local z-index within the pane's own stacking
+   context. */
+.cycle-panel.mode-split .split-transaction-pane .transaction-left-tree {
+  position: absolute;
+  /* Above `.transaction-lanes` (z-index: 17) and its own group headers,
+     which otherwise intercept pointer events meant for this tree. */
+  z-index: 21;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px));
+  overflow: auto;
+  border-right: 1px solid #cbd4df;
+  background: #f8fafc;
+}
+.cycle-panel.mode-split .transaction-lane-label-row { display: none; }

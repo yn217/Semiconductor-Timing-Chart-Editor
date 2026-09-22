@@ -43,7 +43,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     const transactionTrigger = transactionRow.locator("..").locator(".transaction-left-tree-more");
     await transactionTrigger.click();
     await expect(menu).toBeVisible();
-    await expect(menu.getByRole("menuitem")).toContainText(["Focus in Timeline", "Move to CPU", "Duplicate", "Delete"]);
+    await expect(menu.getByRole("menuitem")).toContainText(["Focus in Timeline", "Move to Group", "Duplicate", "Delete"]);
     const transactionMenuBox = (await menu.boundingBox())!;
     expect(transactionMenuBox.x).toBeGreaterThanOrEqual(0);
     expect(transactionMenuBox.x + transactionMenuBox.width).toBeLessThanOrEqual(viewport.width);

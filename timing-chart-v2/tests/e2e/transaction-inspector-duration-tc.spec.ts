@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
-// Transaction Mode displays canonical system-cycle duration directly.
-test("Transaction Inspector's Duration shows canonical cycles", async ({ page }) => {
+// #750: Duration is shown in TC with the canonical system-cycle count alongside; canonical time stays in cycles.
+test("Transaction Inspector's Duration shows TC with the canonical cycle count", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -10,6 +10,6 @@ test("Transaction Inspector's Duration shows canonical cycles", async ({ page })
 
   const inspector = page.getByTestId("inspector");
   const duration = inspector.locator(".property-row", { hasText: "Duration" });
-  await expect(duration).toHaveText(/^Duration2 cycles$/);
+  await expect(duration).toHaveText(/^Duration0\.2 TC \(2 cycles\)$/);
 
 });

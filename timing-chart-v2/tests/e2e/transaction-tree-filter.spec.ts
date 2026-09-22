@@ -7,7 +7,7 @@ test("Transaction Tree filter modes derive grouped and phase data", async ({ pag
   await page.getByLabel("Workspace preset").selectOption("transaction");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
 
-  const filter = page.getByLabel("Transaction filter mode");
+  const filter = page.getByLabel("Filter transactions");
   const rows = page.locator("[data-testid^='transaction-left-tree-row-']");
   await expect(rows).toHaveCount(6);
 

@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("hiding a signal keeps its navigation row recoverable while removing its waveform row", async ({ page }) => {
   await page.goto("/");

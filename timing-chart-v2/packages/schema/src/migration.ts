@@ -146,7 +146,6 @@ function normalizeSignal(value: unknown, index: number, warnings: MigrationWarni
       ...(jsonObject(display.style) ? { style: jsonObject(display.style) } : {}),
       ...(["left", "center", "right"].includes(text(display.align, text(labelLayout.align))) ? { align: text(display.align, text(labelLayout.align)) } : {}),
       ...(["expand", "ellipsis", "wrap"].includes(text(display.overflow, text(labelLayout.overflow))) ? { overflow: text(display.overflow, text(labelLayout.overflow)) } : {}),
-      ...(["upper", "lower", "both"].includes(text(display.splitPane)) ? { splitPane: text(display.splitPane) } : {}),
     },
   };
   optionalNumber(common, "spacingBefore", source.spacingBefore ?? legacyLayout.spacingBefore);

@@ -156,3 +156,23 @@ The Phase 13 performance architecture gate additionally rejects
 MutationObserver-based synchronization and monolithic render-everything entry
 points, and verifies that virtualization, diagnostics, fixture, and 1000-row
 contracts remain present.
+
+## Workspace composition contract (#615, final)
+
+The editor workspace is one **stable shell**; view modes compose *into* it instead of replacing it.
+
+```text
+Stable Workspace Shell (EditorWorkspaceView)
+ -> mode-owned composeMode contract        (workspace/mode-composition.ts: bottom tabs, left rail,
+                                             header placement, resizers, fixed left width, default persistence)
+ -> mode-owned Ribbon groups               (ribbon/{common,signal,transaction,view}-ribbon-groups.tsx)
+ -> mode-owned pane components             (CombinedModePanes, CycleSignalSplitPane)
+ -> bounded interaction owners / hooks     (useViewModeTransition, useActivePaneTracking, useOverlayPresentationRefresh)
+ -> stable renderer / geometry / viewport host (surface host + viewport keep one tree position across modes)
+```
+
+Separate per-mode root component types (CycleModeRoot / TransactionModeRoot / CombinedModeRoot) are **not** part of the
+architecture. They were tried: different root types unmount/remount the Cycle surface host on every mode switch, orphaning
+the renderer/geometry/viewport refs (12 additional Combined/Signal Split e2e failures). A portal-based host was rejected
+because it would add lifecycle, focus, event, measurement and accessibility-tree complexity only to recover a component
+tree shape that is not a product requirement.

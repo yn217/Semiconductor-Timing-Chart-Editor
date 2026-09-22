@@ -1,3 +1,4 @@
+import { timelineScrollOwner } from "./timeline-scroll-owner.js";
 import type { DisplayTimeMappingCache, RenderProjection } from "@timing-chart-v2/projection";
 import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { resolveTimeAxisGeometry, type LocalGeometryMap, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
@@ -25,14 +26,24 @@ export function rebuildRulerPresentation(ruler: HTMLElement, document: Canonical
   const timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
   const mapping = mappingCache.get(document.timeline, document.timeGroups);
   const referenceViewBoxWidth = referenceSvg?.viewBox.baseVal.width;
-  const { scale, targetWidth, waveOriginPx } = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, previousScale, undefined, timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth);
+  // #750: Transaction presentation labels the ruler in TC; Cycle and Combined keep system cycles (Combined shares one ruler with the Cycle pane).
+  const tcScale = ruler.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? (document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1) : 1;
+  // #750: cyclesPerTC is a horizontal display-time COMPRESSION factor in standalone Transaction Mode (1 TC occupies what 1 cycle does in
+  // Cycle Mode). The geometry scale is the single presentation authority, so ruler, grid, bars, Phases, Bookmarks, snap and scroll extent
+  // all follow it; Cycle and Combined stay 1:1 with source cycles.
+  const geometryScale = tcScale > 1 ? 1 / tcScale : (previousScale !== undefined && previousScale >= 1 ? previousScale : 1);
+  const { scale, targetWidth, waveOriginPx } = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, geometryScale, undefined, timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth, tcScale);
   const waveWidthPxPerDisplayCycle = mapping.displayCycleCount > 0 ? targetWidth / mapping.displayCycleCount : undefined;
   return { timeAxis, scale, waveWidthPxPerDisplayCycle, waveOriginPx };
 }
 
 export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, enabled: boolean, totalHeight: number, viewportWidth: number, screenGeometryScale: number): void {
   const timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
-  renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, totalHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode);
+  // #765: standalone Transaction hides the Cycle signal rows, so their summed height must not size the grid (it made the scroll owner overflow
+  // vertically); the grid spans the Transaction lanes instead.
+  const standaloneTransaction = grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction";
+  const gridHeight = standaloneTransaction ? (grid.parentElement?.querySelector<HTMLElement>(".transaction-lanes")?.offsetHeight ?? 0) : totalHeight;
+  renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, gridHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode, grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? Math.max(1, Math.round(document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1)) : 1);
 }
 
 export function refreshPlayheadPresentation(ruler: HTMLElement, cycle: number, boundaryToLocalX: (cycle: number) => number | undefined): void {
@@ -70,7 +81,9 @@ export function refreshTimelinePresentation(context: {
   if (context.reason === "ruler" || context.reason === "resize") {
     context.metricsOwner.update({ viewportWidth: context.viewport.clientWidth });
     const metrics = context.metricsOwner.snapshot();
-    const minimumWaveWidth = Math.max(160, metrics.viewportWidth - metrics.leftPaneWidth - metrics.frozenPaneWidth);
+    // Standalone Transaction has no Cycle left/frozen columns inside the timeline area (#750): the presented time domain may use the full width.
+    const inTransaction = context.ruler.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction";
+    const minimumWaveWidth = Math.max(160, inTransaction ? metrics.viewportWidth : metrics.viewportWidth - metrics.leftPaneWidth - metrics.frozenPaneWidth);
     const currentTimeAxis = resolveTimeAxisGeometry(context.document, context.geometryMaps);
     const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, currentTimeAxis.ownerSignalId ? context.geometrySvgs.get(currentTimeAxis.ownerSignalId) : undefined, metrics.zoom, minimumWaveWidth, context.viewport);
     timeAxis = rebuilt.timeAxis; screenGeometryScale = rebuilt.scale; waveWidthPxPerDisplayCycle = rebuilt.waveWidthPxPerDisplayCycle; waveOriginPx = rebuilt.waveOriginPx; rulerInitialized = true; context.markOpenPhase("ruler-painted"); syncPresentationScale(context.viewport, context.host, context.rulerViewport, context.currentZoom, screenGeometryScale);
@@ -90,31 +103,36 @@ export function syncPresentationScale(viewport: HTMLElement, host: HTMLElement, 
   rulerViewport.style.setProperty("--presentation-x-scale", String(presentationScale));
 }
 
+const scrollVariableConsumerCache = new WeakMap<HTMLElement, readonly HTMLElement[]>();
+function scrollVariableConsumers(viewport: HTMLElement): readonly HTMLElement[] {
+  // Unit-test doubles are not DOM elements; there is nothing to publish to without a DOM.
+  if (typeof viewport.querySelectorAll !== "function") return [];
+  const cached = scrollVariableConsumerCache.get(viewport);
+  if (cached && cached.every((element) => element.isConnected)) return cached;
+  const found = Array.from(viewport.querySelectorAll<HTMLElement>("[data-testid='geometry-grid'], [data-testid='range-selection-band']"));
+  // Only cache a complete set (both consumers mounted); otherwise look again on the next scroll.
+  if (found.length >= 2) scrollVariableConsumerCache.set(viewport, found);
+  return found;
+}
+
 export function syncRulerScroll(ruler: HTMLElement, viewport: HTMLElement, zoom: number): void {
   // Keep scroll translation independent from scale. Reconstructing a
   // transform from the already-transformed bounding box can lose the ruler's
   // horizontal correction during synthetic/high-frequency scroll events,
   // leaving annotation overlays and cycle ticks 1:1 out of alignment.
-  ruler.style.translate = `${-viewport.scrollLeft}px 0`;
+  // #625: in Cycle the TimelineViewport wrapper owns horizontal scroll; the (non-scrolling) viewport needs no frame compensation.
+  const owner = timelineScrollOwner(viewport);
+  const scrollLeft = owner.scrollLeft;
+  ruler.style.translate = `${-scrollLeft}px 0`;
   ruler.style.transform = `scaleX(${zoom})`;
   const rulerFrame = ruler.parentElement;
-  if (rulerFrame) rulerFrame.style.translate = `${viewport.scrollLeft}px 0`;
-  ruler.dataset.scrollLeft = String(viewport.scrollLeft);
-}
-
-export function syncFrozenColumnScroll(viewport: HTMLElement, host: HTMLElement, leftPaneWidth: number): void {
-  const viewportRect = viewport.getBoundingClientRect();
-  const targets: readonly [string, number][] = [
-    ["[data-role='left-tree-rows']", viewportRect.left],
-    ["[data-role='frozen-label-rows']", viewportRect.left + leftPaneWidth],
-  ];
-  for (const [selector, targetLeft] of targets) {
-    const element = host.querySelector<HTMLElement>(selector);
-    if (!element) continue;
-    const currentTranslateX = Number.parseFloat(element.style.getPropertyValue("translate")) || 0;
-    const baseLeft = element.getBoundingClientRect().left - currentTranslateX;
-    const nextTranslateX = targetLeft - baseLeft;
-    if (Math.abs(nextTranslateX) < 0.01) element.style.removeProperty("translate");
-    else element.style.setProperty("translate", `${nextTranslateX}px 0`);
+  if (rulerFrame) rulerFrame.style.translate = owner === viewport ? `${scrollLeft}px 0` : "0px 0";
+  // #738/#768: these custom properties are consumed only by the grid and the range band. Writing them on the viewport (an ancestor of the whole
+  // ~100k-node waveform DOM) invalidated style for every descendant on EVERY scroll event; write them on the two consumers instead.
+  const consumers = scrollVariableConsumers(viewport);
+  for (const consumer of consumers) {
+    consumer.style.setProperty("--timeline-scroll-left", owner === viewport ? "0" : String(scrollLeft));
+    if (consumer.matches("[data-testid='geometry-grid']") && owner !== viewport && zoom > 0) { consumer.style.setProperty("--grid-clip-left", `${scrollLeft / zoom}px`); consumer.style.setProperty("--grid-clip-right", `${(scrollLeft + owner.clientWidth) / zoom}px`); }
   }
+  ruler.dataset.scrollLeft = String(scrollLeft);
 }

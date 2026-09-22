@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 async function ready(page: Page) {
   await page.goto("/");
@@ -247,8 +250,10 @@ test("multi-selection Delete commits selected stable IDs as one atomic operation
 });
 
 test("Transaction mode multi-selection uses the shared clipboard target set", async ({ page }) => {
+  // This journey needs the Transaction demo document (the product default), not the plain Cycle sample.
+  await page.addInitScript(() => { try { window.localStorage.removeItem("timing-chart-v2.startup-document"); } catch { /* best effort */ } });
   await ready(page);
-  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   const first = page.getByTestId("transaction-left-tree-row-demo_txn_read");
   const second = page.getByTestId("transaction-left-tree-row-demo_txn_write");
   await first.click();
@@ -274,18 +279,18 @@ test("multi-signal capability batches visibility and disables primary-only comma
   await expect(ribbon.getByRole("button", { name: "Move selected row down", exact: true })).toBeDisabled();
   await ribbon.getByRole("button", { name: "More", exact: true }).click();
   const overflow = page.getByRole("menu", { name: "More Home Commands" });
-  await expect(overflow.getByRole("button", { name: "Rename", exact: true })).toBeDisabled();
-  await expect(overflow.getByRole("button", { name: "Move Up", exact: true })).toBeDisabled();
-  await expect(overflow.getByRole("button", { name: "Move Down", exact: true })).toBeDisabled();
-  await expect(overflow.getByRole("button", { name: "Hide", exact: true })).toBeEnabled();
-  await overflow.getByRole("button", { name: "Hide", exact: true }).click();
+  await expect(overflow.getByRole("menuitem", { name: "Rename", exact: true })).toBeDisabled();
+  await expect(overflow.getByRole("menuitem", { name: "Move Up", exact: true })).toBeDisabled();
+  await expect(overflow.getByRole("menuitem", { name: "Move Down", exact: true })).toBeDisabled();
+  await expect(overflow.getByRole("menuitem", { name: "Hide", exact: true })).toBeEnabled();
+  await overflow.getByRole("menuitem", { name: "Hide", exact: true }).click();
   await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_request'], [data-role='wave-owner'][data-signal-id='sig_cycle_ready']")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await ribbon.getByRole("button", { name: "More", exact: true }).click();
   const showOverflow = page.getByRole("menu", { name: "More Home Commands" });
-  await expect(showOverflow.getByRole("button", { name: "Show", exact: true })).toBeEnabled();
-  await expect(showOverflow.getByRole("button", { name: "Hide", exact: true })).toBeDisabled();
-  await showOverflow.getByRole("button", { name: "Show", exact: true }).click();
+  await expect(showOverflow.getByRole("menuitem", { name: "Show", exact: true })).toBeEnabled();
+  await expect(showOverflow.getByRole("menuitem", { name: "Hide", exact: true })).toBeDisabled();
+  await showOverflow.getByRole("menuitem", { name: "Show", exact: true }).click();
   await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_request'], [data-role='wave-owner'][data-signal-id='sig_cycle_ready']")).toHaveCount(2);
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 });
@@ -307,7 +312,7 @@ test("Cut uses the clipboard surface and one canonical delete operation", async 
   expect(after.waveDromRenders).toBe(before.waveDromRenders);
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
   await page.keyboard.press("Control+V");
-  await expect(page.getByTestId("clipboard-status")).toContainText("Pasted");
+  await expect(page.getByTestId("clipboard-status")).toContainText("Moved 1 signal") // Cut then Paste is a move (stable ID kept), reported as "Moved";
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 });
 
@@ -321,13 +326,13 @@ test("Visibility and Arrange route through semantic commands", async ({ page }) 
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await ribbon.getByRole("button", { name: "More", exact: true }).click();
   const overflow = page.getByRole("menu", { name: "More Home Commands" });
-  await overflow.getByRole("button", { name: "Hide", exact: true }).click();
+  await overflow.getByRole("menuitem", { name: "Hide", exact: true }).click();
   await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_request']")).toHaveCount(0);
   await ribbon.getByRole("button", { name: "More", exact: true }).click();
-  await page.getByRole("menu", { name: "More Home Commands" }).getByRole("button", { name: "Show", exact: true }).click();
+  await page.getByRole("menu", { name: "More Home Commands" }).getByRole("menuitem", { name: "Show", exact: true }).click();
   await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_request']")).toHaveCount(1);
   await ribbon.getByRole("button", { name: "More", exact: true }).click();
-  await page.getByRole("menu", { name: "More Home Commands" }).getByRole("button", { name: "Move Down", exact: true }).click();
+  await page.getByRole("menu", { name: "More Home Commands" }).getByRole("menuitem", { name: "Move Down", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(after.waveDromRenders).toBeGreaterThanOrEqual(before.waveDromRenders);
@@ -452,11 +457,11 @@ test("Command enablement stays aligned for annotation selection", async ({ page 
   await expect(edit.getByRole("button", { name: "Delete", exact: true })).toBeEnabled();
   await ribbon.getByRole("button", { name: "More", exact: true }).click();
   const overflow = page.getByRole("menu", { name: "More Home Commands" });
-  await expect(overflow.getByRole("button", { name: "Copy", exact: true })).toBeEnabled();
-  await expect(overflow.getByRole("button", { name: "Duplicate", exact: true })).toBeEnabled();
-  await expect(overflow.getByRole("button", { name: "Show", exact: true })).toBeDisabled();
-  await expect(overflow.getByRole("button", { name: "Hide", exact: true })).toBeDisabled();
-  await expect(overflow.getByRole("button", { name: "Rename", exact: true })).toBeDisabled();
+  await expect(overflow.getByRole("menuitem", { name: "Copy", exact: true })).toBeEnabled();
+  await expect(overflow.getByRole("menuitem", { name: "Duplicate", exact: true })).toBeEnabled();
+  await expect(overflow.getByRole("menuitem", { name: "Show", exact: true })).toBeDisabled();
+  await expect(overflow.getByRole("menuitem", { name: "Hide", exact: true })).toBeDisabled();
+  await expect(overflow.getByRole("menuitem", { name: "Rename", exact: true })).toBeDisabled();
 });
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1366, height: 768 }, { width: 1280, height: 720 }]) {
@@ -507,7 +512,7 @@ test("Rename uses the shared app-owned dialog with atomic Apply and view-only Ca
   const ribbon = page.getByTestId("ribbon");
   const openRename = async () => {
     await ribbon.getByRole("button", { name: "More", exact: true }).click();
-    await page.getByRole("menu", { name: "More Home Commands" }).getByRole("button", { name: "Rename", exact: true }).click();
+    await page.getByRole("menu", { name: "More Home Commands" }).getByRole("menuitem", { name: "Rename", exact: true }).click();
   };
   await openRename();
   await expect(page.getByTestId("rename-dialog")).toBeVisible();

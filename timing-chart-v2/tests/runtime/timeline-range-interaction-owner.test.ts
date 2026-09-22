@@ -12,6 +12,7 @@ describe("TimelineRangeInteractionOwner", () => {
         rendererHost: host,
         isTimeDomainPointerTarget: () => true,
         cycleBoundaryAtX: (clientX) => clientX === 20 ? 6 : 2,
+        rulerCellAtX: (clientX) => clientX === 20 ? 6 : 2,
         getCycleCount: () => 24,
         getRange: () => ({ start: 2, end: 4 }),
         getSelectedCycle: () => 2,
@@ -52,6 +53,7 @@ describe("TimelineRangeInteractionOwner", () => {
         rendererHost: host,
         isTimeDomainPointerTarget: () => true,
         cycleBoundaryAtX: () => 11,
+        rulerCellAtX: () => undefined, // falls back to the tick's own semantic cycle (24)
         getCycleCount: () => 24,
         getRange: () => ({ start: 2, end: 4 }),
         getSelectedCycle: () => 2,
@@ -87,6 +89,7 @@ describe("TimelineRangeInteractionOwner", () => {
         rendererHost: host,
         isTimeDomainPointerTarget: () => true,
         cycleBoundaryAtX: (clientX) => clientX === 20 ? 6 : 2,
+        rulerCellAtX: (clientX) => clientX === 20 ? 6 : 2,
         getCycleCount: () => 24,
         getRange: () => ({ start: 2, end: 4 }),
         getSelectedCycle: () => 2,

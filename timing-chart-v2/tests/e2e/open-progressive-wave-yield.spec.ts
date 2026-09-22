@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
+
+startInCycleMode(test);
 
 test.setTimeout(120_000);
 

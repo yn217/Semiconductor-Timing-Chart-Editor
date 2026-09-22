@@ -16,15 +16,7 @@
 /* #429/#397 P0-2: the Transaction Mode Left Tree's "Transactions | Signals"
    tabs -- same row height/font as the label they replace (`strong` above),
    just two clickable segments instead of one static label. */
-.transaction-tree-tabs { display: flex; flex: 1 1 auto; gap: 2px; min-width: 0; }
-/* `.left-column-heading button` (above) is a generic rule (absolute icon
-   buttons like the filter's clear-X) that also matches these two -- same
-   selector specificity, so every property it sets must be explicitly
-   reset here rather than relying on cascade order alone. */
-.transaction-tree-tabs button { position: static; flex: 0 0 auto; width: auto; height: auto; padding: 3px 8px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #5a6b80; font-size: 10px; cursor: pointer; }
-.transaction-tree-tabs button.active { border-color: #bdc9d6; background: white; color: #172033; font-weight: 600; }
-
-.left-column-actions > .tree-add-button { position: static; flex: 0 0 28px; width: 28px; height: 26px; border: 1px solid #a8c9f4; border-radius: 3px; background: #f5f9ff; color: #0c63c7; font-size: 18px; line-height: 1; }
+.transaction-tree-title { flex: 0 0 auto; padding: 0 6px; color: #29425e; font-size: 11px; font-weight: 600; line-height: 24px; }.left-column-actions > .tree-add-button { position: static; flex: 0 0 28px; width: 28px; height: 26px; border: 1px solid #a8c9f4; border-radius: 3px; background: #f5f9ff; color: #0c63c7; font-size: 18px; line-height: 1; }
 
 .left-column-actions > .tree-add-button:hover { background: #e7f2ff; }
 
@@ -274,7 +266,7 @@
 .surface-host [data-role="tree-signal-role"] .comment-icon,
 .surface-host [data-role="signal-role"] .comment-icon { width: 15px; height: 15px; flex: 0 0 15px; }
 
-.editor-shell .surface-host [data-role="tree-signal-role"][data-signal-type] { width: 28px; min-width: 28px; box-sizing: border-box; padding-inline: 2px; }
+.editor-shell .surface-host [data-role="tree-signal-role"][data-signal-type]:not([data-presentation="internal"]) { width: 28px; min-width: 28px; box-sizing: border-box; padding-inline: 2px; }
 
 .surface-host [data-role="tree-signal-name"],
 .surface-host [data-role="frozen-signal-name"] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -1,10 +1,48 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { HistoryState } from "@timing-chart-v2/history";
 import type { Bookmark, BookmarkId, CanonicalDocument } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { nextEntityId } from "./entity-id.js";
 import { findAdjacentBookmark } from "./runtime/bookmark-navigation.js";
 import { DraftStatus } from "./draft-status.js";
+
+// #772 (Failure B): an unapplied Bookmark Name/Cycle/Comment draft is kept across a row switch -- BookmarkEditor remounts per selected
+// Bookmark (its React `key` includes the id), so a per-id module store, not component state, is what survives that remount. Mirrors
+// #763's Transaction Phase draft store: one shared owner, dropped on Apply, on a stale/deleted Bookmark, or on document replacement.
+type BookmarkDraftFields = Readonly<{ name: string; start: number; comment: string }>;
+const bookmarkDrafts = new Map<string, { readonly base: BookmarkDraftFields; readonly draft: BookmarkDraftFields }>();
+const bookmarkDraftListeners = new Set<() => void>();
+let bookmarkDraftVersion = 0;
+const notifyBookmarkDrafts = () => { bookmarkDraftVersion += 1; for (const listener of [...bookmarkDraftListeners]) listener(); };
+const subscribeBookmarkDrafts = (listener: () => void) => { bookmarkDraftListeners.add(listener); return () => { bookmarkDraftListeners.delete(listener); }; };
+const fieldsOf = (bookmark: Bookmark): BookmarkDraftFields => ({ name: bookmark.name, start: bookmark.start, comment: bookmark.comment ?? "" });
+const fieldsEqual = (a: BookmarkDraftFields, b: BookmarkDraftFields) => a.name === b.name && a.start === b.start && a.comment === b.comment;
+function pendingBookmarkDraft(bookmark: Bookmark | undefined): BookmarkDraftFields | undefined {
+  if (!bookmark) return undefined;
+  const entry = bookmarkDrafts.get(bookmark.id);
+  if (!entry) return undefined;
+  const base = fieldsOf(bookmark);
+  if (!fieldsEqual(entry.base, base)) { bookmarkDrafts.delete(bookmark.id); return undefined; }
+  return fieldsEqual(entry.draft, base) ? undefined : entry.draft;
+}
+function setBookmarkDraft(bookmark: Bookmark, draft: BookmarkDraftFields): void {
+  const base = fieldsOf(bookmark);
+  if (fieldsEqual(draft, base)) bookmarkDrafts.delete(bookmark.id); else bookmarkDrafts.set(bookmark.id, { base, draft });
+  notifyBookmarkDrafts();
+}
+export function clearBookmarkDraft(bookmarkId: string): void { if (bookmarkDrafts.delete(bookmarkId)) notifyBookmarkDrafts(); }
+export function clearAllBookmarkDrafts(): void { if (bookmarkDrafts.size === 0) return; bookmarkDrafts.clear(); notifyBookmarkDrafts(); }
+/** Bookmarks other than `exceptId` that still hold an unapplied draft; drops drafts of deleted/stale Bookmarks as a side effect. */
+export function retainedBookmarkDrafts(bookmarks: readonly Bookmark[], exceptId: string | undefined): { readonly id: string; readonly name: string }[] {
+  const kept: { id: string; name: string }[] = [];
+  for (const [id, entry] of [...bookmarkDrafts]) {
+    const bookmark = bookmarks.find((item) => item.id === id);
+    if (!bookmark || !fieldsEqual(entry.base, fieldsOf(bookmark))) { bookmarkDrafts.delete(id); notifyBookmarkDrafts(); continue; }
+    if (id === exceptId) continue;
+    kept.push({ id, name: bookmark.name });
+  }
+  return kept;
+}
 
 /** #388: Bookmark's own Bottom Panel editor -- moves persistent Bookmark
  * data management out of the Ribbon (which must stay a fixed command
@@ -16,14 +54,26 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
   const [name, setName] = useState("Bookmark");
   const [start, setStart] = useState(0);
   const [comment, setComment] = useState("");
-  const [editName, setEditName] = useState(bookmark?.name ?? "");
-  const [editStart, setEditStart] = useState(bookmark?.start ?? 0);
-  const [editComment, setEditComment] = useState(bookmark?.comment ?? "");
+  // #772: this component remounts per selected Bookmark (see the `key` at its call site), so a retained draft is seeded here from the
+  // shared store rather than from a `useEffect` that would never see a stale, already-unmounted instance again.
+  const retained = pendingBookmarkDraft(bookmark);
+  const [editName, setEditName] = useState(retained?.name ?? bookmark?.name ?? "");
+  const [editStart, setEditStart] = useState(retained?.start ?? bookmark?.start ?? 0);
+  const [editComment, setEditComment] = useState(retained?.comment ?? bookmark?.comment ?? "");
+  const wasRetained = retained !== undefined;
+  useSyncExternalStore(subscribeBookmarkDrafts, () => bookmarkDraftVersion, () => 0);
+  const otherDrafts = retainedBookmarkDrafts(document.bookmarks, bookmark?.id);
+  const updateDraft = (next: BookmarkDraftFields) => { if (bookmark) setBookmarkDraft(bookmark, next); };
+  // Re-sync local fields to the committed Bookmark when it changes WITHOUT a remount (Undo/Redo/an external command while the same
+  // Bookmark stays selected). Skips its very first run so it never overwrites the retained draft this component just seeded from.
+  const mounted = useRef(false);
   useEffect(() => {
+    if (!mounted.current) { mounted.current = true; return; }
     setEditName(bookmark?.name ?? "");
     setEditStart(bookmark?.start ?? 0);
     setEditComment(bookmark?.comment ?? "");
-  }, [bookmark?.id, bookmark?.name, bookmark?.start, bookmark?.comment]);
+    if (bookmark) clearBookmarkDraft(bookmark.id);
+  }, [bookmark?.name, bookmark?.start, bookmark?.comment]);
   const ordered = [...document.bookmarks].sort((left, right) => left.start - right.start);
   const duplicate = () => {
     if (!bookmark) return;
@@ -60,15 +110,16 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
       <strong>{bookmark ? `Editing: ${bookmark.name}` : "Bookmark Editor"}</strong>{containingGroups.length > 0 && <small data-testid="bookmark-inside-collapsed">inside collapsed: {containingGroups.map((group) => group.name).join(", ")}</small>}<button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{bookmark && <><button type="button" onClick={() => onReveal(bookmark.start)}>Reveal</button>{containingGroups.length > 0 && <button type="button" data-testid="bookmark-expand-and-jump" onClick={expandAndJump}>Expand and Jump</button>}<button type="button" onClick={duplicate}>Duplicate</button><button type="button" className="danger" data-testid="delete-bottom-bookmark" onClick={onDelete}>Delete Bookmark</button></>}</header>
     {bookmark
       ? <>
+          {otherDrafts.length > 0 && <p className="transaction-retained-drafts" role="status" data-testid="bookmark-retained-drafts">Unapplied Bookmark drafts are kept for: {otherDrafts.map((item) => <span key={item.id} className="transaction-retained-draft" data-bookmark-id={item.id}><button type="button" aria-label={`Discard the unapplied draft for ${item.name}`} onClick={() => clearBookmarkDraft(item.id)}>{item.name} Discard</button></span>)}</p>}
           <form id="bookmark-properties-form" onSubmit={(event) => { event.preventDefault(); if (!hasChanges) return; commands.updateBookmark({ bookmarkId: bookmark.id, name: editName.trim() || "Bookmark", start: editStart, comment: editComment }); }}>
-            <label>Name<input aria-label="Bottom Bookmark name" value={editName} onChange={(event) => setEditName(event.target.value)} /></label>
-            <label>Cycle<input aria-label="Bottom Bookmark cycle" type="number" min="0" max={document.timeline.cycleCount - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} /></label>
-            <label>Comment<input aria-label="Bottom Bookmark comment" value={editComment} onChange={(event) => setEditComment(event.target.value)} /></label>
+            <label>Name<input aria-label="Bottom Bookmark name" value={editName} onChange={(event) => { setEditName(event.target.value); updateDraft({ name: event.target.value, start: editStart, comment: editComment }); }} /></label>
+            <label>Cycle<input aria-label="Bottom Bookmark cycle" type="number" min="0" max={document.timeline.cycleCount - 1} value={editStart} onChange={(event) => { const value = Number(event.target.value); setEditStart(value); updateDraft({ name: editName, start: value, comment: editComment }); }} /></label>
+            <label>Comment<input aria-label="Bottom Bookmark comment" value={editComment} onChange={(event) => { setEditComment(event.target.value); updateDraft({ name: editName, start: editStart, comment: event.target.value }); }} /></label>
           </form>
           <div className="bottom-sticky-actions">
-            {hasChanges && <DraftStatus testId="bottom-bookmark-unapplied" />}
+            {hasChanges && <DraftStatus testId="bottom-bookmark-unapplied" {...(wasRetained ? { label: "Unapplied changes (kept from earlier)" } : {})} />}
             <span className="bottom-sticky-buttons">
-              <button type="button" data-testid="cancel-bottom-bookmark" onClick={onCancel}>Cancel</button>
+              <button type="button" data-testid="cancel-bottom-bookmark" onClick={() => { if (bookmark) { clearBookmarkDraft(bookmark.id); setEditName(bookmark.name); setEditStart(bookmark.start); setEditComment(bookmark.comment ?? ""); } onCancel(); }}>Cancel</button>
               <button type="submit" form="bookmark-properties-form" data-testid="apply-bottom-bookmark" disabled={!hasChanges}>Apply Changes</button>
             </span>
           </div>

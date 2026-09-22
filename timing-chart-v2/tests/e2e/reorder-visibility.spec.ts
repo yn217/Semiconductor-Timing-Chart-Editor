@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // The surface no longer carries a serialized "data-canonical-row-ids"
 // attribute (stable-surface.spec.ts asserts its absence -- it was removed

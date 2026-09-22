@@ -16,6 +16,7 @@ test("Add Transaction Group creates a real Group selectable from the Bottom Pane
   // No Group header exists yet -- flat/empty Tree.
   await expect(page.getByTestId("transaction-group-header")).toHaveCount(0);
 
+  await page.getByTestId("transaction-tree-more").click();
   await page.getByTestId("add-transaction-group-tree").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   // Transaction Mode GUI realignment: creating a Group alone (no
@@ -45,6 +46,7 @@ test("Add Transaction Group creates a real Group selectable from the Bottom Pane
   await expect(header).toContainText("(1)");
 
   // A second Add Group creates a distinct, independently selectable Group.
+  await page.getByTestId("transaction-tree-more").click();
   await page.getByTestId("add-transaction-group-tree").click();
   await expect(groupSelect).toContainText("Group 2");
   await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
@@ -63,6 +65,7 @@ test("Transaction Group can be renamed inline and deleted (ungrouping its Transa
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
 
+  await page.getByTestId("transaction-tree-more").click();
   await page.getByTestId("add-transaction-group-tree").click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
   const bottomEditor = page.getByTestId("transaction-editor");
@@ -101,6 +104,7 @@ test("Transaction Group header collapses and expands its Lanes, view-only (zero 
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
 
+  await page.getByTestId("transaction-tree-more").click();
   await page.getByTestId("add-transaction-group-tree").click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
   const bottomEditor = page.getByTestId("transaction-editor");
@@ -137,6 +141,7 @@ test("Ribbon Ungroup acts on the selected Transaction's Group, disabled when not
   // Not in Transaction Mode's Ribbon Transaction group at all outside a
   // Group -- disabled once created too, since a fresh Transaction has no
   // Group yet.
+  await page.getByTestId("transaction-tree-more").click();
   await page.getByTestId("add-transaction-group-tree").click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(ribbonUngroup).toBeDisabled();

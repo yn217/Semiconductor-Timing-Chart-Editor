@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 test.use({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 
@@ -52,6 +55,8 @@ async function readContract(page: Page): Promise<PresentationContract> {
 
 test("normal and visual-reference use one Production presentation contract", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
+  // Both routes are compared in the same workspace mode (the persisted view-mode preference), otherwise the ribbon differs by mode.
+  await context.addInitScript(() => { try { window.localStorage.setItem("timing-chart-v2.view-mode", "Cycle"); } catch { /* best effort */ } });
   const normalPage = await context.newPage();
   const referencePage = await context.newPage();
   await normalPage.goto("/");

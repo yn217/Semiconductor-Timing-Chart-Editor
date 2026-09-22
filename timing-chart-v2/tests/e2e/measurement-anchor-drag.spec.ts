@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
 import type { Locator, Page } from "@playwright/test";
 import { canonicalFixture } from "../fixtures/canonical.js";
+
+startInCycleSample(test);
 
 async function createAnnotation(page: Page, type: string): Promise<Locator> {
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
@@ -163,11 +166,15 @@ test("Undo restores the pre-drag anchor exactly, Redo re-applies it, and Save/Op
   const transformAfterDrag = await startHandle.evaluate((element) => (element as HTMLElement).style.transform);
   expect(transformAfterDrag).not.toBe(transformBefore);
 
-  await page.getByTestId("editor-undo").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect.poll(() => page.getByTestId("history-status").textContent().then((text) => historyDepth(text ?? ""))).toBe(historyDepth(historyBefore!));
   await expect(startHandle).toHaveAttribute("style", new RegExp(transformBefore.replace(/[()]/g, "\\$&")));
 
-  await page.getByTestId("editor-redo").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
   await expect(startHandle).toHaveAttribute("style", new RegExp(transformAfterDrag.replace(/[()]/g, "\\$&")));
 
   const downloadPromise = page.waitForEvent("download");

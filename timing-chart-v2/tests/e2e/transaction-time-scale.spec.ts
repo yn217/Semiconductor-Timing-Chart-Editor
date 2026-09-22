@@ -13,7 +13,8 @@ test("Transaction Time Scale is set through the Ribbon panel, reflected in the s
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
 
   const timeScaleLabel = page.locator("span", { hasText: /^Time Scale:/ });
-  await expect(timeScaleLabel).toHaveText("Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = 10 Cycles)");
+  await expect(timeScaleLabel).toContainText("Time Scale: Transaction Cycle (TC)");
+  await expect(page.getByTestId("transaction-tc-scale")).toHaveValue("10");
 
   await page.getByTestId("transaction-time-scale-trigger").click();
   const panel = page.getByTestId("transaction-time-scale-panel");
@@ -25,7 +26,8 @@ test("Transaction Time Scale is set through the Ribbon panel, reflected in the s
   await expect(panel).toHaveCount(0);
 
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  await expect(timeScaleLabel).toHaveText("Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = 4 Cycles)");
+  await expect(timeScaleLabel).toContainText("Time Scale: Transaction Cycle (TC)");
+  await expect(page.getByTestId("transaction-tc-scale")).toHaveValue("4");
 
   // Reopening reflects the current document value, not stale draft state.
   await page.getByTestId("transaction-time-scale-trigger").click();
@@ -36,9 +38,11 @@ test("Transaction Time Scale is set through the Ribbon panel, reflected in the s
   await expect(page.getByTestId("transaction-time-scale-panel")).toHaveCount(0);
 
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
-  await expect(timeScaleLabel).toHaveText("Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = 10 Cycles)");
+  await expect(timeScaleLabel).toContainText("Time Scale: Transaction Cycle (TC)");
+  await expect(page.getByTestId("transaction-tc-scale")).toHaveValue("10");
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
-  await expect(timeScaleLabel).toHaveText("Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = 4 Cycles)");
+  await expect(timeScaleLabel).toContainText("Time Scale: Transaction Cycle (TC)");
+  await expect(page.getByTestId("transaction-tc-scale")).toHaveValue("4");
 });
 
 test("Transaction Time Scale panel rejects an invalid ratio and Cancel/Escape discard the draft", async ({ page }) => {
@@ -56,7 +60,8 @@ test("Transaction Time Scale panel rejects an invalid ratio and Cancel/Escape di
   await panel.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(panel).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
-  await expect(page.locator("span", { hasText: /^Time Scale:/ })).toHaveText("Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = 10 Cycles)");
+  await expect(page.locator("span", { hasText: /^Time Scale:/ })).toContainText("Time Scale: Transaction Cycle (TC)");
+  await expect(page.getByTestId("transaction-tc-scale")).toHaveValue("10");
 });
 
 test("GUI Apply preserves an existing secondary clock when editing an unrelated time-scale field", async ({ page }) => {

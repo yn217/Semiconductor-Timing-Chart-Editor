@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 async function ready(page: Page) {
   await page.goto("/");
@@ -179,7 +182,7 @@ test("Transaction clipboard is view-only on Copy, creates a fresh entity on Past
   await editor.getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  await expect(editor.locator(".transaction-list button")).toHaveCount(7);
+  await expect(editor.locator(".transaction-list-row")).toHaveCount(1);
 
   // Creating a Transaction auto-selects it (onTransactionCreated ->
   // selection.selectTransaction), so Copy is reachable directly from Home.
@@ -201,8 +204,8 @@ test("Transaction clipboard is view-only on Copy, creates a fresh entity on Past
   await expect(ribbon.getByTestId("clipboard-status")).toHaveText(/Pasted .* transaction/);
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   const editorAfterPaste = await openTransactionEditor(page);
-  await expect(editorAfterPaste.locator(".transaction-list button")).toHaveCount(8);
-  await expect(editorAfterPaste.getByRole("button", { name: /Clip Test Paste/ })).toHaveCount(1);
+  await expect(editorAfterPaste.locator(".transaction-list-row")).toHaveCount(2);
+  await expect(editorAfterPaste.getByRole("group", { name: /Edit Clip Test Paste/ })).toHaveCount(1);
   const afterPasteCounters = JSON.parse(await surface.getAttribute("data-render-counters") ?? "{}") as { waveDromRenders?: number; localGeometryBuilds?: number };
   expect(afterPasteCounters.waveDromRenders).toBe(beforeCopyCounters.waveDromRenders);
   expect(afterPasteCounters.localGeometryBuilds).toBe(beforeCopyCounters.localGeometryBuilds);
@@ -215,13 +218,14 @@ test("Transaction clipboard is view-only on Copy, creates a fresh entity on Past
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   const editorForCut = page.getByTestId("transaction-editor");
-  await editorForCut.getByRole("button", { name: /Clip Test Paste/ }).click();
+  // The pasted Transaction is auto-selected, so its row is already the in-place editing group (#703).
+  await expect(editorForCut.getByRole("group", { name: /Edit Clip Test Paste/ })).toBeVisible();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await ribbon.getByRole("button", { name: "Cut", exact: true }).click();
   await expect(ribbon.getByTestId("clipboard-status")).toHaveText(/Cut .* transaction/);
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
   const editorAfterCut = await openTransactionEditor(page);
-  await expect(editorAfterCut.locator(".transaction-list button")).toHaveCount(7);
+  await expect(editorAfterCut.locator(".transaction-list-row")).toHaveCount(1);
 
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(transactionSavedPath!);
   await expect(page.getByTestId("unsaved-file-dialog")).toBeVisible();
@@ -230,5 +234,5 @@ test("Transaction clipboard is view-only on Copy, creates a fresh entity on Past
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
   const editorAfterReopen = await openTransactionEditor(page);
-  await expect(editorAfterReopen.locator(".transaction-list button")).toHaveCount(8);
+  await expect(editorAfterReopen.locator(".transaction-list-row")).toHaveCount(2);
 });

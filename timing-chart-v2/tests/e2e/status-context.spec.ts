@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { openBottomSettings } from "./bottom-settings";
 
 test.describe("status context", () => {
   test("reflects workspace, view mode, zoom and selection scope without mutation", async ({ page }) => {
@@ -47,8 +48,10 @@ test.describe("status context", () => {
     await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
     await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
     await expect(page.getByTestId("status-context")).toContainText("Scope: dut");
+    await openBottomSettings(page);
     await page.getByTestId("follow-selection").uncheck();
     await expect(page.getByTestId("status-context")).toContainText("Bottom: Fixed");
+    await openBottomSettings(page);
     await page.getByTestId("bottom-pin").click();
     await expect(page.getByTestId("status-context")).toContainText("Bottom: Pinned");
   });

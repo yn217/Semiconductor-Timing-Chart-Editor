@@ -139,7 +139,7 @@
 
 .surface-host [data-role$="-row"][data-transaction-linked="true"] { background-color: #fff4d6 !important; box-shadow: inset 3px 0 #d59100; }
 
-.cycle-ruler { position: sticky; z-index: 18; top: 0; left: var(--time-domain-left, 440px); width: max(0px, calc(100% - var(--time-domain-left, 440px))); height: 34px; margin-bottom: -34px; overflow: hidden; background: #f8fafc; border-bottom: 1px solid #cbd4df; pointer-events: none; }
+.cycle-ruler { position: sticky; z-index: 18; top: 0; left: var(--time-domain-left, 440px); width: max(0px, calc(100% - var(--time-domain-left, 440px))); height: 34px; margin-bottom: -34px; overflow: clip; background: #f8fafc; border-bottom: 1px solid #cbd4df; pointer-events: none; }
 
 .cycle-ruler-content { position: relative; width: var(--wave-width, 640px); min-width: var(--wave-width, 640px); height: 34px; pointer-events: auto; }
 .time-outline-row { position: absolute; z-index: 6; left: 0; right: 0; height: 20px; border-bottom: 1px solid #cbd4df; background: #eef3f8; pointer-events: none; }
@@ -177,7 +177,10 @@
 
 .cycle-ruler .cycle-tick, .cycle-ruler .timeline-marker, .surface-host [data-role="annotation-label"], .surface-host [data-role="snap-cycle-label"], .surface-host [data-role="clock-edge-number"] { transform-origin: 0 50%; scale: calc(1 / var(--zoom-x, 1)) 1; }
 
-.transaction-lane > button > span { transform-origin: 50% 50%; scale: calc(1 / var(--zoom-x, 1)) 1; }
+/* #750 follow-up: a narrow bar drops its label text, but the label element is also the body-drag handle; keep it filling the bar so a
+   narrow Transaction can still be moved by dragging its body (it had collapsed to 0px height). */
+.transaction-lane > button > span[data-label-compact="true"] { align-self: stretch; height: 100%; min-height: 16px; }
+/* #767: no counter-scale -- the track is no longer CSS-scaled, zoom re-lays the bar geometry out, so bar names keep their natural aspect. */
 
 .surface-host { width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px) + var(--wave-width, 640px)); }
 
@@ -219,19 +222,7 @@
 
 .editor-shell .surface-host [data-role="playhead"] { background: #2f7eea; }
 
-.transaction-lanes { position: absolute; z-index: 17; top: 34px; left: 0; width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px) + var(--wave-width, 640px)); min-height: 86px; border-bottom: 1px solid #8ba3bd; background: #f6f9fded; }
-
-/* #429/#397 P0-2: the "Signals" tab's tree -- occupies the same slot as
-   `.transaction-lanes` (swapped in at the identical call site), but is a
-   plain scrollable label list (no wave-width lane geometry to draw), so it
-   only spans the label columns, not the full canvas width. */
-.transaction-signal-tree { position: absolute; z-index: 17; top: 34px; left: 0; width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); min-height: 86px; max-height: 100%; overflow-y: auto; border-bottom: 1px solid #8ba3bd; border-right: 1px solid #d9e1ea; background: #f6f9fded; }
-.transaction-signal-tree-group h4 { margin: 0; padding: 5px 10px 3px; color: #5a6b80; font-size: 10px; font-weight: 600; }
-.transaction-signal-tree-row { display: flex; width: 100%; align-items: center; gap: 6px; padding: 4px 10px; border: 0; background: transparent; color: #172033; font-size: 11px; text-align: left; cursor: pointer; }
-.transaction-signal-tree-row:hover { background: var(--gui-hover-bg, #f1f6fc); }
-.transaction-signal-tree-row[data-selected="true"] { background: var(--gui-selected-bg, #eef6ff); }
-.transaction-signal-tree-role { display: grid; flex: 0 0 auto; width: 16px; height: 16px; place-items: center; border-radius: 3px; background: #dbe3ee; color: #5a6b80; font-size: 9px; font-weight: 700; }
-.transaction-lane-labels { position: sticky; left: 0; z-index: 2; width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); height: 100%; background: #f8fafc; }
+.transaction-lanes { position: absolute; z-index: 17; top: 34px; left: 0; width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px) + var(--wave-width, 640px)); min-height: 86px; border-bottom: 1px solid #8ba3bd; background: #f6f9fded; }.transaction-lane-labels { position: sticky; left: 0; z-index: 2; width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); height: 100%; background: #f8fafc; }
 /* #452: Group headers + variable-height lanes (stacked overlapping
    Transactions need more than one row) replaced this column's own fixed
    40px-block-per-lane flow with explicit top/height per band (computed in
@@ -251,10 +242,12 @@
    same `onSelect`/`selectedId`. */
 .transaction-lane-label-row { position: absolute; left: 48px; right: 4px; height: 20px; display: flex; align-items: center; gap: 5px; padding: 0 6px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #23364a; font-size: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 .transaction-lane-label-row:hover { background: #e8eef5; }
-.transaction-lane-label-row[data-selected="true"] { border-color: #0b74de; background: #dbeafe; font-weight: 650; }
+.transaction-lane-label-row[data-selected="true"] { border-color: var(--ds-selection-border, #287ac0); background: var(--ds-selection-bg, #e5f2ff); font-weight: 650; }
 .transaction-lane-label-swatch { flex: none; width: 7px; height: 7px; border-radius: 2px; }
 .transaction-group-header, .transaction-group-header-band { position: absolute; left: 0; right: 0; }
 .transaction-group-header { display: flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 1px solid #c7d2de; background: #eef2f7; color: #2c4257; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+/* #764: sticky context layer -- pinned to the scroll owner's left edge; the header band itself still scrolls with the lanes. */
+.transaction-group-header-context { position: sticky; left: 0; display: flex; align-items: center; gap: 6px; height: 100%; padding-right: 8px; background: #eef2f7; min-width: 0; max-width: 100%; }
 .transaction-group-swatch { flex: none; width: 8px; height: 8px; border-radius: 2px; }
 /* #397: collapse/expand chevron -- same shape/interaction as the Signal
    Tree's own Group collapse control (icon-only toggle, no layout shift
@@ -272,8 +265,9 @@
 .transaction-group-header input:hover, .transaction-group-header input:focus { border-color: #9fb3c7; background: #fff; }
 .transaction-group-header-delete { flex: none; margin-left: auto; width: 16px; height: 16px; padding: 0; border: 0; background: transparent; color: #8a97a8; font-size: 12px; line-height: 1; cursor: pointer; }
 .transaction-group-header-delete:hover { color: #b2382c; }
-.transaction-group-header-band { background: #eef2f7ad; border-bottom: 1px solid #c7d2de; }
-.transaction-lane { position: absolute; left: 0; width: 100%; border-bottom: 1px solid #d9e1ea; }
+.transaction-group-header-band { background: #eef2f7ad; border-bottom: 1px solid #c7d2de; pointer-events: none; /* decorative: must never intercept the Group header controls */ }
+.transaction-lane { position: absolute; left: 0; width: 100%; border-bottom: 1px solid #c9d6e3; }
+.transaction-lane:hover { background: rgb(214 229 245 / 45%); }
 .transaction-lane > button:has(.transaction-phases) { height: 32px; align-items: start; }
 .transaction-phases { position: absolute; inset: 15px 0 0; pointer-events: none; }
 /* #429/#397 Transaction Mode Product Closure P0-4: derive both the bar's
@@ -294,29 +288,9 @@
 [data-fold-affordance="end-hidden"] { right: 0; }
 .transaction-lane > button { position: absolute; top: 4px; z-index: 1; min-width: 18px; height: 20px; display: grid; grid-template-columns: 5px minmax(0,1fr) 5px; align-items: center; overflow: hidden; padding: 0; border: 1px solid color-mix(in srgb, var(--transaction-color, #2e70ad) 85%, black); border-radius: 4px; background: color-mix(in srgb, var(--transaction-color, #2e70ad) 25%, white); color: #174d7c; font-size: 10px; }
 .transaction-track > .transaction-lane > button { z-index: 4; }
-.transaction-lane > button[data-selected="true"] { outline: 2px solid #0b74de; background: color-mix(in srgb, var(--transaction-color, #2e70ad) 45%, white); }
+.transaction-lane > button[data-selected="true"] { outline: 2px solid var(--ds-selection-border, #287ac0); background: color-mix(in srgb, var(--transaction-color, #2e70ad) 45%, white); }
 .transaction-lane > button > i { height: 100%; cursor: ew-resize; }
-.transaction-lane span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: grab; }
-
-.cycle-panel.mode-transaction .surface-host { visibility: hidden; }
-.cycle-panel.mode-transaction .transaction-left-tree {
-  position: absolute;
-  z-index: 18;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: var(--gui-left-width);
-  overflow: auto;
-  border-right: 1px solid #cbd4df;
-  background: #f8fafc;
-}
-.cycle-panel.mode-transaction:has([data-testid="transaction-signal-tree"]) .transaction-left-tree { display: none; }
-.cycle-panel.mode-transaction .transaction-lane-labels {
-  left: var(--gui-left-width);
-  width: var(--gui-frozen-width, 210px);
-}
-.cycle-panel.mode-transaction .transaction-lane-label-row { display: none; }
-.transaction-left-tree-root {
+.transaction-lane span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: grab; }.transaction-left-tree-root {
   display: flex;
   align-items: center;
   min-height: 30px;
@@ -382,6 +356,8 @@
 .transaction-left-tree-row-wrap { position: relative; display: block; width: 100%; height: var(--transaction-tree-row-height, 29px); }
 .transaction-bookmark-markers { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
 .transaction-bookmark-markers button { position: absolute; top: 0; bottom: 0; width: 6px; margin-left: -2px; padding: 0; border: 0; border-inline: 2px solid #d97706; background: transparent; box-shadow: 0 0 0 1px #fff8; pointer-events: auto; cursor: pointer; }
+.transaction-bookmark-markers button { border-inline: 1px solid rgb(217 119 6 / 45%); box-shadow: none; }
+.transaction-bookmark-markers button:hover, .transaction-bookmark-markers button:focus-visible, .transaction-bookmark-markers button[data-selected="true"], .transaction-bookmark-markers button[aria-pressed="true"] { border-inline: 2px solid #d97706; box-shadow: 0 0 0 1px #fff8; }
 .transaction-left-tree-row-wrap .transaction-left-tree-row { box-sizing: border-box; height: 100%; padding-right: 57px; }
 .transaction-left-tree-row-actions { position: absolute; z-index: 4; top: 50%; right: 7px; display: grid; grid-template-columns: 22px 22px; align-items: center; width: 44px; height: 24px; transform: translateY(-50%); }
 .transaction-left-tree-visibility, .transaction-left-tree-row-actions > .transaction-left-tree-more { display: inline-flex; align-items: center; justify-content: center; width: 22px; min-width: 22px; height: 24px; margin: 0; padding: 0; border: 0; border-radius: 2px; background: transparent; color: #52677f; cursor: pointer; }
@@ -391,102 +367,8 @@
 .transaction-left-tree-visibility[data-visibility-state="off"] { color: #8a98a9; }
 .transaction-left-tree-visibility:hover, .transaction-left-tree-visibility:focus-visible, .transaction-left-tree-more:hover, .transaction-left-tree-more:focus-visible { outline: 1px solid #8bb8e8; outline-offset: -1px; background: #e7f1fb; color: #1769aa; }
 .transaction-left-tree-visibility:hover, .transaction-left-tree-visibility:focus-visible { color: #1769aa; }
-.transaction-left-tree-row:hover, .transaction-left-tree-row[data-selected="true"] { background: #dcecff; color: #155ca0; }
-.cycle-panel.mode-transaction .transaction-lanes { min-height: calc(100% - 34px); }
-.cycle-panel.mode-transaction .transaction-signal-tree { height: calc(100% - 34px); }
-/* #397: `.surface-host`'s padding-top must clear `.transaction-lanes`'s own
-   bottom edge (its `top` from the base rule above + this max-height) or a
-   multi-Group/multi-lane Transaction set (more content than one lane needs)
-   renders the Lanes region's bottom ~26px into the waveform surface below
-   it -- reproduced with a real 2-Group/2-lane sample in Split mode. Kept as
-   one shared var so the two rules can't drift apart again. */
-.cycle-panel.mode-split { --split-lanes-height: 112px; }
-/* #573: Combined is a stacked Transaction-over-Cycle workspace. The two
-   panes share the horizontal time viewport while vertical scrolling stays
-   local to each pane. */
-.cycle-panel.mode-split .cycle-viewport.split-signal-pane {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
-  flex: 1 1 auto;
-  overflow-x: auto;
-  overflow-y: hidden;
-}
-.cycle-panel.mode-split .split-transaction-pane {
-  position: relative;
-  width: max-content;
-  min-width: 100%;
-  min-height: 0;
-  /* Combined's horizontal splitter uses the same view-only ratio owner as
-     the workspace resize actions. Keep the actual pane allocation driven by
-     that ratio; a fixed 42% made the splitter appear draggable while the
-     panes themselves never changed size. */
-  flex: 0 0 clamp(160px, calc(var(--gui-signal-split-upper-ratio, 0.5) * 100%), 280px);
-  overflow-y: auto;
-  overflow-x: visible;
-  border-bottom: 1px solid var(--ds-border-subtle, #b7c4d2);
-}
-.cycle-panel.mode-split .split-signal-content {
-  position: relative;
-  width: max-content;
-  min-width: 100%;
-  min-height: 0;
-  flex: 1 1 auto;
-  min-height: 220px;
-  overflow-y: auto;
-  overflow-x: visible;
-  overscroll-behavior: contain;
-}
-.cycle-panel.mode-split .split-transaction-pane {
-  overscroll-behavior: contain;
-  z-index: 20;
-}
-.cycle-panel.mode-split .combined-split-divider {
-  flex: 0 0 8px;
-  cursor: row-resize;
-  border-top: 1px solid var(--ds-border-subtle, #b7c4d2);
-  border-bottom: 1px solid var(--ds-border-subtle, #b7c4d2);
-  background: var(--ds-surface-muted, #edf2f7);
-  z-index: 30;
-}
-.cycle-panel.mode-split .combined-split-divider:focus-visible {
-  outline: 2px solid var(--ds-focus-color, #2678bc);
-  outline-offset: -2px;
-}
-.cycle-panel.mode-split .split-transaction-pane .transaction-lanes {
-  position: relative;
-  top: 0;
-  width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px) + var(--wave-width, 640px));
-  min-height: 100%;
-  max-height: none;
-  overflow: visible;
-}
-.cycle-panel.mode-split .split-signal-pane .surface-host { padding-top: 34px; }
-/* Combined left column, upper: the same production Transaction Tree used
-   standalone -- sticky (not absolute) so it stays put during the shared
-   horizontal scroll exactly like `.transaction-lane-labels` already does,
-   spanning the full left+frozen width (one unified tree column, not the
-   left-width/frozen-width split standalone Transaction Mode uses alongside
-   its own narrower `.transaction-lane-labels` strip). Sits above that strip
-   (which stays mounted for lane-bar row math but has its own label rows
-   hidden below) via a higher local z-index within the pane's own stacking
-   context. */
-.cycle-panel.mode-split .split-transaction-pane .transaction-left-tree {
-  position: absolute;
-  /* Above `.transaction-lanes` (z-index: 17) and its own group headers,
-     which otherwise intercept pointer events meant for this tree. */
-  z-index: 21;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px));
-  overflow: auto;
-  border-right: 1px solid #cbd4df;
-  background: #f8fafc;
-}
-.cycle-panel.mode-split .transaction-lane-label-row { display: none; }
-/* #407: Split active pane indicator -- `cycle-viewport[data-active-pane]`
+.transaction-left-tree-row:hover { background: var(--ds-hover-bg, #f3f8fd); color: #155ca0; }
+.transaction-left-tree-row[data-selected="true"] { background: var(--ds-selection-bg, #e5f2ff); color: #155ca0; box-shadow: inset 2px 0 0 var(--ds-selection-border, #287ac0); }/* #407: Split active pane indicator -- `cycle-viewport[data-active-pane]`
    is set imperatively (minimal-cycle-view.tsx; the element itself is
    editor-workspace-view.tsx's JSX, not this file's), one 2px inset border
    on whichever of the two existing Split regions was last clicked/focused.
@@ -557,38 +439,12 @@
 .editor-shell[data-show-group-background="false"] .surface-host [data-role$="-row"]:not([data-selected="true"]):not([data-transaction-linked="true"]) { background-color: transparent !important; }
 
 /* Transaction presentation belongs to the center timing surface. */
-.transaction-track { position: absolute; z-index: 3; top: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); width: var(--wave-width, 640px); height: 100%; transform-origin: 0 0; scale: var(--transaction-zoom) 1; }
-/* Transaction Mode owns its tree in the outer left rail.  The center
-   timeline must therefore not reserve the legacy left/frozen columns a
-   second time.  Keep this scoped to Transaction Mode; Combined/Split still
-   use the embedded transaction pane layout. */
-.editor-shell .cycle-panel.mode-transaction .transaction-lanes {
-  width: var(--wave-width, 640px);
-}
-.editor-shell .cycle-panel.mode-transaction .transaction-lane-labels {
-  left: 0;
-  width: var(--wave-width, 640px);
-}
-.editor-shell .cycle-panel.mode-transaction .cycle-ruler {
-  --time-domain-left: 0px;
-  left: 0;
-  width: 100%;
-}
-.editor-shell .cycle-panel.mode-transaction .geometry-grid {
-  left: 0;
-  width: var(--wave-width, 640px);
-}
-.editor-shell .cycle-panel.mode-transaction .transaction-track {
-  left: 0;
-  width: var(--wave-width, 640px);
-}
-.editor-shell .cycle-panel.mode-transaction .transaction-signal-tree {
-  width: 100%;
-}
-.transaction-geometry-line { position: absolute; top: 0; bottom: 0; width: 1px; border-left: 1px solid #dce4ed; pointer-events: none; }
+.transaction-track { position: absolute; z-index: 3; top: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); width: calc(var(--wave-width, 640px) * var(--transaction-zoom, 1)); height: 100%; }.transaction-geometry-line { position: absolute; top: 0; bottom: 0; width: 1px; border-left: 1px solid #dce4ed; pointer-events: none; }
 .transaction-left-tree-more { display: inline-flex; align-items: center; justify-content: center; width: 22px; min-width: 22px; height: 24px; margin: 0; padding: 0; border: 0; background: transparent; color: #52677f; cursor: pointer; }
 .transaction-left-tree-group-menu { position: fixed; z-index: 1200; display: grid; width: 216px; min-width: min(216px, calc(100vw - 16px)); max-width: calc(100vw - 16px); padding: 4px; border: 1px solid #b8c7d8; border-radius: 3px; background: #fff; box-shadow: 0 4px 12px rgb(30 55 80 / 18%); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
 .transaction-left-tree-group-menu button { box-sizing: border-box; width: 100%; min-width: 0; min-height: 27px; padding: 5px 8px; border: 0; background: transparent; color: #29425e; text-align: left; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.transaction-left-tree-submenu { display: grid; margin: 0 0 2px 10px; border-left: 2px solid #c9d8e8; }
+.transaction-left-tree-submenu button { padding-left: 12px; }
 .transaction-left-tree-group-menu button:hover { background: #e7f1fb; }
 /* #397 Transaction Mode GUI Closure Section 6: single full-width column
    (was a wrapping `repeat(auto-fill,minmax(340px,1fr))` card grid) -- the
@@ -610,7 +466,7 @@
 .transaction-disclosure-slot { box-sizing: border-box; min-height: 28px; padding: 0; border: 0; border-right: 1px solid #dfe7ef; background: #f7fafd; color: #55708d; font-size: 12px; line-height: 1; cursor: pointer; }
 .transaction-disclosure-slot:hover { background: #e7f1fb; color: #163756; }
 .transaction-disclosure-slot:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; z-index: 1; }
-.transaction-phase-row { display: flex; align-items: stretch; min-height: 26px; background: #f8fbfe; color: #5c687c; }
+.transaction-table-phase-row { display: flex; align-items: stretch; min-height: 26px; background: #f8fbfe; color: #5c687c; }
 .transaction-phase-indent { flex: 0 0 28px; width: 28px; min-width: 28px; border-right: 1px solid #dfe7ef; background: #f1f6fa; }
 .transaction-phase-cells { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border-bottom: 1px solid #e4ebf2; }
 .transaction-phase-cells > span { min-width: 0; padding-inline: 4px; border-right: 1px solid #e7edf3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; }
@@ -623,12 +479,8 @@
    with every other row (and with the header) the moment two rows' text
    lengths differ. Fixed widths make every row (and the header, which
    repeats this exact template) share identical column boundaries. */
-.transaction-list-row > button { flex: 1 1 auto; min-width: 0; height: 30px; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #c2cfdd; border-radius: 0; text-align: left; padding-inline: 0; overflow: hidden; }
-.editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row > button { height: 28px; }
-.transaction-list-row > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: #5c687c; }
-.transaction-list-row-editor { flex: 1 1 auto; min-width: 0; min-height: 30px; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #287ac0; background: #e5f2ff; color: #163756; }
-.editor-shell:has(.cycle-panel.mode-transaction) .transaction-list-row-editor { min-height: 28px; }
-.transaction-list-row-editor > * { min-width: 0; width: 100%; height: 24px; box-sizing: border-box; padding: 2px 4px; border: 0; border-right: 1px solid #c7d8e8; border-radius: 0; background: transparent; color: #163756; font: inherit; font-size: 10px; }
+.transaction-list-row > button { flex: 1 1 auto; min-width: 0; height: 30px; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #c2cfdd; border-radius: 0; text-align: left; padding-inline: 0; overflow: hidden; }.transaction-list-row > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: #5c687c; }
+.transaction-list-row-editor { flex: 1 1 auto; min-width: 0; min-height: 30px; display: grid; grid-template-columns: minmax(110px,1.4fr) 80px 48px 54px 54px 60px 55px 70px 84px minmax(140px,2fr); align-items: center; gap: 0; border: 1px solid #287ac0; background: #e5f2ff; color: #163756; }.transaction-list-row-editor > * { min-width: 0; width: 100%; height: 24px; box-sizing: border-box; padding: 2px 4px; border: 0; border-right: 1px solid #c7d8e8; border-radius: 0; background: transparent; color: #163756; font: inherit; font-size: 10px; }
 .transaction-list-row-editor > input[type="color"] { padding: 2px 4px; }
 .transaction-list-row-editor > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .transaction-list-row-editor > *:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; background: #fff; }
@@ -660,8 +512,11 @@
    focus-visible/disabled) sets its own color, background and border,
    keeping border-width constant across states to avoid layout shift. */
 .transaction-list-row > button, .bookmark-list > button { color: #233a59; background: #fff; }
-.transaction-list-row > button:hover:not([data-selected="true"]):not(:disabled), .bookmark-list > button:hover:not([data-selected="true"]):not(:disabled) { border-color: #9fc4e5; background: #f3f8fd; color: #163756; }
-.transaction-list-row > button[data-selected="true"], .bookmark-list > button[data-selected="true"] { border-color: #287ac0; background: #e5f2ff; color: #163756; }
+.transaction-list-row > button:hover:not([data-selected="true"]):not(:disabled), .bookmark-list > button:hover:not([data-selected="true"]):not(:disabled) { border-color: var(--ds-hover-border, #9fc4e5); background: var(--ds-hover-bg, #f3f8fd); color: #163756; }
+.transaction-list-row > button[data-selected="true"], .bookmark-list > button[data-selected="true"] { border-color: var(--ds-selection-border, #287ac0); background: var(--ds-selection-bg, #e5f2ff); color: #163756; }
 .transaction-list-row > button[data-selected="true"]:hover, .bookmark-list > button[data-selected="true"]:hover { background: #d8ecfd; }
 .transaction-list-row > button:focus-visible, .bookmark-list > button:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; z-index: 1; }
 .transaction-list-row > button:disabled, .bookmark-list > button:disabled { color: #8b97a8; background: #f3f5f8; border-color: #d7dee7; cursor: not-allowed; }
+
+/* #746: visible Group creation next to the Tree Add control (same createTransactionGroup path as Bottom/Ribbon). */
+.tree-add-group-button { height: var(--ds-control-height, 22px); padding: 0 6px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; font-size: 10px; font-weight: 650; white-space: nowrap; }

@@ -10,6 +10,22 @@ export type TransactionTreeFilterMode = "all" | "grouped" | "ungrouped" | "phase
 
 export type SemanticCursor = number | undefined;
 
+const VIEW_MODE_PREFERENCE_KEY = "timing-chart-v2.view-mode";
+
+export function readPreferredViewMode(fallback: ViewMode): ViewMode {
+  try {
+    const saved = window.localStorage.getItem(VIEW_MODE_PREFERENCE_KEY);
+    return saved === "Cycle" || saved === "Transaction" || saved === "Split" ? saved : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function savePreferredViewMode(mode: ViewMode): void {
+  try { window.localStorage.setItem(VIEW_MODE_PREFERENCE_KEY, mode); }
+  catch { /* Workspace preferences are best-effort and never block mode changes. */ }
+}
+
 /** #403/#404: which pane/entity family the Ribbon and other chrome should
  * treat as "active" for contextual command surfaces -- deliberately its
  * own state, separate from `ViewMode` (Cycle/Transaction/Split are
@@ -66,9 +82,18 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   // Selection change alone must never call this -- only a real ViewMode
   // change may normalize ActiveContext.
   const setViewMode = (next: ViewMode) => {
+    savePreferredViewMode(next);
     if (viewMode === "Cycle" || viewMode === "Transaction") {
       followSelectionByModeRef.current[viewMode] = followSelectionRef.current;
       bottomPinnedByModeRef.current[viewMode] = bottomPinnedRef.current;
+    }
+    // #773: snapshot the source standalone mode's current Bottom tab BEFORE every transition, including into Combined/Split -- it must
+    // not be lost just because the destination is a temporary layout, not another standalone mode.
+    const transactionTabs: readonly BottomTab[] = ["Transaction", "Phases", "Linked Signals", "Bookmarks", "AI", "Problems", "JSON"];
+    const cycleTabs: readonly BottomTab[] = ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"];
+    if (viewMode === "Cycle" || viewMode === "Transaction") {
+      const currentTabs = viewMode === "Transaction" ? transactionTabs : cycleTabs;
+      if (currentTabs.includes(bottomTab)) lastBottomTabByModeRef.current[viewMode] = bottomTab;
     }
     setViewModeRaw(next);
     setActiveContext((current) => normalizedActiveContextFor(next, current));
@@ -76,17 +101,9 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
       setActivePaneRaw(next === "Transaction" ? "transaction" : "signal");
       setFollowSelection(followSelectionByModeRef.current[next]);
       setBottomPinned(bottomPinnedByModeRef.current[next]);
-      setBottomTab((current) => {
-        const transactionTabs: readonly BottomTab[] = ["Transaction", "Phases", "Linked Signals", "Bookmarks", "AI", "Problems", "JSON"];
-        const cycleTabs: readonly BottomTab[] = ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"];
-        const currentTabs = viewMode === "Transaction" ? transactionTabs : cycleTabs;
-        if (viewMode === "Cycle" || viewMode === "Transaction") {
-          if (currentTabs.includes(current)) lastBottomTabByModeRef.current[viewMode] = current;
-        }
-        const valid = next === "Transaction" ? transactionTabs : cycleTabs;
-        const remembered = lastBottomTabByModeRef.current[next];
-        return valid.includes(remembered) ? remembered : valid[0]!;
-      });
+      const valid = next === "Transaction" ? transactionTabs : cycleTabs;
+      const remembered = lastBottomTabByModeRef.current[next];
+      setBottomTab(valid.includes(remembered) ? remembered : valid[0]!);
     }
   };
   // #407: Split's own pane-level counterpart to #404's ActiveContext --
@@ -211,7 +228,6 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   // as `treeTypeFilter`/`viewMode` above: never touches Canonical, never a
   // second selection owner (a Signal picked here is the exact same
   // selection Cycle Mode's own tree would produce).
-  const [transactionTreeTab, setTransactionTreeTab] = useState<"transactions" | "signals">("transactions");
 
   const [followSelection, setFollowSelection] = useState(true);
   const followSelectionRef = useRef(true);
@@ -257,7 +273,6 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     bottomHeight, setBottomHeight, bottomResizeRef,
     treeFilter, setTreeFilter, transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode,
     treeTypeFilter, setTreeTypeFilter,
-    transactionTreeTab, setTransactionTreeTab,
     followSelection, setFollowSelection, followSelectionRef,
     bottomPinned, setBottomPinned, bottomPinnedRef,
     pinnedBottomSelection, setPinnedBottomSelection,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { DEFAULT_MEASUREMENT_LAYOUT, MEASUREMENT_PROFILES, anchorTransitionFraction, measurementProfilePair } from "@timing-chart-v2/schema";
 import type { Annotation, AnnotationId, CanonicalDocument, MeasurementLayout, MeasurementProfile, SemanticAnchor, SignalId, TransitionAnchorKind } from "@timing-chart-v2/schema";
@@ -64,6 +64,7 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
     : measurementPairBase ?? { start: 0, end: 1 };
   const measurementDraftValid = measurementProfile !== "custom" || ([measurementPair.start, measurementPair.end].every((value) => Number.isFinite(value) && value >= 0 && value <= 1) && measurementPair.start <= measurementPair.end);
   const verticalSpanDraft = { mode: verticalSpanMode, ...(verticalSpanMode === "rows" ? { startRowId: verticalSpanStartRowId, endRowId: verticalSpanEndRowId } : {}), ...(verticalSpanMode === "custom" ? { startOffset: verticalSpanStartOffset, endOffset: verticalSpanEndOffset } : {}) };
+  const verticalSpanHasChanges = JSON.stringify(verticalSpanDraft) !== JSON.stringify(annotation.verticalSpan ?? { mode: "auto" });
   const verticalSpanValid = verticalSpanMode !== "rows" || (!!verticalSpanStartRowId && !!verticalSpanEndRowId);
   const setPositionMode = (mode: "cycle-snap" | "free") => {
     const result = commands.setAnnotationPositionMode(annotation.id, mode);
@@ -92,36 +93,74 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
     event?.preventDefault();
     commands.updateAnnotationProperties({ annotationId: annotation.id, ...annotationPropertiesBase(annotation), label, visible, color, ...(lineControlsEnabled ? { lineType, arrowhead } : {}), ...(isOpacityType ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}), labelOffset: { x: labelX, y: labelY }, style: styleDraft });
   };
+  // #775: this one effect used to reload EVERY local draft field whenever ANY canonical field of this Annotation changed, so applying
+  // one independent sub-editor (Anchor, Vertical Span, Measurement, Position Mode...) silently discarded an unrelated unapplied
+  // General/Style draft. It now tracks each field's own last-synced canonical value in `baseRef`; on a same-Annotation canonical
+  // change it only resyncs a field whose canonical value actually changed AND whose local draft is still clean (still equal to what
+  // it was last synced from) -- a dirty field is left alone, exactly the "merge untouched fields" policy the Issue allows. Switching
+  // to a different Annotation (a real entity change, not a partial commit) still does the full reset it always did.
+  const baseRef = useRef<{
+    id: AnnotationId; label: string; color: string; visible: boolean; lineType: NonNullable<Annotation["lineType"]>; arrowhead: NonNullable<Annotation["arrowhead"]>;
+    labelX: number; labelY: number; opacity: number; traceOffsetCycles: number; measurementProfile: MeasurementProfile; measurementKind: TransitionAnchorKind;
+    measurementStart: string; measurementEnd: string; measurementLayout: MeasurementLayout; verticalSpanMode: NonNullable<Annotation["verticalSpan"]>["mode"];
+    verticalSpanStartRowId: SignalId | undefined; verticalSpanEndRowId: SignalId | undefined; verticalSpanStartOffset: number; verticalSpanEndOffset: number;
+    styleDraft: Annotation["style"]; anchorField: AnchorField; anchorX: number; anchorY: number; anchorCycle: number; anchorSignalId: SignalId | undefined; anchorPoint: SemanticAnchor["point"];
+  } | undefined>(undefined);
   useEffect(() => {
     const anchor = (annotation as Partial<Record<AnchorField, SemanticAnchor>>)[firstAnchorField];
-    setLabel(annotation.label);
-    setColor(annotation.color ?? "#d04a36");
-    setVisible(annotation.visible);
-    setLineType(annotation.lineType ?? "straight");
-    setArrowhead(annotation.arrowhead ?? "end");
-    setLabelX(annotation.labelOffset?.x ?? 0);
-    setLabelY(annotation.labelOffset?.y ?? -14);
-    setOpacity(annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16));
-    setTraceOffsetCycles(annotation.traceOffsetCycles ?? 0);
-    setMeasurementProfile(annotation.measurement?.profile ?? "cycle");
-    setMeasurementKind(annotation.measurement?.anchorKind ?? "threshold");
-    setMeasurementStart(String(Math.round((anchorTransitionFraction(annotation.start) ?? 0.3) * 100)));
-    setMeasurementEnd(String(Math.round((anchorTransitionFraction(annotation.end) ?? 0.7) * 100)));
-    setMeasurementLayout(annotation.measurementLayout ?? DEFAULT_MEASUREMENT_LAYOUT);
-    setVerticalSpanMode(annotation.verticalSpan?.mode ?? "auto");
-    setVerticalSpanStartRowId(annotation.verticalSpan?.startRowId);
-    setVerticalSpanEndRowId(annotation.verticalSpan?.endRowId);
-    setVerticalSpanStartOffset(annotation.verticalSpan?.startOffset ?? 0);
-    setVerticalSpanEndOffset(annotation.verticalSpan?.endOffset ?? 0);
-    setStyleDraft(annotation.style);
-    setAnchorField(firstAnchorField);
-    setAnchorX(anchor?.offset?.x ?? 0);
-    setAnchorY(anchor?.offset?.y ?? 0);
-    setAnchorCycle(anchor?.cycle ?? 0);
-    setAnchorSignalId(anchor?.signalId);
-    setAnchorPoint(anchor?.point ?? "cycle-start");
-    setPositionModeStatus("");
-    setPreviewRevision(0);
+    const next = {
+      id: annotation.id, label: annotation.label, color: annotation.color ?? "#d04a36", visible: annotation.visible,
+      lineType: annotation.lineType ?? "straight", arrowhead: annotation.arrowhead ?? "end",
+      labelX: annotation.labelOffset?.x ?? 0, labelY: annotation.labelOffset?.y ?? -14,
+      opacity: annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16), traceOffsetCycles: annotation.traceOffsetCycles ?? 0,
+      measurementProfile: annotation.measurement?.profile ?? "cycle", measurementKind: annotation.measurement?.anchorKind ?? "threshold",
+      measurementStart: String(Math.round((anchorTransitionFraction(annotation.start) ?? 0.3) * 100)),
+      measurementEnd: String(Math.round((anchorTransitionFraction(annotation.end) ?? 0.7) * 100)),
+      measurementLayout: annotation.measurementLayout ?? DEFAULT_MEASUREMENT_LAYOUT,
+      verticalSpanMode: annotation.verticalSpan?.mode ?? "auto", verticalSpanStartRowId: annotation.verticalSpan?.startRowId, verticalSpanEndRowId: annotation.verticalSpan?.endRowId,
+      verticalSpanStartOffset: annotation.verticalSpan?.startOffset ?? 0, verticalSpanEndOffset: annotation.verticalSpan?.endOffset ?? 0,
+      styleDraft: annotation.style, anchorField: firstAnchorField, anchorX: anchor?.offset?.x ?? 0, anchorY: anchor?.offset?.y ?? 0,
+      anchorCycle: anchor?.cycle ?? 0, anchorSignalId: anchor?.signalId, anchorPoint: anchor?.point ?? "cycle-start",
+    };
+    const prev = baseRef.current;
+    const sameEntity = prev !== undefined && prev.id === annotation.id;
+    /** Resync one field only when ITS canonical value changed and the local draft was clean (still equal to the OLD canonical). A
+     * dirty (still-being-edited) field is preserved -- its baseline still advances so `hasChanges` compares against current Canonical. */
+    const merge = <K extends keyof typeof next>(key: K, current: (typeof next)[K], setLocal: (value: (typeof next)[K]) => void, eq: (a: (typeof next)[K], b: (typeof next)[K]) => boolean = (a, b) => a === b) => {
+      if (!sameEntity) { setLocal(next[key]); return; }
+      const changed = !eq(prev![key], next[key]);
+      const clean = eq(current, prev![key]);
+      if (changed && clean) setLocal(next[key]);
+    };
+    const jsonEq = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+    merge("label", label, setLabel);
+    merge("color", color, setColor);
+    merge("visible", visible, setVisible);
+    merge("lineType", lineType, setLineType);
+    merge("arrowhead", arrowhead, setArrowhead);
+    merge("labelX", labelX, setLabelX);
+    merge("labelY", labelY, setLabelY);
+    merge("opacity", opacity, setOpacity);
+    merge("traceOffsetCycles", traceOffsetCycles, setTraceOffsetCycles);
+    merge("measurementProfile", measurementProfile, setMeasurementProfile);
+    merge("measurementKind", measurementKind, setMeasurementKind);
+    merge("measurementStart", measurementStart, setMeasurementStart);
+    merge("measurementEnd", measurementEnd, setMeasurementEnd);
+    merge("measurementLayout", measurementLayout, setMeasurementLayout, jsonEq);
+    merge("verticalSpanMode", verticalSpanMode, setVerticalSpanMode);
+    merge("verticalSpanStartRowId", verticalSpanStartRowId, setVerticalSpanStartRowId);
+    merge("verticalSpanEndRowId", verticalSpanEndRowId, setVerticalSpanEndRowId);
+    merge("verticalSpanStartOffset", verticalSpanStartOffset, setVerticalSpanStartOffset);
+    merge("verticalSpanEndOffset", verticalSpanEndOffset, setVerticalSpanEndOffset);
+    merge("styleDraft", styleDraft, setStyleDraft, jsonEq);
+    merge("anchorField", anchorField, setAnchorField);
+    merge("anchorX", anchorX, setAnchorX);
+    merge("anchorY", anchorY, setAnchorY);
+    merge("anchorCycle", anchorCycle, setAnchorCycle);
+    merge("anchorSignalId", anchorSignalId, setAnchorSignalId);
+    merge("anchorPoint", anchorPoint, setAnchorPoint);
+    baseRef.current = next;
+    if (!sameEntity) { setPositionModeStatus(""); setPreviewRevision(0); }
     onPreview?.(annotation.id, undefined);
     return () => onPreview?.(annotation.id, undefined);
   }, [annotation.id, canonicalDraftKey, firstAnchorField, onPreview]);
@@ -138,7 +177,7 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
         <button type="button" onClick={() => { commands.resetAnnotationOffsets(annotation.id); setLabelX(0); setLabelY(-14); setAnchorX(0); setAnchorY(0); }}>Reset offsets</button>
         {annotation.type === "measurement" && <section className="annotation-measurement-editor" aria-label="Measurement semantics"><strong>Transition measurement</strong><label>Profile<select aria-label="Measurement profile" value={measurementProfile} onChange={(event) => setMeasurementProfile(event.target.value as MeasurementProfile)}>{MEASUREMENT_PROFILES.map((profile) => <option key={profile} value={profile}>{profile === "cycle" ? "Cycle anchors" : profile === "custom" ? "Custom" : profile}</option>)}</select></label>{measurementProfile !== "cycle" && <label>Meaning<select aria-label="Measurement anchor kind" value={measurementKind} onChange={(event) => setMeasurementKind(event.target.value as TransitionAnchorKind)}><option value="threshold">Transition threshold</option><option value="ratio">Transition ratio</option></select></label>}{measurementProfile === "custom" && <><label>Start %<input aria-label="Custom measurement start" type="number" min="0" max="100" step="1" value={measurementStart} onChange={(event) => setMeasurementStart(event.target.value)} /></label><label>End %<input aria-label="Custom measurement end" type="number" min="0" max="100" step="1" value={measurementEnd} onChange={(event) => setMeasurementEnd(event.target.value)} /></label></>}<label>Start marker<select aria-label="Measurement start marker" value={measurementLayout.startMarker} onChange={(event) => setMeasurementLayout((layout) => ({ ...layout, startMarker: event.target.value as MeasurementLayout["startMarker"] }))}><option value="none">None</option><option value="bar">Bar</option><option value="arrow">Arrow</option></select></label><label>End marker<select aria-label="Measurement end marker" value={measurementLayout.endMarker} onChange={(event) => setMeasurementLayout((layout) => ({ ...layout, endMarker: event.target.value as MeasurementLayout["endMarker"] }))}><option value="none">None</option><option value="bar">Bar</option><option value="arrow">Arrow</option></select></label><label>Arrow layout<select aria-label="Measurement arrow layout" value={measurementLayout.arrowLayout} onChange={(event) => setMeasurementLayout((layout) => ({ ...layout, arrowLayout: event.target.value as MeasurementLayout["arrowLayout"] }))}><option value="auto">Auto</option><option value="inward">Inward</option><option value="outward">Outward</option></select></label><label>Extensions<select aria-label="Measurement extension lines" value={measurementLayout.extensionLines} onChange={(event) => setMeasurementLayout((layout) => ({ ...layout, extensionLines: event.target.value as MeasurementLayout["extensionLines"] }))}><option value="both">Both</option><option value="start">Start</option><option value="end">End</option><option value="none">None</option></select></label><label>Lane<input aria-label="Measurement lane" type="number" min="0" step="1" value={measurementLayout.lane ?? ""} onChange={(event) => setMeasurementLayout((layout) => { if (event.target.value === "") { const { lane: _lane, ...withoutLane } = layout; return withoutLane; } return { ...layout, lane: Number(event.target.value) }; })} /></label><button type="button" data-testid="apply-measurement-semantics" disabled={!measurementDraftValid} onClick={() => commands.updateAnnotationMeasurement({ annotationId: annotation.id, profile: measurementProfile, anchorKind: measurementKind, start: measurementPair.start, end: measurementPair.end, layout: measurementLayout })}>Apply measurement</button></section>}
         {annotation.type === "highlight" && <section className="annotation-position-mode-editor" aria-label="Highlight position mode section"><strong>Position Mode</strong><label>Mode<select aria-label="Highlight position mode" value={annotation.positionMode ?? "cycle-snap"} onChange={(event) => setPositionMode(event.target.value as "cycle-snap" | "free")}><option value="cycle-snap">Cycle Snap</option><option value="free">Free</option></select></label>{positionModeStatus && <p role="alert">{positionModeStatus}</p>}</section>}
-        {annotation.type === "marker" && <section className="annotation-vertical-span-editor" aria-label="Marker vertical span"><strong>Vertical span</strong><label>Mode<select aria-label="Marker vertical span mode" value={verticalSpanMode} onChange={(event) => setVerticalSpanMode(event.target.value as typeof verticalSpanMode)}><option value="auto">Auto (full height)</option><option value="rows">Rows</option><option value="custom">Custom offsets</option></select></label>{verticalSpanMode === "rows" && <><label>Start Row<select aria-label="Marker vertical span start row" value={verticalSpanStartRowId ?? ""} onChange={(event) => setVerticalSpanStartRowId((event.target.value || undefined) as SignalId | undefined)}><option value="">Select a Signal…</option>{document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}</select></label><label>End Row<select aria-label="Marker vertical span end row" value={verticalSpanEndRowId ?? ""} onChange={(event) => setVerticalSpanEndRowId((event.target.value || undefined) as SignalId | undefined)}><option value="">Select a Signal…</option>{document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}</select></label></>}{verticalSpanMode === "custom" && <><label>Start Offset<input aria-label="Marker vertical span start offset" type="number" value={verticalSpanStartOffset} onChange={(event) => setVerticalSpanStartOffset(Number(event.target.value))} /></label><label>End Offset<input aria-label="Marker vertical span end offset" type="number" value={verticalSpanEndOffset} onChange={(event) => setVerticalSpanEndOffset(Number(event.target.value))} /></label></>}<button type="button" data-testid="apply-marker-vertical-span" disabled={!verticalSpanValid} onClick={() => commands.updateAnnotationVerticalSpan({ annotationId: annotation.id, verticalSpan: verticalSpanDraft as NonNullable<Annotation["verticalSpan"]> })}>Apply vertical span</button></section>}
+        {annotation.type === "marker" && <section className="annotation-vertical-span-editor" aria-label="Marker vertical span"><strong>Vertical span</strong><label>Mode<select aria-label="Marker vertical span mode" value={verticalSpanMode} onChange={(event) => setVerticalSpanMode(event.target.value as typeof verticalSpanMode)}><option value="auto">Auto (full height)</option><option value="rows">Rows</option><option value="custom">Custom offsets</option></select></label>{verticalSpanMode === "rows" && <><label>Start Row<select aria-label="Marker vertical span start row" value={verticalSpanStartRowId ?? ""} onChange={(event) => setVerticalSpanStartRowId((event.target.value || undefined) as SignalId | undefined)}><option value="">Select a Signal…</option>{document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}</select></label><label>End Row<select aria-label="Marker vertical span end row" value={verticalSpanEndRowId ?? ""} onChange={(event) => setVerticalSpanEndRowId((event.target.value || undefined) as SignalId | undefined)}><option value="">Select a Signal…</option>{document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}</select></label></>}{verticalSpanMode === "custom" && <><label>Start Offset<input aria-label="Marker vertical span start offset" type="number" value={verticalSpanStartOffset} onChange={(event) => setVerticalSpanStartOffset(Number(event.target.value))} /></label><label>End Offset<input aria-label="Marker vertical span end offset" type="number" value={verticalSpanEndOffset} onChange={(event) => setVerticalSpanEndOffset(Number(event.target.value))} /></label></>}<button type="button" data-testid="apply-marker-vertical-span" disabled={!verticalSpanHasChanges || !verticalSpanValid} onClick={() => commands.updateAnnotationVerticalSpan({ annotationId: annotation.id, verticalSpan: verticalSpanDraft as NonNullable<Annotation["verticalSpan"]> })}>Apply vertical span</button></section>}
       </InspectorSection>
       <InspectorSection sectionId="geometry" title="Geometry / Anchor" open={sections.geometry ?? true} onToggle={() => toggle("geometry")}><div className="property-row"><span>Anchor</span><span>{selectedAnchor?.point ?? "—"}</span></div><div className="annotation-anchor-editor" aria-label="Inspector Annotation Anchor"><label>Endpoint<select aria-label="Inspector annotation endpoint" value={anchorField} onChange={(event) => { const nextField = event.target.value as AnchorField; const nextAnchor = (annotation as Partial<Record<AnchorField, SemanticAnchor>>)[nextField]; setAnchorField(nextField); setAnchorX(nextAnchor?.offset?.x ?? 0); setAnchorY(nextAnchor?.offset?.y ?? 0); setAnchorCycle(nextAnchor?.cycle ?? 0); setAnchorSignalId(nextAnchor?.signalId); setAnchorPoint(nextAnchor?.point ?? "cycle-start"); }}>{anchorFields.map((field) => <option key={field} value={field}>{field}</option>)}</select></label><label>Signal<select aria-label="Inspector annotation anchor signal" value={anchorSignalId ?? ""} onChange={(event) => setAnchorSignalId((event.target.value || undefined) as SignalId | undefined)}><option value="">(none)</option>{document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}</select></label><label>Cycle<input aria-label="Inspector annotation anchor cycle" type="number" min="0" max={document.timeline.cycleCount - 1} step={annotation.type === "highlight" && annotation.positionMode === "free" ? "0.01" : "1"} value={anchorCycle} onChange={(event) => setAnchorCycle(Number(event.target.value))} /></label><label>Point<select aria-label="Inspector annotation anchor point" value={anchorPoint} onChange={(event) => setAnchorPoint(event.target.value as SemanticAnchor["point"])}>{(["cycle-start", "cycle-center", "cycle-end", "transition-start", "transition-center", "transition-end", "rising-edge", "falling-edge", "value-start", "value-center", "row-center"] as const).map((point) => <option key={point} value={point}>{point}</option>)}</select></label><label>X offset<input aria-label="Inspector annotation anchor X" type="number" value={anchorX} onChange={(event) => setAnchorX(Number(event.target.value))} /></label><label>Y offset<input aria-label="Inspector annotation anchor Y" type="number" value={anchorY} onChange={(event) => setAnchorY(Number(event.target.value))} /></label><button type="button" data-testid="apply-inspector-annotation-anchor" disabled={!selectedAnchor} onClick={() => { if (selectedAnchor) commands.setAnnotationAnchor(annotation.id, anchorField, { ...selectedAnchor, ...(anchorSignalId === undefined ? {} : { signalId: anchorSignalId }), cycle: anchorCycle, point: anchorPoint, offset: { x: anchorX, y: anchorY } }); }}>Apply Anchor</button></div></InspectorSection>
       <InspectorSection sectionId="style" title="Style" open={sections.style ?? false} onToggle={() => toggle("style")}>

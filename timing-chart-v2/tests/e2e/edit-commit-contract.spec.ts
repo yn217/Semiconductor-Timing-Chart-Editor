@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+import { openBottomSettings } from "./bottom-settings";
+
+startInCycleMode(test);
 
 test("Inspector and Bottom expose the documented edit contract surfaces", async ({ page }) => {
   await page.goto("/");
@@ -16,7 +20,9 @@ test("Inspector and Bottom expose the documented edit contract surfaces", async 
   await expect(page.getByTestId("bottom-tabs").getByRole("tab", { name: "JSON", exact: true })).toBeVisible();
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(page.getByTestId("bottom-tabs").getByRole("tab", { name: "Transaction", exact: true })).toBeVisible();
+  await openBottomSettings(page);
   await expect(page.getByTestId("follow-selection")).toBeVisible();
+  await openBottomSettings(page);
   await expect(page.getByTestId("bottom-pin")).toBeVisible();
 });
 
@@ -97,8 +103,8 @@ test("Transaction Bottom table keeps selection while Inspector owns edits", asyn
   await page.locator('[data-transaction-row-id="demo_txn_read"]').click();
   const inspector = page.getByTestId("inspector");
   await expect(inspector.getByLabel("Transaction name")).toHaveValue("Read_0");
-  await expect(page.getByTestId("transaction-editor").getByTestId("apply-transaction-properties")).toHaveCount(0);
-  await expect(page.getByTestId("transaction-editor").getByText("Editing:")).toHaveCount(0);
+  // #703: the selected Bottom row is the in-place editing row with its own Apply, disabled while the draft is clean.
+  await expect(page.getByTestId("transaction-editor").getByTestId("apply-transaction-properties")).toBeDisabled();
 });
 
 test("Signal and Group rename use the same explicit Enter/Escape draft contract", async ({ page }) => {

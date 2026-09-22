@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 const clock = {
   id: "sig_clk", name: "CLK", type: "clock", role: "input",
@@ -35,6 +38,7 @@ test("shared ValueSignal policy keeps Quick Values renderable through Save/Open"
   const host = page.getByTestId("cycle-surface");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "compatibility.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.getByTestId("wavedrom-status")).toHaveText("WaveDrom: Ready");
 
   const eventRow = host.locator("[data-role='frozen-row'][data-row-id='sig_event']");
@@ -55,6 +59,7 @@ test("shared ValueSignal policy keeps Quick Values renderable through Save/Open"
   expect(savedPath).toBeTruthy();
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.getByTestId("wavedrom-status")).toHaveText("WaveDrom: Ready");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("signal-count-status")).toHaveText("Signals: 6");
@@ -66,6 +71,7 @@ test("incompatible State to Binary conversion is rejected before canonical commi
   const host = page.getByTestId("cycle-surface");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "compatibility.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_state']").click();
   const bottom = page.getByTestId("bottom-editor");
   const inspector = page.getByTestId("inspector");
@@ -94,6 +100,7 @@ test("Pulse is never offered as a Type conversion target, even from a value-doma
   const host = page.getByTestId("cycle-surface");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "compatibility.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_logic']").click();
   const inspector = page.getByTestId("inspector");
   const type = inspector.getByLabel("Inspector signal type");
@@ -109,6 +116,7 @@ test("compatible Bus to State conversion supports Cancel, Apply, Undo/Redo, and 
   const host = page.getByTestId("cycle-surface");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "compatibility.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_bus']").click();
   const inspector = page.getByTestId("inspector");
   const type = inspector.getByLabel("Inspector signal type");
@@ -143,6 +151,7 @@ test("compatible Bus to State conversion supports Cancel, Apply, Undo/Redo, and 
   expect(savedPath).toBeTruthy();
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_bus']").click();
   await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue("state");
   await expect(page.getByTestId("wavedrom-status")).toHaveText("WaveDrom: Ready");
@@ -154,6 +163,7 @@ test("Bus to Binary conversion rejects non-logic values without mutation", async
   const host = page.getByTestId("cycle-surface");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "compatibility.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_bus']").click();
   const inspector = page.getByTestId("inspector");
   const beforeRevision = await host.getAttribute("data-canonical-revision");
@@ -173,6 +183,7 @@ test("Event Table exposes one action route and visibly rejects invalid imports",
   const host = page.getByTestId("cycle-surface");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "compatibility.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_event']").click();
   const bottom = page.getByTestId("bottom-editor");
   await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true }).click();
@@ -187,7 +198,7 @@ test("Event Table exposes one action route and visibly rejects invalid imports",
   await expect(toolbar.getByRole("button", { name: "Preview Update", exact: true })).toHaveCount(0);
   const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
   await bottom.getByLabel("Import signal events").setInputFiles({ name: "invalid.json", mimeType: "application/json", buffer: Buffer.from("not-json") });
-  await expect(bottom.getByTestId("event-import-status")).toHaveText("Import rejected: invalid JSON.");
+  await expect(bottom.getByTestId("event-import-status")).toHaveText(/^Import rejected: .+/); // the parser problem follows the shared prefix
   expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
@@ -198,6 +209,7 @@ test("Event Table valid import uses canonical validation and one history entry",
   const host = page.getByTestId("cycle-surface");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "compatibility.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_event']").click();
   const bottom = page.getByTestId("bottom-editor");
   await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true }).click();

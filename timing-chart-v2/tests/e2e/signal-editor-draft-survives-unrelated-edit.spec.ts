@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 // #578: SignalEditor's remount key included the whole-document `revision`,
 // so ANY canonical mutation anywhere -- not just edits to the open Signal --
@@ -25,7 +28,7 @@ test("Signal Editor's in-progress Add/Edit Transition draft survives an unrelate
   // This bumps the document's canonical revision without touching REQUEST.
   await page.getByRole("button", { name: "Hide READY", exact: true }).click();
 
-  await expect(page.locator("text=/Selected:/")).toHaveText("Selected: REQUEST");
+  await expect(page.getByTestId("selection-status")).toHaveText("REQUEST");
   await expect(startInput).toHaveValue("7");
   await expect(commentInput).toHaveValue("dirty draft comment");
   await expect(page.locator(".editor-selection")).toHaveText("REQUEST · Signal");

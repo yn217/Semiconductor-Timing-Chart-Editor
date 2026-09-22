@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { timelineOwner } from "./timeline-scroll.js";
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
   test(`#598 frozen Cycle columns stay fixed and clip time content at ${viewport.width}x${viewport.height}`, async ({ page }) => {
@@ -13,7 +14,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await frozen.click();
     await expect(page.getByTestId("inspector-shell")).toBeVisible();
     await expect(page.getByTestId("bottom-resizer")).toBeVisible();
-    const viewportEl = page.getByTestId("cycle-viewport");
+    const viewportEl = timelineOwner(page);
     const before = await frozen.boundingBox();
     expect(before).not.toBeNull();
     const overflow = await viewportEl.evaluate((element) => ({ scrollWidth: element.scrollWidth, clientWidth: element.clientWidth }));

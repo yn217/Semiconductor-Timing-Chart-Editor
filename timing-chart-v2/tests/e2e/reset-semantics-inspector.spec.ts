@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #495 (Reset semantics GUI portion): `signal.updateResetSemantics` and the
 // Canonical `resetSemantics` field already existed with zero Inspector

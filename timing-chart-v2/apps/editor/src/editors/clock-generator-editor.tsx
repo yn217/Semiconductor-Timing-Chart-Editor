@@ -19,6 +19,8 @@ export function ClockGeneratorEditor({ signal, bookmarks, commands, onDuplicate,
     setEdgeCounter(signal.edgeCounter);
     setSuppressedPeriods((signal.generator.suppressedPeriods ?? []).join(", "));
     setGeneratorError("");
+    // A committed generator (Apply/Undo/Redo/Open) always returns to the real canonical waveform: Preview switches off.
+    setPreview(false);
   }, [signal.id, signal.generator, signal.edgeCounter]);
   // Preview reflects the CURRENT draft generator on the real, selected Clock
   // row's waveform via a pure DOM-only path (see refreshClockPreview in
@@ -125,14 +127,16 @@ export function ClockGeneratorEditor({ signal, bookmarks, commands, onDuplicate,
       <label>Period<input aria-label="Clock period" type="number" min="1" step="1" value={generator.period} onChange={(event) => number("period", event.target.value)} /></label>
       <label>Duty<input aria-label="Clock duty" type="number" min="0.01" max="1" step="0.01" value={generator.duty} onChange={(event) => number("duty", event.target.value)} /></label>
       <label>Phase<input aria-label="Clock phase" type="number" step="0.5" value={generator.phase} onChange={(event) => number("phase", event.target.value)} /></label>
-      <output className="clock-derived-frequency" data-testid="clock-derived-frequency" aria-label="Derived clock frequency">Relative frequency: {relativeFrequency === undefined ? "—" : relativeFrequency.toFixed(4)} cycles per reference cycle</output>
       <label>Initial<select aria-label="Clock initial" value={generator.initial} onChange={(event) => setGenerator({ ...generator, initial: Number(event.target.value) as 0 | 1 })}><option value="0">0</option><option value="1">1</option></select></label>
       <label>Polarity<select aria-label="Clock polarity" value={generator.polarity} onChange={(event) => setGenerator({ ...generator, polarity: event.target.value as ClockGenerator["polarity"] })}><option value="positive">Positive</option><option value="negative">Negative</option></select></label>
       <label>Suppressed periods<input aria-label="Clock suppressed periods" value={suppressedPeriods} placeholder="e.g. 1, 3" onChange={(event) => setSuppressedPeriods(event.target.value)} /></label>
+      <div className="clock-generator-actions">
+        <button type="button" data-testid="cancel-clock-generator" onClick={cancelGenerator} disabled={!generatorChanged}>Cancel</button>
+        <button type="submit" data-testid="apply-clock-generator" disabled={!generatorChanged}>Apply generator</button>
+      </div>
+      <output className="clock-derived-frequency" data-testid="clock-derived-frequency" aria-label="Derived clock frequency">Relative frequency: {relativeFrequency === undefined ? "—" : relativeFrequency.toFixed(4)} cycles per reference cycle</output>
       {generatorError && <output className="editor-problem" role="alert" data-testid="clock-generator-error">{generatorError}</output>}
       {generatorChanged && <DraftStatus testId="clock-generator-unapplied" />}
-      <button type="button" data-testid="cancel-clock-generator" onClick={cancelGenerator} disabled={!generatorChanged}>Cancel</button>
-      <button type="submit" data-testid="apply-clock-generator" disabled={!generatorChanged}>Apply generator</button>
     </form>
     <form className="clock-edge-counter" aria-label="Clock Edge Counter" onSubmit={(event) => {
       event.preventDefault();

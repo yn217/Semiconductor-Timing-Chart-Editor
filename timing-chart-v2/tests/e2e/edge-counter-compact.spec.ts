@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
+
+startInCycleSample(test);
 
 test.setTimeout(180_000);
 
@@ -155,6 +158,7 @@ test.describe("Edge Counter compact layout", () => {
       }],
     };
     await page.goto("/");
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
     await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "edge-counter-100k.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
     const host = page.getByTestId("cycle-surface");
     await expect(host).toHaveAttribute("data-cycle-view-ready", "true");

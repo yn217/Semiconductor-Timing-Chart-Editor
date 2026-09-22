@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #402: the Bottom Signal editor gets an explicit Group dropdown + Move
 // button. Bottom Panel Visual Reference pass (#402/#426): the Signal

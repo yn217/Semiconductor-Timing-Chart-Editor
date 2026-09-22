@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { UNGROUPED_DISCLOSURE_KEY, type TransactionDisclosure } from "../workspace/use-transaction-disclosure.js";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { Bookmark, BookmarkId, CanonicalDocument, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { EditorIcon } from "../editor-icon.js";
 import type { TransactionLaneCommandActions } from "../application/editor-surface-command-controller.js";
@@ -95,6 +96,11 @@ function previewPhases(transaction: Transaction, preview: TransactionPreview, ed
   return transaction.phases;
 }
 
+/** #750: under cyclesPerTC compression bars get narrow. Below these widths the inline label would be clipped/unreadable, so it is omitted
+ * (the full name stays in title / aria-label / the Inspector); the font is never shrunk. */
+const BAR_LABEL_MIN_PX = 56;
+const PHASE_LABEL_MIN_PX = 40;
+
 function TransactionBar({ transaction, documentEpoch, viewMode, row, color, selected, cycleCount, getBoundaryX, boundaryXByCycle, visibleBoundaryXs, foldRanges, onSnap, onSelect, commands, onContextMenu }: {
   readonly transaction: Transaction;
   readonly documentEpoch: number;
@@ -171,7 +177,7 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
       pendingPreviewClientX.current = undefined;
       setDrag(undefined);
       setPreview(undefined);
-    });
+    }, drag.edge === "body" ? "Move Transaction - drag horizontally; Esc cancels" : "Resize Transaction - drag the edge; Esc cancels");
   }, [drag, documentEpoch]);
 
   if (containingFold) {
@@ -271,10 +277,10 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
     const cuts = [phase.start, ...foldRanges.flatMap(([fromCycle, toCycle]) => phase.start < toCycle && phase.end > fromCycle ? [Math.max(phase.start, fromCycle), Math.min(phase.end, toCycle)] : []), phase.end];
     return Array.from({ length: cuts.length - 1 }, (_, index) => ({ start: cuts[index]!, end: cuts[index + 1]! })).filter((segment) => segment.end > segment.start && !foldRanges.some(([fromCycle, toCycle]) => segment.start >= fromCycle && segment.end <= toCycle));
   };
-  return <button ref={buttonRef} type="button" data-transaction-id={transaction.id} data-selected={String(selected)} data-drag-preview={String(preview !== undefined)} style={{ left: startX, width: endX - startX, top: 4 + row * LANE_ROW_HEIGHT, ...(color ? { "--transaction-color": color } as CSSProperties : {}) }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)} onContextMenu={(event) => { event.preventDefault(); onSelect(transaction.id); onContextMenu?.(event, transaction.id); }} onPointerMove={updatePreview} onPointerUp={finish} onPointerCancel={cancel}><i data-edge="start" onPointerDown={(event) => begin(event, "start")} />{startHiddenFold && <i className="transaction-fold-affordance" data-fold-affordance="start-hidden" title="Transaction starts inside collapsed range" aria-label="Transaction start hidden in collapsed range" /> }<span onPointerDown={(event) => begin(event, "body")}>{transaction.name}</span>{visibleSegments.length > 1 && visibleSegments.map((segment, index) => { const from = resolveSegmentBoundary(segment.start, 1); const to = resolveSegmentBoundary(segment.end, -1); return from === undefined || to === undefined ? null : <i key={`segment-${index}`} className="transaction-axis-segment" data-transaction-segment="true" aria-hidden="true" style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }} />; })}{gaps.map((gap, index) => <i key={`axis-break-${index}`} className="transaction-axis-break-gap" style={gap} aria-hidden="true" />)}<div className="transaction-phases" aria-hidden="true">{phases?.flatMap((phase) => phaseSegments(phase).map((segment, index) => { const from = resolveSegmentBoundary(segment.start, 1); const to = resolveSegmentBoundary(segment.end, -1); if (from === undefined || to === undefined || endX <= startX) return null; return <small key={`${phase.start}:${phase.end}:${phase.name}:${index}`} data-phase-segment="true" title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }}>{phase.name}</small>; }))}</div>{endHiddenFold && <i className="transaction-fold-affordance" data-fold-affordance="end-hidden" title="Transaction ends inside collapsed range" aria-label="Transaction end hidden in collapsed range" /> }<i data-edge="end" onPointerDown={(event) => begin(event, "end")} /></button>;
+  return <button ref={buttonRef} type="button" data-transaction-id={transaction.id} data-selected={String(selected)} data-drag-preview={String(preview !== undefined)} title={transaction.name} aria-label={transaction.name} style={{ left: startX, width: endX - startX, top: 4 + row * LANE_ROW_HEIGHT, ...(color ? { "--transaction-color": color } as CSSProperties : {}) }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)} onContextMenu={(event) => { event.preventDefault(); onSelect(transaction.id); onContextMenu?.(event, transaction.id); }} onPointerMove={updatePreview} onPointerUp={finish} onPointerCancel={cancel}><i data-edge="start" onPointerDown={(event) => begin(event, "start")} />{startHiddenFold && <i className="transaction-fold-affordance" data-fold-affordance="start-hidden" title="Transaction starts inside collapsed range" aria-label="Transaction start hidden in collapsed range" /> }<span onPointerDown={(event) => begin(event, "body")} data-label-compact={String(endX - startX < BAR_LABEL_MIN_PX)}>{endX - startX < BAR_LABEL_MIN_PX ? "" : transaction.name}</span>{visibleSegments.length > 1 && visibleSegments.map((segment, index) => { const from = resolveSegmentBoundary(segment.start, 1); const to = resolveSegmentBoundary(segment.end, -1); return from === undefined || to === undefined ? null : <i key={`segment-${index}`} className="transaction-axis-segment" data-transaction-segment="true" aria-hidden="true" style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }} />; })}{gaps.map((gap, index) => <i key={`axis-break-${index}`} className="transaction-axis-break-gap" style={gap} aria-hidden="true" />)}<div className="transaction-phases" aria-hidden="true">{phases?.flatMap((phase) => phaseSegments(phase).map((segment, index) => { const from = resolveSegmentBoundary(segment.start, 1); const to = resolveSegmentBoundary(segment.end, -1); if (from === undefined || to === undefined || endX <= startX) return null; return <small key={`${phase.start}:${phase.end}:${phase.name}:${index}`} data-phase-segment="true" title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }}>{to - from < PHASE_LABEL_MIN_PX ? "" : phase.name}</small>; }))}</div>{endHiddenFold && <i className="transaction-fold-affordance" data-fold-affordance="end-hidden" title="Transaction ends inside collapsed range" aria-label="Transaction end hidden in collapsed range" /> }<i data-edge="end" onPointerDown={(event) => begin(event, "end")} /></button>;
 }
 
-export function TransactionLanes({ document: rawDocument, documentEpoch, viewMode, presentationRevision, zoom, selectedId, selectedIds, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu, bookmarks = [], onNavigateBookmark }: { readonly document: CanonicalDocument; readonly documentEpoch: number; readonly viewMode: "Cycle" | "Transaction" | "Split"; readonly presentationRevision?: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly selectedIds?: ReadonlySet<TransactionId>; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSnap: (clientX: number, surfaceLeft?: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void; readonly bookmarks?: readonly Bookmark[]; readonly onNavigateBookmark?: (cycle: number, bookmarkId?: BookmarkId) => void }) {
+export function TransactionLanes({ document: rawDocument, documentEpoch, viewMode, presentationRevision, zoom, selectedId, selectedIds, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu, bookmarks = [], onNavigateBookmark, disclosure }: { /** #759: workspace-level Group disclosure owner shared with the Left Tree. */ readonly disclosure: TransactionDisclosure; readonly document: CanonicalDocument; readonly documentEpoch: number; readonly viewMode: "Cycle" | "Transaction" | "Split"; readonly presentationRevision?: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly selectedIds?: ReadonlySet<TransactionId>; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSnap: (clientX: number, surfaceLeft?: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void; readonly bookmarks?: readonly Bookmark[]; readonly onNavigateBookmark?: (cycle: number, bookmarkId?: BookmarkId) => void }) {
   const isTransactionSelected = (id: TransactionId) => selectedId === id || selectedIds?.has(id) === true;
   const mountSerial = useRef(++transactionLanesMountSerial);
   const laneIndexBuilds = useRef(0);
@@ -301,26 +307,49 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     if (needle.length === 0) return visible.length === rawDocument.transactions.length ? rawDocument : { ...rawDocument, transactions: visible };
     return { ...rawDocument, transactions: visible.filter((transaction) => transaction.name.toLocaleLowerCase().includes(needle) || (transaction.groupId !== undefined && (groupNameById.get(transaction.groupId) ?? "").toLocaleLowerCase().includes(needle))) };
   }, [groupNameById, needle, rawDocument, rawDocument.transactions, selectedId]);
-  // #397 Transaction Mode GUI Closure: Group collapse/expand -- purely
-  // local, transient presentation state (never persisted, never touches
-  // Canonical), same "view-only toggle" shape as the Signal Tree's own
-  // Group collapse. Kept local to this component rather than lifted into
-  // shared workspace state since nothing else needs to read it.
-  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(new Set());
-  const previousDocumentEpoch = useRef(documentEpoch);
-  useEffect(() => {
-    if (previousDocumentEpoch.current === documentEpoch) return;
-    previousDocumentEpoch.current = documentEpoch;
-    setCollapsedGroups(new Set());
-  }, [documentEpoch]);
-  const toggleGroupCollapsed = (key: string) => setCollapsedGroups((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; });
+  // #759: Group disclosure is a view-only presentation state owned once at the workspace level and shared with the Left Tree
+  // (never persisted, never touches Canonical/History/Dirty).
+  const collapsedGroups = disclosure.collapsed;
+  const toggleGroupCollapsed = disclosure.toggle;
   const owner = useRef<HTMLElement>(null);
+  // Selecting a Transaction from the fixed Tree must reveal its actual
+  // projected bar in the shared horizontal viewport. Use the rendered bar's
+  // geometry (owned by the shared TimeAxis projection) so folded display time,
+  // zoom, and pane origins are already reflected; never invent a local cycle
+  // mapper here. Keep a fully visible bar stationary and move only enough to
+  // reveal an offscreen bar. A selected Transaction wholly inside a collapsed
+  // fold has no visible bar to reveal.
+  useLayoutEffect(() => {
+    if (!selectedId || (viewMode !== "Transaction" && viewMode !== "Split")) return;
+    const laneRoot = owner.current;
+    const viewport = laneRoot?.closest<HTMLElement>(".cycle-viewport");
+    const target = laneRoot?.querySelector<HTMLElement>(`[data-transaction-id="${CSS.escape(selectedId)}"]`);
+    if (!viewport || !target || target.dataset.hiddenInFold === "true") return;
+    const viewportRect = viewport.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const visibleLeft = viewportRect.left + viewport.clientLeft;
+    const visibleRight = visibleLeft + viewport.clientWidth;
+    let deltaX = 0;
+    if (targetRect.width > visibleRight - visibleLeft) {
+      deltaX = targetRect.left - visibleLeft;
+    } else if (targetRect.left < visibleLeft) {
+      deltaX = targetRect.left - visibleLeft;
+    } else if (targetRect.right > visibleRight) {
+      deltaX = targetRect.right - visibleRight;
+    }
+    if (Math.abs(deltaX) > 1) {
+      viewport.scrollLeft = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, viewport.scrollLeft + deltaX));
+    }
+  }, [documentEpoch, selectedId, viewMode]);
+  // #767: zoom re-lays the geometry out (X scaled here) instead of CSS-scaling the whole track, which stretched every glyph horizontally.
+  const zoomFactor = Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
+  const getScaledBoundaryX = useCallback((cycle: number) => { const px = getBoundaryX(cycle); return px === undefined ? undefined : px * zoomFactor; }, [getBoundaryX, zoomFactor]);
   const { cycleXs, boundaryXByCycle } = useMemo(() => {
     const foldBoundaryCycles = (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).flatMap((group) => [group.start, group.end]);
     const relevantCycles = [...new Set([...document.transactions.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).flatMap(phase => [phase.start, phase.end])]), ...bookmarks.map((bookmark) => bookmark.start), ...foldBoundaryCycles])].sort((left, right) => left - right);
-    const cycleXs = relevantCycles.flatMap((cycle) => { const x = getBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
+    const cycleXs = relevantCycles.flatMap((cycle) => { const x = getScaledBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
     return { cycleXs, boundaryXByCycle: new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const)) };
-  }, [bookmarks, document.transactions, getBoundaryX, presentationRevision]);
+  }, [bookmarks, document.transactions, getScaledBoundaryX, presentationRevision]);
   const x = (cycle: number) => boundaryXByCycle.get(cycle);
   const foldRanges = useMemo<readonly (readonly [number, number])[]>(() => {
     const ranges = (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const).sort((left, right) => left[0] - right[0] || left[1] - right[1]);
@@ -434,7 +463,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     let labelCursor = 0;
     let trackCursor = 0;
     for (const section of sections) {
-    const sectionKey = section.groupId ?? "ungrouped";
+    const sectionKey = section.groupId ?? UNGROUPED_DISCLOSURE_KEY;
     const collapsed = section.label !== undefined && collapsedGroups.has(sectionKey);
     if (section.label !== undefined) {
       const count = transactionCountByGroup.get(section.groupId) ?? 0;
@@ -491,9 +520,12 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     // Combined mode owns a nested vertical scroller for the transaction pane;
     // the outer cycle viewport only owns the shared horizontal surface there.
     // Keep the standalone Transaction mode fallback on its cycle viewport.
+    const panel = laneRoot?.closest<HTMLElement>(".cycle-panel");
+    // The standalone Transaction tree lists Transactions independently of the Lane surface (#748), so the lanes
+    // virtualize against the cycle viewport that actually scrolls them, not against the tree's scroll offset.
     const viewport = laneRoot?.closest<HTMLElement>(".split-transaction-pane")
-      ?? laneRoot?.parentElement?.closest<HTMLElement>(".cycle-viewport")?.querySelector<HTMLElement>(".transaction-left-tree")
-      ?? laneRoot?.closest<HTMLElement>(".cycle-viewport");
+      ?? laneRoot?.closest<HTMLElement>(".cycle-viewport")
+      ?? panel?.querySelector<HTMLElement>(".transaction-left-tree");
     if (!viewport) return;
     const update = () => setVirtualWindow({ top: viewport.scrollTop, height: viewport.clientHeight || 900 });
     update();
@@ -540,7 +572,9 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
         return <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" data-transaction-group-id={header.groupId ?? "ungrouped"} data-collapsed={String(header.collapsed)} style={{ top: header.labelTop, height: GROUP_HEADER_HEIGHT }}>
-          <button type="button" className="transaction-group-header-chevron" aria-label={header.collapsed ? `Expand ${header.label}` : `Collapse ${header.label}`} aria-expanded={!header.collapsed} onClick={() => toggleGroupCollapsed(header.groupId ?? "ungrouped")}><EditorIcon name={header.collapsed ? "right" : "down"} /></button>
+          {/* #764: label/controls are a sticky context layer pinned to the Timeline viewport's left edge, so horizontal scrolling never leaves half-cut glyphs. */}
+          <div className="transaction-group-header-context">
+          <button type="button" className="transaction-group-header-chevron" aria-label={header.collapsed ? `Expand ${header.label}` : `Collapse ${header.label}`} aria-expanded={!header.collapsed} onClick={() => toggleGroupCollapsed(header.groupId ?? UNGROUPED_DISCLOSURE_KEY)}><EditorIcon name={header.collapsed ? "right" : "down"} /></button>
           {header.color && <i className="transaction-group-swatch" aria-hidden="true" style={{ background: header.color }} />}
           {/* #397 Transaction Mode GUI Closure: rename/delete had zero GUI
               entry point (commands already existed) -- "Ungrouped" is a
@@ -550,6 +584,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
           {group ? <InlineNameInput target={group} value={group.name} ariaLabel={`Rename Group ${group.name}`} onRename={(name) => commands.renameTransactionGroup(group.id, name)} /> : <span>{header.label}</span>}
           <span className="transaction-group-header-count">({header.count})</span>
           {group && <button type="button" className="transaction-group-header-delete" aria-label={`Ungroup ${group.name}`} title="Ungroup (deletes the Group, keeps its Transactions)" onClick={() => commands.deleteTransactionGroup(group.id)}><EditorIcon name="close" /></button>}
+          </div>
         </div>;
       })}
       {visibleLaneBands.map((band) => {
@@ -594,7 +629,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
           // inline style -- the same interaction-priority bug already
           // fixed for Signal rows under #472.
           const resolvedColor = transaction.color ?? (transaction.groupId === undefined ? undefined : transactionGroupById.get(transaction.groupId)?.color);
-          return <TransactionBar key={transaction.id} transaction={transaction} documentEpoch={documentEpoch} viewMode={viewMode} row={row} color={resolvedColor} selected={isTransactionSelected(transaction.id)} cycleCount={document.timeline.cycleCount} getBoundaryX={getBoundaryX} boundaryXByCycle={boundaryXByCycle} visibleBoundaryXs={cycleXs} foldRanges={foldRanges} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
+          return <TransactionBar key={transaction.id} transaction={transaction} documentEpoch={documentEpoch} viewMode={viewMode} row={row} color={resolvedColor} selected={isTransactionSelected(transaction.id)} cycleCount={document.timeline.cycleCount} getBoundaryX={getScaledBoundaryX} boundaryXByCycle={boundaryXByCycle} visibleBoundaryXs={cycleXs} foldRanges={foldRanges} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
         })}
       </div>)}
     </div>

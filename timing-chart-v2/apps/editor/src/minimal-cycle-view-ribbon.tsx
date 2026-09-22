@@ -24,6 +24,10 @@ import { resolveGroupInsertionIndex, resolveInsertionTarget } from "./insertion-
 import type { AIViewIntent } from "./ai-proposal-provider.js";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { HomeOverflow } from "./ribbon/home-overflow.js";
+import { buildTransactionRibbonGroups } from "./ribbon/transaction-ribbon-groups.js";
+import { buildSignalRibbonGroups } from "./ribbon/signal-ribbon-groups.js";
+import { buildCommonRibbonGroups } from "./ribbon/common-ribbon-groups.js";
+import { buildViewRibbonGroups } from "./ribbon/view-ribbon-groups.js";
 
 type DensityMode = "compact" | "comfortable";
 type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
@@ -113,34 +117,6 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     if (!selectedSignalId) return;
     onCreateAnnotation(createAnnotation("arrow", selectedSignalId, range, document, undefined, "bidirectional"));
   };
-  const addTransaction = () => {
-    const id = nextEntityId("transaction", document) as TransactionId;
-    const result = commands.createTransaction({ id, name: `Transaction ${document.transactions.length + 1}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), laneId: "lane_0" });
-    if (result.ok) onTransactionCreated(id);
-  };
-  const duplicateTransaction = () => {
-    const source = selectedTransactionId === undefined ? undefined : document.transactions.find((item) => item.id === selectedTransactionId);
-    if (!source) return;
-    const id = nextEntityId("transaction", document) as TransactionId;
-    const result = commands.duplicateTransaction({ ...source, id, name: `${source.name} Copy` });
-    if (result.ok) onTransactionCreated(id);
-  };
-  // #397 Transaction Mode GUI Closure Section 8: Ribbon-level parity for the
-  // Group header's own "Ungroup" button -- lets the user act on the
-  // selected Transaction's Group without hunting for the small header
-  // control, using the same already-existing `transactionGroup.delete`
-  // command (atomically ungroups every member Transaction).
-  const selectedTransactionGroupId = selectedTransactionId === undefined ? undefined : document.transactions.find((item) => item.id === selectedTransactionId)?.groupId;
-  const ungroupSelectedTransaction = () => {
-    if (selectedTransactionGroupId !== undefined) commands.deleteTransactionGroup(selectedTransactionGroupId);
-  };
-  // #429 Ribbon cleanup: parity for the Left Tree's own "+" Add Group
-  // button -- same `transactionGroup.create` command/ID generation.
-  const addTransactionGroup = () => {
-    const id = nextEntityId("transactionGroup", document) as TransactionGroup["id"];
-    const order = document.transactionGroups?.length ?? 0;
-    commands.createTransactionGroup({ id, name: `Group ${order + 1}`, order });
-  };
   // #406: Home Ribbon's group set now depends on ActiveContext (#404/#405)
   // rather than always showing every group regardless of Cycle/Transaction
   // ViewMode. Time/Layout (Cycle-specific row/timeline-range commands) only
@@ -164,132 +140,10 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
   // avoid a second, divergent entry point to the same TransactionEditor
   // state.
   const commonRibbonGroups: readonly RibbonGroupSpec[] = [
-    {
-      id: "file", majorGroup: "File", caption: "File", items: [
-        { kind: "button", id: "new", icon: "i-new", label: "New", v1Label: "新規", onClick: onNew },
-        { kind: "button", id: "open", icon: "i-open", label: "Open", v1Label: "開く", onClick: onOpen },
-        { kind: "button", id: "save", icon: "i-save", label: "Save", v1Label: "保存", onClick: onSave },
-        { kind: "button", id: "save-as", icon: "i-save", label: "Save As", v1Label: "名前を付けて保存", onClick: onSaveAs },
-      ],
-    },
-    {
-      id: "edit", majorGroup: "Edit", caption: "Edit", items: [
-        { kind: "button", id: "undo", icon: "i-undo", label: "Undo", v1Label: "元に戻す", onClick: onUndo, disabled: !history.canUndo },
-        { kind: "button", id: "redo", icon: "i-redo", label: "Redo", v1Label: "やり直し", onClick: onRedo, disabled: !history.canRedo },
-        // hasSelectedClipboard (not hasSelectedSignal): the actual cut()
-        // handler supports Signal/Group/Spacer/Transaction/Annotation, and
-        // Context Menu's Cut already gates on hasSelectedClipboard -- this
-        // button previously used the narrower hasSelectedSignal, disabling
-        // Cut for a selected Annotation/Group/Transaction even though the
-        // command router fully supports it (#195).
-        { kind: "button", id: "cut", icon: "i-cut", label: "Cut", v1Label: "切取", onClick: onCut, disabled: !hasSelectedClipboard },
-        { kind: "button", id: "copy", icon: "i-copy", label: "Copy", v1Label: "コピー", onClick: onCopy, disabled: !hasSelectedClipboard, title: "Copy is view-only" },
-        { kind: "button", id: "paste", icon: "i-paste", label: "Paste", v1Label: "貼付", onClick: onPaste, disabled: !clipboardAvailable, title: clipboardStatus },
-        { kind: "button", id: "delete", icon: "i-delete", label: "Delete", v1Label: "削除", onClick: onDelete, disabled: !hasDeletableSelection },
-        // #439: "wide" -- "Duplicate" is one word that doesn't fit the
-        // default Home button width without breaking mid-word.
-        { kind: "button", id: "duplicate", icon: "i-duplicate", label: "Duplicate", v1Label: "複製", size: "wide", onClick: onDuplicate, disabled: !hasSelectedClipboard },
-        // #439: "Select All Signals" wrapped to 3 stacked one-word lines at
-        // the standard 44px Home button width (Select / All / Signals) --
-        // over the issue's own 2-line limit. Shortened to the 2-word "Select
-        // All" (wraps cleanly to 2 lines, matching "Fit Selection"'s shape);
-        // the full meaning stays on the accessible name/tooltip.
-        { kind: "button", id: "select-all", icon: "i-select-all", label: "Select All", ariaLabel: "Select All Signals", title: "Select All Signals", onClick: onSelectAll, disabled: !hasSelectableSignals },
-        { kind: "custom", id: "find-replace", render: () => <FindReplacePanel key="find-replace" document={document} mode={viewMode === "Transaction" || (viewMode === "Split" && activeContext === "Transaction") ? "transactions" : "signals"} onRenameSignals={commands.renameSignals} onRenameTransactions={commands.renameTransactions} /> },
-        { kind: "custom", id: "clipboard-status", render: () => <small key="clipboard-status" data-testid="clipboard-status">{clipboardStatus}</small> },
-      ],
-    },
-    {
-      // #437 command ownership matrix: Zoom In/Out/100%/Fit All/Fit
-      // Selection are DUPLICATED between Home and View by explicit design,
-      // not oversight -- View/Panels is the conceptual "Workspace display"
-      // owner (visibility/zoom/layout settings live there), Home keeps a
-      // quick-access copy so zooming/fitting doesn't force a tab switch
-      // mid-edit (the same "frequent command stays on Home" reasoning
-      // Edit/Cut/Copy/Paste already follow). Both routes bind the exact
-      // same onZoom/onSetZoom/onFitAll/onFitSelection callbacks and the
-      // same `zoom` value -- one state owner, never a second Zoom/Fit
-      // implementation to drift out of sync. Removing either route
-      // entirely is a product decision (which tab loses a control users
-      // already rely on) out of this pass's scope -- see #437.
-      id: "view", majorGroup: "Zoom", caption: "Zoom", items: [
-        { kind: "button", id: "zoom-out", icon: "i-zoom-out", label: "Zoom Out", v1Label: "ズーム−", onClick: () => onZoom(-0.25) },
-        { kind: "button", id: "zoom-reset", icon: "i-zoom-reset", label: "100%", ariaLabel: "Reset zoom to 100%", onClick: () => onSetZoom(1) },
-        { kind: "button", id: "zoom-in", icon: "i-zoom-in", label: "Zoom In", v1Label: "ズーム＋", onClick: () => onZoom(0.25) },
-        { kind: "button", id: "fit-all", icon: "i-fit", label: "Fit All", v1Label: "全体表示", onClick: onFitAll },
-        // #439: "wide" -- "Selection" doesn't fit the default Home button
-        // width without breaking mid-word.
-        { kind: "button", id: "fit-selection", icon: "i-select-fit", label: "Fit Selection", size: "wide", onClick: onFitSelection },
-      ],
-    },
-    {
-      // #437: Grid/Snap/Ruler/MiniMap are ALSO duplicated on View's own
-      // Guides/Panels groups (minimal-cycle-view-ribbon.tsx's `viewGroups`
-      // below) -- same reasoning as the Zoom group above, and the same
-      // guarantee: `checked`/`onChange` here are the identical
-      // gridEnabled/snapEnabled/rulerEnabled/minimapEnabled props and
-      // onToggle* callbacks View's own toggles use, so a stale
-      // checked-here-unchecked-there state can't happen by construction.
-      id: "display", majorGroup: "Display", caption: "Display", items: [
-        { kind: "toggle", id: "grid", label: "Grid", testId: "home-grid-toggle", checked: gridEnabled, onChange: onToggleGrid },
-        { kind: "toggle", id: "minimap", label: "MiniMap", testId: "home-minimap-toggle", checked: minimapEnabled, onChange: onToggleMinimap },
-        { kind: "toggle", id: "snap", label: "Snap", testId: "home-snap-toggle", checked: snapEnabled, onChange: onToggleSnap },
-        { kind: "toggle", id: "ruler", label: "Ruler", testId: "home-ruler-toggle", checked: rulerEnabled, onChange: onToggleRuler },
-      ],
-    },
-    {
-      // #429 Ribbon cleanup: this one "Transaction" group used to mix
-      // Transaction/Group/Time Scale commands with no visual distinction --
-      // split into three coherently-captioned groups (Transaction/Group/
-      // Time) over the same already-existing commands, no new model.
-      id: "transaction", majorGroup: "Transaction", caption: "Transaction", items: [
-        { kind: "button", id: "transaction-create", icon: "i-plus", label: "Create", ariaLabel: "Create Transaction", onClick: addTransaction },
-        // #439: "wide" -- see the Clipboard group's "Duplicate" above.
-        { kind: "button", id: "transaction-duplicate", icon: "i-duplicate", label: "Duplicate", ariaLabel: "Duplicate Transaction", size: "wide", onClick: duplicateTransaction, disabled: !selectedTransactionId },
-      ],
-    },
-    ...(viewMode === "Transaction" || (viewMode === "Split" && activeContext === "Transaction") ? [{
-      id: "transaction-group", majorGroup: "Group", caption: "Group", items: [
-        { kind: "button", id: "transaction-group-add", icon: "i-plus", label: "Add", ariaLabel: "Add Transaction Group", onClick: addTransactionGroup },
-        { kind: "button", id: "transaction-ungroup", icon: "i-ungroup", label: "Ungroup", ariaLabel: "Ungroup selected Transaction", title: "Remove the selected Transaction's Group (keeps the Transaction, ungrouped)", onClick: ungroupSelectedTransaction, disabled: selectedTransactionGroupId === undefined },
-      ],
-    } as const] : []),
-    ...(viewMode === "Transaction" || (viewMode === "Split" && activeContext === "Transaction") ? [{
-      id: "transaction-time", majorGroup: "Transaction Time", caption: "Time Scale", items: [
-        { kind: "custom", id: "transaction-time-scale", render: () => <TransactionTimeScalePanel key="transaction-time-scale" document={document} onSetScale={commands.setTransactionTimeScale} /> },
-      ],
-    } as const] : []),
+    ...buildCommonRibbonGroups({ document, history, viewMode, activeContext, commands, clipboardStatus, clipboardAvailable, hasSelectedClipboard, hasDeletableSelection, hasSelectableSignals, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, onNew, onOpen, onSave, onSaveAs, onUndo, onRedo, onCut, onCopy, onPaste, onDelete, onDuplicate, onSelectAll, onZoom, onSetZoom, onFitAll, onFitSelection, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap }),
+    ...buildTransactionRibbonGroups({ document, range, commands, selectedTransactionId, onTransactionCreated, viewMode, activeContext }),
   ];
-  const signalRibbonGroups: readonly RibbonGroupSpec[] = [
-    {
-      id: "timeline", majorGroup: "Time", caption: "Time", items: [
-        { kind: "button", id: "row-up", icon: "i-up", label: "Up", ariaLabel: "Move selected row up", onClick: onMoveUp, disabled: !canMoveUp },
-        { kind: "button", id: "row-down", icon: "i-down", label: "Down", ariaLabel: "Move selected row down", onClick: onMoveDown, disabled: !canMoveDown },
-        { kind: "button", id: "cycle-insert", icon: "i-plus", label: "Cycle Insert", ariaLabel: "Insert one cycle", onClick: () => commands.insertTimeline(range.start, 1) },
-        { kind: "button", id: "cycle-delete", icon: "i-delete", label: "Cycle Delete", ariaLabel: "Delete one cycle", onClick: () => commands.deleteTimeline(range.start, Math.min(document.timeline.cycleCount, range.start + 1)) },
-        { kind: "button", id: "n-cycle-insert", icon: "i-plus", label: "N Cycle Insert", ariaLabel: `Insert ${compactCycleCount} cycles`, onClick: () => commands.insertTimeline(range.start, compactCycleCount) },
-        { kind: "button", id: "n-cycle-delete", icon: "i-delete", label: "N Cycle Delete", ariaLabel: `Delete ${compactCycleCount} cycles`, onClick: () => commands.deleteTimeline(range.start, Math.min(document.timeline.cycleCount, range.start + compactCycleCount)) },
-      ],
-    },
-    {
-      // #416 Home Ribbon cleanup: "Edit Interval" was a pure navigation
-      // duplicate (`onOpenTimeline` is just `setRibbonTab("Timeline")`,
-      // and a "Timeline" tab already sits in the top tab strip) and
-      // "Time Group" duplicated the Timeline Ribbon's own "Create" button
-      // (timeline-toolbar.tsx's `time-group-create`, already functional --
-      // TimeGroup is Timeline-domain, not Home's). Both removed rather than
-      // kept disabled/hidden, per the issue's own explicit "don't keep as
-      // disabled/hidden" instruction. `onOpenTimeline` itself stays wired
-      // (use-editor-ai-assistant-model.ts's AI View Intent route still
-      // calls it) -- only this Home button is gone, not the callback.
-      // "Normalize Spacing" is a different feature (layout clamp, not
-      // TimeGroup/Outline) per the issue's own explicit separation --
-      // stays here rather than migrating alongside TimeGroup.
-      id: "layout", majorGroup: "Layout", caption: "Layout", items: [
-        { kind: "button", id: "normalize-spacing", icon: "i-auto-layout", label: "Auto Space", ariaLabel: "Normalize row spacing", title: "Normalize row height and signal spacing to the supported minimums.", onClick: () => commands.normalizeLayout({ ...document.layout, rowHeight: Math.max(24, document.layout.rowHeight), signalSpacing: Math.max(2, document.layout.signalSpacing) }) },
-      ],
-    },
-  ];
+  const signalRibbonGroups: readonly RibbonGroupSpec[] = buildSignalRibbonGroups({ document, range, commands, compactCycleCount, canMoveUp, canMoveDown, onMoveUp, onMoveDown });
   // Transaction group now lives in commonRibbonGroups (see the scoped-
   // decision comment above) -- no Transaction-only group exists yet, but
   // the bucket stays wired through composeRibbon so a real one (Phase/
@@ -309,86 +163,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
   // (icon-toggle buttons, the Zoom% picker, the Workspace/Density
   // selects) use `kind: "custom"`, the same escape hatch Edit's Find &
   // Replace panel already uses -- not a new pattern.
-  const viewGroups: readonly RibbonGroupSpec[] = [
-    {
-      id: "view-show", majorGroup: "Show", caption: "Show", items: [
-        { kind: "custom", id: "show-labels", render: () => <div key="show-labels" className="view-display-subgroup" data-display-kind="labels" aria-label="Labels and structure"><span>Labels / Structure</span><DsRibbonToggle dataTestId="view-show-signal-names" checked={showSignalNames} label="Signal Names" onChange={onToggleSignalNames} /><DsRibbonToggle dataTestId="view-show-roles" checked={showRoles} label="Roles" onChange={onToggleRoles} /><DsRibbonToggle dataTestId="view-show-group-background" checked={showGroupBackground} label="Group Background" onChange={onToggleGroupBackground} /></div> },
-        { kind: "custom", id: "show-overlays", render: () => <div key="show-overlays" className="view-display-subgroup" data-display-kind="overlays" aria-label="Overlays"><span>Overlays</span><DsRibbonToggle dataTestId="view-show-annotations" checked={showAnnotations} label="Annotations" onChange={onToggleAnnotations} /><DsRibbonToggle dataTestId="view-show-transactions" checked={showTransactions} label="Transactions" onChange={onToggleTransactions} /></div> },
-      ],
-    },
-    {
-      id: "view-panels", majorGroup: "Panels", caption: "Panels", items: [
-        { kind: "custom", id: "panel-inspector", render: () => <DsRibbonToggleButton key="panel-inspector" ariaLabel="Inspector" checked={inspectorVisible} icon={<RibbonIcon name="i-settings" />} onClick={onToggleInspector}>Inspector</DsRibbonToggleButton> },
-        { kind: "custom", id: "panel-bottom", render: () => <DsRibbonToggleButton key="panel-bottom" ariaLabel="Bottom Editor" checked={bottomVisible} icon={<RibbonIcon name="i-preview" />} onClick={onToggleBottom}><span>Bottom</span><span>Editor</span></DsRibbonToggleButton> },
-        // #431 P0-1: Bottom Panel Hidden/Compact/Expanded -- Hidden stays
-        // the existing "Bottom Editor" toggle above (unchanged behavior,
-        // unchanged tests); these two presets cover the other half without
-        // a new state owner (both call the *same* setBottomHeight the drag
-        // handle already uses, just at its own documented min/max -- see
-        // bottom-resizer's aria-valuemin/max). Selecting either preset
-        // also shows the panel if it was hidden (one click from Hidden
-        // straight to a usable size); each button reads "selected" only
-        // when the panel is visible AND already exactly at that height,
-        // not merely "closest to" (a manual drag in between shows neither
-        // as selected, which is correct -- it's neither preset anymore).
-        { kind: "custom", id: "bottom-size-compact", render: () => <DsRibbonToggleButton key="bottom-size-compact" dataTestId="view-panel-bottom-compact" ariaLabel="Bottom Compact" checked={bottomVisible && bottomHeight === 180} icon={<RibbonIcon name="i-preview" />} onClick={() => onSetBottomSize("compact")}>Compact</DsRibbonToggleButton> },
-        { kind: "custom", id: "bottom-size-expanded", render: () => <DsRibbonToggleButton key="bottom-size-expanded" dataTestId="view-panel-bottom-expanded" ariaLabel="Bottom Expanded" checked={bottomVisible && bottomHeight === 420} icon={<RibbonIcon name="i-preview" />} onClick={() => onSetBottomSize("expanded")}>Expanded</DsRibbonToggleButton> },
-        { kind: "custom", id: "panel-tree", render: () => <DsRibbonToggleButton key="panel-tree" dataTestId="view-panel-tree" ariaLabel="Signal Tree" checked={signalTreeVisible} icon={<RibbonIcon name="i-group" />} onClick={onToggleSignalTree}>Signal Tree</DsRibbonToggleButton> },
-        { kind: "custom", id: "panel-minimap", render: () => <DsRibbonToggleButton key="panel-minimap" dataTestId="view-panel-minimap" ariaLabel="MiniMap" checked={minimapEnabled} icon={<RibbonIcon name="i-preview" />} onClick={onToggleMinimap}>MiniMap</DsRibbonToggleButton> },
-        // Named "Signal Split" (not just "Split") specifically to stay
-        // distinct from the unrelated Cycle/Transaction/Split ViewMode tab
-        // group -- this toggles two independent-scroll viewports over the
-        // *same* Cycle signal list, not a different view mode.
-        ...(viewMode === "Cycle" ? [{ kind: "custom", id: "panel-signal-split", render: () => <DsRibbonToggleButton key="panel-signal-split" dataTestId="view-panel-signal-split" ariaLabel="Signal Split" title="Show two vertically independent views of the same Cycle signal list." checked={signalSplitEnabled} icon={<RibbonIcon name="i-group" />} onClick={onToggleSignalSplit}><span>Signal</span><span>Split</span></DsRibbonToggleButton> }] as const : []),
-      ],
-    },
-    {
-      id: "view-guides", majorGroup: "Guides", caption: "Guides", items: [
-        { kind: "toggle", id: "grid", label: "Grid", testId: "grid-toggle", checked: gridEnabled, onChange: onToggleGrid },
-        { kind: "toggle", id: "snap", label: "Snap", testId: "snap-toggle", checked: snapEnabled, onChange: onToggleSnap },
-        { kind: "toggle", id: "ruler", label: "Ruler", testId: "ruler-toggle", checked: rulerEnabled, onChange: onToggleRuler },
-      ],
-    },
-    {
-      id: "view-zoom", majorGroup: "Zoom", caption: "Zoom", items: [
-        { kind: "button", id: "zoom-out", icon: "i-zoom-out", label: "Zoom Out", v1Label: "ズーム−", onClick: () => onZoom(-0.25) },
-        { kind: "custom", id: "zoom-preset", render: () => <span key="zoom-preset" className="view-zoom-preset"><DsRibbonSelect ariaLabel="Zoom preset" value={String(Math.round(zoom * 100))} onChange={(event) => onSetZoom(Number(event.target.value) / 100)}><option value="50">50%</option><option value="100">100%</option><option value="150">150%</option><option value="200">200%</option><option value="400">400%</option><option value="800">800%</option></DsRibbonSelect><output className="visually-hidden" data-testid="zoom-status" aria-label="Current zoom">{Math.round(zoom * 100)}%</output></span> },
-        { kind: "button", id: "zoom-in", icon: "i-zoom-in", label: "Zoom In", v1Label: "ズーム＋", onClick: () => onZoom(0.25) },
-        { kind: "custom", id: "fit-actions", render: () => <div key="fit-actions" aria-label="Fit commands" style={{ display: "flex", gap: "5px" }}><DsRibbonButton icon={<RibbonIcon name="i-fit" />} v1Label="全体表示" onClick={onFitAll}>Fit All</DsRibbonButton><DsRibbonButton icon={<RibbonIcon name="i-select-fit" />} onClick={onFitSelection}>Fit Selection</DsRibbonButton></div> },
-      ],
-    },
-    {
-      // #431/#459: Cursor A/B had a fully-built view-only state API
-      // (use-workspace-ui-state.ts) with zero GUI anywhere. Set A/Set B
-      // stamp the *currently selected cycle* (same value the status bar's
-      // "Cycle N" already shows) onto that cursor; Clear/Swap act on both.
-      // View-only: no Canonical/History/Dirty involvement, same as every
-      // other control in this group.
-      id: "view-cursor", majorGroup: "Cursor", caption: "Cursor", items: [
-        { kind: "custom", id: "cursor-set-a", render: () => <DsRibbonButton key="cursor-set-a" dataTestId="cursor-set-a" ariaLabel="Set Cursor A" title={`Set Cursor A to the current cycle (${selectedCycle})`} icon={<RibbonIcon name="i-ruler" />} onClick={onSetCursorA}><span>Set</span><span>A</span></DsRibbonButton> },
-        { kind: "custom", id: "cursor-set-b", render: () => <DsRibbonButton key="cursor-set-b" dataTestId="cursor-set-b" ariaLabel="Set Cursor B" title={`Set Cursor B to the current cycle (${selectedCycle})`} icon={<RibbonIcon name="i-ruler" />} onClick={onSetCursorB}><span>Set</span><span>B</span></DsRibbonButton> },
-        { kind: "custom", id: "cursor-swap", render: () => <DsRibbonButton key="cursor-swap" dataTestId="cursor-swap" ariaLabel="Swap Cursor A and B" icon={<RibbonIcon name="i-rotate-right" />} disabled={cursorA === undefined && cursorB === undefined} onClick={onSwapCursors}>Swap</DsRibbonButton> },
-        { kind: "custom", id: "cursor-clear", render: () => <DsRibbonButton key="cursor-clear" dataTestId="cursor-clear" ariaLabel="Clear Cursors" icon={<RibbonIcon name="i-clear-format" />} disabled={cursorA === undefined && cursorB === undefined} onClick={onClearCursors}>Clear</DsRibbonButton> },
-      ],
-    },
-    {
-      id: "view-workspace", majorGroup: "Workspace", caption: "Workspace", items: [
-        { kind: "custom", id: "workspace-preset", render: () => <label key="workspace-preset" className="view-workspace-field">Workspace<DsRibbonSelect ariaLabel="Workspace preset" value={workspacePreset} onChange={(event) => onWorkspacePresetChange(event.target.value as WorkspacePreset)}><option value="edit">Edit</option><option value="waveform">Waveform Focus</option><option value="review">Review</option><option value="transaction">Transaction</option></DsRibbonSelect></label> },
-        { kind: "custom", id: "workspace-density", render: () => <label key="workspace-density" className="view-workspace-field">Density<DsRibbonSelect ariaLabel="UI density" value={density} onChange={(event) => onDensityChange(event.target.value as DensityMode)}><option value="comfortable">Comfortable</option><option value="compact">Compact</option></DsRibbonSelect></label> },
-      ],
-    },
-    {
-      id: "view-layout", majorGroup: "Layout", caption: "Layout", items: [
-        { kind: "button", id: "reset-layout", icon: "i-settings", label: "Reset Layout", onClick: onResetLayout },
-        // Accessible name stays the fixed "Focus Waveform" regardless of
-        // toggled state (only the visible label flips to "Restore
-        // Panels") -- a stable name for this one control across both
-        // states, same as the pre-migration button's own hardcoded
-        // ariaLabel.
-        { kind: "button", id: "focus-waveform", icon: "i-preview", label: workspacePreset === "waveform" ? "Restore Panels" : "Focus Waveform", ariaLabel: "Focus Waveform", onClick: () => onWorkspacePresetChange(workspacePreset === "waveform" ? "edit" : "waveform") },
-      ],
-    },
-  ];
+  const viewGroups: readonly RibbonGroupSpec[] = buildViewRibbonGroups({ viewMode, zoom, selectedCycle, cursorA, cursorB, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, signalSplitEnabled, showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground, signalTreeVisible, inspectorVisible, bottomVisible, bottomHeight, density, workspacePreset, onToggleSignalSplit, onSetBottomSize, onSetCursorA, onSetCursorB, onClearCursors, onSwapCursors, onZoom, onSetZoom, onFitAll, onFitSelection, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap, onToggleSignalNames, onToggleRoles, onToggleAnnotations, onToggleTransactions, onToggleGroupBackground, onToggleSignalTree, onToggleInspector, onToggleBottom, onDensityChange, onWorkspacePresetChange, onResetLayout });
   // Arrange group targets: the current multi-selection if there is one,
   // otherwise the single selected Annotation, otherwise nothing (every
   // Arrange handler stays undefined -> ArrangeGroup renders disabled).

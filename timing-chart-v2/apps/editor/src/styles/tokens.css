@@ -31,6 +31,10 @@
   --ds-border-color: #cbd4df;
   --ds-divider-color: #d4dbe4;
   --ds-focus-color: #2678bc;
+  --ds-selection-bg: #e5f2ff;
+  --ds-selection-border: #287ac0;
+  --ds-hover-bg: #f3f8fd;
+  --ds-hover-border: #9fc4e5;
   --ds-focus-width: 2px;
   --ds-focus-offset: 2px;
   --ds-hover-background: #edf6ff;

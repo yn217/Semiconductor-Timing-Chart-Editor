@@ -1,4 +1,7 @@
 import { expect, test, type Locator } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 test("keeps text glyph aspect ratio and X-axis alignment constant across Zoom levels 50/100/150/200%", async ({ page }) => {
   await page.goto("/");
@@ -110,15 +113,16 @@ test("keeps the cycle ruler sticky and clipped to the time domain during vertica
     const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!;
     const ruler = document.querySelector<HTMLElement>("[data-testid='cycle-ruler']")!;
     const tick = ruler.querySelector<HTMLElement>("[data-cycle='3']")!;
-    return { viewport: viewport.getBoundingClientRect().toJSON(), ruler: ruler.getBoundingClientRect().toJSON(), tick: tick.getBoundingClientRect().toJSON(), maxLeft: viewport.scrollWidth - viewport.clientWidth, maxTop: viewport.scrollHeight - viewport.clientHeight };
+    return { viewport: viewport.getBoundingClientRect().toJSON(), ruler: ruler.getBoundingClientRect().toJSON(), tick: tick.getBoundingClientRect().toJSON(), maxLeft: (document.querySelector<HTMLElement>(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']") ?? viewport).scrollWidth - (document.querySelector<HTMLElement>(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']") ?? viewport).clientWidth, maxTop: viewport.scrollHeight - viewport.clientHeight };
   });
   expect(initial.maxTop).toBeGreaterThan(0);
   expect(initial.maxLeft).toBeGreaterThan(0);
   const scroll = await viewport.evaluate((element) => {
-    element.scrollLeft = Math.min(120, element.scrollWidth - element.clientWidth);
+    const owner = (document.querySelector<HTMLElement>(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']") ?? element);
+    owner.scrollLeft = Math.min(120, owner.scrollWidth - owner.clientWidth);
     element.scrollTop = Math.min(120, element.scrollHeight - element.clientHeight);
     element.dispatchEvent(new Event("scroll"));
-    return { left: element.scrollLeft, top: element.scrollTop };
+    return { left: owner.scrollLeft, top: element.scrollTop };
   });
   await page.waitForTimeout(100);
   const after = await page.evaluate(() => {
@@ -159,12 +163,13 @@ test("keeps ruler clipping and frozen-column ownership through scroll positions 
     await page.getByLabel("Zoom preset").selectOption(zoom);
     for (const fraction of [0, 0.5, 1]) {
       await viewport.evaluate((element, position) => {
-        const maxLeft = Math.max(0, element.scrollWidth - element.clientWidth);
+        const owner = (document.querySelector<HTMLElement>(".editor-shell[data-view-mode='Cycle'] [data-role='timeline-viewport']") ?? element);
+        const maxLeft = Math.max(0, owner.scrollWidth - owner.clientWidth);
         const maxTop = Math.max(0, element.scrollHeight - element.clientHeight);
-        element.scrollLeft = Math.round(maxLeft * position);
+        owner.scrollLeft = Math.round(maxLeft * position);
         element.scrollTop = Math.round(maxTop * position);
         element.dispatchEvent(new Event("scroll"));
-        return { left: element.scrollLeft, top: element.scrollTop };
+        return { left: owner.scrollLeft, top: element.scrollTop };
       }, fraction);
       await page.waitForTimeout(50);
       const geometry = await page.evaluate(() => {
@@ -184,7 +189,7 @@ test("keeps ruler clipping and frozen-column ownership through scroll positions 
       });
       expect(Math.abs(geometry.ruler.y - geometry.viewport.y), `zoom=${zoom} fraction=${fraction}`).toBeLessThanOrEqual(1);
       expect(Math.abs(geometry.ruler.left - geometry.frozen.right), `zoom=${zoom} fraction=${fraction}`).toBeLessThanOrEqual(1);
-      expect(geometry.contentOverflow).toBe("hidden");
+      expect(["hidden", "clip"]).toContain(geometry.contentOverflow); // the ruler is a clip box (no programmatic scroll)
       const visibleTicks = geometry.ticks.filter((tick) => Math.min(tick.right, geometry.ruler.right) - Math.max(tick.left, geometry.ruler.left) > 0);
       expect(visibleTicks.length, `zoom=${zoom} fraction=${fraction}`).toBeGreaterThan(0);
     }

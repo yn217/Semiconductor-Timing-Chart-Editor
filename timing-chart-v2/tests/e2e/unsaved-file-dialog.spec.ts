@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { openBottomSettings } from "./bottom-settings";
 import { canonicalFixture } from "../fixtures/canonical";
 
 // Bottom Panel Visual Reference pass (#402/#426): Name moved to Inspector
 // (its sole owner now) -- Bottom's own duplicate Name field was removed.
 async function makeDirty(page: import("@playwright/test").Page) {
   const host = page.getByTestId("cycle-surface");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const name = page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true });
   await name.fill("UNSAVED_REQUEST");
@@ -190,10 +192,14 @@ test("Open rechecks Dirty after a delayed file read", async ({ page }) => {
 
 test("Open atomically clears document-scoped selection, pin, filter and timeline state", async ({ page }) => {
   await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
+  const initialRange = await page.getByTestId("range-status").innerText();
+  const initialCycle = await page.getByTestId("cycle-status").innerText();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click({ modifiers: ["Control"] });
   await expect(page.getByTestId("selection-status")).toHaveText("2 signals");
+  await openBottomSettings(page);
   await page.getByTestId("bottom-pin").click();
   await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
   await page.getByTestId("signal-tree-search-top").fill("REQUEST");
@@ -208,8 +214,8 @@ test("Open atomically clears document-scoped selection, pin, filter and timeline
   await expect(page.getByTestId("selection-status")).toContainText("None");
   await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByTestId("signal-tree-search-top")).toHaveValue("");
-  await expect(page.getByTestId("range-status")).toHaveText("Range: [0, 1)");
-  await expect(page.getByTestId("cycle-status")).toHaveText("Cycle 0");
+  await expect(page.getByTestId("range-status")).toHaveText(initialRange);
+  await expect(page.getByTestId("cycle-status")).toHaveText(initialCycle);
 });
 
 test("Open resets entity-keyed Transaction bulk selection and Bottom pin across colliding document IDs", async ({ page }) => {
@@ -228,18 +234,20 @@ test("Open resets entity-keyed Transaction bulk selection and Bottom pin across 
   await open(makeDocument("Document A"), "document-a.tcd");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
-  await page.getByLabel("Select Shared Transaction", { exact: true }).check();
-  await expect(page.getByTestId("transaction-bulk-count")).toHaveText("1 selected");
+  const bottom = page.getByTestId("bottom-editor");
+  await bottom.locator(".transaction-list-row > button[data-selected]").first().click();
+  await expect(bottom.locator("[data-selected='true']")).toHaveCount(1);
   await page.getByTestId("transaction-lanes").locator("[data-transaction-id='tx_shared']").dispatchEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 240, clientY: 180 });
   await expect(page.getByTestId("signal-context-menu")).toBeVisible();
   await expect(page.getByTestId("signal-context-menu")).toHaveAttribute("data-context-target", "transaction");
+  await openBottomSettings(page);
   await page.getByTestId("bottom-pin").click();
   await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
 
   await open(makeDocument("Document B"), "document-b.tcd");
   await expect(page.locator(".app-titlebar h1")).toHaveText("Document B");
-  await expect(page.getByLabel("Select Shared Transaction", { exact: true })).not.toBeChecked();
-  await expect(page.getByTestId("transaction-bulk-toolbar")).toHaveCount(0);
+  await expect(page.getByTestId("selection-status")).toContainText("None");
+  await expect(bottom.locator("[data-selected='true']")).toHaveCount(0);
   await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByTestId("signal-context-menu")).toBeHidden();
 });

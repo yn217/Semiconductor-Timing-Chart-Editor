@@ -16,14 +16,24 @@ async function jsonValues(page: import("@playwright/test").Page, signalId: strin
   return document_.signals.find((signal) => signal.id === signalId)?.values ?? [];
 }
 
+async function openGenerator(editor: import("@playwright/test").Locator) {
+  await editor.getByTestId("signal-generator-disclosure").click();
+}
+
+async function enterCycle(page: import("@playwright/test").Page) {
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
+}
+
 test("Generate Waveform computes a single pulse into the Signal's ordinary values, undoable and Save/Open-stable", async ({ page }) => {
   await page.goto("/");
+  await enterCycle(page);
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
   const originalValues = await jsonValues(page, "sig_cycle_request");
   await page.getByRole("tab", { name: "Signal", exact: true }).click();
+  await openGenerator(editor);
 
   await editor.getByLabel("Signal generator start").fill("2");
   const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent() };
@@ -52,10 +62,12 @@ test("Generate Waveform computes a single pulse into the Signal's ordinary value
 
 test("Generator supports an infinite periodic pulse train and suppressed periods, and rejects an invalid Width/Period without mutation", async ({ page }) => {
   await page.goto("/");
+  await enterCycle(page);
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
+  await openGenerator(editor);
 
   await editor.getByLabel("Signal generator repeat mode").selectOption("infinite");
   await editor.getByLabel("Signal generator period").fill("4");
@@ -67,16 +79,22 @@ test("Generator supports an infinite periodic pulse train and suppressed periods
   await editor.getByTestId("apply-signal-generator").click();
   await expect(host).toHaveAttribute("data-canonical-revision", "1");
   const values = await jsonValues(page, "sig_cycle_request");
-  // Index 0 -> pulse at 0 (overrides the initial=0 point); index 1
-  // suppressed -> nothing at 4; index 2 -> pulse at 8; and so on until the
-  // document's own cycle count (24 for the default fixture).
-  expect(values.map((change) => change.start)).toEqual([0, 1, 8, 9, 12, 13, 16, 17, 20, 21]);
+  // Index 0 -> pulse at 0 (overrides the initial=0 point); index 1 is
+  // suppressed; subsequent periods start at 8, 12, ... through the current
+  // sample's cycle count (which depends on the selected workspace preset).
+  const cycleCount = Number(await page.locator("main").getAttribute("data-cycle-count"));
+  const expectedStarts = Array.from({ length: Math.ceil(cycleCount / 4) }, (_, periodIndex) => periodIndex)
+    .filter((periodIndex) => periodIndex !== 1)
+    .flatMap((periodIndex) => [periodIndex * 4, periodIndex * 4 + 1])
+    .filter((start) => start < cycleCount);
+  expect(values.map((change) => change.start)).toEqual(expectedStarts);
 
   // A successful Generate advances the canonical revision, which remounts
   // the whole Bottom Editor (same convention every other Bottom Editor tab
   // already follows) -- the Generate Waveform panel's own Draft resets to
   // its defaults, same as every other Draft field in the Bottom Panel.
   await page.getByRole("tab", { name: "Signal", exact: true }).click();
+  await openGenerator(editor);
   await editor.getByLabel("Signal generator repeat mode").selectOption("finite");
   await editor.getByLabel("Signal generator width", { exact: true }).fill("4");
   await editor.getByLabel("Signal generator period").fill("4");
@@ -89,10 +107,12 @@ test("Generator supports an infinite periodic pulse train and suppressed periods
 
 test("Duty mode computes Width from Period, and Generate Waveform is only offered for a Signal (binary), never Level/Bus/State/Event", async ({ page }) => {
   await page.goto("/");
+  await enterCycle(page);
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
+  await openGenerator(editor);
   await editor.getByLabel("Signal generator width mode").selectOption("duty");
   await editor.getByLabel("Signal generator period").fill("10");
   await editor.getByLabel("Signal generator duty").fill("0.3");
@@ -109,10 +129,12 @@ test("Duty mode computes Width from Period, and Generate Waveform is only offere
 
 test("#402: Generate stays disabled once the computed Draft matches the Signal's current values", async ({ page }) => {
   await page.goto("/");
+  await enterCycle(page);
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
+  await openGenerator(editor);
   const generate = editor.getByTestId("apply-signal-generator");
 
   await editor.getByLabel("Signal generator start").fill("2");
@@ -131,4 +153,32 @@ test("#402: Generate stays disabled once the computed Draft matches the Signal's
   await expect(generate).toBeDisabled();
   await expect(editor.getByTestId("signal-generator-unapplied")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});
+
+test("Generator is secondary to the persistent Transition table and collapsing it preserves its draft", async ({ page }) => {
+  await page.goto("/");
+  await enterCycle(page);
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const editor = page.getByTestId("signal-editor");
+  const generator = editor.getByRole("form", { name: "Signal Generator" });
+  const disclosure = editor.getByTestId("signal-generator-disclosure");
+
+  await expect(disclosure).toHaveAttribute("aria-expanded", "false");
+  await expect(generator).toBeHidden();
+  await expect(editor.getByRole("table", { name: "Signal events" })).toBeVisible();
+
+  const initialRevision = await host.getAttribute("data-canonical-revision");
+  const initialHistory = await page.getByTestId("history-status").textContent();
+  await disclosure.click();
+  await editor.getByLabel("Signal generator start").fill("7");
+  await disclosure.click();
+  await expect(generator).toBeHidden();
+  await expect(editor.getByRole("table", { name: "Signal events" })).toBeVisible();
+  await disclosure.click();
+  await expect(editor.getByLabel("Signal generator start")).toHaveValue("7");
+  await expect(editor.getByTestId("signal-generator-unapplied")).toBeVisible();
+  await expect(host).toHaveAttribute("data-canonical-revision", initialRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText(initialHistory!);
 });

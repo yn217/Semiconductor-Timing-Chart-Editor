@@ -1,5 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
+import { timelineOwner } from "./timeline-scroll.js";
+import { startInCycleSample } from "./cycle-startup.js";
 import { readFile } from "node:fs/promises";
+
+startInCycleSample(test);
 
 async function ready(page: Page) {
   await page.goto("/");
@@ -39,7 +43,7 @@ test("matches the locked desktop pane geometry at the Golden viewport", async ({
   const inspector = await page.getByTestId("inspector").boundingBox();
   expect(ribbon).toMatchObject({ y: 65, height: 102 });
   expect(workspace).toMatchObject({ y: 167 });
-  expect(bottom).toMatchObject({ x: 0, height: 240 });
+  expect(bottom).toMatchObject({ x: 265, height: 240 }); // #756: Bottom belongs to the center stack, right of the continuous left rail
   expect(inspector).toMatchObject({ x: 1375, width: 297 });
   await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction" })).toHaveCount(0);
   // Renamed from .ribbon-group to .ribbon-major-group by the PowerPoint-style
@@ -238,12 +242,12 @@ test("applies Annotation Inspector drafts through one semantic command", async (
   const inspector = page.getByTestId("inspector");
   const surface = host.locator("[data-role='timing-chart-surface']");
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
-  await inspector.getByLabel("Annotation label").fill("Inspector Note");
-  await inspector.getByLabel("Inspector annotation color").fill("#114477");
+  await inspector.getByLabel("Annotation label", { exact: true }).fill("Inspector Note");
+  await inspector.getByLabel("Annotation color").fill("#114477");
   await inspector.getByTestId("apply-annotation-properties").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
-  await expect(inspector.getByLabel("Annotation label")).toHaveValue("Inspector Note");
+  await expect(inspector.getByLabel("Annotation label", { exact: true })).toHaveValue("Inspector Note");
   await expect(owner.locator("[data-role='annotation-label']")).toHaveText("Inspector Note");
   const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(after.waveDromRenders).toBe(before.waveDromRenders);
@@ -274,14 +278,14 @@ test("edits Header and Footer metadata through Document Properties and reopens i
   expect(after.waveDromRenders).toBe(before.waveDromRenders);
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
   await properties.getByRole("button", { name: "Close properties" }).click();
-  await expect(page.locator(".app-titlebar h1")).toHaveText("Timing Review");
+  await expect(page.locator(".app-titlebar h1")).toHaveText(/^Timing Review\*?$/); // #729: dirty documents show a trailing *
   const downloadPromise = page.waitForEvent("download");
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
   const download = await downloadPromise;
   const path = await download.path();
   expect(path).toBeTruthy();
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
-  await expect(page.locator(".app-titlebar h1")).toHaveText("Timing Review");
+  await expect(page.locator(".app-titlebar h1")).toHaveText(/^Timing Review\*?$/); // #729: dirty documents show a trailing *
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
   const reopenedProperties = page.getByRole("dialog", { name: "Document Properties" });
@@ -335,7 +339,7 @@ test("Document Properties keeps Header and Legend edits in one Apply/Cancel tran
   await properties.getByTestId("apply-document-properties").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(page.getByTestId("editor-legend")).toBeVisible();
-  await expect(page.locator(".app-titlebar h1")).toHaveText("Applied Properties");
+  await expect(page.locator(".app-titlebar h1")).toHaveText(/^Applied Properties\*?$/); // #729
 });
 
 test("Save As downloads the canonical document with a requested filename without mutation", async ({ page }) => {
@@ -680,7 +684,7 @@ test("Status Bar exposes derived selection, range, view and renderer state witho
   await expect(page.getByTestId("zoom-status-bar")).toHaveText("Zoom: 125%");
   await expect(page.getByTestId("snap-status")).toHaveText("Snap: Off");
   await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
-  await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Split");
+  await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Combined");
   await expect(host).toHaveAttribute("data-canonical-revision", revision!);
   await expect(page.getByTestId("history-status")).toHaveText(history!);
 });
@@ -732,10 +736,10 @@ test("Fit Selection is a view-only navigation action backed by ruler geometry", 
   const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(after.waveDromRenders).toBe(before.waveDromRenders);
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
-  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollLeft = element.scrollWidth; });
-  await expect.poll(() => page.getByTestId("cycle-viewport").evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await timelineOwner(page).evaluate((element) => { element.scrollLeft = element.scrollWidth; });
+  await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
   await page.getByTestId("ribbon").getByRole("button", { name: "Fit All", exact: true }).click();
-  await expect.poll(() => page.getByTestId("cycle-viewport").evaluate((element) => element.scrollLeft)).toBe(0);
+  await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft)).toBe(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(host).toHaveAttribute("data-canonical-revision", "0");
   const afterFitAll = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
@@ -808,7 +812,8 @@ test("Canvas range drag supports reverse and Shift extension while Escape cancel
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   const countersDuring = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as { snapIndexBuilds: number };
-  expect(countersDuring.snapIndexBuilds - countersBefore.snapIndexBuilds).toBe(1);
+  // The drag builds the Snap index at most once (0 when an earlier hover already built it); per-move rebuilds would exceed 1.
+  expect(countersDuring.snapIndexBuilds - countersBefore.snapIndexBuilds).toBeLessThanOrEqual(1);
   await page.mouse.up();
   await expect(host).not.toHaveAttribute("data-range-drag");
   await expect(page.getByTestId("range-status")).toHaveText("Range: [3, 7)");
@@ -848,10 +853,10 @@ test("Canvas keyboard navigation pans the viewport without canonical or render m
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await viewport.focus();
   await viewport.press("End");
-  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-  const atEnd = await viewport.evaluate((element) => element.scrollLeft);
+  await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  const atEnd = await timelineOwner(page).evaluate((element) => element.scrollLeft);
   await viewport.press("Home");
-  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBe(0);
+  await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft)).toBe(0);
   await viewport.press("PageDown");
   await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
   expect(atEnd).toBeGreaterThan(0);
@@ -1181,6 +1186,8 @@ test("edits a Comment Row through the dedicated Bottom Context Editor", async ({
   expect(path).toBeTruthy();
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  // Open resets scroll to the top and rows are virtualized; bring the appended Comment Row back into the mounted window.
+  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollTop = element.scrollHeight; });
   await expect(host.locator("[data-role='left-row'][data-kind='comment'][data-row-id]")).toContainText("Timing Note");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
@@ -1200,7 +1207,10 @@ test("renders Comment Row content at the shared cycle-0 canvas boundary", async 
   expect(contentBox).not.toBeNull();
   expect(rowBox).not.toBeNull();
   expect(waveformBox).not.toBeNull();
-  expect(Math.abs(rowBox!.x - waveformBox!.x)).toBeLessThanOrEqual(1);
+  // The wave owner box starts at the row edge and its SVG carries a 20.5-unit left margin, so cycle 0 of the waveform sits
+  // one margin inside the box -- exactly where the ruler's cycle-0 tick is.
+  const tick0 = await page.getByTestId("cycle-ruler").locator("[data-cycle='0']").boundingBox();
+  expect(Math.abs(tick0!.x - (waveformBox!.x + 20.5))).toBeLessThanOrEqual(1);
   expect(contentBox!.x).toBeGreaterThanOrEqual(rowBox!.x);
 });
 
@@ -1277,9 +1287,10 @@ test("renders Clock Edge Numbers from actual Geometry without WaveDrom regenerat
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   expect(await host.locator("[data-role='clock-edge-number'][data-signal-id='sig_cycle_clock']").count()).toBeGreaterThan(5);
-  // Open/New resets the transient visible range to [0, 1), so a persisted
-  // visible-range-start counter correctly includes the cycle-0 edge again.
-  await expect(host.locator("[data-role='clock-edge-number'][data-edge-counter-id*=':0']")).toHaveCount(1);
+  // Open/New resets the transient range to the default Timeline range [2, 4), so a persisted visible-range-start
+  // counter restarts at the first clock edge inside it (cycle 2), not at the cycle-0 edge.
+  await expect(host.locator("[data-role='clock-edge-number'][data-edge-counter-id='edge:sig_cycle_clock:rising:2']")).toHaveCount(1);
+  await expect(host.locator("[data-role='clock-edge-number'][data-edge-counter-id='edge:sig_cycle_clock:rising:0']")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 

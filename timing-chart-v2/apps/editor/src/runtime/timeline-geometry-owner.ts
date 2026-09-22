@@ -127,10 +127,16 @@ export class TimelineGeometryOwner {
     return waveOriginPx + displayCycle * pixelsPerDisplayCycle;
   }
 
+  #lastBoundedWindow: { start: number; end: number; cycleCount: number } | undefined;
   /** Resolve a local time viewport to canonical source cycles using semantic geometry. */
   sourceWindowForLocalRange(document: CanonicalDocument, localStart: number, localEnd: number, overscan = 2): Readonly<{ start: number; end: number }> {
+    // Small/medium documents already fit comfortably in one WaveDrom artifact.
+    // Keep their geometry stable while the viewport scrolls so a transient
+    // window render cannot replace the currently visible waveform with an
+    // offscreen range. Large documents still use bounded source windows below.
+    if (document.timeline.cycleCount <= 4_096) return { start: 0, end: document.timeline.cycleCount };
     if (this.#requestedSourceCycle !== undefined) {
-      const span = Math.min(2048, document.timeline.cycleCount);
+      const span = Math.min(512, document.timeline.cycleCount);
       const start = Math.max(0, Math.min(this.#requestedSourceCycle - Math.floor(span / 2), document.timeline.cycleCount - span));
       return { start, end: Math.min(document.timeline.cycleCount, start + span) };
     }
@@ -159,12 +165,21 @@ export class TimelineGeometryOwner {
     // mapping to recover source boundaries instead of treating the retained
     // edge as the end of the document. This keeps windowing bounded while
     // allowing scroll/navigation to reach offscreen source time.
-    const sourceAtMappedBoundary = (localX: number, fallback: number): number => {
-      const displayCycle = Math.max(0, Math.min(mapping.displayCycleCount, Math.round(localX)));
-      return mapping.displayToSource[displayCycle] ?? fallback;
-    };
     const firstEntry = entries[0];
     const lastEntry = entries.at(-1);
+    // Outside the retained window the local x is a pixel-space value, not a display-cycle index (#757):
+    // extrapolate with the retained geometry's own pitch (local units per display cycle).
+    const firstDisplay = firstEntry === undefined ? undefined : mapping.sourceToDisplay[firstEntry.cycle];
+    const lastDisplay = lastEntry === undefined ? undefined : mapping.sourceToDisplay[lastEntry.cycle];
+    const pitch = firstEntry && lastEntry && firstDisplay !== undefined && lastDisplay !== undefined && lastDisplay > firstDisplay
+      ? (lastEntry.x - firstEntry.x) / (lastDisplay - firstDisplay) : undefined;
+    const sourceAtMappedBoundary = (localX: number, fallback: number): number => {
+      const displayIndex = pitch !== undefined && pitch > 0 && firstEntry !== undefined && firstDisplay !== undefined
+        ? firstDisplay + (localX - firstEntry.x) / pitch
+        : localX;
+      const displayCycle = Math.max(0, Math.min(mapping.displayCycleCount, Math.round(displayIndex)));
+      return mapping.displayToSource[displayCycle] ?? fallback;
+    };
     let start = sourceAtMappedBoundary(localStart, firstEntry?.cycle ?? 0);
     let end = sourceAtMappedBoundary(localEnd, lastEntry?.cycle ?? document.timeline.cycleCount);
     if (firstEntry && lastEntry && localStart <= lastEntry.x && localEnd >= firstEntry.x) {
@@ -182,10 +197,20 @@ export class TimelineGeometryOwner {
     // subset to replace the bounded geometry window would discard offscreen
     // navigation boundaries on the next render.  DOM remains virtualized;
     // this minimum applies only to the source-time geometry artifact.
-    if (document.timeline.cycleCount > 4096 && boundedEnd - boundedStart < 2048) {
-      const span = Math.min(2048, document.timeline.cycleCount);
-      const centered = Math.max(0, Math.min(boundedStart, document.timeline.cycleCount - span));
-      return { start: centered, end: centered + span };
+    if (document.timeline.cycleCount > 4096) {
+      // Quantize the window to a grid: a window that starts exactly at the viewport start changes on every
+      // scroll step, so a sustained drag re-rendered every mounted WaveDrom owner continuously (#621/#637).
+      // With a 256-cycle grid the source window only changes when the viewport crosses a grid line.
+      // Tile-style reuse (#621): while the visible range (with overscan) still lies inside the
+    // window handed out last, return that same window so unchanged owners are not re-rendered.
+    const last = this.#lastBoundedWindow;
+    if (last && last.cycleCount === document.timeline.cycleCount && boundedStart >= last.start && boundedEnd <= last.end) return { start: last.start, end: last.end };
+    const grid = 256;
+      const start = Math.max(0, Math.floor(boundedStart / grid) * grid);
+      const span = Math.min(document.timeline.cycleCount, Math.max(512, Math.ceil((boundedEnd - start) / grid) * grid));
+      const clampedStart = Math.max(0, Math.min(start, document.timeline.cycleCount - span));
+      this.#lastBoundedWindow = { start: clampedStart, end: clampedStart + span, cycleCount: document.timeline.cycleCount };
+    return { start: clampedStart, end: clampedStart + span };
     }
     return { start: boundedStart, end: boundedEnd };
   }
@@ -200,7 +225,7 @@ export class TimelineGeometryOwner {
     const sourceWindow = this.sourceWindowForLocalRange(document, localStart, localEnd, 2);
     const before = sourceWindow.start;
     const after = sourceWindow.end;
-    return createDisplayTimeViewport(mapping, mapping.sourceToDisplay[before] ?? 0, mapping.sourceToDisplay[after] ?? 0, 2, rowStart, rowEnd, generation, pinnedIds);
+    return createDisplayTimeViewport(mapping, mapping.sourceToDisplay[before] ?? 0, mapping.sourceToDisplay[after] ?? (after >= mapping.sourceToDisplay.length ? mapping.displayCycleCount : 0), 2, rowStart, rowEnd, generation, pinnedIds);
   }
 
   screenToLocal(point: Point, zoom: number, scrollX = 0, scrollY = 0): Point {

@@ -67,3 +67,35 @@ describe("composeRibbon (#405)", () => {
     expect(new Set([...result.visible, ...result.overflow].map((item) => item.id)).size).toBe(source.length);
   });
 });
+
+describe("Ribbon extensibility (#441): adding commands never loses or reorders existing ones", () => {
+  const sizes = ["large", "medium", "small", "icon"] as const;
+  const item = (id: string, overflow: "allowed" | "preferred" | "never", preferredSize: "large" | "medium" | "small" | "icon" = "large") =>
+    ({ kind: "button" as const, id, icon: "i-plus", label: id, presentation: { preferredSize, compactSize: "small" as const, overflow } }) as unknown as RibbonGroupSpec["items"][number];
+  const base = Array.from({ length: 12 }, (_, index) => item("base-" + index, (["allowed", "preferred", "never"] as const)[index % 3]!, sizes[index % 4]!));
+  const extra = Array.from({ length: 30 }, (_, index) => item("extra-" + index, (["allowed", "preferred", "never"] as const)[(index + 1) % 3]!, sizes[(index + 2) % 4]!));
+
+  it("partitions a non-empty command set losslessly at every available size", () => {
+    for (const size of sizes) {
+      const result = partitionRibbonItems(base, size);
+      const ids = [...result.visible, ...result.overflow].map((entry) => entry.id).sort();
+      expect(ids).toEqual(base.map((entry) => entry.id).sort());
+      expect(result.visible.map((entry) => entry.id)).toEqual(base.filter((entry) => result.visible.includes(entry)).map((entry) => entry.id));
+    }
+    // A vacuous fixture would hide regressions: the fixture must actually exercise both outcomes.
+    expect(partitionRibbonItems(base, "small").overflow.length).toBeGreaterThan(0);
+    expect(partitionRibbonItems(base, "small").visible.length).toBeGreaterThan(0);
+  });
+
+  it("commands never marked overflow=never stay visible however many commands are added", () => {
+    for (const size of sizes) {
+      const before = partitionRibbonItems(base, size);
+      const after = partitionRibbonItems([...base, ...extra], size);
+      const neverIds = [...base, ...extra].filter((entry) => "presentation" in entry && entry.presentation?.overflow === "never").map((entry) => entry.id);
+      for (const id of neverIds) expect(after.visible.map((entry) => entry.id), size + ":" + id).toContain(id);
+      // Existing commands keep the same placement and relative order after extension.
+      for (const entry of base) expect(after.overflow.includes(entry)).toBe(before.overflow.includes(entry));
+      expect(after.visible.filter((entry) => base.includes(entry)).map((entry) => entry.id)).toEqual(before.visible.map((entry) => entry.id));
+    }
+  });
+});

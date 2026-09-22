@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("Inspector header has no inert control besides the real Close button", async ({ page }) => {
   await page.goto("/");

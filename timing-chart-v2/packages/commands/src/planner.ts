@@ -798,7 +798,6 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (command.width !== undefined && (nextType !== "bus" || !Number.isInteger(command.width) || command.width < 1)) return fail("invalid", "INVALID_SIGNAL_WIDTH", "$.width", "Width must be a positive integer and applies only to bus signals.");
       if (command.displayAlign !== undefined && !["left", "center", "right"].includes(command.displayAlign)) return fail("invalid", "INVALID_DISPLAY_ALIGN", "$.displayAlign", "Display alignment is invalid.");
       if (command.displayOverflow !== undefined && !["expand", "ellipsis", "wrap"].includes(command.displayOverflow)) return fail("invalid", "INVALID_DISPLAY_OVERFLOW", "$.displayOverflow", "Display overflow is invalid.");
-      if (command.splitPane !== undefined && !["upper", "lower", "both"].includes(command.splitPane)) return fail("invalid", "INVALID_SPLIT_PANE", "$.splitPane", "Signal Split pane assignment is invalid.");
       if ((command.spacingBefore !== undefined && (!Number.isFinite(command.spacingBefore) || command.spacingBefore < 0)) || (command.spacingAfter !== undefined && (!Number.isFinite(command.spacingAfter) || command.spacingAfter < 0))) return fail("invalid", "INVALID_SIGNAL_SPACING", "$.spacing", "Signal spacing must be finite and non-negative.");
       const currentFormat = signal.type === "bus" ? signal.displayFormat : undefined;
       const currentWidth = signal.type === "bus" ? signal.width : undefined;
@@ -806,18 +805,16 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const currentAlign = signal.display.align;
       const currentOverflow = signal.display.overflow;
       const currentStyle = signal.display.style;
-      const currentSplitPane = signal.display.splitPane;
       const nextFormat = nextType === "bus" ? command.displayFormat ?? currentFormat : undefined;
       const nextWidth = nextType === "bus" ? command.width ?? currentWidth : undefined;
       const nextVisible = command.visible ?? currentVisible;
       const nextAlign = command.displayAlign ?? currentAlign;
       const nextOverflow = command.displayOverflow ?? currentOverflow;
       const nextStyle = command.displayStyle ?? currentStyle;
-      const nextSplitPane = command.splitPane ?? currentSplitPane;
       const nextSpacingBefore = command.spacingBefore ?? signal.spacingBefore;
       const nextSpacingAfter = command.spacingAfter ?? signal.spacingAfter;
-      if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth && currentVisible === nextVisible && currentAlign === nextAlign && currentOverflow === nextOverflow && currentSplitPane === nextSplitPane && signal.spacingBefore === nextSpacingBefore && signal.spacingAfter === nextSpacingAfter && semanticEqual(currentStyle, nextStyle)) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
-      const nextDisplay = { ...signal.display, name, visible: nextVisible, ...(nextAlign === undefined ? {} : { align: nextAlign }), ...(nextOverflow === undefined ? {} : { overflow: nextOverflow }), ...(nextStyle === undefined ? {} : { style: nextStyle }), ...(nextSplitPane === undefined ? {} : { splitPane: nextSplitPane }) };
+      if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth && currentVisible === nextVisible && currentAlign === nextAlign && currentOverflow === nextOverflow && signal.spacingBefore === nextSpacingBefore && signal.spacingAfter === nextSpacingAfter && semanticEqual(currentStyle, nextStyle)) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
+      const nextDisplay = { ...signal.display, name, visible: nextVisible, ...(nextAlign === undefined ? {} : { align: nextAlign }), ...(nextOverflow === undefined ? {} : { overflow: nextOverflow }), ...(nextStyle === undefined ? {} : { style: nextStyle }) };
       const next: Signal = signal.type === "clock"
         ? { ...signal, name, role: command.role, display: nextDisplay, ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) }
         : (() => {
@@ -827,9 +824,14 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
         })();
       const waveformChanged = signal.type !== nextType || currentFormat !== nextFormat || currentWidth !== nextWidth;
       const spacingChanged = signal.spacingBefore !== nextSpacingBefore || signal.spacingAfter !== nextSpacingAfter;
+      // Visibility changes the derived row layout exactly like signal.setVisibility: the rows below compact, so their screen Y,
+      // dependent annotations and the MiniMap must be invalidated too (otherwise wave owners stay one row off their labels).
+      const visibilityChanged = currentVisible !== nextVisible;
+      const nextForLayout = replaceSignal(document, index, next);
+      const visibilityRows = visibilityChanged ? changedPositions(orderedVisibleTimingRows(document), orderedVisibleTimingRows(nextForLayout)) : [];
       const changeSet: ChangeSet = {
         rowPresentation: [signal.id],
-        ...(spacingChanged ? { geometryScreenY: geometryRowsFrom(document, signal.id) } : {}),
+        ...(visibilityChanged ? { geometryScreenY: [...new Set([...(spacingChanged ? geometryRowsFrom(document, signal.id) : []), ...visibilityRows])], annotationPosition: annotationsForSignals(document, [...new Set([signal.id, ...visibilityRows])]), minimapOverview: true } : spacingChanged ? { geometryScreenY: geometryRowsFrom(document, signal.id) } : {}),
         ...(waveformChanged ? { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: dependentAnnotations(document, signal.id).map((annotation) => annotation.id) } : {}),
       };
       return { ok: true, document: replaceSignal(document, index, next), changeSet, inverseChangeSet: changeSet };
@@ -1233,7 +1235,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
         : { ...currentScale, ...command.scale };
       if (!Number.isFinite(scale.clockCyclesPerTransactionCycle) || scale.clockCyclesPerTransactionCycle <= 0 || !Number.isInteger(scale.majorInterval) || scale.majorInterval < 1 || !Number.isInteger(scale.minorInterval) || scale.minorInterval < 1) return fail("invalid", "INVALID_TRANSACTION_TIME_SCALE", "$.scale", "Transaction time scale must use positive finite ratio and positive integer intervals.");
       if (semanticEqual(currentScale ?? {}, scale)) return fail("no-op", "NO_OP", "$", "Transaction time scale is unchanged.");
-      return { ok: true, document: { ...document, transactionTimeScale: scale }, changeSet: { transactionSemantics: document.transactions.map((item) => item.id) }, inverseChangeSet: { transactionSemantics: document.transactions.map((item) => item.id) } };
+      return { ok: true, document: { ...document, transactionTimeScale: scale }, changeSet: { transactionSemantics: document.transactions.map((item) => item.id), transactionTimeScale: true }, inverseChangeSet: { transactionSemantics: document.transactions.map((item) => item.id), transactionTimeScale: true } };
     }
     case "annotation.updateAnchor": {
       const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);

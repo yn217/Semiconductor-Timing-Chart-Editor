@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Production correction journey",
+  "type": "object",
+  "required": ["id", "relatedIssue", "preconditions", "actions", "expected", "invariants", "freshStart", "productionPath"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "relatedIssue": { "type": "integer", "minimum": 1 },
+    "preconditions": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "actions": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "expected": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "invariants": { "type": "object", "minProperties": 1 },
+    "freshStart": { "type": "boolean" },
+    "productionPath": { "type": "boolean" }
+  },
+  "additionalProperties": false
+}

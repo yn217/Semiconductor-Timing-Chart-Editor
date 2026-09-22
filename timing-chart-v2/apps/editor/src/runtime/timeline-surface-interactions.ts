@@ -1,3 +1,4 @@
+import { fixedColumnsOutsideTimeline, timelineScrollOwner } from "./timeline-scroll-owner.js";
 import type { MutableRefObject } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { RenderProjection } from "@timing-chart-v2/projection";
@@ -16,7 +17,7 @@ import { TreeDragInteractionOwner } from "./tree-drag-interaction-owner.js";
 import type { TimelineGeometryOwner } from "./timeline-geometry-owner.js";
 import { attachEditorEventBindings } from "./interaction-controller.js";
 import { routeGlobalShortcut } from "./keyboard-shortcut-router.js";
-import { cancelActiveGesture } from "./active-gesture-cancellation.js";
+import { cancelActiveGesture, registerActiveGestureCancel } from "./active-gesture-cancellation.js";
 import { nextCommandId } from "../command-id.js";
 
 type Session = ReturnType<EditorApplicationOwner["runtime"]["session"]["current"]>;
@@ -75,7 +76,8 @@ export function createTimelineViewportKeyDownHandler(viewportElement: HTMLElemen
   return (event) => {
     const target = event.target instanceof Element ? event.target : null;
     if (!target?.closest("[data-testid='cycle-viewport']") || target.closest("input, textarea, select, button, [contenteditable='true']")) return;
-    const horizontalStep = Math.max(48, Math.round(viewportElement.clientWidth * 0.18));
+    const scroller = timelineScrollOwner(viewportElement);
+    const horizontalStep = Math.max(48, Math.round(scroller.clientWidth * 0.18));
     const verticalStep = Math.max(48, Math.round(viewportElement.clientHeight * 0.75));
     let left: number | undefined;
     let top: number | undefined;
@@ -83,11 +85,12 @@ export function createTimelineViewportKeyDownHandler(viewportElement: HTMLElemen
     else if (event.key === "ArrowRight") left = horizontalStep;
     else if (event.key === "PageUp") top = -verticalStep;
     else if (event.key === "PageDown") top = verticalStep;
-    else if (event.key === "Home") left = -viewportElement.scrollWidth;
-    else if (event.key === "End") left = viewportElement.scrollWidth;
+    else if (event.key === "Home") left = -scroller.scrollWidth;
+    else if (event.key === "End") left = scroller.scrollWidth;
     if (left === undefined && top === undefined) return;
     event.preventDefault();
-    viewportElement.scrollBy({ ...(left === undefined ? {} : { left }), ...(top === undefined ? {} : { top }), behavior: "auto" });
+    if (left !== undefined) scroller.scrollBy({ left, behavior: "auto" });
+    if (top !== undefined) viewportElement.scrollBy({ top, behavior: "auto" });
   };
 }
 
@@ -109,11 +112,32 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     lowerCanvasClickRef, menuOriginRef, suppressCanvasClickRef, setRangeSelectionActive, setRange, setSelectedCycle,
     setContextMenu, closeContextMenu, setArrowPickStatus, publishState, refreshRangePreview,
   } = input;
+  // #738: pointer X is interpreted in the SAME coordinate system the ruler ticks are drawn in -- the ruler content's own
+  // origin -- not the (possibly hidden/offset) Cycle wave layer, so Transaction mode (whose Cycle surface is hidden and laid
+  // out elsewhere) resolves the same time as Cycle mode. Falls back to the wave layer only before a ruler exists.
+  const rulerOriginLeft = (): number | undefined => {
+    const ruler = rulerElement.getBoundingClientRect();
+    if (ruler.width > 0) return ruler.left;
+    return rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']")?.getBoundingClientRect().left;
+  };
+  // Canvas pointer X uses the visible Cycle wave layer when there is one (native scroll makes its rect exact at once, even
+  // before the ruler's own scroll transform has synced); when the Cycle surface is hidden (Transaction mode) it falls back to
+  // the ruler's origin, which is the coordinate system the time ticks are drawn in.
+  const timeOriginLeft = (): number | undefined => {
+    const hostHidden = getComputedStyle(rendererHost).visibility === "hidden";
+    const waveLeft = hostHidden ? undefined : rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']")?.getBoundingClientRect().left;
+    return waveLeft ?? rulerOriginLeft();
+  };
   const cycleBoundaryAtX = (clientX: number): number | undefined => {
-    const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
-    if (!waveLayer) return undefined;
-    const bounds = waveLayer.getBoundingClientRect();
-    return timelineGeometry.cycleBoundaryAtScreenX(clientX, bounds.left, timelineNavigation.getZoom(), snapEnabledRef.current);
+    const left = timeOriginLeft();
+    return left === undefined ? undefined : timelineGeometry.cycleBoundaryAtScreenX(clientX, left, timelineNavigation.getZoom(), snapEnabledRef.current);
+  };
+  /** The ruler cell [start, end) containing the pointer: deterministic floor, never snapped to the nearest tick or glyph. */
+  const rulerCellAtX = (clientX: number): number | undefined => {
+    const left = rulerOriginLeft();
+    // Boundary rule: cells are [start, end) -- a pointer exactly on a tick boundary belongs to the cell that starts there
+    // (the 0.01px slack absorbs sub-pixel float error in the ruler/viewport transforms).
+    return left === undefined ? undefined : timelineGeometry.cycleBoundaryAtScreenX(clientX, left - 0.01, timelineNavigation.getZoom(), false);
   };
   const timeDomainExclusions = [
     "[data-role='left-tree-rows']", "[data-role='frozen-label-rows']", "[data-role='annotation-owner']",
@@ -125,7 +149,9 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     const target = event.target instanceof Element ? event.target : undefined;
     if (!target || target.closest(timeDomainExclusions)) return false;
     const bounds = viewportElement.getBoundingClientRect();
-    const left = bounds.left + getTimelineOffset();
+    // #738: the ruler viewport is entirely time domain (it has no frozen columns of its own, in any mode); only the
+    // waveform viewport reserves the Cycle left + frozen columns.
+    const left = bounds.left + (rulerViewportElement.contains(target) ? 0 : getTimelineOffset());
     if (event.clientX < left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) return false;
     // Cycle ownership is scoped to the Cycle renderer or its ruler. Transaction
     // lanes are siblings in the viewport and must never be filtered by a growing
@@ -146,10 +172,10 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
   let rangeInteractions!: TimelineRangeInteractionOwner;
   const onRulerSelect = (event: MouseEvent) => {
     if (rangeInteractions.consumeRulerClickSuppression()) return;
+    // #738: the whole ruler cell is the hit target; the label glyph never owns the interaction.
     const tick = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-cycle]") : null;
-    if (!tick) return;
-    const cycle = Number(tick.dataset.sourceCycle ?? tick.dataset.cycle);
-    if (!Number.isInteger(cycle) || cycle > getSnapshot().document.timeline.cycleCount) return;
+    const cycle = rulerCellAtX(event.clientX) ?? (tick ? Number(tick.dataset.sourceCycle ?? tick.dataset.cycle) : undefined);
+    if (cycle === undefined || !Number.isInteger(cycle) || cycle > getSnapshot().document.timeline.cycleCount) return;
     selectedEdgeRef.current = undefined;
     setRangeSelectionActive(true);
     setSelectedCycle(cycle);
@@ -203,6 +229,7 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     rendererHost,
     isTimeDomainPointerTarget,
     cycleBoundaryAtX,
+    rulerCellAtX,
     getCycleCount: () => getSnapshot().document.timeline.cycleCount,
     getRange: () => timelineRangeRef.current,
     getSelectedCycle: () => selectedCycleRef.current,
@@ -214,6 +241,12 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     refreshRange: refreshRangePreview,
     refreshPlayhead: () => timelineRuntime.refreshPlayhead(),
   });
+  // #720: while an Annotation drag is active the status bar explains the gesture (shared active-gesture hint channel; view-only).
+  let annotationHintRelease: (() => void) | undefined;
+  const syncAnnotationHint = () => {
+    if (annotationInteraction.active && annotationHintRelease === undefined) annotationHintRelease = registerActiveGestureCancel(() => annotationInteraction.cancel(), "Move annotation - drag; Esc cancels");
+    else if (!annotationInteraction.active && annotationHintRelease !== undefined) { annotationHintRelease(); annotationHintRelease = undefined; }
+  };
   const treeDrag = new TreeDragInteractionOwner({ rendererHost, getDocument: () => getSnapshot().document, execute });
   const annotationInteraction = new AnnotationInteractionOwner({
     rendererHost, renderer, timelineGeometry, documentEpoch, getZoom: timelineNavigation.getZoom,
@@ -271,8 +304,10 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
   };
   const detach = attachEditorEventBindings([
     ...(() => { const tree = rendererHost.querySelector<HTMLElement>("[data-role='left-tree-rows']"); return tree ? [{ target: tree, type: "keydown", listener: onTreeKeyDown as EventListener }] : []; })(),
-    { target: viewportElement, type: "scroll", listener: onScroll as EventListener, options: { passive: true } },
+    { target: viewportElement, type: "scroll", listener: onScroll as EventListener, options: { passive: true, capture: true } },
     { target: viewportElement, type: "keydown", listener: onViewportKeyDown as EventListener },
+    // #625: in Cycle the shared viewport never scrolls horizontally (the Timeline owner does); undo programmatic scrolls (focus / scrollIntoView) so nothing slides under the fixed columns.
+    { target: viewportElement, type: "scroll", listener: (() => { if (viewportElement.scrollLeft !== 0 && fixedColumnsOutsideTimeline(viewportElement)) viewportElement.scrollLeft = 0; }) as EventListener },
     { target: rendererHost, type: "click", listener: onCanvasClick as EventListener },
     { target: rendererHost, type: "pointerdown", listener: rangeInteractions.pointerDown as EventListener },
     { target: rendererHost, type: "pointermove", listener: rangeInteractions.pointerMove as EventListener },
@@ -298,12 +333,16 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     { target: rendererHost, type: "pointermove", listener: annotationInteraction.onPointerMove as EventListener },
     { target: rendererHost, type: "pointerup", listener: annotationInteraction.onPointerUp as EventListener },
     { target: rendererHost, type: "pointercancel", listener: annotationInteraction.cancel as EventListener },
+    { target: rendererHost, type: "pointerdown", listener: syncAnnotationHint as EventListener },
+    { target: rendererHost, type: "pointermove", listener: syncAnnotationHint as EventListener },
+    { target: rendererHost, type: "pointerup", listener: syncAnnotationHint as EventListener },
+    { target: rendererHost, type: "pointercancel", listener: syncAnnotationHint as EventListener },
     { target: rendererHost, type: "contextmenu", listener: onContextMenu as EventListener },
     { target: rendererHost.ownerDocument, type: "keydown", listener: onGlobalKeyDown as EventListener },
   ]);
   return {
     cancel: () => { rangeInteractions.cancel(); treeDrag.cancel(); annotationInteraction.cancel(); },
-    detach: () => { detach(); lowerCanvasClickRef.current = () => undefined; rangeInteractions.cancel(); treeDrag.cancel(); annotationInteraction.cancel(); },
+    detach: () => { detach(); lowerCanvasClickRef.current = () => undefined; rangeInteractions.cancel(); treeDrag.cancel(); annotationInteraction.cancel(); syncAnnotationHint(); },
     consumeRulerClickSuppression: () => rangeInteractions.consumeRulerClickSuppression(),
   };
 }

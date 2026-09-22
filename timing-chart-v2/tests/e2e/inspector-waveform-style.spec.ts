@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #472: Signal Inspector's "Waveform Color" was stored in Canonical
 // (Signal.display.style.waveformColor) and survived Save/Open, but nothing

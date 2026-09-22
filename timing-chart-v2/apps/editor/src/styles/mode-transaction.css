@@ -1,0 +1,84 @@
+/* Transaction Mode workspace owner: every rule scoped by .cycle-panel.mode-transaction, moved here
+   from app-shell/center-columns/bottom-editor so the mode has one stylesheet (#593). */
+/* Transaction mode's tree header is 58px tall (line 140), not the plain
+   37px `.column-headings` height every other mode uses -- `.cycle-viewport`
+   kept the flat 37px offset, so its bottom 21px (exactly enough to swallow
+   the horizontal scrollbar) sat past `.cycle-panel`'s own `overflow: hidden`
+   bottom edge and was clipped, leaving Transaction mode with no visible
+   horizontal scrollbar despite `.transaction-lanes` being far wider than the
+   viewport. Mirrors the `.transaction-signal-tree` override two lines up. */
+.editor-shell .cycle-panel.mode-transaction .cycle-viewport { height: 100%; }
+.cycle-panel.mode-transaction .surface-host { visibility: hidden; }
+.cycle-panel.mode-transaction .transaction-left-tree {
+  position: absolute;
+  z-index: 18;
+  /* Standalone Transaction tree is a sibling of `.cycle-viewport`, not a
+     child of its horizontally scrolling surface. Keep it fixed below the
+     58px Transaction header while the shared time surface scrolls behind it. */
+  top: 58px;
+  /* Leave the native horizontal scrollbar unobscured; the tree is a fixed
+     overlay sibling and must not cover the scrollbar's starting thumb. */
+  bottom: 16px;
+  left: 0;
+  width: var(--gui-left-width);
+  overflow: auto;
+  border-right: 1px solid #cbd4df;
+  background: #f8fafc;
+}
+.cycle-panel.mode-transaction .transaction-lane-labels {
+  left: var(--gui-left-width);
+  width: var(--gui-frozen-width, 210px);
+}
+.cycle-panel.mode-transaction .transaction-lane-label-row { display: none; }
+.cycle-panel.mode-transaction .transaction-lanes { min-height: calc(100% - 34px); }
+/* Transaction Mode owns its tree in the outer left rail.  The center
+   timeline must therefore not reserve the legacy left/frozen columns a
+   second time.  Keep this scoped to Transaction Mode; Combined/Split still
+   use the embedded transaction pane layout. */
+.editor-shell .cycle-panel.mode-transaction .transaction-lanes {
+  width: var(--wave-width, 640px);
+}
+.editor-shell .cycle-panel.mode-transaction .transaction-lane-labels {
+  left: 0;
+  width: var(--wave-width, 640px);
+}
+.editor-shell .cycle-panel.mode-transaction .cycle-ruler {
+  --time-domain-left: 0px;
+  left: 0;
+  width: 100%;
+}
+.editor-shell .cycle-panel.mode-transaction .geometry-grid {
+  left: 0;
+  width: var(--wave-width, 640px);
+}
+.editor-shell .cycle-panel.mode-transaction .transaction-track {
+  left: 0;
+  width: calc(var(--wave-width, 640px) * var(--transaction-zoom, 1));
+}
+.editor-shell[data-view-mode="Transaction"] .transaction-list-row > button { height: 28px; }
+.editor-shell[data-view-mode="Transaction"] .transaction-list-row-editor { min-height: 28px; }
+.editor-shell[data-view-mode="Transaction"] .bottom-tabs { flex-basis: 36px; height: 36px; }
+.editor-shell[data-view-mode="Transaction"] .bottom-tabs button { height: 35px; }
+/* The lane-label layer spans the whole time surface in standalone Transaction Mode. As a sticky z-2 stacking context it sat
+   under the bar track (z 3), which made every Group header control (collapse chevron, inline rename, Ungroup) unclickable.
+   Lift the (transparent, non-interactive) layer above the track and let only the header controls take pointer input, so bars
+   underneath stay directly clickable. */
+.editor-shell .cycle-panel.mode-transaction .transaction-lane-labels { z-index: 4; background: transparent; pointer-events: none; }
+.editor-shell .cycle-panel.mode-transaction .transaction-group-header { background: transparent; }
+.editor-shell .cycle-panel.mode-transaction .transaction-group-header > * { pointer-events: auto; }
+
+/* #750: standalone Transaction shows only the lanes; the (hidden) Cycle surface must not widen the scroll area with its left/frozen
+   columns, so the scroll extent is exactly the presented content. */
+.editor-shell[data-view-mode="Transaction"] .surface-host { overflow-x: clip; }
+
+/* #765: the Cycle signal-row plane (surface host + its left tree rows) is invisible in standalone Transaction; keep it laid out for mode
+   round-trips but stop it from contributing its height to the timeline's scrollable overflow (a phantom vertical scrollbar when the lanes fit).
+   Scoped to those two planes only: the ruler, lanes and Bookmark markers share the .split-signal-content wrapper and must not be clipped.
+   overflow: clip (not hidden) so it never becomes a sticky scroll container. */
+.cycle-panel.mode-transaction .surface-host,
+.cycle-panel.mode-transaction [data-role='left-tree-rows'] { height: 0; min-height: 0; overflow: clip; }
+
+/* #764: the track is scaled by --transaction-zoom, so the label plane (Group header bands + their sticky context) must span the same presented
+   extent; at 1x this is identical to --wave-width. */
+.editor-shell .cycle-panel.mode-transaction .transaction-lanes,
+.editor-shell .cycle-panel.mode-transaction .transaction-lane-labels { width: calc(var(--wave-width, 640px) * var(--transaction-zoom, 1)); }

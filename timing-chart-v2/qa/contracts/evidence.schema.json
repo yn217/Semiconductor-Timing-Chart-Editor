@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Correction evidence manifest",
+  "type": "object",
+  "required": ["issue", "commit", "reproduction", "failingTest", "rootCause", "verification"],
+  "properties": {
+    "issue": { "type": "integer", "minimum": 1 },
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+    "reproduction": {
+      "type": "object", "required": ["status", "journey"],
+      "properties": { "status": { "const": "confirmed" }, "journey": { "type": "string", "minLength": 1 } },
+      "additionalProperties": false
+    },
+    "failingTest": {
+      "type": "object", "required": ["name", "observedRed"],
+      "properties": { "name": { "type": "string", "minLength": 1 }, "observedRed": { "const": true } },
+      "additionalProperties": false
+    },
+    "rootCause": {
+      "type": "object", "required": ["bugClass", "violatedInvariant"],
+      "properties": { "bugClass": { "type": "string", "minLength": 1 }, "violatedInvariant": { "type": "string", "minLength": 1 } },
+      "additionalProperties": false
+    },
+    "verification": {
+      "type": "object", "required": ["independent", "freshStart", "productionPath"],
+      "properties": { "independent": { "const": true }, "freshStart": { "const": true }, "productionPath": { "const": true } },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

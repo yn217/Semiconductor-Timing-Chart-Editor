@@ -23,7 +23,8 @@ for (const [width, height] of [[1672, 941], [1280, 720]] as const) {
     await page.getByRole("tab", { name: "Transaction", exact: true }).click();
     await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
 
-    await page.getByTestId("add-transaction-group-tree").click();
+    await page.getByTestId("transaction-tree-more").click();
+  await page.getByTestId("add-transaction-group-tree").click();
     const create = page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true });
     await create.click();
     await create.click();
@@ -36,7 +37,7 @@ for (const [width, height] of [[1672, 941], [1280, 720]] as const) {
     const list = editor.locator(".transaction-list");
     const header = list.locator(".transaction-list-header");
     await expect(header).toBeVisible();
-    await expect(header).toHaveText("NameGroupLaneStart CycleEnd CycleDuration (cycles)# PhasesLinked SignalsColorDescription");
+    await expect(header).toHaveText("NameGroupLaneStart CycleEnd CycleDuration (cycles)# PhasesLinked SignalsColorDescription"); // empty document: 1 cycle = 1 cycle, no TC scale
 
     const rows = list.locator(".transaction-list-row");
     await expect(rows).toHaveCount(2);
@@ -44,7 +45,11 @@ for (const [width, height] of [[1672, 941], [1280, 720]] as const) {
     // column instead of skipping it -- keeps every row on the same fixed
     // 8-column grid as the header.
     await expect(rows.nth(0).locator("button")).toContainText("Ungrouped");
-    await expect(rows.nth(1).locator("button")).toContainText("Group 1");
+    // #703: the active (selected) row is the editable row -- its Group cell is a select showing the chosen Group.
+    const activeRow = rows.nth(1);
+    await expect(activeRow.locator(".transaction-list-row-editor")).toBeVisible();
+    await expect(activeRow.getByLabel("Bottom Transaction group")).toHaveValue(/.+/);
+    await expect(activeRow.getByLabel("Bottom Transaction group").locator("option:checked")).toHaveText("Group 1");
 
     // Column boundaries: the header's cells and every row's cells land on
     // the same x coordinate (within a rounding pixel), proving real table
@@ -52,7 +57,7 @@ for (const [width, height] of [[1672, 941], [1280, 720]] as const) {
     // columns.
     const headerXs = await columnXs(header.locator(".transaction-list-header-cells > span"));
     const row0Xs = await columnXs(rows.nth(0).locator("button > *"));
-    const row1Xs = await columnXs(rows.nth(1).locator("button > *"));
+    const row1Xs = await columnXs(rows.nth(1).locator(".transaction-list-row-editor > *"));
     for (let index = 0; index < headerXs.length; index += 1) {
       expect(Math.abs(headerXs[index]! - row0Xs[index]!)).toBeLessThanOrEqual(1);
       expect(Math.abs(row0Xs[index]! - row1Xs[index]!)).toBeLessThanOrEqual(1);

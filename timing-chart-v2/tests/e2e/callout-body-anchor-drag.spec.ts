@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 // #423: dragging a Callout's comment/body must move only the label offset
 // -- the anchor handle must stay exactly where it was, both during the

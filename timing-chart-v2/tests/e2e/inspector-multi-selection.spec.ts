@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 // GUI/UX Visual Quality Closure -- Inspector spec explicitly names
 // "Signal/Bus/Annotation/Bookmark/Transaction/Multi-selection" as the set

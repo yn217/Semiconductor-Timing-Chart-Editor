@@ -1,3 +1,5 @@
+import { groupColorFor, resolveTransactionColor } from "../transaction-color.js";
+import { cyclesPerTc, cyclesToTc, tcFieldLabel, tcToCycles, tcUnitLabel } from "../transaction-tc.js";
 import type { ReactNode } from "react";
 import { memo, startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
@@ -24,6 +26,7 @@ import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbon
 import { buildCommandRejectionDiagnostics } from "../command-diagnostics.js";
 import { ContextMenuSurface } from "../context-menu-surface.js";
 import { TransactionLinkedSignals } from "../transaction-linked-signals.js";
+import { addPhaseToDraft, canAddPhase, clearPhaseDraft, commitPhaseRows, TransactionPhaseEditor, usePendingPhaseDraft } from "../transaction-bottom-tabs.js";
 import { ExportDialog } from "../export-dialog.js";
 import { ReviewWorkflow } from "../review-workflow.js";
 import { ProblemsPanel } from "../problems-panel.js";
@@ -86,33 +89,29 @@ const spacerId = (value: string) => value as SpacerId;
 
 function InspectorSpacerDraft({ spacer, onApply, onDelete }: { readonly spacer: SpacerRow; readonly onApply: (height: number) => void; readonly onDelete: () => void }) {
   const [draft, setDraft] = useState(String(spacer.height));
-  const [error, setError] = useState("");
   useEffect(() => {
     setDraft(String(spacer.height));
-    setError("");
   }, [spacer.id, spacer.height]);
   const height = Number(draft);
   const valid = draft.trim().length > 0 && Number.isFinite(height) && height > 0;
+  const dirty = draft !== String(spacer.height);
   const changed = valid && height !== spacer.height;
+  const error = dirty && !valid ? "Spacer height must be a finite positive number." : "";
   return <form data-spacer-id={spacer.id} onSubmit={(event) => {
     event.preventDefault();
-    if (!valid) {
-      setError("Spacer height must be a finite positive number.");
-      return;
-    }
     if (changed) onApply(height);
   }}>
     <code>{spacer.id}</code>
-    <label>Height<input name="height" aria-label={`Spacer height ${spacer.id}`} type="number" min="1" step="1" value={draft} onChange={(event) => { setDraft(event.target.value); setError(""); }} /></label>
+    <label>Height<input name="height" aria-label={`Spacer height ${spacer.id}`} aria-invalid={error ? true : undefined} type="number" min="1" step="1" value={draft} onChange={(event) => setDraft(event.target.value)} /></label>
     {error && <span role="alert" className="editor-problem">{error}</span>}
     {changed && <span className="draft-unapplied-indicator" role="status">Unapplied changes</span>}
     <button type="submit" disabled={!changed}>Apply Height</button>
-    <button type="button" onClick={() => { setDraft(String(spacer.height)); setError(""); }} disabled={draft === String(spacer.height) && !error}>Cancel</button>
+    <button type="button" onClick={() => setDraft(String(spacer.height))} disabled={!dirty}>Cancel</button>
     <button type="button" onClick={onDelete}>Delete</button>
   </form>;
 }
 
-export function InspectorPanel({ signal, selectedSignalIds, group, annotation, transaction, bookmark, collapsedGroup, onToggleGroupCollapse, registry, document, viewport, commands, onReveal, onCancel, onClose, onDeleteBookmark, onToggleTransactionSignal, onEditTransactionPhases, onGroupPreview, onAnnotationPreview, minimapMode = "signal" }: { readonly signal: Signal | undefined; readonly selectedSignalIds?: ReadonlySet<SignalId>; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly bookmark: Bookmark | undefined; readonly collapsedGroup: boolean; readonly onToggleGroupCollapse: (() => void) | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void; readonly onDeleteBookmark: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void; readonly onEditTransactionPhases: () => void; readonly onGroupPreview?: (groupId: GroupId, style: SignalGroupStyle | undefined) => void; readonly onAnnotationPreview?: (annotationId: AnnotationId, draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => void; readonly minimapMode?: "signal" | "transaction" }) {
+export function InspectorPanel({ signal, selectedSignalIds, group, annotation, transaction, bookmark, collapsedGroup, onToggleGroupCollapse, registry, document, viewport, commands, onReveal, onCancel, onClose, onDeleteBookmark, onToggleTransactionSignal, onGroupPreview, onAnnotationPreview, minimapMode = "signal" }: { readonly signal: Signal | undefined; readonly selectedSignalIds?: ReadonlySet<SignalId>; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly bookmark: Bookmark | undefined; readonly collapsedGroup: boolean; readonly onToggleGroupCollapse: (() => void) | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void; readonly onDeleteBookmark: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void; readonly onGroupPreview?: (groupId: GroupId, style: SignalGroupStyle | undefined) => void; readonly onAnnotationPreview?: (annotationId: AnnotationId, draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => void; readonly minimapMode?: "signal" | "transaction" }) {
   if ((selectedSignalIds?.size ?? 0) > 1) return <InspectorMultiSelection count={selectedSignalIds!.size} registry={registry} document={document} viewport={viewport} onCancel={onCancel} onClose={onClose} />;
   const [name, setName] = useState(signal?.name ?? "");
   const [groupName, setGroupName] = useState(group?.name ?? "");
@@ -127,7 +126,9 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
   const [groupShowHeader, setGroupShowHeader] = useState(group?.style?.showHeader ?? true);
   const [visible, setVisible] = useState(signal?.display.visible !== false);
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings | undefined>(signal?.type === "clock" ? signal.edgeCounter : undefined);
+  const phaseDraft = usePendingPhaseDraft(transaction);
   const [transactionName, setTransactionName] = useState(transaction?.name ?? "");
+  const tcPer = cyclesPerTc(document);
   const [transactionStart, setTransactionStart] = useState(transaction?.start ?? 0);
   const [transactionEnd, setTransactionEnd] = useState(transaction?.end ?? 1);
   const [transactionLane, setTransactionLane] = useState(transaction?.laneId ?? "lane_0");
@@ -175,7 +176,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
     setTransactionStatus("");
     }
     committedTransactionRef.current = { id: transaction?.id, name: transaction?.name ?? "", start: transaction?.start ?? 0, end: transaction?.end ?? 1, lane: transaction?.laneId ?? "lane_0", group: transaction?.groupId ?? "", color: transaction?.color ?? "", description: transaction?.description ?? "" };
-  }, [transaction?.id, transaction?.start, transaction?.end, transaction?.laneId, transaction?.groupId, transaction?.color, transaction?.description]);
+  }, [transaction?.id, transaction?.name, transaction?.start, transaction?.end, transaction?.laneId, transaction?.groupId, transaction?.color, transaction?.description]);
   const previewGroupStyle = (overrides: Partial<SignalGroupStyle> & { readonly showBorder?: boolean } = {}) => {
     if (!group) return;
     const showBorder = overrides.showBorder ?? groupShowBorder;
@@ -243,12 +244,12 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
         <div className="property-row"><span>ID</span><code title={transaction.id}>{transaction.id}</code></div>
         <label>Name<input aria-label="Transaction name" value={transactionName} onChange={(event) => setTransactionName(event.target.value)} /></label>
         <label>Group<select aria-label="Transaction group" value={transactionGroupId} onChange={(event) => setTransactionGroupId(event.target.value)}><option value="">Ungrouped</option>{document.transactionGroups?.map((groupOption) => <option key={groupOption.id} value={groupOption.id}>{groupOption.name}</option>)}</select></label>
-        <label>Color<span className="inspector-field-with-help"><input aria-label="Transaction color" type="color" value={transactionColor || document.transactionGroups?.find((groupOption) => groupOption.id === (transactionGroupId || undefined))?.color || "#8895a7"} onChange={(event) => setTransactionColor(event.target.value)} />{transactionColor && <button type="button" data-testid="transaction-use-group-color" onClick={() => setTransactionColor("")}>Use Group Color</button>}</span></label>
+        <label>Color<span className="inspector-field-with-help inspector-color-inline"><input aria-label="Transaction color" type="color" value={resolveTransactionColor(document, { ...(transactionColor === "" ? {} : { color: transactionColor }), ...(transactionGroupId === "" ? {} : { groupId: transactionGroupId as never }) })} onChange={(event) => setTransactionColor(event.target.value)} /><span className="inspector-inline-check" title={groupColorFor(document, transactionGroupId) === undefined ? "Ungrouped Transactions have no Group colour to inherit" : "Follow the Group colour"}><input type="checkbox" aria-label="Use group color" data-testid="transaction-use-group-color" checked={transactionColor === "" && groupColorFor(document, transactionGroupId) !== undefined} disabled={groupColorFor(document, transactionGroupId) === undefined} onChange={(event) => setTransactionColor(event.target.checked ? "" : (groupColorFor(document, transactionGroupId) ?? ""))} /><span aria-hidden="true">Use group color</span></span></span></label>
         <label>Description<textarea aria-label="Transaction description" rows={2} value={transactionDescription} onChange={(event) => setTransactionDescription(event.target.value)} /></label>
       </InspectorSection>
       <InspectorSection sectionId="timing" title="Timing" open={transactionSections.timing ?? true} onToggle={() => toggleTransactionSection("timing")}>
-        <div className="inspector-property-pair"><label>Start<input aria-label="Transaction start" type="number" min="0" max={transactionEnd - 1} value={transactionStart} onChange={(event) => setTransactionStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={transactionStart + 1} max={document.timeline.cycleCount} value={transactionEnd} onChange={(event) => setTransactionEnd(Number(event.target.value))} /></label></div>
-        <div className="property-row"><span>Duration</span><span>{transactionEnd - transactionStart} cycles</span></div>
+        <div className="inspector-property-pair"><label>{tcFieldLabel("Start", tcPer)}<input aria-label="Transaction start" type="number" min="0" max={cyclesToTc(transactionEnd - 1, tcPer)} step={tcPer === 1 ? 1 : 1 / tcPer} value={cyclesToTc(transactionStart, tcPer)} onChange={(event) => setTransactionStart(tcToCycles(Number(event.target.value), tcPer))} /></label><label>{tcFieldLabel("End", tcPer)}<input aria-label="Transaction end" type="number" min={cyclesToTc(transactionStart + 1, tcPer)} max={cyclesToTc(document.timeline.cycleCount, tcPer)} step={tcPer === 1 ? 1 : 1 / tcPer} value={cyclesToTc(transactionEnd, tcPer)} onChange={(event) => setTransactionEnd(tcToCycles(Number(event.target.value), tcPer))} /></label></div>
+        <div className="property-row"><span>Duration</span><span>{cyclesToTc(transactionEnd - transactionStart, tcPer)} {tcUnitLabel(tcPer)}{tcPer === 1 ? "" : ` (${transactionEnd - transactionStart} cycles)`}</span></div>
         {/* Transaction Mode GUI realignment: the reference shows Lane as a
             dropdown of existing lanes ("Lane 0"). laneId is a free-form
             identifier (any Lane sharing a name stacks into the same track,
@@ -262,9 +263,8 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
             identity owner. */}
         <label>Lane<span className="inspector-field-with-help"><input aria-label="Transaction lane" list="transaction-lane-options" value={transactionLane} onChange={(event) => setTransactionLane(event.target.value)} /><datalist id="transaction-lane-options">{[...new Set(document.transactions.map((item) => item.laneId ?? "lane_0"))].sort().map((laneId) => <option key={laneId} value={laneId} />)}</datalist><span className="field-help" tabIndex={0} title="A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track." aria-label="About Lane">ⓘ</span></span></label>
       </InspectorSection>
-      <InspectorSection sectionId="phases" title="Phases" count={transaction.phases?.length ?? 0} open={transactionSections.phases ?? true} onToggle={() => toggleTransactionSection("phases")}>
-        <p className="inspector-note" data-testid="transaction-phase-summary">{transaction.phases?.length ? `${transaction.phases[0]?.name || "Unnamed phase"} … ${transaction.phases.at(-1)?.name || "Unnamed phase"}` : "No phases defined."} ({transaction.phases?.length ?? 0})</p>
-        <button type="button" data-testid="edit-transaction-phases" onClick={onEditTransactionPhases}>Edit Phases in Bottom</button>
+      <InspectorSection sectionId="phases" title="Phases" count={phaseDraft?.length ?? transaction.phases?.length ?? 0} onAdd={() => addPhaseToDraft(transaction)} addDisabled={!canAddPhase(transaction)} open={transactionSections.phases ?? true} onToggle={() => toggleTransactionSection("phases")}>
+        <TransactionPhaseEditor transaction={transaction} transactions={document.transactions ?? []} commands={commands} compact cyclesPerTc={tcPer} parentRange={{ start: transactionStart, end: transactionEnd }} />
       </InspectorSection>
       <InspectorSection sectionId="linked-signals" title="Linked Signals" count={transaction.linkedSignals?.length ?? 0} onAdd={() => {}} open={transactionSections["linked-signals"] ?? true} onToggle={() => toggleTransactionSection("linked-signals")}>
         <TransactionLinkedSignals transaction={transaction} document={document} onToggle={(signalId) => onToggleTransactionSignal(transaction.id, signalId)} renderUnlinkButton={(label, onClick) => <EditorIconButton label={label} icon="close" onClick={onClick} />} />
@@ -272,7 +272,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
       {transactionStatus && <output role="status">{transactionStatus}</output>}
       <section><button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Transaction</button></section>
       </div>
-      <InspectorFooter onCancel={onCancel} onApply={() => { setTransactionStatus(""); const result = commands.updateTransaction({ transactionId: transaction.id, name: transactionName, start: transactionStart, end: transactionEnd, laneId: transactionLane, ...(transactionGroupId ? { groupId: transactionGroupId as TransactionGroup["id"] } : {}), ...(transactionColor ? { color: transactionColor } : {}), description: transactionDescription });
+      <InspectorFooter onCancel={() => { clearPhaseDraft(transaction.id); onCancel(); }} onApply={() => { setTransactionStatus(""); const phaseCommit = phaseDraft ? commitPhaseRows(phaseDraft, transactionStart, transactionEnd, tcPer) : undefined; if (phaseCommit && "error" in phaseCommit) { setTransactionStatus(phaseCommit.error); return; } const result = commands.updateTransaction({ transactionId: transaction.id, name: transactionName, start: transactionStart, end: transactionEnd, laneId: transactionLane, ...(phaseCommit ? { phases: phaseCommit.rows } : {}), ...(transactionGroupId ? { groupId: transactionGroupId as TransactionGroup["id"] } : {}), ...(transactionColor ? { color: transactionColor } : {}), description: transactionDescription });
         // #454 Visual Quality Closure ("unclear draft state"): a rejected
         // Apply (e.g. End beyond the document's own cycle count) used to
         // fail silently -- the draft stayed on-screen looking applied
@@ -281,7 +281,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
         // wrong. Surface it the exact same way the Phases validation just
         // above already does -- one shared status output, not a second
         // error-reporting mechanism.
-        if (!result.ok && result.reason !== "no-op") setTransactionStatus(result.problems[0]?.message ?? "Could not apply Transaction changes."); }} applyDisabled={transactionName === transaction.name && transactionStart === transaction.start && transactionEnd === transaction.end && transactionLane === (transaction.laneId ?? "lane_0") && transactionGroupId === (transaction.groupId ?? "") && transactionColor === (transaction.color ?? "") && transactionDescription === (transaction.description ?? "")} applyTestId="apply-inspector-transaction" />
+        if (!result.ok && result.reason !== "no-op") setTransactionStatus(result.problems[0]?.message ?? "Could not apply Transaction changes."); }} applyDisabled={transactionName === transaction.name && transactionStart === transaction.start && transactionEnd === transaction.end && transactionLane === (transaction.laneId ?? "lane_0") && transactionGroupId === (transaction.groupId ?? "") && transactionColor === (transaction.color ?? "") && transactionDescription === (transaction.description ?? "") && phaseDraft === undefined} applyTestId="apply-inspector-transaction" />
     </>}
     <MiniMap document={document} viewport={viewport} mode={minimapMode} />
   </aside>;
@@ -325,37 +325,58 @@ export function InspectorValueSignalEditor({ signal, document, viewport, command
   const [resetDeassertCycle, setResetDeassertCycle] = useState(signal.resetSemantics?.deassertCycle !== undefined ? String(signal.resetSemantics.deassertCycle) : "");
   const [resetStatus, setResetStatus] = useState("");
   const { state: sections, toggle } = useInspectorAccordion("value-signal", { "signal-properties": true, hierarchy: true, "label-style": false, waveform: true, "reset-semantics": false });
+  // #776 (Part A): this used to unconditionally reload EVERY local field whenever the Signal object changed for ANY reason, so Applying
+  // one independent sub-editor (e.g. Reset Semantics) silently discarded an unrelated unapplied Properties/Style draft. Same per-field
+  // clean/dirty merge as #775: a field only resyncs to the new canonical value when THAT field's canonical value actually changed AND
+  // the local draft is still clean (equal to what it was last synced from); a dirty field is preserved, its baseline still advances.
+  const valueSignalBaseRef = useRef<{ id: SignalId; name: string; role: SignalRole; signalType: ValueSignal["type"]; width: number; format: NonNullable<ValueSignal["displayFormat"]>; visible: boolean; spacingBefore: number; spacingAfter: number; align: NonNullable<Signal["display"]["align"]>; overflow: NonNullable<Signal["display"]["overflow"]>; style: string; textColor: string; rowBackground: string; fontFamily: string; fontSize: number; bold: boolean; italic: boolean; underline: boolean; strikethrough: boolean; waveformColor: string; waveformBackground: string; resetEnabled: boolean; resetPolarity: ResetSemantics["polarity"]; resetSync: ResetSemantics["synchronization"]; resetAssertCycle: string; resetDeassertCycle: string } | undefined>(undefined);
   useEffect(() => {
     const nextStyle = signal.display.style ?? {};
-    const nextStyleJson = JSON.stringify(nextStyle);
-    setName((current) => current === signal.display.name ? current : signal.display.name);
-    setRole((current) => current === signal.role ? current : signal.role);
-    setSignalType((current) => current === signal.type ? current : signal.type);
-    setWidth((current) => current === (signal.width ?? 1) ? current : signal.width ?? 1);
-    setFormat((current) => current === (signal.displayFormat ?? "hex") ? current : signal.displayFormat ?? "hex");
-    setVisible((current) => current === (signal.display.visible !== false) ? current : signal.display.visible !== false);
-    setSpacingBefore((current) => current === (signal.spacingBefore ?? 0) ? current : signal.spacingBefore ?? 0);
-    setSpacingAfter((current) => current === (signal.spacingAfter ?? 0) ? current : signal.spacingAfter ?? 0);
-    setAlign((current) => current === (signal.display.align ?? "left") ? current : signal.display.align ?? "left");
-    setOverflow((current) => current === (signal.display.overflow ?? "ellipsis") ? current : signal.display.overflow ?? "ellipsis");
-    setStyle((current) => current === nextStyleJson ? current : nextStyleJson);
-    setTextColor((current) => current === styleString(nextStyle, "color", "#152033") ? current : styleString(nextStyle, "color", "#152033"));
-    setRowBackground((current) => current === styleString(nextStyle, "background", "#ffffff") ? current : styleString(nextStyle, "background", "#ffffff"));
-    setFontFamily((current) => current === styleString(nextStyle, "fontFamily", "Segoe UI") ? current : styleString(nextStyle, "fontFamily", "Segoe UI"));
-    setFontSize((current) => current === styleNumber(nextStyle, "fontSize", 12) ? current : styleNumber(nextStyle, "fontSize", 12));
-    setBold((current) => current === (nextStyle.fontWeight === "bold") ? current : nextStyle.fontWeight === "bold");
-    setItalic((current) => current === (nextStyle.fontStyle === "italic") ? current : nextStyle.fontStyle === "italic");
-    setUnderline((current) => current === styleString(nextStyle, "textDecoration", "").includes("underline") ? current : styleString(nextStyle, "textDecoration", "").includes("underline"));
-    setStrikethrough((current) => current === styleString(nextStyle, "textDecoration", "").includes("line-through") ? current : styleString(nextStyle, "textDecoration", "").includes("line-through"));
-    setWaveformColor((current) => current === styleString(nextStyle, "waveformColor", "#111111") ? current : styleString(nextStyle, "waveformColor", "#111111"));
-    setWaveformBackground((current) => current === styleString(nextStyle, "waveformBackground", "#ffffff") ? current : styleString(nextStyle, "waveformBackground", "#ffffff"));
-    setProblem("");
-    setResetEnabled((current) => current === (signal.resetSemantics !== undefined) ? current : signal.resetSemantics !== undefined);
-    setResetPolarity((current) => current === (signal.resetSemantics?.polarity ?? "active-low") ? current : signal.resetSemantics?.polarity ?? "active-low");
-    setResetSync((current) => current === (signal.resetSemantics?.synchronization ?? "asynchronous") ? current : signal.resetSemantics?.synchronization ?? "asynchronous");
-    setResetAssertCycle((current) => current === (signal.resetSemantics?.assertCycle !== undefined ? String(signal.resetSemantics.assertCycle) : "") ? current : signal.resetSemantics?.assertCycle !== undefined ? String(signal.resetSemantics.assertCycle) : "");
-    setResetDeassertCycle((current) => current === (signal.resetSemantics?.deassertCycle !== undefined ? String(signal.resetSemantics.deassertCycle) : "") ? current : signal.resetSemantics?.deassertCycle !== undefined ? String(signal.resetSemantics.deassertCycle) : "");
-    setResetStatus("");
+    const next = {
+      id: signal.id, name: signal.display.name, role: signal.role, signalType: signal.type, width: signal.width ?? 1, format: signal.displayFormat ?? "hex" as NonNullable<ValueSignal["displayFormat"]>,
+      visible: signal.display.visible !== false, spacingBefore: signal.spacingBefore ?? 0, spacingAfter: signal.spacingAfter ?? 0,
+      align: signal.display.align ?? "left" as NonNullable<Signal["display"]["align"]>, overflow: signal.display.overflow ?? "ellipsis" as NonNullable<Signal["display"]["overflow"]>,
+      style: JSON.stringify(nextStyle), textColor: styleString(nextStyle, "color", "#152033"), rowBackground: styleString(nextStyle, "background", "#ffffff"),
+      fontFamily: styleString(nextStyle, "fontFamily", "Segoe UI"), fontSize: styleNumber(nextStyle, "fontSize", 12), bold: nextStyle.fontWeight === "bold", italic: nextStyle.fontStyle === "italic",
+      underline: styleString(nextStyle, "textDecoration", "").includes("underline"), strikethrough: styleString(nextStyle, "textDecoration", "").includes("line-through"),
+      waveformColor: styleString(nextStyle, "waveformColor", "#111111"), waveformBackground: styleString(nextStyle, "waveformBackground", "#ffffff"),
+      resetEnabled: signal.resetSemantics !== undefined, resetPolarity: signal.resetSemantics?.polarity ?? "active-low", resetSync: signal.resetSemantics?.synchronization ?? "asynchronous",
+      resetAssertCycle: signal.resetSemantics?.assertCycle !== undefined ? String(signal.resetSemantics.assertCycle) : "", resetDeassertCycle: signal.resetSemantics?.deassertCycle !== undefined ? String(signal.resetSemantics.deassertCycle) : "",
+    };
+    const prev = valueSignalBaseRef.current;
+    const sameEntity = prev !== undefined && prev.id === signal.id;
+    const merge = <K extends keyof typeof next>(key: K, current: (typeof next)[K], setLocal: (value: (typeof next)[K]) => void) => {
+      if (!sameEntity) { setLocal(next[key]); return; }
+      if (prev![key] !== next[key] && current === prev![key]) setLocal(next[key]);
+    };
+    merge("name", name, setName);
+    merge("role", role, setRole);
+    merge("signalType", signalType, setSignalType);
+    merge("width", width, setWidth);
+    merge("format", format, setFormat);
+    merge("visible", visible, setVisible);
+    merge("spacingBefore", spacingBefore, setSpacingBefore);
+    merge("spacingAfter", spacingAfter, setSpacingAfter);
+    merge("align", align, setAlign);
+    merge("overflow", overflow, setOverflow);
+    merge("style", style, setStyle);
+    merge("textColor", textColor, setTextColor);
+    merge("rowBackground", rowBackground, setRowBackground);
+    merge("fontFamily", fontFamily, setFontFamily);
+    merge("fontSize", fontSize, setFontSize);
+    merge("bold", bold, setBold);
+    merge("italic", italic, setItalic);
+    merge("underline", underline, setUnderline);
+    merge("strikethrough", strikethrough, setStrikethrough);
+    merge("waveformColor", waveformColor, setWaveformColor);
+    merge("waveformBackground", waveformBackground, setWaveformBackground);
+    merge("resetEnabled", resetEnabled, setResetEnabled);
+    merge("resetPolarity", resetPolarity, setResetPolarity);
+    merge("resetSync", resetSync, setResetSync);
+    merge("resetAssertCycle", resetAssertCycle, setResetAssertCycle);
+    merge("resetDeassertCycle", resetDeassertCycle, setResetDeassertCycle);
+    valueSignalBaseRef.current = next;
+    if (!sameEntity) { setProblem(""); setResetStatus(""); }
   }, [signal]);
   // #402/#426 (Bottom Panel Visual Reference pass): Inspector is now the
   // sole owner of these lightweight Signal properties (Bottom's own

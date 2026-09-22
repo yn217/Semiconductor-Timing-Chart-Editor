@@ -24,7 +24,8 @@ test("toggling Signal Split is view-only and Upper's own scroll position survive
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
 
-  const viewport = page.getByTestId("cycle-viewport");
+  // #625: the Timeline owns horizontal scroll in Cycle.
+  const viewport = page.getByTestId("cycle-viewport").locator("[data-role='timeline-viewport']");
   await page.getByRole("button", { name: "Zoom In", exact: true }).click();
   await expect(page.getByTestId("zoom-status")).toHaveText("125%");
   await viewport.evaluate((element) => { element.scrollLeft = 60; element.dispatchEvent(new Event("scroll")); });
@@ -57,7 +58,7 @@ test("Upper and Lower scroll vertically independently while sharing one horizont
   // transform exactly (Lower's own scrollLeft isn't independently
   // meaningful yet -- its placeholder content has no real scrollable
   // width until PR 4 gives it matching rows).
-  await upper.evaluate((element) => { element.scrollLeft = 45; element.dispatchEvent(new Event("scroll")); });
+  await upper.locator("[data-role='timeline-viewport']").evaluate((element) => { element.scrollLeft = 45; });
   const upperTransformAfterScroll = await page.getByTestId("cycle-ruler").locator(".cycle-ruler-content").evaluate((element) => getComputedStyle(element).transform);
   await expect(page.getByTestId("cycle-ruler-lower").locator(".cycle-ruler-content")).toHaveCSS("transform", upperTransformAfterScroll);
 

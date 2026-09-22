@@ -34,7 +34,7 @@ for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height:
   const farTarget = Math.max(0, size.scrollWidth - size.clientWidth - 8);
   await viewport.evaluate((el, target) => { el.scrollLeft = target; el.dispatchEvent(new Event("scroll", { bubbles: true })); }, farTarget);
   await expect.poll(() => viewport.evaluate((el) => el.scrollLeft)).toBe(farTarget);
-  await expect.poll(() => page.getByTestId("cycle-surface").locator("[data-role='wave-owner'] svg").count()).toBeGreaterThan(0);
+  await expect.poll(() => page.getByTestId("cycle-surface").locator("[data-role='wave-owner'] svg, [data-role='wave-owner'] canvas[data-wave-canvas]").count()).toBeGreaterThan(0);
   await viewport.evaluate((el) => { el.scrollLeft = 0; el.dispatchEvent(new Event("scroll", { bubbles: true })); });
   await expect.poll(() => viewport.evaluate((el) => el.scrollLeft)).toBe(0);
   const txMax = await tx.evaluate((el) => el.scrollHeight - el.clientHeight);

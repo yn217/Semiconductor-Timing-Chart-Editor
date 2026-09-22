@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 test("Delete uses one selection command across Ribbon, context menu, and keyboard", async ({ page }) => {
   await page.goto("/");

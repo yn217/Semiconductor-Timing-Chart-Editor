@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 // #332 item D: implemented-but-currently-unavailable Arrange controls must
 // expose a truthful, contextual disabled reason -- never the generic
@@ -41,6 +44,8 @@ test("Arrange controls distinguish selection/context-unavailable from a real dis
   await expect(menu.getByRole("menuitem", { name: "Lock", exact: true })).toBeEnabled();
 
   // A second annotation selected via Ctrl+click: Group becomes available.
+  // Anchor the second Annotation on another Signal so the two labels do not overlap.
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid']").click();
   await page.getByLabel("Annotation type").selectOption("marker");
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");

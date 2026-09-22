@@ -45,18 +45,20 @@ describe("large-document edit history", () => {
   });
 
   it("retains structural sharing through a long edit/Undo/Redo sequence", () => {
-    const session = new CommandHistorySession(generatePerformanceDocument({ signalCount: 1000, cycleCount: 1000 }));
-    const unchanged = session.getSnapshot().document.signals[999];
+    // Structural sharing is independent of document size; 400x400 keeps 300 authoritative validations well inside the default test timeout
+    // even on a loaded machine (1000x1000 took ~3.3s alone and timed out at 5s under CPU contention). No timeout is raised.
+    const session = new CommandHistorySession(generatePerformanceDocument({ signalCount: 400, cycleCount: 400 }));
+    const unchanged = session.getSnapshot().document.signals[399];
     for (let index = 0; index < 100; index += 1) {
       const result = session.execute({ id: `cmd_perf_rename_${index}` as CommandId, type: "signal.rename", signalId: "sig_perf_1" as SignalId, name: `RENAMED_${index}` });
       expect(result.ok).toBe(true);
-      expect(session.getSnapshot().document.signals[999]).toBe(unchanged);
+      expect(session.getSnapshot().document.signals[399]).toBe(unchanged);
     }
     for (let index = 0; index < 100; index += 1) expect(session.undo().ok).toBe(true);
     expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 100, dirty: false });
     for (let index = 0; index < 100; index += 1) expect(session.redo().ok).toBe(true);
     expect(session.historyMetrics()).toEqual({ commandAttempts: 100, committedActions: 100, undoOperations: 100, redoOperations: 100, evictedEntries: 0, retainedEntryCount: 100, retainedSnapshotEstimate: 200 });
-    expect(session.getSnapshot().document.signals[999]).toBe(unchanged);
+    expect(session.getSnapshot().document.signals[399]).toBe(unchanged);
   });
 
   it("bounds a 10k-action session without changing the current document or cloning for eviction", () => {

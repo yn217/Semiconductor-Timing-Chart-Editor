@@ -1,5 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 const clock = {
   id: "sig_reference_clk", name: "REFERENCE_CLK", type: "clock", role: "input",
@@ -27,8 +30,10 @@ const document = {
 
 async function openDocument(page: Page): Promise<void> {
   await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "reference-conversion.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
 }
 
 test("active Reference Clock conversion discloses and atomically enters clockless mode", async ({ page }) => {
@@ -96,6 +101,7 @@ for (const target of ["binary", "bus", "state"] as const) {
 
     await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
     await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
     await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
     await host.locator("[data-role='frozen-row'][data-row-id='sig_reference_clk']").click();
     await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue(target);

@@ -1,5 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 async function ready(page: Page) {
   await page.goto("/");
@@ -264,7 +267,7 @@ test("cross-highlights stable linked Signals when a Transaction is selected", as
 
 test("ripples Transaction ranges through Timeline edits with exact Undo", async ({ page }) => {
   await ready(page);
-  await createTransaction(page, "Ripple", 2, 6);
+  await createTransaction(page, "Ripple", 2, 6) /* the Cycle sample presents 1 cycle per TC */;
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline insert count").fill("2");
   await page.getByRole("button", { name: "Insert before" }).click();

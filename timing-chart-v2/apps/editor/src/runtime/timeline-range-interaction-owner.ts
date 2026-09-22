@@ -15,6 +15,8 @@ export type TimelineRangeInteractionContext = Readonly<{
   rendererHost: HTMLElement;
   isTimeDomainPointerTarget: (event: PointerEvent) => boolean;
   cycleBoundaryAtX: (clientX: number) => number | undefined;
+  /** #738: ruler cell [start,end) under the pointer, resolved through the shared time geometry (never the label glyph). */
+  rulerCellAtX: (clientX: number) => number | undefined;
   getCycleCount: () => number;
   getRange: () => TimelineRange;
   getSelectedCycle: () => number;
@@ -53,8 +55,10 @@ export class TimelineRangeInteractionOwner {
     const onRuler = Boolean(target?.closest("[data-testid='cycle-ruler']"));
     if (event.button !== 0 || !this.context.isTimeDomainPointerTarget(event)) return;
     const cycleCount = this.context.getCycleCount();
-    const rulerClickCycle = onRuler ? rulerCycleAtTarget(event.target, cycleCount) : undefined;
-    const cycle = rulerClickCycle ?? this.context.cycleBoundaryAtX(event.clientX);
+    const rulerClickCycle = onRuler ? (this.context.rulerCellAtX(event.clientX) ?? rulerCycleAtTarget(event.target, cycleCount)) : undefined;
+    // A click selects the ruler CELL under the pointer (rulerClickCycle); a drag spans BOUNDARIES resolved by the same
+    // rule at both ends (shared time geometry), so left->right and right->left drags produce the same range.
+    const cycle = (onRuler ? this.context.cycleBoundaryAtX(event.clientX) : undefined) ?? rulerClickCycle ?? this.context.cycleBoundaryAtX(event.clientX);
     if (cycle === undefined || cycle > this.context.getCycleCount()) return;
     this.#drag.begin({ start: cycle, anchor: event.shiftKey ? this.context.getRange().start : cycle, selectedCycle: this.context.getSelectedCycle(), startClientX: event.clientX, surface: onRuler ? "ruler" : "waveform", ...(rulerClickCycle === undefined ? {} : { rulerClickCycle }), moved: false });
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -101,8 +105,8 @@ export class TimelineRangeInteractionOwner {
     // must commit through that same authority, or the committed range
     // endpoint can silently differ from the one the user watched during
     // the drag (#313).
-    const cycle = this.context.cycleBoundaryAtX(event.clientX) ?? drag.start;
     const cycleCount = this.context.getCycleCount();
+    const cycle = this.context.cycleBoundaryAtX(event.clientX) ?? drag.start;
     const next = rangeFromBoundaries(drag.anchor, cycle, cycleCount);
     const selectedCycle = Math.min(next.start, cycleCount);
     this.context.setRangeSelectionActive(true);

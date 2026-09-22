@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 // #474 Signal Type registry: Inspector's Type dropdown and the Left Tree's
 // Add menu previously hardcoded the same binary->"Signal"/bus->"Bus"/

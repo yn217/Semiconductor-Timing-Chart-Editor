@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 async function ready(page: import("@playwright/test").Page) {
   await page.goto("/");
@@ -41,7 +44,7 @@ test("Rename Undo keeps the same Signal selected (name reverts, selection does n
   await expect(page.getByTestId("selection-status")).toHaveText("REQUEST");
   const ribbon = page.getByTestId("ribbon");
   await ribbon.getByRole("button", { name: "More", exact: true }).click();
-  await page.getByRole("menu", { name: "More Home Commands" }).getByRole("button", { name: "Rename", exact: true }).click();
+  await page.getByRole("menu", { name: "More Home Commands" }).getByRole("menuitem", { name: "Rename", exact: true }).click();
   const dialog = page.getByTestId("rename-dialog");
   await dialog.getByRole("textbox").fill("RENAMED_REQUEST");
   await dialog.getByRole("button", { name: "Apply", exact: true }).click();

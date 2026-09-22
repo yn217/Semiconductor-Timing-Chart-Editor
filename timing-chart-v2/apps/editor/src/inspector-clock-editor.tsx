@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent, RefObject } from "react";
 import { clockFrequency, type CanonicalDocument, type ClockGenerator, type ClockSignal, type EdgeCounterSettings, type Signal, type SignalRole } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
@@ -36,6 +36,52 @@ function InspectorClockEditor({ signal, document, viewport, commands, onReveal, 
   const [conversionConfirm, setConversionConfirm] = useState(false);
   const [referenceEdge, setReferenceEdge] = useState<"rising" | "falling">(document.timeline.edge);
   const convertsReferenceClock = document.timeline.referenceClock === signal.id;
+  // #776 (Part B): InspectorClockEditor previously had NO same-Signal Canonical synchronization at all -- Undo/Redo or another surface
+  // editing the same Clock left every local field stale (and a stale `generator`/`edgeCounter` could then overwrite the Undo result on
+  // the next Apply). Same policy as Part A / #775: a field resyncs only when its canonical source actually changed AND the local draft
+  // is still clean; a dirty field is preserved.
+  const clockBaseRef = useRef<{ id: ClockSignal["id"]; name: string; role: SignalRole; visible: boolean; spacingBefore: number; spacingAfter: number; align: NonNullable<Signal["display"]["align"]>; overflow: NonNullable<Signal["display"]["overflow"]>; textColor: string; rowBackground: string; fontFamily: string; fontSize: number; bold: boolean; italic: boolean; underline: boolean; strikethrough: boolean; waveformColor: string; waveformBackground: string; generator: ClockGenerator; edgeCounter: EdgeCounterSettings; referenceEdge: "rising" | "falling" } | undefined>(undefined);
+  useEffect(() => {
+    const nextStyle = signal.display.style ?? {};
+    const next = {
+      id: signal.id, name: signal.name, role: signal.role, visible: signal.display.visible !== false, spacingBefore: signal.spacingBefore ?? 0, spacingAfter: signal.spacingAfter ?? 0,
+      align: signal.display.align ?? "left" as NonNullable<Signal["display"]["align"]>, overflow: signal.display.overflow ?? "ellipsis" as NonNullable<Signal["display"]["overflow"]>,
+      textColor: styleString(nextStyle, "color", "#152033"), rowBackground: styleString(nextStyle, "background", "#ffffff"), fontFamily: styleString(nextStyle, "fontFamily", "Inter"),
+      fontSize: styleNumber(nextStyle, "fontSize", 12), bold: nextStyle.fontWeight === "bold", italic: nextStyle.fontStyle === "italic",
+      underline: styleString(nextStyle, "textDecoration", "").includes("underline"), strikethrough: styleString(nextStyle, "textDecoration", "").includes("line-through"),
+      waveformColor: styleString(nextStyle, "waveformColor", "#111111"), waveformBackground: styleString(nextStyle, "waveformBackground", "#ffffff"),
+      generator: signal.generator, edgeCounter: signal.edgeCounter, referenceEdge: document.timeline.edge,
+    };
+    const prev = clockBaseRef.current;
+    const sameEntity = prev !== undefined && prev.id === signal.id;
+    const jsonEq = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+    const merge = <K extends keyof typeof next>(key: K, current: (typeof next)[K], setLocal: (value: (typeof next)[K]) => void, eq: (a: (typeof next)[K], b: (typeof next)[K]) => boolean = (a, b) => a === b) => {
+      if (!sameEntity) { setLocal(next[key]); return; }
+      if (!eq(prev![key], next[key]) && eq(current, prev![key])) setLocal(next[key]);
+    };
+    merge("name", name, setName);
+    merge("role", role, setRole);
+    merge("visible", visible, setVisible);
+    merge("spacingBefore", spacingBefore, setSpacingBefore);
+    merge("spacingAfter", spacingAfter, setSpacingAfter);
+    merge("align", align, setAlign);
+    merge("overflow", overflow, setOverflow);
+    merge("textColor", textColor, setTextColor);
+    merge("rowBackground", rowBackground, setRowBackground);
+    merge("fontFamily", fontFamily, setFontFamily);
+    merge("fontSize", fontSize, setFontSize);
+    merge("bold", bold, setBold);
+    merge("italic", italic, setItalic);
+    merge("underline", underline, setUnderline);
+    merge("strikethrough", strikethrough, setStrikethrough);
+    merge("waveformColor", waveformColor, setWaveformColor);
+    merge("waveformBackground", waveformBackground, setWaveformBackground);
+    merge("generator", generator, setGenerator, jsonEq);
+    merge("edgeCounter", edgeCounter, setEdgeCounter, jsonEq);
+    merge("referenceEdge", referenceEdge, setReferenceEdge);
+    clockBaseRef.current = next;
+    if (!sameEntity) { setProblem(""); setConversionConfirm(false); }
+  }, [signal, document.timeline.edge]);
   const { state: sections, toggle } = useInspectorAccordion("clock-signal", { "signal-properties": true, hierarchy: true, "label-style": false, waveform: true, generator: true, "edge-counter": true });
   const number = (key: "start" | "period" | "duty" | "phase", value: string) => setGenerator({ ...generator, [key]: Number(value) });
   const relativeFrequency = clockFrequency({ ...signal, generator } as ClockSignal);

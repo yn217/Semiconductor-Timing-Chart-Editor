@@ -3,6 +3,7 @@
 @import "./styles/tokens.css";
 @import "./styles/controls.css";
 @import "./styles/app-shell.css";
+@import "./styles/mode-cycle.css";
 @import "./styles/ribbon.css";
 @import "./styles/ribbon-layout.css";
 @import "./styles/role-badge.css";
@@ -13,5 +14,7 @@
 @import "./styles/bottom-editor.css";
 @import "./styles/minimap.css";
 @import "./styles/status-bar.css";
+@import "./styles/mode-transaction.css";
+@import "./styles/mode-combined.css";
 @import "./styles/legacy.css";
 @import "./styles/responsive.css";

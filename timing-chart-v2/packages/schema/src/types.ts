@@ -114,7 +114,6 @@ export interface SignalDisplay {
   /** Signal Split View (#200) pane assignment. Absent means "both" -- a
    * Signal with no assignment renders identically to today's single-pane
    * behavior, so existing documents need no migration bump. */
-  readonly splitPane?: "upper" | "lower" | "both";
 }
 
 export interface EdgeCounterSettings {

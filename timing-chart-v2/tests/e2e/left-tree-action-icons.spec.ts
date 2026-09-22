@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 test("Left Tree header actions use owned SVG icons without changing the document", async ({ page }) => {
   await page.goto("/");
@@ -14,7 +17,7 @@ test("Left Tree header actions use owned SVG icons without changing the document
   const header = page.locator(".left-column-heading");
   await expect(header.locator(".tree-add-button svg path")).toHaveCount(1);
   await expect.poll(() => header.locator(".tree-add-button").evaluate((element) => getComputedStyle(element, "::after").content)).toBe('"Add"');
-  await expect(header.locator(".tree-more-button svg path")).toHaveCount(1);
+  await expect(header.locator(".tree-more-button svg circle")).toHaveCount(3) // the More icon is three dots;
   await expect(header.locator(".tree-add-button")).toHaveText("");
   await expect(header.locator(".tree-more-button")).toHaveText("");
 

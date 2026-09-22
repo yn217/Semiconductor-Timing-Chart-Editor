@@ -25,15 +25,16 @@ async function openTransactionMode(page: Page) {
 async function createReadRequestTransaction(page: Page, { withLinks = false }: { withLinks?: boolean } = {}) {
   const bottomEditor = page.getByTestId("transaction-editor");
   await bottomEditor.getByLabel("New Transaction name").fill("Read Request");
-  await bottomEditor.getByLabel("New Transaction start").fill("2");
-  await bottomEditor.getByLabel("New Transaction end").fill("12");
+  await bottomEditor.getByLabel("New Transaction start").fill("0.2"); // TC (10 cycles/TC) = cycle 2
+  await bottomEditor.getByLabel("New Transaction end").fill("1.2"); // cycle 12
   await bottomEditor.getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
 
   const inspector = page.getByTestId("inspector");
-  const phases: readonly [string, number, number][] = [["Request", 2, 5], ["Processing", 5, 9], ["Response", 9, 12]];
+  const phases: readonly [string, number, number][] = [["Request", 0.2, 0.5], ["Processing", 0.5, 0.9], ["Response", 0.9, 1.2]]; // TC = cycles 2-5, 5-9, 9-12
   for (let i = 0; i < phases.length; i++) await inspector.getByTestId("add-transaction-phase").click();
-  for (let i = 0; i < phases.length; i++) {
+  // Rows are shown in Start-time order (#751): fill from the last row so re-projection after each row never shifts the rows still to edit.
+  for (let i = phases.length - 1; i >= 0; i--) {
     const [name, start, end] = phases[i]!;
     await inspector.getByLabel(`Phase ${i + 1} name`).fill(name);
     await inspector.getByLabel(`Phase ${i + 1} start`).fill(String(start));
@@ -73,7 +74,7 @@ test("Transaction property edits preserve editor and Inspector identity", async 
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(start).toHaveValue("3");
   await expect(editor.locator("[data-transaction-table-header='true']")).toBeVisible();
-  await expect(editor.getByTestId("apply-transaction-properties")).toHaveCount(0);
+  await expect(editor.getByTestId("apply-transaction-properties")).toBeDisabled();
 });
 
 test("Transaction Mode shows the create form directly and does not mutate the document merely by entering it", async ({ page }) => {
@@ -93,7 +94,7 @@ test("Transaction Mode shows the create form directly and does not mutate the do
 test("Transaction search empty state is reserved for an active no-match filter", async ({ page }) => {
   await openTransactionMode(page);
   await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
-  const search = page.getByLabel("Search transactions");
+  const search = page.getByLabel("Search transactions table");
   await search.fill("no-such-transaction");
   await expect(page.getByText("No Transactions match this search.")).toBeVisible();
 });
@@ -122,7 +123,7 @@ test("A Transaction built with phases and Linked Signals survives Save/Open exac
   await createReadRequestTransaction(page, { withLinks: true });
   const host = page.getByTestId("cycle-surface");
   const bottom = page.getByTestId("transaction-editor");
-  const createdRow = bottom.locator("[data-transaction-row-id]").filter({ hasText: "Read Request" });
+  const createdRow = bottom.locator("[data-transaction-row-id]:has(input[aria-label='Bottom Transaction name'])");
   await expect(createdRow).toHaveCount(1);
   const transactionId = await createdRow.getAttribute("data-transaction-row-id");
 
@@ -136,8 +137,8 @@ test("A Transaction built with phases and Linked Signals survives Save/Open exac
   // Edit through the Inspector; the Bottom remains table-first.
   await inspector.getByLabel("Transaction name").fill("Read Request v2");
   await inspector.getByTestId("apply-inspector-transaction").click();
-  await expect(bottom.locator("[data-transaction-row-id]").filter({ hasText: "Read Request v2" })).toHaveCount(1);
-  await expect(bottom.getByTestId("apply-transaction-properties")).toHaveCount(0);
+  await expect(bottom.locator(`[data-transaction-row-id="${transactionId}"] input[aria-label='Bottom Transaction name']`)).toHaveValue("Read Request v2");
+  await expect(bottom.getByTestId("apply-transaction-properties")).toBeDisabled();
 
   // Save/Open must reproduce the exact Transaction/phase/link state.
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
@@ -158,7 +159,8 @@ test("A Transaction built with phases and Linked Signals survives Save/Open exac
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(7);
-  await expect(page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`)).toContainText("Read Request v2");
+  // Narrow (compressed, #750) bars omit the inline label; the accessible name / title always carries the full name.
+  await expect(page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`)).toHaveAttribute("aria-label", "Read Request v2");
 });
 
 // #393 item C: normal Phase authoring must not require raw JSON. Add/Edit/
@@ -169,8 +171,8 @@ test("Phases are added, edited, and deleted through the structured table -- raw 
   await openTransactionMode(page);
   await createReadRequestTransaction(page);
   const inspector = page.getByTestId("inspector");
-  const table = inspector.getByTestId("transaction-phase-editor");
-  await expect(table.locator(".transaction-phase-row:not(.transaction-phase-row-header)")).toHaveCount(3);
+  const table = inspector.getByTestId("inspector-phase-editor");
+  await expect(table.locator(".transaction-bottom-phase-row:not(.transaction-bottom-phase-head)")).toHaveCount(3);
   // createReadRequestTransaction is 2 commands: the Bottom Panel's create,
   // then the Inspector phase Apply.
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
@@ -181,18 +183,17 @@ test("Phases are added, edited, and deleted through the structured table -- raw 
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
   const bottomEditor = page.getByTestId("transaction-editor");
   // Re-select to force the Inspector/Bottom editors to re-read the committed document.
-  await page.getByTestId("transaction-editor").locator("[data-transaction-row-id]").filter({ hasText: "Read Request" }).click();
   await expect(bottomEditor).toBeVisible();
 
   // Delete the last phase.
   await inspector.getByLabel("Delete phase 3").click();
-  await expect(table.locator(".transaction-phase-row:not(.transaction-phase-row-header)")).toHaveCount(2);
+  await expect(table.locator(".transaction-bottom-phase-row:not(.transaction-bottom-phase-head)")).toHaveCount(2);
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
 
   // Add a new phase through "Add Phase" -- no JSON typed anywhere.
   await inspector.getByTestId("add-transaction-phase").click();
-  const rows = table.locator(".transaction-phase-row:not(.transaction-phase-row-header)");
+  const rows = table.locator(".transaction-bottom-phase-row:not(.transaction-bottom-phase-head)");
   await expect(rows).toHaveCount(3);
   await inspector.getByLabel("Phase 3 name").fill("Cooldown");
   await inspector.getByTestId("apply-inspector-transaction").click();
@@ -201,7 +202,7 @@ test("Phases are added, edited, and deleted through the structured table -- raw 
   // #429/#397: no raw "Advanced: edit as JSON" disclosure exists any more
   // -- verify the final committed state through the structured table
   // itself instead.
-  await expect(inspector.getByTestId("transaction-phase-editor").locator("details")).toHaveCount(0);
+  await expect(inspector.getByTestId("inspector-phase-editor").locator("details")).toHaveCount(0);
   await expect(inspector.getByLabel("Phase 1 name")).toHaveValue("Setup");
   await expect(inspector.getByLabel("Phase 3 name")).toHaveValue("Cooldown");
   await expect(page.getByTestId("history-status")).toHaveText("History 5 / Redo 0");
@@ -215,34 +216,28 @@ test("Bulk-selecting Transactions applies Color and Delete to every checked row 
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(6);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 
-  const list = page.getByTestId("transaction-editor").locator(".transaction-list");
+  const editor = page.getByTestId("transaction-editor");
+  const list = editor.locator(".transaction-list");
   const rows = list.locator(".transaction-list-row");
   await expect(rows).toHaveCount(6);
-  // No bulk toolbar until at least one row is checked.
-  await expect(page.getByTestId("transaction-bulk-toolbar")).toHaveCount(0);
 
-  await rows.nth(0).locator("input[type='checkbox']").check();
-  await rows.nth(1).locator("input[type='checkbox']").check();
-  const bulkToolbar = page.getByTestId("transaction-bulk-toolbar");
-  await expect(bulkToolbar).toBeVisible();
-  await expect(page.getByTestId("transaction-bulk-count")).toHaveText("2 selected");
+  // Standard multi-selection (#737): click + Ctrl-click, no checkbox column or separate bulk toolbar.
+  await expect(list.locator("input[type='checkbox']")).toHaveCount(0);
+  await rows.nth(0).locator("button[data-selected]").click();
+  await rows.nth(1).locator("button[data-selected]").click({ modifiers: ["Control"] });
 
-  // Bulk Color: one command per checked row, batched into one History entry.
-  await bulkToolbar.getByLabel("Set selected transactions color").fill("#ff6600");
+  // Bulk Color: one command per selected row, batched into one History entry.
+  await editor.getByLabel("Set selected transaction color").fill("#ff6600");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  const swatches = rows.locator(".transaction-row-swatch");
-  await expect(swatches.nth(0)).toHaveCSS("background-color", "rgb(255, 102, 0)");
-  await expect(swatches.nth(1)).toHaveCSS("background-color", "rgb(255, 102, 0)");
-  await expect(swatches.nth(2)).not.toHaveCSS("background-color", "rgb(255, 102, 0)");
+  await expect(rows.nth(0).locator(".transaction-row-color-swatch")).toHaveCSS("background-color", "rgb(255, 102, 0)");
+  await expect(rows.nth(2).locator(".transaction-row-color-swatch")).not.toHaveCSS("background-color", "rgb(255, 102, 0)");
 
-  // Select all visible, then Bulk Delete removes every checked row as one
-  // History entry and clears the checked set (nothing left to bulk-act on).
-  await list.getByLabel("Select all visible transactions").check();
-  await expect(page.getByTestId("transaction-bulk-count")).toHaveText("6 selected");
-  await bulkToolbar.getByTestId("bulk-delete-transactions").click();
+  // Select all visible (Ctrl+A), then Delete removes every selected row as one History entry.
+  await rows.nth(3).locator("button[data-selected]").click();
+  await rows.nth(3).press("Control+a");
+  await editor.getByTestId("bottom-transaction-delete").click();
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
-  await expect(page.getByTestId("transaction-bulk-toolbar")).toHaveCount(0);
   // #534: the zero-Transaction state is the create form itself, not a
   // separate "No Transactions yet" onboarding block -- same contract as
   // the initial empty state, now also true after bulk-deleting the last

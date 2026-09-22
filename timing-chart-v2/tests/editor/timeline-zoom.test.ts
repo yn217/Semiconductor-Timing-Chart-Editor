@@ -68,7 +68,6 @@ describe("applyTimelineZoom", () => {
       viewportWidth: 800,
       timelineOffset: 0,
       onPresentationScale: () => undefined,
-      onSyncFrozenColumns: () => undefined,
       onZoom: () => undefined,
     } satisfies TimelineZoomSurfaceContext;
 
@@ -93,7 +92,6 @@ describe("applyTimelineZoom", () => {
       viewportWidth: 800,
       timelineOffset: 0,
       onPresentationScale: () => undefined,
-      onSyncFrozenColumns: () => undefined,
       onZoom: () => undefined,
     } satisfies TimelineZoomSurfaceContext;
 

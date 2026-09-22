@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 // #205: Dimension-style visual closure for Measurement -- independent
 // start/end markers, inward/outward/auto arrow layout, and extension
@@ -60,14 +63,16 @@ test("Measurement start/end markers, arrow layout and extension lines have real 
   // necessarily increments the Redo count, so compare the History depth
   // only, not the full "History N / Redo M" string.
   const historyDepth = (text: string) => text.match(/History (\d+)/)?.[1];
-  await page.getByTestId("editor-undo").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect.poll(() => page.getByTestId("history-status").textContent().then((text) => historyDepth(text ?? ""))).toBe(historyDepth(historyBefore!));
   await expect(owner.locator("[data-role='measurement-marker'][data-marker-side='start']")).toHaveAttribute("data-marker-kind", "bar");
   await expect(owner.locator("[data-role='measurement-marker'][data-marker-side='end']")).toHaveAttribute("data-marker-kind", "bar");
   await expect(owner.locator("[data-role='measurement-extension'][data-extension-side='end']")).toHaveCount(1);
 
   // Redo re-applies the exact same change.
-  await page.getByTestId("editor-redo").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText(historyAfterApply!);
   await expect(owner.locator("[data-role='measurement-marker'][data-marker-side='start']")).toHaveAttribute("data-marker-kind", "arrow");
   await expect(owner.locator("[data-role='measurement-marker'][data-marker-side='end']")).toHaveCount(0);

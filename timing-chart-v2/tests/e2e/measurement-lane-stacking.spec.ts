@@ -1,6 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
+
+startInCycleMode(test);
 
 // #205: overlapping Measurements without an explicit lane must auto-stack
 // onto genuinely different lanes rather than collapsing back onto lane 0

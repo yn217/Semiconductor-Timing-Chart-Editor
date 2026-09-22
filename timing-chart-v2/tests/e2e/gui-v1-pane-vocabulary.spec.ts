@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 test("restores V1 pane vocabulary without changing command identity or document state", async ({ page }) => {
   await page.goto("/");
@@ -10,10 +13,11 @@ test("restores V1 pane vocabulary without changing command identity or document 
     dirty: await page.getByTestId("dirty-status").textContent(),
   };
 
-  await expect(page.locator(".left-column-heading strong")).toHaveText("信号 / グループ");
-  await expect(page.locator(".column-headings > span").nth(1)).toHaveText("Role / 信号");
-  await expect(page.getByTestId("bottom-tabs").locator("[data-bottom-tab]").allTextContents()).resolves.toEqual(["信号", "注釈", "問題", "JSON"]);
-  await expect(page.getByTestId("follow-selection").locator(".." )).toHaveText("選択に追従");
+  await expect(page.locator(".left-column-heading strong")).toHaveText("Signals / Groups");
+  await expect(page.locator(".column-headings > span").nth(1)).toHaveText("Role");
+  await expect(page.locator(".column-headings > span").nth(2)).toHaveText("Signal / Annotation");
+  await expect(page.getByTestId("bottom-tabs").locator("[data-bottom-tab]").allTextContents()).resolves.toEqual(["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]);
+  await expect(page.getByTestId("follow-selection").locator(".." )).toHaveText("Follow Selection");
   await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-label", "Pin");
 
   await page.getByTestId("bottom-tabs").locator("[data-bottom-tab='Annotation']").click();

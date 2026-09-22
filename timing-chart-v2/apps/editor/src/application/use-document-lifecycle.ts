@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import type { CommandHistorySession } from "@timing-chart-v2/history";
 import { validateDocumentResourceBudget, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
+import { commitDocumentReplacement } from "./document-replacement.js";
 import { canonicalDocumentOf, createNewDocumentFromProductTemplate, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "../file-document-controller.js";
 
 export type PendingDocumentAction = Readonly<{ kind: "new" | "open"; requestId: number; text?: string }>;
@@ -92,22 +93,20 @@ export function useDocumentLifecycle({
   const effectsRef = useRef<LifecycleEffects | undefined>(undefined);
 
   const replaceDocument = useCallback((input: CanonicalDocument | ParsedCanonicalDocument, migrationWarnings: readonly { code: string; path: string; message: string }[] = []) => {
-    const document = canonicalDocumentOf(input);
-    const resourceProblems = validateDocumentResourceBudget(document);
-    if (resourceProblems.length > 0) {
-      const diagnostics = openProblems(resourceProblems).map((item) => ({ ...item, recommendation: "Reduce the document resource count, then retry Open." }));
-      application.setProblem(diagnostics.map((item) => item.message).join(" "));
-      application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), ...diagnostics]);
+    // #743: the failure boundary lives in commitDocumentReplacement (validate -> replaceSession -> epoch advance once); effects are published only on success.
+    const outcome = commitDocumentReplacement({ replaceSession: (value, diagnostics) => application.replaceSession(value, diagnostics), advanceEpoch: () => application.runtime.documentEpoch.advance() }, input, migrationWarnings);
+    if (!outcome.ok) {
+      if (outcome.reason === "resource-budget") {
+        const diagnostics = openProblems(outcome.problems).map((item) => ({ ...item, recommendation: "Reduce the document resource count, then retry Open." }));
+        application.setProblem(diagnostics.map((item) => item.message).join(" "));
+        application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), ...diagnostics]);
+      } else {
+        application.setProblem(`The document could not be opened: ${outcome.error instanceof Error ? outcome.error.message : String(outcome.error)}`);
+      }
       return false;
     }
-    const migrationDiagnostics = migrationWarnings.map((warning, index) => ({ code: warning.code, path: `${warning.path}[migration:${index}]`, message: warning.message }));
-    const session = application.replaceSession(input, migrationDiagnostics);
-    // Publish the new document identity only after the authoritative session
-    // replacement succeeds. A failed replacement must not invalidate
-    // renderer/gesture work for the still-current document.
-    const documentEpoch = application.runtime.documentEpoch.advance();
     setCompatibilityPreview(undefined);
-    effectsRef.current?.applyReplacement({ document, session, documentEpoch, migrationWarnings });
+    effectsRef.current?.applyReplacement({ document: outcome.document, session: outcome.session, documentEpoch: outcome.documentEpoch, migrationWarnings });
     return true;
   }, [application]);
 

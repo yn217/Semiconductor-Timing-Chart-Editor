@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 // Cross-component Visual Quality audit (Inspector / Bottom / Ribbon)
 // requested by the Goal's Stop-hook feedback: clipping, panel collision,
@@ -14,11 +17,15 @@ async function auditContext(page: Page, label: string) {
 
   const regionBoxes = await page.evaluate(() => {
     const rect = (sel: string) => document.querySelector(sel)?.getBoundingClientRect() ?? null;
+    // #756: the Cycle panel spans Main + Bottom by design (the left tree continues under Bottom); the visible timing canvas ends at the
+    // Bottom splitter, so collision is audited against that visible area.
+    const splitterTop = document.querySelector(".bottom-resize-track")?.getBoundingClientRect().top;
+    const visibleViewport = (): DOMRect | null => { const box = rect('[data-testid="cycle-viewport"], [data-testid="cycle-surface"]'); if (!box || splitterTop === undefined || box.bottom <= splitterTop) return box; return new DOMRect(box.x, box.y, box.width, Math.max(0, splitterTop - box.y)); };
     return {
       ribbon: rect('[data-testid="ribbon"]'),
       inspector: rect('[data-testid="inspector-shell"]'),
       bottom: rect('[data-testid="bottom-editor"]'),
-      viewport: rect('[data-testid="cycle-viewport"], [data-testid="cycle-surface"]'),
+      viewport: visibleViewport(),
     };
   });
   const boxes = Object.entries(regionBoxes).filter(([, box]) => box !== null) as [string, DOMRect][];
@@ -54,6 +61,8 @@ for (const viewport of [{ width: 1672, height: 941, label: "1672x941" }, { width
 
     // Bookmark context
     await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
+    // Create stays disabled until the draft differs from its defaults (Draft/Apply contract): give it a name first.
+    await page.getByLabel("New Bottom Bookmark name").fill("Audit");
     await page.getByRole("button", { name: "Create Bookmark", exact: true }).click();
     await auditContext(page, `${viewport.label} Bookmark`);
 

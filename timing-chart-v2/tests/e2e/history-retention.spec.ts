@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleMode } from "./cycle-startup.js";
+
+startInCycleMode(test);
 
 test("keeps long browser edit history within the documented retention horizon", async ({ page }) => {
   test.setTimeout(90_000);

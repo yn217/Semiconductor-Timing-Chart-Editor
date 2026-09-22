@@ -1,4 +1,6 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { resolveTransactionColor } from "./transaction-color.js";
+import { type TransactionDisclosure } from "./workspace/use-transaction-disclosure.js";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import type {
@@ -15,7 +17,49 @@ type TransactionTreeMenu = Readonly<
   | { kind: "group"; id: string }
   | { kind: "transaction"; id: TransactionId }
 >;
-type TransactionTreeMenuItem = Readonly<{ label: string; run: () => void; disabled?: boolean }>;
+type TransactionTreeMenuItem = Readonly<{ label: string; run: () => void; disabled?: boolean; submenu?: readonly TransactionTreeMenuItem[]; movesFocus?: boolean }>;
+
+const TREE_ROW_HEIGHT = 29;
+const TREE_WINDOWING_THRESHOLD = 150;
+
+/**
+ * Fixed-height row windowing for large Transaction groups: only the rows intersecting the tree's scroll viewport (plus a small
+ * overscan) are mounted; a spacer keeps the scroll extent exact. Small groups render every row as before.
+ */
+function WindowedTreeRows<T>({ items, render, getId, focusId, invalidateKey, windowed }: { readonly items: readonly T[]; readonly render: (item: T) => ReactNode; readonly getId?: (item: T) => string; readonly focusId?: string | undefined; readonly invalidateKey?: string | number; readonly windowed: boolean }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [range, setRange] = useState({ start: 0, end: 60 });
+  useEffect(() => {
+    if (!windowed) return undefined;
+    const element = box.current;
+    const scroller = element?.closest<HTMLElement>(".transaction-left-tree");
+    if (!element || !scroller) return undefined;
+    // #771: the Tree owns ONE shared scroll/resize subscription (see the `scrollTick` effect in TransactionTree) that bumps
+    // `invalidateKey`; this per-Group effect only re-reads its OWN box position on each tick, not the scroller's -- one listener
+    // total instead of one per Group, and no Group-local scroll/resize subscription anymore.
+    const update = () => {
+      const offset = scroller.getBoundingClientRect().top - element.getBoundingClientRect().top;
+      const start = Math.max(0, Math.floor(offset / TREE_ROW_HEIGHT) - 10);
+      const end = Math.min(items.length, Math.ceil((offset + scroller.clientHeight) / TREE_ROW_HEIGHT) + 10);
+      setRange((current) => (current.start === start && current.end === end ? current : { start, end }));
+    };
+    update();
+    // #769: also recompute whenever tree topology above this box could have shifted its scroll-relative offset (a Group collapsing/
+    // expanding elsewhere changes no dependency this box would otherwise see) -- both cases are folded into the one shared `invalidateKey`.
+    return undefined;
+  }, [windowed, items.length, invalidateKey]);
+  // #769: keyboard navigation targets a logical id that may not be mounted yet; widen the window (via useLayoutEffect, before paint) to
+  // include it so the caller's post-render focus effect can find and focus the real DOM node on the very next commit.
+  useLayoutEffect(() => {
+    if (!windowed || focusId === undefined || !getId) return;
+    const index = items.findIndex((item) => getId(item) === focusId);
+    if (index < 0) return;
+    setRange((current) => (index >= current.start && index < current.end ? current : { start: Math.max(0, index - 10), end: Math.min(items.length, index + 20) }));
+  }, [windowed, items, getId, focusId]);
+  if (!windowed) return <>{items.map(render)}</>;
+  const end = Math.max(range.end, Math.min(items.length, range.start + 1));
+  return <div ref={box} data-tree-windowed="true" style={{ position: "relative", height: items.length * TREE_ROW_HEIGHT }}><div style={{ position: "absolute", left: 0, right: 0, top: range.start * TREE_ROW_HEIGHT }}>{items.slice(range.start, end).map(render)}</div></div>;
+}
 
 export function TransactionTree({
   document,
@@ -27,15 +71,18 @@ export function TransactionTree({
   onSelect,
   onRenameGroup,
   onMoveToGroup,
+  onMoveToNewGroup,
   onContextMenu,
   onCreateTransaction,
   onFocusTransaction,
+  onClearSelection,
   onDelete,
   onSetVisibility,
   onSetGroupVisibility,
   onDeleteGroup,
   onDuplicateTransaction,
   onRenameTransaction,
+  disclosure,
 }: {
   readonly document: CanonicalDocument;
   readonly documentEpoch: number;
@@ -57,12 +104,15 @@ export function TransactionTree({
     transactionId: TransactionId,
     groupId: TransactionGroup["id"] | undefined,
   ) => void;
+  /** #749: submenu 'New Group…' -- create a Group and move the Transaction into it atomically. */
+  readonly onMoveToNewGroup?: (transactionId: TransactionId) => void;
   readonly onContextMenu?: (
     event: React.MouseEvent<HTMLButtonElement>,
     transactionId: TransactionId,
   ) => void;
   readonly onCreateTransaction?: () => void;
   readonly onFocusTransaction?: (transactionId: TransactionId) => void;
+  readonly onClearSelection?: () => void;
   readonly onDelete?: () => void;
   readonly onSetVisibility?: (
     transactionId: TransactionId,
@@ -75,11 +125,14 @@ export function TransactionTree({
   readonly onDeleteGroup?: (groupId: TransactionGroup["id"]) => void;
   readonly onDuplicateTransaction?: (transactionId: TransactionId) => void;
   readonly onRenameTransaction?: (transactionId: TransactionId, name: string) => CommandResult;
+  /** #759: workspace-level Group disclosure owner (shared with the center Group headers). */
+  readonly disclosure: TransactionDisclosure;
 }) {
-  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const { collapsed, toggle } = disclosure;
   const [dragOverGroup, setDragOverGroup] = useState<string>();
   const [editingGroupId, setEditingGroupId] = useState<string>();
   const [openMenu, setOpenMenu] = useState<TransactionTreeMenu>();
+  const [submenuOpen, setSubmenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ readonly left: number; readonly top: number; readonly maxHeight: number }>();
   const menuRef = useRef<HTMLDivElement>(null);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
@@ -87,7 +140,6 @@ export function TransactionTree({
   const isTransactionSelected = (id: TransactionId) =>
     selectedId === id || selectedIds?.has(id) === true;
   useEffect(() => {
-    setCollapsed(new Set());
     setDragOverGroup(undefined);
     setEditingGroupId(undefined);
     setOpenMenu(undefined);
@@ -256,17 +308,19 @@ export function TransactionTree({
           ? event.target.closest<HTMLElement>(".transaction-left-tree-row")
           : null;
       if (!current) return;
-      const rows = [
-        ...globalThis.document.querySelectorAll<HTMLElement>(
-          ".transaction-left-tree-row",
-        ),
-      ];
-      const next =
-        rows[rows.indexOf(current) + (event.key === "ArrowDown" ? 1 : -1)];
-      if (!next) return;
+      // #769: navigate the logical visible-Transaction sequence (groups in order, skipping collapsed ones, then Ungrouped) so
+      // ArrowUp/Down works past a virtualization window boundary -- not just the currently-mounted DOM rows.
+      const logicalRows: TransactionId[] = [];
+      for (const group of groups) if (!collapsed.has(group.id)) for (const transaction of groupTransactions(group.id)) logicalRows.push(transaction.id);
+      if (!collapsed.has("__ungrouped__")) for (const transaction of groupTransactions(undefined)) logicalRows.push(transaction.id);
+      const currentId = current.dataset.transactionTreeId as TransactionId | undefined;
+      const currentIndex = currentId === undefined ? -1 : logicalRows.indexOf(currentId);
+      if (currentIndex < 0) return;
+      const nextId = logicalRows[currentIndex + (event.key === "ArrowDown" ? 1 : -1)];
+      if (nextId === undefined) return;
       event.preventDefault();
-      next.focus();
-      const id = next.dataset.transactionTreeId as TransactionId | undefined;
+      setPendingFocusId(nextId);
+      const id: TransactionId | undefined = nextId;
       if (id) onSelect(id);
     };
     globalThis.document.addEventListener("dblclick", onDoubleClick);
@@ -334,6 +388,43 @@ export function TransactionTree({
       groupName.toLocaleLowerCase().includes(needle)
     );
   };
+  const rowId = (transaction: Transaction) => transaction.id;
+  // #769: recomputes whenever ANY Group's collapse state changes -- passed to every WindowedTreeRows instance so a Group collapsing/
+  // expanding above another (unchanged) Group invalidates that Group's stale scroll-relative window too.
+  const collapsedSignature = [...collapsed].sort().join(",");
+  // #771: ONE scroll/resize subscription for the whole Tree (not one per Group) drives every windowed Group's recompute; each Group
+  // still reads its own box position (unavoidable without one fully flattened list) but the scroller itself is measured once per tick.
+  const treeScrollerRef = useRef<HTMLDivElement>(null);
+  const [scrollTick, setScrollTick] = useState(0);
+  useEffect(() => {
+    const scroller = treeScrollerRef.current;
+    if (!scroller) return undefined;
+    let frame: number | undefined;
+    const bump = () => { if (frame !== undefined) return; frame = requestAnimationFrame(() => { frame = undefined; setScrollTick((value) => value + 1); }); };
+    scroller.addEventListener("scroll", bump, { passive: true });
+    const observer = new ResizeObserver(bump);
+    observer.observe(scroller);
+    return () => { scroller.removeEventListener("scroll", bump); observer.disconnect(); if (frame !== undefined) cancelAnimationFrame(frame); };
+  }, []);
+  const windowInvalidateKey = `${collapsedSignature}|${scrollTick}`;
+  const [pendingFocusId, setPendingFocusId] = useState<TransactionId>();
+  // Post-render: once the pending row is actually mounted (WindowedTreeRows above widened its window to include it), focus and reveal
+  // it, then stop. No dependency array: this deliberately re-runs on every render until it finds the node (usually the very next commit).
+  useEffect(() => {
+    if (pendingFocusId === undefined) return;
+    const node = globalThis.document.querySelector<HTMLElement>(`.transaction-left-tree-row[data-transaction-tree-id="${CSS.escape(pendingFocusId)}"]`);
+    if (!node) return;
+    node.focus();
+    node.scrollIntoView({ block: "nearest" });
+    setPendingFocusId(undefined);
+  });
+  // #769 Failure 2 follow-on: a Group elsewhere collapsing/expanding can shrink the freshly recomputed window of an UNRELATED, already
+  // visible Group past the currently focused row, unmounting it (and silently dropping keyboard focus to <body>). Whenever collapse
+  // state changes, re-request the current selection so its WindowedTreeRows widens to keep covering it.
+  useEffect(() => {
+    if (selectedId !== undefined) setPendingFocusId(selectedId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collapsedSignature]);
   const groupTransactions = (groupId: TransactionGroup["id"] | undefined) =>
     document.transactions
       .filter(
@@ -344,10 +435,16 @@ export function TransactionTree({
         (left, right) =>
           left.start - right.start || left.id.localeCompare(right.id),
       );
+  // #771: virtualization is decided by the TOTAL visible Transaction count across every Group, not each Group's own count -- 100 Groups
+  // of 100 (10,000 total) must window just as much as one Group of 10,000; a distribution across many small/medium Groups must not
+  // bypass it.
+  const totalVisibleCount = groups.reduce((sum, group) => sum + groupTransactions(group.id).length, groupTransactions(undefined).length);
+  const globalWindowingEnabled = totalVisibleCount > TREE_WINDOWING_THRESHOLD;
   const closeMenu = (restoreFocus = false) => {
     const trigger = menuTriggerRef.current;
     setOpenMenu(undefined);
     setMenuPosition(undefined);
+    setSubmenuOpen(false);
     if (restoreFocus) requestAnimationFrame(() => { if (trigger?.isConnected) trigger.focus(); });
   };
   const toggleMenu = (nextMenu: TransactionTreeMenu, trigger: HTMLButtonElement) => {
@@ -356,18 +453,21 @@ export function TransactionTree({
       return;
     }
     menuTriggerRef.current = trigger;
+    setSubmenuOpen(false);
     setMenuPosition(undefined);
     setOpenMenu(nextMenu);
   };
   const invokeMenuItem = (item: TransactionTreeMenuItem) => {
-    closeMenu(true);
+    // Items that start inline editing own focus; restoring it to the trigger
+    // would blur the new input and cancel the edit immediately.
+    closeMenu(item.movesFocus !== true);
     item.run();
   };
   const selectedMenuGroup = openMenu?.kind === "group" ? groups.find((group) => group.id === openMenu.id) : undefined;
   const selectedMenuTransaction = openMenu?.kind === "transaction" ? document.transactions.find((transaction) => transaction.id === openMenu.id) : undefined;
   const menuItems: readonly TransactionTreeMenuItem[] = selectedMenuGroup
     ? [
-        { label: "Rename Group", run: () => rename(selectedMenuGroup) },
+        { label: "Rename Group", movesFocus: true, run: () => rename(selectedMenuGroup) },
         { label: "New Transaction", run: () => onCreateTransaction?.() },
         { label: "Select Children", run: () => groupTransactions(selectedMenuGroup.id).forEach((transaction, index) => onSelect(transaction.id, index > 0)) },
         ...(onDeleteGroup ? [{ label: "Delete Group", run: () => onDeleteGroup(selectedMenuGroup.id) }] : []),
@@ -379,8 +479,15 @@ export function TransactionTree({
     : selectedMenuTransaction
       ? [
           { label: "Focus in Timeline", run: () => onFocusTransaction?.(selectedMenuTransaction.id) },
-          ...(onMoveToGroup ? groups.map((group) => ({ label: `Move to ${group.name}`, disabled: selectedMenuTransaction.groupId === group.id, run: () => onMoveToGroup(selectedMenuTransaction.id, group.id) })) : []),
-          ...(onMoveToGroup && selectedMenuTransaction.groupId !== undefined ? [{ label: "Ungroup", run: () => onMoveToGroup(selectedMenuTransaction.id, undefined) }] : []),
+          ...(onMoveToGroup ? [{
+            label: "Move to Group",
+            run: () => undefined,
+            submenu: [
+              ...groups.map((group) => ({ label: group.name, disabled: selectedMenuTransaction.groupId === group.id, run: () => onMoveToGroup(selectedMenuTransaction.id, group.id) })),
+              { label: "Ungrouped", disabled: selectedMenuTransaction.groupId === undefined, run: () => onMoveToGroup(selectedMenuTransaction.id, undefined) },
+              ...(onMoveToNewGroup ? [{ label: "New Group…", run: () => onMoveToNewGroup(selectedMenuTransaction.id) }] : []),
+            ],
+          }] : []),
           ...(onDuplicateTransaction ? [{ label: "Duplicate", run: () => { onSelect(selectedMenuTransaction.id); onDuplicateTransaction(selectedMenuTransaction.id); } }] : []),
           ...(onDelete ? [{ label: "Delete", run: () => { onSelect(selectedMenuTransaction.id); onDelete(); } }] : []),
         ]
@@ -404,13 +511,6 @@ export function TransactionTree({
     event.preventDefault();
     items[next]?.focus();
   };
-  const toggle = (key: string) =>
-    setCollapsed((current) => {
-      const next = new Set(current);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
   const rename = (group: TransactionGroup) => setEditingGroupId(group.id);
   const renderTransaction = (transaction: Transaction) => (
     <div className="transaction-left-tree-row-wrap" key={transaction.id}>
@@ -448,10 +548,7 @@ export function TransactionTree({
           aria-hidden="true"
           style={{
             background:
-              transaction.color ??
-              (transaction.groupId === undefined
-                ? "#8895a7"
-                : (groupById.get(transaction.groupId)?.color ?? "#8895a7")),
+              resolveTransactionColor(document, transaction),
           }}
         />
         {transaction.name}
@@ -523,10 +620,13 @@ export function TransactionTree({
   return (
     <>
     <div
+      ref={treeScrollerRef}
       className="transaction-left-tree"
       data-testid="transaction-left-tree"
       data-transaction-tree-root="true"
       aria-label="Transaction tree"
+      onClick={(event) => { if (onClearSelection && (event.target === event.currentTarget || (event.target instanceof Element && event.target.classList.contains("transaction-left-tree-root")))) onClearSelection(); }}
+      onKeyDown={(event) => { if (event.key === "Escape" && onClearSelection && !openMenu && !(event.target instanceof HTMLInputElement)) { event.preventDefault(); onClearSelection(); } }}
     >
       <div className="transaction-left-tree-root">
         <button
@@ -540,6 +640,9 @@ export function TransactionTree({
         <strong>All Transactions</strong>
         <span>({document.transactions.length})</span>
       </div>
+      {document.transactions.length > 0 && (needle.length > 0 || filterMode !== "all") && !document.transactions.some(matches) && (
+        <p className="inspector-note" role="status" data-testid="transaction-tree-no-match">No transactions match the active tree filter{needle.length > 0 ? ` “${filter.trim()}”` : ""}{filterMode !== "all" ? ` (${filterMode})` : ""}. Clear the search / choose All to see them.</p>
+      )}
       {!collapsed.has("__all__") && (
         <div className="transaction-left-tree-groups">
           {groups.map((group) => {
@@ -608,7 +711,7 @@ export function TransactionTree({
                     <EditorIcon name="more" className="transaction-left-tree-icon" />
                   </button>
                 </div>
-                {!isCollapsed && items.map(renderTransaction)}
+                {!isCollapsed && <WindowedTreeRows items={items} render={renderTransaction} getId={rowId} focusId={pendingFocusId} invalidateKey={windowInvalidateKey} windowed={globalWindowingEnabled} />}
               </div>
             );
           })}
@@ -640,7 +743,7 @@ export function TransactionTree({
                   <span className="transaction-left-tree-group-count">({items.length})</span>
                   <span className="transaction-left-tree-action-placeholder" aria-hidden="true" />
                 </div>
-                {!isCollapsed && items.map(renderTransaction)}
+                {!isCollapsed && <WindowedTreeRows items={items} render={renderTransaction} getId={rowId} focusId={pendingFocusId} invalidateKey={windowInvalidateKey} windowed={globalWindowingEnabled} />}
               </div>
             );
           })()}
@@ -658,7 +761,12 @@ export function TransactionTree({
         onKeyDown={onMenuKeyDown}
         style={{ left: `${menuPosition?.left ?? 0}px`, top: `${menuPosition?.top ?? 0}px`, maxHeight: `${menuPosition?.maxHeight ?? 200}px`, visibility: menuPosition ? "visible" : "hidden" }}
       >
-        {menuItems.map((item) => <button key={item.label} type="button" role="menuitem" disabled={item.disabled} onClick={() => invokeMenuItem(item)}>{item.label}</button>)}
+        {menuItems.map((item) => item.submenu ? <Fragment key={item.label}>
+          <button type="button" role="menuitem" aria-haspopup="menu" aria-expanded={submenuOpen} onClick={() => setSubmenuOpen((open) => !open)} onKeyDown={(event) => { if (event.key === "ArrowRight") { event.preventDefault(); setSubmenuOpen(true); } else if (event.key === "ArrowLeft") { event.preventDefault(); setSubmenuOpen(false); } }}>{item.label} {submenuOpen ? "▾" : "▸"}</button>
+          {submenuOpen && <div role="group" aria-label={item.label} className="transaction-left-tree-submenu">
+            {item.submenu.map((sub) => <button key={sub.label} type="button" role="menuitem" disabled={sub.disabled} onClick={() => invokeMenuItem(sub)}>{sub.label}</button>)}
+          </div>}
+        </Fragment> : <button key={item.label} type="button" role="menuitem" disabled={item.disabled} onClick={() => invokeMenuItem(item)}>{item.label}</button>)}
       </div>,
       globalThis.document.body,
     )}

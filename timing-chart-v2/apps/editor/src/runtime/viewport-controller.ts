@@ -14,15 +14,21 @@ export type TimelineZoomSurfaceContext = {
   readonly inspectorWidth: number;
   readonly viewportWidth: number;
   readonly timelineOffset: number;
+  /** #750: presentation content width (compressed Transaction) when it is narrower than the viewport-derived base; undefined otherwise. */
+  readonly presentationBaseWidth?: () => number | undefined;
   readonly onPresentationScale: (zoom: number) => void;
-  readonly onSyncFrozenColumns: () => void;
   readonly onZoom: (zoom: number) => void;
 };
 
 export function applyTimelineZoom(next: number, context: TimelineZoomSurfaceContext): number {
   const zoom = clampTimelineZoom(next);
-  const baseWidth = Math.max(160, context.viewportWidth - context.leftPaneWidth - context.inspectorWidth - context.frozenPaneWidth);
-  const width = context.timelineOffset + baseWidth * zoom;
+  const viewportBase = Math.max(160, context.viewportWidth - context.leftPaneWidth - context.inspectorWidth - context.frozenPaneWidth);
+  const presentationBase = context.presentationBaseWidth?.();
+  // The scroll extent is the presented content (+ zoom), never wider just because the window is: no artificial horizontal scrolling.
+  const baseWidth = presentationBase !== undefined && Number.isFinite(presentationBase) && presentationBase > 0 ? presentationBase : viewportBase;
+  // Standalone Transaction has no fixed Cycle columns in the scroll area: its presented content starts at 0.
+  const offset = presentationBase !== undefined ? 0 : context.timelineOffset;
+  const width = offset + baseWidth * zoom;
   const applyPresentation = () => {
     if (context.rendererHost.isConnected === false) return;
     for (const element of context.scalable) {
@@ -35,7 +41,6 @@ export function applyTimelineZoom(next: number, context: TimelineZoomSurfaceCont
     context.onPresentationScale(zoom);
     context.rendererHost.style.width = `${width}px`;
     context.timingSurface.style.setProperty("width", `${width}px`);
-    context.onSyncFrozenColumns();
     // Scroll width changes are not observable through ResizeObserver on the
     // viewport itself. Notify view-only consumers such as MiniMap after the
     // zoom-owned width write has been applied.

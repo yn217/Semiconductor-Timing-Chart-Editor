@@ -212,7 +212,9 @@ function clockToWaveJsonWindow(source: CanonicalSignalSource, start: number, end
     generator: {
       ...generator,
       start: localGeneratorStart,
-      initial: firstActive ? active : inactive,
+      // Non-50% duty expands per period and requires the generator's own inactive initial level; only the plain 50% clock
+      // derives its first token from the window-left-edge state.
+      initial: generator.duty === 0.5 ? (firstActive ? active : inactive) : generator.initial,
       suppressedPeriods: started ? [...suppressed].filter((period) => period >= localPulse).map((period) => period - localPulse) : [...suppressed],
     },
   };

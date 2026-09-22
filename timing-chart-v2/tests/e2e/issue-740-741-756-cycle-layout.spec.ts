@@ -1,0 +1,70 @@
+import { expect, test, type Page } from "@playwright/test";
+
+const SIZES = [{ width: 1672, height: 941 }, { width: 1280, height: 720 }] as const;
+
+async function toCycle(page: Page) {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
+}
+const rect = (page: Page, selector: string) => page.evaluate((sel) => { const e = document.querySelector<HTMLElement>(sel); if (!e) return null; const b = e.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, height: b.height, left: b.left, width: b.width }; }, selector);
+
+for (const size of SIZES) {
+  test(`#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at ${size.width}x${size.height}`, async ({ page }) => {
+    await page.setViewportSize(size);
+    await toCycle(page);
+    const visible = await rect(page, ".cycle-panel");
+    const workspace = await rect(page, ".desktop-workspace");
+    expect(visible && workspace).toBeTruthy();
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+    await page.getByTestId("ribbon").getByRole("button", { name: "Bottom Editor", exact: true }).click();
+    await expect(page.locator("main.editor-shell")).toHaveAttribute("data-bottom-visible", "false");
+    const hidden = await rect(page, ".cycle-panel");
+    // The timing canvas now reaches the workspace bottom: no reserved band the size of Bottom + splitter.
+    expect(Math.abs(hidden!.bottom - workspace!.bottom), "cycle panel bottom == workspace bottom").toBeLessThanOrEqual(1);
+    // #756: the panel spans Main + Bottom in both states, so hiding Bottom does not change its height; the visible timing canvas
+    // (down to the Bottom splitter) is what grows -- covered by issue-740-cycle-bottom-hidden.
+    expect(Math.abs(hidden!.height - visible!.height)).toBeLessThanOrEqual(1);
+    await expect(page.getByTestId("bottom-resizer")).toHaveCount(0);
+    // View-only.
+    await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  });
+}
+
+test("#741 Transaction fixed-width sidebar exposes no focusable ghost resizer and hides no width mutation", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
+  await expect(page.getByTestId("left-pane-resizer")).toHaveCount(0);
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(page.getByTestId("left-pane-resizer")).toHaveCount(1);
+});
+
+for (const size of SIZES) {
+  test(`#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at ${size.width}x${size.height}`, async ({ page }) => {
+    await page.setViewportSize(size);
+    await toCycle(page);
+    const measure = () => page.evaluate(() => {
+      const box = (s: string) => { const e = document.querySelector<HTMLElement>(s); if (!e) return null; const b = e.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom }; };
+      return { tree: box("[data-role='left-tree-rows']"), bottom: box(".bottom-editor"), splitter: box(".bottom-resize-track"), track: box("[data-testid='timeline-hscroll']"), workspace: box(".desktop-workspace"), rail: box(".left-workspace-rail"), panel: box(".cycle-panel") };
+    });
+    const visible = await measure();
+    // The tree column is not clipped at the Main area: it continues under the Bottom row, down to the workspace bottom.
+    expect(visible.tree!.bottom).toBeGreaterThanOrEqual(visible.bottom!.bottom - 2);
+    expect(visible.tree!.right).toBeLessThanOrEqual(visible.bottom!.left + 1);
+    // No detached tinted footer block any more.
+    expect(await page.evaluate(() => getComputedStyle(document.querySelector(".desktop-workspace")!, "::after").display)).toBe("none");
+    // The Timeline scrollbar stays above Bottom (not beneath it, not under the fixed columns).
+    if (visible.track) expect(visible.track.bottom).toBeLessThanOrEqual(visible.splitter!.top + 1);
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+    await page.getByTestId("ribbon").getByRole("button", { name: "Bottom Editor", exact: true }).click();
+    await expect(page.locator("main.editor-shell")).toHaveAttribute("data-bottom-visible", "false");
+    // The surface refills the released rows on the next layout tick.
+    await expect.poll(async () => { const m = await measure(); return m.workspace!.bottom - m.tree!.bottom; }).toBeLessThanOrEqual(30);
+    const hidden = await measure();
+    expect(Math.abs(hidden.panel!.bottom - hidden.workspace!.bottom)).toBeLessThanOrEqual(1);
+    await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  });
+}

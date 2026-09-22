@@ -37,7 +37,29 @@ export function migrateDocument(input: unknown): { document: CanonicalDocument; 
   if (input === null || typeof input !== "object" || Array.isArray(input)) return undefined;
   const migrated = migrateThroughRegistry(input, 2);
   if (!migrated) return undefined;
-  return { document: cloneUnknown(migrated.value) as CanonicalDocument, warnings: migrated.warnings };
+  const document = cloneUnknown(migrated.value) as CanonicalDocument;
+  dropLegacySplitPane(document);
+  defaultAdditiveCollections(document);
+  return { document, warnings: migrated.warnings };
+}
+
+/**
+ * Additive canonical collections introduced after v2 files were already being written (annotationGroups). A v2 file that
+ * predates them is still a valid document: open it with the collection empty instead of rejecting it. Save always writes it.
+ */
+function defaultAdditiveCollections(document: CanonicalDocument): void {
+  const record = document as unknown as Record<string, unknown>;
+  if (record.annotationGroups === undefined && Array.isArray(record.annotations)) record.annotationGroups = [];
+}
+
+/** #570: the per-signal Upper/Lower/Both assignment is legacy; it is read and ignored, never kept or written back. */
+function dropLegacySplitPane(document: CanonicalDocument): void {
+  const signals: unknown = (document as { signals?: unknown }).signals;
+  if (!Array.isArray(signals)) return;
+  for (const signal of signals) {
+    const display = signal !== null && typeof signal === "object" ? (signal as { display?: unknown }).display : undefined;
+    if (display !== null && typeof display === "object" && "splitPane" in display) delete (display as Record<string, unknown>).splitPane;
+  }
 }
 
 export type JsonInputResult = Readonly<{ ok: true; value: unknown } | { ok: false; problems: readonly DocumentProblem[] }>;

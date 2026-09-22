@@ -159,7 +159,11 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     left.setAttribute("role", "tree");
     left.setAttribute("aria-label", "Signals and Groups");
     left.tabIndex = 0;
-    for (const layer of [left, frozen, timing, waves, overlays, interactive]) root.append(layer);
+    // #625: the time-domain layers live in one TimelineViewport wrapper (`display: contents` except in Cycle mode, where CSS makes
+    // it the horizontal scroll owner so the fixed columns are never inside a horizontal overflow box).
+    const timelineViewport = element(host, "div", "timeline-viewport");
+    for (const layer of [timing, waves, overlays, interactive]) timelineViewport.append(layer);
+    for (const layer of [left, frozen, timelineViewport]) root.append(layer);
     host.replaceChildren(root);
     this.#layers = { root, left, frozen, timing, waves, overlays, interactive };
     Object.defineProperty(root, "requestPerformanceSnapshot", { configurable: true, value: () => this.diagnostics() });

@@ -1,5 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 test("fits long value labels to WaveDrom segments across adjacent values, zoom, and SVG export", async ({ page }) => {
   await page.goto("/");

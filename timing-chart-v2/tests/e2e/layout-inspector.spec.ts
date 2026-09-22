@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 test("edits global row layout through one semantic operation and preserves it through Save/Open", async ({ page }) => {
   await page.goto("/");
@@ -70,10 +73,14 @@ test("auto fits a long rendered signal label through one layout command", async 
   await expect(host.locator("[data-role='frozen-signal-name']").filter({ hasText: "A_VERY_LONG_SIGNAL_NAME_FOR_LAYOUT_AUTOFIT" })).toHaveCount(1);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "More", exact: true }).click();
-  await page.getByRole("menu", { name: "More Home Commands" }).getByRole("button", { name: "Clear Selection", exact: true }).click();
+  await page.getByRole("menu", { name: "More Home Commands" }).getByRole("menuitem", { name: "Clear Selection", exact: true }).click();
   const layout = page.getByTestId("inspector-layout-editor");
   const before = Number(await layout.getByLabel("Inspector signal name width").inputValue());
+  await expect(layout.getByTestId("layout-draft-note")).toContainText("only change this draft");
   await layout.getByTestId("auto-fit-inspector-layout").click();
+  // Auto Fit only fills the Layout draft (no Canonical change) -- Apply commits it as one command.
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await page.getByTestId("apply-inspector-layout").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   const after = Number(await page.getByTestId("inspector-layout-editor").getByLabel("Inspector signal name width").inputValue());
   expect(after).toBeGreaterThan(before);
