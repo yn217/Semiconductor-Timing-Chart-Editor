@@ -26,7 +26,7 @@ const TREE_WINDOWING_THRESHOLD = 150;
  * Fixed-height row windowing for large Transaction groups: only the rows intersecting the tree's scroll viewport (plus a small
  * overscan) are mounted; a spacer keeps the scroll extent exact. Small groups render every row as before.
  */
-function WindowedTreeRows<T>({ items, render }: { readonly items: readonly T[]; readonly render: (item: T) => ReactNode }) {
+function WindowedTreeRows<T>({ items, render, getId, focusId, invalidateKey }: { readonly items: readonly T[]; readonly render: (item: T) => ReactNode; readonly getId?: (item: T) => string; readonly focusId?: string | undefined; readonly invalidateKey?: string | number }) {
   const box = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState({ start: 0, end: 60 });
   const windowed = items.length > TREE_WINDOWING_THRESHOLD;
@@ -46,7 +46,17 @@ function WindowedTreeRows<T>({ items, render }: { readonly items: readonly T[]; 
     const observer = new ResizeObserver(update);
     observer.observe(scroller);
     return () => { scroller.removeEventListener("scroll", update); observer.disconnect(); };
-  }, [windowed, items.length]);
+    // #769: recompute whenever tree topology above this box could have shifted its scroll-relative offset (a Group collapsing/expanding
+    // elsewhere changes no dependency this box would otherwise see -- items.length is unaffected -- so it needs its own explicit signal).
+  }, [windowed, items.length, invalidateKey]);
+  // #769: keyboard navigation targets a logical id that may not be mounted yet; widen the window (via useLayoutEffect, before paint) to
+  // include it so the caller's post-render focus effect can find and focus the real DOM node on the very next commit.
+  useLayoutEffect(() => {
+    if (!windowed || focusId === undefined || !getId) return;
+    const index = items.findIndex((item) => getId(item) === focusId);
+    if (index < 0) return;
+    setRange((current) => (index >= current.start && index < current.end ? current : { start: Math.max(0, index - 10), end: Math.min(items.length, index + 20) }));
+  }, [windowed, items, getId, focusId]);
   if (!windowed) return <>{items.map(render)}</>;
   const end = Math.max(range.end, Math.min(items.length, range.start + 1));
   return <div ref={box} data-tree-windowed="true" style={{ position: "relative", height: items.length * TREE_ROW_HEIGHT }}><div style={{ position: "absolute", left: 0, right: 0, top: range.start * TREE_ROW_HEIGHT }}>{items.slice(range.start, end).map(render)}</div></div>;
@@ -299,17 +309,19 @@ export function TransactionTree({
           ? event.target.closest<HTMLElement>(".transaction-left-tree-row")
           : null;
       if (!current) return;
-      const rows = [
-        ...globalThis.document.querySelectorAll<HTMLElement>(
-          ".transaction-left-tree-row",
-        ),
-      ];
-      const next =
-        rows[rows.indexOf(current) + (event.key === "ArrowDown" ? 1 : -1)];
-      if (!next) return;
+      // #769: navigate the logical visible-Transaction sequence (groups in order, skipping collapsed ones, then Ungrouped) so
+      // ArrowUp/Down works past a virtualization window boundary -- not just the currently-mounted DOM rows.
+      const logicalRows: TransactionId[] = [];
+      for (const group of groups) if (!collapsed.has(group.id)) for (const transaction of groupTransactions(group.id)) logicalRows.push(transaction.id);
+      if (!collapsed.has("__ungrouped__")) for (const transaction of groupTransactions(undefined)) logicalRows.push(transaction.id);
+      const currentId = current.dataset.transactionTreeId as TransactionId | undefined;
+      const currentIndex = currentId === undefined ? -1 : logicalRows.indexOf(currentId);
+      if (currentIndex < 0) return;
+      const nextId = logicalRows[currentIndex + (event.key === "ArrowDown" ? 1 : -1)];
+      if (nextId === undefined) return;
       event.preventDefault();
-      next.focus();
-      const id = next.dataset.transactionTreeId as TransactionId | undefined;
+      setPendingFocusId(nextId);
+      const id: TransactionId | undefined = nextId;
       if (id) onSelect(id);
     };
     globalThis.document.addEventListener("dblclick", onDoubleClick);
@@ -377,6 +389,28 @@ export function TransactionTree({
       groupName.toLocaleLowerCase().includes(needle)
     );
   };
+  const rowId = (transaction: Transaction) => transaction.id;
+  // #769: recomputes whenever ANY Group's collapse state changes -- passed to every WindowedTreeRows instance so a Group collapsing/
+  // expanding above another (unchanged) Group invalidates that Group's stale scroll-relative window too.
+  const collapsedSignature = [...collapsed].sort().join(",");
+  const [pendingFocusId, setPendingFocusId] = useState<TransactionId>();
+  // Post-render: once the pending row is actually mounted (WindowedTreeRows above widened its window to include it), focus and reveal
+  // it, then stop. No dependency array: this deliberately re-runs on every render until it finds the node (usually the very next commit).
+  useEffect(() => {
+    if (pendingFocusId === undefined) return;
+    const node = globalThis.document.querySelector<HTMLElement>(`.transaction-left-tree-row[data-transaction-tree-id="${CSS.escape(pendingFocusId)}"]`);
+    if (!node) return;
+    node.focus();
+    node.scrollIntoView({ block: "nearest" });
+    setPendingFocusId(undefined);
+  });
+  // #769 Failure 2 follow-on: a Group elsewhere collapsing/expanding can shrink the freshly recomputed window of an UNRELATED, already
+  // visible Group past the currently focused row, unmounting it (and silently dropping keyboard focus to <body>). Whenever collapse
+  // state changes, re-request the current selection so its WindowedTreeRows widens to keep covering it.
+  useEffect(() => {
+    if (selectedId !== undefined) setPendingFocusId(selectedId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collapsedSignature]);
   const groupTransactions = (groupId: TransactionGroup["id"] | undefined) =>
     document.transactions
       .filter(
@@ -657,7 +691,7 @@ export function TransactionTree({
                     <EditorIcon name="more" className="transaction-left-tree-icon" />
                   </button>
                 </div>
-                {!isCollapsed && <WindowedTreeRows items={items} render={renderTransaction} />}
+                {!isCollapsed && <WindowedTreeRows items={items} render={renderTransaction} getId={rowId} focusId={pendingFocusId} invalidateKey={collapsedSignature} />}
               </div>
             );
           })}
@@ -689,7 +723,7 @@ export function TransactionTree({
                   <span className="transaction-left-tree-group-count">({items.length})</span>
                   <span className="transaction-left-tree-action-placeholder" aria-hidden="true" />
                 </div>
-                {!isCollapsed && <WindowedTreeRows items={items} render={renderTransaction} />}
+                {!isCollapsed && <WindowedTreeRows items={items} render={renderTransaction} getId={rowId} focusId={pendingFocusId} invalidateKey={collapsedSignature} />}
               </div>
             );
           })()}
