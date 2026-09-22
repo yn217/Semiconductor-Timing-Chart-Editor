@@ -10,7 +10,13 @@ import type { AIViewIntent } from "./ai-proposal-provider.js";
 // access beyond polling the one configured localhost bridge URL. It is
 // off by default and only starts polling once the caller passes
 // `enabled: true` (the Settings "Enable external agents" toggle).
-export type AIBridgeStatus = "disabled" | "connecting" | "connected" | "error";
+// #778 Phase 1: "connected" alone conflated two very different truths -- the local Bridge process being
+// reachable (this Editor tab's own poll loop succeeding) versus a real external MCP client (Claude Code,
+// Codex, or any other MCP-speaking agent) actually having connected to it. Reporting the former as if it were
+// the latter is an explicitly prohibited shortcut. "connected" now means Bridge-reachable-but-no-external-
+// client-seen; "connected-external-client" means a real client has spoken to the bridge's /mcp endpoint
+// within the last EXTERNAL_CLIENT_TIMEOUT_MS window server-side.
+export type AIBridgeStatus = "disabled" | "connecting" | "connected" | "connected-external-client" | "error";
 
 export type AIBridgeContext = {
   readonly document: CanonicalDocument;
@@ -94,9 +100,9 @@ export function useAIBridgeClient(enabled: boolean, host: string, port: number, 
       const response = await fetch(`${baseUrl}/bridge/poll`, { headers: authHeaders, signal: controller.signal });
       if (response.status === 401) throw new Error("Bridge rejected the configured token.");
       if (!response.ok) throw new Error(`Bridge poll failed (${response.status}).`);
-      const request = (await response.json()) as { requestId: string | null; tool?: string; arguments?: Record<string, unknown> };
+      const request = (await response.json()) as { requestId: string | null; tool?: string; arguments?: Record<string, unknown>; externalClientConnected?: boolean };
       if (cancelled) return false;
-      setStatus("connected");
+      setStatus(request.externalClientConnected ? "connected-external-client" : "connected");
       if (!request.requestId || !request.tool) return false;
       let result: unknown;
       let error: string | undefined;

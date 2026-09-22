@@ -1,4 +1,5 @@
 import { useTransactionDisclosure } from "./workspace/use-transaction-disclosure.js";
+import type { AIBridgeStatus } from "./ai-bridge-client.js";
 import { useCallback, useEffect } from "react";
 import type {
   Dispatch,
@@ -194,7 +195,7 @@ export interface EditorSecondarySurfacesOutput {
   readonly workspaceLeftRail: ReactNode;
   readonly workspaceBottom: ReactNode;
   readonly workspaceInspector: ReactNode;
-  readonly aiBridgeStatus: "disabled" | "connecting" | "connected" | "error";
+  readonly aiBridgeStatus: AIBridgeStatus;
 }
 
 export function useEditorSecondarySurfaces(
