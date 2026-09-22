@@ -1,0 +1,521 @@
+{
+  "formatVersion": 2,
+  "document": {
+    "id": "doc.current.transaction.reference",
+    "title": "Current V2 Transaction Reference",
+    "header": {
+      "subtitle": "Current canonical V2 Transaction-mode acceptance sample",
+      "description": "Current-spec Transaction fixture covering Groups, Lanes, Phases, linked Signals, colors, descriptions and transactionTimeScale.",
+      "notes": "",
+      "preconditions": [],
+      "constraints": [],
+      "exceptions": []
+    },
+    "footer": {
+      "figureNumber": "CURRENT-TXN-001",
+      "revision": "V2",
+      "text": ""
+    }
+  },
+  "timeline": {
+    "start": 0,
+    "end": 160,
+    "cycleCount": 160,
+    "timeBase": "cycle",
+    "edge": "rising",
+    "labelAnchors": [],
+    "referenceClock": "sig_clock"
+  },
+  "transactionTimeScale": {
+    "clockCyclesPerTransactionCycle": 10,
+    "majorInterval": 5,
+    "minorInterval": 1
+  },
+  "signalGroups": [
+    {
+      "id": "grp_ctrl",
+      "name": "Control",
+      "rows": [
+        "sig_clock",
+        "sig_reset_n",
+        "sig_request",
+        "sig_ready"
+      ]
+    },
+    {
+      "id": "grp_data",
+      "name": "Data",
+      "rows": [
+        "sig_valid",
+        "sig_addr",
+        "sig_data",
+        "sig_resp"
+      ]
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_clock",
+      "name": "CLOCK",
+      "type": "clock",
+      "role": "input",
+      "source": {
+        "instancePath": [],
+        "signalName": "clock"
+      },
+      "display": {
+        "name": "CLOCK"
+      },
+      "generator": {
+        "start": 0,
+        "period": 2,
+        "duty": 0.5,
+        "phase": 0,
+        "initial": 0,
+        "polarity": "positive"
+      },
+      "edgeCounter": {
+        "show": false,
+        "mode": "rising",
+        "startNumber": 0,
+        "countFrom": "signal-start",
+        "labelEvery": 1,
+        "position": "above",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": "sig_reset_n",
+      "name": "RESET_N",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [],
+        "signalName": "reset_n"
+      },
+      "display": {
+        "name": "RESET_N"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 4,
+          "value": 1
+        }
+      ],
+      "resetSemantics": {
+        "polarity": "active-low",
+        "synchronization": "asynchronous",
+        "assertCycle": 0,
+        "deassertCycle": 4
+      }
+    },
+    {
+      "id": "sig_request",
+      "name": "REQUEST",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [],
+        "signalName": "request"
+      },
+      "display": {
+        "name": "REQUEST"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 10,
+          "value": 1
+        },
+        {
+          "start": 60,
+          "value": 0
+        },
+        {
+          "start": 70,
+          "value": 1
+        },
+        {
+          "start": 130,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_ready",
+      "name": "READY",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [],
+        "signalName": "ready"
+      },
+      "display": {
+        "name": "READY"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 30,
+          "value": 1
+        },
+        {
+          "start": 90,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_valid",
+      "name": "VALID",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [],
+        "signalName": "valid"
+      },
+      "display": {
+        "name": "VALID"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 70,
+          "value": 1
+        },
+        {
+          "start": 130,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_addr",
+      "name": "ADDR",
+      "type": "bus",
+      "role": "output",
+      "width": 32,
+      "displayFormat": "hex",
+      "source": {
+        "instancePath": [],
+        "signalName": "addr",
+        "msb": 31,
+        "lsb": 0
+      },
+      "display": {
+        "name": "ADDR"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "0"
+        },
+        {
+          "start": 10,
+          "value": "1000"
+        },
+        {
+          "start": 60,
+          "value": "0"
+        },
+        {
+          "start": 70,
+          "value": "2000"
+        },
+        {
+          "start": 130,
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "id": "sig_data",
+      "name": "DATA",
+      "type": "bus",
+      "role": "output",
+      "width": 32,
+      "displayFormat": "hex",
+      "source": {
+        "instancePath": [],
+        "signalName": "data",
+        "msb": 31,
+        "lsb": 0
+      },
+      "display": {
+        "name": "DATA"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "0"
+        },
+        {
+          "start": 20,
+          "value": "A5A5"
+        },
+        {
+          "start": 60,
+          "value": "0"
+        },
+        {
+          "start": 80,
+          "value": "B6B6"
+        },
+        {
+          "start": 130,
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "id": "sig_resp",
+      "name": "RESP",
+      "type": "state",
+      "role": "output",
+      "source": {
+        "instancePath": [],
+        "signalName": "resp"
+      },
+      "display": {
+        "name": "RESP"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": "IDLE"
+        },
+        {
+          "start": 70,
+          "value": "EXEC"
+        },
+        {
+          "start": 130,
+          "value": "IDLE"
+        }
+      ]
+    }
+  ],
+  "transactionGroups": [
+    {
+      "id": "tgrp_memory",
+      "name": "Memory",
+      "color": "#2f6fd1",
+      "order": 0
+    },
+    {
+      "id": "tgrp_cpu",
+      "name": "CPU",
+      "color": "#e07b1f",
+      "order": 1
+    },
+    {
+      "id": "tgrp_peripheral",
+      "name": "Peripheral",
+      "color": "#c62f2f",
+      "order": 2
+    }
+  ],
+  "transactions": [
+    {
+      "id": "txn_read0",
+      "name": "Read_0",
+      "start": 10,
+      "end": 60,
+      "laneId": "lane_0",
+      "groupId": "tgrp_memory",
+      "color": "#3b82f6",
+      "description": "Memory read transaction",
+      "phases": [
+        {
+          "name": "Address",
+          "start": 10,
+          "end": 20
+        },
+        {
+          "name": "Read Data",
+          "start": 20,
+          "end": 50
+        },
+        {
+          "name": "Response",
+          "start": 50,
+          "end": 60
+        }
+      ],
+      "linkedSignals": [
+        "sig_addr",
+        "sig_data"
+      ]
+    },
+    {
+      "id": "txn_write0",
+      "name": "Write_0",
+      "start": 70,
+      "end": 130,
+      "laneId": "lane_0",
+      "groupId": "tgrp_memory",
+      "color": "#8b5cf6",
+      "description": "Memory write transaction",
+      "phases": [
+        {
+          "name": "Address",
+          "start": 70,
+          "end": 80
+        },
+        {
+          "name": "Write Data",
+          "start": 80,
+          "end": 120
+        },
+        {
+          "name": "Response",
+          "start": 120,
+          "end": 130
+        }
+      ],
+      "linkedSignals": [
+        "sig_addr",
+        "sig_data"
+      ]
+    },
+    {
+      "id": "txn_fetch0",
+      "name": "Fetch_0",
+      "start": 15,
+      "end": 55,
+      "laneId": "lane_1",
+      "groupId": "tgrp_cpu",
+      "color": "#f59e0b",
+      "description": "Instruction fetch",
+      "phases": [
+        {
+          "name": "Fetch",
+          "start": 15,
+          "end": 25
+        },
+        {
+          "name": "Decode",
+          "start": 25,
+          "end": 45
+        },
+        {
+          "name": "Wait",
+          "start": 45,
+          "end": 55
+        }
+      ],
+      "linkedSignals": [
+        "sig_request"
+      ]
+    },
+    {
+      "id": "txn_execute0",
+      "name": "Execute_0",
+      "start": 65,
+      "end": 120,
+      "laneId": "lane_1",
+      "groupId": "tgrp_cpu",
+      "color": "#10b981",
+      "description": "Instruction execute",
+      "phases": [
+        {
+          "name": "Execute",
+          "start": 65,
+          "end": 85
+        },
+        {
+          "name": "Memory",
+          "start": 85,
+          "end": 105
+        },
+        {
+          "name": "Write Back",
+          "start": 105,
+          "end": 120
+        }
+      ],
+      "linkedSignals": [
+        "sig_valid",
+        "sig_resp"
+      ]
+    },
+    {
+      "id": "txn_spi0",
+      "name": "SPI_0",
+      "start": 30,
+      "end": 90,
+      "laneId": "lane_2",
+      "groupId": "tgrp_peripheral",
+      "color": "#ef4444",
+      "description": "SPI transfer",
+      "phases": [
+        {
+          "name": "Command",
+          "start": 30,
+          "end": 50
+        },
+        {
+          "name": "Data",
+          "start": 50,
+          "end": 70
+        },
+        {
+          "name": "Stop",
+          "start": 70,
+          "end": 90
+        }
+      ],
+      "linkedSignals": [
+        "sig_ready"
+      ]
+    },
+    {
+      "id": "txn_2",
+      "name": "Transaction2",
+      "start": 100,
+      "end": 140,
+      "laneId": "lane_0",
+      "color": "#94a3b8",
+      "description": "Ungrouped transaction"
+    }
+  ],
+  "bookmarks": [],
+  "timeGroups": [],
+  "annotations": [],
+  "annotationGroups": [],
+  "constraints": [],
+  "legend": {
+    "show": true,
+    "orientation": "horizontal",
+    "usedRolesOnly": true,
+    "position": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "layout": {
+    "roleColumnWidth": 62,
+    "signalNameWidth": 178,
+    "signalNameAlign": "left",
+    "rowHeight": 30,
+    "signalSpacing": 4,
+    "overflow": "ellipsis"
+  },
+  "checkSettings": {}
+}
