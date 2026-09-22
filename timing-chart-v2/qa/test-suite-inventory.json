@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-22T23:16:46.979Z",
+  "generatedAt": "2026-09-22T23:21:35.739Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,11 +11,12 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 336,
-  "caseCount": 984,
-  "reviewedCaseCount": 63,
+  "specFileCount": 335,
+  "caseCount": 982,
+  "reviewedCaseCount": 65,
   "curatedProfileCounts": {
-    "integration": 4,
+    "integration": 6,
+    "nightly": 1,
     "performance": 6,
     "pr": 31,
     "visual": 10
@@ -11664,50 +11665,6 @@
       "reviewStatus": "UNREVIEWED"
     },
     {
-      "file": "issue-755-analytic-geometry-equivalence.spec.ts",
-      "suitePath": [],
-      "line": 26,
-      "title": "analytic cycle grid equals SVG-derived boundaries (unwindowed document)",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-755-analytic-geometry-equivalence.spec.ts",
-      "suitePath": [],
-      "line": 35,
-      "title": "analytic cycle grid equals SVG-derived boundaries (bounded window on a >4096-cycle document)",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
       "file": "issue-755-analytic-transition-equivalence.spec.ts",
       "suitePath": [],
       "line": 5,
@@ -11716,18 +11673,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "domain": "renderer-independent-analytic-geometry-equivalence",
+      "originIssue": 755,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 5600,
+      "primaryContract": "Analytic LocalGeometry returns the same cycle-boundary, transition, threshold, edge, and value-start anchors as the independent WaveDrom SVG extractor across representative signal tokens and rebased windows.",
+      "duplicateGroup": "analytic-geometry-equivalence-755",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This browser probe is needed to compare two independently produced geometry maps (analytic production source versus real WaveDrom SVG extraction); pure unit tests cannot prove parity with the renderer. It subsumes the narrower cycle-only equivalence spec without duplicating the production pitch formula.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "issue-755-canvas-production-acceptance.spec.ts",
@@ -11848,18 +11808,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "domain": "far-window-render-coverage",
+      "originIssue": 757,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 6500,
+      "primaryContract": "After a real 10,000-cycle document far-scroll, the actual rendered waveform surface bounds cover the timeline viewport.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This large-document user-visible geometry journey is expensive and protects viewport coverage after a far jump; its assertion measures the rendered SVG/Canvas surface rectangle rather than internal inline left/width values.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "issue-759-group-disclosure-shared.spec.ts",
@@ -23721,24 +23685,13 @@
       "semanticReviewStatus": "UNREVIEWED"
     },
     {
-      "file": "issue-755-analytic-geometry-equivalence.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 0,
-      "originIssue": "755",
-      "declaredTimeoutMs": 120,
-      "candidateSignals": [
-        "dataset"
-      ],
-      "semanticReviewStatus": "UNREVIEWED"
-    },
-    {
       "file": "issue-755-analytic-transition-equivalence.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "755",
       "declaredTimeoutMs": 60,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-755-canvas-production-acceptance.spec.ts",
@@ -23756,13 +23709,14 @@
     {
       "file": "issue-757-far-scroll-window-coverage.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "757",
       "declaredTimeoutMs": 180,
       "candidateSignals": [
-        "querySelector"
+        "querySelector",
+        "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-759-group-disclosure-shared.spec.ts",
@@ -25441,6 +25395,30 @@
       },
       "protectedInvariant": "Timeline-only horizontal scrolling keeps fixed columns stationary and the visible scrollbar aligned to the time-domain region.",
       "reason": "Removed the implementation-coupled browser case that forced --wave-width, asserted overflow/DOM ancestry, and re-derived scroll-owner topology. The production-path native-scroll journey now also measures visible scrollbar alignment at this width; check:cycle-scroll-owner protects the structural owner contract without launching a browser."
+    },
+    {
+      "from": {
+        "file": "issue-755-analytic-geometry-equivalence.spec.ts",
+        "title": "analytic cycle grid equals SVG-derived boundaries (unwindowed document)"
+      },
+      "to": {
+        "file": "issue-755-analytic-transition-equivalence.spec.ts",
+        "title": "analytic Local Geometry equals the SVG extractor for every anchor across token/brick cases"
+      },
+      "protectedInvariant": "Analytic geometry agrees with an independent SVG DOM extraction for cycle boundaries and all anchor kinds.",
+      "reason": "The removed assertion compared the production geometry to a duplicated 20.5 + 40 * index formula rather than to SVG-derived geometry. The replacement probe directly compares analytic LocalGeometry against the independent production SVG extractor across token/brick cases, while uniformCycleGeometry.test.ts retains cheap known-anchor/property coverage."
+    },
+    {
+      "from": {
+        "file": "issue-755-analytic-geometry-equivalence.spec.ts",
+        "title": "analytic cycle grid equals SVG-derived boundaries (bounded window on a >4096-cycle document)"
+      },
+      "to": {
+        "file": "issue-755-analytic-transition-equivalence.spec.ts",
+        "title": "analytic Local Geometry equals the SVG extractor for every anchor across token/brick cases"
+      },
+      "protectedInvariant": "Rebased/windowed analytic cycle geometry preserves source-cycle identity and boundary X, without a local-index identity assumption.",
+      "reason": "The equivalence probe includes rebased-window cases and compares each semantic anchor with SVG extraction; issue-757-far-scroll-window-coverage.spec.ts separately proves a real >4096-cycle far jump paints the viewport. The previous check reconstructed a uniform pitch in browser code, adding a second copy of production geometry math."
     }
   ]
 }

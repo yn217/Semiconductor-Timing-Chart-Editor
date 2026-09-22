@@ -17,10 +17,12 @@ test("a far scrollLeft jump repaints the window at the viewport, not from cycle 
   const covers = () => page.evaluate(() => {
     const vp = document.querySelector<HTMLElement>("[data-role='timeline-viewport']")!; // #625: the Timeline owns horizontal scroll in Cycle
     const owner = [...document.querySelectorAll<HTMLElement>("[data-role='wave-owner']")].find((o) => o.querySelector("svg, canvas[data-wave-canvas]"))!;
-    const left = parseFloat(owner.style.left || "0");
-    const width = parseFloat(owner.style.width || "0");
-    return { scrollLeft: vp.scrollLeft, clientWidth: vp.clientWidth, ownerLeft: left, ownerRight: left + width };
+    const surface = owner.querySelector<SVGSVGElement | HTMLCanvasElement>("svg, canvas[data-wave-canvas]")!;
+    const viewportRect = vp.getBoundingClientRect();
+    const surfaceRect = surface.getBoundingClientRect();
+    const contentLeft = surfaceRect.left - viewportRect.left + vp.scrollLeft;
+    return { scrollLeft: vp.scrollLeft, clientWidth: vp.clientWidth, surfaceLeft: contentLeft, surfaceRight: contentLeft + surfaceRect.width };
   });
   await viewport.evaluate((el) => { el.scrollLeft = 200_000; });
-  await expect.poll(async () => { const c = await covers(); return c.ownerLeft <= c.scrollLeft && c.ownerRight >= c.scrollLeft + c.clientWidth; }, { timeout: 60_000, message: "painted wave-owner span must cover the viewport after a far jump" }).toBe(true);
+  await expect.poll(async () => { const c = await covers(); return c.surfaceLeft <= c.scrollLeft && c.surfaceRight >= c.scrollLeft + c.clientWidth; }, { timeout: 60_000, message: "the rendered waveform surface must cover the viewport after a far jump" }).toBe(true);
 });

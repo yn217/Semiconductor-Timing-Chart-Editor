@@ -48,6 +48,30 @@
       },
       "protectedInvariant": "Timeline-only horizontal scrolling keeps fixed columns stationary and the visible scrollbar aligned to the time-domain region.",
       "reason": "Removed the implementation-coupled browser case that forced --wave-width, asserted overflow/DOM ancestry, and re-derived scroll-owner topology. The production-path native-scroll journey now also measures visible scrollbar alignment at this width; check:cycle-scroll-owner protects the structural owner contract without launching a browser."
+    },
+    {
+      "from": {
+        "file": "issue-755-analytic-geometry-equivalence.spec.ts",
+        "title": "analytic cycle grid equals SVG-derived boundaries (unwindowed document)"
+      },
+      "to": {
+        "file": "issue-755-analytic-transition-equivalence.spec.ts",
+        "title": "analytic Local Geometry equals the SVG extractor for every anchor across token/brick cases"
+      },
+      "protectedInvariant": "Analytic geometry agrees with an independent SVG DOM extraction for cycle boundaries and all anchor kinds.",
+      "reason": "The removed assertion compared the production geometry to a duplicated 20.5 + 40 * index formula rather than to SVG-derived geometry. The replacement probe directly compares analytic LocalGeometry against the independent production SVG extractor across token/brick cases, while uniformCycleGeometry.test.ts retains cheap known-anchor/property coverage."
+    },
+    {
+      "from": {
+        "file": "issue-755-analytic-geometry-equivalence.spec.ts",
+        "title": "analytic cycle grid equals SVG-derived boundaries (bounded window on a >4096-cycle document)"
+      },
+      "to": {
+        "file": "issue-755-analytic-transition-equivalence.spec.ts",
+        "title": "analytic Local Geometry equals the SVG extractor for every anchor across token/brick cases"
+      },
+      "protectedInvariant": "Rebased/windowed analytic cycle geometry preserves source-cycle identity and boundary X, without a local-index identity assumption.",
+      "reason": "The equivalence probe includes rebased-window cases and compares each semantic anchor with SVG extraction; issue-757-far-scroll-window-coverage.spec.ts separately proves a real >4096-cycle far jump paints the viewport. The previous check reconstructed a uniform pitch in browser code, adding a second copy of production geometry math."
     }
   ]
 }

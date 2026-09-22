@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 336 spec files and 984 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 335 spec files and 982 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 63/984 cases reviewed.
+Semantic review progress: 65/982 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,7 +10,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 4 |
+| `integration` | 6 |
+| `nightly` | 1 |
 | `performance` | 6 |
 | `pr` | 31 |
 | `visual` | 10 |
@@ -201,10 +202,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-753-bookmark-gesture-fuzz.spec.ts` | 5 | 0/5 reviewed |
 | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | 3 | 0/3 reviewed |
 | `issue-753-stress-classified.spec.ts` | 3 | 0/3 reviewed |
-| `issue-755-analytic-geometry-equivalence.spec.ts` | 2 | 0/2 reviewed |
-| `issue-755-analytic-transition-equivalence.spec.ts` | 1 | 0/1 reviewed |
+| `issue-755-analytic-transition-equivalence.spec.ts` | 1 | 1/1 reviewed |
 | `issue-755-canvas-production-acceptance.spec.ts` | 5 | 0/5 reviewed |
-| `issue-757-far-scroll-window-coverage.spec.ts` | 1 | 0/1 reviewed |
+| `issue-757-far-scroll-window-coverage.spec.ts` | 1 | 1/1 reviewed |
 | `issue-759-group-disclosure-shared.spec.ts` | 1 | 0/1 reviewed |
 | `issue-760-combined-horizontal-wheel.spec.ts` | 2 | 0/2 reviewed |
 | `issue-761-start-input-width.spec.ts` | 2 | 0/2 reviewed |
@@ -434,9 +434,8 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-750-ruler-follows-tc-scale.spec.ts` | dataset |
 | `issue-751-bottom-phase-editor.spec.ts` | querySelector |
 | `issue-753-bookmark-gesture-fuzz.spec.ts` | querySelector, explicitWait |
-| `issue-755-analytic-geometry-equivalence.spec.ts` | dataset |
 | `issue-755-canvas-production-acceptance.spec.ts` | querySelector, dataset, geometryRead |
-| `issue-757-far-scroll-window-coverage.spec.ts` | querySelector |
+| `issue-757-far-scroll-window-coverage.spec.ts` | querySelector, geometryRead |
 | `issue-759-group-disclosure-shared.spec.ts` | querySelector |
 | `issue-760-combined-horizontal-wheel.spec.ts` | querySelector |
 | `issue-761-start-input-width.spec.ts` | geometryRead |
@@ -528,6 +527,8 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-747-a11y-and-sort-matrix.spec.ts` “Bottom sort matrix and settings a11y at 1672x941” → `issue-747-a11y-and-sort-matrix.spec.ts` “Bottom sort matrix and settings a11y at 1280x720”. **Invariant:** Start/End sort direction, selected-ID retention, view-only sort, named settings gear, and Escape popover close are width-independent semantic behavior. **Reason:** Removed the redundant desktop semantic run. The compact case retains the complete a11y/sort journey, and issue-747-geometry-acceptance.spec.ts still verifies the layout-specific behavior at both supported viewports.
 - `issue-625-timeline-only-hscroll.spec.ts` “Cycle FixedColumns sit outside the horizontal scroll owner at 1280x720” → `issue-625-cycle-fixed-columns-scroll.spec.ts` “Cycle fixed columns stay stationary through native scrollbar drag at 1280x720”. **Invariant:** Timeline-only horizontal scrolling keeps fixed columns stationary and the visible scrollbar aligned to the time-domain region. **Reason:** Removed the implementation-coupled browser case that forced --wave-width, asserted overflow/DOM ancestry, and re-derived scroll-owner topology. The production-path native-scroll journey now also measures visible scrollbar alignment at this width; check:cycle-scroll-owner protects the structural owner contract without launching a browser.
 - `issue-625-timeline-only-hscroll.spec.ts` “Cycle FixedColumns sit outside the horizontal scroll owner at 1672x941” → `issue-625-cycle-fixed-columns-scroll.spec.ts` “Cycle fixed columns stay stationary through native scrollbar drag at 1672x941”. **Invariant:** Timeline-only horizontal scrolling keeps fixed columns stationary and the visible scrollbar aligned to the time-domain region. **Reason:** Removed the implementation-coupled browser case that forced --wave-width, asserted overflow/DOM ancestry, and re-derived scroll-owner topology. The production-path native-scroll journey now also measures visible scrollbar alignment at this width; check:cycle-scroll-owner protects the structural owner contract without launching a browser.
+- `issue-755-analytic-geometry-equivalence.spec.ts` “analytic cycle grid equals SVG-derived boundaries (unwindowed document)” → `issue-755-analytic-transition-equivalence.spec.ts` “analytic Local Geometry equals the SVG extractor for every anchor across token/brick cases”. **Invariant:** Analytic geometry agrees with an independent SVG DOM extraction for cycle boundaries and all anchor kinds. **Reason:** The removed assertion compared the production geometry to a duplicated 20.5 + 40 * index formula rather than to SVG-derived geometry. The replacement probe directly compares analytic LocalGeometry against the independent production SVG extractor across token/brick cases, while uniformCycleGeometry.test.ts retains cheap known-anchor/property coverage.
+- `issue-755-analytic-geometry-equivalence.spec.ts` “analytic cycle grid equals SVG-derived boundaries (bounded window on a >4096-cycle document)” → `issue-755-analytic-transition-equivalence.spec.ts` “analytic Local Geometry equals the SVG extractor for every anchor across token/brick cases”. **Invariant:** Rebased/windowed analytic cycle geometry preserves source-cycle identity and boundary X, without a local-index identity assumption. **Reason:** The equivalence probe includes rebased-window cases and compares each semantic anchor with SVG extraction; issue-757-far-scroll-window-coverage.spec.ts separately proves a real >4096-cycle far jump paints the viewport. The previous check reconstructed a uniform pitch in browser code, adding a second copy of production geometry math.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 
