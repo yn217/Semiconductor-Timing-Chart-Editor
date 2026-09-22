@@ -123,6 +123,30 @@ export function LeftPaneHeaderActions({ add, more, children }: { readonly add: H
  * still decided by the caller via these callbacks. */
 const TC_SCALE_PRESETS = [1, 2, 4, 5, 10, 20, 50] as const;
 
+/** #750 section 3: "Custom…" accepts a positive integer only; an invalid draft stays local and never becomes the active cyclesPerTC
+ * mapping (the select's own value is never set to an unvalidated number). */
+function TcScaleSelect({ cyclesPerTc, onChange }: { readonly cyclesPerTc: number; readonly onChange: (value: number) => void }) {
+  const isPreset = (TC_SCALE_PRESETS as readonly number[]).includes(cyclesPerTc);
+  const [customMode, setCustomMode] = useState(!isPreset);
+  const [customDraft, setCustomDraft] = useState(String(cyclesPerTc));
+  useEffect(() => { if (isPreset) { setCustomMode(false); setCustomDraft(String(cyclesPerTc)); } }, [cyclesPerTc, isPreset]);
+  const customValue = Number(customDraft);
+  const customValid = customDraft.trim().length > 0 && Number.isInteger(customValue) && customValue >= 1;
+  const options = [...new Set([...TC_SCALE_PRESETS, ...(isPreset ? [] : [cyclesPerTc])])].sort((a, b) => a - b);
+  if (!customMode) {
+    return <select data-testid="transaction-tc-scale" aria-label="Cycles per TC" value={cyclesPerTc} onChange={(event) => { if (event.target.value === "__custom__") { setCustomMode(true); setCustomDraft(String(cyclesPerTc)); return; } onChange(Number(event.target.value)); }}>
+      {options.map((value) => <option key={value} value={value}>{value}</option>)}
+      <option value="__custom__">Custom…</option>
+    </select>;
+  }
+  return <span className="transaction-tc-scale-custom">
+    <input aria-label="Custom cycles per TC" type="number" min="1" step="1" data-testid="transaction-tc-scale-custom-input" aria-invalid={customValid ? undefined : true} value={customDraft} onChange={(event) => setCustomDraft(event.target.value)}
+      onKeyDown={(event) => { if (event.key === "Enter" && customValid) onChange(customValue); if (event.key === "Escape") { setCustomMode(false); setCustomDraft(String(cyclesPerTc)); } }} />
+    <button type="button" data-testid="apply-transaction-tc-scale-custom" disabled={!customValid || customValue === cyclesPerTc} onClick={() => { onChange(customValue); setCustomMode(false); }}>Apply</button>
+    {!customValid && <span role="alert" className="editor-problem">Enter a whole number, 1 or greater.</span>}
+  </span>;
+}
+
 export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange, treeFilter, onTreeFilterChange, onClearTreeFilter, addMenuOpen, onToggleAddMenu, moreMenuOpen, onToggleMoreMenu, onAddEntity, onCloseAddMenu, onOpenBulkRegistration, onCollapseAllGroups, onExpandAllGroups, onOpenHierarchy, onCloseMoreMenu, timeScaleLabel, transactionMode }: SignalTreeColumnHeaderProps) {
   useEffect(() => {
     if (!addMenuOpen && !moreMenuOpen) return;
@@ -179,7 +203,7 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
     </span>
     <span className="role-column-heading" aria-label="Group">Group</span><span className="signal-column-heading" aria-label="Transaction">Transaction</span>
     <span className="frozen-pane-heading-gutter" aria-hidden="true" />
-    <span className="transaction-time-scale-readout">Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = {transactionMode.timeScale ? <select data-testid="transaction-tc-scale" aria-label="Cycles per TC" value={transactionMode.timeScale.cyclesPerTc} onChange={(event) => transactionMode.timeScale?.onChange(Number(event.target.value))}>{[...new Set([...TC_SCALE_PRESETS, transactionMode.timeScale.cyclesPerTc])].sort((a, b) => a - b).map((value) => <option key={value} value={value}>{value}</option>)}</select> : timeScaleLabel} {cycleUnitWord(transactionMode.timeScale?.cyclesPerTc ?? 1)})</span>
+    <span className="transaction-time-scale-readout">Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = {transactionMode.timeScale ? <TcScaleSelect cyclesPerTc={transactionMode.timeScale.cyclesPerTc} onChange={(value) => transactionMode.timeScale?.onChange(value)} /> : timeScaleLabel} {cycleUnitWord(transactionMode.timeScale?.cyclesPerTc ?? 1)})</span>
   </div>;
   }
   return <div className="column-headings">
