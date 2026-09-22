@@ -26,15 +26,17 @@ const TREE_WINDOWING_THRESHOLD = 150;
  * Fixed-height row windowing for large Transaction groups: only the rows intersecting the tree's scroll viewport (plus a small
  * overscan) are mounted; a spacer keeps the scroll extent exact. Small groups render every row as before.
  */
-function WindowedTreeRows<T>({ items, render, getId, focusId, invalidateKey }: { readonly items: readonly T[]; readonly render: (item: T) => ReactNode; readonly getId?: (item: T) => string; readonly focusId?: string | undefined; readonly invalidateKey?: string | number }) {
+function WindowedTreeRows<T>({ items, render, getId, focusId, invalidateKey, windowed }: { readonly items: readonly T[]; readonly render: (item: T) => ReactNode; readonly getId?: (item: T) => string; readonly focusId?: string | undefined; readonly invalidateKey?: string | number; readonly windowed: boolean }) {
   const box = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState({ start: 0, end: 60 });
-  const windowed = items.length > TREE_WINDOWING_THRESHOLD;
   useEffect(() => {
     if (!windowed) return undefined;
     const element = box.current;
     const scroller = element?.closest<HTMLElement>(".transaction-left-tree");
     if (!element || !scroller) return undefined;
+    // #771: the Tree owns ONE shared scroll/resize subscription (see the `scrollTick` effect in TransactionTree) that bumps
+    // `invalidateKey`; this per-Group effect only re-reads its OWN box position on each tick, not the scroller's -- one listener
+    // total instead of one per Group, and no Group-local scroll/resize subscription anymore.
     const update = () => {
       const offset = scroller.getBoundingClientRect().top - element.getBoundingClientRect().top;
       const start = Math.max(0, Math.floor(offset / TREE_ROW_HEIGHT) - 10);
@@ -42,12 +44,9 @@ function WindowedTreeRows<T>({ items, render, getId, focusId, invalidateKey }: {
       setRange((current) => (current.start === start && current.end === end ? current : { start, end }));
     };
     update();
-    scroller.addEventListener("scroll", update, { passive: true });
-    const observer = new ResizeObserver(update);
-    observer.observe(scroller);
-    return () => { scroller.removeEventListener("scroll", update); observer.disconnect(); };
-    // #769: recompute whenever tree topology above this box could have shifted its scroll-relative offset (a Group collapsing/expanding
-    // elsewhere changes no dependency this box would otherwise see -- items.length is unaffected -- so it needs its own explicit signal).
+    // #769: also recompute whenever tree topology above this box could have shifted its scroll-relative offset (a Group collapsing/
+    // expanding elsewhere changes no dependency this box would otherwise see) -- both cases are folded into the one shared `invalidateKey`.
+    return undefined;
   }, [windowed, items.length, invalidateKey]);
   // #769: keyboard navigation targets a logical id that may not be mounted yet; widen the window (via useLayoutEffect, before paint) to
   // include it so the caller's post-render focus effect can find and focus the real DOM node on the very next commit.
@@ -393,6 +392,21 @@ export function TransactionTree({
   // #769: recomputes whenever ANY Group's collapse state changes -- passed to every WindowedTreeRows instance so a Group collapsing/
   // expanding above another (unchanged) Group invalidates that Group's stale scroll-relative window too.
   const collapsedSignature = [...collapsed].sort().join(",");
+  // #771: ONE scroll/resize subscription for the whole Tree (not one per Group) drives every windowed Group's recompute; each Group
+  // still reads its own box position (unavoidable without one fully flattened list) but the scroller itself is measured once per tick.
+  const treeScrollerRef = useRef<HTMLDivElement>(null);
+  const [scrollTick, setScrollTick] = useState(0);
+  useEffect(() => {
+    const scroller = treeScrollerRef.current;
+    if (!scroller) return undefined;
+    let frame: number | undefined;
+    const bump = () => { if (frame !== undefined) return; frame = requestAnimationFrame(() => { frame = undefined; setScrollTick((value) => value + 1); }); };
+    scroller.addEventListener("scroll", bump, { passive: true });
+    const observer = new ResizeObserver(bump);
+    observer.observe(scroller);
+    return () => { scroller.removeEventListener("scroll", bump); observer.disconnect(); if (frame !== undefined) cancelAnimationFrame(frame); };
+  }, []);
+  const windowInvalidateKey = `${collapsedSignature}|${scrollTick}`;
   const [pendingFocusId, setPendingFocusId] = useState<TransactionId>();
   // Post-render: once the pending row is actually mounted (WindowedTreeRows above widened its window to include it), focus and reveal
   // it, then stop. No dependency array: this deliberately re-runs on every render until it finds the node (usually the very next commit).
@@ -421,6 +435,11 @@ export function TransactionTree({
         (left, right) =>
           left.start - right.start || left.id.localeCompare(right.id),
       );
+  // #771: virtualization is decided by the TOTAL visible Transaction count across every Group, not each Group's own count -- 100 Groups
+  // of 100 (10,000 total) must window just as much as one Group of 10,000; a distribution across many small/medium Groups must not
+  // bypass it.
+  const totalVisibleCount = groups.reduce((sum, group) => sum + groupTransactions(group.id).length, groupTransactions(undefined).length);
+  const globalWindowingEnabled = totalVisibleCount > TREE_WINDOWING_THRESHOLD;
   const closeMenu = (restoreFocus = false) => {
     const trigger = menuTriggerRef.current;
     setOpenMenu(undefined);
@@ -601,6 +620,7 @@ export function TransactionTree({
   return (
     <>
     <div
+      ref={treeScrollerRef}
       className="transaction-left-tree"
       data-testid="transaction-left-tree"
       data-transaction-tree-root="true"
@@ -691,7 +711,7 @@ export function TransactionTree({
                     <EditorIcon name="more" className="transaction-left-tree-icon" />
                   </button>
                 </div>
-                {!isCollapsed && <WindowedTreeRows items={items} render={renderTransaction} getId={rowId} focusId={pendingFocusId} invalidateKey={collapsedSignature} />}
+                {!isCollapsed && <WindowedTreeRows items={items} render={renderTransaction} getId={rowId} focusId={pendingFocusId} invalidateKey={windowInvalidateKey} windowed={globalWindowingEnabled} />}
               </div>
             );
           })}
@@ -723,7 +743,7 @@ export function TransactionTree({
                   <span className="transaction-left-tree-group-count">({items.length})</span>
                   <span className="transaction-left-tree-action-placeholder" aria-hidden="true" />
                 </div>
-                {!isCollapsed && <WindowedTreeRows items={items} render={renderTransaction} getId={rowId} focusId={pendingFocusId} invalidateKey={collapsedSignature} />}
+                {!isCollapsed && <WindowedTreeRows items={items} render={renderTransaction} getId={rowId} focusId={pendingFocusId} invalidateKey={windowInvalidateKey} windowed={globalWindowingEnabled} />}
               </div>
             );
           })()}
