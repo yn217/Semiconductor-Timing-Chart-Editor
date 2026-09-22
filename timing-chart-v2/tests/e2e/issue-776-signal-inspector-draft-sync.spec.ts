@@ -6,23 +6,27 @@ test("Apply Reset Semantics does not discard an unapplied Signal name draft", as
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
-  await host.locator("[data-role='frozen-row']").first().click();
+  // Row 0 is the Clock; pick a Value Signal instead (Reset Semantics is Value-Signal-only).
+  await host.locator("[data-role='frozen-row']").nth(1).click();
   const inspector = page.getByTestId("inspector");
   await expect(inspector).toBeVisible();
   const history = await page.getByTestId("history-status").innerText();
 
-  const nameField = inspector.getByLabel("Inspector signal name");
-  await nameField.fill("DRAFT_NAME");
+  // "Name" auto-commits on blur (a separate, pre-existing rename shortcut) -- use Spacing Before, a plain onChange-only draft field,
+  // to isolate this Issue's actual failure mode (an unrelated commit discarding an unapplied Properties field).
+  const spacingField = inspector.locator("input[aria-label='Inspector signal spacing before']");
+  await spacingField.fill("7");
 
-  const resetToggle = inspector.getByLabel("Reset semantics enabled");
-  if (await resetToggle.count() === 0) test.skip(true, "Reset Semantics control not present on this Signal type");
-  await inspector.getByRole("button", { name: "Reset Semantics", exact: false }).click();
+  const resetSectionButton = inspector.getByRole("button", { name: "Reset Semantics", exact: false });
+  if (await resetSectionButton.count() === 0) test.skip(true, "Reset Semantics control not present on this Signal type");
+  if ((await resetSectionButton.getAttribute("aria-expanded")) !== "true") await resetSectionButton.click();
+  const resetToggle = inspector.locator("input[aria-label='Reset semantics enabled']");
   await resetToggle.check();
   const applyReset = inspector.getByTestId("apply-reset-semantics");
   await applyReset.click();
   await expect.poll(() => page.getByTestId("history-status").innerText()).not.toBe(history);
 
-  await expect(nameField).toHaveValue("DRAFT_NAME");
+  await expect(spacingField).toHaveValue("7");
 });
 
 // #776 Part B: Undo after applying a Clock generator change refreshes the Inspector's local generator draft to match the restored
@@ -35,8 +39,14 @@ test("Undo after a Clock generator Apply refreshes the Inspector draft (no stale
   const clockRow = host.locator("[data-role='frozen-row'][data-signal-role='input']").first();
   await clockRow.click();
   const inspector = page.getByTestId("inspector");
-  const periodField = inspector.getByLabel("Inspector clock period");
-  if (await periodField.count() === 0) test.skip(true, "selected row is not a Clock signal");
+  await expect(inspector).toHaveAttribute("data-inspector-context", "clock");
+  const periodField = inspector.locator("input[aria-label='Inspector clock period']");
+  if (!(await periodField.isVisible().catch(() => false))) {
+    const generatorButton = inspector.getByRole("button", { name: "Clock Generator", exact: false });
+    if (await generatorButton.count() === 0) test.skip(true, "selected row is not a Clock signal");
+    await generatorButton.click();
+  }
+  await expect(periodField).toBeVisible();
   const originalPeriod = await periodField.inputValue();
   await periodField.fill(String(Number(originalPeriod) + 4));
   await inspector.getByTestId("apply-inspector-clock").click();
