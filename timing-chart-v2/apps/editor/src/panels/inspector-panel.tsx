@@ -325,37 +325,58 @@ export function InspectorValueSignalEditor({ signal, document, viewport, command
   const [resetDeassertCycle, setResetDeassertCycle] = useState(signal.resetSemantics?.deassertCycle !== undefined ? String(signal.resetSemantics.deassertCycle) : "");
   const [resetStatus, setResetStatus] = useState("");
   const { state: sections, toggle } = useInspectorAccordion("value-signal", { "signal-properties": true, hierarchy: true, "label-style": false, waveform: true, "reset-semantics": false });
+  // #776 (Part A): this used to unconditionally reload EVERY local field whenever the Signal object changed for ANY reason, so Applying
+  // one independent sub-editor (e.g. Reset Semantics) silently discarded an unrelated unapplied Properties/Style draft. Same per-field
+  // clean/dirty merge as #775: a field only resyncs to the new canonical value when THAT field's canonical value actually changed AND
+  // the local draft is still clean (equal to what it was last synced from); a dirty field is preserved, its baseline still advances.
+  const valueSignalBaseRef = useRef<{ id: SignalId; name: string; role: SignalRole; signalType: ValueSignal["type"]; width: number; format: NonNullable<ValueSignal["displayFormat"]>; visible: boolean; spacingBefore: number; spacingAfter: number; align: NonNullable<Signal["display"]["align"]>; overflow: NonNullable<Signal["display"]["overflow"]>; style: string; textColor: string; rowBackground: string; fontFamily: string; fontSize: number; bold: boolean; italic: boolean; underline: boolean; strikethrough: boolean; waveformColor: string; waveformBackground: string; resetEnabled: boolean; resetPolarity: ResetSemantics["polarity"]; resetSync: ResetSemantics["synchronization"]; resetAssertCycle: string; resetDeassertCycle: string } | undefined>(undefined);
   useEffect(() => {
     const nextStyle = signal.display.style ?? {};
-    const nextStyleJson = JSON.stringify(nextStyle);
-    setName((current) => current === signal.display.name ? current : signal.display.name);
-    setRole((current) => current === signal.role ? current : signal.role);
-    setSignalType((current) => current === signal.type ? current : signal.type);
-    setWidth((current) => current === (signal.width ?? 1) ? current : signal.width ?? 1);
-    setFormat((current) => current === (signal.displayFormat ?? "hex") ? current : signal.displayFormat ?? "hex");
-    setVisible((current) => current === (signal.display.visible !== false) ? current : signal.display.visible !== false);
-    setSpacingBefore((current) => current === (signal.spacingBefore ?? 0) ? current : signal.spacingBefore ?? 0);
-    setSpacingAfter((current) => current === (signal.spacingAfter ?? 0) ? current : signal.spacingAfter ?? 0);
-    setAlign((current) => current === (signal.display.align ?? "left") ? current : signal.display.align ?? "left");
-    setOverflow((current) => current === (signal.display.overflow ?? "ellipsis") ? current : signal.display.overflow ?? "ellipsis");
-    setStyle((current) => current === nextStyleJson ? current : nextStyleJson);
-    setTextColor((current) => current === styleString(nextStyle, "color", "#152033") ? current : styleString(nextStyle, "color", "#152033"));
-    setRowBackground((current) => current === styleString(nextStyle, "background", "#ffffff") ? current : styleString(nextStyle, "background", "#ffffff"));
-    setFontFamily((current) => current === styleString(nextStyle, "fontFamily", "Segoe UI") ? current : styleString(nextStyle, "fontFamily", "Segoe UI"));
-    setFontSize((current) => current === styleNumber(nextStyle, "fontSize", 12) ? current : styleNumber(nextStyle, "fontSize", 12));
-    setBold((current) => current === (nextStyle.fontWeight === "bold") ? current : nextStyle.fontWeight === "bold");
-    setItalic((current) => current === (nextStyle.fontStyle === "italic") ? current : nextStyle.fontStyle === "italic");
-    setUnderline((current) => current === styleString(nextStyle, "textDecoration", "").includes("underline") ? current : styleString(nextStyle, "textDecoration", "").includes("underline"));
-    setStrikethrough((current) => current === styleString(nextStyle, "textDecoration", "").includes("line-through") ? current : styleString(nextStyle, "textDecoration", "").includes("line-through"));
-    setWaveformColor((current) => current === styleString(nextStyle, "waveformColor", "#111111") ? current : styleString(nextStyle, "waveformColor", "#111111"));
-    setWaveformBackground((current) => current === styleString(nextStyle, "waveformBackground", "#ffffff") ? current : styleString(nextStyle, "waveformBackground", "#ffffff"));
-    setProblem("");
-    setResetEnabled((current) => current === (signal.resetSemantics !== undefined) ? current : signal.resetSemantics !== undefined);
-    setResetPolarity((current) => current === (signal.resetSemantics?.polarity ?? "active-low") ? current : signal.resetSemantics?.polarity ?? "active-low");
-    setResetSync((current) => current === (signal.resetSemantics?.synchronization ?? "asynchronous") ? current : signal.resetSemantics?.synchronization ?? "asynchronous");
-    setResetAssertCycle((current) => current === (signal.resetSemantics?.assertCycle !== undefined ? String(signal.resetSemantics.assertCycle) : "") ? current : signal.resetSemantics?.assertCycle !== undefined ? String(signal.resetSemantics.assertCycle) : "");
-    setResetDeassertCycle((current) => current === (signal.resetSemantics?.deassertCycle !== undefined ? String(signal.resetSemantics.deassertCycle) : "") ? current : signal.resetSemantics?.deassertCycle !== undefined ? String(signal.resetSemantics.deassertCycle) : "");
-    setResetStatus("");
+    const next = {
+      id: signal.id, name: signal.display.name, role: signal.role, signalType: signal.type, width: signal.width ?? 1, format: signal.displayFormat ?? "hex" as NonNullable<ValueSignal["displayFormat"]>,
+      visible: signal.display.visible !== false, spacingBefore: signal.spacingBefore ?? 0, spacingAfter: signal.spacingAfter ?? 0,
+      align: signal.display.align ?? "left" as NonNullable<Signal["display"]["align"]>, overflow: signal.display.overflow ?? "ellipsis" as NonNullable<Signal["display"]["overflow"]>,
+      style: JSON.stringify(nextStyle), textColor: styleString(nextStyle, "color", "#152033"), rowBackground: styleString(nextStyle, "background", "#ffffff"),
+      fontFamily: styleString(nextStyle, "fontFamily", "Segoe UI"), fontSize: styleNumber(nextStyle, "fontSize", 12), bold: nextStyle.fontWeight === "bold", italic: nextStyle.fontStyle === "italic",
+      underline: styleString(nextStyle, "textDecoration", "").includes("underline"), strikethrough: styleString(nextStyle, "textDecoration", "").includes("line-through"),
+      waveformColor: styleString(nextStyle, "waveformColor", "#111111"), waveformBackground: styleString(nextStyle, "waveformBackground", "#ffffff"),
+      resetEnabled: signal.resetSemantics !== undefined, resetPolarity: signal.resetSemantics?.polarity ?? "active-low", resetSync: signal.resetSemantics?.synchronization ?? "asynchronous",
+      resetAssertCycle: signal.resetSemantics?.assertCycle !== undefined ? String(signal.resetSemantics.assertCycle) : "", resetDeassertCycle: signal.resetSemantics?.deassertCycle !== undefined ? String(signal.resetSemantics.deassertCycle) : "",
+    };
+    const prev = valueSignalBaseRef.current;
+    const sameEntity = prev !== undefined && prev.id === signal.id;
+    const merge = <K extends keyof typeof next>(key: K, current: (typeof next)[K], setLocal: (value: (typeof next)[K]) => void) => {
+      if (!sameEntity) { setLocal(next[key]); return; }
+      if (prev![key] !== next[key] && current === prev![key]) setLocal(next[key]);
+    };
+    merge("name", name, setName);
+    merge("role", role, setRole);
+    merge("signalType", signalType, setSignalType);
+    merge("width", width, setWidth);
+    merge("format", format, setFormat);
+    merge("visible", visible, setVisible);
+    merge("spacingBefore", spacingBefore, setSpacingBefore);
+    merge("spacingAfter", spacingAfter, setSpacingAfter);
+    merge("align", align, setAlign);
+    merge("overflow", overflow, setOverflow);
+    merge("style", style, setStyle);
+    merge("textColor", textColor, setTextColor);
+    merge("rowBackground", rowBackground, setRowBackground);
+    merge("fontFamily", fontFamily, setFontFamily);
+    merge("fontSize", fontSize, setFontSize);
+    merge("bold", bold, setBold);
+    merge("italic", italic, setItalic);
+    merge("underline", underline, setUnderline);
+    merge("strikethrough", strikethrough, setStrikethrough);
+    merge("waveformColor", waveformColor, setWaveformColor);
+    merge("waveformBackground", waveformBackground, setWaveformBackground);
+    merge("resetEnabled", resetEnabled, setResetEnabled);
+    merge("resetPolarity", resetPolarity, setResetPolarity);
+    merge("resetSync", resetSync, setResetSync);
+    merge("resetAssertCycle", resetAssertCycle, setResetAssertCycle);
+    merge("resetDeassertCycle", resetDeassertCycle, setResetDeassertCycle);
+    valueSignalBaseRef.current = next;
+    if (!sameEntity) { setProblem(""); setResetStatus(""); }
   }, [signal]);
   // #402/#426 (Bottom Panel Visual Reference pass): Inspector is now the
   // sole owner of these lightweight Signal properties (Bottom's own
