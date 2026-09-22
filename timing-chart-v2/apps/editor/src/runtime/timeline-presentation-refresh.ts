@@ -103,6 +103,16 @@ export function syncPresentationScale(viewport: HTMLElement, host: HTMLElement, 
   rulerViewport.style.setProperty("--presentation-x-scale", String(presentationScale));
 }
 
+const scrollVariableConsumerCache = new WeakMap<HTMLElement, readonly HTMLElement[]>();
+function scrollVariableConsumers(viewport: HTMLElement): readonly HTMLElement[] {
+  const cached = scrollVariableConsumerCache.get(viewport);
+  if (cached && cached.every((element) => element.isConnected)) return cached;
+  const found = Array.from(viewport.querySelectorAll<HTMLElement>("[data-testid='geometry-grid'], [data-testid='range-selection-band']"));
+  // Only cache a complete set (both consumers mounted); otherwise look again on the next scroll.
+  if (found.length >= 2) scrollVariableConsumerCache.set(viewport, found);
+  return found;
+}
+
 export function syncRulerScroll(ruler: HTMLElement, viewport: HTMLElement, zoom: number): void {
   // Keep scroll translation independent from scale. Reconstructing a
   // transform from the already-transformed bounding box can lose the ruler's
@@ -115,7 +125,12 @@ export function syncRulerScroll(ruler: HTMLElement, viewport: HTMLElement, zoom:
   ruler.style.transform = `scaleX(${zoom})`;
   const rulerFrame = ruler.parentElement;
   if (rulerFrame) rulerFrame.style.translate = owner === viewport ? `${scrollLeft}px 0` : "0px 0";
-  viewport.style.setProperty("--timeline-scroll-left", owner === viewport ? "0" : String(scrollLeft));
-  if (owner !== viewport && zoom > 0) { viewport.style.setProperty("--grid-clip-left", `${scrollLeft / zoom}px`); viewport.style.setProperty("--grid-clip-right", `${(scrollLeft + owner.clientWidth) / zoom}px`); }
+  // #738/#768: these custom properties are consumed only by the grid and the range band. Writing them on the viewport (an ancestor of the whole
+  // ~100k-node waveform DOM) invalidated style for every descendant on EVERY scroll event; write them on the two consumers instead.
+  const consumers = scrollVariableConsumers(viewport);
+  for (const consumer of consumers) {
+    consumer.style.setProperty("--timeline-scroll-left", owner === viewport ? "0" : String(scrollLeft));
+    if (consumer.matches("[data-testid='geometry-grid']") && owner !== viewport && zoom > 0) { consumer.style.setProperty("--grid-clip-left", `${scrollLeft / zoom}px`); consumer.style.setProperty("--grid-clip-right", `${(scrollLeft + owner.clientWidth) / zoom}px`); }
+  }
   ruler.dataset.scrollLeft = String(scrollLeft);
 }

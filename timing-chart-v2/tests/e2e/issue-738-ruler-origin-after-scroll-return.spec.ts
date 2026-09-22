@@ -74,6 +74,9 @@ test.describe("real scrollbar drag", () => {
       await page.mouse.move(startX, y);
       await page.mouse.down();
       for (const stop of stops) await page.mouse.move(startX + track * stop, y, { steps });
+      // A user keeps the button held until the thumb has reached the pointer; releasing while the (main-thread bound) scroll handling is still
+      // catching up strands the thumb short of the edge (seen under load). The thumb must reach the left edge while held; it still fails if it never does.
+      await expect.poll(() => page.locator("[data-role='timeline-viewport']").evaluate((element) => element.scrollLeft), { timeout: 60_000, message: "thumb reaches the left edge while the button is held" }).toBe(0);
       await page.mouse.up();
       await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
       await expect.poll(async () => { const s = await rulerState(page); return s.scrollLeft === 0 ? s.firstVisibleCycle : `scrollLeft ${s.scrollLeft}`; }, { message: "after drag back to the left edge" }).toBe(0);
