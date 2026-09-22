@@ -1,6 +1,17 @@
 # Golden Sample Plan
 
-20 fixtures are defined by Issue #17.
+20 fixtures are defined by Issue #17. Those 01-20 files are retained as **legacy V1 Golden / migration-regression fixtures**; they are not the current canonical product specification.
+
+## Current V2 acceptance pack
+
+For current-product browser verification use:
+
+- `samples/current-v2/01_cycle_reference.tcd.json`
+- `samples/current-v2/02_transaction_reference.tcd.json`
+- `samples/current-v2/03_combined_reference.tcd.json`
+- `samples/current-v2/04_long_timeline_stress_reference.tcd.json`
+
+All four use `formatVersion: 2` and are intentionally mutable when the accepted product contract changes. See `samples/current-v2/README.md` for the acceptance matrix.
 
 ## Protocol / use-case 01-10
 1. APB register access
@@ -37,13 +48,13 @@ The prepared packages are also retained under `references/` and unpacked for loc
 - `samples/golden-protocol/` — 01-10
 - `samples/golden-feature-coverage/` — 11-20
 
-Run `node scripts/validate-samples.mjs` to validate the 20 semantic `.tcd.json` fixtures and the feature coverage matrix.
+`scripts/validate-samples.mjs` no longer exists. The legacy 01-20 pack is retained for migration/reference coverage; current-product acceptance is performed with the V2 pack above plus schema/unit/E2E gates.
 
 ## Non-Golden showcase samples
 
 These are intentionally outside the immutable 20-sample Golden set so they can evolve with the product without changing Golden manifests, thresholds, masks, or Issue #17 expectations.
 
-- `samples/showcase/21_large_feature_showcase.tcd.json` — **128 cycles / 48 signals**. Broad all-in-one feature inspection: four clocks, reset sequencing, input/output/internal roles, binary/bus/state/logic/event/pulse/commentRow, group bands/spacers, clock suppression/gating, edge counters, AXI-like traffic, pipeline latency, Async FIFO/CDC Gray pointers, all 12 annotation types, bookmarks, collapsed time groups/ruler label anchors, transactions/phases, legend, constraints, deep source paths, MiniMap/scroll/filter/Inspector and Save/Open/export starting-state coverage.
+- `samples/showcase/21_large_feature_showcase.tcd.json` — **128 cycles / 48 signals**. Broad all-in-one feature inspection: four clocks, reset sequencing, input/output/internal roles, binary/bus/state/logic/event/pulse/commentRow, group bands/spacers, clock suppression/gating, edge counters, AXI-like traffic, pipeline latency, Async FIFO/CDC Gray pointers, the original 12 annotation families (the current schema has 16; use `current-v2/01_cycle_reference.tcd.json` for all 16), bookmarks, collapsed time groups/ruler label anchors, transactions/phases, legend, constraints, deep source paths, MiniMap/scroll/filter/Inspector and Save/Open/export starting-state coverage.
 - `samples/showcase/22_clockless_annotation_showcase.tcd.json` — **96 cycles / 24 signals / zero clocks**. Dedicated clockless cycle-axis fixture with Input/Output/Internal filtering, bus/state/event/pulse/comment rows, pipeline latency, all canonical annotation families, bookmarks, collapsed idle range and transactions. Use this to verify that Ruler/Grid/selection/annotation behavior does not depend on a Clock Signal.
 - `samples/showcase/23_multiclock_cdc_showcase.tcd.json` — **160 cycles / 28 signals / 4 clocks**. Multi-clock, phase/duty, gated/suppressed clocks, reset domains, 2FF synchronizer, pulse transfer, Async FIFO Gray pointers, synchronized pointer copies, full/empty behavior, CDC annotations and linked transactions.
 - `samples/showcase/24_protocol_transaction_showcase.tcd.json` — **192 cycles / 32 signals / 7 transactions**. APB wait-state/read/write/error examples plus AXI write/read bursts, backpressure, outstanding count, transaction phases, linked Signals and protocol annotations.
