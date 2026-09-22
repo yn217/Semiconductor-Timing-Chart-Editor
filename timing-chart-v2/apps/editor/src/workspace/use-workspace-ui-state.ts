@@ -87,23 +87,23 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
       followSelectionByModeRef.current[viewMode] = followSelectionRef.current;
       bottomPinnedByModeRef.current[viewMode] = bottomPinnedRef.current;
     }
+    // #773: snapshot the source standalone mode's current Bottom tab BEFORE every transition, including into Combined/Split -- it must
+    // not be lost just because the destination is a temporary layout, not another standalone mode.
+    const transactionTabs: readonly BottomTab[] = ["Transaction", "Phases", "Linked Signals", "Bookmarks", "AI", "Problems", "JSON"];
+    const cycleTabs: readonly BottomTab[] = ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"];
+    if (viewMode === "Cycle" || viewMode === "Transaction") {
+      const currentTabs = viewMode === "Transaction" ? transactionTabs : cycleTabs;
+      if (currentTabs.includes(bottomTab)) lastBottomTabByModeRef.current[viewMode] = bottomTab;
+    }
     setViewModeRaw(next);
     setActiveContext((current) => normalizedActiveContextFor(next, current));
     if (next !== "Split") {
       setActivePaneRaw(next === "Transaction" ? "transaction" : "signal");
       setFollowSelection(followSelectionByModeRef.current[next]);
       setBottomPinned(bottomPinnedByModeRef.current[next]);
-      setBottomTab((current) => {
-        const transactionTabs: readonly BottomTab[] = ["Transaction", "Phases", "Linked Signals", "Bookmarks", "AI", "Problems", "JSON"];
-        const cycleTabs: readonly BottomTab[] = ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"];
-        const currentTabs = viewMode === "Transaction" ? transactionTabs : cycleTabs;
-        if (viewMode === "Cycle" || viewMode === "Transaction") {
-          if (currentTabs.includes(current)) lastBottomTabByModeRef.current[viewMode] = current;
-        }
-        const valid = next === "Transaction" ? transactionTabs : cycleTabs;
-        const remembered = lastBottomTabByModeRef.current[next];
-        return valid.includes(remembered) ? remembered : valid[0]!;
-      });
+      const valid = next === "Transaction" ? transactionTabs : cycleTabs;
+      const remembered = lastBottomTabByModeRef.current[next];
+      setBottomTab(valid.includes(remembered) ? remembered : valid[0]!);
     }
   };
   // #407: Split's own pane-level counterpart to #404's ActiveContext --
