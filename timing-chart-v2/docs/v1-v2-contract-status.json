@@ -12,7 +12,7 @@
   },
   "contracts": [
     {"featureKey":"GUI-SPLIT-VIEW","legacySources":["#14","#148"],"ownerIssues":["#172","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
-    {"featureKey":"GUI-SIGNAL-SPLIT","legacySources":["#98"],"ownerIssues":["#200"],"implementationStatus":"PARTIAL"},
+    {"featureKey":"GUI-SIGNAL-SPLIT","legacySources":["#98"],"ownerIssues":["#200"],"implementationStatus":"COMPLETE"},
     {"featureKey":"GUI-HIERARCHY-FULL-PATH","legacySources":["#30"],"ownerIssues":["#177","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
     {"featureKey":"GUI-CANVAS-CYCLE","legacySources":["#42","#61","#89","#99"],"ownerIssues":["#167","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
     {"featureKey":"GUI-RANGE-SELECTION","legacySources":["#42","#61","#89","#99"],"ownerIssues":["#167","#170","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
