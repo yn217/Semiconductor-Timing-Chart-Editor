@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { CanonicalDocument, GroupId, SignalId } from "@timing-chart-v2/schema";
+import { validateCanonicalDocument, type CanonicalDocument, type GroupId, type SignalId } from "@timing-chart-v2/schema";
 import type { AIViewIntent } from "./ai-proposal-provider.js";
 
 // #395 PR3: the browser-side half of the local Agent Bridge
@@ -58,6 +58,27 @@ function executeTool(tool: string, args: Record<string, unknown>, context: AIBri
   if (tool === "get_viewport_snapshot") {
     if (!context.onGetViewportSnapshot) throw new Error("get_viewport_snapshot is not available in the current surface.");
     return context.onGetViewportSnapshot();
+  }
+  // #778 Phase 2 read/context tools: all four are pure projections of `context.document`, the same live
+  // canonical document already flowing into every other read tool -- no additional mutation surface, no new
+  // props threaded from AIOperationPanel, and every reference is a stable id, never a DOM/pixel position.
+  if (tool === "get_transactions") {
+    return {
+      transactionGroups: (context.document.transactionGroups ?? []).map((group) => ({ id: group.id, name: group.name, color: group.color })),
+      transactions: context.document.transactions.map((transaction) => ({ id: transaction.id, name: transaction.name, groupId: transaction.groupId, laneId: transaction.laneId, start: transaction.start, end: transaction.end, color: transaction.color, description: transaction.description, linkedSignalIds: transaction.linkedSignals ?? [], phaseCount: transaction.phases?.length ?? 0 })),
+    };
+  }
+  if (tool === "get_annotations") {
+    const anchorSummary = (anchor: { readonly signalId?: SignalId; readonly cycle: number } | undefined) => anchor === undefined ? undefined : { signalId: anchor.signalId, cycle: anchor.cycle };
+    return {
+      annotations: context.document.annotations.map((annotation) => ({ id: annotation.id, type: annotation.type, label: annotation.label, visible: annotation.visible, locked: annotation.locked ?? false, anchor: anchorSummary(annotation.anchor), start: anchorSummary(annotation.start), end: anchorSummary(annotation.end), from: anchorSummary(annotation.from), to: anchorSummary(annotation.to) })),
+    };
+  }
+  if (tool === "get_bookmarks") {
+    return { bookmarks: context.document.bookmarks.map((bookmark) => ({ id: bookmark.id, name: bookmark.name, cycle: bookmark.start, comment: bookmark.comment })) };
+  }
+  if (tool === "get_problems") {
+    return { problems: validateCanonicalDocument(context.document).map((problem) => ({ code: problem.code, path: problem.path, message: problem.message })) };
   }
   if (tool === "propose_edit") {
     if (!context.onProposeEdit) throw new Error("propose_edit is not available in the current surface.");

@@ -56,7 +56,7 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
     // that forwards an arbitrary tool name.
     expect(source).toMatch(/READ_TOOLS\.has\(name\)\s*\|\|\s*VIEW_ONLY_TOOLS\.has\(name\)\s*\|\|\s*PROPOSAL_TOOLS\.has\(name\)/);
     const catalogNames = [...source.matchAll(/name:\s*"([a-z_]+)"/g)].map((match) => match[1]);
-    expect(new Set(catalogNames)).toEqual(new Set(["get_document_summary", "get_selection", "get_viewport_snapshot", "fit_all", "propose_edit"]));
+    expect(new Set(catalogNames)).toEqual(new Set(["get_document_summary", "get_selection", "get_viewport_snapshot", "get_transactions", "get_annotations", "get_bookmarks", "get_problems", "fit_all", "propose_edit"]));
   });
 
   it("requires the bearer token on every route, including the poll/respond pair, before any routing decision", () => {

@@ -26,7 +26,7 @@ const POLL_TIMEOUT_MS = 25_000;
 // this list can ever be invoked, regardless of what a client sends --
 // tools/call rejects any name not in this map before it is ever queued
 // for the browser.
-const READ_TOOLS = new Set(["get_document_summary", "get_selection", "get_viewport_snapshot"]);
+const READ_TOOLS = new Set(["get_document_summary", "get_selection", "get_viewport_snapshot", "get_transactions", "get_annotations", "get_bookmarks", "get_problems"]);
 const VIEW_ONLY_TOOLS = new Set(["fit_all"]);
 // #395 PR4: propose_edit is the one tool that reaches into document-changing
 // territory, but it still only ever builds a Preview (identical to the user
@@ -39,6 +39,10 @@ const TOOL_CATALOG = [
   { name: "get_document_summary", description: "Read-only summary of the current document (title, signal/annotation/transaction counts, timeline length). Never mutates anything." },
   { name: "get_selection", description: "Read-only current selection (selected Signal/Group/Annotation/Transaction id, if any). Never mutates anything." },
   { name: "get_viewport_snapshot", description: "Read-only structured Element Map: every signal's stable id, name, role, type, group and visibility, plus current selection, zoom and cycle count. Does not include a raw pixel image -- edits must target the stable ids returned here, never pixel coordinates. Never mutates anything." },
+  { name: "get_transactions", description: "Read-only list of every canonical Transaction (stable id, name, group id, lane id, start/end cycle, color, description, linked signal ids, phase count) plus every Transaction Group (stable id, name, color). Never mutates anything." },
+  { name: "get_annotations", description: "Read-only list of every canonical Annotation (stable id, type, label, visible, locked, and its anchor's signal/cycle references by stable id -- never pixel coordinates). Never mutates anything." },
+  { name: "get_bookmarks", description: "Read-only list of every canonical Bookmark (stable id, name, source cycle, comment). Never mutates anything." },
+  { name: "get_problems", description: "Read-only list of every current canonical-document validation problem (code, path, message), exactly as the Editor's own Problems panel computes it. Never mutates anything." },
   { name: "fit_all", description: "View-only: fit the complete timeline into the viewport. Canonical/History/Dirty delta is always 0." },
   { name: "propose_edit", description: "Submit a document-changing edit request as a Preview only -- it is never auto-validated or auto-applied. A human must open the AI Assistant panel and manually Validate + Apply it. Takes a single 'query' string argument." },
 ];
