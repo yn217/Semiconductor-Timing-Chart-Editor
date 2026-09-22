@@ -120,6 +120,8 @@ export interface EditorActions {
   readonly duplicateSelectedEntity: ClipboardActions["duplicate"];
   readonly createCopiedSignals: ClipboardActions["createSignals"];
   readonly setSelectionVisibility: ClipboardActions["setVisibility"];
+  /** #774: bulk visibility by explicit IDs -- never touches Selection (Tree Show/Hide All, per-Group Show/Hide). */
+  readonly setTransactionsVisibility: ClipboardActions["setTransactionsVisibility"];
   readonly isolateSelection: ClipboardActions["isolateSelection"];
   readonly moveSelection: ClipboardActions["move"];
   readonly restorePendingFileFocus: () => void;
@@ -464,6 +466,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     duplicateSelectedEntity: input.editActions.duplicate,
     createCopiedSignals: input.editActions.createSignals,
     setSelectionVisibility: input.editActions.setVisibility,
+    setTransactionsVisibility: input.editActions.setTransactionsVisibility,
     isolateSelection: input.editActions.isolateSelection,
     moveSelection: input.editActions.move,
     ...fileActions,

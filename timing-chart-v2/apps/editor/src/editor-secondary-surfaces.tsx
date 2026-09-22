@@ -438,13 +438,10 @@ export function useEditorSecondarySurfaces(
   );
   // #759: one Group disclosure owner for the Left Tree and the center Group headers.
   const disclosure = useTransactionDisclosure(input.document, input.documentEpoch);
-  // #748: Tree menu Show All / Hide All -- the same selection + visibility command path the per-Group toggle uses (one History unit).
+  // #748/#774: Tree menu Show All / Hide All -- explicit target IDs (one History unit), never Selection: routing bulk visibility
+  // through a temporary Selection used to silently replace the user's real selection, changing the scope of their next Delete/Group/Color.
   const setAllTransactionVisibility = (visible: boolean) => {
-    const items = input.document.transactions;
-    if (items.length === 0) return;
-    input.actions.selectTransaction(items[0]!.id);
-    items.slice(1).forEach((transaction) => input.actions.selectTransaction(transaction.id, true));
-    input.actions.setSelectionVisibility(visible);
+    input.actions.setTransactionsVisibility(input.document.transactions.map((transaction) => transaction.id), visible);
   };
   // #763: unapplied Phase drafts belong to one document; a replacement (New/Open) drops them all so an identical ID in the next document cannot inherit one.
   useEffect(() => { clearAllPhaseDrafts(); clearAllBookmarkDrafts(); }, [input.documentEpoch]);
@@ -520,11 +517,10 @@ export function useEditorSecondarySurfaces(
           input.actions.setSelectionVisibility(visible);
         }}
         onSetGroupVisibility={(groupId, visible) => {
-          const items = input.document.transactions.filter((transaction) => transaction.groupId === groupId);
-          if (items.length === 0) return;
-          input.actions.selectTransaction(items[0]!.id);
-          items.slice(1).forEach((transaction) => input.actions.selectTransaction(transaction.id, true));
-          input.actions.setSelectionVisibility(visible);
+          // #774: explicit target IDs, never a temporary Selection -- the user's real selection (and the scope of their next bulk
+          // command) must not silently become "every Transaction in this Group".
+          const ids = input.document.transactions.filter((transaction) => transaction.groupId === groupId).map((transaction) => transaction.id);
+          input.actions.setTransactionsVisibility(ids, visible);
         }}
         onDeleteGroup={(groupId) => {
           surfaceCommands.deleteTransactionGroup(groupId);

@@ -306,8 +306,19 @@ export function useClipboardActions({ application, selection }: { application: E
   const deleteAnnotation = (annotationId: AnnotationId) => application.execute({ id: nextCommandId("delete_annotation"), type: "annotation.delete", annotationId });
   const deleteTransaction = (transactionId: TransactionId) => application.execute({ id: nextCommandId("delete_transaction"), type: "transaction.delete", transactionId });
   const setSignalVisibility = (signalId: SignalId, visible: boolean) => application.execute({ id: nextCommandId("signal_visibility"), type: "signal.setVisibility", signalId, visible });
+  // #774: Tree-level bulk visibility (Show/Hide All, per-Group Show/Hide) takes explicit target IDs instead of routing through
+  // Selection -- the selection Transport-mechanism pattern silently replaced the user's real selection with the bulk target, so a
+  // following Delete/Duplicate/Group/Color would act on the wrong scope. This never reads or writes Selection at all.
+  const setTransactionsVisibility = (transactionIds: readonly TransactionId[], visible: boolean) => {
+    const current = document();
+    const targets = current.transactions.filter((transaction) => transactionIds.includes(transaction.id) && (transaction.visible ?? true) !== visible);
+    const commands = targets.map((transaction) => ({ id: nextCommandId("route_transaction_visibility"), type: "transaction.update" as const, transactionId: transaction.id, name: transaction.name, start: transaction.start, end: transaction.end, ...(transaction.laneId === undefined ? {} : { laneId: transaction.laneId }), ...(transaction.phases === undefined ? {} : { phases: transaction.phases }), ...(transaction.groupId === undefined ? {} : { groupId: transaction.groupId }), ...(transaction.color === undefined ? {} : { color: transaction.color }), ...(transaction.description === undefined ? {} : { description: transaction.description }), visible }));
+    if (commands.length > 1) return application.executeBatch(nextCommandId("route_transaction_visibility_bulk"), commands);
+    if (commands.length === 1) return application.execute(commands[0]!);
+    return undefined;
+  };
 
-  return { status, available, copy, cut, paste, duplicate, deleteSelection, deleteSignal, deleteAnnotation, deleteTransaction, rename, setVisibility, setSignalVisibility, isolateSelection, move, createSignals } as const;
+  return { status, available, copy, cut, paste, duplicate, deleteSelection, deleteSignal, deleteAnnotation, deleteTransaction, rename, setVisibility, setSignalVisibility, setTransactionsVisibility, isolateSelection, move, createSignals } as const;
 }
 
 export type ClipboardActions = ReturnType<typeof useClipboardActions>;
