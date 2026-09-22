@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 335 spec files and 982 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 65/982 cases reviewed.
+Semantic review progress: 76/982 cases reviewed.
 
 ## Curated profile membership
 
@@ -11,9 +11,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | Profile | Reviewed cases |
 | --- | ---: |
 | `integration` | 6 |
-| `nightly` | 1 |
+| `nightly` | 9 |
 | `performance` | 6 |
-| `pr` | 31 |
+| `pr` | 34 |
 | `visual` | 10 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -199,9 +199,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-750-tc-scale-selector.spec.ts` | 1 | 0/1 reviewed |
 | `issue-751-bottom-phase-editor.spec.ts` | 2 | 0/2 reviewed |
 | `issue-752-bottom-remount.spec.ts` | 1 | 0/1 reviewed |
-| `issue-753-bookmark-gesture-fuzz.spec.ts` | 5 | 0/5 reviewed |
-| `issue-753-bookmark-navigation-stays-in-app.spec.ts` | 3 | 0/3 reviewed |
-| `issue-753-stress-classified.spec.ts` | 3 | 0/3 reviewed |
+| `issue-753-bookmark-gesture-fuzz.spec.ts` | 5 | 5/5 reviewed |
+| `issue-753-bookmark-navigation-stays-in-app.spec.ts` | 3 | 3/3 reviewed |
+| `issue-753-stress-classified.spec.ts` | 3 | 3/3 reviewed |
 | `issue-755-analytic-transition-equivalence.spec.ts` | 1 | 1/1 reviewed |
 | `issue-755-canvas-production-acceptance.spec.ts` | 5 | 0/5 reviewed |
 | `issue-757-far-scroll-window-coverage.spec.ts` | 1 | 1/1 reviewed |
