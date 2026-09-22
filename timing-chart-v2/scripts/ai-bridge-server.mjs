@@ -38,7 +38,7 @@ const PROPOSAL_TOOLS = new Set(["propose_edit"]);
 const TOOL_CATALOG = [
   { name: "get_document_summary", description: "Read-only summary of the current document (title, signal/annotation/transaction counts, timeline length). Never mutates anything." },
   { name: "get_selection", description: "Read-only current selection (selected Signal/Group/Annotation/Transaction id, if any). Never mutates anything." },
-  { name: "get_viewport_snapshot", description: "Read-only structured Element Map: every signal's stable id, name, role, type, group, split-pane assignment and visibility, plus current selection, zoom and cycle count. Does not include a raw pixel image -- edits must target the stable ids returned here, never pixel coordinates. Never mutates anything." },
+  { name: "get_viewport_snapshot", description: "Read-only structured Element Map: every signal's stable id, name, role, type, group and visibility, plus current selection, zoom and cycle count. Does not include a raw pixel image -- edits must target the stable ids returned here, never pixel coordinates. Never mutates anything." },
   { name: "fit_all", description: "View-only: fit the complete timeline into the viewport. Canonical/History/Dirty delta is always 0." },
   { name: "propose_edit", description: "Submit a document-changing edit request as a Preview only -- it is never auto-validated or auto-applied. A human must open the AI Assistant panel and manually Validate + Apply it. Takes a single 'query' string argument." },
 ];
@@ -66,6 +66,19 @@ function bearerToken(req, url) {
 const queuedCalls = [];
 /** Dispatched to a poller, awaiting /bridge/respond, keyed by requestId. */
 const inFlightCalls = new Map();
+// #778 Phase 1: the Editor's own poll/respond traffic must never be mistaken for a real external MCP client.
+// Only a request that actually lands on the `/mcp` JSON-RPC endpoint (the one path a real Claude Code / Codex /
+// generic MCP client speaks) counts as "an external client is here" -- the Editor tab talking to /bridge/poll
+// and /bridge/respond is this same local process's own transport, not a second party. `initialize` alone marks
+// a client as seen (a real client must call it before anything else per the MCP handshake); tools/call also
+// refreshes it so an idle-but-still-open client session doesn't look disconnected between calls.
+let lastExternalClientSeenAt = 0;
+// A client that hasn't spoken in this long is presumed gone rather than left "connected" forever after one
+// handshake -- long enough to comfortably cover normal think-time between tool calls, short enough that a
+// closed client session doesn't keep showing as connected indefinitely.
+const EXTERNAL_CLIENT_TIMEOUT_MS = 120_000;
+function markExternalClientSeen() { lastExternalClientSeenAt = Date.now(); }
+function isExternalClientConnected() { return lastExternalClientSeenAt > 0 && Date.now() - lastExternalClientSeenAt < EXTERNAL_CLIENT_TIMEOUT_MS; }
 
 function removeEverywhere(requestId) {
   const index = queuedCalls.findIndex((call) => call.requestId === requestId);
@@ -111,11 +124,12 @@ async function handleMcp(res, body) {
   const { id, method, params } = body ?? {};
   const reply = (result) => sendJson(res, 200, { jsonrpc: "2.0", id: id ?? null, result });
   const replyError = (code, message) => sendJson(res, 200, { jsonrpc: "2.0", id: id ?? null, error: { code, message } });
-  if (method === "initialize") { reply({ protocolVersion: "2024-11-05", serverInfo: { name: "timing-chart-v2-ai-bridge", version: "0.0.1" }, capabilities: { tools: {} } }); return; }
+  if (method === "initialize") { markExternalClientSeen(); reply({ protocolVersion: "2024-11-05", serverInfo: { name: "timing-chart-v2-ai-bridge", version: "0.0.1" }, capabilities: { tools: {} } }); return; }
   if (method === "tools/list") { reply({ tools: TOOL_CATALOG }); return; }
   if (method === "tools/call") {
     const name = params?.name;
     if (typeof name !== "string" || !(READ_TOOLS.has(name) || VIEW_ONLY_TOOLS.has(name) || PROPOSAL_TOOLS.has(name))) { replyError(-32601, `Unknown or unauthorized tool '${name}'. Only ${[...READ_TOOLS, ...VIEW_ONLY_TOOLS, ...PROPOSAL_TOOLS].join(", ")} are exposed.`); return; }
+    markExternalClientSeen();
     try {
       const result = await queueToolCall(name, params?.arguments);
       reply({ content: [{ type: "text", text: JSON.stringify(result) }], isError: false });
@@ -157,10 +171,10 @@ const server = createServer(async (req, res) => {
     const next = queuedCalls.shift();
     if (next) {
       inFlightCalls.set(next.requestId, next);
-      sendJson(res, 200, { requestId: next.requestId, tool: next.tool, arguments: next.args });
+      sendJson(res, 200, { requestId: next.requestId, tool: next.tool, arguments: next.args, externalClientConnected: isExternalClientConnected() });
       return;
     }
-    sendJson(res, 200, { requestId: null });
+    sendJson(res, 200, { requestId: null, externalClientConnected: isExternalClientConnected() });
     return;
   }
 

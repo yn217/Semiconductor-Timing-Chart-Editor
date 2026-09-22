@@ -63,7 +63,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   const settings = ai.getByTestId("ai-settings");
   await settings.getByLabel("Bridge connection token").fill(TOKEN);
   await settings.getByLabel("Enable external agents").check();
-  await expect(ai.getByTestId("ai-bridge-status")).toHaveText("Status: Connected", { timeout: 10_000 });
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
   await expect(page.getByTestId("ai-provider-status")).toContainText("external agent connected");
 
   // initialize + tools/list, exactly as a real MCP client's handshake would.
@@ -120,7 +120,7 @@ test("propose_edit builds a Preview only -- it never auto-validates or auto-appl
   const settings = ai.getByTestId("ai-settings");
   await settings.getByLabel("Bridge connection token").fill(TOKEN);
   await settings.getByLabel("Enable external agents").check();
-  await expect(ai.getByTestId("ai-bridge-status")).toHaveText("Status: Connected", { timeout: 10_000 });
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
   const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
 
@@ -156,7 +156,7 @@ test("an unauthorized propose_edit call (bad token) never reaches the document, 
   const settings = ai.getByTestId("ai-settings");
   await settings.getByLabel("Bridge connection token").fill(TOKEN);
   await settings.getByLabel("Enable external agents").check();
-  await expect(ai.getByTestId("ai-bridge-status")).toHaveText("Status: Connected", { timeout: 10_000 });
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
   const unauthorized = await callTool("propose_edit", "wrong-token", { query: "rename selected signal to REQ" });
   expect(unauthorized.status).toBe(401);
@@ -176,7 +176,7 @@ test("rejects a request with an invalid token, and rejects any tool outside the 
   const settings = ai.getByTestId("ai-settings");
   await settings.getByLabel("Bridge connection token").fill(TOKEN);
   await settings.getByLabel("Enable external agents").check();
-  await expect(ai.getByTestId("ai-bridge-status")).toHaveText("Status: Connected", { timeout: 10_000 });
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
   const unauthorized = await callTool("get_document_summary", "wrong-token");
   expect(unauthorized.status).toBe(401);
@@ -213,15 +213,15 @@ test("bridge disconnect is surfaced truthfully, and the same tab recovers on its
   const settings = ai.getByTestId("ai-settings");
   await settings.getByLabel("Bridge connection token").fill(TOKEN);
   await settings.getByLabel("Enable external agents").check();
-  await expect(ai.getByTestId("ai-bridge-status")).toHaveText("Status: Connected", { timeout: 10_000 });
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
   bridge?.kill();
   bridge = undefined;
-  await expect(ai.getByTestId("ai-bridge-status")).not.toHaveText("Status: Connected", { timeout: 10_000 });
+  await expect(ai.getByTestId("ai-bridge-status")).not.toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
   bridge = spawn(process.execPath, ["scripts/ai-bridge-server.mjs"], { env: { ...process.env, AI_BRIDGE_PORT: String(PORT), AI_BRIDGE_TOKEN: TOKEN }, stdio: "ignore" });
   await waitForBridgeReady();
-  await expect(ai.getByTestId("ai-bridge-status")).toHaveText("Status: Connected", { timeout: 10_000 });
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
   // The recovered connection is not just a status label -- it is a real,
   // working connection again.

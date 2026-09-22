@@ -279,7 +279,10 @@ export function AIOperationPanel({ document, documentEpoch, revision, selectedSi
         <span className="inspector-note">Protocol: MCP (Streamable HTTP, simplified) · Bridge: {bridgeHost}:{bridgePort} · Start it with <code>npm run ai-bridge</code>.</span>
         <label className="checkline"><input type="checkbox" aria-label="Enable external agents" checked={bridgeEnabled} onChange={(event) => onBridgeEnabledChange(event.target.checked)} />Enable external agents</label>
         <label>Local connection token<input aria-label="Bridge connection token" value={bridgeToken} onChange={(event) => onBridgeTokenChange(event.target.value)} placeholder="paste the token printed by npm run ai-bridge" /></label>
-        <output data-testid="ai-bridge-status" role="status">Status: {bridgeStatus === "connected" ? "Connected" : bridgeStatus === "connecting" ? "Connecting…" : bridgeStatus === "error" ? "Disconnected · check the token and that the bridge is running" : "Disconnected"}</output>
+        {/* #778 Phase 1: "Bridge running" and "a real external AI client is attached" are different facts and
+            must never be worded the same way -- a truthful status is required so a user can tell a merely-
+            started local process from an actual Claude Code/Codex/MCP-client connection. */}
+        <output data-testid="ai-bridge-status" role="status" data-bridge-status={bridgeStatus}>Status: {bridgeStatus === "connected-external-client" ? "External AI client connected" : bridgeStatus === "connected" ? "Bridge running · no external AI client connected yet" : bridgeStatus === "connecting" ? "Connecting…" : bridgeStatus === "error" ? "Disconnected · check the token and that the bridge is running" : "Disconnected"}</output>
       </div>
       <div className="ai-settings-section"><h4>Provider</h4><span className="inspector-note">{providerName}</span></div>
     </div>}
