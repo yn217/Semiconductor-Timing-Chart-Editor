@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { DEFAULT_MEASUREMENT_LAYOUT, MEASUREMENT_PROFILES, anchorTransitionFraction, measurementProfilePair } from "@timing-chart-v2/schema";
 import type { Annotation, AnnotationId, CanonicalDocument, MeasurementLayout, MeasurementProfile, SemanticAnchor, SignalId, TransitionAnchorKind } from "@timing-chart-v2/schema";
@@ -93,36 +93,74 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
     event?.preventDefault();
     commands.updateAnnotationProperties({ annotationId: annotation.id, ...annotationPropertiesBase(annotation), label, visible, color, ...(lineControlsEnabled ? { lineType, arrowhead } : {}), ...(isOpacityType ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}), labelOffset: { x: labelX, y: labelY }, style: styleDraft });
   };
+  // #775: this one effect used to reload EVERY local draft field whenever ANY canonical field of this Annotation changed, so applying
+  // one independent sub-editor (Anchor, Vertical Span, Measurement, Position Mode...) silently discarded an unrelated unapplied
+  // General/Style draft. It now tracks each field's own last-synced canonical value in `baseRef`; on a same-Annotation canonical
+  // change it only resyncs a field whose canonical value actually changed AND whose local draft is still clean (still equal to what
+  // it was last synced from) -- a dirty field is left alone, exactly the "merge untouched fields" policy the Issue allows. Switching
+  // to a different Annotation (a real entity change, not a partial commit) still does the full reset it always did.
+  const baseRef = useRef<{
+    id: AnnotationId; label: string; color: string; visible: boolean; lineType: NonNullable<Annotation["lineType"]>; arrowhead: NonNullable<Annotation["arrowhead"]>;
+    labelX: number; labelY: number; opacity: number; traceOffsetCycles: number; measurementProfile: MeasurementProfile; measurementKind: TransitionAnchorKind;
+    measurementStart: string; measurementEnd: string; measurementLayout: MeasurementLayout; verticalSpanMode: NonNullable<Annotation["verticalSpan"]>["mode"];
+    verticalSpanStartRowId: SignalId | undefined; verticalSpanEndRowId: SignalId | undefined; verticalSpanStartOffset: number; verticalSpanEndOffset: number;
+    styleDraft: Annotation["style"]; anchorField: AnchorField; anchorX: number; anchorY: number; anchorCycle: number; anchorSignalId: SignalId | undefined; anchorPoint: SemanticAnchor["point"];
+  } | undefined>(undefined);
   useEffect(() => {
     const anchor = (annotation as Partial<Record<AnchorField, SemanticAnchor>>)[firstAnchorField];
-    setLabel(annotation.label);
-    setColor(annotation.color ?? "#d04a36");
-    setVisible(annotation.visible);
-    setLineType(annotation.lineType ?? "straight");
-    setArrowhead(annotation.arrowhead ?? "end");
-    setLabelX(annotation.labelOffset?.x ?? 0);
-    setLabelY(annotation.labelOffset?.y ?? -14);
-    setOpacity(annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16));
-    setTraceOffsetCycles(annotation.traceOffsetCycles ?? 0);
-    setMeasurementProfile(annotation.measurement?.profile ?? "cycle");
-    setMeasurementKind(annotation.measurement?.anchorKind ?? "threshold");
-    setMeasurementStart(String(Math.round((anchorTransitionFraction(annotation.start) ?? 0.3) * 100)));
-    setMeasurementEnd(String(Math.round((anchorTransitionFraction(annotation.end) ?? 0.7) * 100)));
-    setMeasurementLayout(annotation.measurementLayout ?? DEFAULT_MEASUREMENT_LAYOUT);
-    setVerticalSpanMode(annotation.verticalSpan?.mode ?? "auto");
-    setVerticalSpanStartRowId(annotation.verticalSpan?.startRowId);
-    setVerticalSpanEndRowId(annotation.verticalSpan?.endRowId);
-    setVerticalSpanStartOffset(annotation.verticalSpan?.startOffset ?? 0);
-    setVerticalSpanEndOffset(annotation.verticalSpan?.endOffset ?? 0);
-    setStyleDraft(annotation.style);
-    setAnchorField(firstAnchorField);
-    setAnchorX(anchor?.offset?.x ?? 0);
-    setAnchorY(anchor?.offset?.y ?? 0);
-    setAnchorCycle(anchor?.cycle ?? 0);
-    setAnchorSignalId(anchor?.signalId);
-    setAnchorPoint(anchor?.point ?? "cycle-start");
-    setPositionModeStatus("");
-    setPreviewRevision(0);
+    const next = {
+      id: annotation.id, label: annotation.label, color: annotation.color ?? "#d04a36", visible: annotation.visible,
+      lineType: annotation.lineType ?? "straight", arrowhead: annotation.arrowhead ?? "end",
+      labelX: annotation.labelOffset?.x ?? 0, labelY: annotation.labelOffset?.y ?? -14,
+      opacity: annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16), traceOffsetCycles: annotation.traceOffsetCycles ?? 0,
+      measurementProfile: annotation.measurement?.profile ?? "cycle", measurementKind: annotation.measurement?.anchorKind ?? "threshold",
+      measurementStart: String(Math.round((anchorTransitionFraction(annotation.start) ?? 0.3) * 100)),
+      measurementEnd: String(Math.round((anchorTransitionFraction(annotation.end) ?? 0.7) * 100)),
+      measurementLayout: annotation.measurementLayout ?? DEFAULT_MEASUREMENT_LAYOUT,
+      verticalSpanMode: annotation.verticalSpan?.mode ?? "auto", verticalSpanStartRowId: annotation.verticalSpan?.startRowId, verticalSpanEndRowId: annotation.verticalSpan?.endRowId,
+      verticalSpanStartOffset: annotation.verticalSpan?.startOffset ?? 0, verticalSpanEndOffset: annotation.verticalSpan?.endOffset ?? 0,
+      styleDraft: annotation.style, anchorField: firstAnchorField, anchorX: anchor?.offset?.x ?? 0, anchorY: anchor?.offset?.y ?? 0,
+      anchorCycle: anchor?.cycle ?? 0, anchorSignalId: anchor?.signalId, anchorPoint: anchor?.point ?? "cycle-start",
+    };
+    const prev = baseRef.current;
+    const sameEntity = prev !== undefined && prev.id === annotation.id;
+    /** Resync one field only when ITS canonical value changed and the local draft was clean (still equal to the OLD canonical). A
+     * dirty (still-being-edited) field is preserved -- its baseline still advances so `hasChanges` compares against current Canonical. */
+    const merge = <K extends keyof typeof next>(key: K, current: (typeof next)[K], setLocal: (value: (typeof next)[K]) => void, eq: (a: (typeof next)[K], b: (typeof next)[K]) => boolean = (a, b) => a === b) => {
+      if (!sameEntity) { setLocal(next[key]); return; }
+      const changed = !eq(prev![key], next[key]);
+      const clean = eq(current, prev![key]);
+      if (changed && clean) setLocal(next[key]);
+    };
+    const jsonEq = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+    merge("label", label, setLabel);
+    merge("color", color, setColor);
+    merge("visible", visible, setVisible);
+    merge("lineType", lineType, setLineType);
+    merge("arrowhead", arrowhead, setArrowhead);
+    merge("labelX", labelX, setLabelX);
+    merge("labelY", labelY, setLabelY);
+    merge("opacity", opacity, setOpacity);
+    merge("traceOffsetCycles", traceOffsetCycles, setTraceOffsetCycles);
+    merge("measurementProfile", measurementProfile, setMeasurementProfile);
+    merge("measurementKind", measurementKind, setMeasurementKind);
+    merge("measurementStart", measurementStart, setMeasurementStart);
+    merge("measurementEnd", measurementEnd, setMeasurementEnd);
+    merge("measurementLayout", measurementLayout, setMeasurementLayout, jsonEq);
+    merge("verticalSpanMode", verticalSpanMode, setVerticalSpanMode);
+    merge("verticalSpanStartRowId", verticalSpanStartRowId, setVerticalSpanStartRowId);
+    merge("verticalSpanEndRowId", verticalSpanEndRowId, setVerticalSpanEndRowId);
+    merge("verticalSpanStartOffset", verticalSpanStartOffset, setVerticalSpanStartOffset);
+    merge("verticalSpanEndOffset", verticalSpanEndOffset, setVerticalSpanEndOffset);
+    merge("styleDraft", styleDraft, setStyleDraft, jsonEq);
+    merge("anchorField", anchorField, setAnchorField);
+    merge("anchorX", anchorX, setAnchorX);
+    merge("anchorY", anchorY, setAnchorY);
+    merge("anchorCycle", anchorCycle, setAnchorCycle);
+    merge("anchorSignalId", anchorSignalId, setAnchorSignalId);
+    merge("anchorPoint", anchorPoint, setAnchorPoint);
+    baseRef.current = next;
+    if (!sameEntity) { setPositionModeStatus(""); setPreviewRevision(0); }
     onPreview?.(annotation.id, undefined);
     return () => onPreview?.(annotation.id, undefined);
   }, [annotation.id, canonicalDraftKey, firstAnchorField, onPreview]);
