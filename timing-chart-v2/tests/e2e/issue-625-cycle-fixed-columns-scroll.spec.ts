@@ -25,13 +25,17 @@ for (const viewportSize of [{ width: 1672, height: 941 }, { width: 1280, height:
     await expect(frozenClock).toBeVisible();
     await expect(track).toBeVisible();
     const initial = await page.evaluate(() => {
-      const node = document.querySelector<HTMLElement>("[data-role='timeline-viewport']")!;
+      const owner = document.querySelector<HTMLElement>("[data-role='timeline-viewport']")!;
       const bar = document.querySelector<HTMLElement>("[data-testid='timeline-hscroll']")!;
       const rect = bar.getBoundingClientRect();
-      return { left: rect.left + bar.clientLeft, bottom: rect.bottom, width: node.clientWidth, scrollWidth: node.scrollWidth, scrollbarHeight: bar.offsetHeight - bar.clientHeight, scrollLeft: node.scrollLeft };
+      const fixed = document.querySelector<HTMLElement>("[data-role='frozen-label-rows']")!.getBoundingClientRect();
+      return { left: rect.left + bar.clientLeft, right: rect.right, ownerLeft: owner.getBoundingClientRect().left, fixedRight: fixed.right, bottom: rect.bottom, width: owner.clientWidth, scrollWidth: owner.scrollWidth, scrollbarHeight: bar.offsetHeight - bar.clientHeight, scrollLeft: owner.scrollLeft };
     });
     expect(initial.scrollWidth).toBeGreaterThan(initial.width);
     expect(initial.scrollLeft).toBe(0);
+    expect(Math.abs(initial.left - initial.ownerLeft)).toBeLessThanOrEqual(1);
+    expect(initial.left).toBeGreaterThanOrEqual(initial.fixedRight - 1);
+    expect(initial.right).toBeLessThanOrEqual(viewportSize.width - 1);
     test.skip(initial.scrollbarHeight === 0, "Native scrollbar-thumb drag requires a headed browser with a non-overlay scrollbar.");
 
     const thumbWidth = Math.max(24, initial.width * initial.width / initial.scrollWidth);

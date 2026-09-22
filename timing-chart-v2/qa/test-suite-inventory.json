@@ -1,15 +1,24 @@
 {
-  "generatedAt": "2026-09-22T22:07:37.076Z",
+  "generatedAt": "2026-09-22T23:16:46.979Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
-  "specFileCount": 337,
-  "caseCount": 988,
-  "reviewedCaseCount": 22,
+  "baseline": {
+    "commit": "965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a",
+    "playwrightVersion": "1.62.1",
+    "specFileCount": 337,
+    "caseCount": 988,
+    "measuredRuntimeSummary": null,
+    "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
+    "retryAndFlakySummary": null
+  },
+  "specFileCount": 336,
+  "caseCount": 984,
+  "reviewedCaseCount": 63,
   "curatedProfileCounts": {
-    "integration": 2,
+    "integration": 4,
     "performance": 6,
-    "pr": 13,
-    "visual": 1
+    "pr": 31,
+    "visual": 10
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -8262,18 +8271,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cycle-timeline-scroll-behavior",
+      "originIssue": 625,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "During real native horizontal scrolling, Cycle fixed columns stay stationary and visible while the Timeline advances; Canonical, History, and Dirty remain unchanged.",
+      "duplicateGroup": "cycle-timeline-scroll-625",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This observes the real native scrollbar and user-visible fixed-column behavior at two widths because responsive geometry and native thumb hit area are width-dependent. It replaces the synthetic-width/DOM-ancestry E2E variant while a static architecture guard checks CSS ownership.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-625-cycle-fixed-columns-scroll.spec.ts",
@@ -8284,18 +8296,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cycle-timeline-scroll-behavior",
+      "originIssue": 625,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "During real native horizontal scrolling, Cycle fixed columns stay stationary and visible while the Timeline advances; Canonical, History, and Dirty remain unchanged.",
+      "duplicateGroup": "cycle-timeline-scroll-625",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This observes the real native scrollbar and user-visible fixed-column behavior at two widths because responsive geometry and native thumb hit area are width-dependent. It replaces the synthetic-width/DOM-ancestry E2E variant while a static architecture guard checks CSS ownership.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-625-mode-geometry-unchanged.spec.ts",
@@ -8306,18 +8321,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-workspace-geometry",
+      "originIssue": 625,
+      "type": "VISUAL_ACCEPTANCE",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "The Cycle-only scroll split does not shift visible workspace geometry in Cycle, Transaction, or Combined beyond 1px, excluding the documented Cycle-span and Transaction-compression differences.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "It protects a cross-mode geometry compatibility contract against a hand-authored pre-split reference at both approved viewport sizes; it is layout-specific and belongs outside the ordinary focused PR journey.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-625-no-bleed-under-fixed-columns.spec.ts",
@@ -8328,18 +8346,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cycle-fixed-column-occlusion",
+      "originIssue": 625,
+      "type": "VISUAL_ACCEPTANCE",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "During real horizontal scrolling, no time-domain pixels intrude beneath the fixed Cycle columns and the timeline scrollbar remains aligned with the time-domain region.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is a distinct pixel-level no-bleed visual contract with screenshot sampling during the drag at both width-dependent layouts; keep it in the visual tier rather than duplicating it in semantic PR tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-625-no-bleed-under-fixed-columns.spec.ts",
@@ -8350,62 +8371,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cycle-fixed-column-occlusion",
+      "originIssue": 625,
+      "type": "VISUAL_ACCEPTANCE",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "During real horizontal scrolling, no time-domain pixels intrude beneath the fixed Cycle columns and the timeline scrollbar remains aligned with the time-domain region.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is a distinct pixel-level no-bleed visual contract with screenshot sampling during the drag at both width-dependent layouts; keep it in the visual tier rather than duplicating it in semantic PR tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-625-timeline-only-hscroll.spec.ts",
-      "suitePath": [],
-      "line": 9,
-      "title": "Cycle FixedColumns sit outside the horizontal scroll owner at 1280x720",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-625-timeline-only-hscroll.spec.ts",
-      "suitePath": [],
-      "line": 9,
-      "title": "Cycle FixedColumns sit outside the horizontal scroll owner at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-626-primary-actions-visible.spec.ts",
@@ -9010,18 +8990,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "transaction-inspector-layout-and-color",
+      "originIssue": 698,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Inspector Phase controls remain usable within both supported viewport widths; Group-color inheritance is reversible, unavailable for Ungrouped Transactions, and does not create History before Apply.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The test combines a real Group-color interaction with a compact Inspector fit invariant at two widths; this cross-panel UI contract is not established by a unit test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "issue-698-color-toggle-and-compact-phases.spec.ts",
@@ -9032,18 +9015,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "transaction-inspector-layout-and-color",
+      "originIssue": 698,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Inspector Phase controls remain usable within both supported viewport widths; Group-color inheritance is reversible, unavailable for Ungrouped Transactions, and does not create History before Apply.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The test combines a real Group-color interaction with a compact Inspector fit invariant at two widths; this cross-panel UI contract is not established by a unit test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "issue-698-inspector-phases.spec.ts",
@@ -9054,18 +9040,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "transaction-phase-draft",
+      "originIssue": 698,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Inspector and Bottom Phases controls share one unapplied draft and one Apply creates a single History unit.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a distinct cross-surface Draft/Apply production journey; unit state tests alone cannot prove both editors show the same draft.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-701-layout-return.spec.ts",
@@ -9098,18 +9087,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "transaction-bottom-apply",
+      "originIssue": 703,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Multiple Bottom row edits commit together through Apply as one Undoable semantic operation, while rejected Apply leaves Canonical/History unchanged and explains the validation failure.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This protects the actual table editing boundary plus command/history outcome; lower-level tests should complement but not replace the visible Apply journey.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-703-inline-row-apply.spec.ts",
@@ -9120,18 +9112,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "transaction-bottom-apply",
+      "originIssue": 703,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Multiple Bottom row edits commit together through Apply as one Undoable semantic operation, while rejected Apply leaves Canonical/History unchanged and explains the validation failure.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This protects the actual table editing boundary plus command/history outcome; lower-level tests should complement but not replace the visible Apply journey.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-704-shared-chevron.spec.ts",
@@ -9164,18 +9159,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "transaction-bottom-grid-visual",
+      "originIssue": 714,
+      "type": "VISUAL_ACCEPTANCE",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Transaction table headers remain readable/aligned with the body, color is represented in the Color column, and the table fits both supported viewports without page overflow.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The two viewport variants directly protect responsive table width and typography, which is an explicit width-dependent visual contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-714-table-header-and-swatch.spec.ts",
@@ -9186,18 +9184,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "transaction-bottom-grid-visual",
+      "originIssue": 714,
+      "type": "VISUAL_ACCEPTANCE",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Transaction table headers remain readable/aligned with the body, color is represented in the Color column, and the table fits both supported viewports without page overflow.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The two viewport variants directly protect responsive table width and typography, which is an explicit width-dependent visual contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-720-control-affordance-audit.spec.ts",
@@ -9208,18 +9209,19 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-accessibility-affordance",
+      "originIssue": 720,
+      "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Visible icon-only controls expose accessible names/tooltips and menu/dialog actions expose their interaction semantics across Cycle, Transaction, and Combined; hover help is view-only.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This cross-mode accessibility and command-affordance matrix is a distinct UI contract. It currently inspects the rendered control surface directly; retain it while cheaper independent coverage is assessed, not as a duplicate of keyboard navigation tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": []
     },
     {
       "file": "issue-720-control-affordance-audit.spec.ts",
@@ -9230,18 +9232,19 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-accessibility-affordance",
+      "originIssue": 720,
+      "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Visible icon-only controls expose accessible names/tooltips and menu/dialog actions expose their interaction semantics across Cycle, Transaction, and Combined; hover help is view-only.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This cross-mode accessibility and command-affordance matrix is a distinct UI contract. It currently inspects the rendered control surface directly; retain it while cheaper independent coverage is assessed, not as a duplicate of keyboard navigation tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": []
     },
     {
       "file": "issue-720-control-affordance-audit.spec.ts",
@@ -9252,18 +9255,19 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-accessibility-affordance",
+      "originIssue": 720,
+      "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Visible icon-only controls expose accessible names/tooltips and menu/dialog actions expose their interaction semantics across Cycle, Transaction, and Combined; hover help is view-only.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This cross-mode accessibility and command-affordance matrix is a distinct UI contract. It currently inspects the rendered control surface directly; retain it while cheaper independent coverage is assessed, not as a duplicate of keyboard navigation tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": []
     },
     {
       "file": "issue-720-control-affordance-audit.spec.ts",
@@ -9274,18 +9278,19 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-accessibility-affordance",
+      "originIssue": 720,
+      "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Visible icon-only controls expose accessible names/tooltips and menu/dialog actions expose their interaction semantics across Cycle, Transaction, and Combined; hover help is view-only.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This cross-mode accessibility and command-affordance matrix is a distinct UI contract. It currently inspects the rendered control surface directly; retain it while cheaper independent coverage is assessed, not as a duplicate of keyboard navigation tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": []
     },
     {
       "file": "issue-720-control-affordance-audit.spec.ts",
@@ -9296,18 +9301,19 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-accessibility-affordance",
+      "originIssue": 720,
+      "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Visible icon-only controls expose accessible names/tooltips and menu/dialog actions expose their interaction semantics across Cycle, Transaction, and Combined; hover help is view-only.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This cross-mode accessibility and command-affordance matrix is a distinct UI contract. It currently inspects the rendered control surface directly; retain it while cheaper independent coverage is assessed, not as a duplicate of keyboard navigation tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": []
     },
     {
       "file": "issue-720-control-affordance-audit.spec.ts",
@@ -9318,18 +9324,19 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-accessibility-affordance",
+      "originIssue": 720,
+      "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Visible icon-only controls expose accessible names/tooltips and menu/dialog actions expose their interaction semantics across Cycle, Transaction, and Combined; hover help is view-only.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This cross-mode accessibility and command-affordance matrix is a distinct UI contract. It currently inspects the rendered control surface directly; retain it while cheaper independent coverage is assessed, not as a duplicate of keyboard navigation tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": []
     },
     {
       "file": "issue-720-cursor-and-disabled-audit.spec.ts",
@@ -9340,18 +9347,19 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-pointer-and-disabled-affordance",
+      "originIssue": 720,
+      "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Visible interactive controls communicate pointer/editability and disabled state consistently across Cycle, Transaction, and Combined.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The suite asserts cursor and disabled-reason affordances, a different invariant from accessible naming and mode-specific keyboard undo/redo. Viewport variants are retained pending measured runtime and compact-layout coupling review.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": []
     },
     {
       "file": "issue-720-cursor-and-disabled-audit.spec.ts",
@@ -9362,18 +9370,19 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-pointer-and-disabled-affordance",
+      "originIssue": 720,
+      "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Visible interactive controls communicate pointer/editability and disabled state consistently across Cycle, Transaction, and Combined.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The suite asserts cursor and disabled-reason affordances, a different invariant from accessible naming and mode-specific keyboard undo/redo. Viewport variants are retained pending measured runtime and compact-layout coupling review.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": []
     },
     {
       "file": "issue-720-cursor-and-disabled-audit.spec.ts",
@@ -9384,18 +9393,19 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-pointer-and-disabled-affordance",
+      "originIssue": 720,
+      "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Visible interactive controls communicate pointer/editability and disabled state consistently across Cycle, Transaction, and Combined.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The suite asserts cursor and disabled-reason affordances, a different invariant from accessible naming and mode-specific keyboard undo/redo. Viewport variants are retained pending measured runtime and compact-layout coupling review.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": []
     },
     {
       "file": "issue-720-cursor-and-disabled-audit.spec.ts",
@@ -9406,18 +9416,19 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-pointer-and-disabled-affordance",
+      "originIssue": 720,
+      "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Visible interactive controls communicate pointer/editability and disabled state consistently across Cycle, Transaction, and Combined.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The suite asserts cursor and disabled-reason affordances, a different invariant from accessible naming and mode-specific keyboard undo/redo. Viewport variants are retained pending measured runtime and compact-layout coupling review.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": []
     },
     {
       "file": "issue-720-cursor-and-disabled-audit.spec.ts",
@@ -9428,18 +9439,19 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-pointer-and-disabled-affordance",
+      "originIssue": 720,
+      "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Visible interactive controls communicate pointer/editability and disabled state consistently across Cycle, Transaction, and Combined.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The suite asserts cursor and disabled-reason affordances, a different invariant from accessible naming and mode-specific keyboard undo/redo. Viewport variants are retained pending measured runtime and compact-layout coupling review.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": []
     },
     {
       "file": "issue-720-cursor-and-disabled-audit.spec.ts",
@@ -9450,18 +9462,19 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-pointer-and-disabled-affordance",
+      "originIssue": 720,
+      "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Visible interactive controls communicate pointer/editability and disabled state consistently across Cycle, Transaction, and Combined.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The suite asserts cursor and disabled-reason affordances, a different invariant from accessible naming and mode-specific keyboard undo/redo. Viewport variants are retained pending measured runtime and compact-layout coupling review.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": []
     },
     {
       "file": "issue-720-disabled-reasons.spec.ts",
@@ -9472,18 +9485,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "transaction-command-affordance",
+      "originIssue": 720,
+      "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Disabled Bottom Transaction commands explain why they are unavailable.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the specific Transaction Bottom command state, complementary to the cross-mode disabled-cursor audit and suitable for a focused user-visible gate.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-720-gesture-status-hint.spec.ts",
@@ -9494,18 +9510,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "gesture-status-feedback",
+      "originIssue": 720,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Transaction and Annotation drags visibly explain Escape cancellation, clear the hint after cancellation/release, and preserve Canonical/History on cancel.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "A real pointer gesture is required to verify the transient status feedback and cancel/release lifecycle; the two Transaction viewport cases guard responsive gesture hit targets.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-720-gesture-status-hint.spec.ts",
@@ -9516,18 +9535,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "gesture-status-feedback",
+      "originIssue": 720,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Transaction and Annotation drags visibly explain Escape cancellation, clear the hint after cancellation/release, and preserve Canonical/History on cancel.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "A real pointer gesture is required to verify the transient status feedback and cancel/release lifecycle; the two Transaction viewport cases guard responsive gesture hit targets.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-720-gesture-status-hint.spec.ts",
@@ -9538,18 +9560,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "gesture-status-feedback",
+      "originIssue": 720,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Transaction and Annotation drags visibly explain Escape cancellation, clear the hint after cancellation/release, and preserve Canonical/History on cancel.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "A real pointer gesture is required to verify the transient status feedback and cancel/release lifecycle; the two Transaction viewport cases guard responsive gesture hit targets.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-720-keyboard-parity.spec.ts",
@@ -9560,18 +9585,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-keyboard-history",
+      "originIssue": 720,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Ctrl+Z and Ctrl+Shift+Z undo and redo one semantic edit consistently in Cycle, Transaction, and Combined.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The three modes have distinct command surfaces and the user-visible keyboard route is the contract; this is one parameterized journey per mode, not viewport duplication.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-720-keyboard-parity.spec.ts",
@@ -9582,18 +9610,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-keyboard-history",
+      "originIssue": 720,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Ctrl+Z and Ctrl+Shift+Z undo and redo one semantic edit consistently in Cycle, Transaction, and Combined.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The three modes have distinct command surfaces and the user-visible keyboard route is the contract; this is one parameterized journey per mode, not viewport duplication.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-720-keyboard-parity.spec.ts",
@@ -9604,18 +9635,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "cross-mode-keyboard-history",
+      "originIssue": 720,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Ctrl+Z and Ctrl+Shift+Z undo and redo one semantic edit consistently in Cycle, Transaction, and Combined.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The three modes have distinct command surfaces and the user-visible keyboard route is the contract; this is one parameterized journey per mode, not viewport duplication.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-720-menu-dialog-affordance.spec.ts",
@@ -9626,18 +9660,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "ribbon-menu-dialog-affordance",
+      "originIssue": 720,
+      "type": "VISUAL_ACCEPTANCE",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Ribbon menu, dialog, and immediate actions remain visually/semantically distinguishable at desktop and compact widths.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The two viewports are intentional because ribbon density and overflow can alter the visible affordance distinction at compact width.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-720-menu-dialog-affordance.spec.ts",
@@ -9648,18 +9685,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "ribbon-menu-dialog-affordance",
+      "originIssue": 720,
+      "type": "VISUAL_ACCEPTANCE",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Ribbon menu, dialog, and immediate actions remain visually/semantically distinguishable at desktop and compact widths.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The two viewports are intentional because ribbon density and overflow can alter the visible affordance distinction at compact width.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-721-visual-channels.spec.ts",
@@ -10132,18 +10172,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "transaction-bottom-sort",
+      "originIssue": 737,
+      "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Bottom Start sort direction changes only view order, preserves selection-independent canonical/history state, and returning to document order restores the original row sequence.",
+      "duplicateGroup": "transaction-bottom-sort-overlap-737-747",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This overlaps the broader #747 Start/End sort matrix but uniquely asserts restoring exact document row order; keep this invariant until it is merged into the domain contract suite.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-737-multi-select.spec.ts",
@@ -10154,84 +10197,71 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "transaction-bottom-multi-selection",
+      "originIssue": 737,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Click/Ctrl/Shift/Ctrl+A operate on the Bottom row selection set without checkboxes; Duplicate acts on the selected set as one History unit and Undo restores the original count.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This exercises bulk mutation and one-step undo in addition to selection grammar, unlike the selection-only compact journey; preserve both contracts.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-737-selection-gestures.spec.ts",
       "suitePath": [],
-      "line": 6,
+      "line": 9,
       "title": "Bottom grid selection gestures at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "transaction-bottom-selection",
+      "originIssue": 737,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Bottom grid supports click/Ctrl/Shift selection, visible-order ranges under filtering, Ctrl+A scoped away from text inputs, and accessible selected/disclosure state without Canonical/History changes.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Retain one compact viewport for viewport-independent selection semantics; the removed desktop duplicate is mapped in qa/test-consolidation-map.json and responsive geometry remains tested at both viewports by #747 geometry acceptance.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-737-selection-gestures.spec.ts",
       "suitePath": [],
-      "line": 6,
-      "title": "Bottom grid selection gestures at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-737-selection-gestures.spec.ts",
-      "suitePath": [],
-      "line": 59,
+      "line": 62,
       "title": "Bottom grid exposes aria-selected and aria-expanded with named disclosure controls",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "transaction-bottom-selection",
+      "originIssue": 737,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Bottom grid supports click/Ctrl/Shift selection, visible-order ranges under filtering, Ctrl+A scoped away from text inputs, and accessible selected/disclosure state without Canonical/History changes.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Retain one compact viewport for viewport-independent selection semantics; the removed desktop duplicate is mapped in qa/test-consolidation-map.json and responsive geometry remains tested at both viewports by #747 geometry acceptance.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-738-ruler-hit-area.spec.ts",
@@ -10920,46 +10950,27 @@
     {
       "file": "issue-747-a11y-and-sort-matrix.spec.ts",
       "suitePath": [],
-      "line": 7,
+      "line": 9,
       "title": "Bottom sort matrix and settings a11y at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "transaction-bottom-sort-settings-a11y",
+      "originIssue": 747,
+      "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Start/End ascending/descending are announced accessibly, one sort key is active, sorting preserves selected ID and view-only state, and the Bottom settings gear opens/closes with Escape.",
+      "duplicateGroup": "transaction-bottom-sort-overlap-737-747",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is broader than #737's Start-only sorting contract and adds End sorting/settings accessibility. One compact viewport is enough for these semantic assertions; two-view responsive geometry remains in the dedicated #747 geometry acceptance.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-747-a11y-and-sort-matrix.spec.ts",
-      "suitePath": [],
-      "line": 7,
-      "title": "Bottom sort matrix and settings a11y at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-747-bottom-settings.spec.ts",
@@ -10970,18 +10981,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "bottom-settings-pin-follow",
+      "originIssue": 747,
+      "type": "USER_JOURNEY",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Follow Selection and Pin are reachable in Bottom settings; Pin changes follow status and survives closing the popover with Escape.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "A real popover/action journey is needed to verify the production path and persisted view state; the geometry suite measures placement separately.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-747-geometry-acceptance.spec.ts",
@@ -10992,18 +11006,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "transaction-bottom-grid-geometry",
+      "originIssue": 747,
+      "type": "VISUAL_ACCEPTANCE",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Settings, selection, sort, and Phase expansion preserve the table header position and align child Phase cells with semantic columns at both supported viewport sizes, without document/history changes.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The assertions measure responsive panel/header/cell geometry, so both 1280x720 and 1672x941 remain necessary; this suite also replaces the viewport-only geometry coverage removed from semantic tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-747-geometry-acceptance.spec.ts",
@@ -11014,18 +11031,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
+      "domain": "transaction-bottom-grid-geometry",
+      "originIssue": 747,
+      "type": "VISUAL_ACCEPTANCE",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Settings, selection, sort, and Phase expansion preserve the table header position and align child Phase cells with semantic columns at both supported viewport sizes, without document/history changes.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The assertions measure responsive panel/header/cell geometry, so both 1280x720 and 1672x941 remain necessary; this suite also replaces the viewport-only geometry coverage removed from semantic tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-748-add-and-focus-journey.spec.ts",
@@ -21864,6 +21884,7 @@
     {
       "file": "acceptance-397-sample-a.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": "397",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -21874,6 +21895,7 @@
     {
       "file": "acceptance-397-sample-c.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": "397",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -21884,6 +21906,7 @@
     {
       "file": "acceptance-397-sample-d.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": "397",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -21894,6 +21917,7 @@
     {
       "file": "acceptance-429-transaction-colors.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": "429",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -21904,6 +21928,7 @@
     {
       "file": "acceptance-429-transaction-composition.spec.ts",
       "caseCount": 32,
+      "reviewedCaseCount": 0,
       "originIssue": "429",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -21912,6 +21937,7 @@
     {
       "file": "advanced-json-diagnostic.spec.ts",
       "caseCount": 7,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -21920,6 +21946,7 @@
     {
       "file": "ai-bridge.spec.ts",
       "caseCount": 5,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 10,
       "candidateSignals": [],
@@ -21928,6 +21955,7 @@
     {
       "file": "ai-domain-coverage.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -21936,6 +21964,7 @@
     {
       "file": "ai-proposal-workflow.spec.ts",
       "caseCount": 10,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -21944,6 +21973,7 @@
     {
       "file": "annotation-bottom-list.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -21952,6 +21982,7 @@
     {
       "file": "annotation-highlight-position-mode.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -21960,6 +21991,7 @@
     {
       "file": "annotation-inspector-anchor.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -21968,6 +22000,7 @@
     {
       "file": "annotation-line-rendering.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -21976,6 +22009,7 @@
     {
       "file": "annotation-marker-vertical-span.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -21984,6 +22018,7 @@
     {
       "file": "annotation-multi-select-font.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -21995,6 +22030,7 @@
     {
       "file": "annotation-multiline-and-export-shapes.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22003,6 +22039,7 @@
     {
       "file": "annotation-presentation-controls.spec.ts",
       "caseCount": 6,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22014,6 +22051,7 @@
     {
       "file": "annotation-presentation.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22022,14 +22060,16 @@
     {
       "file": "annotation-preview-update.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "annotation-snap.spec.ts",
       "caseCount": 18,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22038,6 +22078,7 @@
     {
       "file": "annotation-virtualization-closure.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [],
@@ -22046,6 +22087,7 @@
     {
       "file": "architecture-probe.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22054,6 +22096,7 @@
     {
       "file": "arrange-disabled-reasons.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22062,6 +22105,7 @@
     {
       "file": "arrange-menu-keyboard-nav.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22070,6 +22114,7 @@
     {
       "file": "arrow-endpoint-drag.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22078,6 +22123,7 @@
     {
       "file": "axis-break-compression.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22086,6 +22132,7 @@
     {
       "file": "badge-parity.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22098,6 +22145,7 @@
     {
       "file": "badge-visual-evidence.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22108,6 +22156,7 @@
     {
       "file": "bottom-bookmark-navigation.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22116,6 +22165,7 @@
     {
       "file": "bottom-context.spec.ts",
       "caseCount": 5,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22124,6 +22174,7 @@
     {
       "file": "bottom-editor-row-contrast.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22134,6 +22185,7 @@
     {
       "file": "bottom-panel-cancel-apply-height.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22144,6 +22196,7 @@
     {
       "file": "bottom-panel-full-width.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22154,6 +22207,7 @@
     {
       "file": "bottom-splitter-interaction-closure.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22164,6 +22218,7 @@
     {
       "file": "bottom-tab-header-visibility.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22177,6 +22232,7 @@
     {
       "file": "bulk-registration-strict.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22185,6 +22241,7 @@
     {
       "file": "callout-body-anchor-drag.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22193,6 +22250,7 @@
     {
       "file": "checkbox-dark-color-scheme.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22203,6 +22261,7 @@
     {
       "file": "clipboard-entity-parity.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22211,6 +22270,7 @@
     {
       "file": "clock-generator-toolbar-icon-size.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22219,6 +22279,7 @@
     {
       "file": "clock-presentation-closure.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22227,14 +22288,16 @@
     {
       "file": "clock-preview.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "clockless-time-axis.spec.ts",
       "caseCount": 7,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22246,6 +22309,7 @@
     {
       "file": "combined-column-resize-alignment.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22254,6 +22318,7 @@
     {
       "file": "combined-left-panel-transaction-tree.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22262,6 +22327,7 @@
     {
       "file": "combined-long-fixture-acceptance.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 90000,
       "candidateSignals": [],
@@ -22270,6 +22336,7 @@
     {
       "file": "command-parity-delete.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22278,6 +22345,7 @@
     {
       "file": "comment-row-draft-consistency.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22286,6 +22354,7 @@
     {
       "file": "cycle-default-pitch.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22299,6 +22368,7 @@
     {
       "file": "cycle-frozen-columns-scroll.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22309,6 +22379,7 @@
     {
       "file": "cycle-ruler-long-document-pitch.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22317,6 +22388,7 @@
     {
       "file": "cycle-scroll-pitch-invariant.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22325,6 +22397,7 @@
     {
       "file": "design-system-foundation.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22338,6 +22411,7 @@
     {
       "file": "diagnostic-aggregator.spec.ts",
       "caseCount": 8,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22346,6 +22420,7 @@
     {
       "file": "dialog-esc-lifecycle.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22354,6 +22429,7 @@
     {
       "file": "document-properties.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22364,6 +22440,7 @@
     {
       "file": "edge-counter-compact.spec.ts",
       "caseCount": 5,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 180,
       "candidateSignals": [
@@ -22375,6 +22452,7 @@
     {
       "file": "edit-commit-contract.spec.ts",
       "caseCount": 5,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22383,6 +22461,7 @@
     {
       "file": "empty-group-tree-projection.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22394,6 +22473,7 @@
     {
       "file": "event-pulse-lifecycle.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22402,6 +22482,7 @@
     {
       "file": "export-diagnostics.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22410,6 +22491,7 @@
     {
       "file": "export-fold-mapping.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22418,6 +22500,7 @@
     {
       "file": "export-user-text-boundary.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22426,6 +22509,7 @@
     {
       "file": "feature-showcase-startup.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 60,
       "candidateSignals": [
@@ -22436,6 +22520,7 @@
     {
       "file": "file-beforeunload-dirty-guard.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22444,6 +22529,7 @@
     {
       "file": "file-ribbon-blank-controls.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22455,6 +22541,7 @@
     {
       "file": "font-style-commit-contract.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22463,6 +22550,7 @@
     {
       "file": "full-gui.spec.ts",
       "caseCount": 46,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22473,6 +22561,7 @@
     {
       "file": "ghost-trace-delete.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22481,6 +22570,7 @@
     {
       "file": "golden-samples.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 300,
       "candidateSignals": [],
@@ -22489,6 +22579,7 @@
     {
       "file": "grid-zoom-alignment.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22497,6 +22588,7 @@
     {
       "file": "group-band.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22505,6 +22597,7 @@
     {
       "file": "group-clipboard-parity.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22513,14 +22606,16 @@
     {
       "file": "gui-bottom-resize.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "gui-density-tokens.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22531,14 +22626,16 @@
     {
       "file": "gui-inspector-resize.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "gui-left-pane-resize.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22550,6 +22647,7 @@
     {
       "file": "gui-reference-v8.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22562,6 +22660,7 @@
     {
       "file": "gui-split-view-visual.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22570,6 +22669,7 @@
     {
       "file": "gui-v1-home-vocabulary.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22578,6 +22678,7 @@
     {
       "file": "gui-v1-pane-vocabulary.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22586,6 +22687,7 @@
     {
       "file": "gui-v1-ribbon-labels.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22594,6 +22696,7 @@
     {
       "file": "gui-visual-acceptance.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22605,6 +22708,7 @@
     {
       "file": "history-retention.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 90,
       "candidateSignals": [],
@@ -22613,6 +22717,7 @@
     {
       "file": "home-command-surface.spec.ts",
       "caseCount": 24,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22625,6 +22730,7 @@
     {
       "file": "home-ribbon-timegroup-cleanup.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22633,6 +22739,7 @@
     {
       "file": "icon-button-dialog-close.spec.ts",
       "caseCount": 5,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22641,6 +22748,7 @@
     {
       "file": "incremental-invalidation-matrix.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22649,6 +22757,7 @@
     {
       "file": "insert-icon-semantics.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22660,6 +22769,7 @@
     {
       "file": "insert-timeline-ribbon.spec.ts",
       "caseCount": 10,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22672,6 +22782,7 @@
     {
       "file": "inspector-accordion.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22680,6 +22791,7 @@
     {
       "file": "inspector-capability.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22688,6 +22800,7 @@
     {
       "file": "inspector-group-transaction-scroll.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22696,6 +22809,7 @@
     {
       "file": "inspector-hide-compacts-rows.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22707,6 +22821,7 @@
     {
       "file": "inspector-multi-selection.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22715,6 +22830,7 @@
     {
       "file": "inspector-waveform-style.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22725,6 +22841,7 @@
     {
       "file": "interaction-visual-scenarios.spec.ts",
       "caseCount": 11,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22733,6 +22850,7 @@
     {
       "file": "issue-441-ribbon-label-integrity.spec.ts",
       "caseCount": 9,
+      "reviewedCaseCount": 0,
       "originIssue": "441",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22744,14 +22862,16 @@
     {
       "file": "issue-554-transaction-journey.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": "554",
       "declaredTimeoutMs": 60,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-573-combined-divider-pinned.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "573",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22760,6 +22880,7 @@
     {
       "file": "issue-573-combined-shared-time-axis.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": "573",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22771,6 +22892,7 @@
     {
       "file": "issue-593-mode-layout-isolation.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "593",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22779,6 +22901,7 @@
     {
       "file": "issue-621-far-jump-no-rewindow-storm.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "621",
       "declaredTimeoutMs": 120,
       "candidateSignals": [],
@@ -22787,6 +22910,7 @@
     {
       "file": "issue-623-cycle-entry-settles-once.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "623",
       "declaredTimeoutMs": 3000,
       "candidateSignals": [
@@ -22798,6 +22922,7 @@
     {
       "file": "issue-624-cycle-reload-mode.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "624",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22808,17 +22933,19 @@
     {
       "file": "issue-625-cycle-fixed-columns-scroll.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": "625",
       "declaredTimeoutMs": 60,
       "candidateSignals": [
         "geometryRead",
         "explicitWait"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-625-mode-geometry-unchanged.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "625",
       "declaredTimeoutMs": 180,
       "candidateSignals": [
@@ -22826,11 +22953,12 @@
         "geometryRead",
         "explicitWait"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-625-no-bleed-under-fixed-columns.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": "625",
       "declaredTimeoutMs": 120,
       "candidateSignals": [
@@ -22838,25 +22966,12 @@
         "geometryRead",
         "explicitWait"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-625-timeline-only-hscroll.spec.ts",
-      "caseCount": 2,
-      "originIssue": "625",
-      "declaredTimeoutMs": null,
-      "candidateSignals": [
-        "querySelector",
-        "getComputedStyle",
-        "elementContains",
-        "styleMutation",
-        "geometryRead"
-      ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-626-primary-actions-visible.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "626",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22865,6 +22980,7 @@
     {
       "file": "issue-628-annotation-bottom-collection.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "628",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22876,6 +22992,7 @@
     {
       "file": "issue-629-combined-tree-inspector.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "629",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22884,6 +23001,7 @@
     {
       "file": "issue-629-inspector-mode-context.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "629",
       "declaredTimeoutMs": 60,
       "candidateSignals": [],
@@ -22892,6 +23010,7 @@
     {
       "file": "issue-630-active-mode-title.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "630",
       "declaredTimeoutMs": 60,
       "candidateSignals": [],
@@ -22900,6 +23019,7 @@
     {
       "file": "issue-631-transaction-vertical-lines.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "631",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22912,6 +23032,7 @@
     {
       "file": "issue-635-derived-fields.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "635",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22920,6 +23041,7 @@
     {
       "file": "issue-635-generator-pristine-draft.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "635",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22928,6 +23050,7 @@
     {
       "file": "issue-635-signal-scope-actions.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "635",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22936,6 +23059,7 @@
     {
       "file": "issue-635-transition-draft-signal-scope.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "635",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22944,6 +23068,7 @@
     {
       "file": "issue-635-transition-form-mode.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "635",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22952,6 +23077,7 @@
     {
       "file": "issue-637-sustained-scroll.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "637",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22962,6 +23088,7 @@
     {
       "file": "issue-639-mode-scoped-bottom-selection.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "639",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22970,6 +23097,7 @@
     {
       "file": "issue-639-transaction-create-cycle-bottom-tab.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "639",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22978,6 +23106,7 @@
     {
       "file": "issue-646-tree-fixed-scroll.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "646",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -22986,6 +23115,7 @@
     {
       "file": "issue-650-transaction-select-reveal.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "650",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22996,6 +23126,7 @@
     {
       "file": "issue-651-bulk-dialog-focus.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "651",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23004,6 +23135,7 @@
     {
       "file": "issue-676-canvas-inspector-refresh.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "676",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23012,24 +23144,27 @@
     {
       "file": "issue-698-color-toggle-and-compact-phases.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": "698",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-698-inspector-phases.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "698",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-701-layout-return.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "701",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23038,14 +23173,16 @@
     {
       "file": "issue-703-inline-row-apply.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": "703",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-704-shared-chevron.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "704",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23054,6 +23191,7 @@
     {
       "file": "issue-714-table-header-and-swatch.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": "714",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23061,11 +23199,12 @@
         "getComputedStyle",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-720-control-affordance-audit.spec.ts",
       "caseCount": 6,
+      "reviewedCaseCount": 6,
       "originIssue": "720",
       "declaredTimeoutMs": 1000,
       "candidateSignals": [
@@ -23073,56 +23212,62 @@
         "getComputedStyle",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-720-cursor-and-disabled-audit.spec.ts",
       "caseCount": 6,
+      "reviewedCaseCount": 6,
       "originIssue": "720",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-720-disabled-reasons.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "720",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-720-gesture-status-hint.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 3,
       "originIssue": "720",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-720-keyboard-parity.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 3,
       "originIssue": "720",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-720-menu-dialog-affordance.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": "720",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-721-visual-channels.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": "721",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23133,6 +23278,7 @@
     {
       "file": "issue-722-display-scale-125.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "722",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23143,6 +23289,7 @@
     {
       "file": "issue-722-splitter-discoverability.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "722",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23154,6 +23301,7 @@
     {
       "file": "issue-722-splitter-reset.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "722",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23162,6 +23310,7 @@
     {
       "file": "issue-723-status-diagnostics.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "723",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23173,6 +23322,7 @@
     {
       "file": "issue-724-search-scope.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "724",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23181,6 +23331,7 @@
     {
       "file": "issue-725-draft-markers.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "725",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23189,6 +23340,7 @@
     {
       "file": "issue-725-escape-revert.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "725",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23197,6 +23349,7 @@
     {
       "file": "issue-725-f2-edit.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "725",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23205,6 +23358,7 @@
     {
       "file": "issue-725-keyboard-journey.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "725",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23215,6 +23369,7 @@
     {
       "file": "issue-726-lane-hover.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "726",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23225,6 +23380,7 @@
     {
       "file": "issue-726-marker-hierarchy.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "726",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23235,6 +23391,7 @@
     {
       "file": "issue-727-minimap-affordance.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "727",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23243,6 +23400,7 @@
     {
       "file": "issue-728-group-double-click.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "728",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23251,6 +23409,7 @@
     {
       "file": "issue-729-dirty-title.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "729",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23259,34 +23418,38 @@
     {
       "file": "issue-737-bottom-sort.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "737",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-737-multi-select.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "737",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-737-selection-gestures.spec.ts",
-      "caseCount": 3,
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": "737",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-738-ruler-hit-area.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": "738",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23295,6 +23458,7 @@
     {
       "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
       "caseCount": 7,
+      "reviewedCaseCount": 0,
       "originIssue": "738",
       "declaredTimeoutMs": 300,
       "candidateSignals": [
@@ -23306,6 +23470,7 @@
     {
       "file": "issue-738-stress-real-input.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "738",
       "declaredTimeoutMs": 400,
       "candidateSignals": [
@@ -23317,6 +23482,7 @@
     {
       "file": "issue-738-stress-rebase.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": "738",
       "declaredTimeoutMs": 300,
       "candidateSignals": [
@@ -23328,6 +23494,7 @@
     {
       "file": "issue-740-741-756-cycle-layout.spec.ts",
       "caseCount": 5,
+      "reviewedCaseCount": 0,
       "originIssue": "740",
       "declaredTimeoutMs": 30,
       "candidateSignals": [
@@ -23340,6 +23507,7 @@
     {
       "file": "issue-740-cycle-bottom-hidden-geometry.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "740",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23351,6 +23519,7 @@
     {
       "file": "issue-740-cycle-bottom-hidden.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "740",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23362,6 +23531,7 @@
     {
       "file": "issue-741-transaction-no-left-resizer.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "741",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23370,6 +23540,7 @@
     {
       "file": "issue-744-diagnostics-freshness.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "744",
       "declaredTimeoutMs": 60,
       "candidateSignals": [],
@@ -23378,6 +23549,7 @@
     {
       "file": "issue-746-visible-group-create.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "746",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23388,36 +23560,40 @@
     },
     {
       "file": "issue-747-a11y-and-sort-matrix.spec.ts",
-      "caseCount": 2,
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "747",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-747-bottom-settings.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "747",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-747-geometry-acceptance.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": "747",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-748-add-and-focus-journey.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "748",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23426,6 +23602,7 @@
     {
       "file": "issue-748-transaction-left-header.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "748",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23434,6 +23611,7 @@
     {
       "file": "issue-748-tree-menu-and-parity.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "748",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23444,6 +23622,7 @@
     {
       "file": "issue-749-move-to-group-submenu.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "749",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23452,6 +23631,7 @@
     {
       "file": "issue-750-custom-tc-scale.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "750",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23460,6 +23640,7 @@
     {
       "file": "issue-750-geometry-10-to-50.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": "750",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23472,6 +23653,7 @@
     {
       "file": "issue-750-ruler-follows-tc-scale.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "750",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23482,6 +23664,7 @@
     {
       "file": "issue-750-tc-scale-selector.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "750",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23490,6 +23673,7 @@
     {
       "file": "issue-751-bottom-phase-editor.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "751",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23500,6 +23684,7 @@
     {
       "file": "issue-752-bottom-remount.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "752",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23508,6 +23693,7 @@
     {
       "file": "issue-753-bookmark-gesture-fuzz.spec.ts",
       "caseCount": 5,
+      "reviewedCaseCount": 0,
       "originIssue": "753",
       "declaredTimeoutMs": 3000,
       "candidateSignals": [
@@ -23519,6 +23705,7 @@
     {
       "file": "issue-753-bookmark-navigation-stays-in-app.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": "753",
       "declaredTimeoutMs": 10,
       "candidateSignals": [],
@@ -23527,6 +23714,7 @@
     {
       "file": "issue-753-stress-classified.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": "753",
       "declaredTimeoutMs": 3000,
       "candidateSignals": [],
@@ -23535,6 +23723,7 @@
     {
       "file": "issue-755-analytic-geometry-equivalence.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "755",
       "declaredTimeoutMs": 120,
       "candidateSignals": [
@@ -23545,6 +23734,7 @@
     {
       "file": "issue-755-analytic-transition-equivalence.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "755",
       "declaredTimeoutMs": 60,
       "candidateSignals": [],
@@ -23553,6 +23743,7 @@
     {
       "file": "issue-755-canvas-production-acceptance.spec.ts",
       "caseCount": 5,
+      "reviewedCaseCount": 0,
       "originIssue": "755",
       "declaredTimeoutMs": 300,
       "candidateSignals": [
@@ -23565,6 +23756,7 @@
     {
       "file": "issue-757-far-scroll-window-coverage.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "757",
       "declaredTimeoutMs": 180,
       "candidateSignals": [
@@ -23575,6 +23767,7 @@
     {
       "file": "issue-759-group-disclosure-shared.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "759",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23585,6 +23778,7 @@
     {
       "file": "issue-760-combined-horizontal-wheel.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "760",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23595,6 +23789,7 @@
     {
       "file": "issue-761-start-input-width.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "761",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23605,6 +23800,7 @@
     {
       "file": "issue-763-retained-phase-drafts.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": "763",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23613,6 +23809,7 @@
     {
       "file": "issue-764-group-header-sticky.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "764",
       "declaredTimeoutMs": 120,
       "candidateSignals": [
@@ -23625,6 +23822,7 @@
     {
       "file": "issue-765-transaction-no-phantom-vscroll.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": "765",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23636,6 +23834,7 @@
     {
       "file": "issue-766-cycle-plural.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "766",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23644,6 +23843,7 @@
     {
       "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": "767",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23656,6 +23856,7 @@
     {
       "file": "issue-768-mode-switch-budget.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "768",
       "declaredTimeoutMs": 240,
       "candidateSignals": [
@@ -23666,6 +23867,7 @@
     {
       "file": "issue-769-tree-virtualization-keyboard.spec.ts",
       "caseCount": 5,
+      "reviewedCaseCount": 0,
       "originIssue": "769",
       "declaredTimeoutMs": 240,
       "candidateSignals": [],
@@ -23674,6 +23876,7 @@
     {
       "file": "issue-770-filtered-selection-scope.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "770",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23684,6 +23887,7 @@
     {
       "file": "issue-771-many-small-groups-virtualized.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "771",
       "declaredTimeoutMs": 180,
       "candidateSignals": [
@@ -23694,6 +23898,7 @@
     {
       "file": "issue-772-retained-bookmark-drafts.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "772",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23702,6 +23907,7 @@
     {
       "file": "issue-773-bottom-tab-round-trip.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "773",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23710,6 +23916,7 @@
     {
       "file": "issue-774-visibility-preserves-selection.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "774",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23718,6 +23925,7 @@
     {
       "file": "issue-775-annotation-draft-isolation.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": "775",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23726,6 +23934,7 @@
     {
       "file": "issue-776-signal-inspector-draft-sync.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": "776",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23734,6 +23943,7 @@
     {
       "file": "issue-777-current-v2-samples-acceptance.spec.ts",
       "caseCount": 10,
+      "reviewedCaseCount": 0,
       "originIssue": "777",
       "declaredTimeoutMs": 60,
       "candidateSignals": [],
@@ -23742,6 +23952,7 @@
     {
       "file": "keyboard-shortcut-router.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 5000,
       "candidateSignals": [
@@ -23752,6 +23963,7 @@
     {
       "file": "keyboard-tabs-resizers.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 60000,
       "candidateSignals": [],
@@ -23760,6 +23972,7 @@
     {
       "file": "label-anchor-source-display.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23768,6 +23981,7 @@
     {
       "file": "layout-inspector.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23778,6 +23992,7 @@
     {
       "file": "left-header-action-alignment.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23789,6 +24004,7 @@
     {
       "file": "left-pane-constraint.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23797,6 +24013,7 @@
     {
       "file": "left-tree-action-icons.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23807,6 +24024,7 @@
     {
       "file": "left-tree-compact-footer.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23817,6 +24035,7 @@
     {
       "file": "left-tree-critical-icons.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23827,6 +24046,7 @@
     {
       "file": "left-tree-interaction.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23837,6 +24057,7 @@
     {
       "file": "left-tree-menu-contrast.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23847,6 +24068,7 @@
     {
       "file": "left-tree-projection-policy-correction.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23857,6 +24079,7 @@
     {
       "file": "left-tree-type-filter.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23867,6 +24090,7 @@
     {
       "file": "listener-lifecycle.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23877,6 +24101,7 @@
     {
       "file": "local-geometry-dom-batch.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23888,6 +24113,7 @@
     {
       "file": "measurement-anchor-drag.spec.ts",
       "caseCount": 5,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 2000,
       "candidateSignals": [
@@ -23898,6 +24124,7 @@
     {
       "file": "measurement-dimension-layout.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 2000,
       "candidateSignals": [],
@@ -23906,6 +24133,7 @@
     {
       "file": "measurement-export-matrix.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 2000,
       "candidateSignals": [
@@ -23916,6 +24144,7 @@
     {
       "file": "measurement-lane-stacking.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 2000,
       "candidateSignals": [
@@ -23926,6 +24155,7 @@
     {
       "file": "measurement-top-row-clip.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23934,6 +24164,7 @@
     {
       "file": "mechanical-visual-diagnostics.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23944,6 +24175,7 @@
     {
       "file": "minimal-cycle-view.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23955,6 +24187,7 @@
     {
       "file": "minimap-overview-performance.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23967,6 +24200,7 @@
     {
       "file": "minimap-viewport-closure.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23978,6 +24212,7 @@
     {
       "file": "mode-isolation-journey.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 90,
       "candidateSignals": [],
@@ -23986,6 +24221,7 @@
     {
       "file": "name-draft-identity.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -23994,6 +24230,7 @@
     {
       "file": "open-progressive-wave-yield.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [
@@ -24006,6 +24243,7 @@
     {
       "file": "open-validation-handoff.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24014,6 +24252,7 @@
     {
       "file": "perf-755-far-jump-longtask.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 180,
       "candidateSignals": [
@@ -24024,6 +24263,7 @@
     {
       "file": "performance-closure.spec.ts",
       "caseCount": 11,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [
@@ -24037,6 +24277,7 @@
     {
       "file": "performance-internal-latency.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24045,6 +24286,7 @@
     {
       "file": "performance-view-only-validation.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24053,6 +24295,7 @@
     {
       "file": "pinned-bottom-target.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24061,6 +24304,7 @@
     {
       "file": "production-presentation-equivalence.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24072,6 +24316,7 @@
     {
       "file": "qa-cross-mode-journey.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24082,14 +24327,16 @@
     {
       "file": "qa-fresh-state-journeys.spec.ts",
       "caseCount": 10,
+      "reviewedCaseCount": 6,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "reference-clock-conversion.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24098,6 +24345,7 @@
     {
       "file": "reorder-visibility.spec.ts",
       "caseCount": 8,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24109,6 +24357,7 @@
     {
       "file": "reset-semantics-inspector.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24117,6 +24366,7 @@
     {
       "file": "resource-budget-ui-routes.spec.ts",
       "caseCount": 7,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 2000,
       "candidateSignals": [],
@@ -24125,6 +24375,7 @@
     {
       "file": "result-aware-create-effects.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24133,6 +24384,7 @@
     {
       "file": "review-checks-refresh.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24141,6 +24393,7 @@
     {
       "file": "review-workflow.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24152,6 +24405,7 @@
     {
       "file": "ribbon-caption-layout.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24164,6 +24418,7 @@
     {
       "file": "ribbon-cursor-ab.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24172,6 +24427,7 @@
     {
       "file": "ribbon-layout.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24182,6 +24438,7 @@
     {
       "file": "ribbon-more-popover-closure.spec.ts",
       "caseCount": 6,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24192,6 +24449,7 @@
     {
       "file": "ribbon-responsive-overflow.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24200,6 +24458,7 @@
     {
       "file": "ribbon-tabs.spec.ts",
       "caseCount": 5,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24208,6 +24467,7 @@
     {
       "file": "ribbon-transaction-context.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24216,6 +24476,7 @@
     {
       "file": "ribbon-visual-scenario-matrix.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24224,6 +24485,7 @@
     {
       "file": "ruler-reference-clock.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24232,6 +24494,7 @@
     {
       "file": "ruler-terminal-boundary.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24240,6 +24503,7 @@
     {
       "file": "runtime-owner-acceptance.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [
@@ -24250,6 +24514,7 @@
     {
       "file": "signal-editor-draft-survives-unrelated-edit.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24258,6 +24523,7 @@
     {
       "file": "signal-editor-group-dropdown.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24266,6 +24532,7 @@
     {
       "file": "signal-editor.spec.ts",
       "caseCount": 18,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24276,6 +24543,7 @@
     {
       "file": "signal-event-table-draft-hint.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24284,6 +24552,7 @@
     {
       "file": "signal-filter-clear-affordance.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24292,6 +24561,7 @@
     {
       "file": "signal-generator.spec.ts",
       "caseCount": 5,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24300,6 +24570,7 @@
     {
       "file": "signal-spacing.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24308,6 +24579,7 @@
     {
       "file": "signal-split-no-assignment-control.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24316,6 +24588,7 @@
     {
       "file": "signal-split-render-routing.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24324,6 +24597,7 @@
     {
       "file": "signal-split.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24334,6 +24608,7 @@
     {
       "file": "signal-type-label-registry.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24342,6 +24617,7 @@
     {
       "file": "signal-visibility-recover.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24350,6 +24626,7 @@
     {
       "file": "spacer-clipboard-reorder.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24358,6 +24635,7 @@
     {
       "file": "spacer-row.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24366,6 +24644,7 @@
     {
       "file": "spacer.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24374,6 +24653,7 @@
     {
       "file": "split-active-pane.spec.ts",
       "caseCount": 6,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24382,6 +24662,7 @@
     {
       "file": "stable-id-collision.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24392,6 +24673,7 @@
     {
       "file": "stable-surface.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24402,6 +24684,7 @@
     {
       "file": "status-context.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24410,6 +24693,7 @@
     {
       "file": "time-group-lifecycle.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 60,
       "candidateSignals": [],
@@ -24418,6 +24702,7 @@
     {
       "file": "time-mapping-scale-closure.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [],
@@ -24426,6 +24711,7 @@
     {
       "file": "timeline-editor.spec.ts",
       "caseCount": 29,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24437,6 +24723,7 @@
     {
       "file": "timeline-range-100k.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [
@@ -24449,6 +24736,7 @@
     {
       "file": "timeline-range-band-presentation.spec.ts",
       "caseCount": 9,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24457,6 +24745,7 @@
     {
       "file": "timeline-range-edit-readability.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24467,6 +24756,7 @@
     {
       "file": "timeline-range-hitarea-closure.spec.ts",
       "caseCount": 5,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24475,6 +24765,7 @@
     {
       "file": "timing-grid-x-scale-closure.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24486,6 +24777,7 @@
     {
       "file": "titlebar-controls.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24494,6 +24786,7 @@
     {
       "file": "transaction-bottom-panel-table-first.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24502,6 +24795,7 @@
     {
       "file": "transaction-bottom-panel-table.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24512,6 +24806,7 @@
     {
       "file": "transaction-bottom-phase-linked-signals.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24520,6 +24815,7 @@
     {
       "file": "transaction-bottom-toolbar-add-ungroup.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24528,6 +24824,7 @@
     {
       "file": "transaction-drag.spec.ts",
       "caseCount": 11,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24538,6 +24835,7 @@
     {
       "file": "transaction-empty-state-create-lane-fix.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24546,6 +24844,7 @@
     {
       "file": "transaction-export.spec.ts",
       "caseCount": 16,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [],
@@ -24554,6 +24853,7 @@
     {
       "file": "transaction-group-management.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24562,6 +24862,7 @@
     {
       "file": "transaction-gui-authoring.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24570,6 +24871,7 @@
     {
       "file": "transaction-inspector-apply-validation.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24578,6 +24880,7 @@
     {
       "file": "transaction-inspector-bottom-draft-sync.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24586,6 +24889,7 @@
     {
       "file": "transaction-inspector-duration-tc.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24594,6 +24898,7 @@
     {
       "file": "transaction-inspector-lane-suggestions.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24602,6 +24907,7 @@
     {
       "file": "transaction-lane-labels-visible.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24612,6 +24918,7 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "caseCount": 8,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 180,
       "candidateSignals": [
@@ -24622,6 +24929,7 @@
     {
       "file": "transaction-minimap-overview.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24632,6 +24940,7 @@
     {
       "file": "transaction-onboarding.spec.ts",
       "caseCount": 7,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24640,6 +24949,7 @@
     {
       "file": "transaction-partial-update-preserves-fields.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24648,6 +24958,7 @@
     {
       "file": "transaction-phase-bars.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24658,6 +24969,7 @@
     {
       "file": "transaction-ribbon-groups.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24668,14 +24980,16 @@
     {
       "file": "transaction-selection-smoke.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-signal-picker.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 180,
       "candidateSignals": [],
@@ -24684,27 +24998,30 @@
     {
       "file": "transaction-startup-fixture-matrix.spec.ts",
       "caseCount": 4,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": 60,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-startup-large-fixture.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": 90,
       "candidateSignals": [
         "querySelector",
         "dataset"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-startup-metrics.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": 90000,
       "candidateSignals": [
@@ -24715,6 +25032,7 @@
     {
       "file": "transaction-time-scale.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24723,6 +25041,7 @@
     {
       "file": "transaction-tree-control-parity.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24734,6 +25053,7 @@
     {
       "file": "transaction-tree-filter.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24742,6 +25062,7 @@
     {
       "file": "transaction-tree-long-name.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24750,6 +25071,7 @@
     {
       "file": "transaction-tree-menu-overlay.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24758,6 +25080,7 @@
     {
       "file": "transaction-tree-no-frozen-pane-handle.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24766,6 +25089,7 @@
     {
       "file": "transaction-viewport-hscroll.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24776,6 +25100,7 @@
     {
       "file": "tree-drag-drop.spec.ts",
       "caseCount": 5,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24786,6 +25111,7 @@
     {
       "file": "tree-keyboard.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24794,6 +25120,7 @@
     {
       "file": "undo-redo-selection-context.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24802,6 +25129,7 @@
     {
       "file": "unsaved-file-dialog.spec.ts",
       "caseCount": 12,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24812,16 +25140,18 @@
     {
       "file": "v8-gui-contract-coverage.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "value-label-layout.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24832,6 +25162,7 @@
     {
       "file": "value-signal-compatibility.spec.ts",
       "caseCount": 7,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24840,6 +25171,7 @@
     {
       "file": "view-metrics-owner.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24851,6 +25183,7 @@
     {
       "file": "view-mode-readability.spec.ts",
       "caseCount": 3,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24861,6 +25194,7 @@
     {
       "file": "view-ribbon-slot.spec.ts",
       "caseCount": 7,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24873,6 +25207,7 @@
     {
       "file": "visual-grammar-cross-component.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24884,6 +25219,7 @@
     {
       "file": "visual-reference-lifecycle.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24892,6 +25228,7 @@
     {
       "file": "visual-regression-modes.spec.ts",
       "caseCount": 6,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24900,6 +25237,7 @@
     {
       "file": "wavedrom-security.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24908,6 +25246,7 @@
     {
       "file": "workspace-preset-density.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24916,6 +25255,7 @@
     {
       "file": "workspace-zoom-isolation.spec.ts",
       "caseCount": 2,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24924,6 +25264,7 @@
     {
       "file": "zoom-cross-surface-alignment.spec.ts",
       "caseCount": 1,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -24932,6 +25273,7 @@
     {
       "file": "zoom-text-fidelity.spec.ts",
       "caseCount": 5,
+      "reviewedCaseCount": 0,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -25049,6 +25391,56 @@
       },
       "reviewStatus": "REVIEWED",
       "disposition": "DISTINCT_CONTRACTS"
+    }
+  ],
+  "consolidationMap": [
+    {
+      "from": {
+        "file": "issue-737-selection-gestures.spec.ts",
+        "title": "Bottom grid selection gestures at 1672x941"
+      },
+      "to": {
+        "file": "issue-737-selection-gestures.spec.ts",
+        "title": "Bottom grid selection gestures at 1280x720"
+      },
+      "protectedInvariant": "Click/Ctrl/Shift selection, visible-order filtering, Ctrl+A scoping, and view-only Canonical/History behavior are viewport-independent.",
+      "reason": "Removed the duplicate desktop execution; the compact viewport retains the full semantic journey, while issue-747-geometry-acceptance.spec.ts continues to verify responsive geometry at both 1280x720 and 1672x941."
+    },
+    {
+      "from": {
+        "file": "issue-747-a11y-and-sort-matrix.spec.ts",
+        "title": "Bottom sort matrix and settings a11y at 1672x941"
+      },
+      "to": {
+        "file": "issue-747-a11y-and-sort-matrix.spec.ts",
+        "title": "Bottom sort matrix and settings a11y at 1280x720"
+      },
+      "protectedInvariant": "Start/End sort direction, selected-ID retention, view-only sort, named settings gear, and Escape popover close are width-independent semantic behavior.",
+      "reason": "Removed the redundant desktop semantic run. The compact case retains the complete a11y/sort journey, and issue-747-geometry-acceptance.spec.ts still verifies the layout-specific behavior at both supported viewports."
+    },
+    {
+      "from": {
+        "file": "issue-625-timeline-only-hscroll.spec.ts",
+        "title": "Cycle FixedColumns sit outside the horizontal scroll owner at 1280x720"
+      },
+      "to": {
+        "file": "issue-625-cycle-fixed-columns-scroll.spec.ts",
+        "title": "Cycle fixed columns stay stationary through native scrollbar drag at 1280x720"
+      },
+      "protectedInvariant": "Timeline-only horizontal scrolling keeps fixed columns stationary and the visible scrollbar aligned to the time-domain region.",
+      "reason": "Removed the implementation-coupled browser case that forced --wave-width, asserted overflow/DOM ancestry, and re-derived scroll-owner topology. The production-path native-scroll journey now also measures visible scrollbar alignment at this width; check:cycle-scroll-owner protects the structural owner contract without launching a browser."
+    },
+    {
+      "from": {
+        "file": "issue-625-timeline-only-hscroll.spec.ts",
+        "title": "Cycle FixedColumns sit outside the horizontal scroll owner at 1672x941"
+      },
+      "to": {
+        "file": "issue-625-cycle-fixed-columns-scroll.spec.ts",
+        "title": "Cycle fixed columns stay stationary through native scrollbar drag at 1672x941"
+      },
+      "protectedInvariant": "Timeline-only horizontal scrolling keeps fixed columns stationary and the visible scrollbar aligned to the time-domain region.",
+      "reason": "Removed the implementation-coupled browser case that forced --wave-width, asserted overflow/DOM ancestry, and re-derived scroll-owner topology. The production-path native-scroll journey now also measures visible scrollbar alignment at this width; check:cycle-scroll-owner protects the structural owner contract without launching a browser."
     }
   ]
 }

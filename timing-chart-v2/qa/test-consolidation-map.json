@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "consolidations": [
+    {
+      "from": {
+        "file": "issue-737-selection-gestures.spec.ts",
+        "title": "Bottom grid selection gestures at 1672x941"
+      },
+      "to": {
+        "file": "issue-737-selection-gestures.spec.ts",
+        "title": "Bottom grid selection gestures at 1280x720"
+      },
+      "protectedInvariant": "Click/Ctrl/Shift selection, visible-order filtering, Ctrl+A scoping, and view-only Canonical/History behavior are viewport-independent.",
+      "reason": "Removed the duplicate desktop execution; the compact viewport retains the full semantic journey, while issue-747-geometry-acceptance.spec.ts continues to verify responsive geometry at both 1280x720 and 1672x941."
+    },
+    {
+      "from": {
+        "file": "issue-747-a11y-and-sort-matrix.spec.ts",
+        "title": "Bottom sort matrix and settings a11y at 1672x941"
+      },
+      "to": {
+        "file": "issue-747-a11y-and-sort-matrix.spec.ts",
+        "title": "Bottom sort matrix and settings a11y at 1280x720"
+      },
+      "protectedInvariant": "Start/End sort direction, selected-ID retention, view-only sort, named settings gear, and Escape popover close are width-independent semantic behavior.",
+      "reason": "Removed the redundant desktop semantic run. The compact case retains the complete a11y/sort journey, and issue-747-geometry-acceptance.spec.ts still verifies the layout-specific behavior at both supported viewports."
+    },
+    {
+      "from": {
+        "file": "issue-625-timeline-only-hscroll.spec.ts",
+        "title": "Cycle FixedColumns sit outside the horizontal scroll owner at 1280x720"
+      },
+      "to": {
+        "file": "issue-625-cycle-fixed-columns-scroll.spec.ts",
+        "title": "Cycle fixed columns stay stationary through native scrollbar drag at 1280x720"
+      },
+      "protectedInvariant": "Timeline-only horizontal scrolling keeps fixed columns stationary and the visible scrollbar aligned to the time-domain region.",
+      "reason": "Removed the implementation-coupled browser case that forced --wave-width, asserted overflow/DOM ancestry, and re-derived scroll-owner topology. The production-path native-scroll journey now also measures visible scrollbar alignment at this width; check:cycle-scroll-owner protects the structural owner contract without launching a browser."
+    },
+    {
+      "from": {
+        "file": "issue-625-timeline-only-hscroll.spec.ts",
+        "title": "Cycle FixedColumns sit outside the horizontal scroll owner at 1672x941"
+      },
+      "to": {
+        "file": "issue-625-cycle-fixed-columns-scroll.spec.ts",
+        "title": "Cycle fixed columns stay stationary through native scrollbar drag at 1672x941"
+      },
+      "protectedInvariant": "Timeline-only horizontal scrolling keeps fixed columns stationary and the visible scrollbar aligned to the time-domain region.",
+      "reason": "Removed the implementation-coupled browser case that forced --wave-width, asserted overflow/DOM ancestry, and re-derived scroll-owner topology. The production-path native-scroll journey now also measures visible scrollbar alignment at this width; check:cycle-scroll-owner protects the structural owner contract without launching a browser."
+    }
+  ]
+}

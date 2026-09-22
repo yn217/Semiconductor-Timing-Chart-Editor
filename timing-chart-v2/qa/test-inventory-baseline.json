@@ -1,0 +1,9 @@
+{
+  "commit": "965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a",
+  "playwrightVersion": "1.62.1",
+  "specFileCount": 337,
+  "caseCount": 988,
+  "measuredRuntimeSummary": null,
+  "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
+  "retryAndFlakySummary": null
+}

@@ -7,6 +7,8 @@ const cli = resolve(root, "node_modules/@playwright/test/cli.js");
 const outputPath = resolve(root, process.argv[2] ?? "qa/test-suite-inventory.json");
 const markdownPath = resolve(root, "docs/TEST_SUITE_INVENTORY.md");
 const reviewPath = resolve(root, "qa/test-suite-review.json");
+const baselinePath = resolve(root, "qa/test-inventory-baseline.json");
+const consolidationPath = resolve(root, "qa/test-consolidation-map.json");
 
 const result = spawnSync(process.execPath, [cli, "test", "--list", "--reporter=json"], {
   cwd: root,
@@ -21,10 +23,17 @@ if (result.status !== 0) {
 }
 
 const report = JSON.parse(result.stdout);
-const curatedReviews = existsSync(reviewPath) ? JSON.parse(readFileSync(reviewPath, "utf8")).reviews : [];
+const baseline = JSON.parse(readFileSync(baselinePath, "utf8"));
+const consolidationMap = JSON.parse(readFileSync(consolidationPath, "utf8"));
+const reviewManifest = existsSync(reviewPath) ? JSON.parse(readFileSync(reviewPath, "utf8")) : { reviews: [], specReviews: [] };
+const curatedReviews = reviewManifest.reviews ?? [];
+const specReviews = reviewManifest.specReviews ?? [];
 const reviewsByKey = new Map(curatedReviews.map((review) => [`${review.file}\n${review.title}`, review]));
 if (reviewsByKey.size !== curatedReviews.length) throw new Error("Duplicate file/title key in qa/test-suite-review.json.");
+const reviewsByFile = new Map(specReviews.map((review) => [review.file, review]));
+if (reviewsByFile.size !== specReviews.length) throw new Error("Duplicate file-level review in qa/test-suite-review.json.");
 const matchedReviewKeys = new Set();
+const matchedSpecReviews = new Set();
 const cases = [];
 
 function visit(suites, file = "", suitePath = []) {
@@ -57,9 +66,12 @@ function visit(suites, file = "", suitePath = []) {
           reviewStatus: "UNREVIEWED",
         };
         const review = reviewsByKey.get(`${record.file}\n${record.title}`);
-        if (review) {
-          matchedReviewKeys.add(`${record.file}\n${record.title}`);
-          Object.assign(record, review, { reviewStatus: "REVIEWED" });
+        const specReview = reviewsByFile.get(record.file);
+        if (review || specReview) {
+          if (specReview) matchedSpecReviews.add(record.file);
+          const selectedReview = review ?? specReview;
+          if (review) matchedReviewKeys.add(`${record.file}\n${record.title}`);
+          Object.assign(record, selectedReview, { file: record.file, title: record.title, suitePath: childSuitePath, line: spec.line, reviewStatus: "REVIEWED" });
         }
         cases.push(record);
       }
@@ -71,12 +83,23 @@ function visit(suites, file = "", suitePath = []) {
 visit(report.suites);
 const missingReviewKeys = [...reviewsByKey.keys()].filter((key) => !matchedReviewKeys.has(key));
 if (missingReviewKeys.length) throw new Error(`Curated test reviews no longer match Playwright collection:\n${missingReviewKeys.join("\n")}`);
+const missingSpecReviewFiles = [...reviewsByFile.keys()].filter((file) => !matchedSpecReviews.has(file));
+if (missingSpecReviewFiles.length) throw new Error(`File-level reviews no longer match Playwright collection:\n${missingSpecReviewFiles.join("\n")}`);
 cases.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line || a.title.localeCompare(b.title));
+const caseKeys = new Set(cases.map((test) => `${test.file}\n${test.title}`));
+for (const item of consolidationMap.consolidations) {
+  const fromKey = `${item.from.file}\n${item.from.title}`;
+  const toKey = `${item.to.file}\n${item.to.title}`;
+  if (caseKeys.has(fromKey)) throw new Error(`Consolidated source test still exists: ${item.from.file} — ${item.from.title}`);
+  if (!caseKeys.has(toKey)) throw new Error(`Consolidated replacement test is missing: ${item.to.file} — ${item.to.title}`);
+}
 
 const fileAudit = new Map();
 for (const file of new Set(cases.map((test) => test.file))) {
   const sourcePath = resolve(root, "tests/e2e", file);
   const source = readFileSync(sourcePath, "utf8");
+  const fileCases = cases.filter((test) => test.file === file);
+  const reviewedCaseCount = fileCases.filter((test) => test.reviewStatus === "REVIEWED").length;
   const signals = {
     querySelector: /\.querySelector(?:All)?\s*\(/.test(source),
     getComputedStyle: /getComputedStyle\s*\(/.test(source),
@@ -89,11 +112,12 @@ for (const file of new Set(cases.map((test) => test.file))) {
   };
   fileAudit.set(file, {
     file,
-    caseCount: cases.filter((test) => test.file === file).length,
+    caseCount: fileCases.length,
+    reviewedCaseCount,
     originIssue: file.match(/(?:issue|acceptance)-(\d+)/i)?.[1] ?? null,
     declaredTimeoutMs: [...source.matchAll(/(?:setTimeout|timeout)\s*[:=(]\s*(\d+)/g)].map((match) => Number(match[1])).sort((a, b) => b - a)[0] ?? null,
     candidateSignals: Object.entries(signals).filter(([, present]) => present).map(([signal]) => signal),
-    semanticReviewStatus: "UNREVIEWED",
+    semanticReviewStatus: reviewedCaseCount === 0 ? "UNREVIEWED" : reviewedCaseCount === fileCases.length ? "REVIEWED" : "PARTIAL",
   });
 }
 
@@ -144,6 +168,7 @@ const inventory = {
   generatedAt: new Date().toISOString(),
   source: "Playwright test --list --reporter=json; no tests were executed",
   playwrightVersion: report.config?.version ?? null,
+  baseline,
   specFileCount: new Set(cases.map((test) => test.file)).size,
   caseCount: cases.length,
   reviewedCaseCount: cases.filter((test) => test.reviewStatus === "REVIEWED").length,
@@ -153,6 +178,7 @@ const inventory = {
   fileAudit: [...fileAudit.values()].sort((a, b) => a.file.localeCompare(b.file)),
   duplicateTitleCandidates: duplicateGroups,
   similarTitleCandidates,
+  consolidationMap: consolidationMap.consolidations,
 };
 
 mkdirSync(dirname(outputPath), { recursive: true });
@@ -168,6 +194,7 @@ const markdown = [
   "# Playwright test inventory",
   "",
   `Generated from Playwright collection (${inventory.playwrightVersion}); ${inventory.specFileCount} spec files and ${inventory.caseCount} test cases. Collection does not execute tests.`,
+  `Baseline ${inventory.baseline.commit}: ${inventory.baseline.specFileCount} spec files / ${inventory.baseline.caseCount} cases. Runtime metrics: not measured.`,
   `Semantic review progress: ${inventory.reviewedCaseCount}/${inventory.caseCount} cases reviewed.`,
   "",
   "## Curated profile membership",
@@ -201,6 +228,10 @@ const markdown = [
   "Title similarity is only a discovery heuristic. It does not establish duplicate coverage; review the setup, assertions, and protected invariant before merging or moving tests.",
   "",
   similarTitleCandidates.length ? similarTitleCandidates.map((pair) => `- **${pair.similarity}**${pair.reviewStatus === "REVIEWED" ? ` — ${pair.disposition}` : " — requires semantic review"}: \`${pair.left.file}:${pair.left.line}\` “${pair.left.title}” ↔ \`${pair.right.file}:${pair.right.line}\` “${pair.right.title}”`).join("\n") : "No similar-title candidates found.",
+  "",
+  "## Consolidation/replacement map",
+  "",
+  ...consolidationMap.consolidations.map((item) => `- \`${item.from.file}\` “${item.from.title}” → \`${item.to.file}\` “${item.to.title}”. **Invariant:** ${item.protectedInvariant} **Reason:** ${item.reason}`),
   "",
   "Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.",
   "",
