@@ -1,14 +1,18 @@
 import { expect, test } from "@playwright/test";
 
-test("edited Bottom row cells show a draft marker and double-click focuses the editor", async ({ page }) => {
+test("Bottom draft edit is visibly marked and Escape restores the committed value without deselecting", async ({ page }) => {
   await page.goto("/?transaction-demo");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
   const bottom = page.getByTestId("bottom-editor");
-  const rows = bottom.locator(".transaction-list-row > button[data-selected]");
-  await rows.first().click();
+  const row = bottom.locator(".transaction-list-row > button[data-selected]").first();
+  await row.click();
   const name = page.getByLabel("Bottom Transaction name");
-  await rows.first().dblclick();
+  const original = await name.inputValue();
+  const history = await page.getByTestId("history-status").innerText();
+  await row.dblclick();
+  await expect(name).toBeFocused();
+
   const committedStyle = await name.evaluate((element) => {
     const style = getComputedStyle(element);
     return { background: style.backgroundColor, border: style.borderColor };
@@ -20,10 +24,14 @@ test("edited Bottom row cells show a draft marker and double-click focuses the e
   });
   expect(dirtyStyle).not.toEqual(committedStyle);
   await expect(page.getByTestId("transaction-properties-unapplied")).toBeVisible();
+
   await name.press("Escape");
+  await expect(name).toHaveValue(original);
   await expect.poll(() => name.evaluate((element) => {
     const style = getComputedStyle(element);
     return { background: style.backgroundColor, border: style.borderColor };
-  })).not.toEqual(dirtyStyle);
+  })).toEqual(committedStyle);
   await expect(page.getByTestId("transaction-properties-unapplied")).toHaveCount(0);
+  await expect(row).toHaveAttribute("data-selected", "true");
+  await expect(page.getByTestId("history-status")).toHaveText(history);
 });

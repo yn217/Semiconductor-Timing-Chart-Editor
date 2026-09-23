@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 329 spec files and 964 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 328 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 964/964 cases reviewed.
+Semantic review progress: 963/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -187,8 +187,6 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-722-display-scale-125.spec.ts` | 2 | 2/2 reviewed |
 | `issue-723-status-diagnostics.spec.ts` | 1 | 1/1 reviewed |
 | `issue-724-search-scope.spec.ts` | 1 | 1/1 reviewed |
-| `issue-725-draft-markers.spec.ts` | 1 | 1/1 reviewed |
-| `issue-725-escape-revert.spec.ts` | 1 | 1/1 reviewed |
 | `issue-725-keyboard-journey.spec.ts` | 2 | 2/2 reviewed |
 | `issue-726-lane-hover.spec.ts` | 1 | 1/1 reviewed |
 | `issue-726-marker-hierarchy.spec.ts` | 1 | 1/1 reviewed |
@@ -326,6 +324,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `timeline-range-hitarea-closure.spec.ts` | 5 | 5/5 reviewed |
 | `timing-grid-x-scale-closure.spec.ts` | 1 | 1/1 reviewed |
 | `titlebar-controls.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-bottom-draft.contract.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-bottom-panel-table-first.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-bottom-panel-table.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-bottom-phase-linked-signals.spec.ts` | 1 | 1/1 reviewed |
@@ -434,7 +433,6 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-721-visual-channels.spec.ts` | getComputedStyle |
 | `issue-722-display-scale-125.spec.ts` | geometryRead |
 | `issue-723-status-diagnostics.spec.ts` | querySelector, geometryRead |
-| `issue-725-draft-markers.spec.ts` | getComputedStyle |
 | `issue-725-keyboard-journey.spec.ts` | geometryRead |
 | `issue-726-lane-hover.spec.ts` | getComputedStyle |
 | `issue-726-marker-hierarchy.spec.ts` | getComputedStyle |
@@ -503,6 +501,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `timeline-range-100k.spec.ts` | querySelector, dataset, geometryRead |
 | `timeline-range-edit-readability.spec.ts` | geometryRead |
 | `timing-grid-x-scale-closure.spec.ts` | dataset, geometryRead |
+| `transaction-bottom-draft.contract.spec.ts` | getComputedStyle |
 | `transaction-bottom-panel-table.spec.ts` | geometryRead |
 | `transaction-drag.spec.ts` | geometryRead |
 | `transaction-lane-labels-visible.spec.ts` | getComputedStyle |
@@ -579,6 +578,8 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-722-splitter-reset.spec.ts` “double-clicking the Bottom and Inspector splitters restores default sizes without touching the document” → `splitter-view-state.contract.spec.ts` “double-clicking the Bottom and Inspector splitters restores default sizes without touching the document”. **Invariant:** Double-clicking either splitter restores the documented default view size without changing History or Dirty state. **Reason:** Moved the distinct fast reset journey into the stable splitter suite while retaining its PR profile and #722 traceability.
 - `issue-723-status-diagnostics.spec.ts` “developer diagnostics are collapsed by default and revealed deliberately” → `issue-723-status-diagnostics.spec.ts` “status diagnostics stay opt-in and the left rail never covers status in compact modes”. **Invariant:** Diagnostics remain opt-in without document mutation and the left workspace rail remains above the status bar at 1280x720 through Cycle, Transaction and Combined. **Reason:** Combines two assertions into one loaded production journey, removing a duplicate app startup while preserving both independent visible contracts.
 - `issue-723-status-diagnostics.spec.ts` “left rail never covers the status bar at 1280x720” → `issue-723-status-diagnostics.spec.ts` “status diagnostics stay opt-in and the left rail never covers status in compact modes”. **Invariant:** The left workspace rail never covers the status bar in compact layout across all view modes. **Reason:** The cross-mode geometry assertions now share the same 1280x720 page lifecycle as the opt-in diagnostics check; no assertion was removed.
+- `issue-725-draft-markers.spec.ts` “edited Bottom row cells show a draft marker and double-click focuses the editor” → `transaction-bottom-draft.contract.spec.ts` “Bottom draft edit is visibly marked and Escape restores the committed value without deselecting”. **Invariant:** Double-click focuses the field; changed draft styling and marker appear; Escape restores committed appearance/value without a History mutation. **Reason:** Combined with the focused Escape cancellation journey so both visual feedback and draft lifecycle assertions run in one production fixture load.
+- `issue-725-escape-revert.spec.ts` “Escape in the active Bottom row reverts a dirty draft before deselecting” → `transaction-bottom-draft.contract.spec.ts` “Bottom draft edit is visibly marked and Escape restores the committed value without deselecting”. **Invariant:** Escape resets the active Bottom draft to its canonical value while retaining selection and History unchanged. **Reason:** The source assertion is retained in the merged journey, which additionally proves the dirty indicator clears and selection remains stable.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 

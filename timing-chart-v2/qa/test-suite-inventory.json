@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T10:48:46.599Z",
+  "generatedAt": "2026-09-23T10:51:46.514Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,9 +11,9 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 329,
-  "caseCount": 964,
-  "reviewedCaseCount": 964,
+  "specFileCount": 328,
+  "caseCount": 963,
+  "reviewedCaseCount": 963,
   "curatedProfileCounts": {
     "integration": 490,
     "nightly": 195,
@@ -10962,56 +10962,6 @@
       ]
     },
     {
-      "file": "issue-725-draft-markers.spec.ts",
-      "suitePath": [],
-      "line": 3,
-      "title": "edited Bottom row cells show a draft marker and double-click focuses the editor",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "transaction-bottom-draft-visibility",
-      "originIssue": 725,
-      "type": "VISUAL_ACCEPTANCE",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Editing one Bottom Transaction field makes that cell visibly distinct as an unapplied draft, leaves untouched fields clean, and Escape restores the committed appearance without a semantic edit.",
-      "duplicateGroup": "bottom-transaction-draft-affordance",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "KEEP",
-      "reason": "The acceptance is a visible dirty-cell affordance plus a native double-click editing gesture. A lower-level test cannot prove that the real editor styles the changed field and restores it on Escape; the spec's data-draft-dirty selector is an implementation-coupled diagnostic and should be paired with computed visual-state assertions.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "visual"
-      ]
-    },
-    {
-      "file": "issue-725-escape-revert.spec.ts",
-      "suitePath": [],
-      "line": 3,
-      "title": "Escape in the active Bottom row reverts a dirty draft before deselecting",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "transaction-bottom-escape-revert",
-      "originIssue": 725,
-      "type": "USER_JOURNEY",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Escape reverts the active Bottom Transaction draft before leaving edit state and does not add History.",
-      "duplicateGroup": null,
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "decision": "KEEP",
-      "reason": "The ordering between the real focused input, draft reset, and edit lifecycle is user-visible and complements the combined keyboard journey's tab-order check; retain the narrow behavior guard.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "pr"
-      ]
-    },
-    {
       "file": "issue-725-keyboard-journey.spec.ts",
       "suitePath": [],
       "line": 5,
@@ -20412,6 +20362,32 @@
       ]
     },
     {
+      "file": "transaction-bottom-draft.contract.spec.ts",
+      "suitePath": [],
+      "line": 3,
+      "title": "Bottom draft edit is visibly marked and Escape restores the committed value without deselecting",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "transaction-bottom-draft-edit-lifecycle",
+      "originIssue": 725,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Double-click focuses the Bottom Transaction name editor; an unapplied edit is visibly marked; Escape restores the committed value/style, keeps selection, and does not add History.",
+      "duplicateGroup": "bottom-transaction-draft-affordance",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "One production journey protects visible dirty-state feedback and Escape cancellation together: computed styling, Draft marker, original value, selected identity, and unchanged History are independently asserted. Keeping it in both PR and visual profiles removes a duplicate page startup without dropping either gate.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr",
+        "visual"
+      ]
+    },
+    {
       "file": "transaction-bottom-panel-table-first.spec.ts",
       "suitePath": [],
       "line": 11,
@@ -25764,26 +25740,6 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
-      "file": "issue-725-draft-markers.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 1,
-      "originIssue": "725",
-      "declaredTimeoutMs": null,
-      "candidateSignals": [
-        "getComputedStyle"
-      ],
-      "semanticReviewStatus": "REVIEWED"
-    },
-    {
-      "file": "issue-725-escape-revert.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 1,
-      "originIssue": "725",
-      "declaredTimeoutMs": null,
-      "candidateSignals": [],
-      "semanticReviewStatus": "REVIEWED"
-    },
-    {
       "file": "issue-725-keyboard-journey.spec.ts",
       "caseCount": 2,
       "reviewedCaseCount": 2,
@@ -27192,6 +27148,17 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "transaction-bottom-draft.contract.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [
+        "getComputedStyle"
+      ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
       "file": "transaction-bottom-panel-table-first.spec.ts",
       "caseCount": 1,
       "reviewedCaseCount": 1,
@@ -28236,6 +28203,30 @@
       },
       "protectedInvariant": "The left workspace rail never covers the status bar in compact layout across all view modes.",
       "reason": "The cross-mode geometry assertions now share the same 1280x720 page lifecycle as the opt-in diagnostics check; no assertion was removed."
+    },
+    {
+      "from": {
+        "file": "issue-725-draft-markers.spec.ts",
+        "title": "edited Bottom row cells show a draft marker and double-click focuses the editor"
+      },
+      "to": {
+        "file": "transaction-bottom-draft.contract.spec.ts",
+        "title": "Bottom draft edit is visibly marked and Escape restores the committed value without deselecting"
+      },
+      "protectedInvariant": "Double-click focuses the field; changed draft styling and marker appear; Escape restores committed appearance/value without a History mutation.",
+      "reason": "Combined with the focused Escape cancellation journey so both visual feedback and draft lifecycle assertions run in one production fixture load."
+    },
+    {
+      "from": {
+        "file": "issue-725-escape-revert.spec.ts",
+        "title": "Escape in the active Bottom row reverts a dirty draft before deselecting"
+      },
+      "to": {
+        "file": "transaction-bottom-draft.contract.spec.ts",
+        "title": "Bottom draft edit is visibly marked and Escape restores the committed value without deselecting"
+      },
+      "protectedInvariant": "Escape resets the active Bottom draft to its canonical value while retaining selection and History unchanged.",
+      "reason": "The source assertion is retained in the merged journey, which additionally proves the dirty indicator clears and selection remains stable."
     }
   ]
 }

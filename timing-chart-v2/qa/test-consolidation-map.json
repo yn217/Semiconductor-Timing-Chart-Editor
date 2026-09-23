@@ -348,6 +348,18 @@
       "to": { "file": "issue-723-status-diagnostics.spec.ts", "title": "status diagnostics stay opt-in and the left rail never covers status in compact modes" },
       "protectedInvariant": "The left workspace rail never covers the status bar in compact layout across all view modes.",
       "reason": "The cross-mode geometry assertions now share the same 1280x720 page lifecycle as the opt-in diagnostics check; no assertion was removed."
+    },
+    {
+      "from": { "file": "issue-725-draft-markers.spec.ts", "title": "edited Bottom row cells show a draft marker and double-click focuses the editor" },
+      "to": { "file": "transaction-bottom-draft.contract.spec.ts", "title": "Bottom draft edit is visibly marked and Escape restores the committed value without deselecting" },
+      "protectedInvariant": "Double-click focuses the field; changed draft styling and marker appear; Escape restores committed appearance/value without a History mutation.",
+      "reason": "Combined with the focused Escape cancellation journey so both visual feedback and draft lifecycle assertions run in one production fixture load."
+    },
+    {
+      "from": { "file": "issue-725-escape-revert.spec.ts", "title": "Escape in the active Bottom row reverts a dirty draft before deselecting" },
+      "to": { "file": "transaction-bottom-draft.contract.spec.ts", "title": "Bottom draft edit is visibly marked and Escape restores the committed value without deselecting" },
+      "protectedInvariant": "Escape resets the active Bottom draft to its canonical value while retaining selection and History unchanged.",
+      "reason": "The source assertion is retained in the merged journey, which additionally proves the dirty indicator clears and selection remains stable."
     }
   ]
 }

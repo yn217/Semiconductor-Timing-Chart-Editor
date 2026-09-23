@@ -1157,37 +1157,18 @@
       "replacementTest": null
     },
     {
-      "file": "issue-725-draft-markers.spec.ts",
-      "domain": "transaction-bottom-draft-visibility",
-      "originIssue": 725,
-      "type": "VISUAL_ACCEPTANCE",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Editing one Bottom Transaction field makes that cell visibly distinct as an unapplied draft, leaves untouched fields clean, and Escape restores the committed appearance without a semantic edit.",
-      "duplicateGroup": "bottom-transaction-draft-affordance",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": [
-        "visual"
-      ],
-      "decision": "KEEP",
-      "reason": "The acceptance is a visible dirty-cell affordance plus a native double-click editing gesture. A lower-level test cannot prove that the real editor styles the changed field and restores it on Escape; the spec's data-draft-dirty selector is an implementation-coupled diagnostic and should be paired with computed visual-state assertions.",
-      "replacementTest": null
-    },
-    {
-      "file": "issue-725-escape-revert.spec.ts",
-      "domain": "transaction-bottom-escape-revert",
+      "file": "transaction-bottom-draft.contract.spec.ts",
+      "domain": "transaction-bottom-draft-edit-lifecycle",
       "originIssue": 725,
       "type": "USER_JOURNEY",
       "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": "Escape reverts the active Bottom Transaction draft before leaving edit state and does not add History.",
-      "duplicateGroup": null,
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": [
-        "pr"
-      ],
+      "primaryContract": "Double-click focuses the Bottom Transaction name editor; an unapplied edit is visibly marked; Escape restores the committed value/style, keeps selection, and does not add History.",
+      "duplicateGroup": "bottom-transaction-draft-affordance",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": ["pr", "visual"],
       "decision": "KEEP",
-      "reason": "The ordering between the real focused input, draft reset, and edit lifecycle is user-visible and complements the combined keyboard journey's tab-order check; retain the narrow behavior guard.",
+      "reason": "One production journey protects visible dirty-state feedback and Escape cancellation together: computed styling, Draft marker, original value, selected identity, and unchanged History are independently asserted. Keeping it in both PR and visual profiles removes a duplicate page startup without dropping either gate.",
       "replacementTest": null
     },
     {
