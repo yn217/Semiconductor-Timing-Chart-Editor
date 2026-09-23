@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:30:20.435Z",
+  "generatedAt": "2026-09-23T07:31:39.220Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 885,
+  "reviewedCaseCount": 889,
   "curatedProfileCounts": {
-    "integration": 468,
-    "nightly": 180,
+    "integration": 469,
+    "nightly": 181,
     "performance": 49,
-    "pr": 235,
+    "pr": 238,
     "visual": 150
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -21315,18 +21315,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-phase-add-history-persistence",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "When a valid unused interval exists, adding a Phase commits as one History unit, Undo/Redo restores/reapplies it, and Save/Open preserves its exact name and bounds with a clean reopened History.",
+      "duplicateGroup": "transaction-phase-add-capacity-and-apply",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is the positive counterpart to the disabled-capacity case and verifies the complete Apply/history/persistence lifecycle; keep it as heavier integration rather than routine PR coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "transaction-inspector-apply-validation.spec.ts",
@@ -21337,18 +21341,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-inspector-rejected-apply-feedback",
+      "originIssue": 454,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "An invalid Inspector Apply reports a user-readable range reason, keeps History unchanged, and still allows a subsequent valid edit to commit.",
+      "duplicateGroup": "transaction-rejected-apply-feedback",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a compact negative/positive command-adapter contract guarding against silent rejected edits; rejected Bottom Apply exercises a distinct editor owner and cannot replace Inspector feedback coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-inspector-bottom-draft-sync.spec.ts",
@@ -21359,18 +21366,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-inspector-bottom-draft-sync-undo",
+      "originIssue": 703,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Applying Transaction detail through Inspector updates the selected inline Bottom row without creating a separate Bottom draft/editor, and Undo synchronizes Inspector back to canonical values.",
+      "duplicateGroup": "transaction-detail-ownership",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Unlike the clean-selection case, this exercises an actual Inspector Apply plus Bottom projection synchronization and Undo. It protects the single-editor ownership rule through a real mutation lifecycle.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-inspector-duration-tc.spec.ts",
@@ -21381,18 +21391,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-duration-user-unit-and-canonical-unit",
+      "originIssue": 750,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inspector Duration presents the configured Transaction unit (TC) and its corresponding canonical system-cycle duration together, without conflating display and stored units.",
+      "duplicateGroup": "transaction-time-unit-presentation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This inexpensive label/value contract catches unit ambiguity between user-facing TC and canonical cycles; time conversion unit tests do not prove the Inspector communicates both values.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-inspector-lane-suggestions.spec.ts",
@@ -26954,29 +26967,29 @@
     {
       "file": "transaction-inspector-apply-validation.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 1,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-inspector-bottom-draft-sync.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-inspector-duration-tc.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-inspector-lane-suggestions.spec.ts",
