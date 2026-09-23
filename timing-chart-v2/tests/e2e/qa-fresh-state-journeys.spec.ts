@@ -71,28 +71,6 @@ test("J5/J10 select -> edit -> Apply -> Undo -> Redo, and an unapplied draft doe
   expect(errors).toEqual([]);
 });
 
-test("J6 annotation create -> drag -> Escape leaves Canonical untouched", async ({ page }) => {
-  const errors = trackErrors(page);
-  await fresh(page); await toCycleSample(page);
-  const host = page.getByTestId("cycle-surface");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
-  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
-  await page.getByLabel("Annotation type").selectOption("text");
-  await page.getByRole("button", { name: "Add annotation" }).click();
-  await expect(host).toHaveAttribute("data-editor-idle", "true");
-  const before = await status(page);
-  const label = host.locator("[data-role='annotation-owner'] [data-role='annotation-label']").last();
-  const box = (await label.boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(box.x + 60, box.y + 30, { steps: 5 });
-  await page.keyboard.press("Escape");
-  await page.mouse.up();
-  await expect(host).toHaveAttribute("data-editor-idle", "true");
-  expect(await status(page)).toEqual(before);
-  expect(errors).toEqual([]);
-});
-
 test("J7/J8/J15 far horizontal + vertical scroll -> select, zoom -> scroll -> mode switch", async ({ page }) => {
   const errors = trackErrors(page);
   await fresh(page); await mode(page, "Cycle").click();

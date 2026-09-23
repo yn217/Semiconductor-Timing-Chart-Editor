@@ -1,0 +1,329 @@
+{
+  "schemaVersion": 1,
+  "consolidations": [
+    {
+      "from": { "file": "full-gui.spec.ts", "title": "matches the locked desktop pane geometry at the Golden viewport" },
+      "to": { "file": "gui-reference-v8.spec.ts", "title": "matches the v8 shell contract without mutating canonical state" },
+      "protectedInvariant": "At the desktop reference viewport, ribbon/workspace/bottom/inspector geometry stays aligned to the approved shell dimensions.",
+      "reason": "The v8 shell contract already measures the same reference viewport and was strengthened to assert workspace top, Bottom X/height, and Inspector X/width alongside shell geometry; the separate test only repeated those fixed coordinates."
+    },
+    {
+      "from": { "file": "full-gui.spec.ts", "title": "keeps the V1 Home Ribbon dense without horizontal scrolling" },
+      "to": { "file": "gui-reference-v8.spec.ts", "title": "matches the v8 shell contract without mutating canonical state" },
+      "protectedInvariant": "The desktop Home Ribbon retains its intended height/group structure and does not introduce horizontal scrolling.",
+      "reason": "The target already verifies the desktop Ribbon height, non-overflow, major-group count, title/tabs/status dimensions, and group visibility in the same production presentation contract."
+    },
+    {
+      "from": { "file": "full-gui.spec.ts", "title": "Left Signal/Group filter is positioned in the V1 pane header and remains DOM-only" },
+      "to": { "file": "left-tree-type-filter.spec.ts", "title": "combines the Left Tree type and text filters without mutation at 1672px" },
+      "protectedInvariant": "Text filtering changes only Left Tree presentation, leaves Canonical/History untouched, and clearing the query restores rows while preserving type filter state.",
+      "reason": "The retained type+text filter journey already verifies view-only state across both widths; it now uses the visible Clear signal tree filter control rather than only filling an empty string. Header placement remains checked by the v8 reference contract."
+    },
+    {
+      "from": { "file": "full-gui.spec.ts", "title": "Group header chevron collapses derived rows without mutating Canonical or History" },
+      "to": { "file": "left-tree-interaction.spec.ts", "title": "collapses only Left Tree descendants and restores stable rows without a canonical mutation" },
+      "protectedInvariant": "Group disclosure changes navigation descendants only, preserves frozen/timing/wave rows and stable order, and causes no document/history/render mutation.",
+      "reason": "The retained test exercises all three groups and stable row restoration while checking derived surfaces and render counters; the removed test repeated the same projection lifecycle for one group and added icon-path implementation detail."
+    },
+    {
+      "from": { "file": "full-gui.spec.ts", "title": "Inspector keeps the V1 sectioned editor geometry for a selected clock" },
+      "to": { "file": "gui-reference-v8.spec.ts", "title": "matches the v8 shell contract without mutating canonical state" },
+      "protectedInvariant": "The reference Clock Inspector exposes its Clock Generator and Edge Counter controls within the established shell width without mutating the document.",
+      "reason": "The v8 reference contract already opens with Clock selected and checks Inspector/minimap geometry, section headings, and no-mutation render state. The replacement now also requires the Clock period and Edge Counter mode controls to be visible; raw section count was implementation-specific."
+    },
+    {
+      "from": {
+        "file": "qa-fresh-state-journeys.spec.ts",
+        "title": "J6 annotation create -> drag -> Escape leaves Canonical untouched"
+      },
+      "to": {
+        "file": "keyboard-shortcut-router.spec.ts",
+        "title": "Escape cancels an in-progress Annotation drag, closes the context menu, and resets dependency-arrow pick"
+      },
+      "protectedInvariant": "Escape cancels a real Annotation drag without changing Canonical revision, History, or Dirty state and without runtime errors.",
+      "reason": "The keyboard lifecycle test already creates an Annotation through production UI, resolves its stable ID, performs a real pointer drag, and asserts revision and History preservation; it now also checks Dirty and runtime errors. Keeping the stronger test removes a duplicate fresh journey without weakening the cancellation contract."
+    },
+    {
+      "from": {
+        "file": "issue-737-selection-gestures.spec.ts",
+        "title": "Bottom grid selection gestures at 1672x941"
+      },
+      "to": {
+        "file": "issue-737-selection-gestures.spec.ts",
+        "title": "Bottom grid selection gestures at 1280x720"
+      },
+      "protectedInvariant": "Click/Ctrl/Shift selection, visible-order filtering, Ctrl+A scoping, and view-only Canonical/History behavior are viewport-independent.",
+      "reason": "Removed the duplicate desktop execution; the compact viewport retains the full semantic journey, while issue-747-geometry-acceptance.spec.ts continues to verify responsive geometry at both 1280x720 and 1672x941."
+    },
+    {
+      "from": {
+        "file": "issue-747-a11y-and-sort-matrix.spec.ts",
+        "title": "Bottom sort matrix and settings a11y at 1672x941"
+      },
+      "to": {
+        "file": "issue-747-a11y-and-sort-matrix.spec.ts",
+        "title": "Bottom sort matrix and settings a11y at 1280x720"
+      },
+      "protectedInvariant": "Start/End sort direction, selected-ID retention, view-only sort, named settings gear, and Escape popover close are width-independent semantic behavior.",
+      "reason": "Removed the redundant desktop semantic run. The compact case retains the complete a11y/sort journey, and issue-747-geometry-acceptance.spec.ts still verifies the layout-specific behavior at both supported viewports."
+    },
+    {
+      "from": {
+        "file": "issue-625-timeline-only-hscroll.spec.ts",
+        "title": "Cycle FixedColumns sit outside the horizontal scroll owner at 1280x720"
+      },
+      "to": {
+        "file": "issue-625-cycle-fixed-columns-scroll.spec.ts",
+        "title": "Cycle fixed columns stay stationary through native scrollbar drag at 1280x720"
+      },
+      "protectedInvariant": "Timeline-only horizontal scrolling keeps fixed columns stationary and the visible scrollbar aligned to the time-domain region.",
+      "reason": "Removed the implementation-coupled browser case that forced --wave-width, asserted overflow/DOM ancestry, and re-derived scroll-owner topology. The production-path native-scroll journey now also measures visible scrollbar alignment at this width; check:cycle-scroll-owner protects the structural owner contract without launching a browser."
+    },
+    {
+      "from": {
+        "file": "issue-625-timeline-only-hscroll.spec.ts",
+        "title": "Cycle FixedColumns sit outside the horizontal scroll owner at 1672x941"
+      },
+      "to": {
+        "file": "issue-625-cycle-fixed-columns-scroll.spec.ts",
+        "title": "Cycle fixed columns stay stationary through native scrollbar drag at 1672x941"
+      },
+      "protectedInvariant": "Timeline-only horizontal scrolling keeps fixed columns stationary and the visible scrollbar aligned to the time-domain region.",
+      "reason": "Removed the implementation-coupled browser case that forced --wave-width, asserted overflow/DOM ancestry, and re-derived scroll-owner topology. The production-path native-scroll journey now also measures visible scrollbar alignment at this width; check:cycle-scroll-owner protects the structural owner contract without launching a browser."
+    },
+    {
+      "from": {
+        "file": "issue-755-analytic-geometry-equivalence.spec.ts",
+        "title": "analytic cycle grid equals SVG-derived boundaries (unwindowed document)"
+      },
+      "to": {
+        "file": "issue-755-analytic-transition-equivalence.spec.ts",
+        "title": "analytic Local Geometry equals the SVG extractor for every anchor across token/brick cases"
+      },
+      "protectedInvariant": "Analytic geometry agrees with an independent SVG DOM extraction for cycle boundaries and all anchor kinds.",
+      "reason": "The removed assertion compared the production geometry to a duplicated 20.5 + 40 * index formula rather than to SVG-derived geometry. The replacement probe directly compares analytic LocalGeometry against the independent production SVG extractor across token/brick cases, while uniformCycleGeometry.test.ts retains cheap known-anchor/property coverage."
+    },
+    {
+      "from": {
+        "file": "issue-755-analytic-geometry-equivalence.spec.ts",
+        "title": "analytic cycle grid equals SVG-derived boundaries (bounded window on a >4096-cycle document)"
+      },
+      "to": {
+        "file": "issue-755-analytic-transition-equivalence.spec.ts",
+        "title": "analytic Local Geometry equals the SVG extractor for every anchor across token/brick cases"
+      },
+      "protectedInvariant": "Rebased/windowed analytic cycle geometry preserves source-cycle identity and boundary X, without a local-index identity assumption.",
+      "reason": "The equivalence probe includes rebased-window cases and compares each semantic anchor with SVG extraction; issue-757-far-scroll-window-coverage.spec.ts separately proves a real >4096-cycle far jump paints the viewport. The previous check reconstructed a uniform pitch in browser code, adding a second copy of production geometry math."
+    },
+    {
+      "from": {
+        "file": "issue-750-geometry-10-to-50.spec.ts",
+        "title": "1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (1672x941)"
+      },
+      "to": {
+        "file": "issue-750-geometry-10-to-50.spec.ts",
+        "title": "1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (1280x720)"
+      },
+      "protectedInvariant": "Changing cycles-per-TC compresses a fixed source span by the inverse ratio, preserves displayed TC ruler pitch, leaves canonical source duration unchanged, and Undo restores the prior display.",
+      "reason": "The geometry ratio and source-time semantics are viewport-independent. The compact test retains the complete Journey, while both viewports remain covered by the distinct clipped-label and scroll-extent acceptance where width is relevant."
+    },
+    {
+      "from": {
+        "file": "issue-629-inspector-mode-context.spec.ts",
+        "title": "Inspector follows active workspace context and retains hidden stable selection at 1672x941"
+      },
+      "to": {
+        "file": "issue-629-inspector-mode-context.spec.ts",
+        "title": "Inspector follows active workspace context and retains hidden stable selection at 1280x720"
+      },
+      "protectedInvariant": "Inspector content follows the active mode and restores hidden selected entities by stable identity without Canonical, History or Dirty changes.",
+      "reason": "The cross-mode owner/identity journey has no width-dependent layout assertion. The compact viewport retains all mode transitions and state invariants; responsive Inspector geometry is covered by separate layout acceptance."
+    },
+    {
+      "from": {
+        "file": "issue-630-active-mode-title.spec.ts",
+        "title": "document title never displays a stale mode suffix at 1672x941"
+      },
+      "to": {
+        "file": "issue-630-active-mode-title.spec.ts",
+        "title": "document title never displays a stale mode suffix at 1280x720"
+      },
+      "protectedInvariant": "The displayed mode title tracks Cycle/Transaction/Combined, remains separate from the document name, and stays correct through document replacement and reload.",
+      "reason": "Title/mode ownership and reload behavior are width-independent. One compact viewport retains the entire Journey; width-dependent titlebar overflow belongs in the responsive layout suite."
+    },
+    {
+      "from": {
+        "file": "issue-725-f2-edit.spec.ts",
+        "title": "F2 on the active Bottom row starts editing without committing"
+      },
+      "to": {
+        "file": "issue-725-keyboard-journey.spec.ts",
+        "title": "Bottom grid keyboard editing journey at 1280x720"
+      },
+      "protectedInvariant": "F2 from the focused active Transaction row enters the Bottom row editor without adding a History unit.",
+      "reason": "The retained compact keyboard journey performs the same real F2 activation and asserts the name field receives focus with Canonical revision and History unchanged, then additionally verifies visible-column Tab order and Escape draft cancellation. The standalone F2 smoke duplicated a strict subset of that journey."
+    },
+    {
+      "from": {
+        "file": "issue-763-retained-phase-drafts.spec.ts",
+        "title": "retained Phase drafts are explicit at 1672x941"
+      },
+      "to": {
+        "file": "issue-763-retained-phase-drafts.spec.ts",
+        "title": "retained Phase drafts are explicit at 1280x720"
+      },
+      "protectedInvariant": "A Phase draft survives changing the selected Transaction, is marked as retained in both editors, and can be explicitly discarded without changing Canonical or History.",
+      "reason": "This is a width-independent stable-ID/draft-lifecycle contract with no layout or clipping assertion. The compact viewport retains the complete user journey; responsive editor geometry is covered by dedicated layout acceptance."
+    },
+    {
+      "from": {
+        "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
+        "title": "zoom does not stretch Transaction text at 1672x941"
+      },
+      "to": {
+        "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
+        "title": "zoom does not stretch Transaction text at 1280x720"
+      },
+      "protectedInvariant": "Transaction and Phase glyphs retain their natural rendered font size/height during zoom while the track, ruler, and Transaction edges remain geometrically aligned.",
+      "reason": "The semantic text-size invariant is width-independent; retain one compact viewport. Width-dependent clipping/overflow is covered by dedicated layout tests. Replaced a computed-style transform scan with the observable rendered text dimensions and ruler alignment."
+    },
+    {
+      "from": {
+        "file": "issue-760-combined-horizontal-wheel.spec.ts",
+        "title": "Combined horizontal wheel scrolls the shared viewport at 1672x941"
+      },
+      "to": {
+        "file": "issue-760-combined-horizontal-wheel.spec.ts",
+        "title": "Combined horizontal wheel scrolls the shared viewport at 1280x720"
+      },
+      "protectedInvariant": "Wheel over either pane in a fresh Combined workspace advances the shared horizontal time viewport without changing Canonical, History, or Dirty state.",
+      "reason": "The semantic wheel-owner contract is width-independent and the compact viewport retains wheel interaction over both pane regions. The issue's shared horizontal geometry is separately verified at both accepted viewport sizes by geometry/scroll acceptance tests."
+    },
+    {
+      "from": {
+        "file": "issue-740-cycle-bottom-hidden-geometry.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1672x941"
+      },
+      "to": {
+        "file": "issue-740-cycle-bottom-hidden.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1672x941"
+      },
+      "protectedInvariant": "Hiding Cycle Bottom releases the lower workspace space; the state survives a mode round-trip and can be restored without document mutation.",
+      "reason": "The duplicate case asserted the same hide/round-trip/show geometry while additionally reading CSS grid row values. The retained user-visible test checks the actual workspace gap and hidden Bottom, plus History, Dirty, and Canonical revision invariants."
+    },
+    {
+      "from": {
+        "file": "issue-740-cycle-bottom-hidden-geometry.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1280x720"
+      },
+      "to": {
+        "file": "issue-740-cycle-bottom-hidden.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1280x720"
+      },
+      "protectedInvariant": "Hiding Cycle Bottom releases the lower workspace space; the state survives a mode round-trip and can be restored without document mutation.",
+      "reason": "The compact viewport's user-visible gap and hidden-state journey remain covered in the retained test; the removed assertion was coupled to CSS grid-template-row implementation details."
+    },
+    {
+      "from": {
+        "file": "issue-740-741-756-cycle-layout.spec.ts",
+        "title": "#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at 1672x941"
+      },
+      "to": {
+        "file": "issue-740-cycle-bottom-hidden.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1672x941"
+      },
+      "protectedInvariant": "Hiding Cycle Bottom removes the reserved space and is view-only.",
+      "reason": "The removed case repeated the hide state, panel-to-workspace edge and hidden resizer assertions; the retained #740 journey covers those with stronger Dirty/revision checks, while #756 coverage remains in the same spec."
+    },
+    {
+      "from": {
+        "file": "issue-740-741-756-cycle-layout.spec.ts",
+        "title": "#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at 1280x720"
+      },
+      "to": {
+        "file": "issue-740-cycle-bottom-hidden.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1280x720"
+      },
+      "protectedInvariant": "Hiding Cycle Bottom removes the reserved space and is view-only.",
+      "reason": "The compact case was a duplicate of the retained #740 contract; the shared file continues to exercise #741 and #756 independently."
+    },
+    {
+      "from": {
+        "file": "issue-766-cycle-plural.spec.ts",
+        "title": "Time Scale readout uses singular/plural correctly at 1672x941"
+      },
+      "to": {
+        "file": "issue-766-cycle-plural.spec.ts",
+        "title": "Time Scale readout uses singular/plural correctly"
+      },
+      "protectedInvariant": "TC singular/plural copy is correct for values 1, 10 and 50.",
+      "reason": "Copy is viewport-independent; the retained compact case checks the same three supported values and no singular 'cycles' regression."
+    },
+    {
+      "from": {
+        "file": "issue-741-transaction-no-left-resizer.spec.ts",
+        "title": "Transaction mode exposes no keyboard-operable left-pane separator"
+      },
+      "to": {
+        "file": "issue-740-741-756-cycle-layout.spec.ts",
+        "title": "#741 Transaction fixed-width sidebar exposes no focusable ghost resizer and hides no width mutation"
+      },
+      "protectedInvariant": "Transaction has no focusable ghost resizer, while Cycle retains a functional keyboard-operable separator.",
+      "reason": "The retained #741 case now checks both the Transaction absence and a Cycle ArrowRight change to aria-valuenow; the standalone test duplicated the absence assertion and only added the latter half."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Cycle at 1672x941" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Transaction at 1672x941" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Combined at 1672x941" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Cycle at 1280x720" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Transaction at 1280x720" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Combined at 1280x720" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Cycle at 1024x700" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Transaction at 1024x700" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Combined at 1024x700" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    }
+  ]
+}
