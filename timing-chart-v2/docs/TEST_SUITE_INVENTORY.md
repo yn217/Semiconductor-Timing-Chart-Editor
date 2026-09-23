@@ -441,6 +441,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-740-cycle-bottom-hidden.spec.ts` | querySelector, geometryRead |
 | `issue-746-visible-group-create.spec.ts` | querySelector, geometryRead |
 | `issue-747-a11y-and-sort-matrix.spec.ts` | dataset |
+| `issue-747-bottom-settings.spec.ts` | geometryRead |
 | `issue-747-geometry-acceptance.spec.ts` | querySelector, geometryRead |
 | `issue-748-tree-menu-and-parity.spec.ts` | geometryRead |
 | `issue-750-geometry-10-to-50.spec.ts` | querySelector, dataset, geometryRead |

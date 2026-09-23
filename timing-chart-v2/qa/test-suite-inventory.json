@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T14:37:42.354Z",
+  "generatedAt": "2026-09-23T15:00:42.516Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11647,7 +11647,7 @@
       "file": "issue-747-bottom-settings.spec.ts",
       "suitePath": [],
       "line": 4,
-      "title": "Follow Selection and Pin live behind the Bottom settings gear",
+      "title": "Bottom settings explain Follow Selection and Pin without a persistent status chip",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -25550,7 +25550,9 @@
       "reviewedCaseCount": 1,
       "originIssue": "747",
       "declaredTimeoutMs": null,
-      "candidateSignals": [],
+      "candidateSignals": [
+        "geometryRead"
+      ],
       "semanticReviewStatus": "REVIEWED"
     },
     {
