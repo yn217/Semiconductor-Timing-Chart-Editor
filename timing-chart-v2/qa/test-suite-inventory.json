@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:54:52.334Z",
+  "generatedAt": "2026-09-23T05:56:50.825Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 728,
+  "reviewedCaseCount": 732,
   "curatedProfileCounts": {
-    "integration": 353,
+    "integration": 355,
     "nightly": 168,
     "performance": 44,
-    "pr": 206,
+    "pr": 208,
     "visual": 142
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -16730,18 +16730,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "review-refresh-checks-no-mutation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Refreshing Review checks leaves Canonical revision, History, Dirty state, and render counters unchanged.",
+      "duplicateGroup": "review-refresh-view-only",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The review workflow filtering case proves filter/navigation are view-only after checks exist, but does not guard the explicit refresh action from mutating the document or triggering render work.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "review-checks-refresh.spec.ts",
@@ -16752,18 +16755,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "problems-panel-clear-filter-affordance",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Problems panel presents the Clear Filter affordance and no stale Refresh control in its current panel header.",
+      "duplicateGroup": "problems-panel-filter-controls",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a narrow panel-header/accessible-control migration guard: the full Review workflow case covers scope and severity filters but does not assert the Problems table's Clear Filter control or absence of the obsolete Refresh action. It verifies the affordance, not the clearing interaction itself.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "review-workflow.spec.ts",
@@ -16774,18 +16780,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "review-diagnostics-filter-navigation-view-only",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Review scope/severity filters and Previous/Next navigation operate on shared diagnostics while preserving Canonical revision, History, and Dirty state.",
+      "duplicateGroup": "review-diagnostics-workflow",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the end-to-end diagnostics workflow across a real invalid edit, multiple scope/severity filter states, and navigation targets; refresh-only and layout-only tests cover separate boundaries and do not imply the workflow semantics.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "review-workflow.spec.ts",
@@ -16796,18 +16805,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "review-header-group-layout",
+      "originIssue": 394,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The five Check header groups remain in the intended order, share aligned control baselines, and do not overlap at the tested production viewport.",
+      "duplicateGroup": "review-header-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The behavioral Review workflow tests do not protect the #394 density regression where controls collide; this directly checks grouping, order, overlap, and alignment rather than duplicating filter behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-caption-layout.spec.ts",
@@ -25984,23 +25996,23 @@
     {
       "file": "review-checks-refresh.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "review-workflow.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "ribbon-caption-layout.spec.ts",
