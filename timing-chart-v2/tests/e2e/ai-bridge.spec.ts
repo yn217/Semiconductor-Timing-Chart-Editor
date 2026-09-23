@@ -67,6 +67,9 @@ test("external AI setup guide exposes client configs without copying a bearer se
   const guide = ai.getByTestId("ai-connection-guide");
   await expect(guide).toBeVisible();
   await expect(guide).toContainText("npm run ai-bridge");
+  await expect(guide).toContainText("get_document_summary");
+  await expect(guide.getByTestId("ai-first-read-prompt")).toContainText("Do not edit the document");
+  await expect(guide.getByTestId("ai-first-edit-prompt")).toContainText("Do not Validate or Apply it");
   await expect(guide.getByTestId("ai-bridge-probe")).toContainText(`Bridge found at 127.0.0.1:${PORT}`);
   await expect(guide.getByTestId("ai-client-config")).toContainText("bearer_token_env_var");
   await guide.getByLabel("MCP client setup").selectOption("claude-code");
