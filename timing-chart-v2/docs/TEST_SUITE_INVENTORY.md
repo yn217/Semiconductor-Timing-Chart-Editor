@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 651/959 cases reviewed.
+Semantic review progress: 653/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 302 |
+| `integration` | 303 |
 | `nightly` | 162 |
 | `performance` | 44 |
-| `pr` | 191 |
+| `pr` | 192 |
 | `visual` | 131 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -92,7 +92,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `golden-samples.spec.ts` | 3 | 3/3 reviewed |
 | `grid-zoom-alignment.spec.ts` | 1 | 1/1 reviewed |
 | `group-band.spec.ts` | 3 | 3/3 reviewed |
-| `group-clipboard-parity.spec.ts` | 2 | 0/2 reviewed |
+| `group-clipboard-parity.spec.ts` | 2 | 2/2 reviewed |
 | `gui-bottom-resize.spec.ts` | 1 | 1/1 reviewed |
 | `gui-density-tokens.spec.ts` | 1 | 0/1 reviewed |
 | `gui-inspector-resize.spec.ts` | 1 | 1/1 reviewed |

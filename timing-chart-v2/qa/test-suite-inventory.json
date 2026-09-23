@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:09:24.851Z",
+  "generatedAt": "2026-09-23T05:10:43.331Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 651,
+  "reviewedCaseCount": 653,
   "curatedProfileCounts": {
-    "integration": 302,
+    "integration": 303,
     "nightly": 162,
     "performance": 44,
-    "pr": 191,
+    "pr": 192,
     "visual": 131
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -6747,18 +6747,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "group-clipboard-deep-clone-identity-and-history",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Group Copy is view-only; Paste/Duplicate create one semantic batch each with fresh Group and child Signal IDs, preserve child source semantics, support Undo/Redo, and survive Save/Open.",
+      "duplicateGroup": "group-clipboard-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Generic Signal/Annotation/Transaction clipboard tests do not verify deep-cloning an entire Group's row graph, fresh child identities, or atomic Group batch history. Keep this dedicated aggregate-entity contract in integration coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "group-clipboard-parity.spec.ts",
@@ -6769,18 +6772,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "group-cut-paste-atomic-row-graph",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Cut removes a Group and all owned rows in one history operation; Paste restores the Group's semantic contents under fresh stable identities as one further operation and Save preserves the result.",
+      "duplicateGroup": "group-clipboard-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The adjacent Copy/Paste/Duplicate case does not exercise destructive Cut, atomic removal of owned rows, or re-created Group identity after Paste; retain this separate destructive/restore boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "gui-bottom-resize.spec.ts",
@@ -23999,11 +24005,11 @@
     {
       "file": "group-clipboard-parity.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "gui-bottom-resize.spec.ts",
