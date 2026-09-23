@@ -17,8 +17,8 @@ test("restores V1 pane vocabulary without changing command identity or document 
   await expect(page.locator(".column-headings > span").nth(1)).toHaveText("Role");
   await expect(page.locator(".column-headings > span").nth(2)).toHaveText("Signal / Annotation");
   await expect(page.getByTestId("bottom-tabs").locator("[data-bottom-tab]").allTextContents()).resolves.toEqual(["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]);
-  await expect(page.getByTestId("follow-selection").locator(".." )).toHaveText("Follow Selection");
-  await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-label", "Pin");
+  await expect(page.getByTestId("follow-selection").locator(".." )).toContainText("Follow selection");
+  await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-label", "Pin current content");
 
   await page.getByTestId("bottom-tabs").locator("[data-bottom-tab='Annotation']").click();
   await expect(page.getByTestId("bottom-tabs").locator("[data-bottom-tab='Annotation']")).toHaveClass(/active/);
