@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:40:30.315Z",
+  "generatedAt": "2026-09-23T05:41:32.255Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 696,
+  "reviewedCaseCount": 698,
   "curatedProfileCounts": {
-    "integration": 327,
+    "integration": 328,
     "nightly": 163,
     "performance": 44,
-    "pr": 200,
+    "pr": 201,
     "visual": 142
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -8298,18 +8298,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "inspector-header-action-truthfulness",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Inspector header exposes exactly one functional Close action and no inert overflow/Pin control, while header interactions preserve Canonical/History/Dirty state.",
+      "duplicateGroup": "inspector-header-controls",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This protects truthful action affordances after the Inspector redesign and verifies a real tree interaction does not mutate the document; field capability coverage does not inspect header action semantics.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "inspector-capability.spec.ts",
@@ -8320,18 +8323,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-inspector-draft-and-apply-parity",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Signal Inspector exposes supported parity fields, keeps multi-field drafts out of Canonical/History/Dirty/session/render counters until Apply, then commits one operation and invalidates only the edited Signal's derived waveform/geometry; Undo restores values.",
+      "duplicateGroup": "signal-inspector-capability-apply",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the broad Signal Inspector contract across field discoverability, transient draft isolation, one-command Apply, per-owner invalidation, unrelated SVG identity, and Undo. Narrow visual-style tests cover only presentation subfields, not this full capability/commit boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "inspector-group-transaction-scroll.spec.ts",
@@ -24329,11 +24335,11 @@
     {
       "file": "inspector-capability.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "inspector-group-transaction-scroll.spec.ts",
