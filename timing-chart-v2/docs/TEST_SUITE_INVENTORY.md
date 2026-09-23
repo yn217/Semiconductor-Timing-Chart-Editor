@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 703/959 cases reviewed.
+Semantic review progress: 705/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,7 +10,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 332 |
+| `integration` | 334 |
 | `nightly` | 163 |
 | `performance` | 44 |
 | `pr` | 202 |
@@ -115,7 +115,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `inspector-group-transaction-scroll.spec.ts` | 1 | 1/1 reviewed |
 | `inspector-hide-compacts-rows.spec.ts` | 1 | 1/1 reviewed |
 | `inspector-multi-selection.spec.ts` | 3 | 3/3 reviewed |
-| `inspector-waveform-style.spec.ts` | 2 | 0/2 reviewed |
+| `inspector-waveform-style.spec.ts` | 2 | 2/2 reviewed |
 | `interaction-visual-scenarios.spec.ts` | 11 | 11/11 reviewed |
 | `issue-441-ribbon-label-integrity.spec.ts` | 3 | 3/3 reviewed |
 | `issue-554-transaction-journey.spec.ts` | 2 | 2/2 reviewed |

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:44:43.517Z",
+  "generatedAt": "2026-09-23T05:45:44.024Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,9 +13,9 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 703,
+  "reviewedCaseCount": 705,
   "curatedProfileCounts": {
-    "integration": 332,
+    "integration": 334,
     "nightly": 163,
     "performance": 44,
     "pr": 202,
@@ -8473,18 +8473,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "inspector-waveform-color-live-render-and-history",
+      "originIssue": 472,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Waveform color draft is transient, Apply changes only the selected Signal's actual rendered SVG stroke, unrelated waveforms stay untouched, reselection stays consistent, and Undo/Redo restore exact colors.",
+      "duplicateGroup": "inspector-waveform-color-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This directly verifies the production rendered stroke rather than only Canonical/Inspector field values, plus isolation from unrelated Signal owners and exact Undo/Redo behavior. General Inspector style tests do not assert this WaveDrom SVG presentation effect.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "inspector-waveform-style.spec.ts",
@@ -8495,18 +8498,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "inspector-waveform-color-save-open-bus",
+      "originIssue": 472,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Waveform color on a Bus Signal is serialized by Save/Open and repaints the restored actual waveform stroke with the same value.",
+      "duplicateGroup": "inspector-waveform-color-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Persistence and Bus-render compatibility are independent from the scalar Signal Apply/Undo visual contract; this is the direct Save/Open proof that the style data remains effective after reconstruction.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "interaction-visual-scenarios.spec.ts",
@@ -24389,13 +24395,13 @@
     {
       "file": "inspector-waveform-style.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "interaction-visual-scenarios.spec.ts",
