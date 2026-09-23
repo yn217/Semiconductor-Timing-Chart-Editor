@@ -18,8 +18,12 @@ for (const viewport of [{ width: 1280, height: 720 }]) {
     const revision = await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision");
     const order = () => editor.locator(".transaction-list-row[data-transaction-row-id]").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-transaction-row-id")));
     const originalOrder = await order();
-    await page.getByTestId("transaction-left-tree-row-demo_txn_write").click();
-    const selectedBefore = await editor.locator(".transaction-list-row button[data-selected='true']").evaluate((button) => button.closest<HTMLElement>("[data-transaction-row-id]")?.dataset.transactionRowId);
+    // Sorting preserves the Bottom grid's own selection. Do not select via
+    // the Tree: that changes the Inspector target and replaces the table's
+    // row button with its inline editor, which is a different surface/contract.
+    await editor.locator(".transaction-list-row[data-transaction-row-id='demo_txn_write'] > button[aria-selected]").click();
+    const selectedId = () => editor.locator(".transaction-list-row-editor[data-selected='true'], .transaction-list-row > button[data-selected='true']").evaluate((element) => element.closest<HTMLElement>("[data-transaction-row-id]")?.dataset.transactionRowId);
+    const selectedBefore = await selectedId();
     const direction = page.getByTestId("transaction-sort-direction");
     await expect(direction).toBeDisabled();
     const sortedIds = {
@@ -41,7 +45,7 @@ for (const viewport of [{ width: 1280, height: 720 }]) {
     }
     // Only one primary key is active at a time (single select), sorting is view-only and keeps the selected stable ID.
     expect(await editor.getByTestId("transaction-sort-key").evaluate((el) => (el as HTMLSelectElement).selectedOptions.length)).toBe(1);
-    expect(await editor.locator(".transaction-list-row button[data-selected='true']").evaluate((button) => button.closest<HTMLElement>("[data-transaction-row-id]")?.dataset.transactionRowId)).toBe(selectedBefore);
+    expect(await selectedId()).toBe(selectedBefore);
     await editor.getByTestId("transaction-sort-key").selectOption("document");
     expect(await order(), "document sort restores the exact source row order").toEqual(originalOrder);
     await expect(page.getByTestId("history-status")).toHaveText(history);
