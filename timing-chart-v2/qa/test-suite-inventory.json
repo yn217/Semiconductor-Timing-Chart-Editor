@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:19:48.519Z",
+  "generatedAt": "2026-09-23T05:21:14.428Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 660,
+  "reviewedCaseCount": 663,
   "curatedProfileCounts": {
-    "integration": 305,
+    "integration": 307,
     "nightly": 162,
     "performance": 44,
     "pr": 193,
-    "visual": 135
+    "visual": 136
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -7022,18 +7022,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "v1-home-ribbon-label-compatibility",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The visible V1 labels for Home commands are restored while accessible command names and the single shared schema-group caption remain stable, with no document-state change.",
+      "duplicateGroup": "v1-ui-vocabulary-compatibility",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the direct compatibility contract for visible Ribbon vocabulary versus command-facing accessible names; broader V8 shell assertions do not guarantee these localized labels or caption de-duplication.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "gui-v1-pane-vocabulary.spec.ts",
@@ -7044,18 +7047,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "v1-pane-vocabulary-compatibility",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Cycle pane headings, Bottom tabs, Follow Selection and Pin vocabulary are correct, and navigating to Annotation remains view-only.",
+      "duplicateGroup": "v1-ui-vocabulary-compatibility",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This combines pane vocabulary with a real Bottom-tab navigation and zero semantic/session mutation. It complements the V8 shell's key heading checks without duplicating the command-label or ribbon contracts.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "gui-v1-ribbon-labels.spec.ts",
@@ -7066,18 +7072,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "v1-transaction-check-ribbon-labels",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Transaction view-mode vocabulary and Check-tab Problems labeling remain available; Timeline/Check navigation exposes their real panels without changing document state or render counters.",
+      "duplicateGroup": "v1-ui-vocabulary-compatibility",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The interaction verifies mode-selector and Check-tab vocabulary together with actual Timeline/Problems navigation and view-only invariants; this is distinct from static Home button labels and pane headings.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "gui-visual-acceptance.spec.ts",
@@ -24098,29 +24107,29 @@
     {
       "file": "gui-v1-home-vocabulary.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "gui-v1-pane-vocabulary.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "gui-v1-ribbon-labels.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "gui-visual-acceptance.spec.ts",
