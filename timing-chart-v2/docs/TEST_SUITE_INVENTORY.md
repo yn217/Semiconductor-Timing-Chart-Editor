@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 329 spec files and 965 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 329 spec files and 964 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 965/965 cases reviewed.
+Semantic review progress: 964/964 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 491 |
+| `integration` | 490 |
 | `nightly` | 195 |
 | `performance` | 54 |
 | `pr` | 257 |
-| `visual` | 175 |
+| `visual` | 174 |
 
 ## Top recorded per-case runtimes
 
@@ -185,7 +185,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-720-menu-dialog-affordance.spec.ts` | 2 | 2/2 reviewed |
 | `issue-721-visual-channels.spec.ts` | 3 | 3/3 reviewed |
 | `issue-722-display-scale-125.spec.ts` | 2 | 2/2 reviewed |
-| `issue-723-status-diagnostics.spec.ts` | 2 | 2/2 reviewed |
+| `issue-723-status-diagnostics.spec.ts` | 1 | 1/1 reviewed |
 | `issue-724-search-scope.spec.ts` | 1 | 1/1 reviewed |
 | `issue-725-draft-markers.spec.ts` | 1 | 1/1 reviewed |
 | `issue-725-escape-revert.spec.ts` | 1 | 1/1 reviewed |
@@ -577,6 +577,8 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-722-splitter-discoverability.spec.ts` “Bottom and Inspector splitters are discoverable at 1280x720” → `splitter-view-state.contract.spec.ts` “Bottom and Inspector splitters are discoverable at 1280x720”. **Invariant:** Both splitter orientations remain discoverable and keyboard-operable across responsive layouts without changing Canonical, History or Dirty state. **Reason:** Moved the unchanged production journey into a stable splitter view-state contract suite; case-level viewport metadata and #722 traceability are retained.
 - `issue-722-splitter-discoverability.spec.ts` “Bottom and Inspector splitters are discoverable at 1672x941” → `splitter-view-state.contract.spec.ts` “Bottom and Inspector splitters are discoverable at 1672x941”. **Invariant:** Both splitter orientations remain discoverable and keyboard-operable across responsive layouts without changing Canonical, History or Dirty state. **Reason:** Moved the unchanged production journey into a stable splitter view-state contract suite; case-level viewport metadata and #722 traceability are retained.
 - `issue-722-splitter-reset.spec.ts` “double-clicking the Bottom and Inspector splitters restores default sizes without touching the document” → `splitter-view-state.contract.spec.ts` “double-clicking the Bottom and Inspector splitters restores default sizes without touching the document”. **Invariant:** Double-clicking either splitter restores the documented default view size without changing History or Dirty state. **Reason:** Moved the distinct fast reset journey into the stable splitter suite while retaining its PR profile and #722 traceability.
+- `issue-723-status-diagnostics.spec.ts` “developer diagnostics are collapsed by default and revealed deliberately” → `issue-723-status-diagnostics.spec.ts` “status diagnostics stay opt-in and the left rail never covers status in compact modes”. **Invariant:** Diagnostics remain opt-in without document mutation and the left workspace rail remains above the status bar at 1280x720 through Cycle, Transaction and Combined. **Reason:** Combines two assertions into one loaded production journey, removing a duplicate app startup while preserving both independent visible contracts.
+- `issue-723-status-diagnostics.spec.ts` “left rail never covers the status bar at 1280x720” → `issue-723-status-diagnostics.spec.ts` “status diagnostics stay opt-in and the left rail never covers status in compact modes”. **Invariant:** The left workspace rail never covers the status bar in compact layout across all view modes. **Reason:** The cross-mode geometry assertions now share the same 1280x720 page lifecycle as the opt-in diagnostics check; no assertion was removed.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 

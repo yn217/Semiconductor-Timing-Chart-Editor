@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T10:42:27.444Z",
+  "generatedAt": "2026-09-23T10:44:46.477Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,14 +12,14 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 329,
-  "caseCount": 965,
-  "reviewedCaseCount": 965,
+  "caseCount": 964,
+  "reviewedCaseCount": 964,
   "curatedProfileCounts": {
-    "integration": 491,
+    "integration": 490,
     "nightly": 195,
     "performance": 54,
     "pr": 257,
-    "visual": 175
+    "visual": 174
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -10914,33 +10914,7 @@
       "file": "issue-723-status-diagnostics.spec.ts",
       "suitePath": [],
       "line": 3,
-      "title": "developer diagnostics are collapsed by default and revealed deliberately",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "status-diagnostics-disclosure-and-bounds",
-      "originIssue": 723,
-      "type": "GEOMETRY_CONTRACT",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Developer-only diagnostics start collapsed and can be deliberately revealed without document mutation, while the left workspace rail does not cover status UI at compact size across modes.",
-      "duplicateGroup": null,
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "KEEP",
-      "reason": "The file combines a state disclosure contract with a compact cross-mode layout boundary; both are production-visible and the 1280x720 measurement protects the regression directly.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "integration",
-        "visual"
-      ]
-    },
-    {
-      "file": "issue-723-status-diagnostics.spec.ts",
-      "suitePath": [],
-      "line": 23,
-      "title": "left rail never covers the status bar at 1280x720",
+      "title": "status diagnostics stay opt-in and the left rail never covers status in compact modes",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -25770,8 +25744,8 @@
     },
     {
       "file": "issue-723-status-diagnostics.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "723",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -28238,6 +28212,30 @@
       },
       "protectedInvariant": "Double-clicking either splitter restores the documented default view size without changing History or Dirty state.",
       "reason": "Moved the distinct fast reset journey into the stable splitter suite while retaining its PR profile and #722 traceability."
+    },
+    {
+      "from": {
+        "file": "issue-723-status-diagnostics.spec.ts",
+        "title": "developer diagnostics are collapsed by default and revealed deliberately"
+      },
+      "to": {
+        "file": "issue-723-status-diagnostics.spec.ts",
+        "title": "status diagnostics stay opt-in and the left rail never covers status in compact modes"
+      },
+      "protectedInvariant": "Diagnostics remain opt-in without document mutation and the left workspace rail remains above the status bar at 1280x720 through Cycle, Transaction and Combined.",
+      "reason": "Combines two assertions into one loaded production journey, removing a duplicate app startup while preserving both independent visible contracts."
+    },
+    {
+      "from": {
+        "file": "issue-723-status-diagnostics.spec.ts",
+        "title": "left rail never covers the status bar at 1280x720"
+      },
+      "to": {
+        "file": "issue-723-status-diagnostics.spec.ts",
+        "title": "status diagnostics stay opt-in and the left rail never covers status in compact modes"
+      },
+      "protectedInvariant": "The left workspace rail never covers the status bar in compact layout across all view modes.",
+      "reason": "The cross-mode geometry assertions now share the same 1280x720 page lifecycle as the opt-in diagnostics check; no assertion was removed."
     }
   ]
 }
