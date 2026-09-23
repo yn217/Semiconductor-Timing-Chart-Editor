@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:17:53.195Z",
+  "generatedAt": "2026-09-23T05:19:48.519Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,9 +13,9 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 659,
+  "reviewedCaseCount": 660,
   "curatedProfileCounts": {
-    "integration": 304,
+    "integration": 305,
     "nightly": 162,
     "performance": 44,
     "pr": 193,
@@ -6997,18 +6997,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "combined-stacked-layout-and-pane-ownership",
+      "originIssue": 573,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A real Transaction authoring action enters stacked Combined mode with aligned time-track geometry, a resizable divider, correct active-pane ribbon/Bottom context, shared viewport ownership, and no extra canonical/history/dirty mutation from view operations.",
+      "duplicateGroup": "combined-pane-composition-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is an integrated Combined workflow covering mode-specific pane geometry, active-pane command ownership, divider interaction, and view-only state invariants. transaction-export Split View cases focus on time mapping, export, persistence, and mode state rather than this stacked composition/ownership path. The test writes a tracked visual artifact, so inventory classification does not execute it.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "gui-v1-home-vocabulary.spec.ts",
@@ -24086,11 +24089,11 @@
     {
       "file": "gui-split-view-visual.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "gui-v1-home-vocabulary.spec.ts",
