@@ -55,3 +55,12 @@ if a curated case no longer matches the Playwright test list. Until review is
 complete, only explicitly reviewed cases enter the focused profiles. The full
 E2E suite remains in the scheduled/manual nightly path so unreviewed coverage
 is not dropped from automation.
+
+Reviewed inventory entries require a domain, product-contract key, type, cost
+class, tier, decision, rationale, and an explicit `originIssue` field. The
+`contractId` defaults to the stable reviewed domain key; `originIssue: null`
+means the test is product-level rather than traceable to one originating
+Issue. Cost classes are `FAST`, `MEDIUM`, `HEAVY`, and `VERY_HEAVY`; legacy
+`SMALL` review entries normalize to `FAST`. A reviewed case with no curated
+profile must be explicitly `MOVE_LAYER` with a named replacement, and remains
+in the full nightly E2E collection until that move is completed.

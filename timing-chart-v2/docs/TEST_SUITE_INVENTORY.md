@@ -14,7 +14,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `nightly` | 193 |
 | `performance` | 54 |
 | `pr` | 253 |
-| `visual` | 165 |
+| `visual` | 177 |
 
 ## Top recorded per-case runtimes
 
