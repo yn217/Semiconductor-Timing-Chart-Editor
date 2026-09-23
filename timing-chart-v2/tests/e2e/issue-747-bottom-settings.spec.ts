@@ -1,19 +1,47 @@
 import { expect, test } from "@playwright/test";
 import { openBottomSettings } from "./bottom-settings";
 
-test("Follow Selection and Pin live behind the Bottom settings gear", async ({ page }) => {
+test("Bottom settings explain Follow Selection and Pin without a persistent status chip", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").innerText(),
+    dirty: await page.getByTestId("dirty-status").innerText(),
+    tabs: await page.getByTestId("bottom-tabs").evaluate((element) => element.getBoundingClientRect().toJSON()),
+    content: await page.locator(".bottom-content").evaluate((element) => element.getBoundingClientRect().toJSON()),
+  };
+  const gear = page.getByTestId("bottom-settings");
+  const gearBox = await gear.boundingBox();
+  expect(gearBox?.width).toBeGreaterThanOrEqual(28);
+  expect(gearBox?.height).toBeGreaterThanOrEqual(28);
+  await expect(page.getByTestId("bottom-follow-status")).toHaveCount(0);
+  await expect(page.getByText("Following Selection", { exact: true })).toHaveCount(0);
   const popover = page.getByTestId("bottom-settings-popover");
-  await expect(page.getByTestId("bottom-follow-status")).toBeVisible();
   await expect(popover).toBeHidden();
   await expect(page.getByTestId("bottom-pin")).toBeHidden();
   await openBottomSettings(page);
   await expect(popover).toBeVisible();
+  await expect(popover).toHaveAttribute("aria-label", "Bottom Panel Settings");
+  await expect(popover).toContainText("Choose how the Bottom Panel reacts when the editor selection changes.");
   await expect(page.getByTestId("follow-selection")).toBeVisible();
+  await expect(popover).toContainText("Automatically update the Bottom Panel target when you select another item.");
+  await expect(popover).toContainText("Keep the content currently shown fixed while you inspect or select other items.");
+  await expect(page.getByTestId("follow-selection")).toBeChecked();
+  const afterOpen = {
+    tabs: await page.getByTestId("bottom-tabs").evaluate((element) => element.getBoundingClientRect().toJSON()),
+    content: await page.locator(".bottom-content").evaluate((element) => element.getBoundingClientRect().toJSON()),
+  };
+  expect(afterOpen.tabs).toEqual(before.tabs);
+  expect(afterOpen.content).toEqual(before.content);
+  await page.getByTestId("follow-selection").uncheck();
   await page.getByTestId("bottom-pin").click();
-  await expect(page.getByTestId("bottom-follow-status")).toContainText("Pinned");
+  await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("Escape");
   await expect(popover).toBeHidden();
-  await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
+  await expect(gear).toBeFocused();
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty);
 });
