@@ -1,9 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
+import { buildTypedSignalProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import type { AnnotationId, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 
 describe("deterministic AI proposal provider", () => {
+  it("builds a typed stable-ID rename proposal without mutating the canonical document", () => {
+    const document = canonicalFixture();
+    const result = buildTypedSignalProposal(document, 12, "propose_rename_signal", { signalId: "sig_data", name: " DATA_RENAMED " });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.proposal.baseRevision).toBe(12);
+      expect(result.proposal.commands).toEqual([expect.objectContaining({ type: "signal.rename", signalId: "sig_data", name: "DATA_RENAMED" })]);
+    }
+    expect(document.signals.find((signal) => signal.id === "sig_data")?.name).toBe("DATA");
+    expect(buildTypedSignalProposal(document, 12, "propose_rename_signal", { signalId: "missing", name: "X" })).toEqual({ ok: false, message: "Signal 'missing' does not exist in the current document." });
+    expect(buildTypedSignalProposal(document, 12, "propose_rename_signal", { signalId: "sig_data", name: " " })).toEqual({ ok: false, message: "propose_rename_signal requires a non-empty name." });
+  });
+
   it("returns a revisioned semantic proposal without mutating the source document", () => {
     const document = canonicalFixture();
     const result = deterministicMockAIProposalProvider.propose({ document, revision: 7, query: "rename selected signal to DATA_RENAMED", selectedSignalId: "sig_data" as never });

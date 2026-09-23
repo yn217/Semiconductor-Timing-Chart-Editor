@@ -34,6 +34,7 @@ export type AIBridgeContext = {
   // for a document-changing proposal: a human must still open the AI
   // Assistant panel and click Validate + Apply themselves.
   readonly onProposeEdit: ((query: string) => { readonly error: string } | { readonly summary: string; readonly baseRevision: number; readonly kind: string; readonly requiresApproval: true; readonly message: string }) | undefined;
+  readonly onProposeTypedEdit: ((tool: string, args: Readonly<Record<string, unknown>>) => { readonly error: string } | { readonly summary: string; readonly baseRevision: number; readonly kind: string; readonly requiresApproval: true; readonly message: string }) | undefined;
   // #395 PR5: get_viewport_snapshot is read-only -- see the comment on
   // its implementation in ai-operation-panel.tsx for exactly what it
   // returns and why it deliberately omits a raw pixel image.
@@ -85,6 +86,10 @@ function executeTool(tool: string, args: Record<string, unknown>, context: AIBri
     const query = args.query;
     if (typeof query !== "string" || !query.trim()) throw new Error("propose_edit requires a non-empty 'query' string argument.");
     return context.onProposeEdit(query);
+  }
+  if (tool === "propose_rename_signal") {
+    if (!context.onProposeTypedEdit) throw new Error("propose_rename_signal is not available in the current surface.");
+    return context.onProposeTypedEdit(tool, args);
   }
   throw new Error(`Unknown tool '${tool}'.`);
 }

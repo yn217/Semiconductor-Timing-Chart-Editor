@@ -80,7 +80,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_selection", "get_viewport_snapshot", "get_transactions", "get_annotations", "get_bookmarks", "get_problems", "fit_all", "propose_edit"]);
+  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_selection", "get_viewport_snapshot", "get_transactions", "get_annotations", "get_bookmarks", "get_problems", "fit_all", "propose_edit", "propose_rename_signal"]);
 
   // Read-only: reflects the real, live document -- never a canned/fake value.
   const summary = await callTool("get_document_summary");
@@ -193,6 +193,39 @@ test("propose_edit builds a Preview only -- it never auto-validates or auto-appl
   await ai.getByTestId("ai-validate").click();
   await ai.getByTestId("ai-apply").click();
   await expect(host).toHaveAttribute("data-canonical-revision", String(Number(before.revision) + 1));
+});
+
+test("propose_rename_signal targets a stable Signal ID and still requires human Validate and Apply", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
+
+  const snapshot = await callTool("get_viewport_snapshot");
+  const elementMap = JSON.parse(snapshot.body.result!.content[0]!.text) as { elementMap: readonly { id: string; name: string }[] };
+  const target = elementMap.elementMap.find((signal) => signal.id === "sig_cycle_request");
+  expect(target?.name).toBe("REQUEST");
+  const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+
+  const proposal = await callTool("propose_rename_signal", TOKEN, { signalId: target!.id, name: "REQ" });
+  expect(proposal.body.result!.isError).toBe(false);
+  expect(JSON.parse(proposal.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ summary: "Rename REQUEST to REQ", baseRevision: 0, requiresApproval: true }));
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+  await expect(ai).toContainText("Rename REQUEST to REQ");
+
+  await ai.getByTestId("ai-validate").click();
+  await ai.getByTestId("ai-apply").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(before.revision) + 1));
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("REQ");
 });
 
 test("an unauthorized propose_edit call (bad token) never reaches the document, and an empty query is rejected before building any proposal", async ({ page }) => {

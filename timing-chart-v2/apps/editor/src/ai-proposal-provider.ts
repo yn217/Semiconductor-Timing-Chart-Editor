@@ -33,6 +33,20 @@ export type AIProposalResult = Readonly<
   | { ok: false; message: string }
 >;
 
+/** Build a narrow typed proposal from stable semantic identifiers. The
+ * resulting command still enters the ordinary Preview/Validate/Apply path. */
+export function buildTypedSignalProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  if (tool !== "propose_rename_signal") return { ok: false, message: `Unsupported typed proposal '${tool}'.` };
+  const signalId = args.signalId;
+  const name = args.name;
+  if (typeof signalId !== "string" || signalId.length === 0) return { ok: false, message: "propose_rename_signal requires a stable signalId." };
+  if (typeof name !== "string" || name.trim().length === 0) return { ok: false, message: "propose_rename_signal requires a non-empty name." };
+  const signal = document.signals.find((item) => item.id === signalId && item.type !== "commentRow");
+  if (!signal) return { ok: false, message: `Signal '${signalId}' does not exist in the current document.` };
+  const normalizedName = name.trim();
+  return { ok: true, proposal: proposal(revision, `Rename ${signal.display.name} to ${normalizedName}`, [command({ type: "signal.rename", signalId: signal.id, name: normalizedName }, "typed_rename_signal")]) };
+}
+
 /** Provider-neutral boundary. Implementations may be backed by a mock, local
  * model, or remote service, but they return proposals only; Canonical changes
  * are always applied by the editor's SemanticCommand owner. */

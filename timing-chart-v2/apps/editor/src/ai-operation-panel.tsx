@@ -3,7 +3,7 @@ import { useRef, type ReactNode } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { planCommand } from "@timing-chart-v2/commands";
 import { validateCanonicalDocument, type CanonicalDocument, type DocumentProblem, type GroupId, type SignalId } from "@timing-chart-v2/schema";
-import { deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
+import { buildTypedSignalProposal, deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
 import { useAIBridgeClient, type AIBridgeStatus } from "./ai-bridge-client.js";
 
 function proposalValidationProblems(document: CanonicalDocument, proposal: AIProposal): readonly DocumentProblem[] {
@@ -231,6 +231,22 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
     if (!result.ok) return { error: result.message };
     return { summary: result.proposal.summary, baseRevision: result.proposal.baseRevision, kind: result.proposal.kind, requiresApproval: true, message: "Proposal ready for review -- open the AI Assistant panel to Validate and Apply it." };
   };
+  const onProposeTypedEdit = (tool: string, args: Readonly<Record<string, unknown>>): { readonly error: string } | { readonly summary: string; readonly baseRevision: number; readonly kind: string; readonly requiresApproval: true; readonly message: string } => {
+    let result = buildTypedSignalProposal(document, revision, tool, args);
+    if (result.ok) {
+      const violation = result.proposal.commands.map((proposedCommand) => scopeViolationMessage(scope, document, proposedCommand, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId)).find((message) => message !== undefined);
+      if (violation) result = { ok: false, message: violation };
+    }
+    if (!result.ok) return { error: result.message };
+    onDiagnostic?.(undefined);
+    setPreview(result.proposal);
+    setValidatedRevision(undefined);
+    setPreviewDocumentEpoch(documentEpoch);
+    setValidatedDocumentEpoch(undefined);
+    setStatus("Proposal ready for review (submitted by external agent) · no document mutation yet");
+    logActivity("proposal", result.proposal.summary, `Preview ready · base revision ${result.proposal.baseRevision}`, "external-agent");
+    return { summary: result.proposal.summary, baseRevision: result.proposal.baseRevision, kind: result.proposal.kind, requiresApproval: true, message: "Proposal ready for review -- open the AI Assistant panel to Validate and Apply it." };
+  };
   // #395 PR5: get_viewport_snapshot() is read-only, exactly like
   // get_document_summary/get_selection -- it never mutates anything. It
   // returns the structured "Element Map" the issue asks for (stable
@@ -262,7 +278,7 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
       elementMap,
     };
   };
-  const bridgeStatus = useAIBridgeClient(bridgeEnabled, bridgeHost, bridgePort, bridgeToken, { document, documentEpoch, revision, mode, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, onViewIntent, onProposeEdit, onGetViewportSnapshot });
+  const bridgeStatus = useAIBridgeClient(bridgeEnabled, bridgeHost, bridgePort, bridgeToken, { document, documentEpoch, revision, mode, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, onViewIntent, onProposeEdit, onProposeTypedEdit, onGetViewportSnapshot });
   useEffect(() => { onBridgeStatusChange?.(bridgeStatus); }, [bridgeStatus, onBridgeStatusChange]);
 
   return <section className="ai-operation-panel" data-testid="ai-operation-panel">
