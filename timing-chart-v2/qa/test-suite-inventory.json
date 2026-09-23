@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:52:03.784Z",
+  "generatedAt": "2026-09-23T07:53:15.914Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 929,
+  "reviewedCaseCount": 933,
   "curatedProfileCounts": {
     "integration": 482,
     "nightly": 186,
     "performance": 54,
-    "pr": 251,
+    "pr": 255,
     "visual": 159
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -22799,18 +22799,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-tree-filter-collapse-focus-repair",
+      "originIssue": 291,
+      "type": "ACCESSIBILITY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Filtering hides unrelated treeitems, ArrowUp moves focus from the visible Signal to its Group, and collapsing/expanding the Group retains focus and restores keyboard navigation.",
+      "duplicateGroup": "signal-tree-keyboard-navigation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "A focused accessibility path for roving focus under filtering and collapse. It complements the broader navigation contract with projection changes that invalidate current focus targets.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "undo-redo-selection-context.spec.ts",
@@ -22821,18 +22824,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "undo-delete-selection-restore-redo-clear",
+      "originIssue": 211,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Deleting a selected stable-ID Signal clears selection; Undo recreates and reselects that same semantic entity; Redo deletes and clears selection without stale references.",
+      "duplicateGroup": "undo-redo-selection-context",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Protects transient selection restoration coupled to entity recreation across Undo/Redo; checking only canonical row restoration would miss stale or lost selection state.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "undo-redo-selection-context.spec.ts",
@@ -22843,18 +22849,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "undo-rename-preserves-stable-selection",
+      "originIssue": 211,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Undo of Rename restores the original Signal name while selection remains on the same stable Signal ID.",
+      "duplicateGroup": "undo-redo-selection-context",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Distinct selection-context rule: undoing a property mutation must not change which entity remains selected. The delete case exercises object recreation and cannot substitute for this.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "undo-redo-selection-context.spec.ts",
@@ -22865,18 +22874,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "undo-unrelated-edit-preserves-selection",
+      "originIssue": 211,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Undoing and redoing a timeline insertion that does not target the selected Signal preserves that stable Signal selection.",
+      "duplicateGroup": "undo-redo-selection-context",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Covers the complementary touched-versus-untouched selection invalidation rule: unrelated history entries must leave selection intact, distinct from undoing edits to the selected entity.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "unsaved-file-dialog.spec.ts",
@@ -27332,20 +27344,20 @@
     {
       "file": "tree-keyboard.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 1,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "undo-redo-selection-context.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "unsaved-file-dialog.spec.ts",
