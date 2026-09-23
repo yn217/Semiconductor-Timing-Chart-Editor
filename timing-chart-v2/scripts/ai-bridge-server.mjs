@@ -27,7 +27,7 @@ const EDITOR_SESSION_TIMEOUT_MS = 15_000;
 // this list can ever be invoked, regardless of what a client sends --
 // tools/call rejects any name not in this map before it is ever queued
 // for the browser.
-const READ_TOOLS = new Set(["get_document_summary", "get_selection", "get_viewport_snapshot", "get_transactions", "get_annotations", "get_bookmarks", "get_problems"]);
+const READ_TOOLS = new Set(["get_document_summary", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_annotations", "get_bookmarks", "get_problems"]);
 const VIEW_ONLY_TOOLS = new Set(["fit_all"]);
 // #395 PR4: propose_edit is the one tool that reaches into document-changing
 // territory, but it still only ever builds a Preview (identical to the user
@@ -43,6 +43,9 @@ const TOOL_CATALOG = [
   { name: "get_document_summary", description: "Read-only summary of the explicitly targeted Editor document (title, signal/annotation/transaction counts, timeline length). Never mutates anything.", inputSchema: sessionSchema },
   { name: "get_selection", description: "Read-only current selection for the explicitly targeted Editor session (selected Signal/Group/Annotation/Transaction id, if any). Never mutates anything.", inputSchema: sessionSchema },
   { name: "get_viewport_snapshot", description: "Read-only structured Element Map for the explicitly targeted Editor session: every signal's stable id, name, role, type, group and visibility, plus current selection, zoom and cycle count. Does not include a raw pixel image. Never mutates anything.", inputSchema: sessionSchema },
+  { name: "get_signals", description: "Read-only list of canonical Signals with stable IDs and semantic fields; optional groupId, visible and type filters.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, groupId: { type: "string" }, visible: { type: "boolean" }, type: { type: "string" } }, required: ["editorSessionId"], additionalProperties: false } },
+  { name: "get_signal", description: "Read-only canonical Signal details selected by stable signalId.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, signalId: { type: "string", minLength: 1 } }, required: ["editorSessionId", "signalId"], additionalProperties: false } },
+  { name: "get_signal_groups", description: "Read-only canonical Signal Groups and their ordered stable row IDs.", inputSchema: sessionSchema },
   { name: "get_transactions", description: "Read-only list of every canonical Transaction (stable id, name, group id, lane id, start/end cycle, color, description, linked signal ids, phase count) plus every Transaction Group.", inputSchema: sessionSchema },
   { name: "get_annotations", description: "Read-only list of every canonical Annotation with stable identity and semantic anchors expressed as signal ids and source cycles, never pixels.", inputSchema: sessionSchema },
   { name: "get_bookmarks", description: "Read-only list of every canonical Bookmark (stable id, name, source cycle, comment).", inputSchema: sessionSchema },

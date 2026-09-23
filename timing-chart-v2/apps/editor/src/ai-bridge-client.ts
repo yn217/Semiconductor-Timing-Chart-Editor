@@ -63,6 +63,25 @@ function executeTool(tool: string, args: Record<string, unknown>, context: AIBri
     if (!context.onGetViewportSnapshot) throw new Error("get_viewport_snapshot is not available in the current surface.");
     return context.onGetViewportSnapshot();
   }
+  if (tool === "get_signals") {
+    const { groupId, visible, type } = args;
+    if (groupId !== undefined && typeof groupId !== "string") throw new Error("groupId must be a string.");
+    if (visible !== undefined && typeof visible !== "boolean") throw new Error("visible must be a boolean.");
+    if (type !== undefined && typeof type !== "string") throw new Error("type must be a string.");
+    const groupRows = groupId === undefined ? undefined : context.document.signalGroups.find((group) => group.id === groupId)?.rows;
+    if (groupId !== undefined && !groupRows) return { signals: [] };
+    return { signals: context.document.signals.filter((signal) => signal.type !== "commentRow" && (groupRows === undefined || groupRows.includes(signal.id)) && (visible === undefined || (signal.display.visible !== false) === visible) && (type === undefined || signal.type === type)).map((signal) => ({ id: signal.id, name: signal.display.name, role: signal.role, type: signal.type, groupId: context.document.signalGroups.find((group) => group.rows.includes(signal.id))?.id, visible: signal.display.visible !== false })) };
+  }
+  if (tool === "get_signal") {
+    const signalId = args.signalId;
+    if (typeof signalId !== "string" || !signalId) throw new Error("get_signal requires a stable signalId.");
+    const signal = context.document.signals.find((item) => item.id === signalId && item.type !== "commentRow");
+    if (!signal) return { signal: null };
+    return { signal: { ...signal, groupId: context.document.signalGroups.find((group) => group.rows.includes(signal.id))?.id, visible: signal.display.visible !== false } };
+  }
+  if (tool === "get_signal_groups") {
+    return { groups: context.document.signalGroups.map((group) => ({ id: group.id, name: group.name, rows: [...group.rows] })) };
+  }
   if (tool === "get_transactions") {
     return {
       transactionGroups: (context.document.transactionGroups ?? []).map((group) => ({ id: group.id, name: group.name, color: group.color })),

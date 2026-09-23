@@ -80,7 +80,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_selection", "get_viewport_snapshot", "get_transactions", "get_annotations", "get_bookmarks", "get_problems", "fit_all", "propose_edit", "propose_rename_signal", "propose_update_signal", "propose_move_signal"]);
+  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_annotations", "get_bookmarks", "get_problems", "fit_all", "propose_edit", "propose_rename_signal", "propose_update_signal", "propose_move_signal"]);
 
   // Read-only: reflects the real, live document -- never a canned/fake value.
   const summary = await callTool("get_document_summary");
@@ -129,6 +129,14 @@ test("get_transactions, get_annotations, get_bookmarks and get_problems are read
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
   const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+  const signals = await callTool("get_signals", TOKEN, { groupId: "grp_control" });
+  expect(signals.body.result!.isError).toBe(false);
+  const signalData = JSON.parse(signals.body.result!.content[0]!.text) as { signals: readonly { id: string; name: string; groupId?: string }[] };
+  expect(signalData.signals).toContainEqual(expect.objectContaining({ id: "sig_cycle_request", name: "REQUEST", groupId: "grp_control" }));
+  const signal = await callTool("get_signal", TOKEN, { signalId: "sig_cycle_request" });
+  expect(JSON.parse(signal.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ signal: expect.objectContaining({ id: "sig_cycle_request", name: "REQUEST" }) }));
+  const groups = await callTool("get_signal_groups");
+  expect(JSON.parse(groups.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ groups: expect.arrayContaining([expect.objectContaining({ id: "grp_control", rows: expect.arrayContaining(["sig_cycle_request"]) })]) }));
   const transactions = await callTool("get_transactions");
   expect(transactions.body.result!.isError).toBe(false);
   const transactionData = JSON.parse(transactions.body.result!.content[0]!.text) as { transactionGroups: readonly { id: string; name: string }[]; transactions: readonly { id: string; name: string; start: number; end: number }[] };
