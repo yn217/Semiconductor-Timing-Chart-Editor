@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ComponentProps } from "react";
 import { AIOperationPanel } from "../ai-operation-panel.js";
-import type { AIBridgeStatus } from "../ai-bridge-client.js";
+import type { AIBridgeStatus, AISelectionEntityType } from "../ai-bridge-client.js";
 import type { AIViewIntent } from "../ai-proposal-provider.js";
 import type { DocumentProblem } from "@timing-chart-v2/schema";
 
@@ -11,13 +11,15 @@ export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "
   readonly onCommandBatch: NonNullable<PanelProps["onCommandBatch"]>;
   readonly getZoom: NonNullable<PanelProps["getZoom"]>;
   readonly onFitAll: () => void;
+  readonly onFitSelection: () => void;
   readonly onOpenTimeline: () => void;
+  readonly onSetSelection: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void;
   readonly setRuntimeDiagnostics: (updater: (current: readonly DocumentProblem[]) => readonly DocumentProblem[]) => void;
 }) {
   const [bridgeEnabled, setBridgeEnabled] = useState(false);
   const [bridgeToken, setBridgeToken] = useState("");
   const [bridgeStatus, setBridgeStatus] = useState<AIBridgeStatus>("disabled");
-  const onViewIntent = (intent: AIViewIntent) => { if (intent === "fit-all") input.onFitAll(); else input.onOpenTimeline(); };
+  const onViewIntent = (intent: AIViewIntent) => { if (intent === "fit-all") input.onFitAll(); else if (intent === "fit-selection") input.onFitSelection(); else input.onOpenTimeline(); };
   const onDiagnostic: PanelProps["onDiagnostic"] = (next) => {
     const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next];
     input.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("ai-proposal:")), ...nextDiagnostics]);
@@ -35,6 +37,7 @@ export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "
     onCommand: input.onCommand,
     onCommandBatch: input.onCommandBatch,
     onViewIntent,
+    onSetSelection: input.onSetSelection,
     onDiagnostic,
     icon: null,
     bridgeHost: "127.0.0.1",

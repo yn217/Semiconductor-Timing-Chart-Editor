@@ -183,7 +183,7 @@ export interface EditorSecondarySurfacesInput {
   readonly actions: EditorActions;
   readonly setRuntimeDiagnostics: EditorApplicationOwner["setRuntimeDiagnostics"];
   readonly navigateProblem: (path: string) => void;
-  readonly ai: { readonly getZoom: () => number; readonly fitAll: () => void };
+  readonly ai: { readonly getZoom: () => number; readonly fitAll: () => void; readonly fitSelection: () => void };
 }
 
 export interface EditorSecondarySurfacesOutput {
@@ -242,6 +242,8 @@ export function useEditorSecondarySurfaces(
       ),
     getZoom: input.ai.getZoom,
     onFitAll: input.ai.fitAll,
+    onFitSelection: input.ai.fitSelection,
+    onSetSelection: input.actions.selectAIEntity,
     onOpenTimeline: () => workspace.setRibbonTab("Timeline"),
     setRuntimeDiagnostics: input.setRuntimeDiagnostics,
   });

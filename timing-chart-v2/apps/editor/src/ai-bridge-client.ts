@@ -17,6 +17,7 @@ import type { AIViewIntent } from "./ai-proposal-provider.js";
 // client-seen; "connected-external-client" means a real client has spoken to the bridge's /mcp endpoint
 // within the last EXTERNAL_CLIENT_TIMEOUT_MS window server-side.
 export type AIBridgeStatus = "disabled" | "connecting" | "connected" | "connected-external-client" | "token-required" | "invalid-token" | "unavailable" | "error";
+export type AISelectionEntityType = "signal" | "group" | "transaction" | "annotation" | "bookmark";
 
 export type AIBridgeContext = {
   readonly document: CanonicalDocument;
@@ -28,6 +29,7 @@ export type AIBridgeContext = {
   readonly selectedAnnotationId: string | undefined;
   readonly selectedTransactionId: string | undefined;
   readonly onViewIntent: ((intent: AIViewIntent) => void) | undefined;
+  readonly onSetSelection: ((target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void) | undefined;
   // #395 PR4: propose_edit's only effect is building a Preview (exactly
   // what clicking Preview in the UI does) -- it never validates or
   // applies on its own. There is deliberately no bridge-side "apply" tool
@@ -52,13 +54,27 @@ function documentSummary(document: CanonicalDocument) {
   };
 }
 
-function executeTool(tool: string, args: Record<string, unknown>, context: AIBridgeContext): unknown {
+export function executeAIBridgeTool(tool: string, args: Record<string, unknown>, context: AIBridgeContext): unknown {
   if (tool === "get_document_summary") return documentSummary(context.document);
   if (tool === "get_view_context") {
     if (!context.onGetViewContext) throw new Error("get_view_context is not available in the current surface.");
     return context.onGetViewContext();
   }
   if (tool === "get_selection") return { selectedSignalId: context.selectedSignalId, selectedGroupId: context.selectedGroupId, selectedAnnotationId: context.selectedAnnotationId, selectedTransactionId: context.selectedTransactionId };
+  if (tool === "set_selection") {
+    const { entityType, entityId } = args;
+    if (typeof entityType !== "string" || !["signal", "group", "transaction", "annotation", "bookmark"].includes(entityType) || typeof entityId !== "string" || !entityId) throw new Error("set_selection requires entityType and a stable entityId.");
+    let entityName: string | undefined;
+    if (entityType === "signal") { const signal = context.document.signals.find((item) => item.id === entityId && item.type !== "commentRow"); entityName = signal?.display.name || signal?.name; }
+    else if (entityType === "group") entityName = context.document.signalGroups.find((item) => item.id === entityId)?.name;
+    else if (entityType === "transaction") entityName = context.document.transactions.find((item) => item.id === entityId)?.name;
+    else if (entityType === "annotation") entityName = context.document.annotations.find((item) => item.id === entityId)?.label || context.document.annotations.find((item) => item.id === entityId)?.type;
+    else entityName = context.document.bookmarks.find((item) => item.id === entityId)?.name;
+    if (entityName === undefined) throw new Error(`${entityType} '${entityId}' does not exist in the current document.`);
+    if (!context.onSetSelection) throw new Error("set_selection is not available in the current surface.");
+    context.onSetSelection({ entityType: entityType as AISelectionEntityType, entityId });
+    return { selected: { entityType, entityId, name: entityName }, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 };
+  }
   if (tool === "fit_all") {
     if (!context.onViewIntent) throw new Error("fit_all is not available in the current surface.");
     context.onViewIntent("fit-all");
@@ -261,7 +277,7 @@ export function useAIBridgeClient(enabled: boolean, host: string, port: number, 
       try {
         const currentSession = getSession(contextRef.current);
         if (request.editorSessionId !== session.editorSessionId || currentSession.editorSessionId !== request.editorSessionId) throw new Error("Target Editor session changed before this tool call could execute; choose a live session and retry.");
-        result = executeTool(request.tool, request.arguments ?? {}, contextRef.current);
+        result = executeAIBridgeTool(request.tool, request.arguments ?? {}, contextRef.current);
       } catch (thrown) { error = thrown instanceof Error ? thrown.message : "Tool execution failed."; }
       await fetch(`${baseUrl}/bridge/respond`, { method: "POST", headers: { ...authHeaders, "content-type": "application/json" }, body: JSON.stringify({ requestId: request.requestId, editorSessionId: request.editorSessionId, result, error }), signal: controller.signal });
       return true;

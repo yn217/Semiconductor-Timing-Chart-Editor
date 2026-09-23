@@ -28,7 +28,7 @@ const EDITOR_SESSION_TIMEOUT_MS = 15_000;
 // tools/call rejects any name not in this map before it is ever queued
 // for the browser.
 const READ_TOOLS = new Set(["get_document_summary", "get_view_context", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_transaction", "get_transaction_groups", "get_transaction_phases", "get_linked_signals", "get_annotations", "get_bookmarks", "get_time_groups", "get_problems"]);
-const VIEW_ONLY_TOOLS = new Set(["fit_all", "fit_selection"]);
+const VIEW_ONLY_TOOLS = new Set(["fit_all", "fit_selection", "set_selection"]);
 // #395 PR4: propose_edit is the one tool that reaches into document-changing
 // territory, but it still only ever builds a Preview (identical to the user
 // typing the same query and clicking Preview themselves) -- it never
@@ -43,6 +43,7 @@ const TOOL_CATALOG = [
   { name: "get_document_summary", description: "Read-only summary of the explicitly targeted Editor document (title, signal/annotation/transaction counts, timeline length). Never mutates anything.", inputSchema: sessionSchema },
   { name: "get_view_context", description: "Read-only view state for the explicitly targeted Editor session (mode, source-cycle range, zoom and stable current selection).", inputSchema: sessionSchema },
   { name: "get_selection", description: "Read-only current selection for the explicitly targeted Editor session (selected Signal/Group/Annotation/Transaction id, if any). Never mutates anything.", inputSchema: sessionSchema },
+  { name: "set_selection", description: "View-only: select a current document entity by stable ID in the explicitly targeted Editor session. Does not change Canonical/History/Dirty state.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, entityType: { type: "string", enum: ["signal", "group", "transaction", "annotation", "bookmark"] }, entityId: { type: "string", minLength: 1 } }, required: ["editorSessionId", "entityType", "entityId"], additionalProperties: false } },
   { name: "get_viewport_snapshot", description: "Read-only structured Element Map for the explicitly targeted Editor session: every signal's stable id, name, role, type, group and visibility, plus current selection, zoom and cycle count. Does not include a raw pixel image. Never mutates anything.", inputSchema: sessionSchema },
   { name: "get_signals", description: "Read-only list of canonical Signals with stable IDs and semantic fields; optional groupId, visible and type filters.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, groupId: { type: "string" }, visible: { type: "boolean" }, type: { type: "string" } }, required: ["editorSessionId"], additionalProperties: false } },
   { name: "get_signal", description: "Read-only canonical Signal details selected by stable signalId.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, signalId: { type: "string", minLength: 1 } }, required: ["editorSessionId", "signalId"], additionalProperties: false } },

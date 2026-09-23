@@ -19,7 +19,7 @@ Status is measured against the local Agent Bridge tool catalog in `scripts/ai-br
 | Time Group read / create / update / delete | `get_time_groups`, `propose_create_time_group`, `propose_update_time_group`, `propose_delete_time_group` | Canonical Time Group + Time Group SemanticCommand | Read-only / Document edit | Edit: Yes | `timeGroupId` for update/delete | Canonical source cycles | `ai-proposal-provider.test.ts` | Catalog E2E authored; not run | Implemented; browser acceptance not run |
 | Time Group create / update / delete | — | Time Group SemanticCommand exists | Document edit | Yes | Stable `timeGroupId` required | Canonical source cycles | — | — | Not exposed by MCP |
 | Selection read | `get_selection` | Editor selection owner | Read-only | No | stable selected IDs | n/a | `ai-bridge-session.test.ts` | `ai-bridge.spec.ts` | Implemented |
-| Set selection / reveal entity | — | Editor selection / reveal owners | View-only | No | Stable entity ID | n/a | — | — | Not exposed by MCP |
+| Set selection / reveal entity | `set_selection` | Editor SelectionOwner | View-only | No | Stable entity ID | n/a | `ai-bridge-client.test.ts` | `ai-bridge.spec.ts` | Implemented; browser acceptance not run |
 | Fit all / fit selection | `fit_all`, `fit_selection` | Timeline navigation owner | View-only | No | Current selection for fit-selection | n/a | `ai-bridge-session.test.ts` | `ai-bridge.spec.ts` | Implemented; browser acceptance not run |
 | Open panel / switch mode / set visible time range | — | View intent owners exist where applicable | View-only | No | Stable entity IDs/source range | Canonical source cycles | — | — | Not exposed by MCP |
 | Problems read | `get_problems` | Canonical document validator | Read-only | No | n/a | n/a | `ai-bridge-session.test.ts` | Catalog E2E authored; not run | Implemented |
@@ -35,6 +35,8 @@ The names below must match the bridge `TOOL_CATALOG`; the security contract test
 `propose_create_time_group`, `propose_update_time_group`, `propose_delete_time_group`.
 
 `fit_selection`.
+
+`set_selection`.
 
 ## Verification state
 

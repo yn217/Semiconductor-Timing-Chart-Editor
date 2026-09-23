@@ -628,7 +628,7 @@ export function MinimalCycleView() {
     actions,
     setRuntimeDiagnostics,
     navigateProblem,
-    ai: { getZoom: timelineNavigation.getZoom, fitAll: timelineNavigation.fitAll },
+    ai: { getZoom: timelineNavigation.getZoom, fitAll: timelineNavigation.fitAll, fitSelection: timelineNavigation.fitSelection },
   });
   const capabilities = deriveSelectionCapabilities(snapshot.document, selection.state);
   const { hasSelectedSignal, hasSelectedEntity, hasSelectedClipboard, hasDeletableSelection, canMoveUp, canMoveDown } = capabilities;
