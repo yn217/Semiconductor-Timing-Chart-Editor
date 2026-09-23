@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:59:22.747Z",
+  "generatedAt": "2026-09-23T08:00:58.807Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 949,
+  "reviewedCaseCount": 953,
   "curatedProfileCounts": {
-    "integration": 485,
+    "integration": 487,
     "nightly": 194,
     "performance": 54,
-    "pr": 257,
+    "pr": 259,
     "visual": 171
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -24001,18 +24001,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "wavedrom-open-svg-untrusted-content-safety",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SECURITY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Opening adversarial document strings does not create executable/active SVG elements or javascript/data hrefs in the rendered wave or exported SVG; payload does not execute.",
+      "duplicateGroup": "wavedrom-svg-content-safety",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Focused security regression crosses untrusted Open input, production SVG rendering, and exported SVG sanitization. Static unit coverage alone would not establish the browser DOM sink and download output behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "workspace-preset-density.spec.ts",
@@ -24023,18 +24026,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "workspace-presets-density-view-only",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "View Ribbon exposes workspace preset and density controls; presets update expected shell/Bottom/Inspector layout and density changes presentation without Canonical/History/Dirty mutations.",
+      "duplicateGroup": "workspace-view-preferences",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Protects discoverability and view-only semantics while traversing multiple presets and density values; simple individual layout assertions do not establish this non-mutation contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "workspace-zoom-isolation.spec.ts",
@@ -24045,18 +24051,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "workspace-zoom-isolation-compact",
+      "originIssue": 573,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1280x720, Cycle retains 150% and Transaction retains independent 200% zoom when switching back to Cycle.",
+      "duplicateGroup": "workspace-zoom-isolation",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Compact viewport half of the explicit responsive workspace zoom-isolation test; retains per-mode zoom instead of leaking the latest selected value into Cycle.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "workspace-zoom-isolation.spec.ts",
@@ -24067,18 +24076,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "workspace-zoom-isolation-wide",
+      "originIssue": 573,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1672x941, Cycle retains 150% and Transaction retains independent 200% zoom when switching back to Cycle.",
+      "duplicateGroup": "workspace-zoom-isolation",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Wide viewport counterpart to compact workspace zoom isolation; checks the mode-specific preference contract in a distinct supported layout.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "zoom-cross-surface-alignment.spec.ts",
@@ -27530,29 +27542,29 @@
     {
       "file": "wavedrom-security.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "workspace-preset-density.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "workspace-zoom-isolation.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "zoom-cross-surface-alignment.spec.ts",
