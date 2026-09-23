@@ -66,7 +66,7 @@ describe("deterministic AI proposal provider", () => {
     expect(document.timeline.cycleCount).toBe(canonicalFixture().timeline.cycleCount);
   });
 
-  it("maps typed Signal Group create/rename proposals to existing Group SemanticCommands", () => {
+  it("maps typed Signal Group create/rename/move/delete proposals to existing Group SemanticCommands", () => {
     const document = canonicalFixture();
     const created = buildTypedSignalGroupProposal(document, 22, "propose_create_signal_group", { name: " Auxiliary " });
     expect(created.ok).toBe(true);
@@ -74,7 +74,17 @@ describe("deterministic AI proposal provider", () => {
     const renamed = buildTypedSignalGroupProposal(document, 22, "propose_rename_signal_group", { groupId: document.signalGroups[0]!.id, name: "Controls" });
     expect(renamed.ok).toBe(true);
     if (renamed.ok) expect(renamed.proposal.commands).toEqual([expect.objectContaining({ type: "group.rename", groupId: document.signalGroups[0]!.id, name: "Controls" })]);
+    const withEmptyGroups = { ...document, signalGroups: [...document.signalGroups, { id: "grp_aux" as GroupId, name: "Aux", rows: [] }, { id: "grp_spare" as GroupId, name: "Spare", rows: [] }] };
+    const moved = buildTypedSignalGroupProposal(withEmptyGroups, 22, "propose_move_signal_group", { groupId: "grp_aux", index: 1 });
+    expect(moved.ok).toBe(true);
+    if (moved.ok) expect(moved.proposal.commands).toEqual([expect.objectContaining({ type: "group.move", groupId: "grp_aux", index: 1 })]);
+    const deleted = buildTypedSignalGroupProposal(withEmptyGroups, 22, "propose_delete_signal_group", { groupId: "grp_spare" });
+    expect(deleted.ok).toBe(true);
+    if (deleted.ok) expect(deleted.proposal.commands).toEqual([expect.objectContaining({ type: "group.delete", groupId: "grp_spare" })]);
     expect(buildTypedSignalGroupProposal(document, 22, "propose_rename_signal_group", { groupId: "missing", name: "X" })).toEqual({ ok: false, message: "Signal Group 'missing' does not exist in the current document." });
+    expect(buildTypedSignalGroupProposal(document, 22, "propose_move_signal_group", { groupId: "missing", index: 0 })).toEqual({ ok: false, message: "Signal Group 'missing' does not exist in the current document." });
+    expect(buildTypedSignalGroupProposal(withEmptyGroups, 22, "propose_move_signal_group", { groupId: "grp_aux", index: 3 })).toEqual({ ok: false, message: "index must be an integer from 0 to 2 in the post-removal group list." });
+    expect(buildTypedSignalGroupProposal(document, 22, "propose_delete_signal_group", { groupId: document.signalGroups[0]!.id })).toEqual({ ok: false, message: "Signal Group 'Main' is not empty; only empty Signal Groups can be deleted." });
   });
 
   it("maps typed Transaction proposals to existing Transaction SemanticCommands", () => {

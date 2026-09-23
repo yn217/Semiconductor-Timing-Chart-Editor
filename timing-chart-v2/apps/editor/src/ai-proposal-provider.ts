@@ -131,6 +131,21 @@ export function buildTypedSignalGroupProposal(document: CanonicalDocument, revis
     const normalizedName = name.trim();
     return { ok: true, proposal: proposal(revision, `Rename ${group.name} to ${normalizedName}`, [command({ type: "group.rename", groupId: group.id, name: normalizedName }, "typed_rename_signal_group")]) };
   }
+  if (tool === "propose_move_signal_group" || tool === "propose_delete_signal_group") {
+    const groupId = args.groupId;
+    if (typeof groupId !== "string" || groupId.length === 0) return { ok: false, message: `${tool} requires a stable groupId.` };
+    const groupIndex = document.signalGroups.findIndex((item) => item.id === groupId);
+    const group = document.signalGroups[groupIndex];
+    if (!group) return { ok: false, message: `Signal Group '${groupId}' does not exist in the current document.` };
+    if (tool === "propose_move_signal_group") {
+      const index = args.index;
+      const maximumIndex = document.signalGroups.length - 1;
+      if (!Number.isSafeInteger(index) || (index as number) < 0 || (index as number) > maximumIndex) return { ok: false, message: `index must be an integer from 0 to ${maximumIndex} in the post-removal group list.` };
+      return { ok: true, proposal: proposal(revision, `Move Signal Group ${group.name} to position ${(index as number) + 1}`, [command({ type: "group.move", groupId: group.id, index: index as number }, "typed_move_signal_group")]) };
+    }
+    if (group.rows.length > 0 || (group.spacers?.length ?? 0) > 0) return { ok: false, message: `Signal Group '${group.name}' is not empty; only empty Signal Groups can be deleted.` };
+    return { ok: true, proposal: proposal(revision, `Delete empty Signal Group ${group.name}`, [command({ type: "group.delete", groupId: group.id }, "typed_delete_signal_group")]) };
+  }
   return { ok: false, message: `Unsupported typed Signal Group proposal '${tool}'.` };
 }
 
