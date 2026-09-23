@@ -146,6 +146,32 @@ export function buildTypedTransactionProposal(document: CanonicalDocument, revis
   if (typeof transactionId !== "string" || !transactionId) return { ok: false, message: `${tool} requires a stable transactionId.` };
   const transaction = document.transactions.find((item) => item.id === transactionId);
   if (!transaction) return { ok: false, message: `Transaction '${transactionId}' does not exist in the current document.` };
+  if (tool === "propose_add_phase" || tool === "propose_update_phase") {
+    const name = args.name;
+    const start = args.startCycle;
+    const end = args.endCycle;
+    if (typeof name !== "string" || !name.trim() || !Number.isSafeInteger(start) || !Number.isSafeInteger(end) || (start as number) < transaction.start || (end as number) > transaction.end || (end as number) <= (start as number)) return { ok: false, message: `${tool} requires a name and integer source-cycle boundaries inside the Transaction.` };
+    const phase = { name: name.trim(), start: start as number, end: end as number };
+    if (tool === "propose_add_phase") return { ok: true, proposal: proposal(revision, `Add Phase ${phase.name} to ${transaction.name}`, [command({ type: "transaction.phaseAdd", transactionId: transaction.id, phase }, "typed_add_phase")]) };
+    const phaseIndex = args.phaseIndex;
+    if (!Number.isSafeInteger(phaseIndex) || (phaseIndex as number) < 0 || (phaseIndex as number) >= (transaction.phases?.length ?? 0)) return { ok: false, message: "propose_update_phase requires a phaseIndex that exists in the Transaction." };
+    return { ok: true, proposal: proposal(revision, `Update Phase ${phase.name} in ${transaction.name}`, [command({ type: "transaction.phaseUpdate", transactionId: transaction.id, phaseIndex: phaseIndex as number, phase }, "typed_update_phase")]) };
+  }
+  if (tool === "propose_delete_phase") {
+    const phaseIndex = args.phaseIndex;
+    if (!Number.isSafeInteger(phaseIndex) || (phaseIndex as number) < 0 || (phaseIndex as number) >= (transaction.phases?.length ?? 0)) return { ok: false, message: "propose_delete_phase requires a phaseIndex that exists in the Transaction." };
+    const phase = transaction.phases![phaseIndex as number]!;
+    return { ok: true, proposal: proposal(revision, `Delete Phase ${phase.name} from ${transaction.name}`, [command({ type: "transaction.phaseDelete", transactionId: transaction.id, phaseIndex: phaseIndex as number }, "typed_delete_phase")]) };
+  }
+  if (tool === "propose_link_signal" || tool === "propose_unlink_signal") {
+    const signalId = args.signalId;
+    if (typeof signalId !== "string" || !document.signals.some((signal) => signal.id === signalId && signal.type !== "commentRow")) return { ok: false, message: `Signal '${String(signalId ?? "")}' does not exist in the current document.` };
+    const linked = (transaction.linkedSignals ?? []).includes(signalId as SignalId);
+    if (tool === "propose_link_signal" && linked) return { ok: false, message: `Signal '${signalId}' is already linked to this Transaction.` };
+    if (tool === "propose_unlink_signal" && !linked) return { ok: false, message: `Signal '${signalId}' is not linked to this Transaction.` };
+    const signal = document.signals.find((item) => item.id === signalId)!;
+    return { ok: true, proposal: proposal(revision, `${tool === "propose_link_signal" ? "Link" : "Unlink"} ${signal.display.name} ${tool === "propose_link_signal" ? "to" : "from"} ${transaction.name}`, [command({ type: tool === "propose_link_signal" ? "transaction.linkSignal" : "transaction.unlinkSignal", transactionId: transaction.id, signalId: signal.id }, tool === "propose_link_signal" ? "typed_link_signal" : "typed_unlink_signal")]) };
+  }
   if (tool === "propose_move_transaction") {
     const start = args.start;
     if (!Number.isSafeInteger(start) || (start as number) < 0 || (start as number) + transaction.end - transaction.start > document.timeline.cycleCount) return { ok: false, message: "propose_move_transaction requires an integer source-cycle start that keeps the Transaction inside the timeline." };

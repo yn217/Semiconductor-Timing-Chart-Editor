@@ -236,7 +236,7 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
       ? buildTypedTimelineProposal(document, revision, tool, args)
       : tool === "propose_create_signal_group" || tool === "propose_rename_signal_group"
         ? buildTypedSignalGroupProposal(document, revision, tool, args)
-      : tool === "propose_create_transaction" || tool === "propose_move_transaction" || tool === "propose_resize_transaction" || tool === "propose_delete_transaction"
+      : tool === "propose_create_transaction" || tool === "propose_move_transaction" || tool === "propose_resize_transaction" || tool === "propose_delete_transaction" || tool === "propose_add_phase" || tool === "propose_update_phase" || tool === "propose_delete_phase" || tool === "propose_link_signal" || tool === "propose_unlink_signal"
           ? buildTypedTransactionProposal(document, revision, tool, args)
           : tool === "propose_create_bookmark" || tool === "propose_move_bookmark" || tool === "propose_delete_bookmark"
             ? buildTypedBookmarkProposal(document, revision, tool, args)
