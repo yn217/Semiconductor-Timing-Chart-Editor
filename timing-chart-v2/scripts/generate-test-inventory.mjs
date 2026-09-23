@@ -190,11 +190,15 @@ for (const test of cases) {
   if (test.reviewStatus === "REVIEWED") counts.reviewed += 1;
   fileCounts.set(test.file, counts);
 }
+const slowestMeasuredCases = cases
+  .filter((test) => Number.isFinite(test.measuredRuntimeMs))
+  .sort((a, b) => b.measuredRuntimeMs - a.measuredRuntimeMs || a.file.localeCompare(b.file))
+  .slice(0, 20);
 const markdown = [
   "# Playwright test inventory",
   "",
   `Generated from Playwright collection (${inventory.playwrightVersion}); ${inventory.specFileCount} spec files and ${inventory.caseCount} test cases. Collection does not execute tests.`,
-  `Baseline ${inventory.baseline.commit}: ${inventory.baseline.specFileCount} spec files / ${inventory.baseline.caseCount} cases. Runtime metrics: not measured.`,
+  `Baseline ${inventory.baseline.commit}: ${inventory.baseline.specFileCount} spec files / ${inventory.baseline.caseCount} cases. Full-profile wall time and aggregate percentiles: not measured.`,
   `Semantic review progress: ${inventory.reviewedCaseCount}/${inventory.caseCount} cases reviewed.`,
   "",
   "## Curated profile membership",
@@ -204,6 +208,14 @@ const markdown = [
   "| Profile | Reviewed cases |",
   "| --- | ---: |",
   ...Object.entries(inventory.curatedProfileCounts).map(([profile, count]) => `| \`${profile}\` | ${count} |`),
+  "",
+  "## Top recorded per-case runtimes",
+  "",
+  "These are the highest non-null `measuredRuntimeMs` values already recorded in the curated manifest. Inventory generation does not execute tests or refresh these measurements; treat them as case-level observations, not a full-profile runtime baseline.",
+  "",
+  "| Runtime (ms) | Profile | Spec file | Test case |",
+  "| ---: | --- | --- | --- |",
+  ...slowestMeasuredCases.map((test) => `| ${test.measuredRuntimeMs} | ${(test.profiles ?? []).map((profile) => `\`${profile}\``).join(", ") || "—"} | \`${test.file}\` | ${test.title.replaceAll("|", "\\|")} |`),
   "",
   "> This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.",
   "",

@@ -1,7 +1,7 @@
 # Playwright test inventory
 
 Generated from Playwright collection (1.62.1); 330 spec files and 965 test cases. Collection does not execute tests.
-Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
+Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
 Semantic review progress: 965/965 cases reviewed.
 
 ## Curated profile membership
@@ -15,6 +15,33 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `performance` | 54 |
 | `pr` | 257 |
 | `visual` | 175 |
+
+## Top recorded per-case runtimes
+
+These are the highest non-null `measuredRuntimeMs` values already recorded in the curated manifest. Inventory generation does not execute tests or refresh these measurements; treat them as case-level observations, not a full-profile runtime baseline.
+
+| Runtime (ms) | Profile | Spec file | Test case |
+| ---: | --- | --- | --- |
+| 28400 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941 |
+| 25200 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720 |
+| 25100 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700 |
+| 15200 | `pr` | `issue-738-ruler-hit-area.spec.ts` | ruler cell is the hit target, in Cycle at 1672x941 |
+| 15000 | `pr` | `issue-738-ruler-hit-area.spec.ts` | ruler cell is the hit target, in Cycle at 1280x720 |
+| 13900 | `pr` | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | every Bookmark gesture stays inside the SPA in Combined mode |
+| 13400 | `pr` | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | every Bookmark gesture stays inside the SPA in Cycle mode |
+| 10600 | `visual` | `left-header-action-alignment.spec.ts` | right-aligns Left Tree header actions without changing command behavior |
+| 10200 | `pr` | `issue-760-combined-horizontal-wheel.spec.ts` | Combined horizontal wheel scrolls the shared viewport at 1280x720 |
+| 9700 | `pr` | `issue-738-ruler-hit-area.spec.ts` | ruler cell is the hit target, in Transaction at 1672x941 |
+| 9700 | `visual` | `left-tree-compact-footer.spec.ts` | keeps the left tree footer compact at laptop viewport |
+| 9500 | `pr` | `issue-738-ruler-hit-area.spec.ts` | ruler cell is the hit target, in Transaction at 1280x720 |
+| 9300 | `pr` | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | every Bookmark gesture stays inside the SPA in Transaction mode |
+| 9000 | `integration` | `left-tree-interaction.spec.ts` | collapses only Left Tree descendants and restores stable rows without a canonical mutation |
+| 8800 | `pr` | `issue-750-geometry-10-to-50.spec.ts` | 1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (1280x720) |
+| 8700 | `pr` | `issue-750-custom-tc-scale.spec.ts` | Custom TC scale accepts only a positive integer and never applies an invalid draft |
+| 8600 | `visual` | `issue-767-zoom-keeps-glyph-shape.spec.ts` | zoom does not stretch Transaction text at 1280x720 |
+| 8100 | `pr` | `issue-767-zoom-keeps-glyph-shape.spec.ts` | a narrow Transaction bar keeps a body drag handle and can be moved |
+| 7800 | `visual` | `issue-750-geometry-10-to-50.spec.ts` | compressed Transaction: no clipped labels and no artificial scroll extent at 1280x720 |
+| 7800 | `visual` | `issue-750-geometry-10-to-50.spec.ts` | compressed Transaction: no clipped labels and no artificial scroll extent at 1672x941 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
