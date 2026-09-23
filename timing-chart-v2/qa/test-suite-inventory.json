@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-22T23:33:56.884Z",
+  "generatedAt": "2026-09-23T00:01:56.681Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,15 +11,15 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 335,
-  "caseCount": 981,
-  "reviewedCaseCount": 102,
+  "specFileCount": 334,
+  "caseCount": 975,
+  "reviewedCaseCount": 164,
   "curatedProfileCounts": {
-    "integration": 6,
-    "nightly": 24,
-    "performance": 8,
-    "pr": 42,
-    "visual": 13
+    "integration": 30,
+    "nightly": 40,
+    "performance": 17,
+    "pr": 75,
+    "visual": 30
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -8404,18 +8404,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "clock-primary-action-visibility",
+      "originIssue": 626,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Clock Generator Apply and Inspector Convert Clock actions remain reachable without scrolling at both supported viewport sizes.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is specifically a vertical reachability/viewport-fit contract, so both heights are meaningful and the real rendered controls must be measured in a browser.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "integration"
+      ]
     },
     {
       "file": "issue-626-primary-actions-visible.spec.ts",
@@ -8426,18 +8430,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "clock-primary-action-visibility",
+      "originIssue": 626,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Clock Generator Apply and Inspector Convert Clock actions remain reachable without scrolling at both supported viewport sizes.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is specifically a vertical reachability/viewport-fit contract, so both heights are meaningful and the real rendered controls must be measured in a browser.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "integration"
+      ]
     },
     {
       "file": "issue-628-annotation-bottom-collection.spec.ts",
@@ -8448,18 +8456,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-bottom-collection-draft",
+      "originIssue": 628,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "The Annotation Bottom remains list-first and scrollable; row selection and preview drafts stay view-only until Apply; Inspector Apply/Undo/Redo and creation keep the collection synchronized.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This combines a long scrollable collection with cross-surface selection and draft/commit semantics. Both viewports test explicit list-first visibility and available vertical room, so they are not semantic duplicates.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ]
     },
     {
       "file": "issue-628-annotation-bottom-collection.spec.ts",
@@ -8470,18 +8482,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-bottom-collection-draft",
+      "originIssue": 628,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "The Annotation Bottom remains list-first and scrollable; row selection and preview drafts stay view-only until Apply; Inspector Apply/Undo/Redo and creation keep the collection synchronized.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This combines a long scrollable collection with cross-surface selection and draft/commit semantics. Both viewports test explicit list-first visibility and available vertical room, so they are not semantic duplicates.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ]
     },
     {
       "file": "issue-629-combined-tree-inspector.spec.ts",
@@ -8492,106 +8508,71 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "combined-inspector-entity-switch",
+      "originIssue": 629,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "In Combined mode, selecting a Transaction after a Signal switches Inspector entity context without changing History.",
+      "duplicateGroup": "inspector-mode-context",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The multi-mode context suite does not select a Transaction from the Combined Tree after a Signal, so this small direct user path is complementary rather than duplicated.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-629-inspector-mode-context.spec.ts",
       "suitePath": [],
-      "line": 4,
+      "line": 3,
       "title": "Inspector follows active workspace context and retains hidden stable selection at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "inspector-mode-context-and-stable-selection",
+      "originIssue": 629,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inspector projection follows active workspace and restores hidden Transaction/Signal selection by stable identity through Cycle/Transaction/Combined without data or History changes.",
+      "duplicateGroup": "inspector-mode-context",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The cross-mode stable selection lifecycle is a distinct owner contract. Its desktop duplicate was removed because neither test asserts viewport geometry; the compact test retains the complete journey and error check.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-629-inspector-mode-context.spec.ts",
-      "suitePath": [],
-      "line": 4,
-      "title": "Inspector follows active workspace context and retains hidden stable selection at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-630-active-mode-title.spec.ts",
       "suitePath": [],
-      "line": 5,
+      "line": 4,
       "title": "document title never displays a stale mode suffix at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "document-title-and-active-mode",
+      "originIssue": 630,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "The titlebar keeps document name distinct from active Cycle/Transaction/Combined view and remains correct after document load and browser reload.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The reload and active-view label are production-visible lifecycle behavior. The desktop width copy was redundant because the test checks no width-dependent geometry; the compact case covers all transitions.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-630-active-mode-title.spec.ts",
-      "suitePath": [],
-      "line": 5,
-      "title": "document title never displays a stale mode suffix at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-631-transaction-vertical-lines.spec.ts",
@@ -8602,18 +8583,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-time-grid-visual-layering",
+      "originIssue": 631,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Transaction time-grid vertical indicators remain neutral, thin, non-interactive and behind Transaction bars.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Layering and pointer transparency are visible interaction geometry; computed style/z-order reads are appropriate for this visual acceptance but should not be generalized to semantic tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-635-derived-fields.spec.ts",
@@ -8624,18 +8608,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transition-derived-fields-and-action-scope",
+      "originIssue": 635,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Transition End and Duration are non-editable derived outputs, and row toolbar actions visibly identify the selected Transition they affect.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Lower-level tests can check derived values, but this browser contract verifies the real table renders them as outputs and scopes actions to the selected row; retain one focused UI guard.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-635-derived-fields.spec.ts",
@@ -8646,18 +8633,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transition-derived-fields-and-action-scope",
+      "originIssue": 635,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Transition End and Duration are non-editable derived outputs, and row toolbar actions visibly identify the selected Transition they affect.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Lower-level tests can check derived values, but this browser contract verifies the real table renders them as outputs and scopes actions to the selected row; retain one focused UI guard.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-635-generator-pristine-draft.spec.ts",
@@ -8668,18 +8658,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-generator-pristine-draft-state",
+      "originIssue": 635,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "An untouched Signal Generator is not shown as a user-edited draft; actual editing marks it unapplied and Cancel restores pristine fields without Canonical/History/Dirty changes.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The regression distinguishes default form values from user-edited draft state in the live UI, including cancel behavior; a reducer test cannot establish the user-visible affordance.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-635-signal-scope-actions.spec.ts",
@@ -8690,18 +8683,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-wide-command-scope",
+      "originIssue": 635,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Signal-wide Group move/visibility/delete actions stay in the scoped command group and do not replace the independent Bottom draft Cancel action.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This protects command ownership and visible separation between semantic Signal operations and draft lifecycle controls; the browser assertion catches relocation or action collision.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-635-transition-draft-signal-scope.spec.ts",
@@ -8712,18 +8708,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transition-draft-signal-identity",
+      "originIssue": 635,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Switching selected Signal discards the previous Signal's Add Transition draft rather than leaking values into the next Signal's scope, with no History commit.",
+      "duplicateGroup": "signal-transition-draft-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a stable-identity/draft-isolation contract across real Signal selection changes, distinct from the generator's pristine-draft lifecycle.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-635-transition-form-mode.spec.ts",
@@ -8734,18 +8733,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transition-add-edit-mode-affordance",
+      "originIssue": 635,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "FAST",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Signal transition form clearly states whether it will add a new Transition or edit the selected existing Transition.",
+      "duplicateGroup": "signal-transition-draft-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The mode/status text prevents an edit from being mistaken for an add. This concise visible affordance check complements the Transition draft isolation journey.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-637-sustained-scroll.spec.ts",
@@ -8782,18 +8784,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "mode-scoped-bottom-tab-selection",
+      "originIssue": 639,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Selection following cannot activate a Bottom tab unavailable in the current mode; active tab and panel content remain mode-compatible across selection changes.",
+      "duplicateGroup": "mode-scoped-bottom-tabs",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This covers selection-following and tab compatibility, distinct from #773's explicit mode round-trip memory contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-639-transaction-create-cycle-bottom-tab.spec.ts",
@@ -8804,18 +8809,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-transaction-create-bottom-scope",
+      "originIssue": 639,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Creating a Transaction while in Cycle mode changes canonical data once but does not expose or activate Transaction-only Bottom content in the Cycle workspace.",
+      "duplicateGroup": "mode-scoped-bottom-tabs",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This tests creation from a mode that does not own Transaction Bottom content; it complements selection-following by verifying creation itself does not leak a tab.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-646-tree-fixed-scroll.spec.ts",
@@ -8826,18 +8834,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-fixed-horizontal-scroll",
+      "originIssue": 646,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "The Transaction Tree's screen position and width remain fixed while the timeline horizontally scrolls, without changing History.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This requires actual horizontal overflow and compares screen geometry at both accepted viewport sizes; both variants protect width-dependent geometry rather than duplicate semantic behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "integration"
+      ]
     },
     {
       "file": "issue-646-tree-fixed-scroll.spec.ts",
@@ -8848,18 +8860,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-fixed-horizontal-scroll",
+      "originIssue": 646,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "The Transaction Tree's screen position and width remain fixed while the timeline horizontally scrolls, without changing History.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This requires actual horizontal overflow and compares screen geometry at both accepted viewport sizes; both variants protect width-dependent geometry rather than duplicate semantic behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "integration"
+      ]
     },
     {
       "file": "issue-650-transaction-select-reveal.spec.ts",
@@ -8870,18 +8886,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-minimal-time-reveal",
+      "originIssue": 650,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Selecting an off-screen Transaction minimally reveals its bar, leaves the Tree fixed, and does not alter Canonical/History/Dirty; selecting a visible or already revealed row does not jump again.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "A 1,000-cycle real document with actual wheel scrolling is necessary to test minimal reveal against near/mid/far bars. Both viewport widths exercise different visible ranges; preserve it for automated integration/nightly, outside routine PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "issue-650-transaction-select-reveal.spec.ts",
@@ -8892,18 +8912,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-minimal-time-reveal",
+      "originIssue": 650,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Selecting an off-screen Transaction minimally reveals its bar, leaves the Tree fixed, and does not alter Canonical/History/Dirty; selecting a visible or already revealed row does not jump again.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "A 1,000-cycle real document with actual wheel scrolling is necessary to test minimal reveal against near/mid/far bars. Both viewport widths exercise different visible ranges; preserve it for automated integration/nightly, outside routine PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "issue-651-bulk-dialog-focus.spec.ts",
@@ -8914,18 +8938,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bulk-registration-dialog-focus-return",
+      "originIssue": 651,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Both Cancel and Escape close the Bulk Signal Registration dialog and return focus to the stable Add trigger.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Cancel and Escape are distinct close paths for focus lifecycle; this parameterized browser case is concise and verifies focus restoration at the real dialog boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-651-bulk-dialog-focus.spec.ts",
@@ -8936,18 +8963,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bulk-registration-dialog-focus-return",
+      "originIssue": 651,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Both Cancel and Escape close the Bulk Signal Registration dialog and return focus to the stable Add trigger.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Cancel and Escape are distinct close paths for focus lifecycle; this parameterized browser case is concise and verifies focus restoration at the real dialog boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-676-canvas-inspector-refresh.spec.ts",
@@ -8958,18 +8988,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "canvas-annotation-inspector-save-open",
+      "originIssue": 676,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Dragging a Canvas-rendered Annotation keeps stable identity and synchronizes Inspector/list through Undo/Redo, selection changes and Save/Open at supported viewport sizes.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The real-pointer, renderer, history and serialization journey is a release/integration contract. Retain both viewports because rendering/handle geometry vary with available space; exclude this broad flow from routine PR feedback.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "issue-676-canvas-inspector-refresh.spec.ts",
@@ -8980,18 +9014,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "canvas-annotation-inspector-save-open",
+      "originIssue": 676,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Dragging a Canvas-rendered Annotation keeps stable identity and synchronizes Inspector/list through Undo/Redo, selection changes and Save/Open at supported viewport sizes.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The real-pointer, renderer, history and serialization journey is a release/integration contract. Retain both viewports because rendering/handle geometry vary with available space; exclude this broad flow from routine PR feedback.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "issue-698-color-toggle-and-compact-phases.spec.ts",
@@ -9964,18 +10002,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-bottom-draft-visibility",
+      "originIssue": 725,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Editing one Bottom Transaction field makes that cell visibly distinct as an unapplied draft, leaves untouched fields clean, and Escape restores the committed appearance without a semantic edit.",
+      "duplicateGroup": "bottom-transaction-draft-affordance",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The acceptance is a visible dirty-cell affordance plus a native double-click editing gesture. A lower-level test cannot prove that the real editor styles the changed field and restores it on Escape; the spec's data-draft-dirty selector is an implementation-coupled diagnostic and should be paired with computed visual-state assertions.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-725-escape-revert.spec.ts",
@@ -9986,40 +10027,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-bottom-escape-revert",
+      "originIssue": 725,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Escape reverts the active Bottom Transaction draft before leaving edit state and does not add History.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The ordering between the real focused input, draft reset, and edit lifecycle is user-visible and complements the combined keyboard journey's tab-order check; retain the narrow behavior guard.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-725-f2-edit.spec.ts",
-      "suitePath": [],
-      "line": 3,
-      "title": "F2 on the active Bottom row starts editing without committing",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-725-keyboard-journey.spec.ts",
@@ -10030,18 +10052,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-bottom-keyboard-editing",
+      "originIssue": 725,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Keyboard-only F2 editing, left-to-right Tab order, uncommitted draft state, and Escape cancellation work in the dense Bottom grid.",
+      "duplicateGroup": "bottom-transaction-keyboard-editing",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The Tab-order assertion is explicitly tied to visible column order and the compact viewport can expose clipping/focus regressions. Both approved widths are retained for this width-sensitive keyboard journey; its compact case also subsumes the standalone F2 smoke via the consolidation map.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr",
+        "visual"
+      ]
     },
     {
       "file": "issue-725-keyboard-journey.spec.ts",
@@ -10052,18 +10078,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-bottom-keyboard-editing",
+      "originIssue": 725,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Keyboard-only F2 editing, left-to-right Tab order, uncommitted draft state, and Escape cancellation work in the dense Bottom grid.",
+      "duplicateGroup": "bottom-transaction-keyboard-editing",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The Tab-order assertion is explicitly tied to visible column order and the compact viewport can expose clipping/focus regressions. Both approved widths are retained for this width-sensitive keyboard journey; its compact case also subsumes the standalone F2 smoke via the consolidation map.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr",
+        "visual"
+      ]
     },
     {
       "file": "issue-726-lane-hover.spec.ts",
@@ -11119,18 +11149,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-add-and-keyboard-focus",
+      "originIssue": 748,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Left Tree Add creates one stable Transaction visible in Tree, Timeline and Bottom with one History unit; More does not reflow the pane; keyboard traversal skips the removed Signals switch.",
+      "duplicateGroup": "transaction-tree-responsive-header",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This combines a real semantic create with stable-ID cross-surface projection and responsive header/focus behavior. Both viewport variants protect the panel's width-sensitive density and are not reducible to an isolated command test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ]
     },
     {
       "file": "issue-748-add-and-focus-journey.spec.ts",
@@ -11141,18 +11175,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-add-and-keyboard-focus",
+      "originIssue": 748,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Left Tree Add creates one stable Transaction visible in Tree, Timeline and Bottom with one History unit; More does not reflow the pane; keyboard traversal skips the removed Signals switch.",
+      "duplicateGroup": "transaction-tree-responsive-header",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This combines a real semantic create with stable-ID cross-surface projection and responsive header/focus behavior. Both viewport variants protect the panel's width-sensitive density and are not reducible to an isolated command test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ]
     },
     {
       "file": "issue-748-transaction-left-header.spec.ts",
@@ -11163,18 +11201,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-header-controls",
+      "originIssue": 748,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Transaction Tree exposes named Add, More, Search and Filter controls without a duplicate Signals switch; its Add Group menu action closes correctly and commits one History unit.",
+      "duplicateGroup": "transaction-tree-responsive-header",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The Add Group semantic action and one-step History outcome are not covered by the broader Add Transaction/focus journey. The menu DOM checks are surface-level; retain this compact actionable contract while the separate geometry matrix covers width parity.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-748-tree-menu-and-parity.spec.ts",
@@ -11185,18 +11226,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-menu-and-cycle-parity",
+      "originIssue": 748,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Transaction Tree control dimensions match Cycle where required; the named menu supports Escape/focus return, view-only Expand/Collapse All, and semantic Show/Hide All.",
+      "duplicateGroup": "transaction-tree-responsive-header",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "It protects explicit Cycle/Transaction geometry parity at both accepted viewport sizes together with distinct disclosure and visibility semantics. Those width assertions are the reason to retain both variants; menu presence alone overlaps the header smoke but not its state behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ]
     },
     {
       "file": "issue-748-tree-menu-and-parity.spec.ts",
@@ -11207,18 +11252,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-menu-and-cycle-parity",
+      "originIssue": 748,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Transaction Tree control dimensions match Cycle where required; the named menu supports Escape/focus return, view-only Expand/Collapse All, and semantic Show/Hide All.",
+      "duplicateGroup": "transaction-tree-responsive-header",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "It protects explicit Cycle/Transaction geometry parity at both accepted viewport sizes together with distinct disclosure and visibility semantics. Those width assertions are the reason to retain both variants; menu presence alone overlaps the header smoke but not its state behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ]
     },
     {
       "file": "issue-749-move-to-group-submenu.spec.ts",
@@ -11229,18 +11278,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-group-move-menu-and-history",
+      "originIssue": 749,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "The row menu nests destinations beneath Move to Group and New Group plus moving the Transaction is a single undoable semantic batch.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The menu hierarchy is a user-visible interaction contract and the second journey verifies one-step create+move/undo/redo through the real UI. No existing unit proves both wiring and history grouping.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-749-move-to-group-submenu.spec.ts",
@@ -11251,18 +11303,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-group-move-menu-and-history",
+      "originIssue": 749,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "The row menu nests destinations beneath Move to Group and New Group plus moving the Transaction is a single undoable semantic batch.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The menu hierarchy is a user-visible interaction contract and the second journey verifies one-step create+move/undo/redo through the real UI. No existing unit proves both wiring and history grouping.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-750-custom-tc-scale.spec.ts",
@@ -11423,18 +11478,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-bottom-phase-editor",
+      "originIssue": 751,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Phase editing exposes parent context, sticky Apply/Revert and coverage validation; stable Phase identity survives Start-order projection while edits/deletes target the intended Phase.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The two cases cover complementary user-visible layout/draft validation and stable-identity behavior after display sorting. A model test cannot prove the editor presentation or that row actions resolve the correct canonical Phase.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr",
+        "visual"
+      ]
     },
     {
       "file": "issue-751-bottom-phase-editor.spec.ts",
@@ -11445,18 +11504,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-bottom-phase-editor",
+      "originIssue": 751,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Phase editing exposes parent context, sticky Apply/Revert and coverage validation; stable Phase identity survives Start-order projection while edits/deletes target the intended Phase.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The two cases cover complementary user-visible layout/draft validation and stable-identity behavior after display sorting. A model test cannot prove the editor presentation or that row actions resolve the correct canonical Phase.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr",
+        "visual"
+      ]
     },
     {
       "file": "issue-752-bottom-remount.spec.ts",
@@ -11467,18 +11530,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-bottom-draft-retention-on-selection",
+      "originIssue": 752,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Bottom search and an unapplied Transaction draft survive primary selection changes, restore by stable Transaction identity, and Escape reverts without Canonical/History changes.",
+      "duplicateGroup": "transaction-draft-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This tests a distinct inline Transaction draft and search state across primary selection changes. The Phase-retention suite covers a different editor/domain and cannot replace this lifecycle contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-753-bookmark-gesture-fuzz.spec.ts",
@@ -11789,18 +11855,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "large-document-renderer-selection",
+      "originIssue": 755,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A 30-signal x 10,000-cycle document auto-selects viewport-bounded Canvas rendering without per-cycle SVG node growth, while the supported SVG fallback remains forceable.",
+      "duplicateGroup": "canvas-production-acceptance-755",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This large fixture checks the renderer budget/selection architecture, not only a visible journey. Keep it automated in the performance and full nightly tiers, outside routine PR feedback; runtime not measured in this audit.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "issue-755-canvas-production-acceptance.spec.ts",
@@ -11811,18 +11881,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "canvas-waveform-interaction",
+      "originIssue": 755,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "On the production Canvas path, selection and far-window hit testing follow semantic time; zoom, resize, sustained scrolling, and view-only operations preserve ruler alignment and bounded rendered state.",
+      "duplicateGroup": "canvas-production-acceptance-755",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is a high-value cross-operation Canvas user journey over a 300k-signal-cycle fixture and 60 scroll steps. Keep the expensive acceptance in integration/nightly rather than replacing it with cheaper unit checks.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "issue-755-canvas-production-acceptance.spec.ts",
@@ -11833,18 +11907,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "canvas-annotation-and-edge-geometry",
+      "originIssue": 755,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Far-window Canvas coordinates resolve cycle selection, annotation anchoring, snap, and reference-clock edge counters from the shared analytic geometry.",
+      "duplicateGroup": "canvas-production-acceptance-755",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The browser verifies multiple production consumers agree on the renderer-independent geometry at a far window; the large document makes it inappropriate for routine PR runs.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "issue-755-canvas-production-acceptance.spec.ts",
@@ -11855,18 +11933,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "canvas-save-open-export",
+      "originIssue": 755,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Export from a Canvas-rendered large document still downloads an SVG representation derived from canonical data.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The renderer choice must not leak into the export format; this full large-document download journey belongs in integration/nightly validation.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "issue-755-canvas-production-acceptance.spec.ts",
@@ -11877,18 +11959,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "canvas-renderer-memory-retention",
+      "originIssue": 755,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After warm-up and 24 repeated far-window jumps on a 300k document, Canvas count, DOM growth, and available heap remain bounded.",
+      "duplicateGroup": "canvas-production-acceptance-755",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This is a 24-round memory/retention stress test, not a functional PR journey. Preserve it in automated performance/nightly runs and measure its runtime in the later cost-baseline phase.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "issue-757-far-scroll-window-coverage.spec.ts",
@@ -11925,62 +12011,46 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "shared-transaction-group-disclosure",
+      "originIssue": 759,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Tree and center Group disclosure controls share view-only state across Transaction and Combined without changing Canonical, History or Dirty state.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The contract crosses two rendered surfaces and a mode transition; a lower-level owner test alone cannot prove the visible controls stay synchronized.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-760-combined-horizontal-wheel.spec.ts",
       "suitePath": [],
-      "line": 6,
+      "line": 7,
       "title": "Combined horizontal wheel scrolls the shared viewport at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "domain": "combined-shared-wheel-scroll",
+      "originIssue": 760,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": 10200,
+      "primaryContract": "In a fresh Combined workspace, horizontal wheel input over either pane advances the one shared time viewport and leaves Canonical/History/Dirty unchanged.",
+      "duplicateGroup": "combined-shared-wheel-scroll",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "A real wheel gesture is necessary to distinguish pane-local from shared scroll ownership. The compact-width case exercises both pane input locations; the removed desktop duplicate is mapped in the consolidation file.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-760-combined-horizontal-wheel.spec.ts",
-      "suitePath": [],
-      "line": 6,
-      "title": "Combined horizontal wheel scrolls the shared viewport at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-761-start-input-width.spec.ts",
@@ -12029,68 +12099,54 @@
     {
       "file": "issue-763-retained-phase-drafts.spec.ts",
       "suitePath": [],
-      "line": 8,
+      "line": 7,
       "title": "retained Phase drafts are explicit at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-phase-draft-document-lifecycle",
+      "originIssue": 763,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Unapplied Phase drafts remain visible and recoverable by stable Transaction ID across selection, explicit discard clears them, and New/Open document replacement drops drafts even when IDs repeat.",
+      "duplicateGroup": "transaction-draft-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The compact viewport retains all state-lifecycle assertions; the removed desktop copy made no geometry or responsive-layout assertion. The separate New-document case remains because document epoch reset is a distinct contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr",
+        "integration"
+      ]
     },
     {
       "file": "issue-763-retained-phase-drafts.spec.ts",
       "suitePath": [],
-      "line": 8,
-      "title": "retained Phase drafts are explicit at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-763-retained-phase-drafts.spec.ts",
-      "suitePath": [],
-      "line": 58,
+      "line": 57,
       "title": "opening another document drops every retained Phase draft",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-phase-draft-document-lifecycle",
+      "originIssue": 763,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Unapplied Phase drafts remain visible and recoverable by stable Transaction ID across selection, explicit discard clears them, and New/Open document replacement drops drafts even when IDs repeat.",
+      "duplicateGroup": "transaction-draft-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The compact viewport retains all state-lifecycle assertions; the removed desktop copy made no geometry or responsive-layout assertion. The separate New-document case remains because document epoch reset is a distinct contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr",
+        "integration"
+      ]
     },
     {
       "file": "issue-764-group-header-sticky.spec.ts",
@@ -12249,90 +12305,77 @@
     {
       "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
       "suitePath": [],
-      "line": 6,
+      "line": 7,
       "title": "zoom does not stretch Transaction text at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "domain": "transaction-zoom-text-and-geometry",
+      "originIssue": 767,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 8600,
+      "primaryContract": "At zoom 200/400/800%, Transaction and Phase text retain rendered natural dimensions while track scroll extent and ruler/bar alignment follow layout geometry.",
+      "duplicateGroup": "transaction-zoom-text",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The test observes text dimensions and ruler/bar alignment rather than asserting that specific CSS transform properties are absent. One compact viewport is sufficient for width-independent glyph scaling.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
       "suitePath": [],
-      "line": 6,
-      "title": "zoom does not stretch Transaction text at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
-      "suitePath": [],
-      "line": 55,
+      "line": 49,
       "title": "dragging a Transaction edge at 400% zoom lands on the cycle under the pointer",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "domain": "transaction-zoom-edge-drag",
+      "originIssue": 767,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 6000,
+      "primaryContract": "A real Transaction edge drag at 400% zoom updates the visible end-time value to the cycle under the pointer and creates a semantic edit.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Pointer conversion under high zoom requires a real browser gesture; the assertion checks the semantic Inspector result in the current TC display unit instead of reconstructing expected movement from bar pixel width.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
       "suitePath": [],
-      "line": 79,
+      "line": 74,
       "title": "a narrow Transaction bar keeps a body drag handle and can be moved",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "domain": "transaction-narrow-bar-drag-handle",
+      "originIssue": 767,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 8100,
+      "primaryContract": "When TC compression makes a Transaction bar narrow and its name is compacted, the remaining visible body handle supports a real move operation.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The minimum pointer target and compact label are visual/browser behavior; this journey is distinct from edge resizing at high zoom.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-768-mode-switch-budget.spec.ts",
@@ -12343,18 +12386,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "view-mode-switch-performance",
+      "originIssue": 768,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Median in-page mode-switch latency across eight Cycle/Transaction transitions on the fixed 24x256 fixture stays below the explicit 3,000ms budget without changing History.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This is a measured performance budget, not a functional correctness timeout; keep it in the dedicated performance/nightly gate. Runtime collection remains pending.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "issue-769-tree-virtualization-keyboard.spec.ts",
@@ -12365,18 +12412,23 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-virtualization-keyboard-and-bounds",
+      "originIssue": 769,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Logical keyboard navigation remains valid across virtualized row windows and topology/filter changes; mounted rows remain bounded on 520/3,000 Transaction documents.",
+      "duplicateGroup": "transaction-tree-virtualization-769-771",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "All five cases initialize large production documents and perform long keyboard or bounded-DOM journeys. They remain automated in the heavy integration/performance tiers, not the ordinary PR profile; retain all behavioral cases because row-window keyboard semantics cannot be inferred from a small smoke test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly",
+        "performance"
+      ]
     },
     {
       "file": "issue-769-tree-virtualization-keyboard.spec.ts",
@@ -12387,18 +12439,23 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-virtualization-keyboard-and-bounds",
+      "originIssue": 769,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Logical keyboard navigation remains valid across virtualized row windows and topology/filter changes; mounted rows remain bounded on 520/3,000 Transaction documents.",
+      "duplicateGroup": "transaction-tree-virtualization-769-771",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "All five cases initialize large production documents and perform long keyboard or bounded-DOM journeys. They remain automated in the heavy integration/performance tiers, not the ordinary PR profile; retain all behavioral cases because row-window keyboard semantics cannot be inferred from a small smoke test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly",
+        "performance"
+      ]
     },
     {
       "file": "issue-769-tree-virtualization-keyboard.spec.ts",
@@ -12409,18 +12466,23 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-virtualization-keyboard-and-bounds",
+      "originIssue": 769,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Logical keyboard navigation remains valid across virtualized row windows and topology/filter changes; mounted rows remain bounded on 520/3,000 Transaction documents.",
+      "duplicateGroup": "transaction-tree-virtualization-769-771",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "All five cases initialize large production documents and perform long keyboard or bounded-DOM journeys. They remain automated in the heavy integration/performance tiers, not the ordinary PR profile; retain all behavioral cases because row-window keyboard semantics cannot be inferred from a small smoke test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly",
+        "performance"
+      ]
     },
     {
       "file": "issue-769-tree-virtualization-keyboard.spec.ts",
@@ -12431,18 +12493,23 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-virtualization-keyboard-and-bounds",
+      "originIssue": 769,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Logical keyboard navigation remains valid across virtualized row windows and topology/filter changes; mounted rows remain bounded on 520/3,000 Transaction documents.",
+      "duplicateGroup": "transaction-tree-virtualization-769-771",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "All five cases initialize large production documents and perform long keyboard or bounded-DOM journeys. They remain automated in the heavy integration/performance tiers, not the ordinary PR profile; retain all behavioral cases because row-window keyboard semantics cannot be inferred from a small smoke test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly",
+        "performance"
+      ]
     },
     {
       "file": "issue-769-tree-virtualization-keyboard.spec.ts",
@@ -12453,18 +12520,23 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-virtualization-keyboard-and-bounds",
+      "originIssue": 769,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Logical keyboard navigation remains valid across virtualized row windows and topology/filter changes; mounted rows remain bounded on 520/3,000 Transaction documents.",
+      "duplicateGroup": "transaction-tree-virtualization-769-771",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "All five cases initialize large production documents and perform long keyboard or bounded-DOM journeys. They remain automated in the heavy integration/performance tiers, not the ordinary PR profile; retain all behavioral cases because row-window keyboard semantics cannot be inferred from a small smoke test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly",
+        "performance"
+      ]
     },
     {
       "file": "issue-770-filtered-selection-scope.spec.ts",
@@ -12475,18 +12547,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-filtered-selection-scope",
+      "originIssue": 770,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Filtering and Ctrl+A operate on visible Transaction rows only; a destructive bulk Delete cannot affect rows pruned from filtered selection.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The destructive-scope guarantee spans actual filter, multi-select, keyboard and Delete UI actions. It is a distinct data-safety contract and should remain in fast PR feedback.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-770-filtered-selection-scope.spec.ts",
@@ -12497,18 +12572,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-filtered-selection-scope",
+      "originIssue": 770,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Filtering and Ctrl+A operate on visible Transaction rows only; a destructive bulk Delete cannot affect rows pruned from filtered selection.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The destructive-scope guarantee spans actual filter, multi-select, keyboard and Delete UI actions. It is a distinct data-safety contract and should remain in fast PR feedback.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-771-many-small-groups-virtualized.spec.ts",
@@ -12519,18 +12597,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-global-virtualization-threshold",
+      "originIssue": 771,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Ten thousand Transactions distributed over one hundred individually small Groups still activate global Tree row virtualization and keep mounted rows/DOM bounded.",
+      "duplicateGroup": "transaction-tree-virtualization-769-771",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This is the complementary many-small-groups fixture that catches per-Group thresholds missed by a single large-group keyboard case. Preserve it as automated performance/nightly acceptance rather than running it on every PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "issue-772-retained-bookmark-drafts.spec.ts",
@@ -12563,18 +12645,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "mode-scoped-bottom-tab-memory",
+      "originIssue": 773,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Cycle and Transaction remember independent Bottom tabs through repeated Combined round trips, with no Canonical/History changes.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The state is view-only but its ownership and restoration are only observable across real mode/tab navigation; this is a compact representative cross-mode journey.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-774-visibility-preserves-selection.spec.ts",
@@ -12585,18 +12670,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-visibility-selection",
+      "originIssue": 774,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Global and per-Group Hide All preserve the existing selected stable ID; the next destructive command still targets only that selection.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Global Hide All additionally tests the scope of the subsequent Delete, while per-Group Hide All independently protects selection ownership. Both real command paths are retained; the fixture is small and unrelated to the filter-scope issue.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-774-visibility-preserves-selection.spec.ts",
@@ -12607,18 +12695,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-visibility-selection",
+      "originIssue": 774,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Global and per-Group Hide All preserve the existing selected stable ID; the next destructive command still targets only that selection.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Global Hide All additionally tests the scope of the subsequent Delete, while per-Group Hide All independently protects selection ownership. Both real command paths are retained; the fixture is small and unrelated to the filter-scope issue.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-775-annotation-draft-isolation.spec.ts",
@@ -23026,55 +23117,55 @@
     {
       "file": "issue-626-primary-actions-visible.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "626",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-628-annotation-bottom-collection.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "628",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-629-combined-tree-inspector.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "629",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-629-inspector-mode-context.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "629",
       "declaredTimeoutMs": 60,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-630-active-mode-title.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "630",
       "declaredTimeoutMs": 60,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-631-transaction-vertical-lines.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "631",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23082,52 +23173,52 @@
         "getComputedStyle",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-635-derived-fields.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "635",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-635-generator-pristine-draft.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "635",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-635-signal-scope-actions.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "635",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-635-transition-draft-signal-scope.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "635",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-635-transition-form-mode.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "635",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-637-sustained-scroll.spec.ts",
@@ -23143,58 +23234,58 @@
     {
       "file": "issue-639-mode-scoped-bottom-selection.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "639",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-639-transaction-create-cycle-bottom-tab.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "639",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-646-tree-fixed-scroll.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "646",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-650-transaction-select-reveal.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "650",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-651-bulk-dialog-focus.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "651",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-676-canvas-inspector-refresh.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "676",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-698-color-toggle-and-compact-phases.spec.ts",
@@ -23386,40 +23477,33 @@
     {
       "file": "issue-725-draft-markers.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "725",
       "declaredTimeoutMs": null,
-      "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "candidateSignals": [
+        "getComputedStyle"
+      ],
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-725-escape-revert.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "725",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-725-f2-edit.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 0,
-      "originIssue": "725",
-      "declaredTimeoutMs": null,
-      "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-725-keyboard-journey.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "725",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-726-lane-hover.spec.ts",
@@ -23648,40 +23732,40 @@
     {
       "file": "issue-748-add-and-focus-journey.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "748",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-748-transaction-left-header.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "748",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-748-tree-menu-and-parity.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "748",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-749-move-to-group-submenu.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "749",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-750-custom-tc-scale.spec.ts",
@@ -23728,22 +23812,22 @@
     {
       "file": "issue-751-bottom-phase-editor.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "751",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-752-bottom-remount.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "752",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-753-bookmark-gesture-fuzz.spec.ts",
@@ -23787,7 +23871,7 @@
     {
       "file": "issue-755-canvas-production-acceptance.spec.ts",
       "caseCount": 5,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 5,
       "originIssue": "755",
       "declaredTimeoutMs": 300,
       "candidateSignals": [
@@ -23795,7 +23879,7 @@
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-757-far-scroll-window-coverage.spec.ts",
@@ -23812,24 +23896,24 @@
     {
       "file": "issue-759-group-disclosure-shared.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "759",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-760-combined-horizontal-wheel.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "760",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-761-start-input-width.spec.ts",
@@ -23844,12 +23928,12 @@
     },
     {
       "file": "issue-763-retained-phase-drafts.spec.ts",
-      "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": "763",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-764-group-header-sticky.spec.ts",
@@ -23887,8 +23971,8 @@
     },
     {
       "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
-      "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
       "originIssue": "767",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23896,49 +23980,49 @@
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-768-mode-switch-budget.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "768",
       "declaredTimeoutMs": 240,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-769-tree-virtualization-keyboard.spec.ts",
       "caseCount": 5,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 5,
       "originIssue": "769",
       "declaredTimeoutMs": 240,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-770-filtered-selection-scope.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "770",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-771-many-small-groups-virtualized.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "771",
       "declaredTimeoutMs": 180,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-772-retained-bookmark-drafts.spec.ts",
@@ -23952,20 +24036,20 @@
     {
       "file": "issue-773-bottom-tab-round-trip.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": "773",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-774-visibility-preserves-selection.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "774",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-775-annotation-draft-isolation.spec.ts",
@@ -25522,6 +25606,78 @@
       },
       "protectedInvariant": "Changing cycles-per-TC compresses a fixed source span by the inverse ratio, preserves displayed TC ruler pitch, leaves canonical source duration unchanged, and Undo restores the prior display.",
       "reason": "The geometry ratio and source-time semantics are viewport-independent. The compact test retains the complete Journey, while both viewports remain covered by the distinct clipped-label and scroll-extent acceptance where width is relevant."
+    },
+    {
+      "from": {
+        "file": "issue-629-inspector-mode-context.spec.ts",
+        "title": "Inspector follows active workspace context and retains hidden stable selection at 1672x941"
+      },
+      "to": {
+        "file": "issue-629-inspector-mode-context.spec.ts",
+        "title": "Inspector follows active workspace context and retains hidden stable selection at 1280x720"
+      },
+      "protectedInvariant": "Inspector content follows the active mode and restores hidden selected entities by stable identity without Canonical, History or Dirty changes.",
+      "reason": "The cross-mode owner/identity journey has no width-dependent layout assertion. The compact viewport retains all mode transitions and state invariants; responsive Inspector geometry is covered by separate layout acceptance."
+    },
+    {
+      "from": {
+        "file": "issue-630-active-mode-title.spec.ts",
+        "title": "document title never displays a stale mode suffix at 1672x941"
+      },
+      "to": {
+        "file": "issue-630-active-mode-title.spec.ts",
+        "title": "document title never displays a stale mode suffix at 1280x720"
+      },
+      "protectedInvariant": "The displayed mode title tracks Cycle/Transaction/Combined, remains separate from the document name, and stays correct through document replacement and reload.",
+      "reason": "Title/mode ownership and reload behavior are width-independent. One compact viewport retains the entire Journey; width-dependent titlebar overflow belongs in the responsive layout suite."
+    },
+    {
+      "from": {
+        "file": "issue-725-f2-edit.spec.ts",
+        "title": "F2 on the active Bottom row starts editing without committing"
+      },
+      "to": {
+        "file": "issue-725-keyboard-journey.spec.ts",
+        "title": "Bottom grid keyboard editing journey at 1280x720"
+      },
+      "protectedInvariant": "F2 from the focused active Transaction row enters the Bottom row editor without adding a History unit.",
+      "reason": "The retained compact keyboard journey performs the same real F2 activation and asserts the name field receives focus with Canonical revision and History unchanged, then additionally verifies visible-column Tab order and Escape draft cancellation. The standalone F2 smoke duplicated a strict subset of that journey."
+    },
+    {
+      "from": {
+        "file": "issue-763-retained-phase-drafts.spec.ts",
+        "title": "retained Phase drafts are explicit at 1672x941"
+      },
+      "to": {
+        "file": "issue-763-retained-phase-drafts.spec.ts",
+        "title": "retained Phase drafts are explicit at 1280x720"
+      },
+      "protectedInvariant": "A Phase draft survives changing the selected Transaction, is marked as retained in both editors, and can be explicitly discarded without changing Canonical or History.",
+      "reason": "This is a width-independent stable-ID/draft-lifecycle contract with no layout or clipping assertion. The compact viewport retains the complete user journey; responsive editor geometry is covered by dedicated layout acceptance."
+    },
+    {
+      "from": {
+        "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
+        "title": "zoom does not stretch Transaction text at 1672x941"
+      },
+      "to": {
+        "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
+        "title": "zoom does not stretch Transaction text at 1280x720"
+      },
+      "protectedInvariant": "Transaction and Phase glyphs retain their natural rendered font size/height during zoom while the track, ruler, and Transaction edges remain geometrically aligned.",
+      "reason": "The semantic text-size invariant is width-independent; retain one compact viewport. Width-dependent clipping/overflow is covered by dedicated layout tests. Replaced a computed-style transform scan with the observable rendered text dimensions and ruler alignment."
+    },
+    {
+      "from": {
+        "file": "issue-760-combined-horizontal-wheel.spec.ts",
+        "title": "Combined horizontal wheel scrolls the shared viewport at 1672x941"
+      },
+      "to": {
+        "file": "issue-760-combined-horizontal-wheel.spec.ts",
+        "title": "Combined horizontal wheel scrolls the shared viewport at 1280x720"
+      },
+      "protectedInvariant": "Wheel over either pane in a fresh Combined workspace advances the shared horizontal time viewport without changing Canonical, History, or Dirty state.",
+      "reason": "The semantic wheel-owner contract is width-independent and the compact viewport retains wheel interaction over both pane regions. The issue's shared horizontal geometry is separately verified at both accepted viewport sizes by geometry/scroll acceptance tests."
     }
   ]
 }

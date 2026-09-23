@@ -2,7 +2,8 @@ import { expect, test } from "@playwright/test";
 
 // #760: a horizontal wheel over the Combined time viewport moves the single Combined horizontal viewport, from a fresh session
 // (no Cycle scroll state), and is view-only.
-for (const size of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+// The source-time scroll owner and per-pane wheel behavior are width-independent; retain one compact viewport.
+for (const size of [{ width: 1280, height: 720 }]) {
   test(`Combined horizontal wheel scrolls the shared viewport at ${size.width}x${size.height}`, async ({ page }) => {
     await page.setViewportSize(size);
     await page.goto("/");

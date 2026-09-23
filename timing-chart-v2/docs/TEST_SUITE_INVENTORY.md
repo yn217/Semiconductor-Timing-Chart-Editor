@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 335 spec files and 981 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 334 spec files and 975 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 102/981 cases reviewed.
+Semantic review progress: 164/975 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 6 |
-| `nightly` | 24 |
-| `performance` | 8 |
-| `pr` | 42 |
-| `visual` | 13 |
+| `integration` | 30 |
+| `nightly` | 40 |
+| `performance` | 17 |
+| `pr` | 75 |
+| `visual` | 30 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -128,24 +128,24 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-625-cycle-fixed-columns-scroll.spec.ts` | 2 | 2/2 reviewed |
 | `issue-625-mode-geometry-unchanged.spec.ts` | 1 | 1/1 reviewed |
 | `issue-625-no-bleed-under-fixed-columns.spec.ts` | 2 | 2/2 reviewed |
-| `issue-626-primary-actions-visible.spec.ts` | 2 | 0/2 reviewed |
-| `issue-628-annotation-bottom-collection.spec.ts` | 2 | 0/2 reviewed |
-| `issue-629-combined-tree-inspector.spec.ts` | 1 | 0/1 reviewed |
-| `issue-629-inspector-mode-context.spec.ts` | 2 | 0/2 reviewed |
-| `issue-630-active-mode-title.spec.ts` | 2 | 0/2 reviewed |
-| `issue-631-transaction-vertical-lines.spec.ts` | 1 | 0/1 reviewed |
-| `issue-635-derived-fields.spec.ts` | 2 | 0/2 reviewed |
-| `issue-635-generator-pristine-draft.spec.ts` | 1 | 0/1 reviewed |
-| `issue-635-signal-scope-actions.spec.ts` | 1 | 0/1 reviewed |
-| `issue-635-transition-draft-signal-scope.spec.ts` | 1 | 0/1 reviewed |
-| `issue-635-transition-form-mode.spec.ts` | 1 | 0/1 reviewed |
+| `issue-626-primary-actions-visible.spec.ts` | 2 | 2/2 reviewed |
+| `issue-628-annotation-bottom-collection.spec.ts` | 2 | 2/2 reviewed |
+| `issue-629-combined-tree-inspector.spec.ts` | 1 | 1/1 reviewed |
+| `issue-629-inspector-mode-context.spec.ts` | 1 | 1/1 reviewed |
+| `issue-630-active-mode-title.spec.ts` | 1 | 1/1 reviewed |
+| `issue-631-transaction-vertical-lines.spec.ts` | 1 | 1/1 reviewed |
+| `issue-635-derived-fields.spec.ts` | 2 | 2/2 reviewed |
+| `issue-635-generator-pristine-draft.spec.ts` | 1 | 1/1 reviewed |
+| `issue-635-signal-scope-actions.spec.ts` | 1 | 1/1 reviewed |
+| `issue-635-transition-draft-signal-scope.spec.ts` | 1 | 1/1 reviewed |
+| `issue-635-transition-form-mode.spec.ts` | 1 | 1/1 reviewed |
 | `issue-637-sustained-scroll.spec.ts` | 1 | 1/1 reviewed |
-| `issue-639-mode-scoped-bottom-selection.spec.ts` | 1 | 0/1 reviewed |
-| `issue-639-transaction-create-cycle-bottom-tab.spec.ts` | 1 | 0/1 reviewed |
-| `issue-646-tree-fixed-scroll.spec.ts` | 2 | 0/2 reviewed |
-| `issue-650-transaction-select-reveal.spec.ts` | 2 | 0/2 reviewed |
-| `issue-651-bulk-dialog-focus.spec.ts` | 2 | 0/2 reviewed |
-| `issue-676-canvas-inspector-refresh.spec.ts` | 2 | 0/2 reviewed |
+| `issue-639-mode-scoped-bottom-selection.spec.ts` | 1 | 1/1 reviewed |
+| `issue-639-transaction-create-cycle-bottom-tab.spec.ts` | 1 | 1/1 reviewed |
+| `issue-646-tree-fixed-scroll.spec.ts` | 2 | 2/2 reviewed |
+| `issue-650-transaction-select-reveal.spec.ts` | 2 | 2/2 reviewed |
+| `issue-651-bulk-dialog-focus.spec.ts` | 2 | 2/2 reviewed |
+| `issue-676-canvas-inspector-refresh.spec.ts` | 2 | 2/2 reviewed |
 | `issue-698-color-toggle-and-compact-phases.spec.ts` | 2 | 2/2 reviewed |
 | `issue-698-inspector-phases.spec.ts` | 1 | 1/1 reviewed |
 | `issue-701-layout-return.spec.ts` | 1 | 0/1 reviewed |
@@ -164,10 +164,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-722-splitter-reset.spec.ts` | 1 | 0/1 reviewed |
 | `issue-723-status-diagnostics.spec.ts` | 2 | 0/2 reviewed |
 | `issue-724-search-scope.spec.ts` | 1 | 0/1 reviewed |
-| `issue-725-draft-markers.spec.ts` | 1 | 0/1 reviewed |
-| `issue-725-escape-revert.spec.ts` | 1 | 0/1 reviewed |
-| `issue-725-f2-edit.spec.ts` | 1 | 0/1 reviewed |
-| `issue-725-keyboard-journey.spec.ts` | 2 | 0/2 reviewed |
+| `issue-725-draft-markers.spec.ts` | 1 | 1/1 reviewed |
+| `issue-725-escape-revert.spec.ts` | 1 | 1/1 reviewed |
+| `issue-725-keyboard-journey.spec.ts` | 2 | 2/2 reviewed |
 | `issue-726-lane-hover.spec.ts` | 1 | 0/1 reviewed |
 | `issue-726-marker-hierarchy.spec.ts` | 1 | 0/1 reviewed |
 | `issue-727-minimap-affordance.spec.ts` | 1 | 0/1 reviewed |
@@ -189,37 +188,37 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-747-a11y-and-sort-matrix.spec.ts` | 1 | 1/1 reviewed |
 | `issue-747-bottom-settings.spec.ts` | 1 | 1/1 reviewed |
 | `issue-747-geometry-acceptance.spec.ts` | 2 | 2/2 reviewed |
-| `issue-748-add-and-focus-journey.spec.ts` | 2 | 0/2 reviewed |
-| `issue-748-transaction-left-header.spec.ts` | 1 | 0/1 reviewed |
-| `issue-748-tree-menu-and-parity.spec.ts` | 2 | 0/2 reviewed |
-| `issue-749-move-to-group-submenu.spec.ts` | 2 | 0/2 reviewed |
+| `issue-748-add-and-focus-journey.spec.ts` | 2 | 2/2 reviewed |
+| `issue-748-transaction-left-header.spec.ts` | 1 | 1/1 reviewed |
+| `issue-748-tree-menu-and-parity.spec.ts` | 2 | 2/2 reviewed |
+| `issue-749-move-to-group-submenu.spec.ts` | 2 | 2/2 reviewed |
 | `issue-750-custom-tc-scale.spec.ts` | 1 | 1/1 reviewed |
 | `issue-750-geometry-10-to-50.spec.ts` | 3 | 3/3 reviewed |
 | `issue-750-ruler-follows-tc-scale.spec.ts` | 1 | 1/1 reviewed |
 | `issue-750-tc-scale-selector.spec.ts` | 1 | 1/1 reviewed |
-| `issue-751-bottom-phase-editor.spec.ts` | 2 | 0/2 reviewed |
-| `issue-752-bottom-remount.spec.ts` | 1 | 0/1 reviewed |
+| `issue-751-bottom-phase-editor.spec.ts` | 2 | 2/2 reviewed |
+| `issue-752-bottom-remount.spec.ts` | 1 | 1/1 reviewed |
 | `issue-753-bookmark-gesture-fuzz.spec.ts` | 5 | 5/5 reviewed |
 | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | 3 | 3/3 reviewed |
 | `issue-753-stress-classified.spec.ts` | 3 | 3/3 reviewed |
 | `issue-755-analytic-transition-equivalence.spec.ts` | 1 | 1/1 reviewed |
-| `issue-755-canvas-production-acceptance.spec.ts` | 5 | 0/5 reviewed |
+| `issue-755-canvas-production-acceptance.spec.ts` | 5 | 5/5 reviewed |
 | `issue-757-far-scroll-window-coverage.spec.ts` | 1 | 1/1 reviewed |
-| `issue-759-group-disclosure-shared.spec.ts` | 1 | 0/1 reviewed |
-| `issue-760-combined-horizontal-wheel.spec.ts` | 2 | 0/2 reviewed |
+| `issue-759-group-disclosure-shared.spec.ts` | 1 | 1/1 reviewed |
+| `issue-760-combined-horizontal-wheel.spec.ts` | 1 | 1/1 reviewed |
 | `issue-761-start-input-width.spec.ts` | 2 | 0/2 reviewed |
-| `issue-763-retained-phase-drafts.spec.ts` | 3 | 0/3 reviewed |
+| `issue-763-retained-phase-drafts.spec.ts` | 2 | 2/2 reviewed |
 | `issue-764-group-header-sticky.spec.ts` | 2 | 0/2 reviewed |
 | `issue-765-transaction-no-phantom-vscroll.spec.ts` | 3 | 0/3 reviewed |
 | `issue-766-cycle-plural.spec.ts` | 2 | 0/2 reviewed |
-| `issue-767-zoom-keeps-glyph-shape.spec.ts` | 4 | 0/4 reviewed |
-| `issue-768-mode-switch-budget.spec.ts` | 1 | 0/1 reviewed |
-| `issue-769-tree-virtualization-keyboard.spec.ts` | 5 | 0/5 reviewed |
-| `issue-770-filtered-selection-scope.spec.ts` | 2 | 0/2 reviewed |
-| `issue-771-many-small-groups-virtualized.spec.ts` | 1 | 0/1 reviewed |
+| `issue-767-zoom-keeps-glyph-shape.spec.ts` | 3 | 3/3 reviewed |
+| `issue-768-mode-switch-budget.spec.ts` | 1 | 1/1 reviewed |
+| `issue-769-tree-virtualization-keyboard.spec.ts` | 5 | 5/5 reviewed |
+| `issue-770-filtered-selection-scope.spec.ts` | 2 | 2/2 reviewed |
+| `issue-771-many-small-groups-virtualized.spec.ts` | 1 | 1/1 reviewed |
 | `issue-772-retained-bookmark-drafts.spec.ts` | 1 | 0/1 reviewed |
-| `issue-773-bottom-tab-round-trip.spec.ts` | 1 | 0/1 reviewed |
-| `issue-774-visibility-preserves-selection.spec.ts` | 2 | 0/2 reviewed |
+| `issue-773-bottom-tab-round-trip.spec.ts` | 1 | 1/1 reviewed |
+| `issue-774-visibility-preserves-selection.spec.ts` | 2 | 2/2 reviewed |
 | `issue-775-annotation-draft-isolation.spec.ts` | 1 | 0/1 reviewed |
 | `issue-776-signal-inspector-draft-sync.spec.ts` | 2 | 0/2 reviewed |
 | `issue-777-current-v2-samples-acceptance.spec.ts` | 10 | 0/10 reviewed |
@@ -415,6 +414,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-722-display-scale-125.spec.ts` | geometryRead |
 | `issue-722-splitter-discoverability.spec.ts` | getComputedStyle, explicitWait |
 | `issue-723-status-diagnostics.spec.ts` | querySelector, geometryRead |
+| `issue-725-draft-markers.spec.ts` | getComputedStyle |
 | `issue-725-keyboard-journey.spec.ts` | geometryRead |
 | `issue-726-lane-hover.spec.ts` | getComputedStyle |
 | `issue-726-marker-hierarchy.spec.ts` | getComputedStyle |
@@ -530,6 +530,12 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-755-analytic-geometry-equivalence.spec.ts` “analytic cycle grid equals SVG-derived boundaries (unwindowed document)” → `issue-755-analytic-transition-equivalence.spec.ts` “analytic Local Geometry equals the SVG extractor for every anchor across token/brick cases”. **Invariant:** Analytic geometry agrees with an independent SVG DOM extraction for cycle boundaries and all anchor kinds. **Reason:** The removed assertion compared the production geometry to a duplicated 20.5 + 40 * index formula rather than to SVG-derived geometry. The replacement probe directly compares analytic LocalGeometry against the independent production SVG extractor across token/brick cases, while uniformCycleGeometry.test.ts retains cheap known-anchor/property coverage.
 - `issue-755-analytic-geometry-equivalence.spec.ts` “analytic cycle grid equals SVG-derived boundaries (bounded window on a >4096-cycle document)” → `issue-755-analytic-transition-equivalence.spec.ts` “analytic Local Geometry equals the SVG extractor for every anchor across token/brick cases”. **Invariant:** Rebased/windowed analytic cycle geometry preserves source-cycle identity and boundary X, without a local-index identity assumption. **Reason:** The equivalence probe includes rebased-window cases and compares each semantic anchor with SVG extraction; issue-757-far-scroll-window-coverage.spec.ts separately proves a real >4096-cycle far jump paints the viewport. The previous check reconstructed a uniform pitch in browser code, adding a second copy of production geometry math.
 - `issue-750-geometry-10-to-50.spec.ts` “1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (1672x941)” → `issue-750-geometry-10-to-50.spec.ts` “1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (1280x720)”. **Invariant:** Changing cycles-per-TC compresses a fixed source span by the inverse ratio, preserves displayed TC ruler pitch, leaves canonical source duration unchanged, and Undo restores the prior display. **Reason:** The geometry ratio and source-time semantics are viewport-independent. The compact test retains the complete Journey, while both viewports remain covered by the distinct clipped-label and scroll-extent acceptance where width is relevant.
+- `issue-629-inspector-mode-context.spec.ts` “Inspector follows active workspace context and retains hidden stable selection at 1672x941” → `issue-629-inspector-mode-context.spec.ts` “Inspector follows active workspace context and retains hidden stable selection at 1280x720”. **Invariant:** Inspector content follows the active mode and restores hidden selected entities by stable identity without Canonical, History or Dirty changes. **Reason:** The cross-mode owner/identity journey has no width-dependent layout assertion. The compact viewport retains all mode transitions and state invariants; responsive Inspector geometry is covered by separate layout acceptance.
+- `issue-630-active-mode-title.spec.ts` “document title never displays a stale mode suffix at 1672x941” → `issue-630-active-mode-title.spec.ts` “document title never displays a stale mode suffix at 1280x720”. **Invariant:** The displayed mode title tracks Cycle/Transaction/Combined, remains separate from the document name, and stays correct through document replacement and reload. **Reason:** Title/mode ownership and reload behavior are width-independent. One compact viewport retains the entire Journey; width-dependent titlebar overflow belongs in the responsive layout suite.
+- `issue-725-f2-edit.spec.ts` “F2 on the active Bottom row starts editing without committing” → `issue-725-keyboard-journey.spec.ts` “Bottom grid keyboard editing journey at 1280x720”. **Invariant:** F2 from the focused active Transaction row enters the Bottom row editor without adding a History unit. **Reason:** The retained compact keyboard journey performs the same real F2 activation and asserts the name field receives focus with Canonical revision and History unchanged, then additionally verifies visible-column Tab order and Escape draft cancellation. The standalone F2 smoke duplicated a strict subset of that journey.
+- `issue-763-retained-phase-drafts.spec.ts` “retained Phase drafts are explicit at 1672x941” → `issue-763-retained-phase-drafts.spec.ts` “retained Phase drafts are explicit at 1280x720”. **Invariant:** A Phase draft survives changing the selected Transaction, is marked as retained in both editors, and can be explicitly discarded without changing Canonical or History. **Reason:** This is a width-independent stable-ID/draft-lifecycle contract with no layout or clipping assertion. The compact viewport retains the complete user journey; responsive editor geometry is covered by dedicated layout acceptance.
+- `issue-767-zoom-keeps-glyph-shape.spec.ts` “zoom does not stretch Transaction text at 1672x941” → `issue-767-zoom-keeps-glyph-shape.spec.ts` “zoom does not stretch Transaction text at 1280x720”. **Invariant:** Transaction and Phase glyphs retain their natural rendered font size/height during zoom while the track, ruler, and Transaction edges remain geometrically aligned. **Reason:** The semantic text-size invariant is width-independent; retain one compact viewport. Width-dependent clipping/overflow is covered by dedicated layout tests. Replaced a computed-style transform scan with the observable rendered text dimensions and ruler alignment.
+- `issue-760-combined-horizontal-wheel.spec.ts` “Combined horizontal wheel scrolls the shared viewport at 1672x941” → `issue-760-combined-horizontal-wheel.spec.ts` “Combined horizontal wheel scrolls the shared viewport at 1280x720”. **Invariant:** Wheel over either pane in a fresh Combined workspace advances the shared horizontal time viewport without changing Canonical, History, or Dirty state. **Reason:** The semantic wheel-owner contract is width-independent and the compact viewport retains wheel interaction over both pane regions. The issue's shared horizontal geometry is separately verified at both accepted viewport sizes by geometry/scroll acceptance tests.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 

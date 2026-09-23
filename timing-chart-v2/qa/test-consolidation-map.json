@@ -84,6 +84,78 @@
       },
       "protectedInvariant": "Changing cycles-per-TC compresses a fixed source span by the inverse ratio, preserves displayed TC ruler pitch, leaves canonical source duration unchanged, and Undo restores the prior display.",
       "reason": "The geometry ratio and source-time semantics are viewport-independent. The compact test retains the complete Journey, while both viewports remain covered by the distinct clipped-label and scroll-extent acceptance where width is relevant."
+    },
+    {
+      "from": {
+        "file": "issue-629-inspector-mode-context.spec.ts",
+        "title": "Inspector follows active workspace context and retains hidden stable selection at 1672x941"
+      },
+      "to": {
+        "file": "issue-629-inspector-mode-context.spec.ts",
+        "title": "Inspector follows active workspace context and retains hidden stable selection at 1280x720"
+      },
+      "protectedInvariant": "Inspector content follows the active mode and restores hidden selected entities by stable identity without Canonical, History or Dirty changes.",
+      "reason": "The cross-mode owner/identity journey has no width-dependent layout assertion. The compact viewport retains all mode transitions and state invariants; responsive Inspector geometry is covered by separate layout acceptance."
+    },
+    {
+      "from": {
+        "file": "issue-630-active-mode-title.spec.ts",
+        "title": "document title never displays a stale mode suffix at 1672x941"
+      },
+      "to": {
+        "file": "issue-630-active-mode-title.spec.ts",
+        "title": "document title never displays a stale mode suffix at 1280x720"
+      },
+      "protectedInvariant": "The displayed mode title tracks Cycle/Transaction/Combined, remains separate from the document name, and stays correct through document replacement and reload.",
+      "reason": "Title/mode ownership and reload behavior are width-independent. One compact viewport retains the entire Journey; width-dependent titlebar overflow belongs in the responsive layout suite."
+    },
+    {
+      "from": {
+        "file": "issue-725-f2-edit.spec.ts",
+        "title": "F2 on the active Bottom row starts editing without committing"
+      },
+      "to": {
+        "file": "issue-725-keyboard-journey.spec.ts",
+        "title": "Bottom grid keyboard editing journey at 1280x720"
+      },
+      "protectedInvariant": "F2 from the focused active Transaction row enters the Bottom row editor without adding a History unit.",
+      "reason": "The retained compact keyboard journey performs the same real F2 activation and asserts the name field receives focus with Canonical revision and History unchanged, then additionally verifies visible-column Tab order and Escape draft cancellation. The standalone F2 smoke duplicated a strict subset of that journey."
+    },
+    {
+      "from": {
+        "file": "issue-763-retained-phase-drafts.spec.ts",
+        "title": "retained Phase drafts are explicit at 1672x941"
+      },
+      "to": {
+        "file": "issue-763-retained-phase-drafts.spec.ts",
+        "title": "retained Phase drafts are explicit at 1280x720"
+      },
+      "protectedInvariant": "A Phase draft survives changing the selected Transaction, is marked as retained in both editors, and can be explicitly discarded without changing Canonical or History.",
+      "reason": "This is a width-independent stable-ID/draft-lifecycle contract with no layout or clipping assertion. The compact viewport retains the complete user journey; responsive editor geometry is covered by dedicated layout acceptance."
+    },
+    {
+      "from": {
+        "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
+        "title": "zoom does not stretch Transaction text at 1672x941"
+      },
+      "to": {
+        "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
+        "title": "zoom does not stretch Transaction text at 1280x720"
+      },
+      "protectedInvariant": "Transaction and Phase glyphs retain their natural rendered font size/height during zoom while the track, ruler, and Transaction edges remain geometrically aligned.",
+      "reason": "The semantic text-size invariant is width-independent; retain one compact viewport. Width-dependent clipping/overflow is covered by dedicated layout tests. Replaced a computed-style transform scan with the observable rendered text dimensions and ruler alignment."
+    },
+    {
+      "from": {
+        "file": "issue-760-combined-horizontal-wheel.spec.ts",
+        "title": "Combined horizontal wheel scrolls the shared viewport at 1672x941"
+      },
+      "to": {
+        "file": "issue-760-combined-horizontal-wheel.spec.ts",
+        "title": "Combined horizontal wheel scrolls the shared viewport at 1280x720"
+      },
+      "protectedInvariant": "Wheel over either pane in a fresh Combined workspace advances the shared horizontal time viewport without changing Canonical, History, or Dirty state.",
+      "reason": "The semantic wheel-owner contract is width-independent and the compact viewport retains wheel interaction over both pane regions. The issue's shared horizontal geometry is separately verified at both accepted viewport sizes by geometry/scroll acceptance tests."
     }
   ]
 }
