@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:37:51.323Z",
+  "generatedAt": "2026-09-23T05:39:11.430Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 691,
+  "reviewedCaseCount": 694,
   "curatedProfileCounts": {
     "integration": 325,
     "nightly": 163,
     "performance": 44,
     "pr": 200,
-    "visual": 139
+    "visual": 142
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -7923,18 +7923,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "insert-icon-semantic-shapes-and-compact-fit",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1280px, all Insert actions use distinct deterministic semantic SVG path shapes with equal square geometry, visible controls, and no horizontal overflow/clipping.",
+      "duplicateGroup": "insert-icon-visual-matrix",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This validates semantic icon identity and compact-width fit, which the V1 Golden comparison cannot reliably diagnose by glyph kind and which is not covered by generic Ribbon overflow discovery tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "insert-icon-semantics.spec.ts",
@@ -7945,18 +7948,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "insert-icon-semantic-shapes-and-reference-fit",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1672px, all Insert actions use distinct deterministic semantic SVG path shapes with equal square geometry, visible controls, and no horizontal overflow/clipping.",
+      "duplicateGroup": "insert-icon-visual-matrix",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The approved reference viewport separately protects button/icon sizing and group fit from the compact layout; the two responsive sizes are intentionally evaluated independently.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "insert-icon-semantics.spec.ts",
@@ -7967,18 +7973,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "insert-icon-dpr2-rendering",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At DPR 2, all 14 Insert icons retain the required 18px CSS square size and are not clipped; attach a DPR2 capture for visual inspection.",
+      "duplicateGroup": "insert-icon-visual-matrix",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "DPR2 device scale is independent of CSS viewport width and tests icon visibility/clipping plus an inspectable browser capture, not semantic SVG path distinctness alone.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "insert-timeline-ribbon.spec.ts",
@@ -24280,14 +24289,14 @@
     {
       "file": "insert-icon-semantics.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "insert-timeline-ribbon.spec.ts",
