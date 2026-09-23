@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T10:44:46.477Z",
+  "generatedAt": "2026-09-23T10:48:46.599Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -10924,11 +10924,11 @@
       "type": "GEOMETRY_CONTRACT",
       "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": "Developer-only diagnostics start collapsed and can be deliberately revealed without document mutation, while the left workspace rail does not cover status UI at compact size across modes.",
+      "primaryContract": "Tree and Bottom transaction searches remain independent; active filters and empty states are explicit, developer diagnostics remain opt-in, and the left rail does not cover status UI at compact size across modes.",
       "duplicateGroup": null,
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "decision": "KEEP",
-      "reason": "The file combines a state disclosure contract with a compact cross-mode layout boundary; both are production-visible and the 1280x720 measurement protects the regression directly.",
+      "reason": "One compact production journey verifies Tree-vs-Bottom filter scope, explicit empty states, opt-in diagnostics and cross-mode rail/status geometry; each visible contract is asserted without another app startup.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
