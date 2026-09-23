@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 815/959 cases reviewed.
+Semantic review progress: 819/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,7 +10,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 414 |
+| `integration` | 418 |
 | `nightly` | 172 |
 | `performance` | 45 |
 | `pr` | 229 |
@@ -295,7 +295,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `status-context.spec.ts` | 4 | 4/4 reviewed |
 | `time-group-lifecycle.spec.ts` | 1 | 1/1 reviewed |
 | `time-mapping-scale-closure.spec.ts` | 1 | 1/1 reviewed |
-| `timeline-editor.spec.ts` | 29 | 6/29 reviewed |
+| `timeline-editor.spec.ts` | 29 | 10/29 reviewed |
 | `timeline-range-100k.spec.ts` | 3 | 0/3 reviewed |
 | `timeline-range-band-presentation.spec.ts` | 9 | 0/9 reviewed |
 | `timeline-range-edit-readability.spec.ts` | 3 | 0/3 reviewed |
