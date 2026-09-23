@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:13:29.441Z",
+  "generatedAt": "2026-09-23T07:15:01.935Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 855,
+  "reviewedCaseCount": 859,
   "curatedProfileCounts": {
-    "integration": 446,
+    "integration": 449,
     "nightly": 175,
     "performance": 48,
     "pr": 232,
-    "visual": 146
+    "visual": 147
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -20183,18 +20183,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-range-drag-scroll-zoom-mapping",
+      "originIssue": 573,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Real waveform range drags resolve source intervals correctly after nonzero horizontal scroll and after zoom, while preserving the initial Canonical/History/Dirty/render-counter state.",
+      "duplicateGroup": "cycle-range-pointer-surface-routing",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This proves pointer geometry remains semantic after two view transforms, complementing surface-hit-area coverage and ruler range tests. The test compares the complete view-only state snapshot before/after both drags.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-range-hitarea-closure.spec.ts",
@@ -20205,18 +20208,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-range-drag-direction-extension-terminal",
+      "originIssue": 573,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Waveform range drag normalizes reverse direction, Shift extends an existing half-open selection, and the exclusive terminal ruler boundary is reachable through direct pointer interaction.",
+      "duplicateGroup": "cycle-range-pointer-surface-routing",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "It exercises three gesture semantics not combined elsewhere in one waveform path: reversed endpoints, modifier extension, and terminal endpoint resolution. Existing ruler-focused range coverage does not establish waveform hit conversion for all three.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-range-hitarea-closure.spec.ts",
@@ -20227,18 +20233,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-range-control-exclusion-and-cancel",
+      "originIssue": 573,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A click on a dedicated left-row control does not begin range selection, and pointercancel ends an active drag/removes transient preview without changing view/semantic state.",
+      "duplicateGroup": "cycle-range-pointer-surface-routing",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The complementary case starts drags from multiple valid surfaces; this protects a negative hit-target boundary and cancellation cleanup so controls remain usable and aborted gestures cannot leave stale preview state.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timing-grid-x-scale-closure.spec.ts",
@@ -20249,18 +20258,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "wave-ruler-grid-x-geometry-parity",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "WaveDrom grid marks, ruler ticks, and CSS Grid lines share the same actual X coordinates within one pixel across zoom presets, horizontal scroll, viewport resize, Fit Selection, and Fit All, without document mutation.",
+      "duplicateGroup": "wave-ruler-grid-geometry-parity",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This compares three independently rendered geometry consumers against actual WaveDrom marks over varied scale/scroll/resize states and Fit operations. It is a visual/geometry parity contract, not a duplicate of semantic cycle selection or mapping-unit tests; execution cost should remain outside routine PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "titlebar-controls.spec.ts",
@@ -26744,23 +26756,23 @@
     {
       "file": "timeline-range-hitarea-closure.spec.ts",
       "caseCount": 5,
-      "reviewedCaseCount": 2,
+      "reviewedCaseCount": 5,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "timing-grid-x-scale-closure.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "titlebar-controls.spec.ts",
