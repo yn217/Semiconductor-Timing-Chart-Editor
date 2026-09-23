@@ -348,6 +348,56 @@ test("propose_rename_signal targets a stable Signal ID and still requires human 
   await expect(page.getByTestId("dirty-status")).toHaveText(beforeCancelledUpdate.dirty!);
 });
 
+test("the Editor session and pending AI proposal survive Bottom tab switches, then reject stale revision", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
+
+  const sessionsBefore = JSON.parse((await callTool("list_editor_sessions")).body.result!.content[0]!.text) as { editorSessionId: string }[];
+  expect(sessionsBefore).toHaveLength(1);
+  const editorSessionId = sessionsBefore[0]!.editorSessionId;
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const proposal = await callTool("propose_rename_signal", TOKEN, { editorSessionId, signalId: "sig_cycle_request", name: "REQ_STALE" });
+  expect(proposal.body.result!.isError).toBe(false);
+  await expect(ai).toContainText("Rename REQUEST to REQ_STALE");
+
+  // The bridge session is owned by this Editor tab, not by the currently
+  // visible Bottom child. Switching tabs must preserve both identity and draft.
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
+  const sessionsAfterSwitch = JSON.parse((await callTool("list_editor_sessions")).body.result!.content[0]!.text) as { editorSessionId: string }[];
+  expect(sessionsAfterSwitch.map((session) => session.editorSessionId)).toEqual([editorSessionId]);
+
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByLabel("New Transaction name").fill("Stale proposal revision bump");
+  await page.getByRole("button", { name: "Create Transaction", exact: true }).click();
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 1));
+  const sessionsAfterEdit = JSON.parse((await callTool("list_editor_sessions")).body.result!.content[0]!.text) as { editorSessionId: string }[];
+  expect(sessionsAfterEdit.map((session) => session.editorSessionId)).toEqual([editorSessionId]);
+
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "AI", exact: true }).click();
+  await expect(ai).toContainText("Rename REQUEST to REQ_STALE");
+  await ai.getByTestId("ai-validate").click();
+  await expect(ai.getByTestId("ai-status")).toContainText("Preview is out of date");
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("REQUEST");
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 1));
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+
+  await page.locator(".ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("REQUEST");
+});
+
 test("propose_create_signal uses a stable Group ID and remains a Preview until explicit Apply", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");

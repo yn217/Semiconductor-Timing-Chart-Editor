@@ -549,6 +549,37 @@ export function useEditorSecondarySurfaces(
       )}
     </div>
   );
+  const activeBottomContent = workspace.bottomTab === "Signal" ? (
+    signalEditor
+  ) : workspace.bottomTab === "Annotation" ? (
+    annotationEditor
+  ) : workspace.bottomTab === "Transaction" ? (
+    transactionEditor
+  ) : workspace.bottomTab === "Phases" ? (
+    <TransactionPhaseSummary transaction={selected.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={workspace.cyclesPerTc} />
+  ) : workspace.bottomTab === "Linked Signals" ? (
+    <TransactionLinkedSummary transaction={selected.transaction} document={input.document} />
+  ) : workspace.bottomTab === "Bookmarks" ? (
+    bookmarkEditor
+  ) : workspace.bottomTab === "Problems" ? (
+    <ProblemsPanel diagnostics={input.diagnostics} onNavigate={input.navigateProblem} />
+  ) : workspace.bottomTab === "JSON" ? (
+    <AdvancedJsonPanel
+      document={input.document}
+      selectedSignal={bottom.signal}
+      selectedGroup={bottom.group}
+      selectedAnnotation={bottom.annotation}
+      selectedTransaction={bottom.transaction}
+      onReplaceDocument={input.actions.replaceDocument}
+      onDiagnostic={(next) => {
+        const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next];
+        input.setRuntimeDiagnostics((current) => [
+          ...current.filter((item) => !item.detail?.startsWith("advanced-json:")),
+          ...nextDiagnostics,
+        ]);
+      }}
+    />
+  ) : null;
   const workspaceBottom = (
     <BottomEditorPanel
       tabs={workspace.bottomTabs}
@@ -561,48 +592,15 @@ export function useEditorSecondarySurfaces(
       onTogglePinned={workspace.toggleBottomPin}
       {...(workspace.bottomTab === "Annotation" ? { contentClassName: "bottom-content-annotation" } : {})}
       content={
-        workspace.bottomTab === "Signal" ? (
-          signalEditor
-        ) : workspace.bottomTab === "Annotation" ? (
-          annotationEditor
-        ) : workspace.bottomTab === "Transaction" ? (
-          transactionEditor
-        ) : workspace.bottomTab === "Phases" ? (
-          <TransactionPhaseSummary transaction={selected.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={workspace.cyclesPerTc} />
-        ) : workspace.bottomTab === "Linked Signals" ? (
-          <TransactionLinkedSummary
-            transaction={selected.transaction}
-            document={input.document}
-          />
-        ) : workspace.bottomTab === "Bookmarks" ? (
-          bookmarkEditor
-        ) : workspace.bottomTab === "AI" ? (
-          <AIOperationPanel {...aiAssistantPanel} />
-        ) : workspace.bottomTab === "Problems" ? (
-          <ProblemsPanel
-            diagnostics={input.diagnostics}
-            onNavigate={input.navigateProblem}
-          />
-        ) : (
-          <AdvancedJsonPanel
-            document={input.document}
-            selectedSignal={bottom.signal}
-            selectedGroup={bottom.group}
-            selectedAnnotation={bottom.annotation}
-            selectedTransaction={bottom.transaction}
-            onReplaceDocument={input.actions.replaceDocument}
-            onDiagnostic={(next) => {
-              const nextDiagnostics =
-                next === undefined ? [] : Array.isArray(next) ? next : [next];
-              input.setRuntimeDiagnostics((current) => [
-                ...current.filter(
-                  (item) => !item.detail?.startsWith("advanced-json:"),
-                ),
-                ...nextDiagnostics,
-              ]);
-            }}
-          />
-        )
+        <>
+          {/* Keep the AI Bridge session and an external proposal alive while
+              another Bottom tab is active. The session belongs to this
+              Editor tab/document, not to the visibility of its panel. */}
+          <div className="bottom-ai-panel-host" hidden={workspace.bottomTab !== "AI"}>
+            <AIOperationPanel {...aiAssistantPanel} />
+          </div>
+          {activeBottomContent}
+        </>
       }
     />
   );
