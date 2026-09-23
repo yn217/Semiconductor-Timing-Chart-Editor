@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:46:51.313Z",
+  "generatedAt": "2026-09-23T07:48:16.744Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 913,
+  "reviewedCaseCount": 917,
   "curatedProfileCounts": {
-    "integration": 477,
+    "integration": 478,
     "nightly": 186,
     "performance": 54,
-    "pr": 245,
-    "visual": 154
+    "pr": 246,
+    "visual": 156
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -22399,18 +22399,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-time-scale-invalid-draft-cancel",
+      "originIssue": 397,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A zero clock ratio is rejected with an error and disabled Apply; changing draft to a valid value then Cancel leaves persisted scale and History unchanged.",
+      "duplicateGroup": "transaction-time-scale-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Distinct focused validation of invalid draft rejection and cancel non-commit. Despite the title, this test presses Cancel but does not press Escape; the Escape path is not proven by this case.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-time-scale.spec.ts",
@@ -22421,18 +22424,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-time-scale-preserves-secondary-clock",
+      "originIssue": 530,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Editing Major interval and applying preserves showSecondaryClock through reopening the panel and through production Save/Open.",
+      "duplicateGroup": "transaction-time-scale-optional-fields",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Focused regression for partial GUI Apply erasing an unrelated optional field, with serialized Save/Open confirmation. It covers the secondary-clock flag specifically rather than every time-scale optional field.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-tree-control-parity.spec.ts",
@@ -22443,18 +22449,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-action-column-alignment-compact",
+      "originIssue": 429,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1280x720, group/transaction overflow-menu action centers share one vertical column and visibility controls align in a second column before and after long Group rename; Undo restores label and visibility toggle is view-only/history-aware.",
+      "duplicateGroup": "transaction-tree-action-column-alignment",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Compact viewport counterpart provides geometric alignment evidence and checks that long labels do not shift controls; the wide case covers a different responsive width. Keep in visual acceptance, not PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "transaction-tree-control-parity.spec.ts",
@@ -22465,18 +22474,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-action-column-alignment-wide",
+      "originIssue": 429,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1672x941, group/transaction overflow-menu action centers share one vertical column and visibility controls align in a second column before and after long Group rename; Undo restores label and visibility toggle is view-only/history-aware.",
+      "duplicateGroup": "transaction-tree-action-column-alignment",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Wide viewport counterpart to the compact alignment acceptance; both viewport shapes remain useful because the target is responsive fixed action columns.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "transaction-tree-filter.spec.ts",
@@ -27205,23 +27217,23 @@
     {
       "file": "transaction-time-scale.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 1,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-tree-control-parity.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-tree-filter.spec.ts",
