@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T00:45:24.199Z",
+  "generatedAt": "2026-09-23T00:53:28.385Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,14 +12,14 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 332,
-  "caseCount": 969,
-  "reviewedCaseCount": 211,
+  "caseCount": 963,
+  "reviewedCaseCount": 214,
   "curatedProfileCounts": {
     "integration": 58,
     "nightly": 42,
     "performance": 17,
     "pr": 88,
-    "visual": 61
+    "visual": 64
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -7798,200 +7798,77 @@
     {
       "file": "issue-441-ribbon-label-integrity.spec.ts",
       "suitePath": [],
-      "line": 6,
-      "title": "Ribbon labels are intact in Combined at 1024x700",
+      "line": 5,
+      "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "domain": "ribbon-responsive-label-integrity",
+      "originIssue": 441,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": 25100,
+      "primaryContract": "At narrow width, all Ribbon tab labels remain readable in all three workspace modes and no visible control escapes the Ribbon bounds.",
+      "duplicateGroup": "ribbon-responsive-label-integrity-441",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The narrow case protects the additional 1024px breakpoint required by #441 and remains separate because a still narrower layout can introduce clipping not present at 1280px.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-441-ribbon-label-integrity.spec.ts",
       "suitePath": [],
-      "line": 6,
-      "title": "Ribbon labels are intact in Combined at 1280x720",
+      "line": 5,
+      "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "domain": "ribbon-responsive-label-integrity",
+      "originIssue": 441,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": 25200,
+      "primaryContract": "At compact width, all Ribbon tab labels remain readable in all three workspace modes and no visible control escapes the Ribbon bounds.",
+      "duplicateGroup": "ribbon-responsive-label-integrity-441",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The compact case protects width-sensitive text overflow across all modes and tabs; it remains separate from the desktop case because responsive wrapping/clipping changes with available width.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-441-ribbon-label-integrity.spec.ts",
       "suitePath": [],
-      "line": 6,
-      "title": "Ribbon labels are intact in Combined at 1672x941",
+      "line": 5,
+      "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "domain": "ribbon-responsive-label-integrity",
+      "originIssue": 441,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": 28400,
+      "primaryContract": "At desktop width, all Ribbon tab labels remain readable in all three workspace modes and no visible control escapes the Ribbon bounds.",
+      "duplicateGroup": "ribbon-responsive-label-integrity-441",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The desktop case catches width-dependent label clipping while traversing all modes and tabs in one page; it is visual-suite work, not a routine semantic PR journey.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-441-ribbon-label-integrity.spec.ts",
-      "suitePath": [],
-      "line": 6,
-      "title": "Ribbon labels are intact in Cycle at 1024x700",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-441-ribbon-label-integrity.spec.ts",
-      "suitePath": [],
-      "line": 6,
-      "title": "Ribbon labels are intact in Cycle at 1280x720",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-441-ribbon-label-integrity.spec.ts",
-      "suitePath": [],
-      "line": 6,
-      "title": "Ribbon labels are intact in Cycle at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-441-ribbon-label-integrity.spec.ts",
-      "suitePath": [],
-      "line": 6,
-      "title": "Ribbon labels are intact in Transaction at 1024x700",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-441-ribbon-label-integrity.spec.ts",
-      "suitePath": [],
-      "line": 6,
-      "title": "Ribbon labels are intact in Transaction at 1280x720",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-441-ribbon-label-integrity.spec.ts",
-      "suitePath": [],
-      "line": 6,
-      "title": "Ribbon labels are intact in Transaction at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-554-transaction-journey.spec.ts",
@@ -23031,15 +22908,15 @@
     },
     {
       "file": "issue-441-ribbon-label-integrity.spec.ts",
-      "caseCount": 9,
-      "reviewedCaseCount": 0,
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
       "originIssue": "441",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-554-transaction-journey.spec.ts",
@@ -25764,6 +25641,114 @@
       },
       "protectedInvariant": "Transaction has no focusable ghost resizer, while Cycle retains a functional keyboard-operable separator.",
       "reason": "The retained #741 case now checks both the Transaction absence and a Cycle ArrowRight change to aria-valuenow; the standalone test duplicated the absence assertion and only added the latter half."
+    },
+    {
+      "from": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact in Cycle at 1672x941"
+      },
+      "to": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941"
+      },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact in Transaction at 1672x941"
+      },
+      "to": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941"
+      },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact in Combined at 1672x941"
+      },
+      "to": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941"
+      },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact in Cycle at 1280x720"
+      },
+      "to": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720"
+      },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact in Transaction at 1280x720"
+      },
+      "to": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720"
+      },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact in Combined at 1280x720"
+      },
+      "to": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720"
+      },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact in Cycle at 1024x700"
+      },
+      "to": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700"
+      },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact in Transaction at 1024x700"
+      },
+      "to": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700"
+      },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact in Combined at 1024x700"
+      },
+      "to": {
+        "file": "issue-441-ribbon-label-integrity.spec.ts",
+        "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700"
+      },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
     }
   ]
 }

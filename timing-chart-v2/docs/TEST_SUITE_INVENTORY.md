@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 332 spec files and 969 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 211/969 cases reviewed.
+Semantic review progress: 214/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -14,7 +14,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `nightly` | 42 |
 | `performance` | 17 |
 | `pr` | 88 |
-| `visual` | 61 |
+| `visual` | 64 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -117,7 +117,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `inspector-multi-selection.spec.ts` | 3 | 0/3 reviewed |
 | `inspector-waveform-style.spec.ts` | 2 | 0/2 reviewed |
 | `interaction-visual-scenarios.spec.ts` | 11 | 0/11 reviewed |
-| `issue-441-ribbon-label-integrity.spec.ts` | 9 | 0/9 reviewed |
+| `issue-441-ribbon-label-integrity.spec.ts` | 3 | 3/3 reviewed |
 | `issue-554-transaction-journey.spec.ts` | 2 | 2/2 reviewed |
 | `issue-573-combined-divider-pinned.spec.ts` | 1 | 1/1 reviewed |
 | `issue-573-combined-shared-time-axis.spec.ts` | 3 | 3/3 reviewed |
@@ -539,6 +539,15 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-740-741-756-cycle-layout.spec.ts` “#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at 1280x720” → `issue-740-cycle-bottom-hidden.spec.ts` “Cycle releases Bottom space when hidden at 1280x720”. **Invariant:** Hiding Cycle Bottom removes the reserved space and is view-only. **Reason:** The compact case was a duplicate of the retained #740 contract; the shared file continues to exercise #741 and #756 independently.
 - `issue-766-cycle-plural.spec.ts` “Time Scale readout uses singular/plural correctly at 1672x941” → `issue-766-cycle-plural.spec.ts` “Time Scale readout uses singular/plural correctly”. **Invariant:** TC singular/plural copy is correct for values 1, 10 and 50. **Reason:** Copy is viewport-independent; the retained compact case checks the same three supported values and no singular 'cycles' regression.
 - `issue-741-transaction-no-left-resizer.spec.ts` “Transaction mode exposes no keyboard-operable left-pane separator” → `issue-740-741-756-cycle-layout.spec.ts` “#741 Transaction fixed-width sidebar exposes no focusable ghost resizer and hides no width mutation”. **Invariant:** Transaction has no focusable ghost resizer, while Cycle retains a functional keyboard-operable separator. **Reason:** The retained #741 case now checks both the Transaction absence and a Cycle ArrowRight change to aria-valuenow; the standalone test duplicated the absence assertion and only added the latter half.
+- `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact in Cycle at 1672x941” → `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941”. **Invariant:** Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width. **Reason:** The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup.
+- `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact in Transaction at 1672x941” → `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941”. **Invariant:** Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width. **Reason:** The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup.
+- `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact in Combined at 1672x941” → `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941”. **Invariant:** Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width. **Reason:** The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup.
+- `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact in Cycle at 1280x720” → `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720”. **Invariant:** Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width. **Reason:** The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup.
+- `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact in Transaction at 1280x720” → `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720”. **Invariant:** Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width. **Reason:** The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup.
+- `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact in Combined at 1280x720” → `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720”. **Invariant:** Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width. **Reason:** The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup.
+- `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact in Cycle at 1024x700” → `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700”. **Invariant:** Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width. **Reason:** The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup.
+- `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact in Transaction at 1024x700” → `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700”. **Invariant:** Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width. **Reason:** The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup.
+- `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact in Combined at 1024x700” → `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700”. **Invariant:** Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width. **Reason:** The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 

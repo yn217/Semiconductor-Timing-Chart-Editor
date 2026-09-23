@@ -228,6 +228,60 @@
       },
       "protectedInvariant": "Transaction has no focusable ghost resizer, while Cycle retains a functional keyboard-operable separator.",
       "reason": "The retained #741 case now checks both the Transaction absence and a Cycle ArrowRight change to aria-valuenow; the standalone test duplicated the absence assertion and only added the latter half."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Cycle at 1672x941" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Transaction at 1672x941" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Combined at 1672x941" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Cycle at 1280x720" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Transaction at 1280x720" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Combined at 1280x720" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Cycle at 1024x700" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Transaction at 1024x700" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact in Combined at 1024x700" },
+      "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700" },
+      "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
+      "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
     }
   ]
 }
