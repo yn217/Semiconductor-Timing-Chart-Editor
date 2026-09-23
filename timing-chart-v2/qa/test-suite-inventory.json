@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:45:44.024Z",
+  "generatedAt": "2026-09-23T05:47:15.088Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,9 +13,9 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 705,
+  "reviewedCaseCount": 709,
   "curatedProfileCounts": {
-    "integration": 334,
+    "integration": 338,
     "nightly": 163,
     "performance": 44,
     "pr": 202,
@@ -16150,18 +16150,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "active-reference-clock-conversion-confirmation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Converting the active Reference Clock presents the designation-loss consequence, Cancel is view-only, confirmation removes the designation without implicit replacement, and Undo/Redo restore the exact clockless/clock states.",
+      "duplicateGroup": "reference-clock-conversion-gui-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The command unit test covers conversion planning but cannot prove the user-facing destructive-change disclosure, Cancel boundary, time-axis transition, or history lifecycle through the Inspector confirmation dialog.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "reference-clock-conversion.spec.ts",
@@ -16172,18 +16175,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "clock-to-binary-save-open-defaults",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inspector conversion to Binary preserves Signal identity and source, removes Clock-only properties/reference designation, assigns exact binary defaults, and those semantics survive Save/Open.",
+      "duplicateGroup": "reference-clock-conversion-gui-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The real Inspector plus serialization path is not covered by the semantic conversion unit test; Binary's numeric initial value and Clock-only field removal are its target-specific data contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "reference-clock-conversion.spec.ts",
@@ -16194,18 +16200,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "clock-to-bus-save-open-defaults",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inspector conversion to Bus preserves identity/source, removes Clock-only properties/reference designation, sets width 8/hex format and the canonical initial bus value, and survives Save/Open.",
+      "duplicateGroup": "reference-clock-conversion-gui-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Bus conversion has additional width/display-format defaults absent from Binary/State; it independently protects that variant through production Save/Open.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "reference-clock-conversion.spec.ts",
@@ -16216,18 +16225,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "clock-to-state-save-open-defaults",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inspector conversion to State preserves identity/source, removes Clock-only properties/reference designation, assigns the canonical IDLE initial value, and survives Save/Open.",
+      "duplicateGroup": "reference-clock-conversion-gui-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "State's symbolic IDLE default differs from Binary and Bus values; keeping this target-specific round trip detects conversion serializers that only handle numeric/value-signal variants.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "reorder-visibility.spec.ts",
@@ -25862,11 +25874,11 @@
     {
       "file": "reference-clock-conversion.spec.ts",
       "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "reorder-visibility.spec.ts",
