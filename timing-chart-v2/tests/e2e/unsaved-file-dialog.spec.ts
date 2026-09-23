@@ -345,8 +345,11 @@ test("Open discards an entity-keyed Inspector draft when the replacement documen
   };
 
   await open(makeDocument("Document A", "A Transaction"), "draft-a.tcd");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
   await page.getByTestId("transaction-lanes").locator("[data-transaction-id='tx_shared']").click();
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
   const inspectorName = page.getByTestId("inspector").getByLabel("Transaction name", { exact: true });
   await inspectorName.fill("A Draft Only");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");

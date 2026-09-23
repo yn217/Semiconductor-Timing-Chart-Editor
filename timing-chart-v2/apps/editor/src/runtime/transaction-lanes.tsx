@@ -100,6 +100,7 @@ function previewPhases(transaction: Transaction, preview: TransactionPreview, ed
  * (the full name stays in title / aria-label / the Inspector); the font is never shrunk. */
 const BAR_LABEL_MIN_PX = 56;
 const PHASE_LABEL_MIN_PX = 40;
+const TRANSACTION_DRAG_THRESHOLD_PX = 4;
 
 function TransactionBar({ transaction, documentEpoch, viewMode, row, color, selected, cycleCount, getBoundaryX, boundaryXByCycle, visibleBoundaryXs, foldRanges, onSnap, onSelect, commands, onContextMenu }: {
   readonly transaction: Transaction;
@@ -118,7 +119,7 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize">;
   readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void;
 }) {
-  const [drag, setDrag] = useState<{ edge: TransactionDragEdge; documentEpoch: number; surfaceLeft: number | undefined }>();
+  const [drag, setDrag] = useState<{ edge: TransactionDragEdge; documentEpoch: number; surfaceLeft: number | undefined; startClientX: number }>();
   const [preview, setPreview] = useState<TransactionPreview>();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const pendingPreviewClientX = useRef<number | undefined>(undefined);
@@ -128,6 +129,7 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   const dragPreviewFrames = useRef(0);
   const dragPreviewUpdates = useRef(0);
   const dragSnapQueries = useRef(0);
+  const dragThresholdCrossed = useRef(false);
   const current = preview ?? { start: transaction.start, end: transaction.end };
   const containingFold = foldRanges.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.end <= toCycle);
   const startHiddenFold = foldRanges.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.start < toCycle && transaction.end > toCycle);
@@ -186,6 +188,8 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   if (startX === undefined || endX === undefined) return null;
   const updatePreview = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (!drag || drag.documentEpoch !== documentEpoch) return;
+    if (!dragThresholdCrossed.current && Math.abs(event.clientX - drag.startClientX) < TRANSACTION_DRAG_THRESHOLD_PX) return;
+    dragThresholdCrossed.current = true;
     dragPointerMoves.current += 1;
     event.currentTarget.dataset.dragPointerMoves = String(dragPointerMoves.current);
     pendingPreviewClientX.current = event.clientX;
@@ -227,7 +231,8 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
       button.dataset.dragSnapDomQueries = "0";
       button.dataset.dragSnapLayoutReads = "0";
     }
-    setDrag({ edge, documentEpoch, surfaceLeft: buttonRef.current?.closest<HTMLElement>(".transaction-track")?.getBoundingClientRect().left });
+    dragThresholdCrossed.current = false;
+    setDrag({ edge, documentEpoch, startClientX: event.clientX, surfaceLeft: buttonRef.current?.closest<HTMLElement>(".transaction-track")?.getBoundingClientRect().left });
     setPreview({ start: transaction.start, end: transaction.end });
   };
   const cancel = (event?: ReactPointerEvent<HTMLButtonElement>) => {
@@ -244,6 +249,13 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
     if (previewFrame.current !== undefined) cancelAnimationFrame(previewFrame.current);
     previewFrame.current = undefined;
     pendingPreviewClientX.current = undefined;
+    const moved = dragThresholdCrossed.current || Math.abs(event.clientX - drag.startClientX) >= TRANSACTION_DRAG_THRESHOLD_PX;
+    dragThresholdCrossed.current = false;
+    if (!moved) {
+      setDrag(undefined);
+      setPreview(undefined);
+      return;
+    }
     const cycle = onSnap(event.clientX, drag.surfaceLeft);
     const final = cycle === undefined ? preview : previewTransaction(transaction, drag.edge, cycle, cycleCount);
     setDrag(undefined);
