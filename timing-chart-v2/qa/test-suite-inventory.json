@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:31:39.220Z",
+  "generatedAt": "2026-09-23T07:33:28.603Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 889,
+  "reviewedCaseCount": 893,
   "curatedProfileCounts": {
     "integration": 469,
     "nightly": 181,
     "performance": 49,
-    "pr": 238,
-    "visual": 150
+    "pr": 239,
+    "visual": 153
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -21416,18 +21416,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-lane-existing-suggestions",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inspector's Lane input exposes existing Lane IDs as datalist suggestions while remaining a free-text draft input.",
+      "duplicateGroup": "transaction-lane-input-guidance",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The test proves suggestion discoverability and confirms custom text can be entered; it does not click Apply or prove canonical acceptance of a new Lane. The actual Apply/Save behavior for a custom Lane is covered by the stable-ID authoring workflow in transaction-gui-authoring.spec.ts.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-lane-labels-visible.spec.ts",
@@ -21438,18 +21441,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-lane-label-strip-placement",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "In standalone Transaction mode, the lane label strip is visible beside the timeline, begins at/after the left Transaction Tree edge, and is not clipped by the non-split signal content surface.",
+      "duplicateGroup": "transaction-lane-label-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the only standalone-mode placement check for the separate Lane label strip relative to the Transaction Tree and central timeline. The title says Group/Lane labels, but assertions establish visibility/placement/clipping rather than the rendered label text itself.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "transaction-lane-scaling.spec.ts",
@@ -21460,18 +21466,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-horizontal-overflow-compact",
+      "originIssue": 586,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A 40-Transaction, 1000-cycle document has real horizontal overflow at 1280x720; nonzero scrolling and mode round-trip preserve Canonical/History/Dirty state.",
+      "duplicateGroup": "transaction-horizontal-overflow-responsive",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The compact viewport is an explicit responsive acceptance boundary and is tested with actual overflowing content plus a nonzero scroll and mode round-trip; the wide sibling cannot replace compact-width behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "transaction-lane-scaling.spec.ts",
@@ -21482,18 +21491,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-horizontal-overflow-wide",
+      "originIssue": 586,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A 40-Transaction, 1000-cycle document has real horizontal overflow at 1672x941; nonzero scrolling and mode round-trip preserve Canonical/History/Dirty state.",
+      "duplicateGroup": "transaction-horizontal-overflow-responsive",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The approved wide viewport independently proves long Transaction time ranges remain horizontally reachable and view-only; keep paired with compact evidence because overflow and scroll ownership can differ by viewport.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "transaction-lane-scaling.spec.ts",
@@ -26994,33 +27006,33 @@
     {
       "file": "transaction-inspector-lane-suggestions.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-lane-labels-visible.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-lane-scaling.spec.ts",
       "caseCount": 8,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": 180,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "transaction-minimap-overview.spec.ts",
