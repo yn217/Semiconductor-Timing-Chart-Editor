@@ -26,34 +26,43 @@ async function cellGeometry(page: Page, mode: "Cycle" | "Transaction", cycle: nu
   return { x: zero.x + pitch * cycle, pitch };
 }
 
-for (const mode of ["Cycle", "Transaction"] as const) for (const size of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
-  test(`ruler cell is the hit target, in ${mode} at ${size.width}x${size.height}`, async ({ page }) => {
-    await open(page, mode, size);
-    const rulerBox = (await page.getByTestId("cycle-ruler").boundingBox())!;
-    const lowerY = rulerBox.y + rulerBox.height - 6;
-    const upperY = rulerBox.y + 4;
-    const history = page.getByTestId("history-status");
+for (const mode of ["Cycle", "Transaction"] as const) {
+  test(`ruler cell hit targets and bidirectional range gestures in ${mode} at both supported viewports`, async ({ page }) => {
+    test.setTimeout(60_000);
+    const sizes = [{ width: 1280, height: 720 }, { width: 1672, height: 941 }];
+    for (const [sizeIndex, size] of sizes.entries()) {
+      if (sizeIndex === 0) await open(page, mode, size);
+      else {
+        // Reflow the same production document instead of paying for another full app boot.
+        await page.setViewportSize(size);
+        await expect(page.getByTestId("cycle-ruler")).toBeVisible();
+      }
+      const rulerBox = (await page.getByTestId("cycle-ruler").boundingBox())!;
+      const lowerY = rulerBox.y + rulerBox.height - 6;
+      const upperY = rulerBox.y + 4;
+      const history = page.getByTestId("history-status");
 
-    // Whitespace at the left, middle, right and near the boundary of a cell, lower and upper part of the row.
-    for (const [cycle, dx, y] of [[5, 2, lowerY], [6, 12, lowerY], [7, 25, lowerY], [8, 37, lowerY], [9, 20, upperY]] as const) {
-      const cell = await cellGeometry(page, mode, cycle);
-      await page.mouse.click(cell.x + dx * cell.pitch / 40, y);
-      await expect.poll(() => range(page), { message: `click ${dx}px into cell ${cycle}` }).toBe(`${cycle}-${cycle + 1}`);
+      // Whitespace at the left, middle, right and near the boundary of a cell, lower and upper part of the row.
+      for (const [cycle, dx, y] of [[5, 2, lowerY], [6, 12, lowerY], [7, 25, lowerY], [8, 37, lowerY], [9, 20, upperY]] as const) {
+        const cell = await cellGeometry(page, mode, cycle);
+        await page.mouse.click(cell.x + dx * cell.pitch / 40, y);
+        await expect.poll(() => range(page), { message: `click ${dx}px into cell ${cycle} at ${size.width}x${size.height}` }).toBe(`${cycle}-${cycle + 1}`);
+      }
+
+      // Drags span the boundaries nearest the pointer at both ends (same rule), so both directions give the same range.
+      const a = await cellGeometry(page, mode, 3);
+      const b = await cellGeometry(page, mode, 9);
+      await page.mouse.move(a.x + 25 * a.pitch / 40, lowerY);
+      await page.mouse.down();
+      await page.mouse.move(b.x + 25 * b.pitch / 40, lowerY, { steps: 8 });
+      await page.mouse.up();
+      await expect.poll(() => range(page), { message: `drag 3 -> 9 at ${size.width}x${size.height}` }).toBe("4-10");
+      await page.mouse.move(b.x + 25 * b.pitch / 40, lowerY);
+      await page.mouse.down();
+      await page.mouse.move(a.x + 25 * a.pitch / 40, lowerY, { steps: 8 });
+      await page.mouse.up();
+      await expect.poll(() => range(page), { message: `drag 9 -> 3 at ${size.width}x${size.height}` }).toBe("4-10");
+      await expect(history).toHaveText("History 0 / Redo 0"); // view-only
     }
-
-    // Drags span the boundaries nearest the pointer at both ends (same rule), so both directions give the same range.
-    const a = await cellGeometry(page, mode, 3);
-    const b = await cellGeometry(page, mode, 9);
-    await page.mouse.move(a.x + 25 * a.pitch / 40, lowerY);
-    await page.mouse.down();
-    await page.mouse.move(b.x + 25 * b.pitch / 40, lowerY, { steps: 8 });
-    await page.mouse.up();
-    await expect.poll(() => range(page), { message: "drag 3 -> 9" }).toBe("4-10");
-    await page.mouse.move(b.x + 25 * b.pitch / 40, lowerY);
-    await page.mouse.down();
-    await page.mouse.move(a.x + 25 * a.pitch / 40, lowerY, { steps: 8 });
-    await page.mouse.up();
-    await expect.poll(() => range(page), { message: "drag 9 -> 3" }).toBe("4-10");
-    await expect(history).toHaveText("History 0 / Redo 0"); // view-only
   });
 }

@@ -6579,78 +6579,6 @@
       "replacementTest": null
     },
     {
-      "file": "issue-738-ruler-hit-area.spec.ts",
-      "title": "ruler cell is the hit target, in Cycle at 1280x720",
-      "domain": "ruler-hit-target-and-range-selection",
-      "originIssue": 738,
-      "type": "USER_JOURNEY",
-      "costClass": "HEAVY",
-      "measuredRuntimeMs": 15000,
-      "primaryContract": "Whitespace and vertical positions within Cycle ruler cells select the intended source cell; left-to-right and right-to-left drags select the same view-only range.",
-      "duplicateGroup": "ruler-hit-area-738",
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": [
-        "pr"
-      ],
-      "decision": "KEEP",
-      "reason": "This protects a real pointer hit target and range-selection journey that cannot be proven without the rendered ruler; compact viewport covers this mode's own ruler/time origin. Pointer coordinates are based on adjacent rendered tick spacing, not a copied pitch constant.",
-      "replacementTest": null
-    },
-    {
-      "file": "issue-738-ruler-hit-area.spec.ts",
-      "title": "ruler cell is the hit target, in Cycle at 1672x941",
-      "domain": "ruler-hit-target-and-range-selection",
-      "originIssue": 738,
-      "type": "USER_JOURNEY",
-      "costClass": "HEAVY",
-      "measuredRuntimeMs": 15200,
-      "primaryContract": "Whitespace and vertical positions within Cycle ruler cells select the intended source cell; left-to-right and right-to-left drags select the same view-only range.",
-      "duplicateGroup": "ruler-hit-area-738",
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": [
-        "pr"
-      ],
-      "decision": "KEEP",
-      "reason": "This is the desktop-width counterpart because ruler origin/available cell geometry is width-dependent; it protects the same visible Cycle-mode pointer gesture at the documented full viewport.",
-      "replacementTest": null
-    },
-    {
-      "file": "issue-738-ruler-hit-area.spec.ts",
-      "title": "ruler cell is the hit target, in Transaction at 1280x720",
-      "domain": "ruler-hit-target-and-range-selection",
-      "originIssue": 738,
-      "type": "USER_JOURNEY",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": 9500,
-      "primaryContract": "Whitespace and vertical positions within compressed Transaction ruler cells resolve through the shared mapping; either drag direction selects the same view-only range.",
-      "duplicateGroup": "ruler-hit-area-738",
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": [
-        "pr"
-      ],
-      "decision": "KEEP",
-      "reason": "Transaction ruler hit testing has a distinct compressed time mapping from Cycle mode, and the compact viewport exercises its own origin/available cells. Coordinates are derived from rendered ruler ticks.",
-      "replacementTest": null
-    },
-    {
-      "file": "issue-738-ruler-hit-area.spec.ts",
-      "title": "ruler cell is the hit target, in Transaction at 1672x941",
-      "domain": "ruler-hit-target-and-range-selection",
-      "originIssue": 738,
-      "type": "USER_JOURNEY",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": 9700,
-      "primaryContract": "Whitespace and vertical positions within compressed Transaction ruler cells resolve through the shared mapping; either drag direction selects the same view-only range.",
-      "duplicateGroup": "ruler-hit-area-738",
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": [
-        "pr"
-      ],
-      "decision": "KEEP",
-      "reason": "The desktop counterpart protects compressed Transaction ruler hit testing at the full viewport; responsive ruler origin is width-dependent, so this variant remains distinct.",
-      "replacementTest": null
-    },
-    {
       "file": "issue-740-741-756-cycle-layout.spec.ts",
       "title": "#741 Transaction fixed-width sidebar exposes no focusable ghost resizer and hides no width mutation",
       "domain": "transaction-fixed-sidebar-resizer",
@@ -14670,6 +14598,38 @@
       "profiles": ["pr"],
       "decision": "KEEP",
       "reason": "Retains the dedicated accessibility and disclosure journey within the stable selection contract suite.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-738-ruler-hit-area.spec.ts",
+      "title": "ruler cell hit targets and bidirectional range gestures in Cycle at both supported viewports",
+      "domain": "ruler-hit-target-and-range-selection",
+      "originIssue": 738,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Whitespace and vertical positions within Cycle ruler cells select the intended source cell; both drag directions select the same view-only range at 1280x720 and 1672x941.",
+      "duplicateGroup": "ruler-hit-area-738",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["pr"],
+      "decision": "KEEP",
+      "reason": "Retains the full two-viewport pointer acceptance in one page lifecycle; geometry is derived from adjacent rendered Cycle ticks, not a copied pitch constant. Combined runtime has not yet been measured.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-738-ruler-hit-area.spec.ts",
+      "title": "ruler cell hit targets and bidirectional range gestures in Transaction at both supported viewports",
+      "domain": "ruler-hit-target-and-range-selection",
+      "originIssue": 738,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Compressed Transaction ruler hit testing selects the intended source cell; both drag directions select the same view-only range at 1280x720 and 1672x941.",
+      "duplicateGroup": "ruler-hit-area-738",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["pr"],
+      "decision": "KEEP",
+      "reason": "Retains compressed time mapping and both responsive origins in one page lifecycle; coordinates are derived from rendered ruler ticks. Combined runtime has not yet been measured.",
       "replacementTest": null
     }
   ]

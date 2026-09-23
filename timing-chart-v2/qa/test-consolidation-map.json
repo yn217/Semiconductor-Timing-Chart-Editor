@@ -384,6 +384,30 @@
       "to": { "file": "transaction-selection.contract.spec.ts", "title": "Bottom grid exposes aria-selected and aria-expanded with named disclosure controls" },
       "protectedInvariant": "Selected state is exposed semantically and beyond color alone; expandable phase rows use named controls with aria-expanded state.",
       "reason": "Moved the unchanged accessibility journey into the stable Transaction selection contract suite while preserving its distinct invariant and traceability."
+    },
+    {
+      "from": { "file": "issue-738-ruler-hit-area.spec.ts", "title": "ruler cell is the hit target, in Cycle at 1280x720" },
+      "to": { "file": "issue-738-ruler-hit-area.spec.ts", "title": "ruler cell hit targets and bidirectional range gestures in Cycle at both supported viewports" },
+      "protectedInvariant": "Cycle ruler hit targets and both drag directions remain covered at the compact viewport.",
+      "reason": "Compact assertions now run in the Cycle-mode viewport loop within one app session, alongside the desktop counterpart."
+    },
+    {
+      "from": { "file": "issue-738-ruler-hit-area.spec.ts", "title": "ruler cell is the hit target, in Cycle at 1672x941" },
+      "to": { "file": "issue-738-ruler-hit-area.spec.ts", "title": "ruler cell hit targets and bidirectional range gestures in Cycle at both supported viewports" },
+      "protectedInvariant": "Cycle ruler hit targets and both drag directions remain covered at the desktop viewport.",
+      "reason": "Desktop assertions remain intact in the same Cycle-mode journey after viewport reflow, avoiding another app startup."
+    },
+    {
+      "from": { "file": "issue-738-ruler-hit-area.spec.ts", "title": "ruler cell is the hit target, in Transaction at 1280x720" },
+      "to": { "file": "issue-738-ruler-hit-area.spec.ts", "title": "ruler cell hit targets and bidirectional range gestures in Transaction at both supported viewports" },
+      "protectedInvariant": "Compressed Transaction ruler hit targets and both drag directions remain covered at the compact viewport.",
+      "reason": "Compact assertions now run in the Transaction-mode viewport loop within one app session, alongside the desktop counterpart."
+    },
+    {
+      "from": { "file": "issue-738-ruler-hit-area.spec.ts", "title": "ruler cell is the hit target, in Transaction at 1672x941" },
+      "to": { "file": "issue-738-ruler-hit-area.spec.ts", "title": "ruler cell hit targets and bidirectional range gestures in Transaction at both supported viewports" },
+      "protectedInvariant": "Compressed Transaction ruler hit targets and both drag directions remain covered at the desktop viewport.",
+      "reason": "Desktop assertions remain intact in the same Transaction-mode journey after viewport reflow, avoiding another app startup."
     }
   ]
 }

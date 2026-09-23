@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 326 spec files and 962 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 326 spec files and 960 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 962/962 cases reviewed.
+Semantic review progress: 960/960 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 490 |
 | `nightly` | 195 |
 | `performance` | 54 |
-| `pr` | 256 |
+| `pr` | 254 |
 | `visual` | 174 |
 
 ## Top recorded per-case runtimes
@@ -25,15 +25,11 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | 28400 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1672x941 |
 | 25200 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1280x720 |
 | 25100 | `visual` | `issue-441-ribbon-label-integrity.spec.ts` | Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700 |
-| 15200 | `pr` | `issue-738-ruler-hit-area.spec.ts` | ruler cell is the hit target, in Cycle at 1672x941 |
-| 15000 | `pr` | `issue-738-ruler-hit-area.spec.ts` | ruler cell is the hit target, in Cycle at 1280x720 |
 | 13900 | `pr` | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | every Bookmark gesture stays inside the SPA in Combined mode |
 | 13400 | `pr` | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | every Bookmark gesture stays inside the SPA in Cycle mode |
 | 10600 | `visual` | `left-header-action-alignment.spec.ts` | right-aligns Left Tree header actions without changing command behavior |
 | 10200 | `pr` | `issue-760-combined-horizontal-wheel.spec.ts` | Combined horizontal wheel scrolls the shared viewport at 1280x720 |
-| 9700 | `pr` | `issue-738-ruler-hit-area.spec.ts` | ruler cell is the hit target, in Transaction at 1672x941 |
 | 9700 | `visual` | `left-tree-compact-footer.spec.ts` | keeps the left tree footer compact at laptop viewport |
-| 9500 | `pr` | `issue-738-ruler-hit-area.spec.ts` | ruler cell is the hit target, in Transaction at 1280x720 |
 | 9300 | `pr` | `issue-753-bookmark-navigation-stays-in-app.spec.ts` | every Bookmark gesture stays inside the SPA in Transaction mode |
 | 9000 | `integration` | `left-tree-interaction.spec.ts` | collapses only Left Tree descendants and restores stable rows without a canonical mutation |
 | 8800 | `pr` | `issue-750-geometry-10-to-50.spec.ts` | 1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (1280x720) |
@@ -42,6 +38,10 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | 8100 | `pr` | `issue-767-zoom-keeps-glyph-shape.spec.ts` | a narrow Transaction bar keeps a body drag handle and can be moved |
 | 7800 | `visual` | `issue-750-geometry-10-to-50.spec.ts` | compressed Transaction: no clipped labels and no artificial scroll extent at 1280x720 |
 | 7800 | `visual` | `issue-750-geometry-10-to-50.spec.ts` | compressed Transaction: no clipped labels and no artificial scroll extent at 1672x941 |
+| 7700 | `visual` | `left-pane-constraint.spec.ts` | left pane starts at the approved minimum without a resize jump (/) |
+| 7600 | `pr` | `issue-744-diagnostics-freshness.spec.ts` | timing diagnostics stay current across a semantic edit, Undo and Redo (no silent clear) |
+| 6900 | `visual` | `left-tree-compact-footer.spec.ts` | keeps the left tree footer compact at the Golden viewport |
+| 6600 | `performance` | `local-geometry-dom-batch.spec.ts` | keeps WaveDrom DOM writes and Local Geometry reads inside one render batch |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -193,7 +193,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-727-minimap-affordance.spec.ts` | 1 | 1/1 reviewed |
 | `issue-728-group-double-click.spec.ts` | 1 | 1/1 reviewed |
 | `issue-729-dirty-title.spec.ts` | 1 | 1/1 reviewed |
-| `issue-738-ruler-hit-area.spec.ts` | 4 | 4/4 reviewed |
+| `issue-738-ruler-hit-area.spec.ts` | 2 | 2/2 reviewed |
 | `issue-738-ruler-origin-after-scroll-return.spec.ts` | 7 | 7/7 reviewed |
 | `issue-738-stress-real-input.spec.ts` | 2 | 2/2 reviewed |
 | `issue-738-stress-rebase.spec.ts` | 4 | 4/4 reviewed |
@@ -581,6 +581,10 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-737-multi-select.spec.ts` “Bottom Transaction table uses click/Ctrl/Shift selection without checkboxes or history changes” → `transaction-selection.contract.spec.ts` “Bottom Transaction table uses click/Ctrl/Shift selection without checkboxes or history changes”. **Invariant:** Click/Ctrl/Shift/Ctrl+A selection, checkbox absence, multi-duplicate as one History unit, and one-step Undo remain covered. **Reason:** Moved the unchanged bulk mutation journey into the stable Transaction selection contract suite while preserving its own test case and metadata.
 - `issue-737-selection-gestures.spec.ts` “Bottom grid selection gestures at 1280x720” → `transaction-selection.contract.spec.ts` “Bottom grid selection gestures at 1280x720”. **Invariant:** Visible-order selection ranges under filtering, input-scoped Ctrl+A, and view-only state remain covered at 1280x720. **Reason:** Moved the unchanged compact production journey into the stable Transaction selection contract suite; two-viewport geometry acceptance remains separate.
 - `issue-737-selection-gestures.spec.ts` “Bottom grid exposes aria-selected and aria-expanded with named disclosure controls” → `transaction-selection.contract.spec.ts` “Bottom grid exposes aria-selected and aria-expanded with named disclosure controls”. **Invariant:** Selected state is exposed semantically and beyond color alone; expandable phase rows use named controls with aria-expanded state. **Reason:** Moved the unchanged accessibility journey into the stable Transaction selection contract suite while preserving its distinct invariant and traceability.
+- `issue-738-ruler-hit-area.spec.ts` “ruler cell is the hit target, in Cycle at 1280x720” → `issue-738-ruler-hit-area.spec.ts` “ruler cell hit targets and bidirectional range gestures in Cycle at both supported viewports”. **Invariant:** Cycle ruler hit targets and both drag directions remain covered at the compact viewport. **Reason:** Compact assertions now run in the Cycle-mode viewport loop within one app session, alongside the desktop counterpart.
+- `issue-738-ruler-hit-area.spec.ts` “ruler cell is the hit target, in Cycle at 1672x941” → `issue-738-ruler-hit-area.spec.ts` “ruler cell hit targets and bidirectional range gestures in Cycle at both supported viewports”. **Invariant:** Cycle ruler hit targets and both drag directions remain covered at the desktop viewport. **Reason:** Desktop assertions remain intact in the same Cycle-mode journey after viewport reflow, avoiding another app startup.
+- `issue-738-ruler-hit-area.spec.ts` “ruler cell is the hit target, in Transaction at 1280x720” → `issue-738-ruler-hit-area.spec.ts` “ruler cell hit targets and bidirectional range gestures in Transaction at both supported viewports”. **Invariant:** Compressed Transaction ruler hit targets and both drag directions remain covered at the compact viewport. **Reason:** Compact assertions now run in the Transaction-mode viewport loop within one app session, alongside the desktop counterpart.
+- `issue-738-ruler-hit-area.spec.ts` “ruler cell is the hit target, in Transaction at 1672x941” → `issue-738-ruler-hit-area.spec.ts` “ruler cell hit targets and bidirectional range gestures in Transaction at both supported viewports”. **Invariant:** Compressed Transaction ruler hit targets and both drag directions remain covered at the desktop viewport. **Reason:** Desktop assertions remain intact in the same Transaction-mode journey after viewport reflow, avoiding another app startup.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 

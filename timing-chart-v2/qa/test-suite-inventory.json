@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T11:05:09.525Z",
+  "generatedAt": "2026-09-23T11:09:02.948Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,13 +12,13 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 326,
-  "caseCount": 962,
-  "reviewedCaseCount": 962,
+  "caseCount": 960,
+  "reviewedCaseCount": 960,
   "curatedProfileCounts": {
     "integration": 490,
     "nightly": 195,
     "performance": 54,
-    "pr": 256,
+    "pr": 254,
     "visual": 174
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -11142,7 +11142,7 @@
       "file": "issue-738-ruler-hit-area.spec.ts",
       "suitePath": [],
       "line": 30,
-      "title": "ruler cell is the hit target, in Cycle at 1280x720",
+      "title": "ruler cell hit targets and bidirectional range gestures in Cycle at both supported viewports",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -11151,12 +11151,12 @@
       "originIssue": 738,
       "type": "USER_JOURNEY",
       "costClass": "HEAVY",
-      "measuredRuntimeMs": 15000,
-      "primaryContract": "Whitespace and vertical positions within Cycle ruler cells select the intended source cell; left-to-right and right-to-left drags select the same view-only range.",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Whitespace and vertical positions within Cycle ruler cells select the intended source cell; both drag directions select the same view-only range at 1280x720 and 1672x941.",
       "duplicateGroup": "ruler-hit-area-738",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
       "decision": "KEEP",
-      "reason": "This protects a real pointer hit target and range-selection journey that cannot be proven without the rendered ruler; compact viewport covers this mode's own ruler/time origin. Pointer coordinates are based on adjacent rendered tick spacing, not a copied pitch constant.",
+      "reason": "Retains the full two-viewport pointer acceptance in one page lifecycle; geometry is derived from adjacent rendered Cycle ticks, not a copied pitch constant. Combined runtime has not yet been measured.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -11167,7 +11167,7 @@
       "file": "issue-738-ruler-hit-area.spec.ts",
       "suitePath": [],
       "line": 30,
-      "title": "ruler cell is the hit target, in Cycle at 1672x941",
+      "title": "ruler cell hit targets and bidirectional range gestures in Transaction at both supported viewports",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -11176,62 +11176,12 @@
       "originIssue": 738,
       "type": "USER_JOURNEY",
       "costClass": "HEAVY",
-      "measuredRuntimeMs": 15200,
-      "primaryContract": "Whitespace and vertical positions within Cycle ruler cells select the intended source cell; left-to-right and right-to-left drags select the same view-only range.",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Compressed Transaction ruler hit testing selects the intended source cell; both drag directions select the same view-only range at 1280x720 and 1672x941.",
       "duplicateGroup": "ruler-hit-area-738",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
       "decision": "KEEP",
-      "reason": "This is the desktop-width counterpart because ruler origin/available cell geometry is width-dependent; it protects the same visible Cycle-mode pointer gesture at the documented full viewport.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "pr"
-      ]
-    },
-    {
-      "file": "issue-738-ruler-hit-area.spec.ts",
-      "suitePath": [],
-      "line": 30,
-      "title": "ruler cell is the hit target, in Transaction at 1280x720",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "ruler-hit-target-and-range-selection",
-      "originIssue": 738,
-      "type": "USER_JOURNEY",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": 9500,
-      "primaryContract": "Whitespace and vertical positions within compressed Transaction ruler cells resolve through the shared mapping; either drag direction selects the same view-only range.",
-      "duplicateGroup": "ruler-hit-area-738",
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "decision": "KEEP",
-      "reason": "Transaction ruler hit testing has a distinct compressed time mapping from Cycle mode, and the compact viewport exercises its own origin/available cells. Coordinates are derived from rendered ruler ticks.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "pr"
-      ]
-    },
-    {
-      "file": "issue-738-ruler-hit-area.spec.ts",
-      "suitePath": [],
-      "line": 30,
-      "title": "ruler cell is the hit target, in Transaction at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "ruler-hit-target-and-range-selection",
-      "originIssue": 738,
-      "type": "USER_JOURNEY",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": 9700,
-      "primaryContract": "Whitespace and vertical positions within compressed Transaction ruler cells resolve through the shared mapping; either drag direction selects the same view-only range.",
-      "duplicateGroup": "ruler-hit-area-738",
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "decision": "KEEP",
-      "reason": "The desktop counterpart protects compressed Transaction ruler hit testing at the full viewport; responsive ruler origin is width-dependent, so this variant remains distinct.",
+      "reason": "Retains compressed time mapping and both responsive origins in one page lifecycle; coordinates are derived from rendered ruler ticks. Combined runtime has not yet been measured.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -25776,10 +25726,10 @@
     },
     {
       "file": "issue-738-ruler-hit-area.spec.ts",
-      "caseCount": 4,
-      "reviewedCaseCount": 4,
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": "738",
-      "declaredTimeoutMs": null,
+      "declaredTimeoutMs": 60,
       "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
     },
@@ -28230,6 +28180,54 @@
       },
       "protectedInvariant": "Selected state is exposed semantically and beyond color alone; expandable phase rows use named controls with aria-expanded state.",
       "reason": "Moved the unchanged accessibility journey into the stable Transaction selection contract suite while preserving its distinct invariant and traceability."
+    },
+    {
+      "from": {
+        "file": "issue-738-ruler-hit-area.spec.ts",
+        "title": "ruler cell is the hit target, in Cycle at 1280x720"
+      },
+      "to": {
+        "file": "issue-738-ruler-hit-area.spec.ts",
+        "title": "ruler cell hit targets and bidirectional range gestures in Cycle at both supported viewports"
+      },
+      "protectedInvariant": "Cycle ruler hit targets and both drag directions remain covered at the compact viewport.",
+      "reason": "Compact assertions now run in the Cycle-mode viewport loop within one app session, alongside the desktop counterpart."
+    },
+    {
+      "from": {
+        "file": "issue-738-ruler-hit-area.spec.ts",
+        "title": "ruler cell is the hit target, in Cycle at 1672x941"
+      },
+      "to": {
+        "file": "issue-738-ruler-hit-area.spec.ts",
+        "title": "ruler cell hit targets and bidirectional range gestures in Cycle at both supported viewports"
+      },
+      "protectedInvariant": "Cycle ruler hit targets and both drag directions remain covered at the desktop viewport.",
+      "reason": "Desktop assertions remain intact in the same Cycle-mode journey after viewport reflow, avoiding another app startup."
+    },
+    {
+      "from": {
+        "file": "issue-738-ruler-hit-area.spec.ts",
+        "title": "ruler cell is the hit target, in Transaction at 1280x720"
+      },
+      "to": {
+        "file": "issue-738-ruler-hit-area.spec.ts",
+        "title": "ruler cell hit targets and bidirectional range gestures in Transaction at both supported viewports"
+      },
+      "protectedInvariant": "Compressed Transaction ruler hit targets and both drag directions remain covered at the compact viewport.",
+      "reason": "Compact assertions now run in the Transaction-mode viewport loop within one app session, alongside the desktop counterpart."
+    },
+    {
+      "from": {
+        "file": "issue-738-ruler-hit-area.spec.ts",
+        "title": "ruler cell is the hit target, in Transaction at 1672x941"
+      },
+      "to": {
+        "file": "issue-738-ruler-hit-area.spec.ts",
+        "title": "ruler cell hit targets and bidirectional range gestures in Transaction at both supported viewports"
+      },
+      "protectedInvariant": "Compressed Transaction ruler hit targets and both drag directions remain covered at the desktop viewport.",
+      "reason": "Desktop assertions remain intact in the same Transaction-mode journey after viewport reflow, avoiding another app startup."
     }
   ]
 }
