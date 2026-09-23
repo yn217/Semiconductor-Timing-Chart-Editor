@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:48:16.744Z",
+  "generatedAt": "2026-09-23T07:49:37.455Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 917,
+  "reviewedCaseCount": 921,
   "curatedProfileCounts": {
     "integration": 478,
     "nightly": 186,
     "performance": 54,
-    "pr": 246,
-    "visual": 156
+    "pr": 247,
+    "visual": 159
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -22499,18 +22499,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-filter-derived-scopes",
+      "originIssue": 429,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Tree filter modes derive the expected transaction rows: all six; five grouped; five phased; and only the one ungrouped Transaction2, excluding the ungrouped/no-phase row from grouped/phases modes.",
+      "duplicateGroup": "transaction-tree-filter-modes",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Concise deterministic filter projection contract with exact row counts and an explicit ungrouped exclusion; distinct from selection scope pruning under filtered deletion.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-tree-long-name.spec.ts",
@@ -22521,18 +22524,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-long-name-ellipsis-tooltip",
+      "originIssue": 429,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A long Transaction label remains within its row/panel width and exposes the complete name using its native tooltip after editing through Inspector.",
+      "duplicateGroup": "transaction-tree-name-overflow",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Checks both measured non-overflow geometry and recovery of the complete semantic name via title tooltip. These are production layout/accessibility affordances not covered by ordinary text-presence checks.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "transaction-tree-menu-overlay.spec.ts",
@@ -22543,18 +22549,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-menu-overlay-compact",
+      "originIssue": 429,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1280x720, Group and Transaction menus remain viewport-contained, compact, fixed-position and anchored without shifting the Group header; Escape closes the Group menu and returns focus; dismissal is view-only for Canonical/History/Dirty.",
+      "duplicateGroup": "transaction-tree-menu-overlay-and-keyboard",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Compact viewport half of responsive menu overlay acceptance, including focus restoration and no document mutations. The wide case provides distinct viewport coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "transaction-tree-menu-overlay.spec.ts",
@@ -22565,18 +22574,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-tree-menu-overlay-wide",
+      "originIssue": 429,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1672x941, Group and Transaction menus remain viewport-contained, compact, fixed-position and anchored without shifting the Group header; Escape closes the Group menu and returns focus; dismissal is view-only for Canonical/History/Dirty.",
+      "duplicateGroup": "transaction-tree-menu-overlay-and-keyboard",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Wide viewport counterpart to the compact menu overlay acceptance; edge containment and dimensions are evaluated against each actual viewport.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "transaction-tree-no-frozen-pane-handle.spec.ts",
@@ -27238,29 +27250,29 @@
     {
       "file": "transaction-tree-filter.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-tree-long-name.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-tree-menu-overlay.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-tree-no-frozen-pane-handle.spec.ts",

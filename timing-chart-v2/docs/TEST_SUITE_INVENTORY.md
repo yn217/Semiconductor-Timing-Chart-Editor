@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 917/959 cases reviewed.
+Semantic review progress: 921/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,8 +13,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 478 |
 | `nightly` | 186 |
 | `performance` | 54 |
-| `pr` | 246 |
-| `visual` | 156 |
+| `pr` | 247 |
+| `visual` | 159 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -329,9 +329,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `transaction-startup-metrics.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-time-scale.spec.ts` | 3 | 3/3 reviewed |
 | `transaction-tree-control-parity.spec.ts` | 2 | 2/2 reviewed |
-| `transaction-tree-filter.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-tree-long-name.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-tree-menu-overlay.spec.ts` | 2 | 0/2 reviewed |
+| `transaction-tree-filter.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-tree-long-name.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-tree-menu-overlay.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-tree-no-frozen-pane-handle.spec.ts` | 1 | 0/1 reviewed |
 | `transaction-viewport-hscroll.spec.ts` | 1 | 0/1 reviewed |
 | `tree-drag-drop.spec.ts` | 5 | 0/5 reviewed |
