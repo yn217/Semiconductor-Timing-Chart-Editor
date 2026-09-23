@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:38:04.245Z",
+  "generatedAt": "2026-09-23T07:39:40.745Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 901,
+  "reviewedCaseCount": 905,
   "curatedProfileCounts": {
-    "integration": 471,
+    "integration": 472,
     "nightly": 184,
     "performance": 52,
-    "pr": 241,
+    "pr": 244,
     "visual": 154
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -21719,18 +21719,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-empty-create-inspector-bottom-sync",
+      "originIssue": 393,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Creating a Transaction through the zero-state form then applying an Inspector timing edit keeps the Bottom table visible, omits the removed Editing header, and reflects the updated value in Inspector and row editor.",
+      "duplicateGroup": "transaction-onboarding-and-zero-state",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The title overstates identity: this test does not compare DOM node identity or Inspector mount identity. It does cover the first-create→Inspector Apply→Bottom table synchronization path, which is distinct from editing an already-loaded sample; keep with the narrower contract stated here.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-onboarding.spec.ts",
@@ -21741,18 +21744,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-zero-state-create-form-view-only",
+      "originIssue": 393,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Entering Transaction mode on an empty document immediately exposes the Create Transaction form, not a separate empty/search result, and does not change Canonical revision or History.",
+      "duplicateGroup": "transaction-onboarding-and-zero-state",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This protects the empty-document onboarding affordance and its view-only mode-entry boundary, separate from successful creation and later undo flows.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-onboarding.spec.ts",
@@ -21763,18 +21769,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-search-no-match-state",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "With at least one Transaction present, entering a search query that matches none displays the explicit no-match message rather than the zero-Transaction create state.",
+      "duplicateGroup": "transaction-onboarding-and-zero-state",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This checks the distinct filtered-empty condition; the sibling empty-document case confirms the no-match message is absent when no filter is active. Together they prevent the two onboarding states from being conflated.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-onboarding.spec.ts",
@@ -21785,18 +21794,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-create-undo-redo-sample-count",
+      "originIssue": 393,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Creating one Transaction through the Home Ribbon adds exactly one History unit and one row to the six-item startup sample; Undo/Redo restores seven/six/seven Transactions exactly.",
+      "duplicateGroup": "transaction-onboarding-and-zero-state",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the concise primary Create command/history journey for the default Transaction sample; it verifies exact collection cardinality across both Undo and Redo, unlike the no-mutation zero-state checks.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-onboarding.spec.ts",
@@ -27075,11 +27087,11 @@
     {
       "file": "transaction-onboarding.spec.ts",
       "caseCount": 7,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "transaction-partial-update-preserves-fields.spec.ts",
