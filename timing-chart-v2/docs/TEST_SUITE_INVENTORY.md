@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 859/959 cases reviewed.
+Semantic review progress: 863/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,8 +13,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 449 |
 | `nightly` | 175 |
 | `performance` | 48 |
-| `pr` | 232 |
-| `visual` | 147 |
+| `pr` | 233 |
+| `visual` | 150 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -301,9 +301,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `timeline-range-edit-readability.spec.ts` | 3 | 3/3 reviewed |
 | `timeline-range-hitarea-closure.spec.ts` | 5 | 5/5 reviewed |
 | `timing-grid-x-scale-closure.spec.ts` | 1 | 1/1 reviewed |
-| `titlebar-controls.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-bottom-panel-table-first.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-bottom-panel-table.spec.ts` | 2 | 0/2 reviewed |
+| `titlebar-controls.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-bottom-panel-table-first.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-bottom-panel-table.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-bottom-phase-linked-signals.spec.ts` | 1 | 0/1 reviewed |
 | `transaction-bottom-toolbar-add-ungroup.spec.ts` | 1 | 0/1 reviewed |
 | `transaction-drag.spec.ts` | 11 | 11/11 reviewed |
