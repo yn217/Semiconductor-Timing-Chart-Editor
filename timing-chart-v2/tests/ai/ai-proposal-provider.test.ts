@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
+import { buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import type { AnnotationId, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 
@@ -76,6 +76,21 @@ describe("deterministic AI proposal provider", () => {
     expect(deleted.ok).toBe(true);
     if (deleted.ok) expect(deleted.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.delete", transactionId: "transaction_1" })]);
     expect(buildTypedTransactionProposal(document, 23, "propose_move_transaction", { transactionId: "missing", start: 2 })).toEqual({ ok: false, message: "Transaction 'missing' does not exist in the current document." });
+  });
+
+  it("maps typed Bookmark proposals to existing Bookmark SemanticCommands", () => {
+    const base = canonicalFixture();
+    const document = { ...base, bookmarks: [{ id: "bookmark_1" as never, name: "Start", start: 2 }] };
+    const created = buildTypedBookmarkProposal(document, 24, "propose_create_bookmark", { name: " Middle ", cycle: 4, comment: "phase boundary" });
+    expect(created.ok).toBe(true);
+    if (created.ok) expect(created.proposal.commands).toEqual([expect.objectContaining({ type: "bookmark.create", bookmark: expect.objectContaining({ name: "Middle", start: 4, comment: "phase boundary" }) })]);
+    const moved = buildTypedBookmarkProposal(document, 24, "propose_move_bookmark", { bookmarkId: "bookmark_1", cycle: 5 });
+    expect(moved.ok).toBe(true);
+    if (moved.ok) expect(moved.proposal.commands).toEqual([expect.objectContaining({ type: "bookmark.move", bookmarkId: "bookmark_1", start: 5 })]);
+    const deleted = buildTypedBookmarkProposal(document, 24, "propose_delete_bookmark", { bookmarkId: "bookmark_1" });
+    expect(deleted.ok).toBe(true);
+    if (deleted.ok) expect(deleted.proposal.commands).toEqual([expect.objectContaining({ type: "bookmark.delete", bookmarkId: "bookmark_1" })]);
+    expect(buildTypedBookmarkProposal(document, 24, "propose_move_bookmark", { bookmarkId: "missing", cycle: 1 })).toEqual({ ok: false, message: "Bookmark 'missing' does not exist in the current document." });
   });
 
   it("returns a revisioned semantic proposal without mutating the source document", () => {

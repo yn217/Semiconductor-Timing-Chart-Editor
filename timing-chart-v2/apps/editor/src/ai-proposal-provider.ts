@@ -136,6 +136,26 @@ export function buildTypedTransactionProposal(document: CanonicalDocument, revis
   return { ok: false, message: `Unsupported typed Transaction proposal '${tool}'.` };
 }
 
+export function buildTypedBookmarkProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  const cycle = args.cycle;
+  if (tool === "propose_create_bookmark") {
+    const name = args.name;
+    if (typeof name !== "string" || !name.trim() || !Number.isSafeInteger(cycle) || (cycle as number) < 0 || (cycle as number) >= document.timeline.cycleCount) return { ok: false, message: "propose_create_bookmark requires a name and integer source cycle within the timeline." };
+    const bookmark = { id: nextEntityId("bookmark", document), name: name.trim(), start: cycle as number, ...(typeof args.comment === "string" && args.comment.length > 0 ? { comment: args.comment } : {}) };
+    return { ok: true, proposal: proposal(revision, `Create Bookmark ${bookmark.name} at cycle ${bookmark.start}`, [command({ type: "bookmark.create", bookmark }, "typed_create_bookmark")]) };
+  }
+  const bookmarkId = args.bookmarkId;
+  if (typeof bookmarkId !== "string" || bookmarkId.length === 0) return { ok: false, message: `${tool} requires a stable bookmarkId.` };
+  const bookmark = document.bookmarks.find((item) => item.id === bookmarkId);
+  if (!bookmark) return { ok: false, message: `Bookmark '${bookmarkId}' does not exist in the current document.` };
+  if (tool === "propose_move_bookmark") {
+    if (!Number.isSafeInteger(cycle) || (cycle as number) < 0 || (cycle as number) >= document.timeline.cycleCount) return { ok: false, message: "propose_move_bookmark requires an integer source cycle within the timeline." };
+    return { ok: true, proposal: proposal(revision, `Move Bookmark ${bookmark.name} to cycle ${cycle}`, [command({ type: "bookmark.move", bookmarkId: bookmark.id, start: cycle as number }, "typed_move_bookmark")]) };
+  }
+  if (tool === "propose_delete_bookmark") return { ok: true, proposal: proposal(revision, `Delete Bookmark ${bookmark.name}`, [command({ type: "bookmark.delete", bookmarkId: bookmark.id }, "typed_delete_bookmark")]) };
+  return { ok: false, message: `Unsupported typed Bookmark proposal '${tool}'.` };
+}
+
 /** Provider-neutral boundary. Implementations may be backed by a mock, local
  * model, or remote service, but they return proposals only; Canonical changes
  * are always applied by the editor's SemanticCommand owner. */
