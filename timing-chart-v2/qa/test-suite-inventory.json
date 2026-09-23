@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T02:27:29.417Z",
+  "generatedAt": "2026-09-23T02:30:48.775Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 461,
+  "reviewedCaseCount": 471,
   "curatedProfileCounts": {
-    "integration": 205,
+    "integration": 210,
     "nightly": 128,
     "performance": 23,
     "pr": 149,
-    "visual": 101
+    "visual": 106
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -7820,18 +7820,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "insert-timeline-ribbon-responsive-layout",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Insert and Timeline command controls remain visible and non-overlapping at the compact supported viewport while representative commands still work.",
+      "duplicateGroup": "insert-timeline-ribbon-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is a broad, geometry-heavy 1280px case combining two tabs and canonical mutations; keep viewport-specific behavior in visual tier and consider separating its command journeys from layout checks.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "insert-timeline-ribbon.spec.ts",
@@ -7842,18 +7845,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "insert-timeline-ribbon-wide-layout",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At the canonical wide viewport, Insert and Timeline controls remain discoverable, contained, and usable without overlap.",
+      "duplicateGroup": "insert-timeline-ribbon-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The wide viewport is an explicit visual baseline but repeats much of the compact case's journey; retain only the unique wide-layout evidence and avoid making both cases routine PR checks.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "insert-timeline-ribbon.spec.ts",
@@ -7864,18 +7870,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "tree-ribbon-insert-target-parity",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Tree Add and Ribbon Insert use the same selected row/group target, preserve insertion position, and Undo restores the prior tree contents.",
+      "duplicateGroup": "insert-row-target-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This multi-operation journey compares two production entry points and validates placement/Undo parity; its breadth and visual-reference fixture make integration tier more appropriate than PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "insert-timeline-ribbon.spec.ts",
@@ -7886,18 +7895,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "timeline-command-and-time-group-workflow",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Timeline exposes cycle insertion and Time Group collapse/expand controls, and the group view state changes without leaving the editor active.",
+      "duplicateGroup": "timeline-time-group-workflow",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Exercises actual Time Group creation and shared outline controls rather than only checking command labels; retain as a representative integration journey.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "insert-timeline-ribbon.spec.ts",
@@ -7908,18 +7920,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "time-group-outline-collapse-projection",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A created Time Group appears in the ruler outline and its collapse state is reflected by the shared Timeline and ruler controls.",
+      "duplicateGroup": "timeline-time-group-workflow",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Adds the distinct ruler-projection surface to the Time Group interaction; keep one representative cross-surface geometry check and avoid duplicating every toggle state at browser level.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "insert-timeline-ribbon.spec.ts",
@@ -7930,18 +7945,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "time-group-ungroup-command",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Ungroup invoked from the Time Group outline removes the group through the semantic command path and creates history.",
+      "duplicateGroup": "timeline-time-group-workflow",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Protects an independently exposed outline action and confirms group removal, but overlaps the broader create/collapse workflow; retain only while that distinct entry path is required.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "insert-timeline-ribbon.spec.ts",
@@ -7952,18 +7970,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "timeline-ribbon-control-layout",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Timeline labels make cycle semantics explicit, controls fit within their groups, and group baselines stay aligned.",
+      "duplicateGroup": "timeline-ribbon-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Mixes accessible product labels with direct layout measurements; retain under visual acceptance and move any pure wording checks to a cheaper contract layer.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "insert-timeline-ribbon.spec.ts",
@@ -7974,18 +7995,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "timeline-ribbon-boundary-visual",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1280px Timeline group boundaries remain visible, non-overlapping, and caption baselines align.",
+      "duplicateGroup": "timeline-ribbon-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Viewport-specific computed-style/geometry audit belongs in visual tier; compare against the paired viewport case to avoid redundant repeated layout assertions.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "insert-timeline-ribbon.spec.ts",
@@ -7996,18 +8020,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "timeline-ribbon-boundary-visual-wide",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1672px Timeline group boundaries preserve spacing, non-overlap, and a shared caption baseline.",
+      "duplicateGroup": "timeline-ribbon-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the wide reference measurement paired with the compact case and should not execute in routine PR verification; retain only the unique width-dependent evidence.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "insert-timeline-ribbon.spec.ts",
@@ -8018,18 +8045,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "tree-ribbon-insert-selection-parity",
+      "originIssue": 262,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Rows created from Tree Add or Ribbon Insert become the active selection, including Signal, Group, Comment, and Spacer insertion routes.",
+      "duplicateGroup": "insert-row-target-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Covers several distinct row-kind insertion semantics and selection feedback; keep in integration pending consolidation with the adjacent Tree/Ribbon insertion target journey.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "inspector-accordion.spec.ts",
@@ -23657,7 +23687,7 @@
     {
       "file": "insert-timeline-ribbon.spec.ts",
       "caseCount": 10,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 10,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23665,7 +23695,7 @@
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "inspector-accordion.spec.ts",
