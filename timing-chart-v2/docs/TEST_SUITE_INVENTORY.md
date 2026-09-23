@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 965 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 570/965 cases reviewed.
+Semantic review progress: 574/965 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 256 |
+| `integration` | 259 |
 | `nightly` | 151 |
 | `performance` | 37 |
-| `pr` | 165 |
+| `pr` | 166 |
 | `visual` | 129 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -240,8 +240,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `measurement-export-matrix.spec.ts` | 1 | 1/1 reviewed |
 | `measurement-lane-stacking.spec.ts` | 3 | 3/3 reviewed |
 | `measurement-top-row-clip.spec.ts` | 2 | 2/2 reviewed |
-| `mechanical-visual-diagnostics.spec.ts` | 1 | 0/1 reviewed |
-| `minimal-cycle-view.spec.ts` | 3 | 0/3 reviewed |
+| `mechanical-visual-diagnostics.spec.ts` | 1 | 1/1 reviewed |
+| `minimal-cycle-view.spec.ts` | 3 | 3/3 reviewed |
 | `minimap-overview-performance.spec.ts` | 2 | 0/2 reviewed |
 | `minimap-viewport-closure.spec.ts` | 1 | 0/1 reviewed |
 | `mode-isolation-journey.spec.ts` | 2 | 0/2 reviewed |

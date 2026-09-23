@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T03:56:22.941Z",
+  "generatedAt": "2026-09-23T03:58:18.661Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 965,
-  "reviewedCaseCount": 570,
+  "reviewedCaseCount": 574,
   "curatedProfileCounts": {
-    "integration": 256,
+    "integration": 259,
     "nightly": 151,
     "performance": 37,
-    "pr": 165,
+    "pr": 166,
     "visual": 129
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -14773,18 +14773,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "mechanical-diagnostics-negative-fixture",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "IMPLEMENTATION_COUPLED",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "primaryContract": "The mechanical visual analyzer recognizes four deliberately injected diagnostic categories and reports major findings with evidence.",
+      "duplicateGroup": "mechanical-diagnostics-unit-contract",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "MOVE_LAYER",
+      "reason": "The case uses page.setContent and an in-memory synthetic DOM only; tests/harness/mechanical-diagnostics.test.ts already exercises the same negative categories directly at the harness unit layer, making this E2E wrapper duplicate coverage without testing the production app.",
+      "replacementTest": "tests/harness/mechanical-diagnostics.test.ts",
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "minimal-cycle-view.spec.ts",
@@ -14795,18 +14798,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "cycle-row-projection-alignment",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The same canonical Signal ID order projects into Left Tree, frozen labels, semantic timing rows, and one waveform per Signal with consistent row Y positions and group markers.",
+      "duplicateGroup": "cycle-row-projection-alignment",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the foundational multi-surface row identity/alignment contract; tests for individual visibility/collapse behaviors do not prove the complete canonical-to-wave projection order.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "minimal-cycle-view.spec.ts",
@@ -14817,18 +14823,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "cycle-ruler-geometry-selection-view-only",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Ruler ticks come from local geometry in strictly increasing unique positions, while selecting a Signal propagates stable selection across surfaces without rebuilding geometry or changing document/history.",
+      "duplicateGroup": "cycle-ruler-and-selection-projection",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This joins the ruler geometry owner and cross-surface selection projection invariants without asserting fixed pixel positions; it is distinct from drag and viewport lifecycle cases.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "minimal-cycle-view.spec.ts",
@@ -14839,18 +14848,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-viewport-shared-scroll-incremental-projection",
+      "originIssue": 573,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "One Cycle viewport scroll owner synchronizes horizontal and vertical position while retaining WaveDrom DOM identities, avoiding full row scans/RowLayout rebuilds, and keeping frozen labels aligned.",
+      "duplicateGroup": "cycle-viewport-scroll-owner",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This protects a shared viewport owner and incremental projection contract across both scroll axes. Exact internal counters and direct scroll assignment make it an integration/architecture check; replace synthetic scroll mutation with a real interaction when the test is next updated.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "minimap-overview-performance.spec.ts",
@@ -25407,25 +25419,25 @@
     {
       "file": "mechanical-visual-diagnostics.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "minimal-cycle-view.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "minimap-overview-performance.spec.ts",
