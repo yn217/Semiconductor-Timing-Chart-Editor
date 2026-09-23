@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T00:12:08.097Z",
+  "generatedAt": "2026-09-23T00:19:51.466Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,15 +11,15 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 334,
-  "caseCount": 975,
-  "reviewedCaseCount": 190,
+  "specFileCount": 333,
+  "caseCount": 971,
+  "reviewedCaseCount": 195,
   "curatedProfileCounts": {
-    "integration": 44,
+    "integration": 48,
     "nightly": 42,
     "performance": 17,
-    "pr": 81,
-    "visual": 48
+    "pr": 82,
+    "visual": 52
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -10827,156 +10827,79 @@
     {
       "file": "issue-740-741-756-cycle-layout.spec.ts",
       "suitePath": [],
-      "line": 14,
-      "title": "#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at 1280x720",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-740-741-756-cycle-layout.spec.ts",
-      "suitePath": [],
-      "line": 14,
-      "title": "#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-740-741-756-cycle-layout.spec.ts",
-      "suitePath": [],
-      "line": 35,
+      "line": 11,
       "title": "#741 Transaction fixed-width sidebar exposes no focusable ghost resizer and hides no width mutation",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-fixed-sidebar-resizer",
+      "originIssue": 741,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "FAST",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Transaction mode has no keyboard-operable fixed-width sidebar separator, while Cycle retains its functional separator.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a concise real keyboard/focus contract for the mode-specific control and is separate from the Cycle rail geometry cases in the same spec file.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-740-741-756-cycle-layout.spec.ts",
       "suitePath": [],
-      "line": 46,
+      "line": 22,
       "title": "#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-left-rail-continuity",
+      "originIssue": 756,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At both supported viewport sizes, the Cycle Tree reaches the workspace bottom, stays beside rather than under the Bottom table, and the timeline scrollbar remains attached above the Bottom splitter.",
+      "duplicateGroup": "cycle-left-rail-continuity",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The compact viewport can expose rail clipping and overflow relationships that differ from desktop; retain this width-specific layout acceptance.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ]
     },
     {
       "file": "issue-740-741-756-cycle-layout.spec.ts",
       "suitePath": [],
-      "line": 46,
+      "line": 22,
       "title": "#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-left-rail-continuity",
+      "originIssue": 756,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At both supported viewport sizes, the Cycle Tree reaches the workspace bottom, stays beside rather than under the Bottom table, and the timeline scrollbar remains attached above the Bottom splitter.",
+      "duplicateGroup": "cycle-left-rail-continuity",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This measures the structural left-rail relationship and scrollbar boundary across both viewport sizes; it complements the #740 bottom-hidden test without repeating its hide/show journey.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-740-cycle-bottom-hidden-geometry.spec.ts",
-      "suitePath": [],
-      "line": 5,
-      "title": "Cycle: hiding Bottom releases its space back to the timing canvas at 1280x720",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-740-cycle-bottom-hidden-geometry.spec.ts",
-      "suitePath": [],
-      "line": 5,
-      "title": "Cycle: hiding Bottom releases its space back to the timing canvas at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ]
     },
     {
       "file": "issue-740-cycle-bottom-hidden.spec.ts",
@@ -10987,18 +10910,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-bottom-hidden-space-release",
+      "originIssue": 740,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At both supported viewport sizes, hiding Bottom returns its space to the Cycle canvas, remains stable through a mode round-trip, restores Bottom on demand, and leaves canonical revision, History and Dirty unchanged.",
+      "duplicateGroup": "cycle-bottom-visibility-geometry",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The test asserts user-visible region geometry, hidden/visible state and view-only invariants in the real workspace; this is the single retained guard after removing duplicate variants that repeated the same hide/round-trip/show flow or inspected CSS grid tracks directly.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ]
     },
     {
       "file": "issue-740-cycle-bottom-hidden.spec.ts",
@@ -11009,18 +10936,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-bottom-hidden-space-release",
+      "originIssue": 740,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At both supported viewport sizes, hiding Bottom returns its space to the Cycle canvas, remains stable through a mode round-trip, restores Bottom on demand, and leaves canonical revision, History and Dirty unchanged.",
+      "duplicateGroup": "cycle-bottom-visibility-geometry",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The test asserts user-visible region geometry, hidden/visible state and view-only invariants in the real workspace; this is the single retained guard after removing duplicate variants that repeated the same hide/round-trip/show flow or inspected CSS grid tracks directly.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ]
     },
     {
       "file": "issue-741-transaction-no-left-resizer.spec.ts",
@@ -23724,8 +23655,8 @@
     },
     {
       "file": "issue-740-741-756-cycle-layout.spec.ts",
-      "caseCount": 5,
-      "reviewedCaseCount": 0,
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
       "originIssue": "740",
       "declaredTimeoutMs": 30,
       "candidateSignals": [
@@ -23733,31 +23664,19 @@
         "getComputedStyle",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-740-cycle-bottom-hidden-geometry.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 0,
-      "originIssue": "740",
-      "declaredTimeoutMs": null,
-      "candidateSignals": [
-        "getComputedStyle",
-        "geometryRead"
-      ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-740-cycle-bottom-hidden.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": "740",
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-741-transaction-no-left-resizer.spec.ts",
@@ -25770,6 +25689,54 @@
       },
       "protectedInvariant": "Wheel over either pane in a fresh Combined workspace advances the shared horizontal time viewport without changing Canonical, History, or Dirty state.",
       "reason": "The semantic wheel-owner contract is width-independent and the compact viewport retains wheel interaction over both pane regions. The issue's shared horizontal geometry is separately verified at both accepted viewport sizes by geometry/scroll acceptance tests."
+    },
+    {
+      "from": {
+        "file": "issue-740-cycle-bottom-hidden-geometry.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1672x941"
+      },
+      "to": {
+        "file": "issue-740-cycle-bottom-hidden.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1672x941"
+      },
+      "protectedInvariant": "Hiding Cycle Bottom releases the lower workspace space; the state survives a mode round-trip and can be restored without document mutation.",
+      "reason": "The duplicate case asserted the same hide/round-trip/show geometry while additionally reading CSS grid row values. The retained user-visible test checks the actual workspace gap and hidden Bottom, plus History, Dirty, and Canonical revision invariants."
+    },
+    {
+      "from": {
+        "file": "issue-740-cycle-bottom-hidden-geometry.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1280x720"
+      },
+      "to": {
+        "file": "issue-740-cycle-bottom-hidden.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1280x720"
+      },
+      "protectedInvariant": "Hiding Cycle Bottom releases the lower workspace space; the state survives a mode round-trip and can be restored without document mutation.",
+      "reason": "The compact viewport's user-visible gap and hidden-state journey remain covered in the retained test; the removed assertion was coupled to CSS grid-template-row implementation details."
+    },
+    {
+      "from": {
+        "file": "issue-740-741-756-cycle-layout.spec.ts",
+        "title": "#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at 1672x941"
+      },
+      "to": {
+        "file": "issue-740-cycle-bottom-hidden.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1672x941"
+      },
+      "protectedInvariant": "Hiding Cycle Bottom removes the reserved space and is view-only.",
+      "reason": "The removed case repeated the hide state, panel-to-workspace edge and hidden resizer assertions; the retained #740 journey covers those with stronger Dirty/revision checks, while #756 coverage remains in the same spec."
+    },
+    {
+      "from": {
+        "file": "issue-740-741-756-cycle-layout.spec.ts",
+        "title": "#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at 1280x720"
+      },
+      "to": {
+        "file": "issue-740-cycle-bottom-hidden.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1280x720"
+      },
+      "protectedInvariant": "Hiding Cycle Bottom removes the reserved space and is view-only.",
+      "reason": "The compact case was a duplicate of the retained #740 contract; the shared file continues to exercise #741 and #756 independently."
     }
   ]
 }

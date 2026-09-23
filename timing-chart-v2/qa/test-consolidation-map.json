@@ -156,6 +156,54 @@
       },
       "protectedInvariant": "Wheel over either pane in a fresh Combined workspace advances the shared horizontal time viewport without changing Canonical, History, or Dirty state.",
       "reason": "The semantic wheel-owner contract is width-independent and the compact viewport retains wheel interaction over both pane regions. The issue's shared horizontal geometry is separately verified at both accepted viewport sizes by geometry/scroll acceptance tests."
+    },
+    {
+      "from": {
+        "file": "issue-740-cycle-bottom-hidden-geometry.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1672x941"
+      },
+      "to": {
+        "file": "issue-740-cycle-bottom-hidden.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1672x941"
+      },
+      "protectedInvariant": "Hiding Cycle Bottom releases the lower workspace space; the state survives a mode round-trip and can be restored without document mutation.",
+      "reason": "The duplicate case asserted the same hide/round-trip/show geometry while additionally reading CSS grid row values. The retained user-visible test checks the actual workspace gap and hidden Bottom, plus History, Dirty, and Canonical revision invariants."
+    },
+    {
+      "from": {
+        "file": "issue-740-cycle-bottom-hidden-geometry.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1280x720"
+      },
+      "to": {
+        "file": "issue-740-cycle-bottom-hidden.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1280x720"
+      },
+      "protectedInvariant": "Hiding Cycle Bottom releases the lower workspace space; the state survives a mode round-trip and can be restored without document mutation.",
+      "reason": "The compact viewport's user-visible gap and hidden-state journey remain covered in the retained test; the removed assertion was coupled to CSS grid-template-row implementation details."
+    },
+    {
+      "from": {
+        "file": "issue-740-741-756-cycle-layout.spec.ts",
+        "title": "#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at 1672x941"
+      },
+      "to": {
+        "file": "issue-740-cycle-bottom-hidden.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1672x941"
+      },
+      "protectedInvariant": "Hiding Cycle Bottom removes the reserved space and is view-only.",
+      "reason": "The removed case repeated the hide state, panel-to-workspace edge and hidden resizer assertions; the retained #740 journey covers those with stronger Dirty/revision checks, while #756 coverage remains in the same spec."
+    },
+    {
+      "from": {
+        "file": "issue-740-741-756-cycle-layout.spec.ts",
+        "title": "#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at 1280x720"
+      },
+      "to": {
+        "file": "issue-740-cycle-bottom-hidden.spec.ts",
+        "title": "Cycle releases Bottom space when hidden at 1280x720"
+      },
+      "protectedInvariant": "Hiding Cycle Bottom removes the reserved space and is view-only.",
+      "reason": "The compact case was a duplicate of the retained #740 contract; the shared file continues to exercise #741 and #756 independently."
     }
   ]
 }

@@ -21,6 +21,8 @@ for (const vp of viewports) {
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
     await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
     const historyBefore = await page.getByTestId("history-status").innerText();
+    const dirtyBefore = await page.getByTestId("dirty-status").innerText();
+    const revisionBefore = await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision");
     const shell = page.locator(".editor-shell");
     await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
     const toggle = page.getByRole("button", { name: /Bottom Editor/ }).first();
@@ -39,7 +41,10 @@ for (const vp of viewports) {
 
     await toggle.click();
     await expect(shell).toHaveAttribute("data-bottom-visible", "true");
+    await expect(page.getByTestId("bottom-resizer")).toBeVisible();
     expect((await geometry(page)).gap).toBeGreaterThan(150);
     await expect(page.getByTestId("history-status")).toHaveText(historyBefore);
+    await expect(page.getByTestId("dirty-status")).toHaveText(dirtyBefore);
+    expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).toBe(revisionBefore);
   });
 }

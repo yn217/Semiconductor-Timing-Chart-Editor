@@ -1185,6 +1185,21 @@
       "decision": "KEEP",
       "reason": "The user-visible dirty-to-saved transition crosses the semantic mutation and Save completion boundary; it is a concise high-value PR contract and should not be replaced by a unit-only dirty flag test.",
       "replacementTest": null
+    },
+    {
+      "file": "issue-740-cycle-bottom-hidden.spec.ts",
+      "domain": "cycle-bottom-hidden-space-release",
+      "originIssue": 740,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "At both supported viewport sizes, hiding Bottom returns its space to the Cycle canvas, remains stable through a mode round-trip, restores Bottom on demand, and leaves canonical revision, History and Dirty unchanged.",
+      "duplicateGroup": "cycle-bottom-visibility-geometry",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": ["integration", "visual"],
+      "decision": "KEEP",
+      "reason": "The test asserts user-visible region geometry, hidden/visible state and view-only invariants in the real workspace; this is the single retained guard after removing duplicate variants that repeated the same hide/round-trip/show flow or inspected CSS grid tracks directly.",
+      "replacementTest": null
     }
   ],
   "reviews": [
@@ -1906,6 +1921,54 @@
       "profiles": ["visual"],
       "decision": "KEEP",
       "reason": "This single desktop geometry contract checks measurable visual relationships rather than a broad screenshot matrix; it belongs in the visual profile, not every semantic PR journey.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-740-741-756-cycle-layout.spec.ts",
+      "title": "#741 Transaction fixed-width sidebar exposes no focusable ghost resizer and hides no width mutation",
+      "domain": "transaction-fixed-sidebar-resizer",
+      "originIssue": 741,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "FAST",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Transaction mode has no keyboard-operable fixed-width sidebar separator, while Cycle retains its functional separator.",
+      "duplicateGroup": null,
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["pr"],
+      "decision": "KEEP",
+      "reason": "This is a concise real keyboard/focus contract for the mode-specific control and is separate from the Cycle rail geometry cases in the same spec file.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-740-741-756-cycle-layout.spec.ts",
+      "title": "#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1672x941",
+      "domain": "cycle-left-rail-continuity",
+      "originIssue": 756,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "At both supported viewport sizes, the Cycle Tree reaches the workspace bottom, stays beside rather than under the Bottom table, and the timeline scrollbar remains attached above the Bottom splitter.",
+      "duplicateGroup": "cycle-left-rail-continuity",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": ["integration", "visual"],
+      "decision": "KEEP",
+      "reason": "This measures the structural left-rail relationship and scrollbar boundary across both viewport sizes; it complements the #740 bottom-hidden test without repeating its hide/show journey.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-740-741-756-cycle-layout.spec.ts",
+      "title": "#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1280x720",
+      "domain": "cycle-left-rail-continuity",
+      "originIssue": 756,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "At both supported viewport sizes, the Cycle Tree reaches the workspace bottom, stays beside rather than under the Bottom table, and the timeline scrollbar remains attached above the Bottom splitter.",
+      "duplicateGroup": "cycle-left-rail-continuity",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": ["integration", "visual"],
+      "decision": "KEEP",
+      "reason": "The compact viewport can expose rail clipping and overflow relationships that differ from desktop; retain this width-specific layout acceptance.",
       "replacementTest": null
     }
   ]

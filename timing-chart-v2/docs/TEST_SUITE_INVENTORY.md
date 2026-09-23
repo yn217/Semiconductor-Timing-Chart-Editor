@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 334 spec files and 975 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 333 spec files and 971 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 190/975 cases reviewed.
+Semantic review progress: 195/971 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 44 |
+| `integration` | 48 |
 | `nightly` | 42 |
 | `performance` | 17 |
-| `pr` | 81 |
-| `visual` | 48 |
+| `pr` | 82 |
+| `visual` | 52 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -179,9 +179,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-738-ruler-origin-after-scroll-return.spec.ts` | 7 | 7/7 reviewed |
 | `issue-738-stress-real-input.spec.ts` | 2 | 2/2 reviewed |
 | `issue-738-stress-rebase.spec.ts` | 4 | 4/4 reviewed |
-| `issue-740-741-756-cycle-layout.spec.ts` | 5 | 0/5 reviewed |
-| `issue-740-cycle-bottom-hidden-geometry.spec.ts` | 2 | 0/2 reviewed |
-| `issue-740-cycle-bottom-hidden.spec.ts` | 2 | 0/2 reviewed |
+| `issue-740-741-756-cycle-layout.spec.ts` | 3 | 3/3 reviewed |
+| `issue-740-cycle-bottom-hidden.spec.ts` | 2 | 2/2 reviewed |
 | `issue-741-transaction-no-left-resizer.spec.ts` | 1 | 0/1 reviewed |
 | `issue-744-diagnostics-freshness.spec.ts` | 2 | 0/2 reviewed |
 | `issue-746-visible-group-create.spec.ts` | 2 | 0/2 reviewed |
@@ -424,7 +423,6 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-738-stress-real-input.spec.ts` | dataset, geometryRead |
 | `issue-738-stress-rebase.spec.ts` | dataset, geometryRead |
 | `issue-740-741-756-cycle-layout.spec.ts` | querySelector, getComputedStyle, geometryRead |
-| `issue-740-cycle-bottom-hidden-geometry.spec.ts` | getComputedStyle, geometryRead |
 | `issue-740-cycle-bottom-hidden.spec.ts` | querySelector, geometryRead |
 | `issue-746-visible-group-create.spec.ts` | querySelector, geometryRead |
 | `issue-747-a11y-and-sort-matrix.spec.ts` | querySelector |
@@ -536,6 +534,10 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-763-retained-phase-drafts.spec.ts` “retained Phase drafts are explicit at 1672x941” → `issue-763-retained-phase-drafts.spec.ts` “retained Phase drafts are explicit at 1280x720”. **Invariant:** A Phase draft survives changing the selected Transaction, is marked as retained in both editors, and can be explicitly discarded without changing Canonical or History. **Reason:** This is a width-independent stable-ID/draft-lifecycle contract with no layout or clipping assertion. The compact viewport retains the complete user journey; responsive editor geometry is covered by dedicated layout acceptance.
 - `issue-767-zoom-keeps-glyph-shape.spec.ts` “zoom does not stretch Transaction text at 1672x941” → `issue-767-zoom-keeps-glyph-shape.spec.ts` “zoom does not stretch Transaction text at 1280x720”. **Invariant:** Transaction and Phase glyphs retain their natural rendered font size/height during zoom while the track, ruler, and Transaction edges remain geometrically aligned. **Reason:** The semantic text-size invariant is width-independent; retain one compact viewport. Width-dependent clipping/overflow is covered by dedicated layout tests. Replaced a computed-style transform scan with the observable rendered text dimensions and ruler alignment.
 - `issue-760-combined-horizontal-wheel.spec.ts` “Combined horizontal wheel scrolls the shared viewport at 1672x941” → `issue-760-combined-horizontal-wheel.spec.ts` “Combined horizontal wheel scrolls the shared viewport at 1280x720”. **Invariant:** Wheel over either pane in a fresh Combined workspace advances the shared horizontal time viewport without changing Canonical, History, or Dirty state. **Reason:** The semantic wheel-owner contract is width-independent and the compact viewport retains wheel interaction over both pane regions. The issue's shared horizontal geometry is separately verified at both accepted viewport sizes by geometry/scroll acceptance tests.
+- `issue-740-cycle-bottom-hidden-geometry.spec.ts` “Cycle releases Bottom space when hidden at 1672x941” → `issue-740-cycle-bottom-hidden.spec.ts` “Cycle releases Bottom space when hidden at 1672x941”. **Invariant:** Hiding Cycle Bottom releases the lower workspace space; the state survives a mode round-trip and can be restored without document mutation. **Reason:** The duplicate case asserted the same hide/round-trip/show geometry while additionally reading CSS grid row values. The retained user-visible test checks the actual workspace gap and hidden Bottom, plus History, Dirty, and Canonical revision invariants.
+- `issue-740-cycle-bottom-hidden-geometry.spec.ts` “Cycle releases Bottom space when hidden at 1280x720” → `issue-740-cycle-bottom-hidden.spec.ts` “Cycle releases Bottom space when hidden at 1280x720”. **Invariant:** Hiding Cycle Bottom releases the lower workspace space; the state survives a mode round-trip and can be restored without document mutation. **Reason:** The compact viewport's user-visible gap and hidden-state journey remain covered in the retained test; the removed assertion was coupled to CSS grid-template-row implementation details.
+- `issue-740-741-756-cycle-layout.spec.ts` “#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at 1672x941” → `issue-740-cycle-bottom-hidden.spec.ts` “Cycle releases Bottom space when hidden at 1672x941”. **Invariant:** Hiding Cycle Bottom removes the reserved space and is view-only. **Reason:** The removed case repeated the hide state, panel-to-workspace edge and hidden resizer assertions; the retained #740 journey covers those with stronger Dirty/revision checks, while #756 coverage remains in the same spec.
+- `issue-740-741-756-cycle-layout.spec.ts` “#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at 1280x720” → `issue-740-cycle-bottom-hidden.spec.ts` “Cycle releases Bottom space when hidden at 1280x720”. **Invariant:** Hiding Cycle Bottom removes the reserved space and is view-only. **Reason:** The compact case was a duplicate of the retained #740 contract; the shared file continues to exercise #741 and #756 independently.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 
