@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:04:42.097Z",
+  "generatedAt": "2026-09-23T05:07:06.587Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 642,
+  "reviewedCaseCount": 644,
   "curatedProfileCounts": {
-    "integration": 300,
+    "integration": 301,
     "nightly": 159,
     "performance": 44,
-    "pr": 187,
+    "pr": 188,
     "visual": 131
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -6497,18 +6497,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "global-shortcut-input-focus-and-ime-guard",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "KEYBOARD_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Ctrl+Z in an editable Annotation input performs native text undo rather than global document Undo, and a composing Delete event does not delete the focused Annotation.",
+      "duplicateGroup": "global-shortcut-focus-guard",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This protects two high-risk routing guards—editable-field ownership and IME composition—at the real document-level keyboard listener. Other keyboard tests cover key bindings but not this exact text-edit/composition boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -6519,18 +6522,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "view-only-composed-state-invariance",
+      "originIssue": 175,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "primaryContract": "Sequential selection, Bottom tab, Ribbon tab, zoom, and Inspector visibility operations leave History/session commits and waveform/local geometry counters unchanged.",
+      "duplicateGroup": "view-only-invalidation-boundaries",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "MOVE_LAYER",
+      "reason": "performance-view-only-validation.spec.ts observes these same operations separately and also protects Dirty, validator, RowLayout, and both pane resizers/scroll owners. Retain that focused owner-level contract instead of this weaker overlapping full-GUI check.",
+      "replacementTest": "performance-view-only-validation.spec.ts — view-only GUI operations do not validate or semantically rerender the document",
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ghost-trace-delete.spec.ts",
@@ -23927,11 +23933,11 @@
     {
       "file": "full-gui.spec.ts",
       "caseCount": 41,
-      "reviewedCaseCount": 39,
+      "reviewedCaseCount": 41,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "ghost-trace-delete.spec.ts",

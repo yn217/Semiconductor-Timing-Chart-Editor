@@ -3217,6 +3217,38 @@
       "replacementTest": null
     },
     {
+      "file": "full-gui.spec.ts",
+      "title": "keeps global shortcuts focus-aware and IME-safe",
+      "domain": "global-shortcut-input-focus-and-ime-guard",
+      "originIssue": null,
+      "type": "KEYBOARD_CONTRACT",
+      "costClass": "SMALL",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Ctrl+Z in an editable Annotation input performs native text undo rather than global document Undo, and a composing Delete event does not delete the focused Annotation.",
+      "duplicateGroup": "global-shortcut-focus-guard",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["pr"],
+      "decision": "KEEP",
+      "reason": "This protects two high-risk routing guards—editable-field ownership and IME composition—at the real document-level keyboard listener. Other keyboard tests cover key bindings but not this exact text-edit/composition boundary.",
+      "replacementTest": null
+    },
+    {
+      "file": "full-gui.spec.ts",
+      "title": "keeps view-only selection, tabs, zoom and panel state out of History and WaveDrom",
+      "domain": "view-only-composed-state-invariance",
+      "originIssue": 175,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "SMALL",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Sequential selection, Bottom tab, Ribbon tab, zoom, and Inspector visibility operations leave History/session commits and waveform/local geometry counters unchanged.",
+      "duplicateGroup": "view-only-invalidation-boundaries",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": ["integration"],
+      "decision": "MOVE_LAYER",
+      "reason": "performance-view-only-validation.spec.ts observes these same operations separately and also protects Dirty, validator, RowLayout, and both pane resizers/scroll owners. Retain that focused owner-level contract instead of this weaker overlapping full-GUI check.",
+      "replacementTest": "performance-view-only-validation.spec.ts — view-only GUI operations do not validate or semantically rerender the document"
+    },
+    {
       "file": "qa-fresh-state-journeys.spec.ts",
       "title": "J9 Bottom follows the selected entity kind",
       "domain": "bottom-panel-selection",
