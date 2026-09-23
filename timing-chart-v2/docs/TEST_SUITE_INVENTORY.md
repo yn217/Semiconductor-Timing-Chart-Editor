@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 785/959 cases reviewed.
+Semantic review progress: 803/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 395 |
+| `integration` | 408 |
 | `nightly` | 171 |
 | `performance` | 44 |
-| `pr` | 219 |
+| `pr` | 224 |
 | `visual` | 144 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -282,16 +282,16 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `signal-generator.spec.ts` | 5 | 5/5 reviewed |
 | `signal-spacing.spec.ts` | 3 | 3/3 reviewed |
 | `signal-split-no-assignment-control.spec.ts` | 1 | 1/1 reviewed |
-| `signal-split-render-routing.spec.ts` | 3 | 1/3 reviewed |
-| `signal-split.spec.ts` | 2 | 0/2 reviewed |
-| `signal-type-label-registry.spec.ts` | 2 | 0/2 reviewed |
-| `signal-visibility-recover.spec.ts` | 1 | 0/1 reviewed |
-| `spacer-clipboard-reorder.spec.ts` | 1 | 0/1 reviewed |
-| `spacer-row.spec.ts` | 1 | 0/1 reviewed |
-| `spacer.spec.ts` | 1 | 0/1 reviewed |
-| `split-active-pane.spec.ts` | 6 | 0/6 reviewed |
-| `stable-id-collision.spec.ts` | 1 | 0/1 reviewed |
-| `stable-surface.spec.ts` | 1 | 0/1 reviewed |
+| `signal-split-render-routing.spec.ts` | 3 | 3/3 reviewed |
+| `signal-split.spec.ts` | 2 | 2/2 reviewed |
+| `signal-type-label-registry.spec.ts` | 2 | 2/2 reviewed |
+| `signal-visibility-recover.spec.ts` | 1 | 1/1 reviewed |
+| `spacer-clipboard-reorder.spec.ts` | 1 | 1/1 reviewed |
+| `spacer-row.spec.ts` | 1 | 1/1 reviewed |
+| `spacer.spec.ts` | 1 | 1/1 reviewed |
+| `split-active-pane.spec.ts` | 6 | 6/6 reviewed |
+| `stable-id-collision.spec.ts` | 1 | 1/1 reviewed |
+| `stable-surface.spec.ts` | 1 | 1/1 reviewed |
 | `status-context.spec.ts` | 4 | 0/4 reviewed |
 | `time-group-lifecycle.spec.ts` | 1 | 0/1 reviewed |
 | `time-mapping-scale-closure.spec.ts` | 1 | 0/1 reviewed |

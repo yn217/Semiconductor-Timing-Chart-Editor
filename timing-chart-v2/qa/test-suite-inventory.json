@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T06:08:50.449Z",
+  "generatedAt": "2026-09-23T06:14:04.852Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 785,
+  "reviewedCaseCount": 803,
   "curatedProfileCounts": {
-    "integration": 395,
+    "integration": 408,
     "nightly": 171,
     "performance": 44,
-    "pr": 219,
+    "pr": 224,
     "visual": 144
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -18421,18 +18421,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-split-legacy-input-and-retired-control",
+      "originIssue": 570,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "primaryContract": "Retired per-Signal split assignment metadata/control must not affect the shared Split view; toggling Split remains view-only.",
+      "duplicateGroup": "signal-split-retired-assignment",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "MOVE_LAYER",
+      "reason": "Despite its title, the test does not load legacy assignment data or assert Canonical/History/Dirty deltas; it only opens Split and checks that the Inspector field is absent. Sample D asserts the actual view-only ON/OFF flow and retired-control absence in the full shared-row model, so it supersedes this misleading default-fixture case.",
+      "replacementTest": "acceptance-397-sample-d.spec.ts::Signal Split ON shows the same 24-Signal row sequence in both panes with independent vertical scroll and shared horizontal scroll, OFF returns to one viewport, view-only throughout",
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "signal-split-render-routing.spec.ts",
@@ -18443,18 +18446,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-split-cycle-mode-gating",
+      "originIssue": 200,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Signal Split control is absent in Transaction and Combined modes and available in Cycle mode.",
+      "duplicateGroup": "signal-split-mode-availability",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The Sample D shared-row acceptance runs in Cycle mode and does not prove mode gating; this directly protects availability boundaries across all three workspace modes.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "signal-split.spec.ts",
@@ -18465,18 +18471,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-split-toggle-scroll-retention",
+      "originIssue": 200,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Toggling the Lower viewport is view-only and preserves Upper's horizontal scroll position across OFF/ON while the shared ruler remains synchronized.",
+      "duplicateGroup": "signal-split-scroll-ownership",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Sample D covers dual-pane shared horizontal time and independent vertical scroll, but this additionally creates a nonzero Upper scroll position, removes/recreates Lower, and proves Upper's scroll survives that lifecycle.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-split.spec.ts",
@@ -18487,18 +18496,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-split-independent-scroll-axes",
+      "originIssue": 573,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "primaryContract": "Upper and Lower vertical scroll positions are independent while both rulers consume the same horizontal scroll and zoom domain.",
+      "duplicateGroup": "signal-split-scroll-ownership",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "MOVE_LAYER",
+      "reason": "Sample D verifies both panes' independently changing scroll positions and shared horizontal alignment with a 24-Signal fixture that provides real overflow; this short default-fixture test only moves Upper vertically and compares ruler transforms.",
+      "replacementTest": "acceptance-397-sample-d.spec.ts::Signal Split ON shows the same 24-Signal row sequence in both panes with independent vertical scroll and shared horizontal scroll, OFF returns to one viewport, view-only throughout",
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-type-label-registry.spec.ts",
@@ -18509,18 +18521,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-type-label-registry-roundtrip-compact",
+      "originIssue": 474,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The supported Signal type labels remain identical between creation and Inspector controls, and type changes survive Undo/Redo and Save/Open at 1280x720.",
+      "duplicateGroup": "signal-type-label-registry-responsive-roundtrip",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The compact viewport exercises the type-registry and persisted role contract under narrower responsive layout; the wide viewport cannot replace this breakpoint-sensitive check.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-type-label-registry.spec.ts",
@@ -18531,18 +18546,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-type-label-registry-roundtrip-wide",
+      "originIssue": 474,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The supported Signal type labels remain identical between creation and Inspector controls, and type changes survive Undo/Redo and Save/Open at 1672x941.",
+      "duplicateGroup": "signal-type-label-registry-responsive-roundtrip",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This proves the type-registry and serialized-role lifecycle at the wide acceptance viewport; the compact case independently protects the smaller layout.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-visibility-recover.spec.ts",
@@ -18553,18 +18571,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-visibility-navigation-recovery",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Hiding a Signal retains its navigation identity while removing it from timing/frozen/wave projections, and restoring it returns the same canonical Signal to aligned surfaces.",
+      "duplicateGroup": "signal-visibility-recovery",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Stable SVG reuse tests cover renderer identity and Inspector tests cover row alignment; this protects the distinct user recovery path where a hidden item remains discoverable in the Tree and can be restored.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "spacer-clipboard-reorder.spec.ts",
@@ -18575,18 +18596,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "spacer-insert-clipboard-and-group-boundary",
+      "originIssue": 222,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Insert, Duplicate, clipboard copy/paste, same-Group drag reorder, and cross-Group rejection preserve Spacer height/identity and semantic command/history rules.",
+      "duplicateGroup": "spacer-creation-edit-and-order",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This uniquely covers the Insert Ribbon adapter, fresh identity on copy, in-Group drag, and Core's cross-Group Spacer rejection; Tree Add and Group Inspector edit tests do not cover these operations.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "spacer-row.spec.ts",
@@ -18597,18 +18621,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "spacer-group-inspector-height-lifecycle",
+      "originIssue": 222,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Group Inspector Spacer height drafts reject invalid values without commit, valid Apply commits one reversible edit, and height survives Save/Open and exports.",
+      "duplicateGroup": "spacer-creation-edit-and-order",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Tree Add covers creation and projection only; this covers Group Inspector height editing, invalid draft isolation, Apply, history, persistence, and export reconstruction.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "spacer.spec.ts",
@@ -18619,18 +18646,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "spacer-tree-add-projection",
+      "originIssue": 222,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Tree Add creates a canonical Spacer with one History entry and projects a row without rebuilding WaveDrom or local timing geometry.",
+      "duplicateGroup": "spacer-creation-edit-and-order",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Insert Ribbon and Group Inspector routes use different production adapters; this directly guards Tree Add selection, row projection, and the Spacer no-wave/no-geometry invalidation contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "split-active-pane.spec.ts",
@@ -18641,18 +18671,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "combined-active-pane-context-routing",
+      "originIssue": 407,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "In Combined mode, Signal-surface and Transaction-lane interactions update active-pane/ActiveContext ownership without Canonical or History mutation.",
+      "duplicateGroup": "combined-active-pane-routing",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Sibling drag tests verify specific gesture routes; this covers general click/focus ownership, context-sensitive Ribbon change, and view-only behavior across both active panes.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "split-active-pane.spec.ts",
@@ -18663,18 +18696,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "mode-local-bottom-tab-memory",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Switching between Cycle and Transaction restores each mode's last valid Bottom tab without leaking the other mode's selection.",
+      "duplicateGroup": "bottom-tab-mode-memory",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the only test of per-mode Bottom-tab memory and validates fallback to each mode's valid tab instead of a shared global selection.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "split-active-pane.spec.ts",
@@ -18685,18 +18721,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "combined-transaction-drag-routing",
+      "originIssue": 407,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A real Transaction bar drag in Combined mode mutates the Transaction through its owner, leaves Cycle editor idle, and activates the Transaction pane.",
+      "duplicateGroup": "combined-gesture-owner-routing",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This real-pointer Transaction gesture asserts one semantic edit, Cycle editor isolation, and active-pane ownership; Signal range selection and mode-switch tests do not replace it.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "split-active-pane.spec.ts",
@@ -18707,18 +18746,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "combined-mode-owner-roundtrip",
+      "originIssue": 407,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Transaction remains the active owner on entering Combined and its bars remain present after returning to Transaction, with no new History entry.",
+      "duplicateGroup": "combined-mode-owner-routing",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Active-pane interaction does not cover mode transition restoration; this checks Transaction→Combined→Transaction ownership and view-only History preservation.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "split-active-pane.spec.ts",
@@ -18729,18 +18771,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "combined-signal-range-gesture-routing",
+      "originIssue": 407,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A real waveform range drag in Combined resolves source cycles from Cycle ruler geometry, routes selection to the Signal pane, and creates no Canonical/History change.",
+      "duplicateGroup": "combined-gesture-owner-routing",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Transaction drag protects the opposite owner route; this specifically verifies Signal range coordinates/source cycles and view-only selection in Combined.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "split-active-pane.spec.ts",
@@ -18751,18 +18796,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "combined-mode-switch-cancels-active-drag",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A low-level mode switch during an active Transaction drag cancels the preview before pointerup and prevents a stale semantic edit from committing.",
+      "duplicateGroup": "combined-drag-cancellation-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Completed drag and mode round-trip tests do not exercise cancellation during an in-flight pointer sequence; this guards against stale gesture ownership committing after workspace change.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "stable-id-collision.spec.ts",
@@ -18773,18 +18821,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "stable-id-uniqueness-after-reload",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After Save/Open in a fresh module session resets the in-memory ID counter, newly created Signals still receive IDs unique across the document.",
+      "duplicateGroup": "stable-id-generation-and-reload",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Stable IDs are canonical identity rather than position; this exercises actual restore and subsequent authoring that can expose counter collisions beyond pure generator unit tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "stable-surface.spec.ts",
@@ -18795,18 +18846,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "stable-waveform-owner-reorder-identity",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Row-shell reorder and viewport remount preserve heavy WaveDrom SVG owner identity/order while only updating row positions and keeping canonical/rendered row mappings aligned.",
+      "duplicateGroup": "stable-waveform-surface-owner-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This deterministic Phase 5 surface probe measures expensive SVG owner identity and render counters across viewport remount/reorder; product-level reorder tests do not enforce renderer reuse.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "status-context.spec.ts",
@@ -26362,98 +26416,98 @@
     {
       "file": "signal-split-render-routing.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 1,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "signal-split.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "signal-type-label-registry.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "signal-visibility-recover.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "spacer-clipboard-reorder.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "spacer-row.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "spacer.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "split-active-pane.spec.ts",
       "caseCount": 6,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 6,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "stable-id-collision.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "stable-surface.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "status-context.spec.ts",
