@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T02:30:48.775Z",
+  "generatedAt": "2026-09-23T02:32:45.538Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 471,
+  "reviewedCaseCount": 475,
   "curatedProfileCounts": {
-    "integration": 210,
-    "nightly": 128,
+    "integration": 212,
+    "nightly": 129,
     "performance": 23,
-    "pr": 149,
-    "visual": 106
+    "pr": 150,
+    "visual": 107
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -13875,18 +13875,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "layout-settings-semantic-persistence",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Applying global row/label layout creates one semantic history operation, supports Undo/Redo, and Save/Open restores persisted layout settings.",
+      "duplicateGroup": "layout-settings-lifecycle",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This covers a genuine Save/Open persistence lifecycle after editing multiple layout fields; it should not run in the small routine PR cohort.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "layout-inspector.spec.ts",
@@ -13897,18 +13901,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "layout-draft-cancel-no-mutation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Canceling an edited layout draft leaves Canonical revision and History unchanged.",
+      "duplicateGroup": "layout-settings-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This isolates a low-cost Draft/Cancel semantic boundary and complements the heavier Apply/Save/Open journey.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "layout-inspector.spec.ts",
@@ -13919,18 +13926,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "layout-autofit-draft-apply-undo",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Auto Fit proposes a width in the layout draft, Apply commits it once, and Undo restores the prior width.",
+      "duplicateGroup": "layout-settings-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "A long-name production journey checks both a presentation-derived suggestion and command/Undo semantics; retain as one focused integration example rather than cloning it across multiple label styles.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "layout-inspector.spec.ts",
@@ -13941,18 +13951,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "persisted-label-layout-visual-contract",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Applying persisted label widths/alignment/overflow updates the rendered columns independently of transient splitter width, and Reset restores documented defaults.",
+      "duplicateGroup": "layout-settings-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "It currently asserts exact internal CSS grid templates, whitespace, and render counters; retain the layout contract in visual tier while decoupling assertions from incidental DOM/CSS details where possible.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "left-header-action-alignment.spec.ts",
@@ -24860,13 +24873,13 @@
     {
       "file": "layout-inspector.spec.ts",
       "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "left-header-action-alignment.spec.ts",

@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 471/963 cases reviewed.
+Semantic review progress: 475/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 210 |
-| `nightly` | 128 |
+| `integration` | 212 |
+| `nightly` | 129 |
 | `performance` | 23 |
-| `pr` | 149 |
-| `visual` | 106 |
+| `pr` | 150 |
+| `visual` | 107 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -223,7 +223,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `keyboard-shortcut-router.spec.ts` | 4 | 4/4 reviewed |
 | `keyboard-tabs-resizers.spec.ts` | 2 | 0/2 reviewed |
 | `label-anchor-source-display.spec.ts` | 1 | 0/1 reviewed |
-| `layout-inspector.spec.ts` | 4 | 0/4 reviewed |
+| `layout-inspector.spec.ts` | 4 | 4/4 reviewed |
 | `left-header-action-alignment.spec.ts` | 1 | 0/1 reviewed |
 | `left-pane-constraint.spec.ts` | 2 | 0/2 reviewed |
 | `left-tree-action-icons.spec.ts` | 1 | 0/1 reviewed |
