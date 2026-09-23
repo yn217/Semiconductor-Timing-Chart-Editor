@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 334 spec files and 975 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 164/975 cases reviewed.
+Semantic review progress: 190/975 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 30 |
-| `nightly` | 40 |
+| `integration` | 44 |
+| `nightly` | 42 |
 | `performance` | 17 |
-| `pr` | 75 |
-| `visual` | 30 |
+| `pr` | 81 |
+| `visual` | 48 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -119,12 +119,12 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `interaction-visual-scenarios.spec.ts` | 11 | 0/11 reviewed |
 | `issue-441-ribbon-label-integrity.spec.ts` | 9 | 0/9 reviewed |
 | `issue-554-transaction-journey.spec.ts` | 2 | 2/2 reviewed |
-| `issue-573-combined-divider-pinned.spec.ts` | 1 | 0/1 reviewed |
-| `issue-573-combined-shared-time-axis.spec.ts` | 3 | 0/3 reviewed |
-| `issue-593-mode-layout-isolation.spec.ts` | 2 | 0/2 reviewed |
+| `issue-573-combined-divider-pinned.spec.ts` | 1 | 1/1 reviewed |
+| `issue-573-combined-shared-time-axis.spec.ts` | 3 | 3/3 reviewed |
+| `issue-593-mode-layout-isolation.spec.ts` | 2 | 2/2 reviewed |
 | `issue-621-far-jump-no-rewindow-storm.spec.ts` | 1 | 1/1 reviewed |
 | `issue-623-cycle-entry-settles-once.spec.ts` | 1 | 1/1 reviewed |
-| `issue-624-cycle-reload-mode.spec.ts` | 2 | 0/2 reviewed |
+| `issue-624-cycle-reload-mode.spec.ts` | 2 | 2/2 reviewed |
 | `issue-625-cycle-fixed-columns-scroll.spec.ts` | 2 | 2/2 reviewed |
 | `issue-625-mode-geometry-unchanged.spec.ts` | 1 | 1/1 reviewed |
 | `issue-625-no-bleed-under-fixed-columns.spec.ts` | 2 | 2/2 reviewed |
@@ -148,9 +148,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-676-canvas-inspector-refresh.spec.ts` | 2 | 2/2 reviewed |
 | `issue-698-color-toggle-and-compact-phases.spec.ts` | 2 | 2/2 reviewed |
 | `issue-698-inspector-phases.spec.ts` | 1 | 1/1 reviewed |
-| `issue-701-layout-return.spec.ts` | 1 | 0/1 reviewed |
+| `issue-701-layout-return.spec.ts` | 1 | 1/1 reviewed |
 | `issue-703-inline-row-apply.spec.ts` | 2 | 2/2 reviewed |
-| `issue-704-shared-chevron.spec.ts` | 1 | 0/1 reviewed |
+| `issue-704-shared-chevron.spec.ts` | 1 | 1/1 reviewed |
 | `issue-714-table-header-and-swatch.spec.ts` | 2 | 2/2 reviewed |
 | `issue-720-control-affordance-audit.spec.ts` | 6 | 6/6 reviewed |
 | `issue-720-cursor-and-disabled-audit.spec.ts` | 6 | 6/6 reviewed |
@@ -158,20 +158,20 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-720-gesture-status-hint.spec.ts` | 3 | 3/3 reviewed |
 | `issue-720-keyboard-parity.spec.ts` | 3 | 3/3 reviewed |
 | `issue-720-menu-dialog-affordance.spec.ts` | 2 | 2/2 reviewed |
-| `issue-721-visual-channels.spec.ts` | 3 | 0/3 reviewed |
-| `issue-722-display-scale-125.spec.ts` | 2 | 0/2 reviewed |
-| `issue-722-splitter-discoverability.spec.ts` | 2 | 0/2 reviewed |
-| `issue-722-splitter-reset.spec.ts` | 1 | 0/1 reviewed |
-| `issue-723-status-diagnostics.spec.ts` | 2 | 0/2 reviewed |
-| `issue-724-search-scope.spec.ts` | 1 | 0/1 reviewed |
+| `issue-721-visual-channels.spec.ts` | 3 | 3/3 reviewed |
+| `issue-722-display-scale-125.spec.ts` | 2 | 2/2 reviewed |
+| `issue-722-splitter-discoverability.spec.ts` | 2 | 2/2 reviewed |
+| `issue-722-splitter-reset.spec.ts` | 1 | 1/1 reviewed |
+| `issue-723-status-diagnostics.spec.ts` | 2 | 2/2 reviewed |
+| `issue-724-search-scope.spec.ts` | 1 | 1/1 reviewed |
 | `issue-725-draft-markers.spec.ts` | 1 | 1/1 reviewed |
 | `issue-725-escape-revert.spec.ts` | 1 | 1/1 reviewed |
 | `issue-725-keyboard-journey.spec.ts` | 2 | 2/2 reviewed |
-| `issue-726-lane-hover.spec.ts` | 1 | 0/1 reviewed |
-| `issue-726-marker-hierarchy.spec.ts` | 1 | 0/1 reviewed |
-| `issue-727-minimap-affordance.spec.ts` | 1 | 0/1 reviewed |
-| `issue-728-group-double-click.spec.ts` | 1 | 0/1 reviewed |
-| `issue-729-dirty-title.spec.ts` | 1 | 0/1 reviewed |
+| `issue-726-lane-hover.spec.ts` | 1 | 1/1 reviewed |
+| `issue-726-marker-hierarchy.spec.ts` | 1 | 1/1 reviewed |
+| `issue-727-minimap-affordance.spec.ts` | 1 | 1/1 reviewed |
+| `issue-728-group-double-click.spec.ts` | 1 | 1/1 reviewed |
+| `issue-729-dirty-title.spec.ts` | 1 | 1/1 reviewed |
 | `issue-737-bottom-sort.spec.ts` | 1 | 1/1 reviewed |
 | `issue-737-multi-select.spec.ts` | 1 | 1/1 reviewed |
 | `issue-737-selection-gestures.spec.ts` | 2 | 2/2 reviewed |
