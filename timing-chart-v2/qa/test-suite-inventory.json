@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:33:28.603Z",
+  "generatedAt": "2026-09-23T07:36:03.246Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 893,
+  "reviewedCaseCount": 897,
   "curatedProfileCounts": {
-    "integration": 469,
-    "nightly": 181,
-    "performance": 49,
-    "pr": 239,
+    "integration": 470,
+    "nightly": 182,
+    "performance": 50,
+    "pr": 241,
     "visual": 153
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -21516,18 +21516,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-10k-mounted-dom-budget",
+      "originIssue": 604,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Opening 10,000 Transactions mounts the Transaction surface with fewer than 1,000 bars and Tree rows, nonzero layout height, and no History mutation.",
+      "duplicateGroup": "transaction-large-document-virtualization",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is a dedicated large-document virtualization budget check. Its <1,000 bound is coarse relative to a viewport-scale target and should not be described as a tight DOM budget without measured evidence; retain as a 10k regression sentinel in performance/nightly.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "transaction-lane-scaling.spec.ts",
@@ -21538,18 +21542,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-standalone-vertical-viewport-owner",
+      "originIssue": 748,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A 2,000-Transaction standalone document supports nonzero vertical scrolling on the Cycle viewport owner while keeping the virtualized lane surface populated.",
+      "duplicateGroup": "transaction-large-document-virtualization",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The source correctly scrolls the standalone `.cycle-viewport`, which TransactionLanes subscribes to, unlike the independently scrolling Left Tree. However, the current assertion only proves scrollTop changed and at least one bar exists; it does not compare mounted stable IDs/positions before and after, so it is weak evidence for the stronger ‘drives virtualization’ title. Strengthen the boundary assertion if this owner contract is changed later.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-lane-scaling.spec.ts",
@@ -21560,18 +21567,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-fit-selection-view-only",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Transaction Fit Selection and Fit All update zoom/scroll to the selected range or all content while Canonical revision, History, and Dirty remain unchanged.",
+      "duplicateGroup": "transaction-fit-commands-view-only",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a compact real-command check that the Transaction workspace's fit operations change only presentation state and make the expected viewport adjustment, complementing zoom preset and general Cycle fit coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-lane-scaling.spec.ts",
@@ -21582,18 +21592,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-zoom-scroll-mode-roundtrip",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Transaction zoom, horizontal scroll, Canonical revision, History, and Dirty state survive Transaction→Cycle→Transaction round-trip unchanged.",
+      "duplicateGroup": "transaction-mode-view-state-preservation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Unlike the Combined mode-surface case, this verifies preservation of actual Transaction zoom and nonzero horizontal scroll across leaving and re-entering the workspace; it is a concise view-state lifecycle contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-lane-scaling.spec.ts",
@@ -27026,7 +27039,7 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "caseCount": 8,
-      "reviewedCaseCount": 2,
+      "reviewedCaseCount": 6,
       "originIssue": null,
       "declaredTimeoutMs": 180,
       "candidateSignals": [
