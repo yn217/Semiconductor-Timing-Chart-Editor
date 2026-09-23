@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTransactionGroupProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
+import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimeGroupProposal, buildTypedTimelineProposal, buildTypedTransactionGroupProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import type { AnnotationId, CommandId, GroupId, SignalId, TimeGroupId, TransactionGroupId, TransactionId } from "@timing-chart-v2/schema";
 
@@ -114,6 +114,24 @@ describe("deterministic AI proposal provider", () => {
     if (deleted.ok) expect(deleted.proposal).toEqual(expect.objectContaining({ summary: "Delete Transaction Group Memory and ungroup 1 Transaction", commands: [expect.objectContaining({ type: "transactionGroup.delete", groupId })] }));
     expect(buildTypedTransactionGroupProposal(document, 24, "propose_rename_transaction_group", { groupId: "missing", name: "X" })).toMatchObject({ ok: false, message: expect.stringContaining("does not exist") });
     expect(buildTypedTransactionGroupProposal(document, 24, "propose_create_transaction_group", { name: "Bad", color: "red" })).toMatchObject({ ok: false, message: expect.stringContaining("six-digit") });
+  });
+
+  it("maps Time Group create/update/delete through stable-ID SemanticCommands and canonical source cycles", () => {
+    const base = canonicalFixture();
+    const groupId = "time_1" as TimeGroupId;
+    const document = { ...base, timeline: { ...base.timeline, cycleCount: 20 }, timeGroups: [{ id: groupId, name: "Window", start: 2, end: 8, presentation: { collapsed: true, foldStyle: "axis-break" as const, foldLabel: "Window" } }] };
+    const created = buildTypedTimeGroupProposal(document, 41, "propose_create_time_group", { name: " Setup ", startCycle: 10, endCycle: 15, comment: "stable interval" });
+    expect(created.ok).toBe(true);
+    if (created.ok) expect(created.proposal.commands).toEqual([expect.objectContaining({ type: "timeGroup.create", timeGroup: expect.objectContaining({ name: "Setup", start: 10, end: 15, comment: "stable interval", presentation: { collapsed: false, foldStyle: "none" } }) })]);
+    const updated = buildTypedTimeGroupProposal(document, 41, "propose_update_time_group", { timeGroupId: groupId, startCycle: 3, endCycle: 9 });
+    expect(updated.ok).toBe(true);
+    if (updated.ok) expect(updated.proposal.commands).toEqual([expect.objectContaining({ type: "timeGroup.update", timeGroupId: groupId, name: "Window", start: 3, end: 9, presentation: document.timeGroups[0]!.presentation })]);
+    const deleted = buildTypedTimeGroupProposal(document, 41, "propose_delete_time_group", { timeGroupId: groupId });
+    expect(deleted.ok).toBe(true);
+    if (deleted.ok) expect(deleted.proposal.commands).toEqual([expect.objectContaining({ type: "timeGroup.delete", timeGroupId: groupId })]);
+    expect(buildTypedTimeGroupProposal(document, 41, "propose_create_time_group", { name: "Bad", startCycle: 8, endCycle: 8 })).toMatchObject({ ok: false, message: expect.stringContaining("source-cycle boundaries") });
+    expect(buildTypedTimeGroupProposal(document, 41, "propose_update_time_group", { timeGroupId: "missing", name: "X" })).toMatchObject({ ok: false, message: expect.stringContaining("does not exist") });
+    expect(buildTypedTimeGroupProposal(document, 41, "propose_update_time_group", { timeGroupId: groupId })).toMatchObject({ ok: false, message: expect.stringContaining("at least one changed field") });
   });
 
   it("maps Phase and linked-Signal proposals through stable Transaction/Signal IDs", () => {

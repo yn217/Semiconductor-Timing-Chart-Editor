@@ -1,5 +1,5 @@
 import type { SemanticCommand } from "@timing-chart-v2/commands";
-import { valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type SignalId, type SignalRole, type TransactionGroupId, type TransactionId, type TransactionPhase, type ValueSignal } from "@timing-chart-v2/schema";
+import { valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type SignalId, type SignalRole, type TimeGroup, type TimeGroupId, type TransactionGroupId, type TransactionId, type TransactionPhase, type ValueSignal } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { createAnnotation } from "./create-annotation.js";
@@ -158,6 +158,45 @@ export function buildTypedTransactionGroupProposal(document: CanonicalDocument, 
     return { ok: true, proposal: proposal(revision, `Delete Transaction Group ${group.name} and ungroup ${affectedCount} Transaction${affectedCount === 1 ? "" : "s"}`, [command({ type: "transactionGroup.delete", groupId: group.id }, "typed_delete_transaction_group")]) };
   }
   return { ok: false, message: `Unsupported typed Transaction Group proposal '${tool}'.` };
+}
+
+export function buildTypedTimeGroupProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  const integer = (key: string): number | undefined => Number.isSafeInteger(args[key]) ? args[key] as number : undefined;
+  const validRange = (start: number | undefined, end: number | undefined) => start !== undefined && end !== undefined && start >= 0 && start < end && end <= document.timeline.cycleCount;
+  if (tool === "propose_create_time_group") {
+    const name = args.name;
+    const start = integer("startCycle"); const end = integer("endCycle");
+    if (typeof name !== "string" || !name.trim() || !validRange(start, end)) return { ok: false, message: "propose_create_time_group requires a non-empty name and integer source-cycle boundaries within the timeline with endCycle > startCycle." };
+    if (args.category !== undefined && typeof args.category !== "string") return { ok: false, message: "category must be a string when supplied." };
+    if (args.comment !== undefined && typeof args.comment !== "string") return { ok: false, message: "comment must be a string when supplied." };
+    const timeGroup: TimeGroup = { id: nextEntityId("time", document) as TimeGroupId, name: name.trim(), start: start!, end: end!, ...(typeof args.category === "string" ? { category: args.category } : {}), ...(typeof args.comment === "string" ? { comment: args.comment } : {}), presentation: { collapsed: false, foldStyle: "none" } };
+    return { ok: true, proposal: proposal(revision, `Create Time Group ${timeGroup.name} at source cycles ${start}–${end}`, [command({ type: "timeGroup.create", timeGroup }, "typed_create_time_group")]) };
+  }
+  const timeGroupId = args.timeGroupId;
+  if (typeof timeGroupId !== "string" || !timeGroupId) return { ok: false, message: `${tool} requires a stable timeGroupId.` };
+  const group = document.timeGroups.find((item) => item.id === timeGroupId);
+  if (!group) return { ok: false, message: `Time Group '${timeGroupId}' does not exist in the current document.` };
+  if (tool === "propose_delete_time_group") {
+    const promotedChildren = document.timeGroups.filter((item) => item.parentId === group.id).length;
+    const ownedAnchors = document.timeline.labelAnchors.filter((anchor) => anchor.id === group.presentation?.resumeLabelAnchorId || anchor.ownerTimeGroupId === group.id).length;
+    return { ok: true, proposal: proposal(revision, `Delete Time Group ${group.name}; promote ${promotedChildren} child group${promotedChildren === 1 ? "" : "s"} and remove ${ownedAnchors} owned Label Anchor${ownedAnchors === 1 ? "" : "s"}`, [command({ type: "timeGroup.delete", timeGroupId: group.id }, "typed_delete_time_group")]) };
+  }
+  if (tool === "propose_update_time_group") {
+    const name = args.name;
+    if (name !== undefined && (typeof name !== "string" || !name.trim())) return { ok: false, message: "name must be non-empty when supplied." };
+    const start = args.startCycle === undefined ? group.start : integer("startCycle");
+    const end = args.endCycle === undefined ? group.end : integer("endCycle");
+    if (!validRange(start, end)) return { ok: false, message: "startCycle/endCycle must be integer source-cycle boundaries within the timeline with endCycle > startCycle." };
+    if (args.category !== undefined && typeof args.category !== "string") return { ok: false, message: "category must be a string when supplied." };
+    if (args.comment !== undefined && typeof args.comment !== "string") return { ok: false, message: "comment must be a string when supplied." };
+    if (name === undefined && args.startCycle === undefined && args.endCycle === undefined && args.category === undefined && args.comment === undefined) return { ok: false, message: "propose_update_time_group requires at least one changed field." };
+    const nextName = typeof name === "string" ? name.trim() : group.name;
+    const category = args.category === undefined ? group.category : args.category as string;
+    const comment = args.comment === undefined ? group.comment : args.comment as string;
+    const presentation = group.presentation;
+    return { ok: true, proposal: proposal(revision, `Update Time Group ${group.name}`, [command({ type: "timeGroup.update", timeGroupId: group.id, name: nextName, start: start!, end: end!, ...(category === undefined ? {} : { category }), ...(comment === undefined ? {} : { comment }), ...(presentation === undefined ? {} : { presentation }) }, "typed_update_time_group")]) };
+  }
+  return { ok: false, message: `Unsupported typed Time Group proposal '${tool}'.` };
 }
 
 export function buildTypedTransactionProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {

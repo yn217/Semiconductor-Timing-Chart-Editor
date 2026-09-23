@@ -3,7 +3,7 @@ import { useRef, type ReactNode } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { planCommand } from "@timing-chart-v2/commands";
 import { validateCanonicalDocument, type CanonicalDocument, type DocumentProblem, type GroupId, type SignalId } from "@timing-chart-v2/schema";
-import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTransactionGroupProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
+import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTimeGroupProposal, buildTypedTransactionGroupProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
 import { probeAIBridge, useAIBridgeClient, type AIBridgeStatus } from "./ai-bridge-client.js";
 import { buildAIClientConfig, buildAIMcpEndpoint, type AIClientSetup } from "./ai-connection-guide.js";
 
@@ -267,6 +267,8 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
         ? buildTypedSignalGroupProposal(document, revision, tool, args)
       : tool === "propose_create_transaction_group" || tool === "propose_rename_transaction_group" || tool === "propose_delete_transaction_group"
         ? buildTypedTransactionGroupProposal(document, revision, tool, args)
+      : tool === "propose_create_time_group" || tool === "propose_update_time_group" || tool === "propose_delete_time_group"
+        ? buildTypedTimeGroupProposal(document, revision, tool, args)
       : tool === "propose_create_transaction" || tool === "propose_update_transaction" || tool === "propose_move_transaction" || tool === "propose_resize_transaction" || tool === "propose_delete_transaction" || tool === "propose_add_phase" || tool === "propose_update_phase" || tool === "propose_delete_phase" || tool === "propose_link_signal" || tool === "propose_unlink_signal"
           ? buildTypedTransactionProposal(document, revision, tool, args)
       : tool === "propose_create_bookmark" || tool === "propose_move_bookmark" || tool === "propose_update_bookmark" || tool === "propose_delete_bookmark"
