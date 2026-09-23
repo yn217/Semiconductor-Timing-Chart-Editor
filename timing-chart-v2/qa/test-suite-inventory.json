@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:12:13.394Z",
+  "generatedAt": "2026-09-23T07:13:29.441Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 851,
+  "reviewedCaseCount": 855,
   "curatedProfileCounts": {
-    "integration": 444,
+    "integration": 446,
     "nightly": 175,
     "performance": 48,
-    "pr": 231,
-    "visual": 145
+    "pr": 232,
+    "visual": 146
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -20083,18 +20083,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "timeline-range-edit-responsive-readability-wide",
+      "originIssue": 396,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1672x941, Selected and Target range preview lines remain separated/contained, Range Edit controls remain inside the Ribbon group without overlap, and group height remains consistent with Insert.",
+      "duplicateGroup": "timeline-range-edit-responsive-readability",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The wide approved viewport independently verifies the documented desktop layout; the compact sibling protects its own breakpoint. Both viewport contracts are retained because their constraints differ.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "timeline-range-edit-readability.spec.ts",
@@ -20105,18 +20108,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "timeline-range-command-tooltip-semantics",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Delete, Duplicate, and Move tooltips explain the actual selected half-open source interval and destination/resulting interval instead of vague or misleading command text.",
+      "duplicateGroup": "timeline-range-command-accessible-descriptions",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This small user-facing affordance prevents range commands from being misunderstood and is the only direct check that descriptions match the command's half-open semantics; transform behavior tests do not validate instructional text.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "timeline-range-hitarea-closure.spec.ts",
@@ -20127,18 +20133,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-range-drag-surface-hit-routing",
+      "originIssue": 573,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Real range drags from waveform, semantic timing row, blank timing viewport, ruler, and comment row resolve the same source interval; reverse drag normalizes correctly and every range gesture remains view-only.",
+      "duplicateGroup": "cycle-range-pointer-surface-routing",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the broad input-surface hit-routing matrix, including a visual-reference comment row and reverse normalization. Narrow ruler/waveform range tests do not prove all pointer-start regions share the correct selection owner.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-range-hitarea-closure.spec.ts",
@@ -20149,18 +20158,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-range-preview-playhead-snapshot",
+      "originIssue": 573,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "During a real drag, each pointer snapshot resolves one source cycle used consistently by both range preview endpoint and playhead, then clears transient preview on pointerup without semantic mutation.",
+      "duplicateGroup": "cycle-range-pointer-surface-routing",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The previous case checks surface entry points and final ranges; this separately protects intra-gesture consistency so preview and playhead cannot lag or use different pointer conversions.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-range-hitarea-closure.spec.ts",
@@ -26721,22 +26733,22 @@
     {
       "file": "timeline-range-edit-readability.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 1,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "timeline-range-hitarea-closure.spec.ts",
       "caseCount": 5,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "timing-grid-x-scale-closure.spec.ts",

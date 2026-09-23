@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 851/959 cases reviewed.
+Semantic review progress: 855/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 444 |
+| `integration` | 446 |
 | `nightly` | 175 |
 | `performance` | 48 |
-| `pr` | 231 |
-| `visual` | 145 |
+| `pr` | 232 |
+| `visual` | 146 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -298,8 +298,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `timeline-editor.spec.ts` | 29 | 29/29 reviewed |
 | `timeline-range-100k.spec.ts` | 3 | 3/3 reviewed |
 | `timeline-range-band-presentation.spec.ts` | 9 | 9/9 reviewed |
-| `timeline-range-edit-readability.spec.ts` | 3 | 1/3 reviewed |
-| `timeline-range-hitarea-closure.spec.ts` | 5 | 0/5 reviewed |
+| `timeline-range-edit-readability.spec.ts` | 3 | 3/3 reviewed |
+| `timeline-range-hitarea-closure.spec.ts` | 5 | 2/5 reviewed |
 | `timing-grid-x-scale-closure.spec.ts` | 1 | 0/1 reviewed |
 | `titlebar-controls.spec.ts` | 1 | 0/1 reviewed |
 | `transaction-bottom-panel-table-first.spec.ts` | 1 | 0/1 reviewed |
