@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T10:56:06.974Z",
+  "generatedAt": "2026-09-23T11:00:07.475Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 328,
-  "caseCount": 963,
-  "reviewedCaseCount": 963,
+  "specFileCount": 327,
+  "caseCount": 962,
+  "reviewedCaseCount": 962,
   "curatedProfileCounts": {
     "integration": 490,
     "nightly": 195,
     "performance": 54,
-    "pr": 257,
+    "pr": 256,
     "visual": 174
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -11139,31 +11139,6 @@
       ]
     },
     {
-      "file": "issue-737-bottom-sort.spec.ts",
-      "suitePath": [],
-      "line": 3,
-      "title": "Bottom Transaction table sorts by Start as view state only",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "transaction-bottom-sort",
-      "originIssue": 737,
-      "type": "SEMANTIC_CONTRACT",
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": "Bottom Start sort direction changes only view order, preserves selection-independent canonical/history state, and returning to document order restores the original row sequence.",
-      "duplicateGroup": "transaction-bottom-sort-overlap-737-747",
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "decision": "KEEP",
-      "reason": "This overlaps the broader #747 Start/End sort matrix but uniquely asserts restoring exact document row order; keep this invariant until it is merged into the domain contract suite.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "pr"
-      ]
-    },
-    {
       "file": "issue-737-multi-select.spec.ts",
       "suitePath": [],
       "line": 3,
@@ -11910,11 +11885,11 @@
       "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": "Start/End ascending/descending are announced accessibly, one sort key is active, sorting preserves selected ID and view-only state, and the Bottom settings gear opens/closes with Escape.",
+      "primaryContract": "Start/End ascending/descending order is proven by independent stable-ID anchors; selection is preserved; document order restores the original ID sequence; all sorting is view-only; the Bottom settings gear opens/closes with Escape.",
       "duplicateGroup": "transaction-bottom-sort-overlap-737-747",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
       "decision": "KEEP",
-      "reason": "This is broader than #737's Start-only sorting contract and adds End sorting/settings accessibility. One compact viewport is enough for these semantic assertions; two-view responsive geometry remains in the dedicated #747 geometry acceptance.",
+      "reason": "The contract absorbs #737's exact document-order restoration and stable-ID sort anchors, alongside #747's Start/End state/selection/accessibility checks. One compact viewport is enough for these semantic assertions; two-view responsive geometry remains in dedicated acceptance.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -25800,17 +25775,6 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
-      "file": "issue-737-bottom-sort.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 1,
-      "originIssue": "737",
-      "declaredTimeoutMs": null,
-      "candidateSignals": [
-        "querySelector"
-      ],
-      "semanticReviewStatus": "REVIEWED"
-    },
-    {
       "file": "issue-737-multi-select.spec.ts",
       "caseCount": 1,
       "reviewedCaseCount": 1,
@@ -25928,7 +25892,7 @@
       "originIssue": "747",
       "declaredTimeoutMs": null,
       "candidateSignals": [
-        "querySelector"
+        "dataset"
       ],
       "semanticReviewStatus": "REVIEWED"
     },
@@ -28227,6 +28191,18 @@
       },
       "protectedInvariant": "Escape resets the active Bottom draft to its canonical value while retaining selection and History unchanged.",
       "reason": "The source assertion is retained in the merged journey, which additionally proves the dirty indicator clears and selection remains stable."
+    },
+    {
+      "from": {
+        "file": "issue-737-bottom-sort.spec.ts",
+        "title": "Bottom Transaction table sorts by Start as view state only"
+      },
+      "to": {
+        "file": "issue-747-a11y-and-sort-matrix.spec.ts",
+        "title": "Bottom sort matrix and settings a11y at 1280x720"
+      },
+      "protectedInvariant": "Start sort asc/desc and return-to-document-order preserve exact stable-ID row sequences; sorting changes only view state.",
+      "reason": "The #747 matrix now asserts explicit hand-authored stable-ID orders for Start/End, preserves the selected ID, returns to original document order, and retains Canonical/History checks. Removed duplicate separate app startup."
     }
   ]
 }

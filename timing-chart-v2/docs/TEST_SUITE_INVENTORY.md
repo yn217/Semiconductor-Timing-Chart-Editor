@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 328 spec files and 963 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 327 spec files and 962 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 963/963 cases reviewed.
+Semantic review progress: 962/962 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 490 |
 | `nightly` | 195 |
 | `performance` | 54 |
-| `pr` | 257 |
+| `pr` | 256 |
 | `visual` | 174 |
 
 ## Top recorded per-case runtimes
@@ -193,7 +193,6 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-727-minimap-affordance.spec.ts` | 1 | 1/1 reviewed |
 | `issue-728-group-double-click.spec.ts` | 1 | 1/1 reviewed |
 | `issue-729-dirty-title.spec.ts` | 1 | 1/1 reviewed |
-| `issue-737-bottom-sort.spec.ts` | 1 | 1/1 reviewed |
 | `issue-737-multi-select.spec.ts` | 1 | 1/1 reviewed |
 | `issue-737-selection-gestures.spec.ts` | 2 | 2/2 reviewed |
 | `issue-738-ruler-hit-area.spec.ts` | 4 | 4/4 reviewed |
@@ -436,7 +435,6 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-725-keyboard-journey.spec.ts` | geometryRead |
 | `issue-726-lane-hover.spec.ts` | getComputedStyle |
 | `issue-726-marker-hierarchy.spec.ts` | getComputedStyle |
-| `issue-737-bottom-sort.spec.ts` | querySelector |
 | `issue-737-selection-gestures.spec.ts` | getComputedStyle |
 | `issue-738-ruler-origin-after-scroll-return.spec.ts` | dataset, geometryRead |
 | `issue-738-stress-real-input.spec.ts` | dataset, geometryRead |
@@ -444,7 +442,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-740-741-756-cycle-layout.spec.ts` | querySelector, getComputedStyle, geometryRead |
 | `issue-740-cycle-bottom-hidden.spec.ts` | querySelector, geometryRead |
 | `issue-746-visible-group-create.spec.ts` | querySelector, geometryRead |
-| `issue-747-a11y-and-sort-matrix.spec.ts` | querySelector |
+| `issue-747-a11y-and-sort-matrix.spec.ts` | dataset |
 | `issue-747-geometry-acceptance.spec.ts` | querySelector, geometryRead |
 | `issue-748-tree-menu-and-parity.spec.ts` | geometryRead |
 | `issue-750-geometry-10-to-50.spec.ts` | querySelector, dataset, geometryRead |
@@ -580,6 +578,7 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-723-status-diagnostics.spec.ts` “left rail never covers the status bar at 1280x720” → `issue-723-status-diagnostics.spec.ts` “status diagnostics stay opt-in and the left rail never covers status in compact modes”. **Invariant:** The left workspace rail never covers the status bar in compact layout across all view modes. **Reason:** The cross-mode geometry assertions now share the same 1280x720 page lifecycle as the opt-in diagnostics check; no assertion was removed.
 - `issue-725-draft-markers.spec.ts` “edited Bottom row cells show a draft marker and double-click focuses the editor” → `transaction-bottom-draft.contract.spec.ts` “Bottom draft edit is visibly marked and Escape restores the committed value without deselecting”. **Invariant:** Double-click focuses the field; changed draft styling and marker appear; Escape restores committed appearance/value without a History mutation. **Reason:** Combined with the focused Escape cancellation journey so both visual feedback and draft lifecycle assertions run in one production fixture load.
 - `issue-725-escape-revert.spec.ts` “Escape in the active Bottom row reverts a dirty draft before deselecting” → `transaction-bottom-draft.contract.spec.ts` “Bottom draft edit is visibly marked and Escape restores the committed value without deselecting”. **Invariant:** Escape resets the active Bottom draft to its canonical value while retaining selection and History unchanged. **Reason:** The source assertion is retained in the merged journey, which additionally proves the dirty indicator clears and selection remains stable.
+- `issue-737-bottom-sort.spec.ts` “Bottom Transaction table sorts by Start as view state only” → `issue-747-a11y-and-sort-matrix.spec.ts` “Bottom sort matrix and settings a11y at 1280x720”. **Invariant:** Start sort asc/desc and return-to-document-order preserve exact stable-ID row sequences; sorting changes only view state. **Reason:** The #747 matrix now asserts explicit hand-authored stable-ID orders for Start/End, preserves the selected ID, returns to original document order, and retains Canonical/History checks. Removed duplicate separate app startup.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 

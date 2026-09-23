@@ -1275,23 +1275,6 @@
       "replacementTest": null
     },
     {
-      "file": "issue-737-bottom-sort.spec.ts",
-      "domain": "transaction-bottom-sort",
-      "originIssue": 737,
-      "type": "SEMANTIC_CONTRACT",
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": "Bottom Start sort direction changes only view order, preserves selection-independent canonical/history state, and returning to document order restores the original row sequence.",
-      "duplicateGroup": "transaction-bottom-sort-overlap-737-747",
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": [
-        "pr"
-      ],
-      "decision": "KEEP",
-      "reason": "This overlaps the broader #747 Start/End sort matrix but uniquely asserts restoring exact document row order; keep this invariant until it is merged into the domain contract suite.",
-      "replacementTest": null
-    },
-    {
       "file": "issue-737-multi-select.spec.ts",
       "domain": "transaction-bottom-multi-selection",
       "originIssue": 737,
@@ -1419,14 +1402,14 @@
       "type": "SEMANTIC_CONTRACT",
       "costClass": null,
       "measuredRuntimeMs": null,
-      "primaryContract": "Start/End ascending/descending are announced accessibly, one sort key is active, sorting preserves selected ID and view-only state, and the Bottom settings gear opens/closes with Escape.",
+      "primaryContract": "Start/End ascending/descending order is proven by independent stable-ID anchors; selection is preserved; document order restores the original ID sequence; all sorting is view-only; the Bottom settings gear opens/closes with Escape.",
       "duplicateGroup": "transaction-bottom-sort-overlap-737-747",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
       "profiles": [
         "pr"
       ],
       "decision": "KEEP",
-      "reason": "This is broader than #737's Start-only sorting contract and adds End sorting/settings accessibility. One compact viewport is enough for these semantic assertions; two-view responsive geometry remains in the dedicated #747 geometry acceptance.",
+      "reason": "The contract absorbs #737's exact document-order restoration and stable-ID sort anchors, alongside #747's Start/End state/selection/accessibility checks. One compact viewport is enough for these semantic assertions; two-view responsive geometry remains in dedicated acceptance.",
       "replacementTest": null
     },
     {

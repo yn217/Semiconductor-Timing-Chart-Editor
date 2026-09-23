@@ -360,6 +360,12 @@
       "to": { "file": "transaction-bottom-draft.contract.spec.ts", "title": "Bottom draft edit is visibly marked and Escape restores the committed value without deselecting" },
       "protectedInvariant": "Escape resets the active Bottom draft to its canonical value while retaining selection and History unchanged.",
       "reason": "The source assertion is retained in the merged journey, which additionally proves the dirty indicator clears and selection remains stable."
+    },
+    {
+      "from": { "file": "issue-737-bottom-sort.spec.ts", "title": "Bottom Transaction table sorts by Start as view state only" },
+      "to": { "file": "issue-747-a11y-and-sort-matrix.spec.ts", "title": "Bottom sort matrix and settings a11y at 1280x720" },
+      "protectedInvariant": "Start sort asc/desc and return-to-document-order preserve exact stable-ID row sequences; sorting changes only view state.",
+      "reason": "The #747 matrix now asserts explicit hand-authored stable-ID orders for Start/End, preserves the selected ID, returns to original document order, and retains Canonical/History checks. Removed duplicate separate app startup."
     }
   ]
 }
