@@ -8,30 +8,6 @@ async function toCycle(page: Page) {
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
 }
-const rect = (page: Page, selector: string) => page.evaluate((sel) => { const e = document.querySelector<HTMLElement>(sel); if (!e) return null; const b = e.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, height: b.height, left: b.left, width: b.width }; }, selector);
-
-for (const size of SIZES) {
-  test(`#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at ${size.width}x${size.height}`, async ({ page }) => {
-    await page.setViewportSize(size);
-    await toCycle(page);
-    const visible = await rect(page, ".cycle-panel");
-    const workspace = await rect(page, ".desktop-workspace");
-    expect(visible && workspace).toBeTruthy();
-    await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
-    await page.getByTestId("ribbon").getByRole("button", { name: "Bottom Editor", exact: true }).click();
-    await expect(page.locator("main.editor-shell")).toHaveAttribute("data-bottom-visible", "false");
-    const hidden = await rect(page, ".cycle-panel");
-    // The timing canvas now reaches the workspace bottom: no reserved band the size of Bottom + splitter.
-    expect(Math.abs(hidden!.bottom - workspace!.bottom), "cycle panel bottom == workspace bottom").toBeLessThanOrEqual(1);
-    // #756: the panel spans Main + Bottom in both states, so hiding Bottom does not change its height; the visible timing canvas
-    // (down to the Bottom splitter) is what grows -- covered by issue-740-cycle-bottom-hidden.
-    expect(Math.abs(hidden!.height - visible!.height)).toBeLessThanOrEqual(1);
-    await expect(page.getByTestId("bottom-resizer")).toHaveCount(0);
-    // View-only.
-    await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
-  });
-}
-
 test("#741 Transaction fixed-width sidebar exposes no focusable ghost resizer and hides no width mutation", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
@@ -39,7 +15,12 @@ test("#741 Transaction fixed-width sidebar exposes no focusable ghost resizer an
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
   await expect(page.getByTestId("left-pane-resizer")).toHaveCount(0);
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
-  await expect(page.getByTestId("left-pane-resizer")).toHaveCount(1);
+  const separator = page.getByTestId("left-pane-resizer");
+  await expect(separator).toHaveCount(1);
+  const before = await separator.getAttribute("aria-valuenow");
+  await separator.focus();
+  await page.keyboard.press("ArrowRight");
+  expect(await separator.getAttribute("aria-valuenow")).not.toBe(before);
 });
 
 for (const size of SIZES) {

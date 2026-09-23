@@ -2,7 +2,10 @@ import { expect, test } from "@playwright/test";
 
 // #737 selection grammar in the Bottom Transaction grid (both viewports): click, Ctrl/Cmd+click toggle, Shift+click contiguous range in visible
 // order (including under a filter), Ctrl+A selects all visible only outside text inputs; selection is view-only.
-for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+// Selection semantics do not depend on viewport width. Keep the compact
+// viewport here; responsive Bottom geometry remains covered at both widths by
+// issue-747-geometry-acceptance.spec.ts.
+for (const viewport of [{ width: 1280, height: 720 }]) {
   test(`Bottom grid selection gestures at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));

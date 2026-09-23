@@ -3,7 +3,9 @@ import { openBottomSettings } from "./bottom-settings.js";
 
 // #747 accessibility + sort matrix: Start/End ascending/descending are announced by name and state, only one primary key is active, sorting is
 // view-only and keeps the selected ID; the gear is named 'Bottom Panel settings' and Escape closes its popover.
-for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+// Sort and accessibility semantics are width-independent; retain the compact
+// viewport. The separate geometry acceptance keeps the 1280/1672 layout matrix.
+for (const viewport of [{ width: 1280, height: 720 }]) {
   test(`Bottom sort matrix and settings a11y at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));

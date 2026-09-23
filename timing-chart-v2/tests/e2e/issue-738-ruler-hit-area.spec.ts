@@ -16,7 +16,11 @@ const range = async (page: Page) => `${await page.getByLabel("Timeline range sta
 const rawTick = async (page: Page, cycle: number) => (await page.getByTestId("cycle-ruler").locator(`.cycle-tick[data-source-cycle='${cycle}']`).boundingBox())!;
 /** Left edge + pitch of ruler cells: exact ticks in Cycle; derived from the cycle 0 / cycle 10 TC ticks in compressed Transaction. */
 async function cellGeometry(page: Page, mode: "Cycle" | "Transaction", cycle: number) {
-  if (mode === "Cycle") return { x: (await rawTick(page, cycle)).x, pitch: 40 };
+  if (mode === "Cycle") {
+    const tick = await rawTick(page, cycle);
+    const nextTick = await rawTick(page, cycle + 1);
+    return { x: tick.x, pitch: nextTick.x - tick.x };
+  }
   const zero = await rawTick(page, 0); const ten = await rawTick(page, 10);
   const pitch = (ten.x - zero.x) / 10;
   return { x: zero.x + pitch * cycle, pitch };

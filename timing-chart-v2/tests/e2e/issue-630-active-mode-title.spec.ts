@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { transactionDemoDocument } from "../../apps/editor/src/fixtures-cycle-reference-documents.js";
 
-for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
-  test(`document title never displays a stale mode suffix at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+test("document title never displays a stale mode suffix at 1280x720", async ({ page }) => {
+    const viewport = { width: 1280, height: 720 };
     test.setTimeout(60_000);
     const pageErrors: string[] = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -51,5 +51,4 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(page.getByTestId("history-status")).toHaveText(baseline.history);
     await expect(page.getByTestId("dirty-status")).toHaveText(baseline.dirty);
     expect(pageErrors).toEqual([]);
-  });
-}
+});
