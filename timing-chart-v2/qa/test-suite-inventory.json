@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T04:28:10.474Z",
+  "generatedAt": "2026-09-23T04:33:27.216Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,10 +12,10 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 332,
-  "caseCount": 965,
-  "reviewedCaseCount": 596,
+  "caseCount": 964,
+  "reviewedCaseCount": 599,
   "curatedProfileCounts": {
-    "integration": 276,
+    "integration": 279,
     "nightly": 157,
     "performance": 44,
     "pr": 166,
@@ -15834,50 +15834,31 @@
       "file": "qa-fresh-state-journeys.spec.ts",
       "suitePath": [],
       "line": 74,
-      "title": "J6 annotation create -> drag -> Escape leaves Canonical untouched",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "qa-fresh-state-journeys.spec.ts",
-      "suitePath": [],
-      "line": 96,
       "title": "J7/J8/J15 far horizontal + vertical scroll -> select, zoom -> scroll -> mode switch",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "fresh-state-scroll-and-mode-journey",
+      "originIssue": 684,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "A fresh Cycle workspace can scroll horizontally and vertically, select after the far scroll, zoom, reposition, and survive mode round trips without runtime errors.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This verifies a real fresh-start interaction sequence spanning both scroll axes, selection, zoom, and mode ownership; separate owner tests do not prove the combined lifecycle order.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "qa-fresh-state-journeys.spec.ts",
       "suitePath": [],
-      "line": 115,
+      "line": 93,
       "title": "J9 Bottom follows the selected entity kind",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -15902,46 +15883,52 @@
     {
       "file": "qa-fresh-state-journeys.spec.ts",
       "suitePath": [],
-      "line": 129,
+      "line": 107,
       "title": "J11-J14 save -> edit -> Undo, dirty -> Open -> Cancel / Discard, reload -> Open",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "fresh-state-document-lifecycle",
+      "originIssue": 684,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "A fresh Cycle document can be saved, edited, undone/redone, protected by Cancel or replaced by Discard during Open, then reloaded and opened again without runtime errors.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Although focused tests cover individual dirty-dialog paths, this test uniquely verifies their end-to-end ordering with Save/download, edit history, browser reload, and a second Open in one fresh session.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "qa-fresh-state-journeys.spec.ts",
       "suitePath": [],
-      "line": 162,
+      "line": 140,
       "title": "J17 window resize during an active range drag keeps the app consistent",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "active-range-drag-resize-lifecycle",
+      "originIssue": 684,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Resizing the browser viewport during a live Cycle range drag leaves the editor idle, creates no History unit, and produces no runtime errors.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the only reviewed live range-drag plus viewport-resize lifecycle; static geometry and ordinary range-drag tests do not cover resize during pointer capture.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "reference-clock-conversion.spec.ts",
@@ -25656,12 +25643,12 @@
     },
     {
       "file": "qa-fresh-state-journeys.spec.ts",
-      "caseCount": 10,
-      "reviewedCaseCount": 6,
+      "caseCount": 9,
+      "reviewedCaseCount": 9,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "reference-clock-conversion.spec.ts",
@@ -26727,6 +26714,18 @@
     }
   ],
   "consolidationMap": [
+    {
+      "from": {
+        "file": "qa-fresh-state-journeys.spec.ts",
+        "title": "J6 annotation create -> drag -> Escape leaves Canonical untouched"
+      },
+      "to": {
+        "file": "keyboard-shortcut-router.spec.ts",
+        "title": "Escape cancels an in-progress Annotation drag, closes the context menu, and resets dependency-arrow pick"
+      },
+      "protectedInvariant": "Escape cancels a real Annotation drag without changing Canonical revision, History, or Dirty state and without runtime errors.",
+      "reason": "The keyboard lifecycle test already creates an Annotation through production UI, resolves its stable ID, performs a real pointer drag, and asserts revision and History preservation; it now also checks Dirty and runtime errors. Keeping the stronger test removes a duplicate fresh journey without weakening the cancellation contract."
+    },
     {
       "from": {
         "file": "issue-737-selection-gestures.spec.ts",

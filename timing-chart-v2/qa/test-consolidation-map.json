@@ -3,6 +3,18 @@
   "consolidations": [
     {
       "from": {
+        "file": "qa-fresh-state-journeys.spec.ts",
+        "title": "J6 annotation create -> drag -> Escape leaves Canonical untouched"
+      },
+      "to": {
+        "file": "keyboard-shortcut-router.spec.ts",
+        "title": "Escape cancels an in-progress Annotation drag, closes the context menu, and resets dependency-arrow pick"
+      },
+      "protectedInvariant": "Escape cancels a real Annotation drag without changing Canonical revision, History, or Dirty state and without runtime errors.",
+      "reason": "The keyboard lifecycle test already creates an Annotation through production UI, resolves its stable ID, performs a real pointer drag, and asserts revision and History preservation; it now also checks Dirty and runtime errors. Keeping the stronger test removes a duplicate fresh journey without weakening the cancellation contract."
+    },
+    {
+      "from": {
         "file": "issue-737-selection-gestures.spec.ts",
         "title": "Bottom grid selection gestures at 1672x941"
       },

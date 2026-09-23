@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 332 spec files and 965 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 332 spec files and 964 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 596/965 cases reviewed.
+Semantic review progress: 599/964 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,7 +10,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 276 |
+| `integration` | 279 |
 | `nightly` | 157 |
 | `performance` | 44 |
 | `pr` | 166 |
@@ -255,7 +255,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `pinned-bottom-target.spec.ts` | 4 | 4/4 reviewed |
 | `production-presentation-equivalence.spec.ts` | 1 | 1/1 reviewed |
 | `qa-cross-mode-journey.spec.ts` | 2 | 2/2 reviewed |
-| `qa-fresh-state-journeys.spec.ts` | 10 | 6/10 reviewed |
+| `qa-fresh-state-journeys.spec.ts` | 9 | 9/9 reviewed |
 | `reference-clock-conversion.spec.ts` | 4 | 0/4 reviewed |
 | `reorder-visibility.spec.ts` | 8 | 0/8 reviewed |
 | `reset-semantics-inspector.spec.ts` | 2 | 0/2 reviewed |
@@ -519,6 +519,7 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 
 ## Consolidation/replacement map
 
+- `qa-fresh-state-journeys.spec.ts` “J6 annotation create -> drag -> Escape leaves Canonical untouched” → `keyboard-shortcut-router.spec.ts` “Escape cancels an in-progress Annotation drag, closes the context menu, and resets dependency-arrow pick”. **Invariant:** Escape cancels a real Annotation drag without changing Canonical revision, History, or Dirty state and without runtime errors. **Reason:** The keyboard lifecycle test already creates an Annotation through production UI, resolves its stable ID, performs a real pointer drag, and asserts revision and History preservation; it now also checks Dirty and runtime errors. Keeping the stronger test removes a duplicate fresh journey without weakening the cancellation contract.
 - `issue-737-selection-gestures.spec.ts` “Bottom grid selection gestures at 1672x941” → `issue-737-selection-gestures.spec.ts` “Bottom grid selection gestures at 1280x720”. **Invariant:** Click/Ctrl/Shift selection, visible-order filtering, Ctrl+A scoping, and view-only Canonical/History behavior are viewport-independent. **Reason:** Removed the duplicate desktop execution; the compact viewport retains the full semantic journey, while issue-747-geometry-acceptance.spec.ts continues to verify responsive geometry at both 1280x720 and 1672x941.
 - `issue-747-a11y-and-sort-matrix.spec.ts` “Bottom sort matrix and settings a11y at 1672x941” → `issue-747-a11y-and-sort-matrix.spec.ts` “Bottom sort matrix and settings a11y at 1280x720”. **Invariant:** Start/End sort direction, selected-ID retention, view-only sort, named settings gear, and Escape popover close are width-independent semantic behavior. **Reason:** Removed the redundant desktop semantic run. The compact case retains the complete a11y/sort journey, and issue-747-geometry-acceptance.spec.ts still verifies the layout-specific behavior at both supported viewports.
 - `issue-625-timeline-only-hscroll.spec.ts` “Cycle FixedColumns sit outside the horizontal scroll owner at 1280x720” → `issue-625-cycle-fixed-columns-scroll.spec.ts` “Cycle fixed columns stay stationary through native scrollbar drag at 1280x720”. **Invariant:** Timeline-only horizontal scrolling keeps fixed columns stationary and the visible scrollbar aligned to the time-domain region. **Reason:** Removed the implementation-coupled browser case that forced --wave-width, asserted overflow/DOM ancestry, and re-derived scroll-owner topology. The production-path native-scroll journey now also measures visible scrollbar alignment at this width; check:cycle-scroll-owner protects the structural owner contract without launching a browser.

@@ -69,6 +69,9 @@ test("Ctrl+A inside a text input performs native select-all instead of the app s
 });
 
 test("Escape cancels an in-progress Annotation drag, closes the context menu, and resets dependency-arrow pick", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(String(error)));
+  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.goto("/");
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
@@ -81,6 +84,7 @@ test("Escape cancels an in-progress Annotation drag, closes the context menu, an
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const revisionBefore = await host.getAttribute("data-canonical-revision");
   const historyBefore = await page.getByTestId("history-status").textContent();
+  const dirtyBefore = await page.getByTestId("dirty-status").textContent();
 
   const annotationsAfter = await host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-id")).filter((id): id is string => id !== null));
   expect(new Set(annotationsAfter).size).toBe(annotationsAfter.length);
@@ -97,4 +101,6 @@ test("Escape cancels an in-progress Annotation drag, closes the context menu, an
 
   expect(await host.getAttribute("data-canonical-revision")).toBe(revisionBefore);
   expect(await page.getByTestId("history-status").textContent()).toBe(historyBefore);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(dirtyBefore);
+  expect(errors).toEqual([]);
 });
