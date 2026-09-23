@@ -5881,9 +5881,7 @@
       "primaryContract": "Home has no duplicate Time Group or interval-editor commands; the Timeline owns the Time Group creation action and creating it commits one History entry.",
       "duplicateGroup": "home-timeline-command-ownership",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": [
-        "pr"
-      ],
+      "profiles": [],
       "decision": "MOVE_LAYER",
       "reason": "This journey is fully covered only by pairing the dedicated Home command-label test (asserts duplicate Home controls are absent and Auto Space remains) with gui-reference-v8.spec.ts's V8 secondary-actions test (creates the Time Group from Timeline, verifies one History entry, and Undo). Keeping this third copy duplicates the same #416 path; retain its assertions in those focused contracts instead.",
       "replacementTest": "home-command-surface.spec.ts — Home command labels describe their observable action; gui-reference-v8.spec.ts — V8 Home secondary actions stay connected to real navigation and semantic commands"
