@@ -142,17 +142,21 @@ describe("deterministic AI proposal provider", () => {
 
   it("maps typed Bookmark proposals to existing Bookmark SemanticCommands", () => {
     const base = canonicalFixture();
-    const document = { ...base, bookmarks: [{ id: "bookmark_1" as never, name: "Start", start: 2 }] };
+    const document = { ...base, bookmarks: [{ id: "bookmark_1" as never, name: "Start", start: 2, comment: "preserve me" }] };
     const created = buildTypedBookmarkProposal(document, 24, "propose_create_bookmark", { name: " Middle ", cycle: 4, comment: "phase boundary" });
     expect(created.ok).toBe(true);
     if (created.ok) expect(created.proposal.commands).toEqual([expect.objectContaining({ type: "bookmark.create", bookmark: expect.objectContaining({ name: "Middle", start: 4, comment: "phase boundary" }) })]);
     const moved = buildTypedBookmarkProposal(document, 24, "propose_move_bookmark", { bookmarkId: "bookmark_1", cycle: 5 });
     expect(moved.ok).toBe(true);
     if (moved.ok) expect(moved.proposal.commands).toEqual([expect.objectContaining({ type: "bookmark.move", bookmarkId: "bookmark_1", start: 5 })]);
+    const updated = buildTypedBookmarkProposal(document, 24, "propose_update_bookmark", { bookmarkId: "bookmark_1", name: "Release" });
+    expect(updated.ok).toBe(true);
+    if (updated.ok) expect(updated.proposal.commands).toEqual([expect.objectContaining({ type: "bookmark.update", bookmarkId: "bookmark_1", name: "Release", start: 2, comment: "preserve me" })]);
     const deleted = buildTypedBookmarkProposal(document, 24, "propose_delete_bookmark", { bookmarkId: "bookmark_1" });
     expect(deleted.ok).toBe(true);
     if (deleted.ok) expect(deleted.proposal.commands).toEqual([expect.objectContaining({ type: "bookmark.delete", bookmarkId: "bookmark_1" })]);
     expect(buildTypedBookmarkProposal(document, 24, "propose_move_bookmark", { bookmarkId: "missing", cycle: 1 })).toEqual({ ok: false, message: "Bookmark 'missing' does not exist in the current document." });
+    expect(buildTypedBookmarkProposal(document, 24, "propose_update_bookmark", { bookmarkId: "bookmark_1" })).toEqual({ ok: false, message: "propose_update_bookmark requires at least one changed field." });
   });
 
   it("maps typed Annotation create/update/delete to stable-ID SemanticCommands and rejects invalid source ranges", () => {

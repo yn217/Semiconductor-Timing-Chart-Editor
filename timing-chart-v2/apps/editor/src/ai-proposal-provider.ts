@@ -224,6 +224,16 @@ export function buildTypedBookmarkProposal(document: CanonicalDocument, revision
     if (!Number.isSafeInteger(cycle) || (cycle as number) < 0 || (cycle as number) >= document.timeline.cycleCount) return { ok: false, message: "propose_move_bookmark requires an integer source cycle within the timeline." };
     return { ok: true, proposal: proposal(revision, `Move Bookmark ${bookmark.name} to cycle ${cycle}`, [command({ type: "bookmark.move", bookmarkId: bookmark.id, start: cycle as number }, "typed_move_bookmark")]) };
   }
+  if (tool === "propose_update_bookmark") {
+    const name = args.name === undefined ? bookmark.name : args.name;
+    const nextCycle = args.cycle === undefined ? bookmark.start : args.cycle;
+    const comment = args.comment === undefined ? bookmark.comment : args.comment;
+    if (typeof name !== "string" || !name.trim()) return { ok: false, message: "name must be a non-empty string when supplied." };
+    if (!Number.isSafeInteger(nextCycle) || (nextCycle as number) < 0 || (nextCycle as number) >= document.timeline.cycleCount) return { ok: false, message: "cycle must be an integer source cycle within the timeline." };
+    if (comment !== undefined && typeof comment !== "string") return { ok: false, message: "comment must be a string when supplied." };
+    if (name === bookmark.name && nextCycle === bookmark.start && comment === bookmark.comment) return { ok: false, message: "propose_update_bookmark requires at least one changed field." };
+    return { ok: true, proposal: proposal(revision, `Update Bookmark ${bookmark.name}`, [command({ type: "bookmark.update", bookmarkId: bookmark.id, name: name.trim(), start: nextCycle as number, ...(comment === undefined ? {} : { comment }) }, "typed_update_bookmark")]) };
+  }
   if (tool === "propose_delete_bookmark") return { ok: true, proposal: proposal(revision, `Delete Bookmark ${bookmark.name}`, [command({ type: "bookmark.delete", bookmarkId: bookmark.id }, "typed_delete_bookmark")]) };
   return { ok: false, message: `Unsupported typed Bookmark proposal '${tool}'.` };
 }
