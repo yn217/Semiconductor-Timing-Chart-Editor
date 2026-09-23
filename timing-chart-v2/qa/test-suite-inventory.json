@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T04:54:11.443Z",
+  "generatedAt": "2026-09-23T04:56:06.607Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 613,
+  "reviewedCaseCount": 618,
   "curatedProfileCounts": {
-    "integration": 285,
+    "integration": 287,
     "nightly": 159,
     "performance": 44,
-    "pr": 174,
+    "pr": 177,
     "visual": 130
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -5772,18 +5772,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "save-as-filename-and-view-only-boundary",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Save As applies the requested filename and downloads the canonical document while leaving Canonical revision, History, Dirty, and renderer counters unchanged.",
+      "duplicateGroup": "save-as-dialog-success-contract",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Dialog Escape and failure tests protect cancellation/error lifecycle, not successful filename handling or the non-mutating Save As boundary. Keep this compact success-path assertion in PR coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -5794,18 +5797,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "legend-presentation-projection",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Applying Legend orientation, role filtering, and position through Document Properties creates one canonical revision and projects matching visible Legend geometry and roles.",
+      "duplicateGroup": "legend-properties-and-persistence",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The stable-ID entry editor and advanced JSON round-trip cover per-entry labels/visibility/order; neither proves the canonical presentation fields control orientation, used-role filtering, and rendered position. This is their focused projection contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -5816,18 +5822,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "legend-position-interaction-adapters",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Legend position changes through pointer drag and keyboard nudge update the canonical Legend position via legend.update, with each committed interaction represented in History.",
+      "duplicateGroup": "legend-position-adapters",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Document Properties position fields cover direct editing but cannot verify the overlay's pointer and keyboard adapters or their semantic History routing. Keep both interaction modalities in integration coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -5838,18 +5847,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "legend-entry-stable-id-form-editor",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Document Properties form edits a specific Legend entry by stable ID, applies label/visibility/order together, and renders the resulting visibility and order from the canonical entry data.",
+      "duplicateGroup": "legend-properties-and-persistence",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The following Save/Open journey edits the advanced JSON representation; this test independently protects the user-facing stable-ID form controls and their semantic application path.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -5860,18 +5872,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "legend-entry-save-open-export-roundtrip",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Advanced Legend entry data with stable IDs, custom labels, visibility, and order survives canonical Save/Open and is reflected in SVG, PNG, and PDF export.",
+      "duplicateGroup": "legend-properties-and-persistence",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the only combined advanced-entry serialization round-trip and multi-format export check. The form-editor case does not exercise serialization or exported projection; retain as integration coverage, with its screenshot artifact not regenerated during inventory review.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -23840,7 +23855,7 @@
     {
       "file": "full-gui.spec.ts",
       "caseCount": 41,
-      "reviewedCaseCount": 10,
+      "reviewedCaseCount": 15,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
