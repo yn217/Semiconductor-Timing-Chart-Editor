@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:22:17.176Z",
+  "generatedAt": "2026-09-23T05:23:57.214Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,9 +13,9 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 664,
+  "reviewedCaseCount": 665,
   "curatedProfileCounts": {
-    "integration": 307,
+    "integration": 308,
     "nightly": 163,
     "performance": 44,
     "pr": 193,
@@ -7123,18 +7123,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "history-metrics-browser-projection",
+      "originIssue": 163,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After 100 real GUI visibility actions, browser-exposed history counters report committed actions, retained entries, eviction count, and snapshot estimate consistently.",
+      "duplicateGroup": "history-retention-boundary",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The 100-action browser case is below the configured 1000-entry horizon, so it is not the eviction-boundary proof; the existing history-retention and performance-statistics unit tests exercise 10k actions and actual eviction. Keep this as the distinct UI-to-session-metrics projection contract, and do not describe it as proving eviction.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "home-command-surface.spec.ts",
@@ -24150,11 +24153,11 @@
     {
       "file": "history-retention.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": 90,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "home-command-surface.spec.ts",
