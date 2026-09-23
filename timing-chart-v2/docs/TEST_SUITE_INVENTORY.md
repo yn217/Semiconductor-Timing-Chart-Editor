@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 326 spec files and 953 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 326 spec files and 952 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 953/953 cases reviewed.
+Semantic review progress: 952/952 cases reviewed.
 
 ## Curated profile membership
 
@@ -14,7 +14,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `nightly` | 195 |
 | `performance` | 54 |
 | `pr` | 253 |
-| `visual` | 167 |
+| `visual` | 166 |
 
 ## Top recorded per-case runtimes
 
@@ -203,7 +203,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-746-visible-group-create.spec.ts` | 1 | 1/1 reviewed |
 | `issue-747-a11y-and-sort-matrix.spec.ts` | 1 | 1/1 reviewed |
 | `issue-747-bottom-settings.spec.ts` | 1 | 1/1 reviewed |
-| `issue-747-geometry-acceptance.spec.ts` | 2 | 2/2 reviewed |
+| `issue-747-geometry-acceptance.spec.ts` | 1 | 1/1 reviewed |
 | `issue-748-add-and-focus-journey.spec.ts` | 1 | 1/1 reviewed |
 | `issue-748-transaction-left-header.spec.ts` | 1 | 1/1 reviewed |
 | `issue-748-tree-menu-and-parity.spec.ts` | 1 | 1/1 reviewed |
@@ -599,6 +599,8 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-750-geometry-10-to-50.spec.ts` “compressed Transaction: no clipped labels and no artificial scroll extent at 1672x941” → `issue-750-geometry-10-to-50.spec.ts` “compressed Transaction has no clipped labels or artificial scroll extent at both supported viewports”. **Invariant:** Compressed Transaction names remain accessible and no artificial horizontal scroll extent appears at desktop width. **Reason:** The unchanged clipping/extent assertions run at both widths after one transaction-demo load with the same 50-cycle display scale.
 - `issue-751-bottom-phase-editor.spec.ts` “Bottom Phases tab shows parent context, top Apply/Revert and live validation” → `issue-751-bottom-phase-editor.spec.ts` “Bottom Phase editor preserves draft/validation and stable Phase identity through Start-order projection”. **Invariant:** Phase parent context, Apply/Revert placement, draft retention/reversion, live validation, and unchanged History remain protected. **Reason:** The Phase editor lifecycle and stable-identity/order checks use the same transaction-demo fixture and tab. Running them sequentially after Revert preserves both journeys while avoiding a duplicate application startup.
 - `issue-751-bottom-phase-editor.spec.ts` “Phase rows follow Start-time order; edit and delete resolve the Phase, not the display index; validation wording is TC-safe” → `issue-751-bottom-phase-editor.spec.ts` “Bottom Phase editor preserves draft/validation and stable Phase identity through Start-order projection”. **Invariant:** Start-time projection order remains separate from stable Phase identity, delete resolves by Phase ID, and shared TC-safe validation does not mutate History. **Reason:** Both complementary Phase user journeys now run in one app session; the initial draft is reverted before the identity/order assertions, retaining each original check.
+- `issue-747-geometry-acceptance.spec.ts` “Bottom table geometry is stable under settings, selection, sort and Phase expansion at 1280x720” → `issue-747-geometry-acceptance.spec.ts` “Bottom table geometry is stable under settings, selection, sort and Phase expansion at both viewports”. **Invariant:** Compact-width Bottom table/header/Phase geometry remains aligned through settings, selection, sort and expansion without document/history changes. **Reason:** Runs the existing responsive geometry journey at compact width after a single transaction-demo startup; all per-viewport geometry and state baselines are retained.
+- `issue-747-geometry-acceptance.spec.ts` “Bottom table geometry is stable under settings, selection, sort and Phase expansion at 1672x941” → `issue-747-geometry-acceptance.spec.ts` “Bottom table geometry is stable under settings, selection, sort and Phase expansion at both viewports”. **Invariant:** Desktop Bottom table/header/Phase geometry remains aligned through settings, selection, sort and expansion without document/history changes. **Reason:** Runs the existing responsive geometry journey at desktop width in the same application session; the viewport is resized and geometry re-measured independently.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 

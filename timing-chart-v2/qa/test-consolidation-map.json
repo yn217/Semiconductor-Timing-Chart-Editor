@@ -492,6 +492,18 @@
       "to": { "file": "issue-751-bottom-phase-editor.spec.ts", "title": "Bottom Phase editor preserves draft/validation and stable Phase identity through Start-order projection" },
       "protectedInvariant": "Start-time projection order remains separate from stable Phase identity, delete resolves by Phase ID, and shared TC-safe validation does not mutate History.",
       "reason": "Both complementary Phase user journeys now run in one app session; the initial draft is reverted before the identity/order assertions, retaining each original check."
+    },
+    {
+      "from": { "file": "issue-747-geometry-acceptance.spec.ts", "title": "Bottom table geometry is stable under settings, selection, sort and Phase expansion at 1280x720" },
+      "to": { "file": "issue-747-geometry-acceptance.spec.ts", "title": "Bottom table geometry is stable under settings, selection, sort and Phase expansion at both viewports" },
+      "protectedInvariant": "Compact-width Bottom table/header/Phase geometry remains aligned through settings, selection, sort and expansion without document/history changes.",
+      "reason": "Runs the existing responsive geometry journey at compact width after a single transaction-demo startup; all per-viewport geometry and state baselines are retained."
+    },
+    {
+      "from": { "file": "issue-747-geometry-acceptance.spec.ts", "title": "Bottom table geometry is stable under settings, selection, sort and Phase expansion at 1672x941" },
+      "to": { "file": "issue-747-geometry-acceptance.spec.ts", "title": "Bottom table geometry is stable under settings, selection, sort and Phase expansion at both viewports" },
+      "protectedInvariant": "Desktop Bottom table/header/Phase geometry remains aligned through settings, selection, sort and expansion without document/history changes.",
+      "reason": "Runs the existing responsive geometry journey at desktop width in the same application session; the viewport is resized and geometry re-measured independently."
     }
   ]
 }

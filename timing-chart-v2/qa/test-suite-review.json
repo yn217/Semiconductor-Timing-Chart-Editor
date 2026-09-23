@@ -1409,7 +1409,7 @@
         "visual"
       ],
       "decision": "KEEP",
-      "reason": "The assertions measure responsive panel/header/cell geometry, so both 1280x720 and 1672x941 remain necessary; this suite also replaces the viewport-only geometry coverage removed from semantic tests.",
+      "reason": "The assertions measure responsive panel/header/cell geometry, so both 1280x720 and 1672x941 remain necessary. They now run sequentially in one production session, and this suite also replaces viewport-only geometry coverage removed from semantic tests.",
       "replacementTest": null
     },
     {

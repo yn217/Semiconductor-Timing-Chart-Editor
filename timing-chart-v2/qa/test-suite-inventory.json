@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T11:43:14.470Z",
+  "generatedAt": "2026-09-23T11:46:49.224Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,14 +12,14 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 326,
-  "caseCount": 953,
-  "reviewedCaseCount": 953,
+  "caseCount": 952,
+  "reviewedCaseCount": 952,
   "curatedProfileCounts": {
     "integration": 485,
     "nightly": 195,
     "performance": 54,
     "pr": 253,
-    "visual": 167
+    "visual": 166
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -11721,8 +11721,8 @@
     {
       "file": "issue-747-geometry-acceptance.spec.ts",
       "suitePath": [],
-      "line": 7,
-      "title": "Bottom table geometry is stable under settings, selection, sort and Phase expansion at 1280x720",
+      "line": 8,
+      "title": "Bottom table geometry is stable under settings, selection, sort and Phase expansion at both viewports",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -11736,32 +11736,7 @@
       "duplicateGroup": null,
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "decision": "KEEP",
-      "reason": "The assertions measure responsive panel/header/cell geometry, so both 1280x720 and 1672x941 remain necessary; this suite also replaces the viewport-only geometry coverage removed from semantic tests.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "visual"
-      ]
-    },
-    {
-      "file": "issue-747-geometry-acceptance.spec.ts",
-      "suitePath": [],
-      "line": 7,
-      "title": "Bottom table geometry is stable under settings, selection, sort and Phase expansion at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "transaction-bottom-grid-geometry",
-      "originIssue": 747,
-      "type": "VISUAL_ACCEPTANCE",
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": "Settings, selection, sort, and Phase expansion preserve the table header position and align child Phase cells with semantic columns at both supported viewport sizes, without document/history changes.",
-      "duplicateGroup": null,
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "KEEP",
-      "reason": "The assertions measure responsive panel/header/cell geometry, so both 1280x720 and 1672x941 remain necessary; this suite also replaces the viewport-only geometry coverage removed from semantic tests.",
+      "reason": "The assertions measure responsive panel/header/cell geometry, so both 1280x720 and 1672x941 remain necessary. They now run sequentially in one production session, and this suite also replaces viewport-only geometry coverage removed from semantic tests.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -25656,8 +25631,8 @@
     },
     {
       "file": "issue-747-geometry-acceptance.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "747",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -28215,6 +28190,30 @@
       },
       "protectedInvariant": "Start-time projection order remains separate from stable Phase identity, delete resolves by Phase ID, and shared TC-safe validation does not mutate History.",
       "reason": "Both complementary Phase user journeys now run in one app session; the initial draft is reverted before the identity/order assertions, retaining each original check."
+    },
+    {
+      "from": {
+        "file": "issue-747-geometry-acceptance.spec.ts",
+        "title": "Bottom table geometry is stable under settings, selection, sort and Phase expansion at 1280x720"
+      },
+      "to": {
+        "file": "issue-747-geometry-acceptance.spec.ts",
+        "title": "Bottom table geometry is stable under settings, selection, sort and Phase expansion at both viewports"
+      },
+      "protectedInvariant": "Compact-width Bottom table/header/Phase geometry remains aligned through settings, selection, sort and expansion without document/history changes.",
+      "reason": "Runs the existing responsive geometry journey at compact width after a single transaction-demo startup; all per-viewport geometry and state baselines are retained."
+    },
+    {
+      "from": {
+        "file": "issue-747-geometry-acceptance.spec.ts",
+        "title": "Bottom table geometry is stable under settings, selection, sort and Phase expansion at 1672x941"
+      },
+      "to": {
+        "file": "issue-747-geometry-acceptance.spec.ts",
+        "title": "Bottom table geometry is stable under settings, selection, sort and Phase expansion at both viewports"
+      },
+      "protectedInvariant": "Desktop Bottom table/header/Phase geometry remains aligned through settings, selection, sort and expansion without document/history changes.",
+      "reason": "Runs the existing responsive geometry journey at desktop width in the same application session; the viewport is resized and geometry re-measured independently."
     }
   ]
 }
