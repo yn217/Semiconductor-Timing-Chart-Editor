@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:59:15.887Z",
+  "generatedAt": "2026-09-23T06:03:41.169Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 747,
+  "reviewedCaseCount": 765,
   "curatedProfileCounts": {
-    "integration": 369,
-    "nightly": 168,
+    "integration": 382,
+    "nightly": 170,
     "performance": 44,
-    "pr": 209,
-    "visual": 142
+    "pr": 212,
+    "visual": 144
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -17342,18 +17342,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "home-ribbon-transaction-context-groups",
+      "originIssue": 406,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Switching between Cycle and Transaction changes the Home Ribbon group composition and Bottom context without mutating Canonical/History/Dirty; Transaction creation remains one Undo/Redo-able command.",
+      "duplicateGroup": "home-ribbon-viewmode-context",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Static responsive tests do not validate ViewMode-owned group projection or Bottom context synchronization, and the create/Undo/Redo portion protects the retained Transaction action route.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-transaction-context.spec.ts",
@@ -17364,18 +17367,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-context-ribbon-overflow",
+      "originIssue": 406,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1280x720 in Transaction context, the Home Ribbon scroll width does not exceed the client width.",
+      "duplicateGroup": "transaction-context-ribbon-responsive",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The generic narrow Ribbon check runs without explicitly switching to Transaction context; this checks the different Transaction-context group set at the compact supported viewport.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-transaction-context.spec.ts",
@@ -17386,18 +17392,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-context-ribbon-overflow",
+      "originIssue": 406,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1672x941 in Transaction context, the Home Ribbon scroll width does not exceed the client width.",
+      "duplicateGroup": "transaction-context-ribbon-responsive",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The wide reference check verifies overflow under Transaction-specific Home composition; Cycle/wide label geometry tests do not switch to this context or assert its client/scroll width relationship.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-visual-scenario-matrix.spec.ts",
@@ -17408,18 +17417,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "ribbon-all-tab-visual-manifest",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At the reference viewport, each Ribbon tab produces a deterministic scenario manifest with icon/baseline diagnostics, capture metadata, and no console/page/resource failures.",
+      "duplicateGroup": "ribbon-visual-scenario-matrix",
+      "executionTier": "TIER_4_SLOW_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "This is the only all-tab production capture/manifest integrity sweep and validates the review-bundle evidence format as well as each tab's icon/baseline diagnostics; individual layout checks do not verify manifest completeness or runtime failures across all tabs.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "nightly"
+      ]
     },
     {
       "file": "ribbon-visual-scenario-matrix.spec.ts",
@@ -17430,18 +17443,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "ribbon-compressed-home-roundtrip",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1365x800, Ribbon tab round-trips preserve Ribbon height/workspace position and document state, remain scrollbar-free, and yield clean compressed/round-trip icon-baseline manifests.",
+      "duplicateGroup": "ribbon-visual-scenario-matrix",
+      "executionTier": "TIER_4_SLOW_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "The desktop all-tab capture does not exercise the intermediate compressed viewport or repeated Home round-trip stability; this is a visual evidence scenario rather than routine semantic coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "nightly"
+      ]
     },
     {
       "file": "ruler-reference-clock.spec.ts",
@@ -17452,18 +17469,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "reference-clock-ruler-document-generation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Ruler geometry remains present and correctly changes across Signal/event edits, Undo/Redo, and repeated opens of two documents with distinct non-default Reference Clock IDs and cycle counts.",
+      "duplicateGroup": "reference-clock-owner-stability",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Reference label persistence does not cover stale ruler/geometry ownership across successive document generations; this lifecycle specifically switches A→B→A and checks each document's tick projection after edits and history replay.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ruler-reference-clock.spec.ts",
@@ -17474,18 +17494,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "reference-clock-label-edge-persistence",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Selecting a different stable Reference Clock, changing its edge and name, and Save/Open derives the Time Axis status/context labels and serialized clock/edge from Canonical state.",
+      "duplicateGroup": "reference-clock-owner-stability",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The A→B→A ruler test only checks tick availability/count; this separately proves user-visible stable clock identity, edge, rename propagation, and persisted Time Axis ownership.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ruler-terminal-boundary.spec.ts",
@@ -17496,18 +17519,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "ruler-terminal-half-open-boundary",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "For a half-open timeline [0, cycleCount), the Ruler resolves and renders the terminal cycleCount boundary at an X greater than the preceding tick.",
+      "duplicateGroup": "ruler-terminal-boundary",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Ordinary tick-count and reference-clock tests do not assert the final exclusive-end boundary, which may be represented only as the previous cycle's end geometry.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "runtime-owner-acceptance.spec.ts",
@@ -17518,40 +17544,46 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "document-open-current-geometry-annotation-drag",
+      "originIssue": 556,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After opening a document, an Inspector-selected stable Annotation ID is used to drag its endpoint against the newly opened document's current Cycle geometry and snap to the intended cycle.",
+      "duplicateGroup": "runtime-owner-current-document-geometry",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "General Annotation drag tests do not exercise the Open→render-owner replacement→drag sequence; the target is now selected by Inspector's canonical Annotation ID rather than DOM order, preserving stable identity under overlay reuse.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "runtime-owner-acceptance.spec.ts",
       "suitePath": [],
-      "line": 48,
+      "line": 52,
       "title": "resize then edit then zoom reads current ViewMetrics and keeps semantics coherent",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "viewmetrics-resize-edit-zoom-sequence",
+      "originIssue": 556,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After resizing Inspector, an immediate Signal edit and subsequent zoom use current ViewMetrics while preserving semantic selection/data and a mounted waveform.",
+      "duplicateGroup": "viewmetrics-resize-action-sequence",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The ordered resize→edit→zoom sequence catches stale layout metrics consumed by a later command; isolated resize and zoom cases cannot establish that consumers switch to the current metrics between operations.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor-draft-survives-unrelated-edit.spec.ts",
@@ -17562,18 +17594,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-editor-draft-unrelated-document-edit",
+      "originIssue": 578,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "An uncommitted Bottom Signal event draft survives an unrelated canonical visibility edit to another Signal, retains the original editor selection, and is still explicitly cancelable.",
+      "duplicateGroup": "signal-editor-draft-revision-stability",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Local field editing/Cancel tests do not protect against whole-document revision remount erasing the draft when another entity changes; this reproduces that cross-entity lifecycle directly.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor-group-dropdown.spec.ts",
@@ -17584,18 +17619,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-editor-group-dropdown-command",
+      "originIssue": 402,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Bottom's Group dropdown plus Move button invokes one reversible signal.move command, disables same-group no-op, and updates the selected Signal's current-group projection.",
+      "duplicateGroup": "signal-editor-group-move-adapters",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The sibling test covers moving into an empty Group; this covers the populated destination and same-group disabled guard through the dedicated Bottom editor adapter, preserving semantic role and Undo behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor-group-dropdown.spec.ts",
@@ -17606,18 +17644,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "inspector-signal-draft-apply-gating",
+      "originIssue": 402,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inspector Apply is disabled for an unchanged Signal draft, becomes enabled after a role change without immediate Canonical mutation, then applies one update and disables again.",
+      "duplicateGroup": "inspector-signal-apply-draft-gating",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The broader Name/Role test validates independent commit paths, but this directly protects the Draft dirty-state gate and disabled/enabled transition that prevents accidental no-op Apply commands.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -17628,18 +17669,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "inspector-signal-spacing-layout-command",
+      "originIssue": 402,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inspector spacing fields commit via the canonical Signal command, change the next row's rendered vertical position, avoid WaveDrom regeneration, and are Undoable.",
+      "duplicateGroup": "inspector-signal-property-commands",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This covers a layout-affecting Signal property and its actual row-geometry effect; role/name/type tests protect different property-specific rendering and command semantics.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -17650,18 +17694,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-editor-selection-derived-table",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Bottom Signal editor follows the selected stable Signal and exposes its derived event rows with stable read-only Start/Value/End/Duration fields and quick-value actions.",
+      "duplicateGroup": "signal-editor-selection-projection",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Mutation tests assume an already selected Signal and do not assert selection-to-editor projection or the table's derived read-only columns; this is the base user entry/structure contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -17672,18 +17719,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-event-edit-incremental-owner",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Editing and saving one event changes that Signal's waveform exactly once, preserves unrelated waveform SVG identity and row positions, and Undo restores prior event semantics.",
+      "duplicateGroup": "signal-event-edit-history-locality",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The simpler event-row tests establish editing UX but do not assert owner-local WaveDrom/geometry invalidation or that an unrelated waveform is retained; this is the direct incremental-render boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -17694,18 +17744,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "inspector-name-role-independent-commit",
+      "originIssue": 402,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inspector name commits on Enter and role commits through Apply as two distinct one-revision actions, with the rendered row updated and WaveDrom untouched.",
+      "duplicateGroup": "inspector-signal-property-commands",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Apply gating covers only role-draft enablement and type/width covers a different command payload; this protects the separate InlineNameInput Enter commit and the intended independent Name/Role ownership paths.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -17716,18 +17769,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "inspector-signal-type-bus-width-command",
+      "originIssue": 402,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inspector applies Signal type/role and Bus width together as one semantic command, and Undo restores the canonical width.",
+      "duplicateGroup": "inspector-signal-property-commands",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Bus width is type-specific canonical data and is not exercised by generic Name/Role/Spacing property cases; this verifies a single atomic type/width update and undo restoration.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -26124,78 +26180,78 @@
     {
       "file": "ribbon-transaction-context.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "ribbon-visual-scenario-matrix.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "ruler-reference-clock.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "ruler-terminal-boundary.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "runtime-owner-acceptance.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [
         "getComputedStyle"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "signal-editor-draft-survives-unrelated-edit.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "signal-editor-group-dropdown.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "signal-editor.spec.ts",
       "caseCount": 18,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 5,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "signal-event-table-draft-hint.spec.ts",
