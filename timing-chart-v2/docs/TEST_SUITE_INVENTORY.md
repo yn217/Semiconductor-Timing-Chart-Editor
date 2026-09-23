@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 765/959 cases reviewed.
+Semantic review progress: 785/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 382 |
-| `nightly` | 170 |
+| `integration` | 395 |
+| `nightly` | 171 |
 | `performance` | 44 |
-| `pr` | 212 |
+| `pr` | 219 |
 | `visual` | 144 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -276,13 +276,13 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `runtime-owner-acceptance.spec.ts` | 2 | 2/2 reviewed |
 | `signal-editor-draft-survives-unrelated-edit.spec.ts` | 1 | 1/1 reviewed |
 | `signal-editor-group-dropdown.spec.ts` | 2 | 2/2 reviewed |
-| `signal-editor.spec.ts` | 18 | 5/18 reviewed |
-| `signal-event-table-draft-hint.spec.ts` | 1 | 0/1 reviewed |
-| `signal-filter-clear-affordance.spec.ts` | 1 | 0/1 reviewed |
+| `signal-editor.spec.ts` | 18 | 18/18 reviewed |
+| `signal-event-table-draft-hint.spec.ts` | 1 | 1/1 reviewed |
+| `signal-filter-clear-affordance.spec.ts` | 1 | 1/1 reviewed |
 | `signal-generator.spec.ts` | 5 | 5/5 reviewed |
-| `signal-spacing.spec.ts` | 3 | 0/3 reviewed |
-| `signal-split-no-assignment-control.spec.ts` | 1 | 0/1 reviewed |
-| `signal-split-render-routing.spec.ts` | 3 | 0/3 reviewed |
+| `signal-spacing.spec.ts` | 3 | 3/3 reviewed |
+| `signal-split-no-assignment-control.spec.ts` | 1 | 1/1 reviewed |
+| `signal-split-render-routing.spec.ts` | 3 | 1/3 reviewed |
 | `signal-split.spec.ts` | 2 | 0/2 reviewed |
 | `signal-type-label-registry.spec.ts` | 2 | 0/2 reviewed |
 | `signal-visibility-recover.spec.ts` | 1 | 0/1 reviewed |

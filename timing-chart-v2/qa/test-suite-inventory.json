@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T06:03:41.169Z",
+  "generatedAt": "2026-09-23T06:08:50.449Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 765,
+  "reviewedCaseCount": 785,
   "curatedProfileCounts": {
-    "integration": 382,
-    "nightly": 170,
+    "integration": 395,
+    "nightly": 171,
     "performance": 44,
-    "pr": 212,
+    "pr": 219,
     "visual": 144
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -17794,18 +17794,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-event-toolbar-footer-actions",
+      "originIssue": 402,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Bottom event toolbar exposes only Duplicate/Add Row/Delete, event export is available in the table footer, and Duplicate commits one additional row in one History unit.",
+      "duplicateGroup": "signal-event-table-actions",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This protects the post-#402 toolbar/footer ownership and a real row-duplicate command; import/undo, transition editing, and table selection are tested separately and do not assert the relocated export affordance.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -17816,18 +17819,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-event-import-replace-undo",
+      "originIssue": 402,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Importing an event table from the footer replaces the selected Signal's values in one History operation and Undo restores the prior table.",
+      "duplicateGroup": "signal-event-table-actions",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Resource-boundary tests protect rejected oversized/deep files, not successful replacement semantics, exact one-command history, or Undo restoration of the prior event table.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -17838,18 +17844,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "clock-generator-period-command",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Applying a Clock period edit produces one semantic History operation, regenerates only the Clock waveform/geometry owner once, and reflects the committed period in the editor.",
+      "duplicateGroup": "clock-generator-editor-contracts",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Duty/suppressed-period cases cover specialized generator values; this is the base period-edit command and incremental owner invalidation contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -17860,18 +17869,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "clock-generator-duty-waveform-history",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A 25% Clock duty edit changes the rendered WaveDrom use geometry, rebuilds only the clock owner once, and restores/reapplies through Undo/Redo and Save/Open.",
+      "duplicateGroup": "clock-generator-editor-contracts",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Period editing does not validate non-50% duty rendering; this checks waveform geometry change, one-owner invalidation, history replay, and persisted duty semantics.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -17882,18 +17894,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "clock-generator-suppressed-periods",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Duplicate suppressed periods are rejected without History, valid distinct suppressed periods update the Clock waveform, and the accepted list survives Undo/Redo and Save/Open.",
+      "duplicateGroup": "clock-generator-editor-contracts",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Duty/period tests do not cover suppression-list validation or phase omissions; this is the dedicated invalid/valid list boundary and persistence path.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -17904,18 +17919,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "clock-edge-counter-editor-command",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Bottom Clock editor applies edge-counter visibility, edge mode, and count origin as one semantic operation, renders numbering without rebuilding WaveDrom/geometry, and Undo restores the disabled state.",
+      "duplicateGroup": "clock-generator-editor-contracts",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Edge Counter is independent presentation metadata and has its own editor command; clock generator output edits do not verify numbering mode/count origin or overlay-only invalidation.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -17926,18 +17944,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "clock-context-toolbar-action-contract",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The selected Clock context toolbar presents Presets/Duplicate/Import/Export/Preview, preview is view-only, the 50%-duty preset is actionable, and Duplicate creates/selects one Clock.",
+      "duplicateGroup": "clock-context-toolbar",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This protects the Clock-specific action surface and exercises preview/preset/duplicate behavior; Import and Export are asserted as available buttons here, not as completed file-I/O workflows, so dedicated file lifecycle tests remain necessary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -17948,18 +17969,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-event-start-rendered-boundary",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After editing an event Start cycle, the actual rendered transition geometry moves to the corresponding Ruler boundary while remaining absent from the old boundary.",
+      "duplicateGroup": "signal-event-geometry-and-edit",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Canonical row-value assertions cannot establish that the WaveDrom transition moved to the new semantic cycle; this is the rendered geometry acceptance for Start editing.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -17970,18 +17994,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-event-row-draft-save-cancel",
+      "originIssue": 402,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Read-only event rows expose no edit controls until Edit, unchanged Draft keeps Save disabled, changed Draft marks unapplied state, Cancel restores Canonical without History, and Save commits one operation.",
+      "duplicateGroup": "signal-event-row-draft-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Immediate Add semantics and unrelated-edit draft survival cover different workflows; this directly protects the row-local Edit→dirty draft→Cancel/Save lifecycle and avoids invisible idle inputs.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -17992,18 +18019,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transition-table-tristate-selection",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The transition table Select All checkbox correctly reflects unchecked/indeterminate/checked states, shares selection with per-row checkboxes and footer count, and honors bulk-action cardinality guards.",
+      "duplicateGroup": "transition-table-bulk-selection",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Transition reorder tests use selected rows but do not verify tri-state checkbox semantics, accessible row labels, selection count synchronization, or Delete/Move enablement constraints.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -18014,18 +18044,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transition-row-drag-reorder",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Dragging an individual transition handle changes event-row order through one semantic History operation and the updated row values are projected in order.",
+      "duplicateGroup": "transition-row-reorder-adapters",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Selected block Move Up/Down actions are distinct toolbar command paths; neither protects the row drag-handle adapter and its one-operation commit.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -18036,18 +18069,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transition-selected-block-move-down",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Moving a contiguous selected transition block down preserves block selection and performs one semantic reorder without creating or deleting rows.",
+      "duplicateGroup": "transition-row-reorder-adapters",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This tests the direction-specific selected-block boundary and selection tracking; the up/Undo case covers the opposite edge and history replay, while drag reorder exercises another adapter.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "signal-editor.spec.ts",
@@ -18058,18 +18094,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transition-selected-block-move-up-history",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Moving a selected transition block upward changes its order once and Undo/Redo restores/reapplies the order while retaining the complete row set.",
+      "duplicateGroup": "transition-row-reorder-adapters",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The selected-block down case does not cover upward boundary behavior or history replay; a drag-handle single-row move is not a substitute for selected contiguous-block movement.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "signal-event-table-draft-hint.spec.ts",
@@ -18080,18 +18119,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-event-immediate-commit-hint",
+      "originIssue": 426,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The event form clearly communicates immediate per-Add commit semantics and adding an event creates exactly one History step.",
+      "duplicateGroup": "signal-event-immediate-commit",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The event Save/Cancel case covers deferred row-edit drafts, not the distinct immediate Add/Add & Continue interaction model; this pairs truthful guidance with its one-step behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "signal-filter-clear-affordance.spec.ts",
@@ -18102,18 +18144,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-tree-filter-clear-affordance",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Signal Tree clear button appears only for non-empty input, is inset and vertically aligned within the search field, and clears the filter back to its absent state.",
+      "duplicateGroup": "signal-tree-filter-controls",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Filtering behavior tests do not protect the conditional clear affordance's containment/alignment or its empty-state disappearance; this is a compact UI geometry plus interaction contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "signal-generator.spec.ts",
@@ -18250,18 +18295,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-spacing-locality-persistence",
+      "originIssue": 402,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Applying per-Signal spacing moves subsequent rows, updates row positions without WaveDrom/local-geometry rebuild, supports Undo/Redo, and survives Save/Open.",
+      "duplicateGroup": "signal-spacing-ownership",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The base spacing case in signal-editor.spec.ts only checks a row displacement and Undo; this adds precise row-position-only invalidation plus persisted reconstruction for a Signal-specific spacing value.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-spacing.spec.ts",
@@ -18272,18 +18320,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "spacing-invalid-draft-rejection",
+      "originIssue": 402,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Negative Group and Signal spacing drafts are rejected without Canonical revision, History, or Dirty changes.",
+      "duplicateGroup": "signal-spacing-ownership",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Valid spacing persistence does not exercise invalid numeric values across both Group and Signal owners; this guards rejected drafts from leaking into Canonical state or creating History.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "signal-spacing.spec.ts",
@@ -18294,18 +18345,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "group-signal-global-spacing-persistence-export",
+      "originIssue": 402,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Group before/after spacing, Signal before/after spacing, and document layout spacing apply as separate commands, serialize exactly, restore through Save/Open, and remain represented in SVG/PNG/PDF exports.",
+      "duplicateGroup": "signal-spacing-ownership",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This combines three distinct spacing owners and verifies exact file serialization plus all three export formats; local Signal spacing Save/Open alone cannot prove Group/global spacing ownership or export projection.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "signal-split-no-assignment-control.spec.ts",
@@ -18316,18 +18371,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-split-legacy-assignment-control-absence",
+      "originIssue": 570,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "primaryContract": "Cycle Inspector does not expose the retired per-Signal Upper/Lower/Both Split Pane assignment control.",
+      "duplicateGroup": "signal-split-retired-assignment",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "MOVE_LAYER",
+      "reason": "The existing Sample D dual-viewport acceptance already selects a Signal and asserts the retired Split Pane Inspector control is absent while exercising the canonical shared-row product model; this default-document absence-only check adds no distinct fixture or state transition.",
+      "replacementTest": "acceptance-397-sample-d.spec.ts::Signal Split ON shows the same 24-Signal row sequence in both panes with independent vertical scroll and shared horizontal scroll, OFF returns to one viewport, view-only throughout",
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "signal-split-render-routing.spec.ts",
@@ -18338,18 +18396,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-split-canonical-row-sequence",
+      "originIssue": 200,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "primaryContract": "Both Split panes project the same first five canonical timing-row IDs in the default Cycle fixture.",
+      "duplicateGroup": "signal-split-canonical-row-sequence",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "MOVE_LAYER",
+      "reason": "The Sample D acceptance checks the complete 24-Signal canonical row sequence across both panes plus independent vertical/shared horizontal scroll and view-only behavior; its richer fixture subsumes this five-row prefix assertion.",
+      "replacementTest": "acceptance-397-sample-d.spec.ts::Signal Split ON shows the same 24-Signal row sequence in both panes with independent vertical scroll and shared horizontal scroll, OFF returns to one viewport, view-only throughout",
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "signal-split-render-routing.spec.ts",
@@ -26245,31 +26306,31 @@
     {
       "file": "signal-editor.spec.ts",
       "caseCount": 18,
-      "reviewedCaseCount": 5,
+      "reviewedCaseCount": 18,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "signal-event-table-draft-hint.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "signal-filter-clear-affordance.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "signal-generator.spec.ts",
@@ -26283,29 +26344,29 @@
     {
       "file": "signal-spacing.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "signal-split-no-assignment-control.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "signal-split-render-routing.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "signal-split.spec.ts",
