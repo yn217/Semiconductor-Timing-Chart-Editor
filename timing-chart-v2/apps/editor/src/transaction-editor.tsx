@@ -1,4 +1,4 @@
-import { cyclesPerTc, cyclesToTc, tcFieldLabel, tcToCycles } from "./transaction-tc.js";
+import { cyclesToTc, tcFieldLabel, tcToCycles } from "./transaction-tc.js";
 import { useEffect, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import type { HistoryState } from "@timing-chart-v2/history";
@@ -9,9 +9,8 @@ import { EditorIconButton } from "./editor-icon.js";
 import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 import { DraftStatus } from "./draft-status.js";
 
-export function TransactionEditor({ transaction, selectedTransactionIds, document, history, onSelect, onSelectTransactions, commands, onUndo, onRedo, onDelete, onCancel, onToggleTransactionSignal }: { readonly transaction: Transaction | undefined; readonly selectedTransactionIds?: ReadonlySet<TransactionId>; readonly document: CanonicalDocument; readonly history: HistoryState; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSelectTransactions: (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => void; readonly commands: TransactionEditorCommandActions; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void }) {
+export function TransactionEditor({ transaction, selectedTransactionIds, document, cyclesPerTc: perTc = 10, history, onSelect, onSelectTransactions, commands, onUndo, onRedo, onDelete, onCancel, onToggleTransactionSignal }: { readonly transaction: Transaction | undefined; readonly selectedTransactionIds?: ReadonlySet<TransactionId>; readonly document: CanonicalDocument; readonly cyclesPerTc?: number; readonly history: HistoryState; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSelectTransactions: (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => void; readonly commands: TransactionEditorCommandActions; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void }) {
   const [name, setName] = useState("Transaction");
-  const perTc = cyclesPerTc(document);
   const [start, setStart] = useState(1);
   const [end, setEnd] = useState(Math.min(5, document.timeline.cycleCount));
   const [laneId, setLaneId] = useState("");

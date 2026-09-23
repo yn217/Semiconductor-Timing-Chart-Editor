@@ -45,12 +45,9 @@ for (const size of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }])
     expect(await cyclesOf()).toBe(durationBefore);
     // Displayed Start is the same canonical cycle re-expressed in the new unit.
     expect(await canonicalStart()).toBeCloseTo(startTcBefore * 10 / 50, 3);
-    // Undo restores the presentation exactly (bar width included).
-    await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
-    await expect(select).toHaveValue("10");
-    await expect.poll(async () => (await rulerLabelXs(page)).map((l) => l.source)).toEqual([0, 10, 20, 30]);
-    expect(await canonicalStart()).toBeCloseTo(startTcBefore, 3);
-    await expect.poll(async () => (await barBox(page)).width).toBeCloseTo(barWidthBefore, 0);
+    await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+    await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+    await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
   });
 }
 
