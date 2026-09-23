@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T06:14:04.852Z",
+  "generatedAt": "2026-09-23T06:51:07.872Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 803,
+  "reviewedCaseCount": 807,
   "curatedProfileCounts": {
     "integration": 408,
     "nightly": 171,
     "performance": 44,
-    "pr": 224,
+    "pr": 228,
     "visual": 144
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -18868,95 +18868,107 @@
         "status context"
       ],
       "line": 5,
-      "title": "reflects workspace, view mode, zoom and selection scope without mutation",
+      "title": "reflects workspace, view mode and zoom without mutation",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "workspace-view-status-context",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Status context, mode status and zoom status reflect user changes to workspace preset, active Cycle mode and zoom while Canonical revision, History depth and Dirty status stay unchanged.",
+      "duplicateGroup": "workspace-view-status-context",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the only combined status-readout journey for workspace preset and zoom changes with explicit Canonical/History/Dirty invariants; a lower-level test cannot prove that the visible status widgets follow the user-facing controls. The title is limited to the state actually exercised (selection scope is covered separately in the next case).",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "status-context.spec.ts",
       "suitePath": [
         "status context"
       ],
-      "line": 25,
+      "line": 27,
       "title": "titlebar view-title always agrees with the status bar's Mode (#199)",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "titlebar-status-mode-parity",
+      "originIssue": 199,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The titlebar view title and status-bar mode label agree across Cycle, Transaction and Combined mode switches without changing Canonical revision, History depth or Dirty status.",
+      "duplicateGroup": "workspace-view-status-context",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a distinct cross-mode naming parity contract; the workspace/zoom status test does not switch through the three mode-title pairs.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "status-context.spec.ts",
       "suitePath": [
         "status context"
       ],
-      "line": 44,
+      "line": 48,
       "title": "exposes Bottom pin/follow state and selected hierarchy scope",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bottom-follow-pin-status-context",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Status context exposes the selected hierarchy scope and reflects Bottom Follow versus Fixed and Pinned state after the corresponding user controls change without changing Canonical revision, History depth or Dirty status.",
+      "duplicateGroup": "bottom-pin-follow-status",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Selection-scope status and the two independent Bottom positioning controls are not covered by workspace/zoom mode status or by Bottom layout tests; this concise UI journey verifies their visible readout and view-only invariant.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "status-context.spec.ts",
       "suitePath": [
         "status context"
       ],
-      "line": 59,
+      "line": 69,
       "title": "exposes and clears a temporary arrow-pick mode",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "temporary-arrow-pick-status-lifecycle",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Starting endpoint-pick mode announces its temporary active step in the tool-status area, and Escape returns that visible status to the normal Select tool without changing Canonical revision, History depth or Dirty status.",
+      "duplicateGroup": "arrow-pick-temporary-status",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Other arrow tests verify endpoint selection and annotation creation, but this is the direct visible contract for temporary tool status, its Escape reset and view-only lifecycle.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "time-group-lifecycle.spec.ts",
@@ -26512,11 +26524,11 @@
     {
       "file": "status-context.spec.ts",
       "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "time-group-lifecycle.spec.ts",

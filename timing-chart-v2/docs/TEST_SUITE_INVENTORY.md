@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 803/959 cases reviewed.
+Semantic review progress: 807/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 408 |
 | `nightly` | 171 |
 | `performance` | 44 |
-| `pr` | 224 |
+| `pr` | 228 |
 | `visual` | 144 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -292,7 +292,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `split-active-pane.spec.ts` | 6 | 6/6 reviewed |
 | `stable-id-collision.spec.ts` | 1 | 1/1 reviewed |
 | `stable-surface.spec.ts` | 1 | 1/1 reviewed |
-| `status-context.spec.ts` | 4 | 0/4 reviewed |
+| `status-context.spec.ts` | 4 | 4/4 reviewed |
 | `time-group-lifecycle.spec.ts` | 1 | 0/1 reviewed |
 | `time-mapping-scale-closure.spec.ts` | 1 | 0/1 reviewed |
 | `timeline-editor.spec.ts` | 29 | 0/29 reviewed |
