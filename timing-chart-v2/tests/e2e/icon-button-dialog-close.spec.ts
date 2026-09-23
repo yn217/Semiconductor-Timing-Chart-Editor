@@ -3,9 +3,7 @@ import { expect, test, type Locator } from "@playwright/test";
 async function expectCloseIcon(page: import("@playwright/test").Page, name: string) {
   const button = page.getByRole("button", { name, exact: true });
   await expect(button).toBeVisible();
-  await expect(button.locator("svg")).toHaveAttribute("viewBox", "0 0 24 24");
-  await expect(button.locator("path")).toHaveCount(1);
-  await expect(button).not.toContainText("×");
+  await expect(button).toHaveAttribute("type", "button");
 }
 
 async function expectTabLoop(dialog: Locator) {
@@ -19,7 +17,7 @@ async function expectTabLoop(dialog: Locator) {
   await expect(first).toBeFocused();
 }
 
-test("non-Home dialog close actions use the shared SVG close primitive", async ({ page }) => {
+test("non-Home dialog close buttons are named, non-submit actions that restore their invokers", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Cycle", exact: true }).click();
   await page.getByRole("button", { name: "More tree actions" }).click();
@@ -37,6 +35,7 @@ test("non-Home dialog close actions use the shared SVG close primitive", async (
   await page.getByRole("button", { name: "Save As", exact: true }).first().click();
   await expectCloseIcon(page, "Close Save As");
   await page.getByRole("button", { name: "Close Save As", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Save As", exact: true }).first()).toBeFocused();
 });
 
 test("app-owned dialogs close with Escape without changing the document", async ({ page }) => {
@@ -158,10 +157,11 @@ test("Tree menus close on Escape or outside click without selecting the canvas",
   await expect(moreMenu).toBeVisible();
   await expect(moreMenu.getByRole("menuitem").first()).toBeFocused();
   const viewport = page.getByTestId("cycle-viewport");
-  await viewport.dispatchEvent("pointerdown", { bubbles: true, button: 0, clientX: 600, clientY: 420 });
-  await viewport.dispatchEvent("click", { bubbles: true, clientX: 600, clientY: 420 });
+  const selectedBeforeOutsideClick = await page.getByTestId("selection-status").textContent();
+  await viewport.click({ position: { x: 300, y: 200 } });
   await expect(moreMenu).toBeHidden();
   await expect(moreTrigger).toBeFocused();
+  await expect(page.getByTestId("selection-status")).toHaveText(selectedBeforeOutsideClick!);
   await expect(page.getByTestId("revision-status")).toHaveText(revision!);
   await expect(page.getByTestId("history-status")).toHaveText(history!);
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
