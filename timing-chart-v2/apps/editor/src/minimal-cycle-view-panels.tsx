@@ -289,19 +289,19 @@ export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelec
         return <button type="button" role="tab" key={tab} id={tabId} data-bottom-tab={tab} tabIndex={active ? 0 : -1} aria-label={tab} aria-selected={active} aria-controls="bottom-context-content" className={active ? "active" : ""} onClick={() => onSelectTab(tab)} onKeyDown={(event) => onTabKeyDown(event, tab)}>{tab}</button>;
       })}
       <span />
-      {/* #440: a Selection change can silently leave the Bottom Editor
-          showing a DIFFERENT entity than what's now selected (Pin holds
-          the active tab's own target on purpose) -- this status text
-          makes that state explicit instead of leaving "Pin"/"Unpin" as
-          the only clue, so a Transaction-selected-while-Bottom-still-
-          shows-Bookmark moment reads as intentional, not stale. */}
-      <output className="bottom-follow-status" data-testid="bottom-follow-status">{pinned ? `Pinned: ${activeTab}` : "Following Selection"}</output>
       <span className="bottom-settings-anchor" ref={settingsRef}>
         <button type="button" className="bottom-settings-button" data-testid="bottom-settings" aria-label="Bottom Panel settings" aria-haspopup="true" aria-expanded={settingsOpen} title="Bottom panel behavior: Follow Selection, Pin" onClick={() => setSettingsOpen((open) => !open)}>{"⚙"}</button>
-        <div className="bottom-settings-popover" data-testid="bottom-settings-popover" role="group" aria-label="Bottom panel behavior" hidden={!settingsOpen} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); setSettingsOpen(false); } }}>
-        <label><input data-testid="follow-selection" type="checkbox" checked={followSelection} onChange={(event) => onFollowSelectionChange(event.target.checked)} /> Follow Selection</label>
-        <button type="button" data-testid="bottom-pin" aria-label={pinned ? "Unpin" : "Pin"} aria-pressed={pinned} onClick={onTogglePinned}><span className="bottom-pin-label" data-v1-label={pinned ? "Unpin" : "Pin"}>{pinned ? "Unpin" : "Pin"}</span></button>
-      
+        <div className="bottom-settings-popover" data-testid="bottom-settings-popover" role="dialog" aria-label="Bottom Panel Settings" hidden={!settingsOpen} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); setSettingsOpen(false); settingsRef.current?.querySelector<HTMLElement>(".bottom-settings-button")?.focus(); } }}>
+          <strong>Bottom Panel Settings</strong>
+          <p>Choose how the Bottom Panel reacts when the editor selection changes.</p>
+          <label className="bottom-setting-option">
+            <input data-testid="follow-selection" type="checkbox" checked={followSelection} onChange={(event) => onFollowSelectionChange(event.target.checked)} />
+            <span><strong>Follow selection</strong><small>Automatically update the Bottom Panel target when you select another item. Turn off to keep its current target.</small></span>
+          </label>
+          <div className="bottom-setting-option">
+            <button type="button" data-testid="bottom-pin" aria-label={pinned ? "Unpin current content" : "Pin current content"} aria-pressed={pinned} onClick={onTogglePinned}>{pinned ? "Unpin current content" : "Pin current content"}</button>
+            <small>Keep the content currently shown fixed while you inspect or select other items.</small>
+          </div>
         </div>
       </span>
     </nav>
