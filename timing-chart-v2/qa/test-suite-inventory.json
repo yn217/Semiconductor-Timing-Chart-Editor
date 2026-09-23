@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T09:54:16.005Z",
+  "generatedAt": "2026-09-23T10:06:24.735Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -1929,7 +1929,7 @@
     {
       "file": "annotation-line-rendering.spec.ts",
       "suitePath": [],
-      "line": 13,
+      "line": 14,
       "title": "renders distinct connector paths and SVG arrowheads for every line type",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1954,7 +1954,7 @@
     {
       "file": "annotation-line-rendering.spec.ts",
       "suitePath": [],
-      "line": 64,
+      "line": 65,
       "title": "Dependency annotations expose and persist line presentation controls",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -1979,7 +1979,7 @@
     {
       "file": "annotation-line-rendering.spec.ts",
       "suitePath": [],
-      "line": 88,
+      "line": 89,
       "title": "SVG export preserves a Dependency's route shape, arrow markers and label",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2005,7 +2005,7 @@
     {
       "file": "annotation-line-rendering.spec.ts",
       "suitePath": [],
-      "line": 142,
+      "line": 143,
       "title": "SVG export preserves Diagonal's distinct elbow geometry, not Straight's single segment",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2056,7 +2056,7 @@
     {
       "file": "annotation-multi-select-font.spec.ts",
       "suitePath": [],
-      "line": 9,
+      "line": 10,
       "title": "Ribbon Bold applies to every selected Annotation as one atomic commit, each keeping its own color",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2081,7 +2081,7 @@
     {
       "file": "annotation-multiline-and-export-shapes.spec.ts",
       "suitePath": [],
-      "line": 35,
+      "line": 38,
       "title": "Callout label holds real multi-line text in the live DOM and exported SVG",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2106,7 +2106,7 @@
     {
       "file": "annotation-multiline-and-export-shapes.spec.ts",
       "suitePath": [],
-      "line": 66,
+      "line": 69,
       "title": "Bracket's exported SVG carries its own cap marks, not a plain Range line",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2132,7 +2132,7 @@
     {
       "file": "annotation-multiline-and-export-shapes.spec.ts",
       "suitePath": [],
-      "line": 87,
+      "line": 90,
       "title": "Marker's exported SVG carries a vertical tick glyph, not an invisible zero-length line",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2158,7 +2158,7 @@
     {
       "file": "annotation-multiline-and-export-shapes.spec.ts",
       "suitePath": [],
-      "line": 115,
+      "line": 118,
       "title": "Callout's multi-line label survives a real Save/Open round trip, in both the live DOM and the exported SVG",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2184,7 +2184,7 @@
     {
       "file": "annotation-presentation-controls.spec.ts",
       "suitePath": [],
-      "line": 47,
+      "line": 50,
       "title": "Range Stroke/Fill controls have real canonical + rendered + exported effect",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2210,7 +2210,7 @@
     {
       "file": "annotation-presentation-controls.spec.ts",
       "suitePath": [],
-      "line": 91,
+      "line": 94,
       "title": "Vertical Line exports a full-height dashed line, not an invisible zero-length one",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2236,7 +2236,7 @@
     {
       "file": "annotation-presentation-controls.spec.ts",
       "suitePath": [],
-      "line": 111,
+      "line": 114,
       "title": "Text has no Stroke/Fill controls enabled -- disabled with a truthful reason, not a fake inert control",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2261,7 +2261,7 @@
     {
       "file": "annotation-presentation-controls.spec.ts",
       "suitePath": [],
-      "line": 125,
+      "line": 128,
       "title": "Lock shows a real visible indicator, blocks drag, and Unlock restores it -- mixed-selection Lock affects only the unlocked one",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2286,7 +2286,7 @@
     {
       "file": "annotation-presentation-controls.spec.ts",
       "suitePath": [],
-      "line": 193,
+      "line": 196,
       "title": "Lock state survives a real Save/Open round trip",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2312,7 +2312,7 @@
     {
       "file": "annotation-presentation-controls.spec.ts",
       "suitePath": [],
-      "line": 243,
+      "line": 246,
       "title": "Annotation Ribbon groups show one label each, readable-but-disabled with truthful reasons, and enable on selection (#390)",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2337,7 +2337,7 @@
     {
       "file": "annotation-presentation.spec.ts",
       "suitePath": [],
-      "line": 12,
+      "line": 15,
       "title": "renders distinct product presentation for text, callout, marker, ranges, and brackets",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2362,7 +2362,7 @@
     {
       "file": "annotation-preview-update.spec.ts",
       "suitePath": [],
-      "line": 8,
+      "line": 9,
       "title": "Annotation Preview Update reflects draft Label/Color on the live overlay with zero Canonical delta, and reverts on Cancel",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2387,7 +2387,7 @@
     {
       "file": "annotation-preview-update.spec.ts",
       "suitePath": [],
-      "line": 43,
+      "line": 45,
       "title": "Annotation Preview Update reverts even without an explicit Cancel, when selection moves away",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2412,7 +2412,7 @@
     {
       "file": "annotation-preview-update.spec.ts",
       "suitePath": [],
-      "line": 67,
+      "line": 70,
       "title": "Apply commits the previewed draft as one real SemanticCommand",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -2994,7 +2994,7 @@
     {
       "file": "arrange-disabled-reasons.spec.ts",
       "suitePath": [],
-      "line": 12,
+      "line": 13,
       "title": "Arrange controls distinguish selection/context-unavailable from a real disabled state",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -3820,7 +3820,7 @@
     {
       "file": "clipboard-entity-parity.spec.ts",
       "suitePath": [],
-      "line": 17,
+      "line": 18,
       "title": "Signal Cut/Paste restores the same stable ID and name in the target Group",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -3845,7 +3845,7 @@
     {
       "file": "clipboard-entity-parity.spec.ts",
       "suitePath": [],
-      "line": 35,
+      "line": 36,
       "title": "Comment Row clipboard preserves content, uses fresh IDs, and supports Cut Undo Redo",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -3870,7 +3870,7 @@
     {
       "file": "clipboard-entity-parity.spec.ts",
       "suitePath": [],
-      "line": 103,
+      "line": 104,
       "title": "Annotation clipboard is view-only on Copy, creates a fresh entity on Paste, and cuts atomically",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -3895,7 +3895,7 @@
     {
       "file": "clipboard-entity-parity.spec.ts",
       "suitePath": [],
-      "line": 172,
+      "line": 176,
       "title": "Transaction clipboard is view-only on Copy, creates a fresh entity on Paste, and cuts atomically",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5516,7 +5516,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 45,
+      "line": 39,
       "title": "matches the locked desktop pane geometry at the Golden viewport",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5541,7 +5541,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 69,
+      "line": 63,
       "title": "keeps the V1 Home Ribbon dense without horizontal scrolling",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5566,7 +5566,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 88,
+      "line": 82,
       "title": "Left Signal/Group rows expose V1 role and visibility controls through SemanticCommand",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5591,7 +5591,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 107,
+      "line": 101,
       "title": "Left Signal/Group filter is positioned in the V1 pane header and remains DOM-only",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5616,7 +5616,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 125,
+      "line": 119,
       "title": "Left tree Add surface exposes real Signal/Clock/Bus/State/Group commands",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5641,7 +5641,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 145,
+      "line": 139,
       "title": "Group header chevron collapses derived rows without mutating Canonical or History",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5666,7 +5666,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 180,
+      "line": 174,
       "title": "Inspector keeps the V1 sectioned editor geometry for a selected clock",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5691,7 +5691,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 205,
+      "line": 199,
       "title": "routes Annotation delete through the shared command registry from Context Menu",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5716,7 +5716,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 205,
+      "line": 199,
       "title": "routes Annotation delete through the shared command registry from Inspector",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5741,7 +5741,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 205,
+      "line": 199,
       "title": "routes Annotation delete through the shared command registry from Keyboard",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5766,7 +5766,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 205,
+      "line": 199,
       "title": "routes Annotation delete through the shared command registry from Ribbon",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5791,7 +5791,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 220,
+      "line": 214,
       "title": "applies Inspector drafts, exposes Problems/JSON, and toggles panels",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5816,7 +5816,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 246,
+      "line": 240,
       "title": "applies Annotation Inspector drafts through one semantic command",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5841,7 +5841,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 265,
+      "line": 259,
       "title": "edits Header and Footer metadata through Document Properties and reopens it",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5866,7 +5866,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 329,
+      "line": 323,
       "title": "Document Properties keeps Header and Legend edits in one Apply/Cancel transaction",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5891,7 +5891,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 353,
+      "line": 347,
       "title": "Save As downloads the canonical document with a requested filename without mutation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5916,7 +5916,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 379,
+      "line": 373,
       "title": "edits and displays the Legend through the canonical presentation command",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5941,7 +5941,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 401,
+      "line": 395,
       "title": "Legend position supports drag and keyboard nudge through legend.update",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5966,7 +5966,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 422,
+      "line": 416,
       "title": "Legend editor exposes stable-ID label, visibility and ordering controls",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5991,7 +5991,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 442,
+      "line": 436,
       "title": "edits Legend entry labels, visibility and order, then preserves them through Save/Open and export",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6016,7 +6016,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 490,
+      "line": 484,
       "title": "exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registration",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6041,7 +6041,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 554,
+      "line": 548,
       "title": "filters the Signal/Group tree by display name, path, role, or group without mutating the document",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6066,7 +6066,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 582,
+      "line": 576,
       "title": "View controls expose geometry-backed Grid/Snap and a pannable MiniMap viewport",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6091,7 +6091,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 599,
+      "line": 593,
       "title": "View controls expose functional Ruler and MiniMap visibility toggles without mutation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6116,7 +6116,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 630,
+      "line": 624,
       "title": "MiniMap renders a derived waveform overview for every canonical row without mutation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6141,7 +6141,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 648,
+      "line": 642,
       "title": "MiniMap viewport drag pans the real viewport without canonical or render mutation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6166,7 +6166,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 675,
+      "line": 669,
       "title": "Status Bar exposes derived selection, range, view and renderer state without mutating the document",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6191,7 +6191,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 700,
+      "line": 694,
       "title": "Bottom Signal Context Editor keeps the V1 continuous center editing surface",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6216,7 +6216,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 714,
+      "line": 708,
       "title": "Fit Selection is a view-only navigation action backed by ruler geometry",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6241,7 +6241,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 758,
+      "line": 752,
       "title": "Fit Selection resolves source boundaries through a collapsed TimeGroup",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6266,7 +6266,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 785,
+      "line": 779,
       "title": "Canvas cycle selection exposes a ruler-geometry-backed playhead without mutation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6291,7 +6291,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 802,
+      "line": 796,
       "title": "Canvas range drag supports reverse and Shift extension while Escape cancels preview",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6316,7 +6316,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 856,
+      "line": 850,
       "title": "Canvas keyboard navigation pans the viewport without canonical or render mutation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6341,7 +6341,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 878,
+      "line": 872,
       "title": "applies Signal Inspector capability fields as one semantic operation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6366,7 +6366,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 932,
+      "line": 926,
       "title": "#477: Label Style keeps a common dirty/Apply lifecycle across repeated edits and Background actually renders",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6391,7 +6391,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1015,
+      "line": 1009,
       "title": "Signal Inspector properties survive Undo/Redo and Save/Open",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6416,7 +6416,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1058,
+      "line": 1052,
       "title": "applies Group Inspector presentation properties as one semantic operation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6441,7 +6441,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1075,
+      "line": 1069,
       "title": "applies Transaction Inspector phases through one semantic operation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6466,7 +6466,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1110,
+      "line": 1104,
       "title": "applies Clock Generator Inspector drafts with editable duty and one history entry",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6491,7 +6491,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1131,
+      "line": 1125,
       "title": "Clock Inspector exposes common Signal Properties and style through one command",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6516,7 +6516,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1165,
+      "line": 1159,
       "title": "edits a Comment Row through the dedicated Bottom Context Editor",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6541,7 +6541,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1203,
+      "line": 1197,
       "title": "renders Comment Row content at the shared cycle-0 canvas boundary",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6566,7 +6566,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1225,
+      "line": 1219,
       "title": "saves and reopens through the application service boundary",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6591,7 +6591,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1259,
+      "line": 1253,
       "title": "renders Clock Edge Numbers from actual Geometry without WaveDrom regeneration",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6616,7 +6616,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1305,
+      "line": 1299,
       "title": "keeps global shortcuts focus-aware and IME-safe",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6641,7 +6641,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1319,
+      "line": 1313,
       "title": "keeps view-only selection, tabs, zoom and panel state out of History and WaveDrom",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -8017,7 +8017,7 @@
     {
       "file": "incremental-invalidation-matrix.spec.ts",
       "suitePath": [],
-      "line": 29,
+      "line": 30,
       "title": "ChangeSet invalidation matrix keeps derived owners local",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -10590,7 +10590,7 @@
     {
       "file": "issue-720-gesture-status-hint.spec.ts",
       "suitePath": [],
-      "line": 6,
+      "line": 7,
       "title": "Transaction drag shows a status hint that clears on Escape and release at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -10615,7 +10615,7 @@
     {
       "file": "issue-720-gesture-status-hint.spec.ts",
       "suitePath": [],
-      "line": 6,
+      "line": 7,
       "title": "Transaction drag shows a status hint that clears on Escape and release at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -10640,7 +10640,7 @@
     {
       "file": "issue-720-gesture-status-hint.spec.ts",
       "suitePath": [],
-      "line": 39,
+      "line": 40,
       "title": "Annotation drag shows a status hint that clears on Escape",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -12862,7 +12862,7 @@
     {
       "file": "issue-755-canvas-production-acceptance.spec.ts",
       "suitePath": [],
-      "line": 43,
+      "line": 44,
       "title": "large documents paint Canvas without per-cycle SVG; ?wave=svg forces the SVG fallback",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -12888,7 +12888,7 @@
     {
       "file": "issue-755-canvas-production-acceptance.spec.ts",
       "suitePath": [],
-      "line": 52,
+      "line": 53,
       "title": "selection, hit-test, zoom, resize and sustained drag on the Canvas path keep the ruler and geometry aligned",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -12914,7 +12914,7 @@
     {
       "file": "issue-755-canvas-production-acceptance.spec.ts",
       "suitePath": [],
-      "line": 90,
+      "line": 91,
       "title": "annotation anchoring, snap and edge counter resolve on the Canvas path in a far window",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -12940,7 +12940,7 @@
     {
       "file": "issue-755-canvas-production-acceptance.spec.ts",
       "suitePath": [],
-      "line": 119,
+      "line": 121,
       "title": "export of a large Canvas-rendered document still produces SVG from canonical data",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -12966,7 +12966,7 @@
     {
       "file": "issue-755-canvas-production-acceptance.spec.ts",
       "suitePath": [],
-      "line": 131,
+      "line": 133,
       "title": "memory stays bounded over repeated far jumps (no canvas/DOM/heap leak)",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -15053,7 +15053,7 @@
     {
       "file": "measurement-top-row-clip.spec.ts",
       "suitePath": [],
-      "line": 19,
+      "line": 20,
       "title": "a Measurement anchored on the top-row Signal places its label/line below the row, never behind the Ruler",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -15078,7 +15078,7 @@
     {
       "file": "measurement-top-row-clip.spec.ts",
       "suitePath": [],
-      "line": 49,
+      "line": 51,
       "title": "a Measurement anchored well below the top row keeps its default above-the-line placement",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -15537,7 +15537,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 10,
+      "line": 11,
       "title": "View-only operations keep canonical validation and render counters unchanged",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -15562,7 +15562,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 56,
+      "line": 57,
       "title": "SnapIndex cache survives a non-geometric Signal rename",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -15587,7 +15587,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 80,
+      "line": 83,
       "title": "retargets the SnapIndex after a vertical viewport jump",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -15613,7 +15613,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 156,
+      "line": 159,
       "title": "heavy renderer diagnostics are pull-based and absent from hot-path DOM counters",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -15638,7 +15638,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 175,
+      "line": 178,
       "title": "PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants with browser median/p95",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -15663,7 +15663,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 273,
+      "line": 276,
       "title": "1000x1000 virtualization mounts viewport-scale rows and avoids duplicate bindings",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -15689,7 +15689,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 294,
+      "line": 297,
       "title": "large valid fixture records Open/Save browser profile evidence",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -15715,7 +15715,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 316,
+      "line": 319,
       "title": "viewport-only projection remains bounded at 1k, 5k, and 10k rows",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -15741,7 +15741,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 345,
+      "line": 348,
       "title": "repeated Open A/B/A releases old owners and does not stack handlers",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -15767,7 +15767,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 362,
+      "line": 365,
       "title": "Open first-correct-paint has median and p95 evidence across scale fixtures",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -15793,7 +15793,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 388,
+      "line": 391,
       "title": "nightly/manual 500/1000 heavy profiles",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -16044,7 +16044,7 @@
     {
       "file": "qa-fresh-state-journeys.spec.ts",
       "suitePath": [],
-      "line": 30,
+      "line": 31,
       "title": "J1-3 fresh -> Combined: renders, view-only, no errors",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16069,7 +16069,7 @@
     {
       "file": "qa-fresh-state-journeys.spec.ts",
       "suitePath": [],
-      "line": 30,
+      "line": 31,
       "title": "J1-3 fresh -> Cycle: renders, view-only, no errors",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16094,7 +16094,7 @@
     {
       "file": "qa-fresh-state-journeys.spec.ts",
       "suitePath": [],
-      "line": 30,
+      "line": 31,
       "title": "J1-3 fresh -> Transaction: renders, view-only, no errors",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16119,7 +16119,7 @@
     {
       "file": "qa-fresh-state-journeys.spec.ts",
       "suitePath": [],
-      "line": 41,
+      "line": 42,
       "title": "J4/J16 Cycle -> Transaction -> Combined -> Cycle, then rapid switching, stays view-only and error-free",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16144,7 +16144,7 @@
     {
       "file": "qa-fresh-state-journeys.spec.ts",
       "suitePath": [],
-      "line": 52,
+      "line": 53,
       "title": "J5/J10 select -> edit -> Apply -> Undo -> Redo, and an unapplied draft does not leak to the next selection",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16169,7 +16169,7 @@
     {
       "file": "qa-fresh-state-journeys.spec.ts",
       "suitePath": [],
-      "line": 74,
+      "line": 75,
       "title": "J6 annotation create -> drag -> Escape leaves Canonical untouched",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16194,7 +16194,7 @@
     {
       "file": "qa-fresh-state-journeys.spec.ts",
       "suitePath": [],
-      "line": 104,
+      "line": 99,
       "title": "J7/J8/J15 far horizontal + vertical scroll -> select, zoom -> scroll -> mode switch",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16219,7 +16219,7 @@
     {
       "file": "qa-fresh-state-journeys.spec.ts",
       "suitePath": [],
-      "line": 123,
+      "line": 118,
       "title": "J9 Bottom follows the selected entity kind",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16244,7 +16244,7 @@
     {
       "file": "qa-fresh-state-journeys.spec.ts",
       "suitePath": [],
-      "line": 137,
+      "line": 132,
       "title": "J11-J14 save -> edit -> Undo, dirty -> Open -> Cancel / Discard, reload -> Open",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16269,7 +16269,7 @@
     {
       "file": "qa-fresh-state-journeys.spec.ts",
       "suitePath": [],
-      "line": 170,
+      "line": 165,
       "title": "J17 window resize during an active range drag keeps the app consistent",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -17688,7 +17688,7 @@
     {
       "file": "runtime-owner-acceptance.spec.ts",
       "suitePath": [],
-      "line": 18,
+      "line": 19,
       "title": "Open then Annotation drag uses the current document geometry",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -17713,7 +17713,7 @@
     {
       "file": "runtime-owner-acceptance.spec.ts",
       "suitePath": [],
-      "line": 48,
+      "line": 50,
       "title": "resize then edit then zoom reads current ViewMetrics and keeps semantics coherent",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -24245,7 +24245,7 @@
     {
       "file": "zoom-cross-surface-alignment.spec.ts",
       "suitePath": [],
-      "line": 6,
+      "line": 7,
       "title": "Annotation and Transaction X positions stay exactly aligned with the Ruler at 50/100/150/200% zoom, with no double-scaling",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -27767,7 +27767,7 @@
       "similarity": 0.78,
       "left": {
         "file": "annotation-preview-update.spec.ts",
-        "line": 67,
+        "line": 70,
         "title": "Apply commits the previewed draft as one real SemanticCommand"
       },
       "right": {
@@ -27782,7 +27782,7 @@
       "similarity": 0.75,
       "left": {
         "file": "annotation-preview-update.spec.ts",
-        "line": 43,
+        "line": 45,
         "title": "Annotation Preview Update reverts even without an explicit Cancel, when selection moves away"
       },
       "right": {

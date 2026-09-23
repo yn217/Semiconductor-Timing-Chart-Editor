@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { startInCycleMode } from "./cycle-startup.js";
+import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
 startInCycleMode(test);
 
@@ -25,10 +26,11 @@ test("a Measurement anchored on the top-row Signal places its label/line below t
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("measurement");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
-  const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']").last();
+  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "measurement"));
   await expect(owner).toBeVisible();
   await expect(owner).toHaveAttribute("data-measurement-side", "below");
 
@@ -55,9 +57,10 @@ test("a Measurement anchored well below the top row keeps its default above-the-
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_result']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("measurement");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
-  const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']").last();
+  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "measurement"));
   await expect(owner).toHaveAttribute("data-measurement-side", "above");
 });

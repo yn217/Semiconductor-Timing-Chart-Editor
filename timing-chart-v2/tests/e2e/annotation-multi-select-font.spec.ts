@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
+import { snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
 startInCycleSample(test);
 
@@ -14,23 +15,23 @@ test("Ribbon Bold applies to every selected Annotation as one atomic commit, eac
   const tabs = page.locator(".ribbon-tabs");
   await tabs.getByRole("button", { name: "Annotation", exact: true }).click();
 
-  const owners = host.locator("[data-role='annotation-owner']");
   await page.getByLabel("Annotation type").selectOption("text");
+  const beforeFirst = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  const firstId = await owners.last().getAttribute("data-annotation-id");
+  const firstId = await waitForCreatedAnnotationId(host, beforeFirst, "text");
 
   // Anchor the second Annotation on another Signal so the two labels do not overlap.
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid']").click();
   await page.getByLabel("Annotation type").selectOption("marker");
+  const beforeSecond = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  const secondId = await owners.last().getAttribute("data-annotation-id");
+  const secondId = await waitForCreatedAnnotationId(host, beforeSecond, "marker");
   expect(firstId).not.toBe(secondId);
 
-  // Stable per-annotation locators -- `.last()` is dynamic and re-resolves
-  // against whatever the current DOM order is, which shifts as more
-  // annotations get added/selected.
+  // Keep locators keyed to the canonical stable IDs even as selection and
+  // overlay projection order change.
   const first = host.locator(`[data-role='annotation-owner'][data-annotation-id='${firstId}']`);
   const second = host.locator(`[data-role='annotation-owner'][data-annotation-id='${secondId}']`);
   const firstLabel = first.locator("[data-role='annotation-label']");

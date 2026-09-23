@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { timelineOwner } from "./timeline-scroll.js";
+import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
 /**
  * #684 blind fresh-state journeys (production path, no injected state): every test starts from a fresh browser context (default
@@ -78,18 +79,12 @@ test("J6 annotation create -> drag -> Escape leaves Canonical untouched", async 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("text");
-  const previousIds = new Set(await host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-id"))));
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const before = await status(page);
-  const findCreatedId = () => host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items, previous) => {
-    const created = items.map((item) => item.getAttribute("data-annotation-id")).filter((id): id is string => Boolean(id) && !previous.includes(id));
-    return created.length === 1 ? created[0] : null;
-  }, [...previousIds]);
-  await expect.poll(findCreatedId).toBeTruthy();
-  const annotationId = await findCreatedId();
-  expect(annotationId).toBeTruthy();
-  const label = host.locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}'] [data-role='annotation-label']`);
+  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "text"));
+  const label = owner.locator("[data-role='annotation-label']");
   const box = (await label.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();

@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { canonicalFixture } from "../fixtures/canonical.js";
+import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
 async function openDocument(page: import("@playwright/test").Page, title: string) {
   const document = canonicalFixture();
@@ -25,10 +26,11 @@ test("Open then Annotation drag uses the current document geometry", async ({ pa
   await host.locator("[data-role='frozen-row'][data-row-id='sig_data']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("arrow");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
-  const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='arrow']").last();
+  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "arrow"));
   const handle = owner.locator("[data-role='annotation-handle'][data-annotation-field='from']");
   const handleBox = await handle.boundingBox();
   const x2 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='2']").evaluate((element) => (element as HTMLElement).style.left));

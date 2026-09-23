@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { startInCycleMode } from "./cycle-startup.js";
+import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
 startInCycleMode(test);
 
@@ -15,8 +16,10 @@ startInCycleMode(test);
 
 async function addAnnotation(page: import("@playwright/test").Page, type: string) {
   await page.getByLabel("Annotation type").selectOption(type);
+  const host = page.getByTestId("cycle-surface");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
-  return page.getByTestId("cycle-surface").locator(`[data-role='annotation-owner'][data-annotation-type='${type}']`).last();
+  return annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, type));
 }
 
 async function exportSvgText(page: import("@playwright/test").Page): Promise<string> {

@@ -509,8 +509,8 @@ No exact normalized cross-file title duplicates found.
 
 Title similarity is only a discovery heuristic. It does not establish duplicate coverage; review the setup, assertions, and protected invariant before merging or moving tests.
 
-- **0.78** — DISTINCT_CONTRACTS: `annotation-preview-update.spec.ts:67` “Apply commits the previewed draft as one real SemanticCommand” ↔ `clock-preview.spec.ts:80` “Apply after Preview commits exactly the previewed draft as one real SemanticCommand”
-- **0.75** — DISTINCT_CONTRACTS: `annotation-preview-update.spec.ts:43` “Annotation Preview Update reverts even without an explicit Cancel, when selection moves away” ↔ `clock-preview.spec.ts:63` “Clock Preview reverts even without an explicit Cancel, when selection moves away”
+- **0.78** — DISTINCT_CONTRACTS: `annotation-preview-update.spec.ts:70` “Apply commits the previewed draft as one real SemanticCommand” ↔ `clock-preview.spec.ts:80` “Apply after Preview commits exactly the previewed draft as one real SemanticCommand”
+- **0.75** — DISTINCT_CONTRACTS: `annotation-preview-update.spec.ts:45` “Annotation Preview Update reverts even without an explicit Cancel, when selection moves away” ↔ `clock-preview.spec.ts:63` “Clock Preview reverts even without an explicit Cancel, when selection moves away”
 - **0.73** — DISTINCT_CONTRACTS: `gui-bottom-resize.spec.ts:3` “Bottom Editor splitter resizes and collapses without changing document or render state” ↔ `gui-inspector-resize.spec.ts:3` “Inspector splitter resizes and collapses without changing document or render state”
 - **0.7** — DISTINCT_CONTRACTS: `transaction-startup-fixture-matrix.spec.ts:8` “Transaction Open reaches first useful paint for medium fixture at 1280x720” ↔ `transaction-startup-large-fixture.spec.ts:5` “500-Transaction Open reaches first useful Transaction paint at 1280x720”
 - **0.7** — DISTINCT_CONTRACTS: `transaction-startup-fixture-matrix.spec.ts:8` “Transaction Open reaches first useful paint for medium fixture at 1672x941” ↔ `transaction-startup-large-fixture.spec.ts:5` “500-Transaction Open reaches first useful Transaction paint at 1672x941”
