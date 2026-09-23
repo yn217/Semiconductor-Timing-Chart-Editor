@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:29:01.052Z",
+  "generatedAt": "2026-09-23T05:30:06.911Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 677,
+  "reviewedCaseCount": 679,
   "curatedProfileCounts": {
-    "integration": 316,
+    "integration": 317,
     "nightly": 163,
     "performance": 44,
-    "pr": 197,
+    "pr": 198,
     "visual": 137
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -7448,18 +7448,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-context-menu-command-parity",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Signal row context menu exposes the supported shared actions, Copy remains view-only/focused, and Duplicate commits the selected stable Signal through one command.",
+      "duplicateGroup": "context-menu-shared-command-adapters",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Ribbon/overflow tests do not prove the right-click adapter publishes the same supported capabilities or preserves row focus through Copy. This additionally performs Duplicate through that context-menu route.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "home-command-surface.spec.ts",
@@ -7470,18 +7473,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "context-menu-multiselection-preservation",
+      "originIssue": 195,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Right-clicking a selected member preserves the full multi-selection for menu actions; right-clicking an unselected row deterministically switches to that single context target.",
+      "duplicateGroup": "context-menu-multiselection-targeting",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This directly protects the context-target selection policy fixed by #195. Generic context-menu availability tests do not exercise selected-member preservation versus unselected-target switching.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "home-command-surface.spec.ts",
@@ -24198,7 +24204,7 @@
     {
       "file": "home-command-surface.spec.ts",
       "caseCount": 24,
-      "reviewedCaseCount": 12,
+      "reviewedCaseCount": 14,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
