@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 969 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 207/969 cases reviewed.
+Semantic review progress: 211/969 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 55 |
+| `integration` | 58 |
 | `nightly` | 42 |
 | `performance` | 17 |
-| `pr` | 87 |
-| `visual` | 59 |
+| `pr` | 88 |
+| `visual` | 61 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -181,8 +181,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-738-stress-rebase.spec.ts` | 4 | 4/4 reviewed |
 | `issue-740-741-756-cycle-layout.spec.ts` | 3 | 3/3 reviewed |
 | `issue-740-cycle-bottom-hidden.spec.ts` | 2 | 2/2 reviewed |
-| `issue-744-diagnostics-freshness.spec.ts` | 2 | 0/2 reviewed |
-| `issue-746-visible-group-create.spec.ts` | 2 | 0/2 reviewed |
+| `issue-744-diagnostics-freshness.spec.ts` | 2 | 2/2 reviewed |
+| `issue-746-visible-group-create.spec.ts` | 2 | 2/2 reviewed |
 | `issue-747-a11y-and-sort-matrix.spec.ts` | 1 | 1/1 reviewed |
 | `issue-747-bottom-settings.spec.ts` | 1 | 1/1 reviewed |
 | `issue-747-geometry-acceptance.spec.ts` | 2 | 2/2 reviewed |

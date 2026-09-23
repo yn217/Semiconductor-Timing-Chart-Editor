@@ -1305,9 +1305,56 @@
       "decision": "KEEP",
       "reason": "The two cases represent distinct high-risk failure paths—cross-subeditor draft discard and stale local state after Undo—so they remain separate cases within one focused file rather than one broad journey.",
       "replacementTest": null
+    },
+    {
+      "file": "issue-746-visible-group-create.spec.ts",
+      "domain": "transaction-group-creation-discoverability",
+      "originIssue": 746,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 3600,
+      "primaryContract": "Visible Group creation is reachable from both the Transaction Tree and Bottom toolbar at desktop and compact widths; each creation updates the displayed Group collection and Undo restores the initial collection.",
+      "duplicateGroup": "transaction-group-creation-discoverability-746",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": ["integration", "visual"],
+      "decision": "KEEP",
+      "reason": "Both viewport cases are intentional: the contract includes visible control bounds and header overflow, which are width-dependent, in addition to the shared Tree/Bottom command and Undo journey. The test observes visible controls and semantic collection changes rather than requiring a specific DOM ownership structure.",
+      "replacementTest": null
     }
   ],
   "reviews": [
+    {
+      "file": "issue-744-diagnostics-freshness.spec.ts",
+      "title": "timing diagnostics stay current across a semantic edit, Undo and Redo (no silent clear)",
+      "domain": "timing-diagnostics-freshness",
+      "originIssue": 744,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 7600,
+      "primaryContract": "An existing timing diagnostic remains visible and current through a production semantic edit, Undo, and Redo without changing the diagnostic result.",
+      "duplicateGroup": "timing-diagnostics-freshness-744",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["pr"],
+      "decision": "KEEP",
+      "reason": "The invariant crosses an imported canonical fixture, the diagnostics UI, SemanticCommand, and History replay; unit tests for diagnostic derivation cannot prove that the visible diagnostics stay synchronized in the actual editor journey. This is the single user-visible regression guard for #744.",
+      "replacementTest": null
+    },
+    {
+      "file": "issue-744-diagnostics-freshness.spec.ts",
+      "title": "one canonical validation per accepted command; the UI never rescans the structure",
+      "domain": "canonical-validation-owner-boundary",
+      "originIssue": 744,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 4900,
+      "primaryContract": "Execute, Undo, and Redo each perform one authoritative DocumentSession validation and do not trigger a duplicate full canonical validation in the React application owner.",
+      "duplicateGroup": "canonical-validation-owner-boundary-744",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": ["integration"],
+      "decision": "KEEP",
+      "reason": "The data-session-counters attribute exposes internal owner counters, so this is implementation-coupled and intentionally excluded from routine PR browser tests. Existing DocumentSession unit tests cover session validation counts but cannot detect a duplicate UI-level traversal; retain this focused architecture guard in the integration tier until an owner-level non-browser harness can observe both counters without launching the full app.",
+      "replacementTest": null
+    },
     {
       "file": "issue-755-canvas-production-acceptance.spec.ts",
       "title": "large documents paint Canvas without per-cycle SVG; ?wave=svg forces the SVG fallback",
