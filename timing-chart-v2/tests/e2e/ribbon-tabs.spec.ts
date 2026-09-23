@@ -116,12 +116,14 @@ test("AI query previews and applies one scoped SemanticCommand", async ({ page }
   await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 1));
 });
 
-test("AI preview cancels and rejects stale revision without mutation", async ({ page }) => {
+test("AI preview cancellation leaves Canonical and History unchanged", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const revisionBefore = await host.getAttribute("data-canonical-revision");
+  const historyBefore = await page.getByTestId("history-status").textContent();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "AI", exact: true }).click();
   await page.getByRole("tab", { name: "AI", exact: true }).click();
   const ai = page.getByTestId("ai-operation-panel");
@@ -129,13 +131,7 @@ test("AI preview cancels and rejects stale revision without mutation", async ({ 
   await ai.getByRole("button", { name: "Preview" }).click();
   await ai.getByRole("button", { name: "Cancel" }).click();
   await expect(ai.getByTestId("ai-status")).toHaveText("Preview cancelled · no document mutation");
-  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
-  await ai.getByRole("button", { name: "Preview" }).click();
-  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
-  await page.getByTestId("ribbon").locator(".home-timeline-group").getByRole("button", { name: "Insert one cycle", exact: true }).click();
-  await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(ai.getByRole("button", { name: "Apply Preview" })).toHaveCount(1);
-  await ai.getByRole("button", { name: "Apply Preview" }).click();
-  await expect(ai.getByTestId("ai-status")).toContainText("Preview is out of date. Regenerate it.");
-  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText(historyBefore!);
+  await expect(host).toHaveAttribute("data-canonical-revision", revisionBefore!);
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toBeVisible();
 });
