@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
+import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTransactionGroupProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
-import type { AnnotationId, CommandId, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CommandId, GroupId, SignalId, TimeGroupId, TransactionGroupId, TransactionId } from "@timing-chart-v2/schema";
 
 describe("deterministic AI proposal provider", () => {
   it("builds a typed stable-ID rename proposal without mutating the canonical document", () => {
@@ -97,6 +97,23 @@ describe("deterministic AI proposal provider", () => {
     expect(deleted.ok).toBe(true);
     if (deleted.ok) expect(deleted.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.delete", transactionId: "transaction_1" })]);
     expect(buildTypedTransactionProposal(document, 23, "propose_move_transaction", { transactionId: "missing", start: 2 })).toEqual({ ok: false, message: "Transaction 'missing' does not exist in the current document." });
+  });
+
+  it("maps Transaction Group create/rename/delete to stable-ID SemanticCommands with affected count", () => {
+    const base = canonicalFixture();
+    const groupId = "transaction_group_read" as TransactionGroupId;
+    const document = { ...base, transactions: [{ id: "transaction_1" as TransactionId, name: "Read", start: 1, end: 4, groupId }], transactionGroups: [{ id: groupId, name: "Memory", order: 0, color: "#3382F6" }] };
+    const created = buildTypedTransactionGroupProposal(document, 24, "propose_create_transaction_group", { name: " Bus ", color: "#123456" });
+    expect(created.ok).toBe(true);
+    if (created.ok) expect(created.proposal.commands).toEqual([expect.objectContaining({ type: "transactionGroup.create", group: expect.objectContaining({ name: "Bus", order: 1, color: "#123456" }) })]);
+    const renamed = buildTypedTransactionGroupProposal(document, 24, "propose_rename_transaction_group", { groupId, name: "System" });
+    expect(renamed.ok).toBe(true);
+    if (renamed.ok) expect(renamed.proposal.commands).toEqual([expect.objectContaining({ type: "transactionGroup.rename", groupId, name: "System" })]);
+    const deleted = buildTypedTransactionGroupProposal(document, 24, "propose_delete_transaction_group", { groupId });
+    expect(deleted.ok).toBe(true);
+    if (deleted.ok) expect(deleted.proposal).toEqual(expect.objectContaining({ summary: "Delete Transaction Group Memory and ungroup 1 Transaction", commands: [expect.objectContaining({ type: "transactionGroup.delete", groupId })] }));
+    expect(buildTypedTransactionGroupProposal(document, 24, "propose_rename_transaction_group", { groupId: "missing", name: "X" })).toMatchObject({ ok: false, message: expect.stringContaining("does not exist") });
+    expect(buildTypedTransactionGroupProposal(document, 24, "propose_create_transaction_group", { name: "Bad", color: "red" })).toMatchObject({ ok: false, message: expect.stringContaining("six-digit") });
   });
 
   it("maps Phase and linked-Signal proposals through stable Transaction/Signal IDs", () => {

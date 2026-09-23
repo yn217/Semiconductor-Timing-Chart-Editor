@@ -1,5 +1,5 @@
 import type { SemanticCommand } from "@timing-chart-v2/commands";
-import { valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type SignalId, type SignalRole, type TransactionId, type TransactionPhase, type ValueSignal } from "@timing-chart-v2/schema";
+import { valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type SignalId, type SignalRole, type TransactionGroupId, type TransactionId, type TransactionPhase, type ValueSignal } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { createAnnotation } from "./create-annotation.js";
@@ -132,6 +132,32 @@ export function buildTypedSignalGroupProposal(document: CanonicalDocument, revis
     return { ok: true, proposal: proposal(revision, `Rename ${group.name} to ${normalizedName}`, [command({ type: "group.rename", groupId: group.id, name: normalizedName }, "typed_rename_signal_group")]) };
   }
   return { ok: false, message: `Unsupported typed Signal Group proposal '${tool}'.` };
+}
+
+export function buildTypedTransactionGroupProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  const groups = document.transactionGroups ?? [];
+  if (tool === "propose_create_transaction_group") {
+    const name = args.name;
+    const color = args.color;
+    if (typeof name !== "string" || !name.trim()) return { ok: false, message: "propose_create_transaction_group requires a non-empty name." };
+    if (color !== undefined && (typeof color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(color))) return { ok: false, message: "color must be a six-digit hexadecimal color when supplied." };
+    const group = { id: nextEntityId("transactionGroup", document) as TransactionGroupId, name: name.trim(), order: groups.length, ...(typeof color === "string" ? { color } : {}) };
+    return { ok: true, proposal: proposal(revision, `Create Transaction Group ${group.name}`, [command({ type: "transactionGroup.create", group }, "typed_create_transaction_group")]) };
+  }
+  const groupId = args.groupId;
+  if (typeof groupId !== "string" || !groupId) return { ok: false, message: `${tool} requires a stable groupId.` };
+  const group = groups.find((item) => item.id === groupId);
+  if (!group) return { ok: false, message: `Transaction Group '${groupId}' does not exist in the current document.` };
+  if (tool === "propose_rename_transaction_group") {
+    const name = args.name;
+    if (typeof name !== "string" || !name.trim()) return { ok: false, message: "propose_rename_transaction_group requires a non-empty name." };
+    return { ok: true, proposal: proposal(revision, `Rename Transaction Group ${group.name} to ${name.trim()}`, [command({ type: "transactionGroup.rename", groupId: group.id, name: name.trim() }, "typed_rename_transaction_group")]) };
+  }
+  if (tool === "propose_delete_transaction_group") {
+    const affectedCount = document.transactions.filter((transaction) => transaction.groupId === group.id).length;
+    return { ok: true, proposal: proposal(revision, `Delete Transaction Group ${group.name} and ungroup ${affectedCount} Transaction${affectedCount === 1 ? "" : "s"}`, [command({ type: "transactionGroup.delete", groupId: group.id }, "typed_delete_transaction_group")]) };
+  }
+  return { ok: false, message: `Unsupported typed Transaction Group proposal '${tool}'.` };
 }
 
 export function buildTypedTransactionProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
