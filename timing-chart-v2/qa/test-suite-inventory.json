@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:39:40.745Z",
+  "generatedAt": "2026-09-23T07:42:44.127Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 905,
+  "reviewedCaseCount": 909,
   "curatedProfileCounts": {
-    "integration": 472,
+    "integration": 475,
     "nightly": 184,
     "performance": 52,
-    "pr": 244,
+    "pr": 245,
     "visual": 154
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -21819,18 +21819,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-authoring-phase-link-save-open-sync",
+      "originIssue": 393,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "One stable Transaction ID carries its name, three structured phases, and two linked Signals through production Save/Open, while Inspector Apply stays synchronized with the Bottom row.",
+      "duplicateGroup": "transaction-authoring-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This joins phase/link authoring, Inspector-to-Bottom synchronization, and serialized Save/Open for the same stable entity. It overlaps the broader six-Transaction sample journey and the simpler Save/Open case, but protects this exact mixed lifecycle.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-onboarding.spec.ts",
@@ -21841,18 +21844,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-structured-phase-authoring",
+      "originIssue": 393,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Phase add/edit/delete through the structured table are separate semantic applies with one History unit each, and ordinary phase editing does not require the Advanced JSON surface.",
+      "duplicateGroup": "transaction-phase-authoring",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Distinctly protects the normal structured phase workflow, exact History increments, and separation from raw JSON editing; the Save/Open sibling does not exercise edit/delete semantics.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-onboarding.spec.ts",
@@ -21863,18 +21869,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-multiselect-color-delete-atomicity",
+      "originIssue": 453,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Multi-selected Transactions receive a bulk color change in one History unit; Ctrl+A/Delete removes the collection in one unit and Undo restores it.",
+      "duplicateGroup": "transaction-multiselect-bulk-commands",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Adds bulk color and delete atomicity beyond the focused selection/filter tests. The title's checked-row wording is stale: selection uses click/Ctrl-click, not checkboxes. Its color assertions verify a selected row and an unselected row, not every selected row; preserve it with that narrower evidentiary scope.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-partial-update-preserves-fields.spec.ts",
@@ -21885,18 +21894,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-partial-update-preserves-group-color",
+      "originIssue": 461,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Applying a Start-only Inspector edit preserves the Transaction's existing Group and Color in the Inspector and Bottom projection.",
+      "duplicateGroup": "transaction-partial-update-data-preservation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Focused regression for the known partial-update data-loss path. This case asserts Group and Color specifically; Description and other optional fields require companion coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-phase-bars.spec.ts",
@@ -27087,20 +27099,20 @@
     {
       "file": "transaction-onboarding.spec.ts",
       "caseCount": 7,
-      "reviewedCaseCount": 4,
+      "reviewedCaseCount": 7,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-partial-update-preserves-fields.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-phase-bars.spec.ts",
