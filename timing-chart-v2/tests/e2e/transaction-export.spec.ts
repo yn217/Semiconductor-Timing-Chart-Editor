@@ -129,7 +129,9 @@ test("exports both synchronized signal and transaction layers from Split View", 
 
 test("exports SVG, PNG and PDF from Split View through the shared ExportScene", async ({ page }) => {
   await ready(page);
-  await createTransaction(page, "Split All Formats", 2, 6);
+  // startInCycleSample loads a 24-cycle document (2 TC at the default scale);
+  // keep the edited Transaction range valid so Apply actually commits the name.
+  await createTransaction(page, "Split All Formats", 0, 2);
   await page.getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.getByTestId("transaction-lanes")).toBeVisible();
 
@@ -154,7 +156,7 @@ test("exports SVG, PNG and PDF from Split View through the shared ExportScene", 
   const svgText = svg.toString("utf8");
   expect(svgText).toContain('data-signal-id="sig_cycle_clock"');
   expect(svgText).toContain('data-transaction-id=');
-  expect(svgText).toContain("Split All Formats");
+  expect(svgText.includes("Split All Formats")).toBe(true);
   const png = await download("png");
   expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
   const pdf = await download("pdf");
