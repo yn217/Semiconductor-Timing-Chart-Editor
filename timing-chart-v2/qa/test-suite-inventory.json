@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:07:48.712Z",
+  "generatedAt": "2026-09-23T07:09:17.592Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 839,
+  "reviewedCaseCount": 843,
   "curatedProfileCounts": {
-    "integration": 436,
-    "nightly": 173,
-    "performance": 46,
-    "pr": 230,
+    "integration": 437,
+    "nightly": 175,
+    "performance": 48,
+    "pr": 231,
     "visual": 144
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -19781,18 +19781,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "100k-far-bookmark-navigation-reveal",
+      "originIssue": 587,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "On a 100k-cycle production document, Bookmark double-click navigates to offscreen cycles 50k and 99k, then mounts valid Clock geometry and allows access to the corresponding event editor.",
+      "duplicateGroup": "100k-cycle-offscreen-geometry-acceptance",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This covers offscreen semantic navigation/reveal through the actual Bookmark path plus post-reveal renderer and event-editor availability; the neighboring unsampled-boundary drag and scroll-window tests protect different geometry stages. Its 120-second timeout is a performance/nightly concern; runtime unmeasured here.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "timeline-range-100k.spec.ts",
@@ -19803,18 +19807,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "100k-wave-window-scroll-reprojection",
+      "originIssue": 587,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After horizontal scrolling a 100k-cycle document with actual overflow, the mounted Waveform owner's rendered source window changes to follow the visible time range.",
+      "duplicateGroup": "100k-cycle-offscreen-geometry-acceptance",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This directly guards bounded-render window refresh after real scroll; case 783 verifies far-cycle navigation and usable projection, while this specifically asserts the mounted source-window rebasing. The 120-second large-document setup should not run in routine PR checks; no runtime measured in this static review.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "timeline-range-band-presentation.spec.ts",
@@ -19825,18 +19833,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "cycle-range-overlay-empty-state",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Before the user selects a range, both the central range band and ruler preview overlay remain hidden.",
+      "duplicateGroup": "cycle-range-band-presentation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This protects the empty-state rendering contract and prevents a misleading phantom selection overlay. The populated-band assertions in the sibling cannot prove absence before selection.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "timeline-range-band-presentation.spec.ts",
@@ -19847,18 +19858,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "cycle-range-band-hit-alignment-and-view-only",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "One-cycle, forward/reverse drag, and terminal half-open selection bands align within one pixel to source-cycle ruler ticks across central/ruler surfaces, while Canonical, History, Dirty, and render counters stay unchanged.",
+      "duplicateGroup": "cycle-range-band-presentation",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The shared `assertBand` checks rendered bounds, selected tick membership, two independently drawn bands, and source mapping. Other range tests check selection values/drag lifecycle, not this cross-surface visual alignment invariant.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-range-band-presentation.spec.ts",
@@ -26661,7 +26675,7 @@
     {
       "file": "timeline-range-100k.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 1,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [
@@ -26669,16 +26683,16 @@
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "timeline-range-band-presentation.spec.ts",
       "caseCount": 9,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "timeline-range-edit-readability.spec.ts",
