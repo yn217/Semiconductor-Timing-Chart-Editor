@@ -87,6 +87,28 @@ export function buildTypedTimelineProposal(document: CanonicalDocument, revision
   return { ok: false, message: `Unsupported typed timeline proposal '${tool}'.` };
 }
 
+export function buildTypedSignalGroupProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  if (tool === "propose_create_signal_group") {
+    const name = args.name;
+    if (typeof name !== "string" || name.trim().length === 0) return { ok: false, message: "propose_create_signal_group requires a non-empty name." };
+    const normalizedName = name.trim();
+    const id = nextEntityId("group", document) as GroupId;
+    const group = { id, name: normalizedName, rows: [] };
+    return { ok: true, proposal: proposal(revision, `Create Signal Group ${normalizedName}`, [command({ type: "group.create", group, index: document.signalGroups.length }, "typed_create_signal_group")]) };
+  }
+  if (tool === "propose_rename_signal_group") {
+    const groupId = args.groupId;
+    const name = args.name;
+    if (typeof groupId !== "string" || groupId.length === 0) return { ok: false, message: "propose_rename_signal_group requires a stable groupId." };
+    if (typeof name !== "string" || name.trim().length === 0) return { ok: false, message: "propose_rename_signal_group requires a non-empty name." };
+    const group = document.signalGroups.find((item) => item.id === groupId);
+    if (!group) return { ok: false, message: `Signal Group '${groupId}' does not exist in the current document.` };
+    const normalizedName = name.trim();
+    return { ok: true, proposal: proposal(revision, `Rename ${group.name} to ${normalizedName}`, [command({ type: "group.rename", groupId: group.id, name: normalizedName }, "typed_rename_signal_group")]) };
+  }
+  return { ok: false, message: `Unsupported typed Signal Group proposal '${tool}'.` };
+}
+
 /** Provider-neutral boundary. Implementations may be backed by a mock, local
  * model, or remote service, but they return proposals only; Canonical changes
  * are always applied by the editor's SemanticCommand owner. */

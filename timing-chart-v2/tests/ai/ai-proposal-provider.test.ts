@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTypedSignalProposal, buildTypedTimelineProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
+import { buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import type { AnnotationId, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 
@@ -47,6 +47,17 @@ describe("deterministic AI proposal provider", () => {
     if (moved.ok) expect(moved.proposal.commands).toEqual([expect.objectContaining({ type: "timeline.moveRange", start: 2, end: 5, to: 7 })]);
     expect(buildTypedTimelineProposal(document, 21, "propose_delete_cycles", { start: 5, end: 5 })).toEqual({ ok: false, message: "propose_delete_cycles requires integer boundaries within the timeline and end > start." });
     expect(document.timeline.cycleCount).toBe(canonicalFixture().timeline.cycleCount);
+  });
+
+  it("maps typed Signal Group create/rename proposals to existing Group SemanticCommands", () => {
+    const document = canonicalFixture();
+    const created = buildTypedSignalGroupProposal(document, 22, "propose_create_signal_group", { name: " Auxiliary " });
+    expect(created.ok).toBe(true);
+    if (created.ok) expect(created.proposal.commands).toEqual([expect.objectContaining({ type: "group.create", index: document.signalGroups.length, group: expect.objectContaining({ name: "Auxiliary", rows: [] }) })]);
+    const renamed = buildTypedSignalGroupProposal(document, 22, "propose_rename_signal_group", { groupId: document.signalGroups[0]!.id, name: "Controls" });
+    expect(renamed.ok).toBe(true);
+    if (renamed.ok) expect(renamed.proposal.commands).toEqual([expect.objectContaining({ type: "group.rename", groupId: document.signalGroups[0]!.id, name: "Controls" })]);
+    expect(buildTypedSignalGroupProposal(document, 22, "propose_rename_signal_group", { groupId: "missing", name: "X" })).toEqual({ ok: false, message: "Signal Group 'missing' does not exist in the current document." });
   });
 
   it("returns a revisioned semantic proposal without mutating the source document", () => {
