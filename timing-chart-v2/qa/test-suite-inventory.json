@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T01:50:36.994Z",
+  "generatedAt": "2026-09-23T01:54:49.515Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 420,
+  "reviewedCaseCount": 425,
   "curatedProfileCounts": {
-    "integration": 193,
-    "nightly": 124,
+    "integration": 196,
+    "nightly": 126,
     "performance": 23,
-    "pr": 127,
+    "pr": 129,
     "visual": 94
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -5128,18 +5128,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "empty-group-projection-and-persistence",
+      "originIssue": 426,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "An empty Group remains represented consistently in the virtualized Left Tree and Signal editor dropdown, retains stable identity through rename/delete/Undo/Redo, and roundtrips with zero rows through Save/Open.",
+      "duplicateGroup": "empty-group-projection-lifecycle",
+      "executionTier": "TIER_4_SLOW_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "This exercises multiple projections, virtualized visibility, semantic lifecycle, and actual file roundtrip; it is a high-value but slow cross-surface acceptance rather than routine PR coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "empty-group-tree-projection.spec.ts",
@@ -5150,18 +5154,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "empty-group-stable-identity-and-projection",
+      "originIssue": 426,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Creating multiple empty Groups allocates distinct stable IDs and exposes exactly the same set in the Left Tree and Group selector.",
+      "duplicateGroup": "empty-group-projection-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This compactly protects duplicate/omitted entity projection under repeated creation and compares two production surfaces by ID rather than display order.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "empty-group-tree-projection.spec.ts",
@@ -5172,18 +5179,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "empty-group-first-child-projection",
+      "originIssue": 426,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inserting the first Signal into an initially empty Group mounts one row with the same new stable ID in Left Tree, frozen labels, timing rows, and waveform ownership.",
+      "duplicateGroup": "empty-group-projection-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a concise first-child projection regression. The target is resolved as the stable-ID set difference, avoiding DOM order/last-node identity assumptions.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "event-pulse-lifecycle.spec.ts",
@@ -5194,18 +5204,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "event-authoring-and-legacy-pulse-creation-policy",
+      "originIssue": 400,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "New authoring paths offer Event but not legacy Pulse, and Event creation/edit/Undo/Redo remain functional from Ribbon and Left Tree Add surfaces.",
+      "duplicateGroup": "event-pulse-compatibility-policy",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This guards the explicit product distinction between current Event creation and legacy Pulse compatibility across two production creation surfaces.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "event-pulse-lifecycle.spec.ts",
@@ -5216,18 +5229,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "legacy-pulse-load-edit-persistence-export",
+      "originIssue": 400,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "An existing legacy Pulse loads as Pulse, remains editable through the value editor, survives Undo/Redo and Save/Open, and is preserved in JSON plus SVG/PNG/PDF exports.",
+      "duplicateGroup": "event-pulse-compatibility-policy",
+      "executionTier": "TIER_4_SLOW_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "This is explicit backward-compatibility protection across file and three export formats; its size and lifecycle breadth justify slower integration/nightly execution.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "export-diagnostics.spec.ts",
@@ -23224,23 +23241,23 @@
     {
       "file": "empty-group-tree-projection.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset",
         "explicitWait"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "event-pulse-lifecycle.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "export-diagnostics.spec.ts",
