@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:16:42.095Z",
+  "generatedAt": "2026-09-23T07:21:23.545Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,9 +13,9 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 863,
+  "reviewedCaseCount": 865,
   "curatedProfileCounts": {
-    "integration": 449,
+    "integration": 451,
     "nightly": 175,
     "performance": 48,
     "pr": 233,
@@ -20383,18 +20383,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-inspector-and-clean-bottom-row-state",
+      "originIssue": 703,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Selecting a stable Transaction in the realistic fixture keeps the table-first Bottom toolbar/list visible with no unapplied row draft, while the Inspector follows the same selection and exposes timing and linked-signal detail.",
+      "duplicateGroup": "transaction-detail-ownership",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The title overstates this case: it does not edit or Apply a draft. It uniquely checks cross-panel selection/detail ownership and the clean Bottom draft state; the actual Bottom Draft->Apply/Undo and rejected-Apply journeys are covered by issue-703-inline-row-apply.spec.ts. Keep this as an ownership contract, not as Apply acceptance.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-bottom-toolbar-add-ungroup.spec.ts",
@@ -20405,18 +20408,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-bottom-toolbar-add-ungroup",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Bottom toolbar's Ungroup clears the selected Transaction's Group through the semantic path, and Add creates/selects a Transaction; both operations update History.",
+      "duplicateGroup": "transaction-bottom-toolbar-commands",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the only combined production-UI check of the newly exposed Bottom Add and Ungroup entry points against Group state and History. It covers two command adapters, not the separate drag or inline Apply contracts.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-drag.spec.ts",
@@ -26818,20 +26824,20 @@
     {
       "file": "transaction-bottom-phase-linked-signals.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-bottom-toolbar-add-ungroup.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-drag.spec.ts",

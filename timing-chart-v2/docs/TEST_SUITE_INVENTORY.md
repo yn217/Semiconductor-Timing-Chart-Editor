@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 863/959 cases reviewed.
+Semantic review progress: 865/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,7 +10,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 449 |
+| `integration` | 451 |
 | `nightly` | 175 |
 | `performance` | 48 |
 | `pr` | 233 |
@@ -304,8 +304,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `titlebar-controls.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-bottom-panel-table-first.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-bottom-panel-table.spec.ts` | 2 | 2/2 reviewed |
-| `transaction-bottom-phase-linked-signals.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-bottom-toolbar-add-ungroup.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-bottom-phase-linked-signals.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-bottom-toolbar-add-ungroup.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-drag.spec.ts` | 11 | 11/11 reviewed |
 | `transaction-empty-state-create-lane-fix.spec.ts` | 1 | 0/1 reviewed |
 | `transaction-export.spec.ts` | 16 | 0/16 reviewed |
