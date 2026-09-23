@@ -80,7 +80,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_selection", "get_viewport_snapshot", "fit_all", "propose_edit"]);
+  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_selection", "get_viewport_snapshot", "get_transactions", "get_annotations", "get_bookmarks", "get_problems", "fit_all", "propose_edit"]);
 
   // Read-only: reflects the real, live document -- never a canned/fake value.
   const summary = await callTool("get_document_summary");
@@ -110,6 +110,46 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect(fitAll.body.result!.isError).toBe(false);
   const parsedFitAll = JSON.parse(fitAll.body.result!.content[0]!.text) as { applied: boolean; canonicalDelta: number; historyDelta: number; dirtyDelta: number };
   expect(parsedFitAll).toEqual({ applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 });
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+});
+
+test("get_transactions, get_annotations, get_bookmarks and get_problems are read-only semantic projections", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
+
+  const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+  const transactions = await callTool("get_transactions");
+  expect(transactions.body.result!.isError).toBe(false);
+  const transactionData = JSON.parse(transactions.body.result!.content[0]!.text) as { transactionGroups: readonly { id: string; name: string }[]; transactions: readonly { id: string; name: string; start: number; end: number }[] };
+  expect(transactionData.transactions.length).toBeGreaterThan(0);
+  expect(transactionData.transactions[0]).toEqual(expect.objectContaining({ id: expect.any(String), name: expect.any(String), start: expect.any(Number), end: expect.any(Number) }));
+
+  const annotations = await callTool("get_annotations");
+  expect(annotations.body.result!.isError).toBe(false);
+  const annotationData = JSON.parse(annotations.body.result!.content[0]!.text) as { annotations: readonly { id: string; type: string; visible: boolean; locked: boolean }[] };
+  expect(Array.isArray(annotationData.annotations)).toBe(true);
+  for (const annotation of annotationData.annotations) expect(annotation).toEqual(expect.objectContaining({ id: expect.any(String), type: expect.any(String), visible: expect.any(Boolean), locked: expect.any(Boolean) }));
+
+  const bookmarks = await callTool("get_bookmarks");
+  expect(bookmarks.body.result!.isError).toBe(false);
+  const bookmarkData = JSON.parse(bookmarks.body.result!.content[0]!.text) as { bookmarks: readonly { id: string; name: string; cycle: number }[] };
+  expect(Array.isArray(bookmarkData.bookmarks)).toBe(true);
+
+  const problems = await callTool("get_problems");
+  expect(problems.body.result!.isError).toBe(false);
+  const problemData = JSON.parse(problems.body.result!.content[0]!.text) as { problems: readonly { code: string; path: string; message: string }[] };
+  expect(problemData.problems).toEqual([]);
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
