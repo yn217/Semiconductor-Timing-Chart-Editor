@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:53:15.914Z",
+  "generatedAt": "2026-09-23T07:54:35.851Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 933,
+  "reviewedCaseCount": 937,
   "curatedProfileCounts": {
-    "integration": 482,
+    "integration": 484,
     "nightly": 186,
     "performance": 54,
-    "pr": 255,
-    "visual": 159
+    "pr": 256,
+    "visual": 161
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -22949,18 +22949,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "dirty-open-dialog-keyboard-focus-activation",
+      "originIssue": 291,
+      "type": "ACCESSIBILITY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Dirty Open confirmation traps tab focus among Save/Cancel/Discard, wraps both directions, and Enter activates the focused Discard action to replace the document cleanly.",
+      "duplicateGroup": "dirty-open-dialog-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Focused keyboard accessibility contract for a destructive-confirmation dialog. Other dirty-open tests cover pointer choices and cancel/discard semantics, not tab wrap or Enter activation.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "unsaved-file-dialog.spec.ts",
@@ -23023,18 +23026,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "dirty-open-dialog-dark-pointer-actions",
+      "originIssue": 291,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "In dark color scheme, dirty-open Save/Cancel/Discard controls have readable and pointer-hit targets through the production file picker, and each action preserves or replaces the document according to its contract.",
+      "duplicateGroup": "dirty-open-dialog-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Covers dark-theme visual readability plus actual pointer-operable Save/Cancel/Discard routes through the production picker. This is broader than isolated dialog-state checks and protects a separate color-scheme/picker interaction.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "integration"
+      ]
     },
     {
       "file": "unsaved-file-dialog.spec.ts",
@@ -23272,18 +23279,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "wavedrom-value-label-segment-fit-export",
+      "originIssue": 205,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Long bus/state labels remain segment-bounded with ellipsis and full accessible/title text; adjacent grid geometry remains stable under zoom and SVG export retains semantic labels.",
+      "duplicateGroup": "wavedrom-value-label-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Protects a combination of segment containment, label semantics, zoom-invariant grid, and exported SVG accessibility that ordinary geometry or screenshot tests do not jointly establish.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "value-signal-compatibility.spec.ts",
@@ -23471,18 +23481,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "view-metrics-owner-live-resize-and-invalidation",
+      "originIssue": 554,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Resizing left/frozen/Inspector panes changes the shared view metrics without Canonical/History/Dirty changes or WaveDrom/geometry rebuilds; subsequent timeline mutation rebuilds ruler metrics using the current dimensions and preserves ruler/grid boundary alignment.",
+      "duplicateGroup": "view-metrics-owner",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Checks live metrics freshness and invalidation behavior across three independent pane resizes, then verifies the next semantic change rebuilds ruler and grid consistently. It uniquely protects callbacks that outlive the resize event.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "view-mode-readability.spec.ts",
@@ -27362,7 +27375,7 @@
     {
       "file": "unsaved-file-dialog.spec.ts",
       "caseCount": 14,
-      "reviewedCaseCount": 12,
+      "reviewedCaseCount": 14,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -27371,7 +27384,7 @@
         "geometryRead",
         "explicitWait"
       ],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "v8-gui-contract-coverage.spec.ts",
@@ -27387,13 +27400,13 @@
     {
       "file": "value-label-layout.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "value-signal-compatibility.spec.ts",
@@ -27407,14 +27420,14 @@
     {
       "file": "view-metrics-owner.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "view-mode-readability.spec.ts",

@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 933/959 cases reviewed.
+Semantic review progress: 937/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 482 |
+| `integration` | 484 |
 | `nightly` | 186 |
 | `performance` | 54 |
-| `pr` | 255 |
-| `visual` | 159 |
+| `pr` | 256 |
+| `visual` | 161 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -337,11 +337,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `tree-drag-drop.spec.ts` | 5 | 5/5 reviewed |
 | `tree-keyboard.spec.ts` | 2 | 2/2 reviewed |
 | `undo-redo-selection-context.spec.ts` | 3 | 3/3 reviewed |
-| `unsaved-file-dialog.spec.ts` | 14 | 12/14 reviewed |
+| `unsaved-file-dialog.spec.ts` | 14 | 14/14 reviewed |
 | `v8-gui-contract-coverage.spec.ts` | 1 | 1/1 reviewed |
-| `value-label-layout.spec.ts` | 1 | 0/1 reviewed |
+| `value-label-layout.spec.ts` | 1 | 1/1 reviewed |
 | `value-signal-compatibility.spec.ts` | 7 | 7/7 reviewed |
-| `view-metrics-owner.spec.ts` | 1 | 0/1 reviewed |
+| `view-metrics-owner.spec.ts` | 1 | 1/1 reviewed |
 | `view-mode-readability.spec.ts` | 3 | 0/3 reviewed |
 | `view-ribbon-slot.spec.ts` | 7 | 7/7 reviewed |
 | `visual-grammar-cross-component.spec.ts` | 2 | 0/2 reviewed |
