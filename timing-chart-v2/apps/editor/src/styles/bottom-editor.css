@@ -36,13 +36,7 @@
 
 .bottom-tabs button.active { margin-bottom: -1px; border: 1px solid #599df0; border-bottom: 2px solid white; border-radius: 4px 4px 0 0; background: #fff; color: #086fd2; font-weight: 700; }
 
-.bottom-pin-label[data-v1-label] { position: relative; color: transparent; }
-
-.bottom-pin-label[data-v1-label]::after { position: absolute; inset: 0; color: #25384f; content: attr(data-v1-label); white-space: nowrap; }
-
 .bottom-tabs > span { flex: 1; }
-.bottom-tabs label { align-self: center; font-size: 10px; }
-.bottom-follow-status { align-self: center; margin-right: 8px; padding: 2px 7px; border-radius: 9px; background: #eef3f9; color: #45566d; font-size: 9px; font-weight: 650; white-space: nowrap; }
 
 .bottom-content { flex: 1; min-height: 0; overflow: auto; }
 .bottom-content-annotation { display: flex; flex-direction: column; overflow: hidden; }
@@ -156,12 +150,6 @@
 .editor-shell .signal-editor:has(.clock-editor) .clock-generator select { width: 100%; }
 
 .editor-shell .bottom-tabs { height: 38px; }
-
-.editor-shell .bottom-pin-label { font-size: 0; }
-
-.editor-shell .bottom-pin-label::after { content: "Pin"; font-size: 9px; }
-
-.editor-shell [data-testid="bottom-pin"][aria-pressed="true"] .bottom-pin-label::after { content: "Unpin"; }
 
 .transaction-editor { min-height: 100%; padding: 0 12px; }.transaction-bottom-summary { min-height: 100%; padding: 10px 12px; color: #263d58; }
 .transaction-bottom-summary > header { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #d5dde7; padding-bottom: 7px; }
@@ -601,9 +589,16 @@
 .transaction-bottom-phase-coverage.is-warning { color: #a25a00; }
 .transaction-list-row-editor input[data-draft-dirty="true"] { background: #fff7e0; border-color: #d9a441; }
 .bottom-settings-anchor { position: relative; display: inline-flex; align-items: center; }
-.bottom-settings-button { height: 22px; min-width: 24px; padding: 0 5px; border: 1px solid #c3ceda; border-radius: 3px; background: #fff; color: #405c78; cursor: pointer; }
-.bottom-settings-popover { position: absolute; z-index: 40; top: 26px; right: 0; display: flex; flex-direction: column; gap: 6px; min-width: 160px; padding: 8px; border: 1px solid #b8c7d8; border-radius: 3px; background: #fff; box-shadow: 0 4px 12px rgb(30 55 80 / 18%); }
+.bottom-settings-button { box-sizing: border-box; width: 28px; height: 28px; min-width: 28px; padding: 0; border: 1px solid #c3ceda; border-radius: 3px; background: #fff; color: #405c78; cursor: pointer; }
+.bottom-settings-popover { position: absolute; z-index: 40; top: 30px; right: 0; display: flex; flex-direction: column; gap: 8px; width: min(320px, calc(100vw - 24px)); padding: 12px; border: 1px solid #b8c7d8; border-radius: 3px; background: #fff; color: #25384f; box-shadow: 0 4px 12px rgb(30 55 80 / 18%); }
 .bottom-settings-popover[hidden] { display: none; }
+.bottom-settings-popover > strong { font-size: 12px; }
+.bottom-settings-popover > p { margin: 0; color: #52647a; font-size: 11px; line-height: 1.4; }
+.bottom-setting-option { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: start; gap: 8px; padding-top: 7px; border-top: 1px solid #e2e8f0; }
+.bottom-setting-option > span { display: grid; gap: 3px; }
+.bottom-setting-option strong { font-size: 11px; }
+.bottom-setting-option small { color: #52647a; font-size: 10px; line-height: 1.4; }
+.bottom-setting-option button { min-height: 26px; border: 1px solid #c3ceda; border-radius: 3px; background: #fff; color: #25384f; font-size: 10px; cursor: pointer; }
 .signal-context-header .signal-scope-actions { display: inline-flex; align-items: center; gap: 6px; margin-left: 12px; padding-left: 12px; border-left: 1px solid #c3ceda; }
 .signal-context-header button.danger { border-color: #d39b9b; color: #a52b2b; background: #fff7f7; }
 .event-derived-column { font-style: italic; cursor: help; }
