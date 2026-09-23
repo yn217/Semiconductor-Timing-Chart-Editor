@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:30:06.911Z",
+  "generatedAt": "2026-09-23T05:31:04.854Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,9 +13,9 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 679,
+  "reviewedCaseCount": 682,
   "curatedProfileCounts": {
-    "integration": 317,
+    "integration": 320,
     "nightly": 163,
     "performance": 44,
     "pr": 198,
@@ -7498,18 +7498,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "context-menu-viewport-corner-clamping",
+      "originIssue": 291,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1280x720, opening the Signal context menu at each viewport corner keeps the positioned menu within the visible safe margin and Escape closes it without document mutation.",
+      "duplicateGroup": "context-menu-viewport-matrix",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Compact viewport has the tightest available space and independently exercises all four placement corners; keyboard-menu contracts do not assert viewport-bound geometry.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "home-command-surface.spec.ts",
@@ -7520,18 +7523,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "context-menu-viewport-corner-clamping",
+      "originIssue": 291,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1366x768, opening the Signal context menu at each viewport corner keeps the positioned menu within the visible safe margin and Escape closes it without document mutation.",
+      "duplicateGroup": "context-menu-viewport-matrix",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The intermediate laptop viewport is a separate responsive layout size that can use different menu positioning than either the compact or approved desktop size; preserve as part of the explicit three-width geometry matrix.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "home-command-surface.spec.ts",
@@ -7542,18 +7548,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "context-menu-viewport-corner-clamping",
+      "originIssue": 291,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1672x941, opening the Signal context menu at each viewport corner keeps the positioned menu within the visible safe margin and Escape closes it without document mutation.",
+      "duplicateGroup": "context-menu-viewport-matrix",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The locked desktop/reference viewport is part of the responsive placement matrix; compact-only testing would not cover right/bottom-corner placement at the approved desktop geometry.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "home-command-surface.spec.ts",
@@ -24204,7 +24213,7 @@
     {
       "file": "home-command-surface.spec.ts",
       "caseCount": 24,
-      "reviewedCaseCount": 14,
+      "reviewedCaseCount": 17,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
