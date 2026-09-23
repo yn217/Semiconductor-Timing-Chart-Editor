@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T03:50:24.566Z",
+  "generatedAt": "2026-09-23T03:53:42.086Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 965,
-  "reviewedCaseCount": 555,
+  "reviewedCaseCount": 558,
   "curatedProfileCounts": {
-    "integration": 246,
+    "integration": 247,
     "nightly": 148,
-    "performance": 36,
-    "pr": 163,
+    "performance": 37,
+    "pr": 164,
     "visual": 127
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -14395,18 +14395,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-tree-keydown-listener-lifecycle",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "SMALL",
+      "measuredRuntimeMs": 6400,
+      "primaryContract": "A Cycle Tree mount does not accumulate keydown registrations on the Left Tree rows element, including React StrictMode's development remount behavior.",
+      "duplicateGroup": "left-tree-keyboard-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The test instruments the native listener registration boundary to guard against duplicate keyboard handlers; the following ArrowDown behavior test checks the user-visible consequence but cannot reliably detect duplicated registration when effects remount.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "listener-lifecycle.spec.ts",
@@ -14417,18 +14420,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-tree-roving-focus-step",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "SMALL",
+      "measuredRuntimeMs": 3400,
+      "primaryContract": "One ArrowDown press advances Left Tree row focus by exactly one stable row, preserving expected keyboard navigation behavior.",
+      "duplicateGroup": "left-tree-keyboard-navigation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a concise externally observable keyboard-navigation assertion; it complements the listener lifecycle guard with a direct focus outcome and is cheap enough for the focused PR browser tier.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "local-geometry-dom-batch.spec.ts",
@@ -14439,18 +14445,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "domain": "wave-dom-geometry-render-batch",
+      "originIssue": 174,
+      "type": "PERFORMANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 6600,
+      "primaryContract": "A clean Cycle startup batches all WaveDrom owners under one render batch and performs one Local Geometry build per owner, without changing History or Dirty state.",
+      "duplicateGroup": "wave-dom-geometry-batching",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The test checks a renderer/geometry batching invariant and exact owner counters; it provides focused architecture/performance evidence and should not be treated as broad correctness or ordinary PR acceptance.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance"
+      ]
     },
     {
       "file": "measurement-anchor-drag.spec.ts",
@@ -25285,25 +25294,25 @@
     {
       "file": "listener-lifecycle.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "local-geometry-dom-batch.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector",
         "dataset"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "measurement-anchor-drag.spec.ts",
