@@ -82,6 +82,29 @@ function executeTool(tool: string, args: Record<string, unknown>, context: AIBri
   if (tool === "get_signal_groups") {
     return { groups: context.document.signalGroups.map((group) => ({ id: group.id, name: group.name, rows: [...group.rows] })) };
   }
+  if (tool === "get_transaction") {
+    const transactionId = args.transactionId;
+    if (typeof transactionId !== "string" || !transactionId) throw new Error("get_transaction requires a stable transactionId.");
+    return { transaction: context.document.transactions.find((item) => item.id === transactionId) ?? null };
+  }
+  if (tool === "get_transaction_groups") {
+    return { groups: (context.document.transactionGroups ?? []).map((group) => ({ id: group.id, name: group.name, color: group.color })) };
+  }
+  if (tool === "get_transaction_phases") {
+    const transactionId = args.transactionId;
+    if (typeof transactionId !== "string" || !transactionId) throw new Error("get_transaction_phases requires a stable transactionId.");
+    const transaction = context.document.transactions.find((item) => item.id === transactionId);
+    return { transactionId, phases: transaction?.phases?.map((phase) => ({ name: phase.name, start: phase.start, end: phase.end })) ?? null };
+  }
+  if (tool === "get_linked_signals") {
+    const transactionId = args.transactionId;
+    if (typeof transactionId !== "string" || !transactionId) throw new Error("get_linked_signals requires a stable transactionId.");
+    const transaction = context.document.transactions.find((item) => item.id === transactionId);
+    if (!transaction) return { transactionId, signals: null };
+    const linkedIds = transaction.linkedSignals ?? [];
+    const signals = linkedIds.map((id) => context.document.signals.find((signal) => signal.id === id && signal.type !== "commentRow")).filter((signal) => signal !== undefined).map((signal) => ({ id: signal.id, name: signal.display.name, role: signal.role, type: signal.type }));
+    return { transactionId, signals, unresolvedSignalIds: linkedIds.filter((id) => !context.document.signals.some((signal) => signal.id === id)) };
+  }
   if (tool === "get_transactions") {
     return {
       transactionGroups: (context.document.transactionGroups ?? []).map((group) => ({ id: group.id, name: group.name, color: group.color })),

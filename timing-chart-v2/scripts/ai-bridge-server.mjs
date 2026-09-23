@@ -27,7 +27,7 @@ const EDITOR_SESSION_TIMEOUT_MS = 15_000;
 // this list can ever be invoked, regardless of what a client sends --
 // tools/call rejects any name not in this map before it is ever queued
 // for the browser.
-const READ_TOOLS = new Set(["get_document_summary", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_annotations", "get_bookmarks", "get_problems"]);
+const READ_TOOLS = new Set(["get_document_summary", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_transaction", "get_transaction_groups", "get_transaction_phases", "get_linked_signals", "get_annotations", "get_bookmarks", "get_problems"]);
 const VIEW_ONLY_TOOLS = new Set(["fit_all"]);
 // #395 PR4: propose_edit is the one tool that reaches into document-changing
 // territory, but it still only ever builds a Preview (identical to the user
@@ -47,6 +47,10 @@ const TOOL_CATALOG = [
   { name: "get_signal", description: "Read-only canonical Signal details selected by stable signalId.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, signalId: { type: "string", minLength: 1 } }, required: ["editorSessionId", "signalId"], additionalProperties: false } },
   { name: "get_signal_groups", description: "Read-only canonical Signal Groups and their ordered stable row IDs.", inputSchema: sessionSchema },
   { name: "get_transactions", description: "Read-only list of every canonical Transaction (stable id, name, group id, lane id, start/end cycle, color, description, linked signal ids, phase count) plus every Transaction Group.", inputSchema: sessionSchema },
+  { name: "get_transaction", description: "Read-only canonical Transaction details selected by stable transactionId.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, transactionId: { type: "string", minLength: 1 } }, required: ["editorSessionId", "transactionId"], additionalProperties: false } },
+  { name: "get_transaction_groups", description: "Read-only canonical Transaction Groups with stable IDs and semantic colors.", inputSchema: sessionSchema },
+  { name: "get_transaction_phases", description: "Read-only ordered phase names and source-cycle boundaries for a Transaction identified by stable transactionId.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, transactionId: { type: "string", minLength: 1 } }, required: ["editorSessionId", "transactionId"], additionalProperties: false } },
+  { name: "get_linked_signals", description: "Read-only Signal details linked to a Transaction identified by stable transactionId.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, transactionId: { type: "string", minLength: 1 } }, required: ["editorSessionId", "transactionId"], additionalProperties: false } },
   { name: "get_annotations", description: "Read-only list of every canonical Annotation with stable identity and semantic anchors expressed as signal ids and source cycles, never pixels.", inputSchema: sessionSchema },
   { name: "get_bookmarks", description: "Read-only list of every canonical Bookmark (stable id, name, source cycle, comment).", inputSchema: sessionSchema },
   { name: "get_problems", description: "Read-only canonical-document validation problems, using the same validator as the Editor's Problems panel.", inputSchema: sessionSchema },

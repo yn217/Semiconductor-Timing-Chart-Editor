@@ -80,7 +80,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_annotations", "get_bookmarks", "get_problems", "fit_all", "propose_edit", "propose_rename_signal", "propose_update_signal", "propose_move_signal"]);
+  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_transaction", "get_transaction_groups", "get_transaction_phases", "get_linked_signals", "get_annotations", "get_bookmarks", "get_problems", "fit_all", "propose_edit", "propose_rename_signal", "propose_update_signal", "propose_move_signal"]);
 
   // Read-only: reflects the real, live document -- never a canned/fake value.
   const summary = await callTool("get_document_summary");
@@ -142,6 +142,15 @@ test("get_transactions, get_annotations, get_bookmarks and get_problems are read
   const transactionData = JSON.parse(transactions.body.result!.content[0]!.text) as { transactionGroups: readonly { id: string; name: string }[]; transactions: readonly { id: string; name: string; start: number; end: number }[] };
   expect(transactionData.transactions.length).toBeGreaterThan(0);
   expect(transactionData.transactions[0]).toEqual(expect.objectContaining({ id: expect.any(String), name: expect.any(String), start: expect.any(Number), end: expect.any(Number) }));
+  const transactionId = transactionData.transactions[0]!.id;
+  const transaction = await callTool("get_transaction", TOKEN, { transactionId });
+  expect(JSON.parse(transaction.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ transaction: expect.objectContaining({ id: transactionId }) }));
+  const transactionGroups = await callTool("get_transaction_groups");
+  expect(JSON.parse(transactionGroups.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ groups: expect.any(Array) }));
+  const phases = await callTool("get_transaction_phases", TOKEN, { transactionId });
+  expect(JSON.parse(phases.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ transactionId, phases: expect.any(Array) }));
+  const linkedSignals = await callTool("get_linked_signals", TOKEN, { transactionId });
+  expect(JSON.parse(linkedSignals.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ transactionId, signals: expect.any(Array) }));
 
   const annotations = await callTool("get_annotations");
   expect(annotations.body.result!.isError).toBe(false);
