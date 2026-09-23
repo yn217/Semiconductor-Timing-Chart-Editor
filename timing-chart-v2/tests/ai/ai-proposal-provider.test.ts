@@ -25,6 +25,15 @@ describe("deterministic AI proposal provider", () => {
     expect(buildTypedSignalProposal(document, 13, "propose_update_signal", { signalId: "sig_data" })).toEqual({ ok: false, message: "propose_update_signal requires role or visible." });
   });
 
+  it("builds typed signal-move proposals using stable Signal and Group IDs", () => {
+    const base = canonicalFixture();
+    const document = { ...base, signalGroups: [...base.signalGroups, { id: "grp_aux" as GroupId, name: "Aux", rows: [] }] };
+    const result = buildTypedSignalProposal(document, 14, "propose_move_signal", { signalId: "sig_data", targetGroupId: "grp_aux" });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.proposal.commands).toEqual([expect.objectContaining({ type: "signal.move", signalId: "sig_data", targetGroupId: "grp_aux", index: 0 })]);
+    expect(buildTypedSignalProposal(document, 14, "propose_move_signal", { signalId: "sig_data", targetGroupId: "missing" })).toEqual({ ok: false, message: "Signal Group 'missing' does not exist in the current document." });
+  });
+
   it("returns a revisioned semantic proposal without mutating the source document", () => {
     const document = canonicalFixture();
     const result = deterministicMockAIProposalProvider.propose({ document, revision: 7, query: "rename selected signal to DATA_RENAMED", selectedSignalId: "sig_data" as never });

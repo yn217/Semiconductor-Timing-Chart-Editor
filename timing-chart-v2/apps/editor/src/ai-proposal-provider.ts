@@ -37,11 +37,20 @@ export type AIProposalResult = Readonly<
  * resulting command still enters the ordinary Preview/Validate/Apply path. */
 export function buildTypedSignalProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
   const signalId = args.signalId;
-  if (tool !== "propose_rename_signal" && tool !== "propose_update_signal") return { ok: false, message: `Unsupported typed proposal '${tool}'.` };
+  if (tool !== "propose_rename_signal" && tool !== "propose_update_signal" && tool !== "propose_move_signal") return { ok: false, message: `Unsupported typed proposal '${tool}'.` };
   const name = args.name;
   if (typeof signalId !== "string" || signalId.length === 0) return { ok: false, message: `${tool} requires a stable signalId.` };
   const signal = document.signals.find((item) => item.id === signalId && item.type !== "commentRow");
   if (!signal) return { ok: false, message: `Signal '${signalId}' does not exist in the current document.` };
+  if (tool === "propose_move_signal") {
+    const targetGroupId = args.targetGroupId;
+    if (typeof targetGroupId !== "string" || targetGroupId.length === 0) return { ok: false, message: "propose_move_signal requires a stable targetGroupId." };
+    const targetGroup = document.signalGroups.find((group) => group.id === targetGroupId);
+    if (!targetGroup) return { ok: false, message: `Signal Group '${targetGroupId}' does not exist in the current document.` };
+    const index = args.index === undefined ? targetGroup.rows.length : args.index;
+    if (!Number.isInteger(index) || (index as number) < 0) return { ok: false, message: "index must be a non-negative integer." };
+    return { ok: true, proposal: proposal(revision, `Move ${signal.display.name} to ${targetGroup.name}`, [command({ type: "signal.move", signalId: signal.id, targetGroupId: targetGroup.id, index: index as number }, "typed_move_signal")]) };
+  }
   if (tool === "propose_update_signal") {
     const role = args.role;
     const visible = args.visible;

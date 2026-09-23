@@ -80,7 +80,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_selection", "get_viewport_snapshot", "get_transactions", "get_annotations", "get_bookmarks", "get_problems", "fit_all", "propose_edit", "propose_rename_signal", "propose_update_signal"]);
+  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_selection", "get_viewport_snapshot", "get_transactions", "get_annotations", "get_bookmarks", "get_problems", "fit_all", "propose_edit", "propose_rename_signal", "propose_update_signal", "propose_move_signal"]);
 
   // Read-only: reflects the real, live document -- never a canned/fake value.
   const summary = await callTool("get_document_summary");
