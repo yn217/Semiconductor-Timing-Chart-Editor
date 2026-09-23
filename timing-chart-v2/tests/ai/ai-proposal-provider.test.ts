@@ -19,6 +19,18 @@ describe("deterministic AI proposal provider", () => {
     expect(buildTypedSignalProposal(document, 12, "propose_rename_signal", { signalId: "sig_data", name: " " })).toEqual({ ok: false, message: "propose_rename_signal requires a non-empty name." });
   });
 
+  it("builds a typed Signal create proposal through signal.create and validates type/group/value", () => {
+    const document = canonicalFixture();
+    const groupId = document.signalGroups[0]!.id;
+    const created = buildTypedSignalProposal(document, 12, "propose_create_signal", { name: " READY ", type: "event", role: "output", groupId, initialValue: "rise" });
+    expect(created.ok).toBe(true);
+    if (created.ok) expect(created.proposal.commands).toEqual([expect.objectContaining({ type: "signal.create", targetGroupId: groupId, index: document.signalGroups[0]!.rows.length, signal: expect.objectContaining({ name: "READY", type: "event", role: "output", values: [{ start: 0, value: "rise" }] }) })]);
+    expect(buildTypedSignalProposal(document, 12, "propose_create_signal", { name: "Bad", type: "event", role: "internal", groupId, initialValue: "unknown" })).toMatchObject({ ok: false, message: expect.stringContaining("not supported for event") });
+    expect(buildTypedSignalProposal(document, 12, "propose_create_signal", { name: "Bad", type: "binary", role: "internal", groupId: "missing" })).toEqual({ ok: false, message: "Signal Group 'missing' does not exist in the current document." });
+    expect(buildTypedSignalProposal(document, 12, "propose_create_signal", { name: "Bad", type: "binary", role: "internal", groupId, width: 8 })).toEqual({ ok: false, message: "width is supported only for bus signals." });
+    expect(document.signals.some((signal) => signal.display.name === "READY")).toBe(false);
+  });
+
   it("builds typed role/visibility proposals using the existing signal update command", () => {
     const document = canonicalFixture();
     const result = buildTypedSignalProposal(document, 13, "propose_update_signal", { signalId: "sig_data", role: "output", visible: false });

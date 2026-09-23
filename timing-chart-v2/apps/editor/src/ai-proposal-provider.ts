@@ -1,5 +1,5 @@
 import type { SemanticCommand } from "@timing-chart-v2/commands";
-import type { AnnotationId, AnnotationType, CanonicalDocument, GroupId, SignalId, TransactionId, TransactionPhase, ValueSignal } from "@timing-chart-v2/schema";
+import { valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type SignalId, type SignalRole, type TransactionId, type TransactionPhase, type ValueSignal } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { createAnnotation } from "./create-annotation.js";
@@ -36,6 +36,26 @@ export type AIProposalResult = Readonly<
 /** Build a narrow typed proposal from stable semantic identifiers. The
  * resulting command still enters the ordinary Preview/Validate/Apply path. */
 export function buildTypedSignalProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  if (tool === "propose_create_signal") {
+    const { name, type, role, groupId } = args;
+    if (typeof name !== "string" || !name.trim()) return { ok: false, message: "propose_create_signal requires a non-empty name." };
+    if (type !== "binary" && type !== "logic" && type !== "bus" && type !== "state" && type !== "event" && type !== "pulse") return { ok: false, message: "type must be binary, logic, bus, state, event, or pulse." };
+    if (role !== "input" && role !== "output" && role !== "internal") return { ok: false, message: "role must be input, output, or internal." };
+    if (typeof groupId !== "string" || !groupId) return { ok: false, message: "propose_create_signal requires a stable groupId." };
+    const group = document.signalGroups.find((item) => item.id === groupId);
+    if (!group) return { ok: false, message: `Signal Group '${groupId}' does not exist in the current document.` };
+    const width = args.width;
+    if (type === "bus" && width !== undefined && (!Number.isSafeInteger(width) || (width as number) < 1)) return { ok: false, message: "width must be a positive integer for a bus signal." };
+    if (type !== "bus" && width !== undefined) return { ok: false, message: "width is supported only for bus signals." };
+    const defaultValue: string | number = type === "bus" ? "00" : type === "state" ? "IDLE" : type === "event" ? "NONE" : 0;
+    const initialValue = args.initialValue ?? defaultValue;
+    if (typeof initialValue !== "string" && (typeof initialValue !== "number" || !Number.isFinite(initialValue))) return { ok: false, message: "initialValue must be a finite number or string." };
+    const valueProblem = valueSignalValueProblem(type, initialValue);
+    if (valueProblem) return { ok: false, message: `initialValue is invalid: ${valueProblem}` };
+    const normalizedName = name.trim();
+    const signal: ValueSignal = { id: nextEntityId("signal", document) as SignalId, name: normalizedName, type, role: role as SignalRole, source: { instancePath: [], signalName: normalizedName }, display: { name: normalizedName }, values: [{ start: 0, value: initialValue }], ...(type === "bus" ? { width: (width as number | undefined) ?? 8, displayFormat: "hex" as const } : {}) };
+    return { ok: true, proposal: proposal(revision, `Create ${type} signal ${normalizedName} in ${group.name}`, [command({ type: "signal.create", signal, targetGroupId: group.id, index: group.rows.length }, "typed_create_signal")]) };
+  }
   const signalId = args.signalId;
   if (tool !== "propose_rename_signal" && tool !== "propose_update_signal" && tool !== "propose_move_signal") return { ok: false, message: `Unsupported typed proposal '${tool}'.` };
   const name = args.name;

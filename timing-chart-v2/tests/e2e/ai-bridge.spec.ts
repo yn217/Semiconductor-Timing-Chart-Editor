@@ -98,7 +98,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_view_context", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_transaction", "get_transaction_groups", "get_transaction_phases", "get_linked_signals", "get_annotations", "get_bookmarks", "get_time_groups", "get_problems", "fit_all", "propose_edit", "propose_rename_signal", "propose_update_signal", "propose_move_signal", "propose_insert_cycles", "propose_delete_cycles", "propose_move_range", "propose_duplicate_range", "propose_create_signal_group", "propose_rename_signal_group", "propose_create_transaction", "propose_update_transaction", "propose_move_transaction", "propose_resize_transaction", "propose_delete_transaction", "propose_add_phase", "propose_update_phase", "propose_delete_phase", "propose_link_signal", "propose_unlink_signal", "propose_create_bookmark", "propose_move_bookmark", "propose_update_bookmark", "propose_delete_bookmark", "propose_create_annotation", "propose_update_annotation", "propose_delete_annotation"]);
+  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_view_context", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_transaction", "get_transaction_groups", "get_transaction_phases", "get_linked_signals", "get_annotations", "get_bookmarks", "get_time_groups", "get_problems", "fit_all", "propose_edit", "propose_create_signal", "propose_rename_signal", "propose_update_signal", "propose_move_signal", "propose_insert_cycles", "propose_delete_cycles", "propose_move_range", "propose_duplicate_range", "propose_create_signal_group", "propose_rename_signal_group", "propose_create_transaction", "propose_update_transaction", "propose_move_transaction", "propose_resize_transaction", "propose_delete_transaction", "propose_add_phase", "propose_update_phase", "propose_delete_phase", "propose_link_signal", "propose_unlink_signal", "propose_create_bookmark", "propose_move_bookmark", "propose_update_bookmark", "propose_delete_bookmark", "propose_create_annotation", "propose_update_annotation", "propose_delete_annotation"]);
 
   // Read-only: reflects the real, live document -- never a canned/fake value.
   const summary = await callTool("get_document_summary");
@@ -320,6 +320,34 @@ test("propose_rename_signal targets a stable Signal ID and still requires human 
   await expect(host).toHaveAttribute("data-canonical-revision", beforeCancelledUpdate.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(beforeCancelledUpdate.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(beforeCancelledUpdate.dirty!);
+});
+
+test("propose_create_signal uses a stable Group ID and remains a Preview until explicit Apply", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
+  const groupsResponse = await callTool("get_signal_groups");
+  const groups = JSON.parse(groupsResponse.body.result!.content![0]!.text) as { groups: readonly { id: string }[] };
+  const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+  const proposal = await callTool("propose_create_signal", TOKEN, { name: "READY", type: "event", role: "output", groupId: groups.groups[0]!.id, initialValue: "rise" });
+  expect(proposal.body.result!.isError).toBe(false);
+  expect(JSON.parse(proposal.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ summary: expect.stringContaining("Create event signal READY"), requiresApproval: true }));
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+  await expect(ai).toContainText("Create event signal READY");
+  await ai.getByTestId("ai-validate").click();
+  await ai.getByTestId("ai-apply").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(before.revision) + 1));
+  await expect(host.locator("[data-role='frozen-row']").filter({ hasText: "READY" })).toBeVisible();
 });
 
 test("an unauthorized propose_edit call (bad token) never reaches the document, and an empty query is rejected before building any proposal", async ({ page }) => {
