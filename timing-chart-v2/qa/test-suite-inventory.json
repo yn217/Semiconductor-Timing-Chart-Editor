@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T15:58:41.271Z",
+  "generatedAt": "2026-09-23T16:30:40.692Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -20674,12 +20674,12 @@
       "originIssue": 397,
       "type": "VISUAL_ACCEPTANCE",
       "costClass": "MEDIUM",
-      "measuredRuntimeMs": null,
-      "primaryContract": "At 1280x720, the Bottom Transaction header, selected inline-edit row, and unselected row share fixed column X positions and every row retains a Group cell.",
+      "measuredRuntimeMs": 3800,
+      "primaryContract": "At 1280x720, the Bottom Transaction header, selected inline-edit row, and unselected row share fixed column X positions, every row retains a Group cell, and row height remains 28–32px.",
       "duplicateGroup": "transaction-bottom-table-responsive-alignment",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "decision": "KEEP",
-      "reason": "The compact viewport protects column fit and stable semantic column positions when width is constrained; the wide sibling cannot replace this responsive contract.",
+      "reason": "The compact viewport protects column fit, stable semantic column positions, and dense 28–32px rows when width is constrained; the wide sibling cannot replace this responsive contract.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -20700,12 +20700,12 @@
       "originIssue": 397,
       "type": "VISUAL_ACCEPTANCE",
       "costClass": "MEDIUM",
-      "measuredRuntimeMs": null,
-      "primaryContract": "At 1672x941, the Bottom Transaction header, selected inline-edit row, and unselected row share fixed column X positions and every row retains a Group cell.",
+      "measuredRuntimeMs": 6300,
+      "primaryContract": "At 1672x941, the Bottom Transaction header, selected inline-edit row, and unselected row share fixed column X positions, every row retains a Group cell, and row height remains 28–32px.",
       "duplicateGroup": "transaction-bottom-table-responsive-alignment",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "decision": "KEEP",
-      "reason": "The approved wide viewport independently checks production table alignment and the always-present Group column. This is paired with, but not replaced by, the compact breakpoint test.",
+      "reason": "The approved wide viewport independently checks production table alignment, the always-present Group column, and dense 28–32px rows. This is paired with, but not replaced by, the compact breakpoint test.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
