@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:25:36.373Z",
+  "generatedAt": "2026-09-23T05:26:30.710Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,9 +13,9 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 668,
+  "reviewedCaseCount": 671,
   "curatedProfileCounts": {
-    "integration": 308,
+    "integration": 311,
     "nightly": 163,
     "performance": 44,
     "pr": 196,
@@ -7223,18 +7223,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "clipboard-document-provenance-atomic-rejection",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SECURITY_INVARIANT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After copying in one document and opening another, Paste is rejected with a diagnostic while canonical entities, revision, History, and Dirty state of the destination remain unchanged.",
+      "duplicateGroup": "foreign-document-clipboard-rejection",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This exercises the real File Open boundary and destination-document atomicity for a foreign clipboard; it is the base provenance invariant, while the next two tests additionally guard type-specific stable-reference collisions.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "home-command-surface.spec.ts",
@@ -7245,18 +7248,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-clipboard-stable-reference-collision",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SECURITY_INVARIANT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Pasting a foreign Annotation that references a colliding Signal ID is rejected without retargeting it to the destination document's unrelated Signal or mutating destination state.",
+      "duplicateGroup": "foreign-document-clipboard-rejection",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Annotation sourceSignal/start/end references require type-specific identity protection beyond the generic document-provenance check; the test asserts the user-visible diagnostic and zero canonical/history/dirty changes.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "home-command-surface.spec.ts",
@@ -7267,18 +7273,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-clipboard-stable-reference-collision",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SECURITY_INVARIANT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Pasting a foreign Transaction whose linked Signal ID collides in the destination is rejected without retargeting its link or mutating destination state.",
+      "duplicateGroup": "foreign-document-clipboard-rejection",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Transaction linkedSignals have a distinct identity-reference path from Annotation anchors; keep a representative Transaction-specific collision guard in addition to generic provenance and Annotation collision coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "home-command-surface.spec.ts",
@@ -24171,7 +24180,7 @@
     {
       "file": "home-command-surface.spec.ts",
       "caseCount": 24,
-      "reviewedCaseCount": 3,
+      "reviewedCaseCount": 6,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
