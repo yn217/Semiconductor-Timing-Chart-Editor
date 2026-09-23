@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:56:50.825Z",
+  "generatedAt": "2026-09-23T05:59:15.887Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 732,
+  "reviewedCaseCount": 747,
   "curatedProfileCounts": {
-    "integration": 355,
+    "integration": 369,
     "nightly": 168,
     "performance": 44,
-    "pr": 208,
+    "pr": 209,
     "visual": 142
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -16830,18 +16830,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "ribbon-caption-layout-mode-invariance",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1280x720, changing Cycle/Transaction/Combined modes preserves Ribbon height and keeps each visible group caption below its body without pseudo-element duplication.",
+      "duplicateGroup": "ribbon-caption-mode-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This compact viewport detects caption collision/wrapping changes during mode transitions that static Ribbon label tests do not measure; its paired wide case covers a distinct responsive width.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-caption-layout.spec.ts",
@@ -16852,18 +16855,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "ribbon-caption-layout-mode-invariance",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1672x941, changing Cycle/Transaction/Combined modes preserves Ribbon height and keeps each visible group caption below its body without pseudo-element duplication.",
+      "duplicateGroup": "ribbon-caption-mode-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The reference-width counterpart checks group caption geometry over the same mode lifecycle; compact-width wrapping behavior cannot establish desktop alignment.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-cursor-ab.spec.ts",
@@ -16874,18 +16880,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cursor-ab-ribbon-workspace-state",
+      "originIssue": 459,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "View Ribbon controls set, move, swap, and clear source-time cursor A/B state, update guide/status projections, and remain view-only with zero History mutation.",
+      "duplicateGroup": "cursor-ab-ribbon-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This exercises the full Ribbon-to-workspace cursor lifecycle and status projection; geometry-only cursor tests do not cover set/swap/clear command wiring or no-History behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-cursor-ab.spec.ts",
@@ -16896,18 +16905,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cursor-guide-drag-view-state",
+      "originIssue": 459,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Dragging Cursor A to a semantic Cycle boundary updates its source-time position while leaving Canonical and History unchanged.",
+      "duplicateGroup": "cursor-ab-ribbon-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The set/swap/clear case does not exercise pointer coordinate projection or guide drag; this separately protects the cursor-only drag mutation boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-layout.spec.ts",
@@ -16918,18 +16930,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "home-ribbon-icon-label-overlap",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1365px, visible Home Ribbon icons and labels remain within their buttons and Timeline controls do not overlap neighboring controls, with no horizontal Ribbon overflow.",
+      "duplicateGroup": "home-ribbon-icon-label-geometry",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This intermediate-width overlap check targets icon/label and sibling-control geometry, not text wrapping alone; the 1672px case is its wide responsive counterpart and existing wrapping tests assert a different text contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-layout.spec.ts",
@@ -16940,18 +16955,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "home-ribbon-icon-label-overlap",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1672px, visible Home Ribbon icons and labels remain within their buttons and Timeline controls do not overlap neighboring controls, with no horizontal Ribbon overflow.",
+      "duplicateGroup": "home-ribbon-icon-label-geometry",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This verifies icon-label and Timeline sibling geometry at the approved wide reference width; the narrower viewport can fail independently, and word-boundary wrapping checks do not detect these collisions.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-more-popover-closure.spec.ts",
@@ -16964,18 +16982,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "ribbon-horizontal-overflow",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "primaryContract": "At 1024px, the Home Ribbon's scroll width does not exceed its client width.",
+      "duplicateGroup": "ribbon-horizontal-overflow-breakpoints",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "MOVE_LAYER",
+      "reason": "The 1024px responsive-overflow case already asserts the same no-scrollbar width invariant and additionally opens More to verify command reachability; retaining this standalone assertion duplicates that breakpoint.",
+      "replacementTest": "ribbon-responsive-overflow.spec.ts::keeps Home commands reachable without a Ribbon scrollbar at 1024px",
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-more-popover-closure.spec.ts",
@@ -16988,18 +17009,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "ribbon-horizontal-overflow",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "primaryContract": "At 1280px, the Home Ribbon's scroll width does not exceed its client width.",
+      "duplicateGroup": "ribbon-horizontal-overflow-breakpoints",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "MOVE_LAYER",
+      "reason": "The 1280px responsive-overflow case already asserts the same no-scrollbar width invariant and also verifies the major-group composition; this standalone width-only assertion is redundant at that breakpoint.",
+      "replacementTest": "ribbon-responsive-overflow.spec.ts::keeps Home commands reachable without a Ribbon scrollbar at 1280px",
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-more-popover-closure.spec.ts",
@@ -17012,18 +17036,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "ribbon-horizontal-overflow",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1672px, the Home Ribbon's scroll width does not exceed its client width.",
+      "duplicateGroup": "ribbon-horizontal-overflow-breakpoints",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The responsive-overflow matrix does not exercise 1672px; this retains the standalone wide reference width as an independent overflow breakpoint.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-more-popover-closure.spec.ts",
@@ -17036,18 +17063,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "ribbon-horizontal-overflow",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 900px, the Home Ribbon's scroll width does not exceed its client width.",
+      "duplicateGroup": "ribbon-horizontal-overflow-breakpoints",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "900px is a narrower overflow boundary than the 1024px menu-reachability case and independently catches failures below the compact breakpoint.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-more-popover-closure.spec.ts",
@@ -17060,18 +17090,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "home-more-popup-bounds-keyboard-dismissal",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1024px, More popup stays inside viewport, supports arrow/Home/End focus navigation, closes on Escape or tab switch, restores focus, and causes no document mutation.",
+      "duplicateGroup": "home-more-popup-responsive-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Command reachability at compact width does not cover popup geometry, menu keyboard contract, Escape focus restoration, tab-switch dismissal, or view-only lifecycle; this is the wider of two explicit compact corner checks.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-more-popover-closure.spec.ts",
@@ -17084,18 +17117,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "home-more-popup-bounds-keyboard-dismissal",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 900px, More popup stays inside viewport, supports arrow/Home/End focus navigation, closes on Escape or tab switch, restores focus, and causes no document mutation.",
+      "duplicateGroup": "home-more-popup-responsive-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This verifies the popup at the narrowest tested viewport where positioning and available menu space differ from 1024px; the command inventory test does not assert overlay bounds or keyboard dismissal lifecycle.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-responsive-overflow.spec.ts",
@@ -17106,18 +17142,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "home-ribbon-overflow-command-reachability",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1024px, Home Ribbon has no horizontal scrollbar, relocates commands into More, exposes the required command set, and allows view-only Select All through that menu.",
+      "duplicateGroup": "home-ribbon-responsive-overflow",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the compact-width command reachability contract and also absorbs the duplicate 1024px overflow-only assertion; no desktop grouping or standalone popup-bound test proves the relocated command inventory.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-responsive-overflow.spec.ts",
@@ -17128,18 +17167,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "home-ribbon-overflow-command-reachability",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1280px, Home Ribbon remains scrollbar-free and exposes the documented major-group order; compact mode retains this contract while moving commands to More.",
+      "duplicateGroup": "home-ribbon-responsive-overflow",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The 1280px boundary validates the full ribbon group composition while the paired 1024px case checks relocation/reachability; it also subsumes the standalone overflow-only assertion at the same width.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ribbon-responsive-overflow.spec.ts",
@@ -17150,18 +17192,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "home-ribbon-overflow-zoom-view-only",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A zoom preset selected from the compact Home More menu changes view zoom while leaving Canonical revision, History, and Dirty state unchanged.",
+      "duplicateGroup": "home-ribbon-responsive-overflow",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Menu reachability alone does not establish that a relocated zoom action uses the view-only route rather than mutating document/history state; this is a focused adapter contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "ribbon-tabs.spec.ts",
@@ -26017,7 +26062,7 @@
     {
       "file": "ribbon-caption-layout.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -26025,47 +26070,47 @@
         "getComputedStyle",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "ribbon-cursor-ab.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "ribbon-layout.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "ribbon-more-popover-closure.spec.ts",
       "caseCount": 6,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 6,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "ribbon-responsive-overflow.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "ribbon-tabs.spec.ts",
