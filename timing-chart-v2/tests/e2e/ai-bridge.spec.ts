@@ -118,6 +118,12 @@ test("a test MCP client can connect, read the live document/selection, and reque
   const parsedSelection = JSON.parse(selection.body.result!.content[0]!.text) as { selectedSignalId: string };
   expect(parsedSelection.selectedSignalId).toBe("sig_cycle_request");
 
+  const setSelection = await callTool("set_selection", TOKEN, { entityType: "signal", entityId: "sig_cycle_ready" });
+  expect(setSelection.body.result!.isError).toBe(false);
+  expect(JSON.parse(setSelection.body.result!.content[0]!.text)).toEqual({ selected: { entityType: "signal", entityId: "sig_cycle_ready", name: "READY" }, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 });
+  await expect(page.getByTestId("selection-status")).toHaveText("READY");
+  expect(JSON.parse((await callTool("get_selection")).body.result!.content[0]!.text)).toEqual(expect.objectContaining({ selectedSignalId: "sig_cycle_ready" }));
+
   // #395 PR5: get_viewport_snapshot is read-only too -- a structured
   // Element Map (real stable ids, not pixel coordinates) plus zoom/cycle
   // count/selection, exactly what the issue's own constraint requires an
@@ -136,6 +142,13 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect(fitAll.body.result!.isError).toBe(false);
   const parsedFitAll = JSON.parse(fitAll.body.result!.content[0]!.text) as { applied: boolean; canonicalDelta: number; historyDelta: number; dirtyDelta: number };
   expect(parsedFitAll).toEqual({ applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 });
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+
+  const fitSelection = await callTool("fit_selection");
+  expect(fitSelection.body.result!.isError).toBe(false);
+  expect(JSON.parse(fitSelection.body.result!.content[0]!.text)).toEqual({ applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 });
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
