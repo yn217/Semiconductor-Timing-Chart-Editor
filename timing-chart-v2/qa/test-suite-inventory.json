@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T03:58:18.661Z",
+  "generatedAt": "2026-09-23T04:02:17.618Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,11 +13,11 @@
   },
   "specFileCount": 332,
   "caseCount": 965,
-  "reviewedCaseCount": 574,
+  "reviewedCaseCount": 583,
   "curatedProfileCounts": {
-    "integration": 259,
-    "nightly": 151,
-    "performance": 37,
+    "integration": 266,
+    "nightly": 156,
+    "performance": 42,
     "pr": 166,
     "visual": 129
   },
@@ -14873,18 +14873,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "minimap-static-overview-invalidation",
+      "originIssue": 174,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Viewport scrolling and MiniMap pan reuse the static overview rows/lookups and do not change document, History, Dirty, validation, waveform, or geometry state.",
+      "duplicateGroup": "minimap-static-overview-cache",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This measures overview cache reuse under viewport-only operations with explicit semantic and render no-change checks; its cache counters are architectural evidence and should stay outside generic user-journey PR smoke.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "integration"
+      ]
     },
     {
       "file": "minimap-overview-performance.spec.ts",
@@ -14895,18 +14899,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "minimap-static-overview-invalidation",
+      "originIssue": 174,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Committing a Signal rename updates canonical data/history/dirty state without rebuilding the static MiniMap overview when the changed property does not affect its projection.",
+      "duplicateGroup": "minimap-static-overview-cache",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This covers invalidation precision after a real semantic commit, complementary to the viewport-only case; the pair distinguishes correct reuse from simply never rebuilding the overview.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "integration"
+      ]
     },
     {
       "file": "minimap-viewport-closure.spec.ts",
@@ -14917,18 +14925,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "minimap-viewport-indicator-geometry-lifecycle",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1280x720 the MiniMap viewport rectangle tracks vertical/horizontal scrolling, resize, real pointer panning, zoom, and hide/remount state within normalized geometry bounds without document mutation.",
+      "duplicateGroup": "minimap-viewport-indicator",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is a multi-axis geometry and lifecycle acceptance journey with real pointer pan, resize, zoom, and remount; keep it as heavy integration rather than repeat it in ordinary PR runs.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "mode-isolation-journey.spec.ts",
@@ -14939,18 +14951,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "mode-local-presentation-state-isolation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1280x720, Cycle, Transaction, and Combined preserve their own selection, zoom, pane sizing/visibility, scroll, split ratio, and independent vertical positions across repeated mode switches without document mutation.",
+      "duplicateGroup": "mode-presentation-isolation-responsive",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This exercises a large production-opened document through repeated mode switches and many independent presentation controls at the compact viewport; the larger viewport companion protects a distinct responsive boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "mode-isolation-journey.spec.ts",
@@ -14961,18 +14977,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "mode-local-presentation-state-isolation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1672x941, Cycle, Transaction, and Combined preserve their own selection, zoom, pane sizing/visibility, scroll, split ratio, and independent vertical positions across repeated mode switches without document mutation.",
+      "duplicateGroup": "mode-presentation-isolation-responsive",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is the reference-size companion to the compact viewport journey. Both share the same semantic state-isolation contract, but the independent viewport changes real overflow and pane geometry conditions and warrants separate heavy-tier evidence.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "name-draft-identity.spec.ts",
@@ -14983,18 +15003,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "inspector-draft-stable-identity",
+      "originIssue": 208,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "An uncommitted Inspector rename draft remains scoped to its stable Signal identity; switching between same-named Signals cannot transfer the draft or create an unintended History entry.",
+      "duplicateGroup": "inspector-draft-identity",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This guards against name-based identity collisions across selection changes with both entities first given the same name, a stronger adversarial case than switching between differently named Signals. It remains useful after #208's separate Transaction hit-target fix.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "open-progressive-wave-yield.spec.ts",
@@ -15005,18 +15028,22 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "open-stale-wave-result-epoch",
+      "originIssue": 174,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Opening a second document during the first document's bounded WaveDrom batch drops stale results from the replaced document epoch and leaves only the new document's rows/owners.",
+      "duplicateGroup": "progressive-open-wave-batches",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This deterministically forces an Open race while rendering a 500-signal document and asserts stale-owner rejection at document replacement; it guards an asynchronous identity boundary not covered by final-document smoke tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "open-progressive-wave-yield.spec.ts",
@@ -15027,18 +15054,22 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "open-progressive-render-yield",
+      "originIssue": 174,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Opening a 100-signal/500-cycle document yields between bounded WaveDrom batches (maximum size 8), shows progress before idle, and finishes cleanly without document mutation.",
+      "duplicateGroup": "progressive-open-wave-batches",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This validates bounded batch sizing, frame yielding and progress observability with a large fixture and runtime counters; retain in the heavy performance gate, not routine focused browser runs.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "open-progressive-wave-yield.spec.ts",
@@ -15049,18 +15080,22 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "open-first-ruler-progressive-usability",
+      "originIssue": 174,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "During progressive Open, a usable reference Cycle Ruler is rendered while WaveDrom batches are still pending, before the document reaches idle.",
+      "duplicateGroup": "progressive-open-wave-batches",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This protects first-usable-time behavior rather than eventual render completion: ruler ticks must be available during pending waveform work. It complements batch-yield accounting with an observable early interaction surface.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "integration"
+      ]
     },
     {
       "file": "open-validation-handoff.spec.ts",
@@ -25442,7 +25477,7 @@
     {
       "file": "minimap-overview-performance.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -25450,42 +25485,42 @@
         "dataset",
         "explicitWait"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "minimap-viewport-closure.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "mode-isolation-journey.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": 90,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "name-draft-identity.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "open-progressive-wave-yield.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [
@@ -25493,7 +25528,7 @@
         "dataset",
         "explicitWait"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "open-validation-handoff.spec.ts",

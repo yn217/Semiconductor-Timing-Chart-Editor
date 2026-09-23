@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 965 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 574/965 cases reviewed.
+Semantic review progress: 583/965 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,9 +10,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 259 |
-| `nightly` | 151 |
-| `performance` | 37 |
+| `integration` | 266 |
+| `nightly` | 156 |
+| `performance` | 42 |
 | `pr` | 166 |
 | `visual` | 129 |
 
@@ -242,11 +242,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `measurement-top-row-clip.spec.ts` | 2 | 2/2 reviewed |
 | `mechanical-visual-diagnostics.spec.ts` | 1 | 1/1 reviewed |
 | `minimal-cycle-view.spec.ts` | 3 | 3/3 reviewed |
-| `minimap-overview-performance.spec.ts` | 2 | 0/2 reviewed |
-| `minimap-viewport-closure.spec.ts` | 1 | 0/1 reviewed |
-| `mode-isolation-journey.spec.ts` | 2 | 0/2 reviewed |
-| `name-draft-identity.spec.ts` | 1 | 0/1 reviewed |
-| `open-progressive-wave-yield.spec.ts` | 3 | 0/3 reviewed |
+| `minimap-overview-performance.spec.ts` | 2 | 2/2 reviewed |
+| `minimap-viewport-closure.spec.ts` | 1 | 1/1 reviewed |
+| `mode-isolation-journey.spec.ts` | 2 | 2/2 reviewed |
+| `name-draft-identity.spec.ts` | 1 | 1/1 reviewed |
+| `open-progressive-wave-yield.spec.ts` | 3 | 3/3 reviewed |
 | `open-validation-handoff.spec.ts` | 3 | 0/3 reviewed |
 | `perf-755-far-jump-longtask.spec.ts` | 1 | 0/1 reviewed |
 | `performance-closure.spec.ts` | 11 | 11/11 reviewed |
