@@ -35,7 +35,7 @@ const VIEW_ONLY_TOOLS = new Set(["fit_all"]);
 // validates or applies on its own. There is deliberately no bridge-side
 // "apply" tool for a document-changing proposal at all: a human must open
 // the AI Assistant panel and manually Validate + Apply it.
-const PROPOSAL_TOOLS = new Set(["propose_edit", "propose_rename_signal"]);
+const PROPOSAL_TOOLS = new Set(["propose_edit", "propose_rename_signal", "propose_update_signal"]);
 const sessionInput = { type: "string", minLength: 1, maxLength: 128, description: "Explicit live Editor session id returned by list_editor_sessions." };
 const sessionSchema = { type: "object", properties: { editorSessionId: sessionInput }, required: ["editorSessionId"], additionalProperties: false };
 const TOOL_CATALOG = [
@@ -48,6 +48,7 @@ const TOOL_CATALOG = [
   { name: "get_bookmarks", description: "Read-only list of every canonical Bookmark (stable id, name, source cycle, comment).", inputSchema: sessionSchema },
   { name: "get_problems", description: "Read-only canonical-document validation problems, using the same validator as the Editor's Problems panel.", inputSchema: sessionSchema },
   { name: "propose_rename_signal", description: "Propose renaming the Signal identified by stable signalId. Creates a Preview only; a human must Validate and Apply it.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, signalId: { type: "string", minLength: 1 }, name: { type: "string", minLength: 1 } }, required: ["editorSessionId", "signalId", "name"], additionalProperties: false } },
+  { name: "propose_update_signal", description: "Propose changing a Signal's role and/or visibility by stable signalId. Creates a Preview only; a human must Validate and Apply it.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, signalId: { type: "string", minLength: 1 }, role: { type: "string", enum: ["input", "output", "internal"] }, visible: { type: "boolean" } }, required: ["editorSessionId", "signalId"], anyOf: [{ required: ["role"] }, { required: ["visible"] }], additionalProperties: false } },
   { name: "fit_all", description: "View-only: fit the complete timeline in the explicitly targeted Editor session. Canonical/History/Dirty delta is always 0.", inputSchema: sessionSchema },
   { name: "propose_edit", description: "Submit a document-changing edit request to the explicitly targeted Editor session as a Preview only -- it is never auto-validated or auto-applied. A human must open the AI Assistant panel and manually Validate + Apply it.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, query: { type: "string", minLength: 1 } }, required: ["editorSessionId", "query"], additionalProperties: false } },
 ];

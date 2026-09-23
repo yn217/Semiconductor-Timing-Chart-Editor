@@ -87,8 +87,8 @@ function executeTool(tool: string, args: Record<string, unknown>, context: AIBri
     if (typeof query !== "string" || !query.trim()) throw new Error("propose_edit requires a non-empty 'query' string argument.");
     return context.onProposeEdit(query);
   }
-  if (tool === "propose_rename_signal") {
-    if (!context.onProposeTypedEdit) throw new Error("propose_rename_signal is not available in the current surface.");
+  if (tool === "propose_rename_signal" || tool === "propose_update_signal") {
+    if (!context.onProposeTypedEdit) throw new Error(`${tool} is not available in the current surface.`);
     return context.onProposeTypedEdit(tool, args);
   }
   throw new Error(`Unknown tool '${tool}'.`);

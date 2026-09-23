@@ -17,6 +17,14 @@ describe("deterministic AI proposal provider", () => {
     expect(buildTypedSignalProposal(document, 12, "propose_rename_signal", { signalId: "sig_data", name: " " })).toEqual({ ok: false, message: "propose_rename_signal requires a non-empty name." });
   });
 
+  it("builds typed role/visibility proposals using the existing signal update command", () => {
+    const document = canonicalFixture();
+    const result = buildTypedSignalProposal(document, 13, "propose_update_signal", { signalId: "sig_data", role: "output", visible: false });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.proposal.commands).toEqual([expect.objectContaining({ type: "signal.updateProperties", signalId: "sig_data", name: "DATA", role: "output", visible: false })]);
+    expect(buildTypedSignalProposal(document, 13, "propose_update_signal", { signalId: "sig_data" })).toEqual({ ok: false, message: "propose_update_signal requires role or visible." });
+  });
+
   it("returns a revisioned semantic proposal without mutating the source document", () => {
     const document = canonicalFixture();
     const result = deterministicMockAIProposalProvider.propose({ document, revision: 7, query: "rename selected signal to DATA_RENAMED", selectedSignalId: "sig_data" as never });

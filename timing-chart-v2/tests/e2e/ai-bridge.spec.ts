@@ -80,7 +80,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_selection", "get_viewport_snapshot", "get_transactions", "get_annotations", "get_bookmarks", "get_problems", "fit_all", "propose_edit", "propose_rename_signal"]);
+  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_selection", "get_viewport_snapshot", "get_transactions", "get_annotations", "get_bookmarks", "get_problems", "fit_all", "propose_edit", "propose_rename_signal", "propose_update_signal"]);
 
   // Read-only: reflects the real, live document -- never a canned/fake value.
   const summary = await callTool("get_document_summary");
@@ -226,6 +226,15 @@ test("propose_rename_signal targets a stable Signal ID and still requires human 
   await ai.getByTestId("ai-apply").click();
   await expect(host).toHaveAttribute("data-canonical-revision", String(Number(before.revision) + 1));
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("REQ");
+
+  const beforeCancelledUpdate = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+  const update = await callTool("propose_update_signal", TOKEN, { signalId: target!.id, role: "output" });
+  expect(update.body.result!.isError).toBe(false);
+  expect(JSON.parse(update.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ summary: expect.stringContaining("role to output"), requiresApproval: true }));
+  await ai.getByRole("button", { name: "Cancel" }).click();
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeCancelledUpdate.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeCancelledUpdate.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(beforeCancelledUpdate.dirty!);
 });
 
 test("an unauthorized propose_edit call (bad token) never reaches the document, and an empty query is rejected before building any proposal", async ({ page }) => {

@@ -36,13 +36,23 @@ export type AIProposalResult = Readonly<
 /** Build a narrow typed proposal from stable semantic identifiers. The
  * resulting command still enters the ordinary Preview/Validate/Apply path. */
 export function buildTypedSignalProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
-  if (tool !== "propose_rename_signal") return { ok: false, message: `Unsupported typed proposal '${tool}'.` };
   const signalId = args.signalId;
+  if (tool !== "propose_rename_signal" && tool !== "propose_update_signal") return { ok: false, message: `Unsupported typed proposal '${tool}'.` };
   const name = args.name;
-  if (typeof signalId !== "string" || signalId.length === 0) return { ok: false, message: "propose_rename_signal requires a stable signalId." };
-  if (typeof name !== "string" || name.trim().length === 0) return { ok: false, message: "propose_rename_signal requires a non-empty name." };
+  if (typeof signalId !== "string" || signalId.length === 0) return { ok: false, message: `${tool} requires a stable signalId.` };
   const signal = document.signals.find((item) => item.id === signalId && item.type !== "commentRow");
   if (!signal) return { ok: false, message: `Signal '${signalId}' does not exist in the current document.` };
+  if (tool === "propose_update_signal") {
+    const role = args.role;
+    const visible = args.visible;
+    if (role !== undefined && role !== "input" && role !== "output" && role !== "internal") return { ok: false, message: "role must be input, output, or internal." };
+    if (visible !== undefined && typeof visible !== "boolean") return { ok: false, message: "visible must be a boolean." };
+    if (role === undefined && visible === undefined) return { ok: false, message: "propose_update_signal requires role or visible." };
+    const nextRole = (role ?? signal.role) as typeof signal.role;
+    const commandFields = { type: "signal.updateProperties" as const, signalId: signal.id, name: signal.name, role: nextRole, ...(visible === undefined ? {} : { visible }) };
+    return { ok: true, proposal: proposal(revision, `Update ${signal.display.name}${role === undefined ? " visibility" : ` role to ${role}`}${visible === undefined ? "" : ` and visibility to ${visible ? "shown" : "hidden"}`}`, [command(commandFields, "typed_update_signal")]) };
+  }
+  if (typeof name !== "string" || name.trim().length === 0) return { ok: false, message: "propose_rename_signal requires a non-empty name." };
   const normalizedName = name.trim();
   return { ok: true, proposal: proposal(revision, `Rename ${signal.display.name} to ${normalizedName}`, [command({ type: "signal.rename", signalId: signal.id, name: normalizedName }, "typed_rename_signal")]) };
 }
