@@ -84,6 +84,11 @@ export function buildTypedTimelineProposal(document: CanonicalDocument, revision
     if (start === undefined || end === undefined || to === undefined || start < 0 || end <= start || end > document.timeline.cycleCount || to < 0 || to > document.timeline.cycleCount) return { ok: false, message: "propose_move_range requires integer source/target boundaries within the timeline and end > start." };
     return commandFor({ type: "timeline.moveRange", start, end, to }, `Move cycles ${start}–${end} to ${to}`, "typed_move_range");
   }
+  if (tool === "propose_duplicate_range") {
+    const start = integer("start"); const end = integer("end"); const at = integer("at");
+    if (start === undefined || end === undefined || at === undefined || start < 0 || end <= start || end > document.timeline.cycleCount || at < 0 || at > document.timeline.cycleCount) return { ok: false, message: "propose_duplicate_range requires an integer source range and insertion boundary within the timeline." };
+    return commandFor({ type: "timeline.duplicateRange", start, end, at }, `Duplicate cycles ${start}–${end} at ${at}`, "typed_duplicate_range");
+  }
   return { ok: false, message: `Unsupported typed timeline proposal '${tool}'.` };
 }
 
@@ -146,6 +151,23 @@ export function buildTypedTransactionProposal(document: CanonicalDocument, revis
   if (typeof transactionId !== "string" || !transactionId) return { ok: false, message: `${tool} requires a stable transactionId.` };
   const transaction = document.transactions.find((item) => item.id === transactionId);
   if (!transaction) return { ok: false, message: `Transaction '${transactionId}' does not exist in the current document.` };
+  if (tool === "propose_update_transaction") {
+    const name = args.name === undefined ? transaction.name : args.name;
+    const start = args.startCycle === undefined ? transaction.start : args.startCycle;
+    const end = args.endCycle === undefined ? transaction.end : args.endCycle;
+    const laneId = args.laneId;
+    const groupId = args.groupId;
+    const color = args.color;
+    const description = args.description;
+    if (typeof name !== "string" || !name.trim() || !Number.isSafeInteger(start) || !Number.isSafeInteger(end) || (start as number) < 0 || (end as number) <= (start as number) || (end as number) > document.timeline.cycleCount) return { ok: false, message: "propose_update_transaction requires a non-empty name and valid integer source-cycle boundaries." };
+    if (laneId !== undefined && (typeof laneId !== "string" || !laneId.trim())) return { ok: false, message: "laneId must be a non-empty string when supplied." };
+    if (groupId !== undefined && (typeof groupId !== "string" || !document.transactionGroups?.some((group) => group.id === groupId))) return { ok: false, message: `Transaction Group '${String(groupId)}' does not exist in the current document.` };
+    if (color !== undefined && (typeof color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(color))) return { ok: false, message: "color must be a six-digit hexadecimal color." };
+    if (description !== undefined && typeof description !== "string") return { ok: false, message: "description must be a string when supplied." };
+    if (name === transaction.name && start === transaction.start && end === transaction.end && laneId === undefined && groupId === undefined && color === undefined && description === undefined) return { ok: false, message: "propose_update_transaction requires at least one changed field." };
+    const fields = { type: "transaction.update" as const, transactionId: transaction.id, name: name.trim(), start: start as number, end: end as number, ...(laneId === undefined ? {} : { laneId: (laneId as string).trim() }), ...(groupId === undefined ? {} : { groupId: groupId as never }), ...(color === undefined ? {} : { color: color as string }), ...(description === undefined ? {} : { description: description as string }) };
+    return { ok: true, proposal: proposal(revision, `Update Transaction ${transaction.name}`, [command(fields, "typed_update_transaction")]) };
+  }
   if (tool === "propose_add_phase" || tool === "propose_update_phase") {
     const name = args.name;
     const start = args.startCycle;

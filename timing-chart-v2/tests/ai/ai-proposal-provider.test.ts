@@ -47,6 +47,9 @@ describe("deterministic AI proposal provider", () => {
     const moved = buildTypedTimelineProposal(document, 21, "propose_move_range", { start: 2, end: 5, to: 7 });
     expect(moved.ok).toBe(true);
     if (moved.ok) expect(moved.proposal.commands).toEqual([expect.objectContaining({ type: "timeline.moveRange", start: 2, end: 5, to: 7 })]);
+    const duplicated = buildTypedTimelineProposal(document, 21, "propose_duplicate_range", { start: 2, end: 5, at: 7 });
+    expect(duplicated.ok).toBe(true);
+    if (duplicated.ok) expect(duplicated.proposal.commands).toEqual([expect.objectContaining({ type: "timeline.duplicateRange", start: 2, end: 5, at: 7 })]);
     expect(buildTypedTimelineProposal(document, 21, "propose_delete_cycles", { start: 5, end: 5 })).toEqual({ ok: false, message: "propose_delete_cycles requires integer boundaries within the timeline and end > start." });
     expect(document.timeline.cycleCount).toBe(canonicalFixture().timeline.cycleCount);
   });
@@ -74,6 +77,10 @@ describe("deterministic AI proposal provider", () => {
     const resized = buildTypedTransactionProposal(document, 23, "propose_resize_transaction", { transactionId: "transaction_1", edge: "end", value: 6 });
     expect(resized.ok).toBe(true);
     if (resized.ok) expect(resized.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.resize", transactionId: "transaction_1", edge: "end", value: 6 })]);
+    const updated = buildTypedTransactionProposal(document, 23, "propose_update_transaction", { transactionId: "transaction_1", description: "Updated description" });
+    expect(updated.ok).toBe(true);
+    if (updated.ok) expect(updated.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.update", transactionId: "transaction_1", name: "Read", start: 1, end: 4, description: "Updated description" })]);
+    expect(buildTypedTransactionProposal(document, 23, "propose_update_transaction", { transactionId: "transaction_1" })).toEqual({ ok: false, message: "propose_update_transaction requires at least one changed field." });
     const deleted = buildTypedTransactionProposal(document, 23, "propose_delete_transaction", { transactionId: "transaction_1" });
     expect(deleted.ok).toBe(true);
     if (deleted.ok) expect(deleted.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.delete", transactionId: "transaction_1" })]);
