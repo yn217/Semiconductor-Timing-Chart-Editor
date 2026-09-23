@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T06:56:51.394Z",
+  "generatedAt": "2026-09-23T06:58:37.015Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 811,
+  "reviewedCaseCount": 815,
   "curatedProfileCounts": {
-    "integration": 411,
+    "integration": 414,
     "nightly": 172,
     "performance": 45,
-    "pr": 228,
+    "pr": 229,
     "visual": 144
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -19080,18 +19080,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "waveform-cycle-zero-and-terminal-selection",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Clicks at waveform geometry corresponding to Cycle 0 and the revealed exclusive terminal boundary select the correct half-open cells without changing Canonical, History, or Dirty state.",
+      "duplicateGroup": "cycle-terminal-boundary-surface-selection",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Although it shares terminal-boundary coverage with the mapping/ruler case, this exercises the rendered waveform hit-testing surface and specifically Cycle 0 at the left edge; the sibling verifies ruler-derived source mapping. Retain both surface contracts.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19102,18 +19105,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "ruler-shift-click-half-open-selection",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A normal ruler click selects one cycle and Shift-click extends to the expected half-open source-cycle range, with exactly those cycle cells marked selected and no Canonical mutation.",
+      "duplicateGroup": "cycle-range-selection-input-contracts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the only Shift-click extension contract for the ruler. Drag-selection tests cover pointer-drag semantics and preview lifecycle, not modifier-click anchoring or selected-cell count.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19124,18 +19130,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "waveform-range-drag-preview-cancel",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Waveform drag creates a preview-only half-open range, Shift-drag extends the existing range, and Escape cancels an active drag while Canonical, History, Dirty, and renderer counters remain unchanged.",
+      "duplicateGroup": "cycle-range-selection-input-contracts",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The test protects the waveform-specific preview/commit/cancel lifecycle and guards renderer work during pointer movement. Ruler drag siblings do not prove this surface's routing or Shift extension behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19146,18 +19155,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-terminal-boundary-projection",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A newly-created Transaction whose end equals timeline cycleCount has a rendered right edge aligned within one pixel of the actual terminal ruler boundary.",
+      "duplicateGroup": "transaction-edge-time-axis-alignment",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This specifically verifies end-exclusive Transaction projection at the un-folded terminal boundary. The folded TimeGroup sibling verifies shared mapping alignment at an interior fold boundary, so neither subsumes the other.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -26564,7 +26576,7 @@
     {
       "file": "timeline-editor.spec.ts",
       "caseCount": 29,
-      "reviewedCaseCount": 2,
+      "reviewedCaseCount": 6,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
