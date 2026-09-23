@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T04:50:32.190Z",
+  "generatedAt": "2026-09-23T04:54:11.443Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 611,
+  "reviewedCaseCount": 613,
   "curatedProfileCounts": {
-    "integration": 284,
+    "integration": 285,
     "nightly": 159,
     "performance": 44,
-    "pr": 173,
+    "pr": 174,
     "visual": 130
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -5722,18 +5722,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "document-header-footer-save-open-export",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Document Properties commits Header, notes, preconditions, constraints, exceptions, and Footer metadata as one canonical edit; Save/Open restores the fields and SVG export includes their semantic text without waveform or local-geometry rebuilds.",
+      "duplicateGroup": "document-properties-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This combines the broad metadata schema, a single History unit, Save/Open round-trip, and SVG text projection. Export-only tests use a smaller field set and do not prove reopening the serialized canonical document; retain as one integration journey rather than routine PR coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -5744,18 +5747,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "document-properties-apply-cancel-atomicity",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Cancel discards staged Header and Legend edits with zero History/Dirty change; Apply commits Header and Legend presentation together as exactly one semantic History operation.",
+      "duplicateGroup": "document-properties-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This directly protects the dialog's transaction boundary for mixed document metadata and presentation settings. Save/Open coverage validates persisted values but cannot detect premature mutation on Cancel or multiple commits on Apply.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -23834,7 +23840,7 @@
     {
       "file": "full-gui.spec.ts",
       "caseCount": 41,
-      "reviewedCaseCount": 8,
+      "reviewedCaseCount": 10,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],

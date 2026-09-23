@@ -2721,6 +2721,38 @@
       "replacementTest": null
     },
     {
+      "file": "full-gui.spec.ts",
+      "title": "edits Header and Footer metadata through Document Properties and reopens it",
+      "domain": "document-header-footer-save-open-export",
+      "originIssue": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Document Properties commits Header, notes, preconditions, constraints, exceptions, and Footer metadata as one canonical edit; Save/Open restores the fields and SVG export includes their semantic text without waveform or local-geometry rebuilds.",
+      "duplicateGroup": "document-properties-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": ["integration"],
+      "decision": "KEEP",
+      "reason": "This combines the broad metadata schema, a single History unit, Save/Open round-trip, and SVG text projection. Export-only tests use a smaller field set and do not prove reopening the serialized canonical document; retain as one integration journey rather than routine PR coverage.",
+      "replacementTest": null
+    },
+    {
+      "file": "full-gui.spec.ts",
+      "title": "Document Properties keeps Header and Legend edits in one Apply/Cancel transaction",
+      "domain": "document-properties-apply-cancel-atomicity",
+      "originIssue": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Cancel discards staged Header and Legend edits with zero History/Dirty change; Apply commits Header and Legend presentation together as exactly one semantic History operation.",
+      "duplicateGroup": "document-properties-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["pr"],
+      "decision": "KEEP",
+      "reason": "This directly protects the dialog's transaction boundary for mixed document metadata and presentation settings. Save/Open coverage validates persisted values but cannot detect premature mutation on Cancel or multiple commits on Apply.",
+      "replacementTest": null
+    },
+    {
       "file": "qa-fresh-state-journeys.spec.ts",
       "title": "J9 Bottom follows the selected entity kind",
       "domain": "bottom-panel-selection",
