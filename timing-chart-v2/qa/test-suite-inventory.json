@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T01:02:02.478Z",
+  "generatedAt": "2026-09-23T01:17:37.282Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 315,
+  "reviewedCaseCount": 350,
   "curatedProfileCounts": {
-    "integration": 127,
-    "nightly": 98,
+    "integration": 149,
+    "nightly": 109,
     "performance": 20,
-    "pr": 105,
-    "visual": 80
+    "pr": 116,
+    "visual": 82
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -1781,18 +1781,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-bottom-collection-lifecycle",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Annotation collection remains stable while selection is view-only, visibility and import follow their semantic contracts, and imported data survives Save/Open.",
+      "duplicateGroup": "annotation-bottom-collection-lifecycle",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This single broad acceptance journey spans selection, visibility, import, and real file round-trip; do not split it into repeated app-start journeys without evidence that the split improves feedback or diagnosis.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-highlight-position-mode.spec.ts",
@@ -1803,18 +1807,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "highlight-position-mode-contract",
+      "originIssue": 419,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Bottom editor commits the existing Highlight position-mode command once, supports a fractional Free anchor, and rejects an invalid switch back to Cycle Snap without an extra History entry.",
+      "duplicateGroup": "highlight-position-mode-contract",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This concise visible path checks the existing semantic command and rejection behavior through the real editor; unit tests complement but cannot prove Bottom editor wiring.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "annotation-highlight-position-mode.spec.ts",
@@ -1825,18 +1832,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "highlight-position-mode-persistence",
+      "originIssue": 419,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A fractional Free Highlight position is serialized and restored unchanged through the production Save/Open path.",
+      "duplicateGroup": "highlight-position-mode-persistence",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is the only production serialization round-trip for fractional free-position data and must remain in integration/nightly rather than being inferred from the edit journey.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-inspector-anchor.spec.ts",
@@ -1847,18 +1858,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-inspector-anchor-apply",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "IMPLEMENTATION_COUPLED",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inspector applies the selected stable Annotation endpoint's anchor fields as one operation and keeps the committed source identity/coordinates visible.",
+      "duplicateGroup": "annotation-inspector-anchor-apply",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The no-waveform/local-geometry-regeneration assertions inspect internal render counters; preserve the useful Inspector journey as an integration architecture guard, not routine PR E2E.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "annotation-line-rendering.spec.ts",
@@ -1869,18 +1883,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-line-presentation",
+      "originIssue": 375,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Straight, diagonal, curve, and orthogonal connectors produce distinct user-visible path shapes and arrowhead orientation after Apply.",
+      "duplicateGroup": "annotation-line-rendering",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "It verifies four distinct connector semantics in the live renderer and actual Draft/Apply path; exact SVG path inspection is geometry-level acceptance, not a cheap unit substitute for the user-visible result.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "annotation-line-rendering.spec.ts",
@@ -1891,18 +1908,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "dependency-line-presentation",
+      "originIssue": 375,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Dependency Annotations expose line-style and arrowhead controls and retain the selected values after Apply in the rendered annotation.",
+      "duplicateGroup": "dependency-line-presentation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This compact journey covers the type-specific controls and persisted visible result without duplicating the separate SVG export contracts.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "annotation-line-rendering.spec.ts",
@@ -1913,18 +1933,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "dependency-svg-export",
+      "originIssue": 375,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Exporting a styled Dependency retains its orthogonal route, arrow markers, and label in the downloaded SVG.",
+      "duplicateGroup": "dependency-svg-export",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The assertion targets the export pipeline output, which cannot be proven by a live-DOM renderer test; nightly/integration avoids repeating the download workflow in routine PR checks.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-line-rendering.spec.ts",
@@ -1935,18 +1959,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "diagonal-svg-export",
+      "originIssue": 375,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Exported Diagonal geometry is a genuine two-segment elbow, distinct from Straight's single segment.",
+      "duplicateGroup": "annotation-svg-export-shapes",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is a different exported line-shape invariant from Dependency marker/label persistence; retain the downloaded-SVG check but keep it out of every PR run.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-marker-vertical-span.spec.ts",
@@ -1957,18 +1985,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "marker-vertical-span-editing",
+      "originIssue": 426,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Marker vertical-span fields remain draft-only until Apply, commit in one operation, and the resulting handles move without changing the Marker anchor.",
+      "duplicateGroup": "marker-vertical-span-editing",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the representative Bottom Draft/Apply plus pointer-handle interaction for a distinct Marker capability; retain it as a focused production journey.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "annotation-multi-select-font.spec.ts",
@@ -1979,18 +2010,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-multi-selection-batch-edit",
+      "originIssue": 331,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A multi-selection formatting action commits once, updates every selected Annotation, and preserves each entity's independent non-font properties.",
+      "duplicateGroup": "annotation-multi-selection-batch-edit",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This verifies atomic production selection and batch preservation across heterogeneous Annotation types; it is a multi-step journey better retained in integration than routine PR E2E.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "annotation-multiline-and-export-shapes.spec.ts",
@@ -2089,18 +2123,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-style-and-export",
+      "originIssue": 378,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Applying Range stroke/fill style updates the actual rendered annotation and carries the same semantic appearance into exported SVG.",
+      "duplicateGroup": "annotation-style-svg-export",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This crosses draft/apply, production overlay rendering, export dialog, and downloaded SVG semantics; a DOM-only or unit assertion cannot prove the export contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-presentation-controls.spec.ts",
@@ -2111,18 +2149,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-svg-export-shapes",
+      "originIssue": 375,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Exported Vertical Line geometry spans the chart height and retains its dashed presentation.",
+      "duplicateGroup": "annotation-svg-export-shapes",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This protects a distinct exported shape regression through the actual Export workflow; it cannot be replaced by live-overlay geometry checks.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-presentation-controls.spec.ts",
@@ -2133,18 +2175,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-style-capability",
+      "originIssue": 378,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A Text Annotation truthfully disables unsupported Stroke/Fill controls and explains why they are unavailable.",
+      "duplicateGroup": "annotation-style-capability",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is one compact, visible capability contract; static typing cannot prove the rendered controls are disabled and expose a truthful reason.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "annotation-presentation-controls.spec.ts",
@@ -2155,18 +2200,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-lock-batch-semantics",
+      "originIssue": 378,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Lock visibly prevents movement, Unlock restores movement, and mixed-selection Lock changes only eligible Annotations without rejecting the valid subset.",
+      "duplicateGroup": "annotation-lock-batch-semantics",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The single journey covers pointer behavior plus atomic mixed-selection semantics; retain it as integration because it performs multiple real drags and selection transitions.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "annotation-presentation-controls.spec.ts",
@@ -2177,18 +2225,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-lock-persistence",
+      "originIssue": 378,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The canonical lock state survives production Save/Open and remains behaviorally enforced after reload.",
+      "duplicateGroup": "annotation-lock-persistence",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The persistence and post-reload drag assertion are distinct from in-session lock behavior and require the actual serialization/open path.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-presentation-controls.spec.ts",
@@ -2199,18 +2251,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-ribbon-capability-visual",
+      "originIssue": 390,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Annotation Ribbon group names are not duplicated, unavailable controls remain readable with explanations, and selection enables controls that then perform real actions.",
+      "duplicateGroup": "annotation-ribbon-capability-visual",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The test intentionally probes computed caption visibility, opacity/readability, selection-dependent state, and action effects; keep in the visual profile rather than routine PR runs.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "annotation-presentation.spec.ts",
@@ -2221,18 +2276,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-kind-presentation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Representative Annotation kinds remain visually distinguishable through their user-facing bodies, borders, and bracket glyphs.",
+      "duplicateGroup": "annotation-kind-presentation",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The six-kind rendered presentation sweep inspects computed DOM styling and distinct shape affordances; retain it in visual acceptance instead of the routine semantic PR profile.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "annotation-preview-update.spec.ts",
@@ -2318,18 +2376,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-anchor-validation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Import rejects Anchors that target non-timing entities or incompatible anchor points without replacing the active document, History, or title, and reports the validation codes.",
+      "duplicateGroup": "annotation-anchor-validation",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The production-file import boundary and no-partial-replacement invariant are distinct from pure validator coverage; retain one browser contract but keep it out of the normal PR profile.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2340,18 +2401,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-type-creation-and-projection",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "IMPLEMENTATION_COUPLED",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The supported Annotation type catalog can be created through the production authoring path and each entity receives a stable renderer overlay with the expected shape family.",
+      "duplicateGroup": "annotation-type-catalog-creation",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The broad 12-type sweep also asserts renderer counters and internal owner/shape attributes, so it is an architecture/integration guard rather than a compact user journey. Keep it as a broad catalog sweep; add cheaper domain-specific contract coverage separately instead of running it on every PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2362,18 +2427,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-derived-overlay-stability",
+      "originIssue": 205,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Ghost Trace and Timing Region edits preserve the linked source identity and offset through Apply and Save/Open without rebuilding the underlying waveform or local geometry.",
+      "duplicateGroup": "annotation-ghost-trace-timing-region",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is the only tested end-to-end linked Ghost Trace edit/persistence journey; renderer counters are implementation-facing diagnostics, while stable identity and saved semantics remain product contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2384,18 +2453,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-threshold-measurement",
+      "originIssue": 205,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Creating a 30/70 Measurement from a selected source-time range produces both semantic thresholds and preserves the same Measurement identity and behavior through Save/Open.",
+      "duplicateGroup": "annotation-measurement-persistence",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The end-to-end geometry-backed create and actual file round trip are essential acceptance for the Measurement feature and are not implied by schema-only coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2406,18 +2479,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-style-apply",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "IMPLEMENTATION_COUPLED",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Applying style and label-offset changes updates only Annotation presentation while preserving its identity and leaving waveform/local geometry unchanged.",
+      "duplicateGroup": "annotation-style-apply",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The zero-regeneration claim is explicitly tied to renderer counters; retain this architecture/performance contract in integration, while a separate concise UI test covers actual style effect.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2428,18 +2504,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-snap-endpoint",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Dragging an Annotation endpoint to a rendered semantic cycle boundary commits the exact source boundary and clears temporary snap feedback after pointer release.",
+      "duplicateGroup": "annotation-endpoint-snap",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the representative pointer-to-shared-geometry interaction; a unit round-trip alone cannot prove the production handle uses the rendered boundary and commits it.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2450,18 +2529,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-free-endpoint-positioning",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "With Snap disabled, a real endpoint drag uses free geometry and does not expose cycle-snap feedback.",
+      "duplicateGroup": "annotation-free-endpoint-positioning",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a concise user-visible alternative-mode contract and is distinct from the snapped endpoint journey; keep both focused paths.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2472,18 +2554,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-snap-candidate-invalidation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "IMPLEMENTATION_COUPLED",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Changing Snap and Zoom refreshes the derived candidate service while leaving Canonical, History, Dirty state, and waveform projection untouched.",
+      "duplicateGroup": "annotation-snap-candidate-invalidation",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The assertion is specifically about internal session/candidate and render counters, which is an architecture/invalidation guard; preserve it outside ordinary PR E2E.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2494,18 +2579,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-axis-break-source-time",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Snapping across a collapsed TimeGroup changes the displayed geometry but retains the correct canonical source-cycle anchor.",
+      "duplicateGroup": "annotation-axis-break-source-time",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This crosses fold mapping, pointer snapping, and canonical source-time persistence; the focused geometry property suite cannot establish that the Annotation overlay uses the shared Axis Break mapping.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2516,18 +2604,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-pointer-preview-cancel",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A sub-threshold Annotation pointer movement canceled before release leaves Canonical, History, and Dirty state unchanged.",
+      "duplicateGroup": "annotation-pointer-preview-cancel",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This guards the production pointer lifecycle's no-op/cancel boundary, which is not proven by command-unit tests; it is short enough for focused PR coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2538,18 +2629,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-visual-offsets",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Moving an Annotation visually changes its offset without mutating its semantic anchor, and resetting the offset restores the baseline independently.",
+      "duplicateGroup": "annotation-visual-offsets",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The contract spans a real overlay interaction and distinct canonical anchor-versus-presentation state; keep one focused user journey rather than duplicate this behavior across every Annotation kind.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2560,18 +2654,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-custom-measurement-profiles",
+      "originIssue": 205,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Standard and Custom Measurement profiles select explicit transition semantics and produce the corresponding semantic endpoints.",
+      "duplicateGroup": "annotation-measurement-profiles",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This verifies profile authoring and semantic transition selection across the production interaction, not just Measurement schema acceptance; retain it as integration coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2582,18 +2679,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-measurement-history-persistence",
+      "originIssue": 205,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Measurement semantic edits commit as one History unit, restore exactly through Undo/Redo, and survive production Save/Open.",
+      "duplicateGroup": "annotation-measurement-persistence",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "History restoration and file round-trip are separate from profile creation and threshold rendering; preserve this high-risk lifecycle contract in the heavy integration tier.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2604,18 +2705,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-drag-document-epoch",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Replacing the document while an Annotation pointer gesture is active cancels the preview and prevents stale drag state from mutating the new document.",
+      "duplicateGroup": "annotation-drag-document-epoch",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a compact cross-document lifecycle boundary with a data-safety consequence; it cannot be replaced by a normal drag or document-epoch unit test alone.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2626,18 +2730,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-time-geometry-alignment",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "IMPLEMENTATION_COUPLED",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Annotation remains aligned to its semantic source anchor after row reorder, Zoom, and horizontal Scroll, without rebuilding waveform projection.",
+      "duplicateGroup": "annotation-time-geometry-alignment",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The alignment is observable behavior, but its no-regeneration assertion is an internal renderer architecture guard; retain this representative cross-transform check in integration rather than PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2648,18 +2755,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-anchor-timeline-ripple",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Timeline insert/delete operations ripple or clamp Annotation anchors according to the semantic contract and Undo/Redo restores exact prior anchors.",
+      "duplicateGroup": "annotation-anchor-timeline-ripple",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The interaction crosses two semantic command families and reversible anchor adjustment; this distinct integration contract should not be multiplied into the general Annotation drag matrix.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2670,18 +2780,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-arrow-two-point-capture",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Two production pointer picks create a transition-anchored Arrow, while Escape cancels an incomplete capture without leaving a pending interaction.",
+      "duplicateGroup": "annotation-two-point-capture",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the representative two-point capture and cancellation user journey; direct handler tests would not verify transition picking or Escape ownership.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -2692,18 +2805,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-dependency-creation-type",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Choosing Dependency before the same two-transition capture creates a Dependency semantic entity rather than silently creating an Arrow.",
+      "duplicateGroup": "annotation-two-point-capture",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This protects the type-selection-to-semantic-entity boundary that the Arrow capture journey does not cover; it is a distinct regression with a short production path.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "annotation-virtualization-closure.spec.ts",
@@ -22395,59 +22511,59 @@
     {
       "file": "annotation-bottom-list.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "annotation-highlight-position-mode.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "annotation-inspector-anchor.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "annotation-line-rendering.spec.ts",
       "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "annotation-marker-vertical-span.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "annotation-multi-select-font.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector",
         "dataset"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "annotation-multiline-and-export-shapes.spec.ts",
@@ -22461,23 +22577,23 @@
     {
       "file": "annotation-presentation-controls.spec.ts",
       "caseCount": 6,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 6,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector",
         "getComputedStyle"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "annotation-presentation.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "annotation-preview-update.spec.ts",
@@ -22491,11 +22607,11 @@
     {
       "file": "annotation-snap.spec.ts",
       "caseCount": 18,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 18,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "annotation-virtualization-closure.spec.ts",

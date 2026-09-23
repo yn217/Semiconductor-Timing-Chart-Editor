@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 315/963 cases reviewed.
+Semantic review progress: 350/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 127 |
-| `nightly` | 98 |
+| `integration` | 149 |
+| `nightly` | 109 |
 | `performance` | 20 |
-| `pr` | 105 |
-| `visual` | 80 |
+| `pr` | 116 |
+| `visual` | 82 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -29,17 +29,17 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `ai-bridge.spec.ts` | 5 | 0/5 reviewed |
 | `ai-domain-coverage.spec.ts` | 1 | 0/1 reviewed |
 | `ai-proposal-workflow.spec.ts` | 10 | 0/10 reviewed |
-| `annotation-bottom-list.spec.ts` | 1 | 0/1 reviewed |
-| `annotation-highlight-position-mode.spec.ts` | 2 | 0/2 reviewed |
-| `annotation-inspector-anchor.spec.ts` | 1 | 0/1 reviewed |
-| `annotation-line-rendering.spec.ts` | 4 | 0/4 reviewed |
-| `annotation-marker-vertical-span.spec.ts` | 1 | 0/1 reviewed |
-| `annotation-multi-select-font.spec.ts` | 1 | 0/1 reviewed |
+| `annotation-bottom-list.spec.ts` | 1 | 1/1 reviewed |
+| `annotation-highlight-position-mode.spec.ts` | 2 | 2/2 reviewed |
+| `annotation-inspector-anchor.spec.ts` | 1 | 1/1 reviewed |
+| `annotation-line-rendering.spec.ts` | 4 | 4/4 reviewed |
+| `annotation-marker-vertical-span.spec.ts` | 1 | 1/1 reviewed |
+| `annotation-multi-select-font.spec.ts` | 1 | 1/1 reviewed |
 | `annotation-multiline-and-export-shapes.spec.ts` | 4 | 0/4 reviewed |
-| `annotation-presentation-controls.spec.ts` | 6 | 0/6 reviewed |
-| `annotation-presentation.spec.ts` | 1 | 0/1 reviewed |
+| `annotation-presentation-controls.spec.ts` | 6 | 6/6 reviewed |
+| `annotation-presentation.spec.ts` | 1 | 1/1 reviewed |
 | `annotation-preview-update.spec.ts` | 3 | 3/3 reviewed |
-| `annotation-snap.spec.ts` | 18 | 0/18 reviewed |
+| `annotation-snap.spec.ts` | 18 | 18/18 reviewed |
 | `annotation-virtualization-closure.spec.ts` | 3 | 3/3 reviewed |
 | `architecture-probe.spec.ts` | 1 | 1/1 reviewed |
 | `arrange-disabled-reasons.spec.ts` | 1 | 1/1 reviewed |
