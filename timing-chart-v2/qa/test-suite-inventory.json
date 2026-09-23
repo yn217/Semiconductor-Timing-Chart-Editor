@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T02:36:45.713Z",
+  "generatedAt": "2026-09-23T02:38:46.434Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 492,
+  "reviewedCaseCount": 496,
   "curatedProfileCounts": {
-    "integration": 225,
+    "integration": 226,
     "nightly": 134,
     "performance": 23,
-    "pr": 154,
-    "visual": 107
+    "pr": 155,
+    "visual": 109
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -20777,18 +20777,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-showcase-reload",
+      "originIssue": 575,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The production Transaction inspection sample is populated before and after browser reload, with six table rows and semantic phase projection.",
+      "duplicateGroup": "transaction-showcase-and-phase-projection",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Protects the user-facing default/reload sample route as well as phase presence; retain one representative reload journey outside ordinary focused PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-phase-bars.spec.ts",
@@ -20799,18 +20802,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-phase-duration-projection-compact",
+      "originIssue": 429,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Transaction Phase widths and shared boundaries represent semantic durations proportionally at the compact supported viewport.",
+      "duplicateGroup": "transaction-showcase-and-phase-projection",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The relative width and boundary checks are geometric and viewport-sensitive; keep compact-layout evidence in visual acceptance. Its screenshot path is a tracked local artifact and was deliberately not regenerated during metadata-only review.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "transaction-phase-bars.spec.ts",
@@ -20821,18 +20827,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-phase-duration-projection-wide",
+      "originIssue": 429,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Transaction Phase widths and shared boundaries represent semantic durations proportionally at the wide reference viewport.",
+      "duplicateGroup": "transaction-showcase-and-phase-projection",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the wide counterpart to the compact viewport case; retain only as viewport-specific visual acceptance, not as routine PR duplication. Tracked screenshot artifact was not touched.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "transaction-phase-bars.spec.ts",
@@ -20843,18 +20852,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-phase-edge-resize-guard",
+      "originIssue": 429,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A Transaction edge cannot resize across a protected semantic Phase boundary; rejected drags leave Inspector values and Canonical revision unchanged.",
+      "duplicateGroup": "transaction-phase-resize",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a distinct real-pointer rejection contract at the Transaction interaction boundary. Keep the focused drag test; the semantic boundary rules should also have a lower-level planner test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-ribbon-groups.spec.ts",
@@ -25906,13 +25918,13 @@
     {
       "file": "transaction-phase-bars.spec.ts",
       "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-ribbon-groups.spec.ts",
