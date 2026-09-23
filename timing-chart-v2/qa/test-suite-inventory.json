@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T01:47:43.409Z",
+  "generatedAt": "2026-09-23T01:50:36.994Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 415,
+  "reviewedCaseCount": 420,
   "curatedProfileCounts": {
-    "integration": 191,
-    "nightly": 122,
-    "performance": 22,
+    "integration": 193,
+    "nightly": 124,
+    "performance": 23,
     "pr": 127,
-    "visual": 92
+    "visual": 94
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -4868,18 +4868,21 @@
       "timeoutMs": 180000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "clock-edge-counter-compact-controls",
+      "originIssue": 210,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At the desktop editor width, all Clock Edge Counter controls remain visible and reachable without horizontal overflow or excessive vertical expansion.",
+      "duplicateGroup": "edge-counter-responsive-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This directly protects the editor's compact control layout and is a visual affordance check rather than a command correctness test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "edge-counter-compact.spec.ts",
@@ -4892,18 +4895,21 @@
       "timeoutMs": 180000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "clock-edge-counter-compact-controls",
+      "originIssue": 210,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1000px viewport width, the Clock Edge Counter editor has nonzero usable width, no horizontal overflow, and keeps Apply reachable.",
+      "duplicateGroup": "edge-counter-responsive-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The constrained bottom-editor width is a distinct responsive clipping boundary; retain this narrow-width visual case without running it in routine PR profile.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "edge-counter-compact.spec.ts",
@@ -4916,18 +4922,22 @@
       "timeoutMs": 180000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "clock-edge-counter-bookmark-stable-identity",
+      "originIssue": 210,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Marker-based Edge Counter uses the selected Bookmark's stable identity and source time through Undo/Redo and Save/Open, producing no labels before that marker.",
+      "duplicateGroup": "edge-counter-marker-source-identity",
+      "executionTier": "TIER_4_SLOW_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "This validates stable Bookmark reference identity and persisted Edge Counter semantics across multiple state transitions and file roundtrip; it is intentionally outside PR latency budget.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "edge-counter-compact.spec.ts",
@@ -4940,18 +4950,21 @@
       "timeoutMs": 180000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "clock-edge-counter-selected-edge-geometry",
+      "originIssue": 210,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Selecting a source cycle and using selected-edge counting starts numbering from the preceding real rendered Clock edge, not from a cycle-only fallback.",
+      "duplicateGroup": "edge-counter-anchor-resolution",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a real pointer-to-ruler and Edge Counter geometry ownership journey; a pure edge-index test cannot establish that the UI-selected cycle resolves to the rendered source edge.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "edge-counter-compact.spec.ts",
@@ -4964,18 +4977,22 @@
       "timeoutMs": 180000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "clock-edge-counter-large-document-index-reuse",
+      "originIssue": 175,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "On a 100k-cycle Clock, changing Edge Counter presentation reuses the production edge index and performs zero per-cycle probes or geometry lookups.",
+      "duplicateGroup": "edge-counter-indexed-refresh-cost",
+      "executionTier": "TIER_4_SLOW_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "This asserts implementation counters on an explicitly large fixture; keep it in performance/nightly where cost matters and do not treat internal counter names as user-facing browser assertions.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly",
+        "performance"
+      ]
     },
     {
       "file": "edit-commit-contract.spec.ts",
@@ -23186,14 +23203,14 @@
     {
       "file": "edge-counter-compact.spec.ts",
       "caseCount": 5,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 5,
       "originIssue": null,
       "declaredTimeoutMs": 180,
       "candidateSignals": [
         "querySelector",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "edit-commit-contract.spec.ts",
