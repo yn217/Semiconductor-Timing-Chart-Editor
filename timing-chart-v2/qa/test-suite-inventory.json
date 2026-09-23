@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:07:06.587Z",
+  "generatedAt": "2026-09-23T05:08:26.680Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 644,
+  "reviewedCaseCount": 648,
   "curatedProfileCounts": {
     "integration": 301,
-    "nightly": 159,
+    "nightly": 162,
     "performance": 44,
-    "pr": 188,
+    "pr": 189,
     "visual": 131
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -6547,18 +6547,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "ghost-trace-source-signal-delete-dependency",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "When the only dependent entity is a Ghost Trace Annotation referencing a Signal by stable sourceSignalId, production Signal Delete is rejected, the Signal and canonical revision remain unchanged, and the dependency diagnostic is shown.",
+      "duplicateGroup": "signal-delete-dependent-entity-guards",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This exercises the specific Ghost Trace reference edge through the production delete adapter. Generic Annotation dependency tests cannot prove that this stable-ID relationship participates in deletion validation or leaves state untouched.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "golden-samples.spec.ts",
@@ -6569,18 +6572,21 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "golden-samples-production-open-save-roundtrip",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "All 20 immutable Golden documents pass the production file-input Open path, match semantic counts and feature contracts, render without diagnostics or stale/duplicate row ownership, and preserve those projections through Save/Open.",
+      "duplicateGroup": "golden-sample-production-matrix",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is the broad immutable compatibility matrix across all sample documents, including production rendering, diagnostic capture, feature coverage, and per-sample Save/Open. Its size and artifact generation justify nightly-only execution rather than routine PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "golden-samples.spec.ts",
@@ -6591,18 +6597,21 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "golden-sample-switch-stale-row-ownership",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "primaryContract": "Replacing one Golden Sample with another through production File Input leaves only the destination document's canonical row identities, with no stale or duplicate Left Tree rows.",
+      "duplicateGroup": "golden-sample-production-matrix",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "MOVE_LAYER",
+      "reason": "The all-20 Open/Save/Open matrix already opens each sample sequentially through the same File Input replacement route and checks exact canonical Left/Frozen row identity after every replacement, which subsumes this two-sample subset.",
+      "replacementTest": "golden-samples.spec.ts — opens all 20 immutable Golden Samples in the production browser path",
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "golden-samples.spec.ts",
@@ -6613,18 +6622,21 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "golden-samples-all-format-export-matrix",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Each of the 20 immutable Golden documents exports SVG/PNG/PDF with semantic coverage contracts satisfied, valid format signatures, and unchanged Canonical revision, History, and session counters.",
+      "duplicateGroup": "golden-sample-production-matrix",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The sample-open matrix does not exercise export serialization/rendering for every document or validate PDF/PNG bytes. This intentionally expensive cross-format compatibility and non-mutation matrix belongs in nightly only.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly"
+      ]
     },
     {
       "file": "grid-zoom-alignment.spec.ts",
@@ -23942,20 +23954,20 @@
     {
       "file": "ghost-trace-delete.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "golden-samples.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": 300,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "grid-zoom-alignment.spec.ts",
