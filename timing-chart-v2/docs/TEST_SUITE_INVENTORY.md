@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 332 spec files and 965 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 537/963 cases reviewed.
+Semantic review progress: 965/965 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 236 |
-| `nightly` | 148 |
-| `performance` | 36 |
-| `pr` | 162 |
-| `visual` | 120 |
+| `integration` | 491 |
+| `nightly` | 195 |
+| `performance` | 54 |
+| `pr` | 263 |
+| `visual` | 175 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -74,7 +74,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `cycle-scroll-pitch-invariant.spec.ts` | 2 | 2/2 reviewed |
 | `design-system-foundation.spec.ts` | 1 | 1/1 reviewed |
 | `diagnostic-aggregator.spec.ts` | 8 | 8/8 reviewed |
-| `dialog-esc-lifecycle.spec.ts` | 1 | 0/1 reviewed |
+| `dialog-esc-lifecycle.spec.ts` | 1 | 1/1 reviewed |
 | `document-properties.spec.ts` | 1 | 1/1 reviewed |
 | `edge-counter-compact.spec.ts` | 5 | 5/5 reviewed |
 | `edit-commit-contract.spec.ts` | 5 | 5/5 reviewed |
@@ -83,39 +83,39 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `export-diagnostics.spec.ts` | 2 | 2/2 reviewed |
 | `export-fold-mapping.spec.ts` | 1 | 1/1 reviewed |
 | `export-user-text-boundary.spec.ts` | 1 | 1/1 reviewed |
-| `feature-showcase-startup.spec.ts` | 3 | 0/3 reviewed |
+| `feature-showcase-startup.spec.ts` | 3 | 3/3 reviewed |
 | `file-beforeunload-dirty-guard.spec.ts` | 1 | 1/1 reviewed |
 | `file-ribbon-blank-controls.spec.ts` | 1 | 1/1 reviewed |
 | `font-style-commit-contract.spec.ts` | 1 | 1/1 reviewed |
-| `full-gui.spec.ts` | 46 | 0/46 reviewed |
-| `ghost-trace-delete.spec.ts` | 1 | 0/1 reviewed |
-| `golden-samples.spec.ts` | 3 | 0/3 reviewed |
+| `full-gui.spec.ts` | 46 | 46/46 reviewed |
+| `ghost-trace-delete.spec.ts` | 1 | 1/1 reviewed |
+| `golden-samples.spec.ts` | 3 | 3/3 reviewed |
 | `grid-zoom-alignment.spec.ts` | 1 | 1/1 reviewed |
-| `group-band.spec.ts` | 3 | 0/3 reviewed |
-| `group-clipboard-parity.spec.ts` | 2 | 0/2 reviewed |
+| `group-band.spec.ts` | 3 | 3/3 reviewed |
+| `group-clipboard-parity.spec.ts` | 2 | 2/2 reviewed |
 | `gui-bottom-resize.spec.ts` | 1 | 1/1 reviewed |
-| `gui-density-tokens.spec.ts` | 1 | 0/1 reviewed |
+| `gui-density-tokens.spec.ts` | 1 | 1/1 reviewed |
 | `gui-inspector-resize.spec.ts` | 1 | 1/1 reviewed |
-| `gui-left-pane-resize.spec.ts` | 2 | 0/2 reviewed |
-| `gui-reference-v8.spec.ts` | 3 | 0/3 reviewed |
-| `gui-split-view-visual.spec.ts` | 1 | 0/1 reviewed |
-| `gui-v1-home-vocabulary.spec.ts` | 1 | 0/1 reviewed |
-| `gui-v1-pane-vocabulary.spec.ts` | 1 | 0/1 reviewed |
-| `gui-v1-ribbon-labels.spec.ts` | 1 | 0/1 reviewed |
-| `gui-visual-acceptance.spec.ts` | 1 | 0/1 reviewed |
-| `history-retention.spec.ts` | 1 | 0/1 reviewed |
-| `home-command-surface.spec.ts` | 24 | 0/24 reviewed |
-| `home-ribbon-timegroup-cleanup.spec.ts` | 1 | 0/1 reviewed |
+| `gui-left-pane-resize.spec.ts` | 2 | 2/2 reviewed |
+| `gui-reference-v8.spec.ts` | 3 | 3/3 reviewed |
+| `gui-split-view-visual.spec.ts` | 1 | 1/1 reviewed |
+| `gui-v1-home-vocabulary.spec.ts` | 1 | 1/1 reviewed |
+| `gui-v1-pane-vocabulary.spec.ts` | 1 | 1/1 reviewed |
+| `gui-v1-ribbon-labels.spec.ts` | 1 | 1/1 reviewed |
+| `gui-visual-acceptance.spec.ts` | 1 | 1/1 reviewed |
+| `history-retention.spec.ts` | 1 | 1/1 reviewed |
+| `home-command-surface.spec.ts` | 24 | 24/24 reviewed |
+| `home-ribbon-timegroup-cleanup.spec.ts` | 1 | 1/1 reviewed |
 | `icon-button-dialog-close.spec.ts` | 5 | 5/5 reviewed |
-| `incremental-invalidation-matrix.spec.ts` | 1 | 0/1 reviewed |
-| `insert-icon-semantics.spec.ts` | 3 | 0/3 reviewed |
+| `incremental-invalidation-matrix.spec.ts` | 1 | 1/1 reviewed |
+| `insert-icon-semantics.spec.ts` | 3 | 3/3 reviewed |
 | `insert-timeline-ribbon.spec.ts` | 10 | 10/10 reviewed |
-| `inspector-accordion.spec.ts` | 2 | 0/2 reviewed |
-| `inspector-capability.spec.ts` | 2 | 0/2 reviewed |
-| `inspector-group-transaction-scroll.spec.ts` | 1 | 0/1 reviewed |
-| `inspector-hide-compacts-rows.spec.ts` | 1 | 0/1 reviewed |
-| `inspector-multi-selection.spec.ts` | 3 | 0/3 reviewed |
-| `inspector-waveform-style.spec.ts` | 2 | 0/2 reviewed |
+| `inspector-accordion.spec.ts` | 2 | 2/2 reviewed |
+| `inspector-capability.spec.ts` | 2 | 2/2 reviewed |
+| `inspector-group-transaction-scroll.spec.ts` | 1 | 1/1 reviewed |
+| `inspector-hide-compacts-rows.spec.ts` | 1 | 1/1 reviewed |
+| `inspector-multi-selection.spec.ts` | 3 | 3/3 reviewed |
+| `inspector-waveform-style.spec.ts` | 2 | 2/2 reviewed |
 | `interaction-visual-scenarios.spec.ts` | 11 | 11/11 reviewed |
 | `issue-441-ribbon-label-integrity.spec.ts` | 3 | 3/3 reviewed |
 | `issue-554-transaction-journey.spec.ts` | 2 | 2/2 reviewed |
@@ -221,137 +221,137 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-776-signal-inspector-draft-sync.spec.ts` | 2 | 2/2 reviewed |
 | `issue-777-current-v2-samples-acceptance.spec.ts` | 10 | 10/10 reviewed |
 | `keyboard-shortcut-router.spec.ts` | 4 | 4/4 reviewed |
-| `keyboard-tabs-resizers.spec.ts` | 2 | 0/2 reviewed |
-| `label-anchor-source-display.spec.ts` | 1 | 0/1 reviewed |
+| `keyboard-tabs-resizers.spec.ts` | 2 | 2/2 reviewed |
+| `label-anchor-source-display.spec.ts` | 1 | 1/1 reviewed |
 | `layout-inspector.spec.ts` | 4 | 4/4 reviewed |
-| `left-header-action-alignment.spec.ts` | 1 | 0/1 reviewed |
-| `left-pane-constraint.spec.ts` | 2 | 0/2 reviewed |
-| `left-tree-action-icons.spec.ts` | 1 | 0/1 reviewed |
-| `left-tree-compact-footer.spec.ts` | 2 | 0/2 reviewed |
-| `left-tree-critical-icons.spec.ts` | 1 | 0/1 reviewed |
-| `left-tree-interaction.spec.ts` | 3 | 0/3 reviewed |
-| `left-tree-menu-contrast.spec.ts` | 1 | 0/1 reviewed |
-| `left-tree-projection-policy-correction.spec.ts` | 2 | 0/2 reviewed |
-| `left-tree-type-filter.spec.ts` | 2 | 0/2 reviewed |
-| `listener-lifecycle.spec.ts` | 2 | 0/2 reviewed |
-| `local-geometry-dom-batch.spec.ts` | 1 | 0/1 reviewed |
-| `measurement-anchor-drag.spec.ts` | 5 | 0/5 reviewed |
-| `measurement-dimension-layout.spec.ts` | 1 | 0/1 reviewed |
-| `measurement-export-matrix.spec.ts` | 1 | 0/1 reviewed |
-| `measurement-lane-stacking.spec.ts` | 3 | 0/3 reviewed |
-| `measurement-top-row-clip.spec.ts` | 2 | 0/2 reviewed |
-| `mechanical-visual-diagnostics.spec.ts` | 1 | 0/1 reviewed |
-| `minimal-cycle-view.spec.ts` | 3 | 0/3 reviewed |
-| `minimap-overview-performance.spec.ts` | 2 | 0/2 reviewed |
-| `minimap-viewport-closure.spec.ts` | 1 | 0/1 reviewed |
-| `mode-isolation-journey.spec.ts` | 2 | 0/2 reviewed |
-| `name-draft-identity.spec.ts` | 1 | 0/1 reviewed |
-| `open-progressive-wave-yield.spec.ts` | 3 | 0/3 reviewed |
-| `open-validation-handoff.spec.ts` | 3 | 0/3 reviewed |
-| `perf-755-far-jump-longtask.spec.ts` | 1 | 0/1 reviewed |
+| `left-header-action-alignment.spec.ts` | 1 | 1/1 reviewed |
+| `left-pane-constraint.spec.ts` | 2 | 2/2 reviewed |
+| `left-tree-action-icons.spec.ts` | 1 | 1/1 reviewed |
+| `left-tree-compact-footer.spec.ts` | 2 | 2/2 reviewed |
+| `left-tree-critical-icons.spec.ts` | 1 | 1/1 reviewed |
+| `left-tree-interaction.spec.ts` | 3 | 3/3 reviewed |
+| `left-tree-menu-contrast.spec.ts` | 1 | 1/1 reviewed |
+| `left-tree-projection-policy-correction.spec.ts` | 2 | 2/2 reviewed |
+| `left-tree-type-filter.spec.ts` | 2 | 2/2 reviewed |
+| `listener-lifecycle.spec.ts` | 2 | 2/2 reviewed |
+| `local-geometry-dom-batch.spec.ts` | 1 | 1/1 reviewed |
+| `measurement-anchor-drag.spec.ts` | 5 | 5/5 reviewed |
+| `measurement-dimension-layout.spec.ts` | 1 | 1/1 reviewed |
+| `measurement-export-matrix.spec.ts` | 1 | 1/1 reviewed |
+| `measurement-lane-stacking.spec.ts` | 3 | 3/3 reviewed |
+| `measurement-top-row-clip.spec.ts` | 2 | 2/2 reviewed |
+| `mechanical-visual-diagnostics.spec.ts` | 1 | 1/1 reviewed |
+| `minimal-cycle-view.spec.ts` | 3 | 3/3 reviewed |
+| `minimap-overview-performance.spec.ts` | 2 | 2/2 reviewed |
+| `minimap-viewport-closure.spec.ts` | 1 | 1/1 reviewed |
+| `mode-isolation-journey.spec.ts` | 2 | 2/2 reviewed |
+| `name-draft-identity.spec.ts` | 1 | 1/1 reviewed |
+| `open-progressive-wave-yield.spec.ts` | 3 | 3/3 reviewed |
+| `open-validation-handoff.spec.ts` | 3 | 3/3 reviewed |
+| `perf-755-far-jump-longtask.spec.ts` | 1 | 1/1 reviewed |
 | `performance-closure.spec.ts` | 11 | 11/11 reviewed |
-| `performance-internal-latency.spec.ts` | 1 | 0/1 reviewed |
-| `performance-view-only-validation.spec.ts` | 1 | 0/1 reviewed |
-| `pinned-bottom-target.spec.ts` | 4 | 0/4 reviewed |
-| `production-presentation-equivalence.spec.ts` | 1 | 0/1 reviewed |
-| `qa-cross-mode-journey.spec.ts` | 2 | 0/2 reviewed |
-| `qa-fresh-state-journeys.spec.ts` | 10 | 6/10 reviewed |
-| `reference-clock-conversion.spec.ts` | 4 | 0/4 reviewed |
-| `reorder-visibility.spec.ts` | 8 | 0/8 reviewed |
-| `reset-semantics-inspector.spec.ts` | 2 | 0/2 reviewed |
-| `resource-budget-ui-routes.spec.ts` | 7 | 0/7 reviewed |
-| `result-aware-create-effects.spec.ts` | 2 | 0/2 reviewed |
-| `review-checks-refresh.spec.ts` | 2 | 0/2 reviewed |
-| `review-workflow.spec.ts` | 2 | 0/2 reviewed |
-| `ribbon-caption-layout.spec.ts` | 2 | 0/2 reviewed |
-| `ribbon-cursor-ab.spec.ts` | 2 | 0/2 reviewed |
-| `ribbon-layout.spec.ts` | 2 | 0/2 reviewed |
-| `ribbon-more-popover-closure.spec.ts` | 6 | 0/6 reviewed |
-| `ribbon-responsive-overflow.spec.ts` | 3 | 0/3 reviewed |
+| `performance-internal-latency.spec.ts` | 1 | 1/1 reviewed |
+| `performance-view-only-validation.spec.ts` | 1 | 1/1 reviewed |
+| `pinned-bottom-target.spec.ts` | 4 | 4/4 reviewed |
+| `production-presentation-equivalence.spec.ts` | 1 | 1/1 reviewed |
+| `qa-cross-mode-journey.spec.ts` | 2 | 2/2 reviewed |
+| `qa-fresh-state-journeys.spec.ts` | 10 | 10/10 reviewed |
+| `reference-clock-conversion.spec.ts` | 4 | 4/4 reviewed |
+| `reorder-visibility.spec.ts` | 8 | 8/8 reviewed |
+| `reset-semantics-inspector.spec.ts` | 2 | 2/2 reviewed |
+| `resource-budget-ui-routes.spec.ts` | 7 | 7/7 reviewed |
+| `result-aware-create-effects.spec.ts` | 2 | 2/2 reviewed |
+| `review-checks-refresh.spec.ts` | 2 | 2/2 reviewed |
+| `review-workflow.spec.ts` | 2 | 2/2 reviewed |
+| `ribbon-caption-layout.spec.ts` | 2 | 2/2 reviewed |
+| `ribbon-cursor-ab.spec.ts` | 2 | 2/2 reviewed |
+| `ribbon-layout.spec.ts` | 2 | 2/2 reviewed |
+| `ribbon-more-popover-closure.spec.ts` | 6 | 6/6 reviewed |
+| `ribbon-responsive-overflow.spec.ts` | 3 | 3/3 reviewed |
 | `ribbon-tabs.spec.ts` | 5 | 5/5 reviewed |
-| `ribbon-transaction-context.spec.ts` | 3 | 0/3 reviewed |
-| `ribbon-visual-scenario-matrix.spec.ts` | 2 | 0/2 reviewed |
-| `ruler-reference-clock.spec.ts` | 2 | 0/2 reviewed |
-| `ruler-terminal-boundary.spec.ts` | 1 | 0/1 reviewed |
-| `runtime-owner-acceptance.spec.ts` | 2 | 0/2 reviewed |
-| `signal-editor-draft-survives-unrelated-edit.spec.ts` | 1 | 0/1 reviewed |
-| `signal-editor-group-dropdown.spec.ts` | 2 | 0/2 reviewed |
-| `signal-editor.spec.ts` | 18 | 0/18 reviewed |
-| `signal-event-table-draft-hint.spec.ts` | 1 | 0/1 reviewed |
-| `signal-filter-clear-affordance.spec.ts` | 1 | 0/1 reviewed |
+| `ribbon-transaction-context.spec.ts` | 3 | 3/3 reviewed |
+| `ribbon-visual-scenario-matrix.spec.ts` | 2 | 2/2 reviewed |
+| `ruler-reference-clock.spec.ts` | 2 | 2/2 reviewed |
+| `ruler-terminal-boundary.spec.ts` | 1 | 1/1 reviewed |
+| `runtime-owner-acceptance.spec.ts` | 2 | 2/2 reviewed |
+| `signal-editor-draft-survives-unrelated-edit.spec.ts` | 1 | 1/1 reviewed |
+| `signal-editor-group-dropdown.spec.ts` | 2 | 2/2 reviewed |
+| `signal-editor.spec.ts` | 18 | 18/18 reviewed |
+| `signal-event-table-draft-hint.spec.ts` | 1 | 1/1 reviewed |
+| `signal-filter-clear-affordance.spec.ts` | 1 | 1/1 reviewed |
 | `signal-generator.spec.ts` | 5 | 5/5 reviewed |
-| `signal-spacing.spec.ts` | 3 | 0/3 reviewed |
-| `signal-split-no-assignment-control.spec.ts` | 1 | 0/1 reviewed |
-| `signal-split-render-routing.spec.ts` | 3 | 0/3 reviewed |
-| `signal-split.spec.ts` | 2 | 0/2 reviewed |
-| `signal-type-label-registry.spec.ts` | 2 | 0/2 reviewed |
-| `signal-visibility-recover.spec.ts` | 1 | 0/1 reviewed |
-| `spacer-clipboard-reorder.spec.ts` | 1 | 0/1 reviewed |
-| `spacer-row.spec.ts` | 1 | 0/1 reviewed |
-| `spacer.spec.ts` | 1 | 0/1 reviewed |
-| `split-active-pane.spec.ts` | 6 | 0/6 reviewed |
-| `stable-id-collision.spec.ts` | 1 | 0/1 reviewed |
-| `stable-surface.spec.ts` | 1 | 0/1 reviewed |
-| `status-context.spec.ts` | 4 | 0/4 reviewed |
-| `time-group-lifecycle.spec.ts` | 1 | 0/1 reviewed |
-| `time-mapping-scale-closure.spec.ts` | 1 | 0/1 reviewed |
-| `timeline-editor.spec.ts` | 29 | 0/29 reviewed |
-| `timeline-range-100k.spec.ts` | 3 | 0/3 reviewed |
-| `timeline-range-band-presentation.spec.ts` | 9 | 0/9 reviewed |
-| `timeline-range-edit-readability.spec.ts` | 3 | 0/3 reviewed |
-| `timeline-range-hitarea-closure.spec.ts` | 5 | 0/5 reviewed |
-| `timing-grid-x-scale-closure.spec.ts` | 1 | 0/1 reviewed |
-| `titlebar-controls.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-bottom-panel-table-first.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-bottom-panel-table.spec.ts` | 2 | 0/2 reviewed |
-| `transaction-bottom-phase-linked-signals.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-bottom-toolbar-add-ungroup.spec.ts` | 1 | 0/1 reviewed |
+| `signal-spacing.spec.ts` | 3 | 3/3 reviewed |
+| `signal-split-no-assignment-control.spec.ts` | 1 | 1/1 reviewed |
+| `signal-split-render-routing.spec.ts` | 3 | 3/3 reviewed |
+| `signal-split.spec.ts` | 2 | 2/2 reviewed |
+| `signal-type-label-registry.spec.ts` | 2 | 2/2 reviewed |
+| `signal-visibility-recover.spec.ts` | 1 | 1/1 reviewed |
+| `spacer-clipboard-reorder.spec.ts` | 1 | 1/1 reviewed |
+| `spacer-row.spec.ts` | 1 | 1/1 reviewed |
+| `spacer.spec.ts` | 1 | 1/1 reviewed |
+| `split-active-pane.spec.ts` | 6 | 6/6 reviewed |
+| `stable-id-collision.spec.ts` | 1 | 1/1 reviewed |
+| `stable-surface.spec.ts` | 1 | 1/1 reviewed |
+| `status-context.spec.ts` | 4 | 4/4 reviewed |
+| `time-group-lifecycle.spec.ts` | 1 | 1/1 reviewed |
+| `time-mapping-scale-closure.spec.ts` | 1 | 1/1 reviewed |
+| `timeline-editor.spec.ts` | 29 | 29/29 reviewed |
+| `timeline-range-100k.spec.ts` | 3 | 3/3 reviewed |
+| `timeline-range-band-presentation.spec.ts` | 9 | 9/9 reviewed |
+| `timeline-range-edit-readability.spec.ts` | 3 | 3/3 reviewed |
+| `timeline-range-hitarea-closure.spec.ts` | 5 | 5/5 reviewed |
+| `timing-grid-x-scale-closure.spec.ts` | 1 | 1/1 reviewed |
+| `titlebar-controls.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-bottom-panel-table-first.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-bottom-panel-table.spec.ts` | 2 | 2/2 reviewed |
+| `transaction-bottom-phase-linked-signals.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-bottom-toolbar-add-ungroup.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-drag.spec.ts` | 11 | 11/11 reviewed |
-| `transaction-empty-state-create-lane-fix.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-export.spec.ts` | 16 | 0/16 reviewed |
+| `transaction-empty-state-create-lane-fix.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-export.spec.ts` | 16 | 16/16 reviewed |
 | `transaction-group-management.spec.ts` | 4 | 4/4 reviewed |
-| `transaction-gui-authoring.spec.ts` | 2 | 0/2 reviewed |
-| `transaction-inspector-apply-validation.spec.ts` | 3 | 0/3 reviewed |
-| `transaction-inspector-bottom-draft-sync.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-inspector-duration-tc.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-inspector-lane-suggestions.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-lane-labels-visible.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-lane-scaling.spec.ts` | 8 | 0/8 reviewed |
-| `transaction-minimap-overview.spec.ts` | 2 | 0/2 reviewed |
-| `transaction-onboarding.spec.ts` | 7 | 0/7 reviewed |
-| `transaction-partial-update-preserves-fields.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-gui-authoring.spec.ts` | 2 | 2/2 reviewed |
+| `transaction-inspector-apply-validation.spec.ts` | 3 | 3/3 reviewed |
+| `transaction-inspector-bottom-draft-sync.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-inspector-duration-tc.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-inspector-lane-suggestions.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-lane-labels-visible.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-lane-scaling.spec.ts` | 8 | 8/8 reviewed |
+| `transaction-minimap-overview.spec.ts` | 2 | 2/2 reviewed |
+| `transaction-onboarding.spec.ts` | 7 | 7/7 reviewed |
+| `transaction-partial-update-preserves-fields.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-phase-bars.spec.ts` | 4 | 4/4 reviewed |
-| `transaction-ribbon-groups.spec.ts` | 1 | 0/1 reviewed |
+| `transaction-ribbon-groups.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-selection-smoke.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-signal-picker.spec.ts` | 4 | 4/4 reviewed |
 | `transaction-startup-fixture-matrix.spec.ts` | 4 | 4/4 reviewed |
 | `transaction-startup-large-fixture.spec.ts` | 2 | 2/2 reviewed |
-| `transaction-startup-metrics.spec.ts` | 2 | 0/2 reviewed |
-| `transaction-time-scale.spec.ts` | 3 | 0/3 reviewed |
-| `transaction-tree-control-parity.spec.ts` | 2 | 0/2 reviewed |
-| `transaction-tree-filter.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-tree-long-name.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-tree-menu-overlay.spec.ts` | 2 | 0/2 reviewed |
-| `transaction-tree-no-frozen-pane-handle.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-viewport-hscroll.spec.ts` | 1 | 0/1 reviewed |
-| `tree-drag-drop.spec.ts` | 5 | 0/5 reviewed |
-| `tree-keyboard.spec.ts` | 2 | 0/2 reviewed |
-| `undo-redo-selection-context.spec.ts` | 3 | 0/3 reviewed |
-| `unsaved-file-dialog.spec.ts` | 12 | 12/12 reviewed |
+| `transaction-startup-metrics.spec.ts` | 2 | 2/2 reviewed |
+| `transaction-time-scale.spec.ts` | 3 | 3/3 reviewed |
+| `transaction-tree-control-parity.spec.ts` | 2 | 2/2 reviewed |
+| `transaction-tree-filter.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-tree-long-name.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-tree-menu-overlay.spec.ts` | 2 | 2/2 reviewed |
+| `transaction-tree-no-frozen-pane-handle.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-viewport-hscroll.spec.ts` | 1 | 1/1 reviewed |
+| `tree-drag-drop.spec.ts` | 5 | 5/5 reviewed |
+| `tree-keyboard.spec.ts` | 2 | 2/2 reviewed |
+| `undo-redo-selection-context.spec.ts` | 3 | 3/3 reviewed |
+| `unsaved-file-dialog.spec.ts` | 14 | 14/14 reviewed |
 | `v8-gui-contract-coverage.spec.ts` | 1 | 1/1 reviewed |
-| `value-label-layout.spec.ts` | 1 | 0/1 reviewed |
+| `value-label-layout.spec.ts` | 1 | 1/1 reviewed |
 | `value-signal-compatibility.spec.ts` | 7 | 7/7 reviewed |
-| `view-metrics-owner.spec.ts` | 1 | 0/1 reviewed |
-| `view-mode-readability.spec.ts` | 3 | 0/3 reviewed |
+| `view-metrics-owner.spec.ts` | 1 | 1/1 reviewed |
+| `view-mode-readability.spec.ts` | 3 | 3/3 reviewed |
 | `view-ribbon-slot.spec.ts` | 7 | 7/7 reviewed |
-| `visual-grammar-cross-component.spec.ts` | 2 | 0/2 reviewed |
-| `visual-reference-lifecycle.spec.ts` | 1 | 0/1 reviewed |
-| `visual-regression-modes.spec.ts` | 6 | 0/6 reviewed |
-| `wavedrom-security.spec.ts` | 1 | 0/1 reviewed |
-| `workspace-preset-density.spec.ts` | 1 | 0/1 reviewed |
-| `workspace-zoom-isolation.spec.ts` | 2 | 0/2 reviewed |
-| `zoom-cross-surface-alignment.spec.ts` | 1 | 0/1 reviewed |
-| `zoom-text-fidelity.spec.ts` | 5 | 0/5 reviewed |
+| `visual-grammar-cross-component.spec.ts` | 2 | 2/2 reviewed |
+| `visual-reference-lifecycle.spec.ts` | 1 | 1/1 reviewed |
+| `visual-regression-modes.spec.ts` | 6 | 6/6 reviewed |
+| `wavedrom-security.spec.ts` | 1 | 1/1 reviewed |
+| `workspace-preset-density.spec.ts` | 1 | 1/1 reviewed |
+| `workspace-zoom-isolation.spec.ts` | 2 | 2/2 reviewed |
+| `zoom-cross-surface-alignment.spec.ts` | 1 | 1/1 reviewed |
+| `zoom-text-fidelity.spec.ts` | 5 | 5/5 reviewed |
 
 ## Static review candidates
 
@@ -492,7 +492,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `transaction-tree-control-parity.spec.ts` | querySelector, geometryRead |
 | `transaction-viewport-hscroll.spec.ts` | geometryRead |
 | `tree-drag-drop.spec.ts` | dataset |
-| `unsaved-file-dialog.spec.ts` | explicitWait |
+| `unsaved-file-dialog.spec.ts` | getComputedStyle, elementContains, geometryRead, explicitWait |
 | `v8-gui-contract-coverage.spec.ts` | geometryRead |
 | `value-label-layout.spec.ts` | querySelector |
 | `view-metrics-owner.spec.ts` | dataset, geometryRead |

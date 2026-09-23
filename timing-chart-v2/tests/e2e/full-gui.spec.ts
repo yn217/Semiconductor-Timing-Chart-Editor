@@ -29,9 +29,17 @@ async function createTextAnnotation(page: Page) {
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("text");
+  const previousIds = new Set(await host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-id"))));
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  return host.locator("[data-role='annotation-owner']").last();
+  const findCreatedId = () => host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items, previous) => {
+    const created = items.map((item) => item.getAttribute("data-annotation-id")).filter((id): id is string => Boolean(id) && !previous.includes(id));
+    return created.length === 1 ? created[0] : null;
+  }, [...previousIds]);
+  await expect.poll(findCreatedId).toBeTruthy();
+  const annotationId = await findCreatedId();
+  expect(annotationId).toBeTruthy();
+  return host.locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}']`);
 }
 
 test("matches the locked desktop pane geometry at the Golden viewport", async ({ page }) => {
