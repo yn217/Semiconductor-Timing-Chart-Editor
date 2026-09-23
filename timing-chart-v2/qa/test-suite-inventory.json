@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:11:45.605Z",
+  "generatedAt": "2026-09-23T05:13:18.876Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 654,
+  "reviewedCaseCount": 656,
   "curatedProfileCounts": {
     "integration": 303,
     "nightly": 162,
     "performance": 44,
     "pr": 192,
-    "visual": 132
+    "visual": 134
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -6872,18 +6872,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-signal-group-pane-splitter-derived-grid",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Pointer resizing the Signal/Group pane updates its accessible value and all derived column-grid widths within the supported maximum, while Canonical, History, Dirty, and session counters remain unchanged.",
+      "duplicateGroup": "cycle-left-pane-splitter-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The performance owner test only verifies the resize is view-only; it does not assert actual derived grid widths, accessible splitter value, or the maximum bound. Keep this concrete production layout contract in visual acceptance.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "gui-left-pane-resize.spec.ts",
@@ -6894,18 +6897,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-label-timing-splitter-ruler-wave-alignment",
+      "originIssue": 573,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Pointer resizing the frozen Signal label columns updates their derived widths and Ruler plot origin, and after zoom the Waveform geometry remains aligned with its timing column without semantic/session mutation.",
+      "duplicateGroup": "cycle-left-pane-splitter-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The Combined inspector-layout acceptance changes widths through a different control path and compares Transaction/Cycle source-boundary X values; this case verifies the Cycle frozen-column pointer splitter's own shared ruler/waveform layout and view-only contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "gui-reference-v8.spec.ts",
@@ -24046,14 +24052,14 @@
     {
       "file": "gui-left-pane-resize.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "gui-reference-v8.spec.ts",

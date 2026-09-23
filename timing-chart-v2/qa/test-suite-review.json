@@ -3409,6 +3409,38 @@
       "replacementTest": null
     },
     {
+      "file": "gui-left-pane-resize.spec.ts",
+      "title": "Signal/Group pane splitter resizes the derived columns without mutation",
+      "domain": "left-signal-group-pane-splitter-derived-grid",
+      "originIssue": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Pointer resizing the Signal/Group pane updates its accessible value and all derived column-grid widths within the supported maximum, while Canonical, History, Dirty, and session counters remain unchanged.",
+      "duplicateGroup": "cycle-left-pane-splitter-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": ["visual"],
+      "decision": "KEEP",
+      "reason": "The performance owner test only verifies the resize is view-only; it does not assert actual derived grid widths, accessible splitter value, or the maximum bound. Keep this concrete production layout contract in visual acceptance.",
+      "replacementTest": null
+    },
+    {
+      "file": "gui-left-pane-resize.spec.ts",
+      "title": "Signal label and timing splitter resizes shared geometry columns without mutation",
+      "domain": "cycle-label-timing-splitter-ruler-wave-alignment",
+      "originIssue": 573,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Pointer resizing the frozen Signal label columns updates their derived widths and Ruler plot origin, and after zoom the Waveform geometry remains aligned with its timing column without semantic/session mutation.",
+      "duplicateGroup": "cycle-left-pane-splitter-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": ["visual"],
+      "decision": "KEEP",
+      "reason": "The Combined inspector-layout acceptance changes widths through a different control path and compares Transaction/Cycle source-boundary X values; this case verifies the Cycle frozen-column pointer splitter's own shared ruler/waveform layout and view-only contract.",
+      "replacementTest": null
+    },
+    {
       "file": "qa-fresh-state-journeys.spec.ts",
       "title": "J9 Bottom follows the selected entity kind",
       "domain": "bottom-panel-selection",
