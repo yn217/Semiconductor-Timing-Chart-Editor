@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:42:44.127Z",
+  "generatedAt": "2026-09-23T07:46:51.313Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,11 +13,11 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 909,
+  "reviewedCaseCount": 913,
   "curatedProfileCounts": {
-    "integration": 475,
-    "nightly": 184,
-    "performance": 52,
+    "integration": 477,
+    "nightly": 186,
+    "performance": 54,
     "pr": 245,
     "visual": 154
   },
@@ -22019,18 +22019,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-ribbon-mode-visibility-and-group-commands",
+      "originIssue": 429,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Ribbon contextual visibility and overflow remain correct across Cycle and Transaction modes; Transaction, Group, and Time groups expose their intended commands, and Add Group/Create/Group assignment/Ungroup each update the production model and History as expected.",
+      "duplicateGroup": "transaction-ribbon-commands",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Combines contextual Ribbon visibility with real Group creation and transaction group/ungroup command behavior, which is not wholly covered by static structure checks. The scope is broader than one isolated command, so retain in integration rather than focused PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-selection-smoke.spec.ts",
@@ -22319,18 +22322,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-startup-metrics-compact",
+      "originIssue": 599,
+      "type": "PERFORMANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Three reload trials at 1280x720 publish ordered startup phase marks, ready time, projection counters, matching document epochs, and an idle first-correct-paint state.",
+      "duplicateGroup": "transaction-startup-metrics",
+      "executionTier": "TIER_4_PERFORMANCE_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "Compact viewport companion to the wide startup sample; both dimensions are needed for the documented responsive measurement. Keep it paired with the 1672x941 case and outside PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "transaction-startup-metrics.spec.ts",
@@ -22341,18 +22348,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-startup-metrics-wide",
+      "originIssue": 599,
+      "type": "PERFORMANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Three reload trials at 1672x941 publish ordered startup phase marks, ready time, projection counters, matching document epochs, and an idle first-correct-paint state.",
+      "duplicateGroup": "transaction-startup-metrics",
+      "executionTier": "TIER_4_PERFORMANCE_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "The wide viewport is one half of the explicit responsive startup measurement matrix; it is not a runtime threshold test and should stay out of PR. Preserve it with the compact counterpart.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "transaction-time-scale.spec.ts",
@@ -22363,18 +22374,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-time-scale-view-only-preference-save-open",
+      "originIssue": 397,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Changing the Transaction Cycle display ratio changes the view preference, not Canonical revision/History/Dirty state; cancel/reopen and reload preserve the applied ratio.",
+      "duplicateGroup": "transaction-time-scale-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Protects view-only time-scale semantics and preference persistence across reload, including clean document state. Separate invalid-ratio/cancel behavior is covered by the adjacent focused test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-time-scale.spec.ts",
@@ -27128,13 +27142,13 @@
     {
       "file": "transaction-ribbon-groups.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-selection-smoke.spec.ts",
@@ -27180,22 +27194,22 @@
     {
       "file": "transaction-startup-metrics.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": 90000,
       "candidateSignals": [
         "dataset"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-time-scale.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "transaction-tree-control-parity.spec.ts",
