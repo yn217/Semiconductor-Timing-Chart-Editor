@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T15:37:53.999Z",
+  "generatedAt": "2026-09-23T15:42:10.413Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -21869,7 +21869,7 @@
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
       "line": 55,
-      "title": "standalone Transaction tree scroll drives the virtualized lane surface",
+      "title": "standalone Transaction cycle viewport scroll advances the virtualized lane window",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -21879,11 +21879,11 @@
       "type": "GEOMETRY_CONTRACT",
       "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": "A 2,000-Transaction standalone document supports nonzero vertical scrolling on the Cycle viewport owner while keeping the virtualized lane surface populated.",
+      "primaryContract": "A 2,000-Transaction standalone document supports nonzero vertical scrolling on the Cycle viewport owner and mounts a different stable Transaction-ID window after scrolling.",
       "duplicateGroup": "transaction-large-document-virtualization",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "decision": "KEEP",
-      "reason": "The source correctly scrolls the standalone `.cycle-viewport`, which TransactionLanes subscribes to, unlike the independently scrolling Left Tree. However, the current assertion only proves scrollTop changed and at least one bar exists; it does not compare mounted stable IDs/positions before and after, so it is weak evidence for the stronger ‘drives virtualization’ title. Strengthen the boundary assertion if this owner contract is changed later.",
+      "reason": "This verifies the actual production vertical scroll owner and confirms that scroll changes the mounted stable-ID window, rather than merely checking a nonzero scrollTop and any surviving bar.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -21894,7 +21894,7 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
-      "line": 68,
+      "line": 73,
       "title": "Transaction Fit All and Fit Selection remain view-only",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21920,7 +21920,7 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
-      "line": 91,
+      "line": 96,
       "title": "Transaction view state survives both mode-switch directions",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21946,7 +21946,7 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
-      "line": 113,
+      "line": 118,
       "title": "central Transaction surface remains viewport-bounded across 1k/5k/10k with bounded mode, scroll, and selection work",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21957,11 +21957,11 @@
       "type": "PERFORMANCE",
       "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": "At 1k/5k/10k Transactions, record mode-entry/scroll/selection/ten-edit latency and mounted bar/Tree-row counts, while selection avoids index/stack/Tree rebuilds and edits retain TransactionLanes identity.",
+      "primaryContract": "At 1k/5k/10k Transactions, record mode-entry, actual Lane viewport scroll, selection, and ten-edit latency plus mounted bar/Tree-row counts; verify scroll changes the mounted stable-ID window, selection avoids index/stack/Tree rebuilds, and edits retain TransactionLanes identity.",
       "duplicateGroup": "transaction-large-document-virtualization",
       "executionTier": "TIER_4_PERFORMANCE",
       "decision": "KEEP",
-      "reason": "This is a unique scale matrix with explicit latency ceilings, owner counters and repeated mutation evidence; it belongs in performance/nightly. Caveat: the test scrolls `transaction-left-tree`, but production standalone TransactionLanes listens to `.cycle-viewport`; its recorded scroll timing therefore does not measure lane virtualization response and should not be treated as proof of scroll-bounded projection. The mounted-node thresholds are also coarse (<1,000).",
+      "reason": "This is a unique scale matrix with explicit latency ceilings, owner counters, mounted stable-ID window change, and repeated mutation evidence; it belongs in performance/nightly. The test scrolls the actual `.cycle-viewport` owner used by standalone TransactionLanes, not the independently scrolling Left Tree. The mounted-node thresholds remain coarse (<1,000).",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -21973,7 +21973,7 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "suitePath": [],
-      "line": 200,
+      "line": 208,
       "title": "single-lane Transaction edits remain bounded on a large sequential fixture",
       "project": "chromium",
       "timeoutMs": 30000,

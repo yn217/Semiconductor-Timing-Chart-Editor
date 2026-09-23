@@ -558,7 +558,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const isVisible = (top: number, height: number) => top < virtualBottom && top + height > virtualTop;
   const visibleGroupHeaders = groupHeaders.filter((header) => isVisible(header.labelTop, GROUP_HEADER_HEIGHT));
   const bandContainsSelected = (band: LaneBand) => selectedId !== undefined && (laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).some((transaction) => transaction.id === selectedId);
-  const visibleLaneBands = laneBands.filter((band) => isVisible(band.labelTop, band.labelHeight) || bandContainsSelected(band));
+  const visibleLaneBands = laneBands.filter((band) => isVisible(band.labelTop, band.labelHeight) || isVisible(band.trackTop, band.trackHeight) || bandContainsSelected(band));
   const isTreeTransactionVisible = (band: LaneBand, transaction: Transaction) => {
     if (isTransactionSelected(transaction.id)) return true;
     const row = band.treeRowOf.get(transaction.id) ?? 0;

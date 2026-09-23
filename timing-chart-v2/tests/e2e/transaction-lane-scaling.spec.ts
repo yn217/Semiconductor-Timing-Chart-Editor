@@ -52,7 +52,7 @@ test("10k Transaction fixture keeps mounted lane DOM viewport-bounded", async ({
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
-test("standalone Transaction tree scroll drives the virtualized lane surface", async ({ page }) => {
+test("standalone Transaction cycle viewport scroll advances the virtualized lane window", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   const base = generatePerformanceDocument({ signalCount: 40, cycleCount: 500, profile: "transaction-heavy" });
@@ -60,9 +60,14 @@ test("standalone Transaction tree scroll drives the virtualized lane surface", a
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-scroll.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "2000", { timeout: 60_000 });
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
-  const tree = page.getByTestId("transaction-left-tree");
   const lanes = page.getByTestId("transaction-lanes");
-await expect(tree).toBeVisible();  // #748: the Lane surface scrolls with the cycle viewport (the tree lists Transactions independently), and the  // virtualized bars must follow that scroll offset rather than the tree's.  const viewport = page.getByTestId("cycle-viewport");  await viewport.evaluate((element) => { element.scrollTop = Math.min(600, element.scrollHeight - element.clientHeight); });  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);  await expect.poll(() => lanes.locator("[data-transaction-id]").count()).toBeGreaterThan(0);
+  const viewport = page.getByTestId("cycle-viewport");
+  await expect(page.getByTestId("transaction-left-tree")).toBeVisible();
+  const visibleIdsBefore = await lanes.locator("[data-transaction-id]").evaluateAll((bars) => bars.map((bar) => bar.getAttribute("data-transaction-id")).filter((id): id is string => id !== null).sort());
+  await viewport.evaluate((element) => { element.scrollTop = Math.min(600, element.scrollHeight - element.clientHeight); });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await expect.poll(async () => lanes.locator("[data-transaction-id]").evaluateAll((bars) => bars.map((bar) => bar.getAttribute("data-transaction-id")).filter((id): id is string => id !== null).sort())).not.toEqual(visibleIdsBefore);
+  await expect(lanes.locator("[data-transaction-id]")).not.toHaveCount(0);
 });
 
 test("Transaction Fit All and Fit Selection remain view-only", async ({ page }) => {
@@ -140,9 +145,10 @@ test("central Transaction surface remains viewport-bounded across 1k/5k/10k with
     await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
     await expect(page.getByTestId("transaction-lanes")).toBeVisible({ timeout: 60_000 });
     const modeReady = await page.evaluate((startedAt) => performance.now() - startedAt, started);
-    // Standalone Transaction mode owns vertical virtualization through the
-    // left transaction tree; cycle-viewport is the shared horizontal owner.
-    const viewport = page.getByTestId("transaction-left-tree");
+    // Standalone TransactionLanes subscribes to the cycle viewport for its
+    // vertical window. The Left Tree scroll is independent and must not stand
+    // in for Lane virtualization evidence.
+    const viewport = page.getByTestId("cycle-viewport");
     const metrics = await page.getByTestId("transaction-lanes").evaluate((element) => ({
       totalHeight: Number.parseFloat((element as HTMLElement).style.height),
       mountedBars: element.querySelectorAll("[data-transaction-id]").length,
@@ -162,8 +168,10 @@ test("central Transaction surface remains viewport-bounded across 1k/5k/10k with
     await expect(lanes).toHaveAttribute("data-tree-row-builds", String(treeRowBuildsBeforeSelection));
     const selectionMs = await page.evaluate((startedAt) => performance.now() - startedAt, selectionStarted);
     const scrollStarted = await page.evaluate(() => performance.now());
+    const mountedIdsBeforeScroll = await lanes.locator("[data-transaction-id]").evaluateAll((bars) => bars.map((bar) => bar.getAttribute("data-transaction-id")).filter((id): id is string => id !== null).sort());
     await viewport.evaluate((element) => { element.scrollTop = Math.max(1, (element.scrollHeight - element.clientHeight) / 2); element.dispatchEvent(new Event("scroll")); });
     await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+    await expect.poll(async () => lanes.locator("[data-transaction-id]").evaluateAll((bars) => bars.map((bar) => bar.getAttribute("data-transaction-id")).filter((id): id is string => id !== null).sort())).not.toEqual(mountedIdsBeforeScroll);
     const scrollMs = await page.evaluate((startedAt) => performance.now() - startedAt, scrollStarted);
     const inspector = page.getByTestId("inspector");
     const startInput = inspector.getByLabel("Transaction start");
