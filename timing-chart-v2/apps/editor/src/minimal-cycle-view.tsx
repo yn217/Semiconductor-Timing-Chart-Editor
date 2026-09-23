@@ -628,7 +628,7 @@ export function MinimalCycleView() {
     actions,
     setRuntimeDiagnostics,
     navigateProblem,
-    ai: { getZoom: timelineNavigation.getZoom, fitAll: timelineNavigation.fitAll },
+    ai: { getZoom: timelineNavigation.getZoom, fitAll: timelineNavigation.fitAll, fitSelection: timelineNavigation.fitSelection },
   });
   const capabilities = deriveSelectionCapabilities(snapshot.document, selection.state);
   const { hasSelectedSignal, hasSelectedEntity, hasSelectedClipboard, hasDeletableSelection, canMoveUp, canMoveDown } = capabilities;
@@ -718,7 +718,7 @@ export function MinimalCycleView() {
       onMoveDown: () => moveSelection(1),
       onVisibility: setSelectionVisibility,
       onRange: (range: { readonly start: number; readonly end: number }) => { setRangeSelectionActive(true); setTimelineRange(range); },
-      onViewIntent: (intent: "fit-all" | "open-timeline") => { if (intent === "fit-all") timelineNavigation.fitAll(); else setRibbonTab("Timeline"); },
+      onViewIntent: (intent: "fit-all" | "fit-selection" | "open-timeline") => { if (intent === "fit-all") timelineNavigation.fitAll(); else if (intent === "fit-selection") timelineNavigation.fitSelection(); else setRibbonTab("Timeline"); },
       onCreateAnnotation: createSelectedAnnotation,
       onArrowPick: (annotationType: Parameters<typeof armArrowPick.current>[0]) => armArrowPick.current(annotationType),
       onZoom: timelineNavigation.zoomBy,

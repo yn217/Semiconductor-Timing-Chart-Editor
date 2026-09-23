@@ -335,7 +335,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, cyclesPerTc, on
       <div className="ribbon-major-group" data-major-group="Provider" aria-label="AI provider status">
         <DsRibbonGroup ariaLabel="Provider" className="ai-provider-group" label="Provider">
           {/* #778 Phase 1: "bridge running" must not be worded as "external agent connected" -- those are different facts. */}
-          <output className="ai-provider-status" data-testid="ai-provider-status">Local deterministic (offline) · {aiBridgeStatus === "connected-external-client" ? "external agent connected" : aiBridgeStatus === "connected" ? "bridge running, no external agent yet" : aiBridgeStatus === "connecting" ? "connecting to bridge…" : aiBridgeStatus === "error" ? "bridge connection failed" : "no external agent connected"}</output>
+          <output className="ai-provider-status" data-testid="ai-provider-status">Local deterministic (offline) · {aiBridgeStatus === "connected-external-client" ? "external agent connected" : aiBridgeStatus === "connected" ? "bridge running, no external agent yet" : aiBridgeStatus === "connecting" ? "connecting to bridge…" : aiBridgeStatus === "invalid-token" ? "bridge token rejected" : aiBridgeStatus === "unavailable" ? "bridge unavailable" : aiBridgeStatus === "token-required" ? "bridge token required" : aiBridgeStatus === "error" ? "bridge connection failed" : "no external agent connected"}</output>
         </DsRibbonGroup>
       </div>
     </>}
