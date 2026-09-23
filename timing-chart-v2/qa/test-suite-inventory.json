@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:21:23.545Z",
+  "generatedAt": "2026-09-23T07:23:26.637Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 865,
+  "reviewedCaseCount": 869,
   "curatedProfileCounts": {
-    "integration": 451,
-    "nightly": 175,
+    "integration": 454,
+    "nightly": 176,
     "performance": 48,
-    "pr": 233,
+    "pr": 234,
     "visual": 150
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -20710,18 +20710,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-empty-create-optional-lane",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The empty-state Transaction creation route succeeds with its Lane field untouched and produces a Transaction/History change rather than silently rejecting the optional Lane value.",
+      "duplicateGroup": "transaction-create-entry-points",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This isolates a real production regression at the no-selection Create form. It is not redundant with toolbar Add, which creates from a selected-list context and does not exercise the untouched empty-state Lane field.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-export.spec.ts",
@@ -20732,18 +20735,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-authoring-save-open-history",
+      "originIssue": 556,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A canonical Transaction's Inspector-edited identity/timing/lane/description and linked stable Signal survive Save/Open; Undo/Redo applies to the link operation and reopened document starts with clean History.",
+      "duplicateGroup": "transaction-save-open-lifecycle",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is an end-to-end canonical authoring and persistence lifecycle spanning multiple Apply operations, stable Signal linking, History reversal/replay, and real file Save/Open. Keep outside routine PR execution.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "transaction-export.spec.ts",
@@ -20754,18 +20761,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "combined-transaction-cycle-shared-geometry",
+      "originIssue": 573,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "In Combined view the same source-cycle position remains aligned between Transaction and Cycle panes before and after zoom and horizontal scroll, while shared rendered geometry owners are not rebuilt.",
+      "duplicateGroup": "combined-shared-time-axis",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This asserts measured cross-pane semantic X alignment through shared mapping/Snap geometry across zoom and nonzero scroll, a distinct dual-pane contract beyond static Combined visibility or mode-toggle no-mutation checks.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-export.spec.ts",
@@ -20776,18 +20786,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "combined-export-content-layers",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The production SVG export from Combined view contains both a stable Signal layer and a stable Transaction layer with document context, without mutating Canonical, History, or rendering state.",
+      "duplicateGroup": "combined-export-content",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This checks the actual export artifact's semantic layer content and view-only behavior. The neighboring all-formats test checks format encodings; neither alone proves both synchronized layer types appear in the artifact.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-export.spec.ts",
@@ -26853,20 +26866,20 @@
     {
       "file": "transaction-empty-state-create-lane-fix.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-export.spec.ts",
       "caseCount": 16,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "transaction-group-management.spec.ts",
