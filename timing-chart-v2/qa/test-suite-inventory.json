@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T02:00:11.811Z",
+  "generatedAt": "2026-09-23T02:09:01.443Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 430,
+  "reviewedCaseCount": 433,
   "curatedProfileCounts": {
-    "integration": 197,
+    "integration": 198,
     "nightly": 126,
     "performance": 23,
-    "pr": 132,
-    "visual": 95
+    "pr": 133,
+    "visual": 96
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -4430,18 +4430,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "comment-row-line-spacing-draft-apply",
+      "originIssue": 426,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Changing Comment Row line spacing stays local until Apply, commits the completed draft once, and Cancel restores the last committed value without changing History.",
+      "duplicateGroup": "comment-row-draft-apply-contract",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This compact visible Draft/Apply/Cancel journey protects the historical per-keystroke Semantic Command regression and the user-observable History boundary; state-only tests cannot prove the wired control path.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "cycle-default-pitch.spec.ts",
@@ -4602,18 +4605,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "design-system-ribbon-primitive-geometry",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The non-Home design-system ribbon button primitive preserves its documented minimum hit width, button height, icon dimensions, label containment, and token value.",
+      "duplicateGroup": "ribbon-primitive-geometry",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This deliberately isolates the reusable design-system primitive and its token geometry, so keep it out of semantic PR journeys and in the visual contract profile. It is a primitive-level check, not evidence that every production Ribbon surface mounts the primitive.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "diagnostic-aggregator.spec.ts",
@@ -5477,18 +5483,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-font-style-commit-boundaries",
+      "originIssue": 331,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Font Family, Size, and Color each commit one History unit at their documented completion boundary; repeated blur and Clear Formatting when already clear do not create extra History entries.",
+      "duplicateGroup": "annotation-font-style-commit-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This single journey crosses three distinct editor completion events plus scoped clear/no-op behavior. Keep the complete semantic lifecycle in integration rather than adding its multi-commit sequence to every PR run.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -23140,11 +23149,11 @@
     {
       "file": "comment-row-draft-consistency.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "cycle-default-pitch.spec.ts",
@@ -23192,7 +23201,7 @@
     {
       "file": "design-system-foundation.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -23201,7 +23210,7 @@
         "directDomMutation",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "diagnostic-aggregator.spec.ts",
@@ -23334,11 +23343,11 @@
     {
       "file": "font-style-commit-contract.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "full-gui.spec.ts",
