@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 214/963 cases reviewed.
+Semantic review progress: 271/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,21 +10,21 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 58 |
-| `nightly` | 42 |
+| `integration` | 115 |
+| `nightly` | 95 |
 | `performance` | 17 |
 | `pr` | 88 |
-| `visual` | 64 |
+| `visual` | 68 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
 | Spec file | Cases | Review status |
 | --- | ---: | --- |
-| `acceptance-397-sample-a.spec.ts` | 4 | 0/4 reviewed |
-| `acceptance-397-sample-c.spec.ts` | 3 | 0/3 reviewed |
-| `acceptance-397-sample-d.spec.ts` | 4 | 0/4 reviewed |
-| `acceptance-429-transaction-colors.spec.ts` | 4 | 0/4 reviewed |
-| `acceptance-429-transaction-composition.spec.ts` | 32 | 0/32 reviewed |
+| `acceptance-397-sample-a.spec.ts` | 4 | 4/4 reviewed |
+| `acceptance-397-sample-c.spec.ts` | 3 | 3/3 reviewed |
+| `acceptance-397-sample-d.spec.ts` | 4 | 4/4 reviewed |
+| `acceptance-429-transaction-colors.spec.ts` | 4 | 4/4 reviewed |
+| `acceptance-429-transaction-composition.spec.ts` | 32 | 32/32 reviewed |
 | `advanced-json-diagnostic.spec.ts` | 7 | 0/7 reviewed |
 | `ai-bridge.spec.ts` | 5 | 0/5 reviewed |
 | `ai-domain-coverage.spec.ts` | 1 | 0/1 reviewed |
@@ -219,7 +219,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-774-visibility-preserves-selection.spec.ts` | 2 | 2/2 reviewed |
 | `issue-775-annotation-draft-isolation.spec.ts` | 1 | 1/1 reviewed |
 | `issue-776-signal-inspector-draft-sync.spec.ts` | 2 | 2/2 reviewed |
-| `issue-777-current-v2-samples-acceptance.spec.ts` | 10 | 0/10 reviewed |
+| `issue-777-current-v2-samples-acceptance.spec.ts` | 10 | 10/10 reviewed |
 | `keyboard-shortcut-router.spec.ts` | 4 | 0/4 reviewed |
 | `keyboard-tabs-resizers.spec.ts` | 2 | 0/2 reviewed |
 | `label-anchor-source-display.spec.ts` | 1 | 0/1 reviewed |
