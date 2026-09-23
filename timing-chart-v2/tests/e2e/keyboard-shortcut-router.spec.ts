@@ -57,14 +57,13 @@ test("Ctrl+A inside a text input performs native select-all instead of the app s
   const rowIds = await surface.locator("[data-role='left-tree-rows'] [data-role='left-row'][data-row-id]").evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId));
   await surface.locator(`[data-role='left-row'][data-row-id='${rowIds[0]}']`).click();
 
-  const nameField = page.getByLabel("Signal display name", { exact: true }).or(page.getByLabel("Display name", { exact: true }));
-  if (await nameField.count()) {
-    await nameField.focus();
-    await page.keyboard.press("Control+a");
-    await page.keyboard.type("x");
-    const value = await nameField.inputValue();
-    expect(value).toBe("x");
-  }
+  const nameField = page.getByLabel("Inspector signal name", { exact: true });
+  await expect(nameField).toHaveCount(1);
+  await nameField.focus();
+  await page.keyboard.press("Control+a");
+  await page.keyboard.type("x");
+  const value = await nameField.inputValue();
+  expect(value).toBe("x");
   const selectedRows = surface.locator("[data-role='left-tree-rows'] [data-role='left-row'][aria-selected='true']");
   expect(await selectedRows.count()).toBeLessThanOrEqual(1);
 });
@@ -77,12 +76,18 @@ test("Escape cancels an in-progress Annotation drag, closes the context menu, an
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("text");
+  const annotationsBefore = await host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-id")).filter((id): id is string => id !== null));
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const revisionBefore = await host.getAttribute("data-canonical-revision");
   const historyBefore = await page.getByTestId("history-status").textContent();
 
-  const owner = host.locator("[data-role='annotation-owner']").last();
+  const annotationsAfter = await host.locator("[data-role='annotation-owner'][data-annotation-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-id")).filter((id): id is string => id !== null));
+  expect(new Set(annotationsAfter).size).toBe(annotationsAfter.length);
+  const newAnnotationIds = annotationsAfter.filter((id) => !annotationsBefore.includes(id));
+  expect(newAnnotationIds).toHaveLength(1);
+  const owner = host.locator(`[data-role='annotation-owner'][data-annotation-id='${newAnnotationIds[0]}']`);
+  await expect(owner).toBeVisible();
   const box = (await owner.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();

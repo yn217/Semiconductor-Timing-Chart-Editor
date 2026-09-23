@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 433/963 cases reviewed.
+Semantic review progress: 449/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 198 |
-| `nightly` | 126 |
+| `integration` | 203 |
+| `nightly` | 128 |
 | `performance` | 23 |
-| `pr` | 133 |
+| `pr` | 144 |
 | `visual` | 96 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -106,7 +106,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `history-retention.spec.ts` | 1 | 0/1 reviewed |
 | `home-command-surface.spec.ts` | 24 | 0/24 reviewed |
 | `home-ribbon-timegroup-cleanup.spec.ts` | 1 | 0/1 reviewed |
-| `icon-button-dialog-close.spec.ts` | 5 | 0/5 reviewed |
+| `icon-button-dialog-close.spec.ts` | 5 | 5/5 reviewed |
 | `incremental-invalidation-matrix.spec.ts` | 1 | 0/1 reviewed |
 | `insert-icon-semantics.spec.ts` | 3 | 0/3 reviewed |
 | `insert-timeline-ribbon.spec.ts` | 10 | 0/10 reviewed |
@@ -220,7 +220,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-775-annotation-draft-isolation.spec.ts` | 1 | 1/1 reviewed |
 | `issue-776-signal-inspector-draft-sync.spec.ts` | 2 | 2/2 reviewed |
 | `issue-777-current-v2-samples-acceptance.spec.ts` | 10 | 10/10 reviewed |
-| `keyboard-shortcut-router.spec.ts` | 4 | 0/4 reviewed |
+| `keyboard-shortcut-router.spec.ts` | 4 | 4/4 reviewed |
 | `keyboard-tabs-resizers.spec.ts` | 2 | 0/2 reviewed |
 | `label-anchor-source-display.spec.ts` | 1 | 0/1 reviewed |
 | `layout-inspector.spec.ts` | 4 | 0/4 reviewed |
@@ -340,7 +340,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `unsaved-file-dialog.spec.ts` | 12 | 0/12 reviewed |
 | `v8-gui-contract-coverage.spec.ts` | 1 | 1/1 reviewed |
 | `value-label-layout.spec.ts` | 1 | 0/1 reviewed |
-| `value-signal-compatibility.spec.ts` | 7 | 0/7 reviewed |
+| `value-signal-compatibility.spec.ts` | 7 | 7/7 reviewed |
 | `view-metrics-owner.spec.ts` | 1 | 0/1 reviewed |
 | `view-mode-readability.spec.ts` | 3 | 0/3 reviewed |
 | `view-ribbon-slot.spec.ts` | 7 | 0/7 reviewed |
