@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 400/963 cases reviewed.
+Semantic review progress: 410/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 181 |
-| `nightly` | 120 |
+| `integration` | 189 |
+| `nightly` | 121 |
 | `performance` | 22 |
-| `pr` | 123 |
+| `pr` | 125 |
 | `visual` | 91 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -49,7 +49,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `badge-parity.spec.ts` | 2 | 2/2 reviewed |
 | `badge-visual-evidence.spec.ts` | 1 | 1/1 reviewed |
 | `bottom-bookmark-navigation.spec.ts` | 2 | 2/2 reviewed |
-| `bottom-context.spec.ts` | 5 | 0/5 reviewed |
+| `bottom-context.spec.ts` | 5 | 5/5 reviewed |
 | `bottom-editor-row-contrast.spec.ts` | 3 | 3/3 reviewed |
 | `bottom-panel-cancel-apply-height.spec.ts` | 1 | 1/1 reviewed |
 | `bottom-panel-full-width.spec.ts` | 2 | 2/2 reviewed |
@@ -77,7 +77,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `dialog-esc-lifecycle.spec.ts` | 1 | 0/1 reviewed |
 | `document-properties.spec.ts` | 1 | 0/1 reviewed |
 | `edge-counter-compact.spec.ts` | 5 | 0/5 reviewed |
-| `edit-commit-contract.spec.ts` | 5 | 0/5 reviewed |
+| `edit-commit-contract.spec.ts` | 5 | 5/5 reviewed |
 | `empty-group-tree-projection.spec.ts` | 3 | 0/3 reviewed |
 | `event-pulse-lifecycle.spec.ts` | 2 | 0/2 reviewed |
 | `export-diagnostics.spec.ts` | 2 | 2/2 reviewed |
