@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:41:32.255Z",
+  "generatedAt": "2026-09-23T05:42:37.871Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,9 +13,9 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 698,
+  "reviewedCaseCount": 699,
   "curatedProfileCounts": {
-    "integration": 328,
+    "integration": 329,
     "nightly": 163,
     "performance": 44,
     "pr": 201,
@@ -8348,18 +8348,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "group-transaction-inspector-content-reachability",
+      "originIssue": 426,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At the default compact viewport, Group Apply and Transaction Apply/Delete actions remain reachable within their scrollable Inspector content and are not clipped by the shell.",
+      "duplicateGroup": "inspector-scroll-reachability",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This covers the long Group and Transaction Inspector variants, which have distinct scroll-content wrappers and bottom actions from the Signal/Annotation/Clock Inspector tests. The test scrolls to the real buttons and requires viewport visibility/actionability rather than mere DOM presence.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "inspector-hide-compacts-rows.spec.ts",
@@ -24344,11 +24347,11 @@
     {
       "file": "inspector-group-transaction-scroll.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "inspector-hide-compacts-rows.spec.ts",
