@@ -228,6 +228,7 @@ export function useEditorSecondarySurfaces(
     document: input.document,
     documentEpoch: input.documentEpoch,
     revision: input.revision,
+    mode: workspace.viewMode === "Split" ? "Combined" : workspace.viewMode,
     selectedSignalId: input.annotationTargetSignalId,
     selectedGroupId: selected.group?.id,
     selectedAnnotationId: selected.annotation?.id,

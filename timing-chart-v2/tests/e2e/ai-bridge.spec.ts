@@ -27,7 +27,16 @@ async function waitForBridgeReady(): Promise<void> {
 }
 
 async function callTool(name: string, token = TOKEN, args?: Record<string, unknown>) {
-  const response = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }) });
+  let editorSessionId = args?.editorSessionId;
+  if (name !== "list_editor_sessions" && typeof editorSessionId !== "string") {
+    const sessionsResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/call", params: { name: "list_editor_sessions", arguments: {} } }) });
+    if (!sessionsResponse.ok) return { status: sessionsResponse.status, body: await sessionsResponse.json() as { result?: { content: readonly { text: string }[] }; error?: { code: number; message: string } } };
+    const sessionResult = (await sessionsResponse.json() as { result: { content: readonly { text: string }[] } }).result;
+    const sessions = JSON.parse(sessionResult.content[0]!.text) as { editorSessionId: string }[];
+    editorSessionId = sessions[0]?.editorSessionId;
+  }
+  const arguments_ = name === "list_editor_sessions" ? args ?? {} : { ...args, editorSessionId };
+  const response = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: arguments_ } }) });
   return { status: response.status, body: (await response.json()) as { result?: { content: readonly { text: string }[] }; error?: { code: number; message: string } } };
 }
 
@@ -71,7 +80,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  expect(tools).toEqual(["get_document_summary", "get_selection", "get_viewport_snapshot", "fit_all", "propose_edit"]);
+  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_selection", "get_viewport_snapshot", "fit_all", "propose_edit"]);
 
   // Read-only: reflects the real, live document -- never a canned/fake value.
   const summary = await callTool("get_document_summary");

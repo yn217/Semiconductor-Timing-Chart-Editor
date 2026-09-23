@@ -20,6 +20,9 @@ export type AIBridgeStatus = "disabled" | "connecting" | "connected" | "connecte
 
 export type AIBridgeContext = {
   readonly document: CanonicalDocument;
+  readonly documentEpoch: number;
+  readonly revision: number;
+  readonly mode: "Cycle" | "Transaction" | "Combined";
   readonly selectedSignalId: SignalId | undefined;
   readonly selectedGroupId: GroupId | undefined;
   readonly selectedAnnotationId: string | undefined;
@@ -77,6 +80,9 @@ export function useAIBridgeClient(enabled: boolean, host: string, port: number, 
   const [status, setStatus] = useState<AIBridgeStatus>("disabled");
   const contextRef = useRef(context);
   contextRef.current = context;
+  const tabIdRef = useRef<string | undefined>(undefined);
+  if (!tabIdRef.current) tabIdRef.current = globalThis.crypto.randomUUID();
+  const sessionRef = useRef<{ readonly documentKey: string; readonly editorSessionId: string } | undefined>(undefined);
 
   useEffect(() => {
     if (!enabled) { setStatus("disabled"); return undefined; }
@@ -96,18 +102,61 @@ export function useAIBridgeClient(enabled: boolean, host: string, port: number, 
     setStatus("connecting");
     const baseUrl = `http://${host}:${port}`;
     const authHeaders = { authorization: `Bearer ${token}` };
+    const getSession = (currentContext: AIBridgeContext, forceNew = false) => {
+      const documentKey = `${currentContext.documentEpoch}:${currentContext.document.document.id}`;
+      if (forceNew || !sessionRef.current || sessionRef.current.documentKey !== documentKey) {
+        sessionRef.current = { documentKey, editorSessionId: globalThis.crypto.randomUUID() };
+      }
+      return { tabId: tabIdRef.current!, ...sessionRef.current };
+    };
+    let activeSession = getSession(contextRef.current, true);
+    const closeSession = (session: ReturnType<typeof getSession>) => {
+      void fetch(`${baseUrl}/bridge/close`, {
+        method: "POST",
+        headers: { ...authHeaders, "content-type": "application/json" },
+        body: JSON.stringify({ tabId: session.tabId, editorSessionId: session.editorSessionId }),
+        keepalive: true,
+      }).catch(() => { /* session expiry remains the fallback if the page is closing */ });
+    };
+    const handlePageHide = () => closeSession(activeSession);
+    window.addEventListener("pagehide", handlePageHide);
     const pollOnce = async (): Promise<boolean> => {
-      const response = await fetch(`${baseUrl}/bridge/poll`, { headers: authHeaders, signal: controller.signal });
+      const currentContext = contextRef.current;
+      const session = getSession(currentContext);
+      activeSession = session;
+      const document = currentContext.document;
+      const response = await fetch(`${baseUrl}/bridge/poll`, {
+        method: "POST",
+        headers: { ...authHeaders, "content-type": "application/json" },
+        body: JSON.stringify({
+          tabId: session.tabId,
+          editorSessionId: session.editorSessionId,
+          documentId: document.document.id,
+          documentTitle: document.document.title,
+          mode: currentContext.mode,
+          revision: currentContext.revision,
+          cycleCount: document.timeline.cycleCount,
+          signalCount: document.signals.length,
+          transactionCount: document.transactions.length,
+          annotationCount: document.annotations.length,
+          bookmarkCount: document.bookmarks.length,
+        }),
+        signal: controller.signal,
+      });
       if (response.status === 401) throw new Error("Bridge rejected the configured token.");
       if (!response.ok) throw new Error(`Bridge poll failed (${response.status}).`);
-      const request = (await response.json()) as { requestId: string | null; tool?: string; arguments?: Record<string, unknown>; externalClientConnected?: boolean };
+      const request = (await response.json()) as { requestId: string | null; editorSessionId: string; tool?: string; arguments?: Record<string, unknown>; externalClientConnected?: boolean };
       if (cancelled) return false;
       setStatus(request.externalClientConnected ? "connected-external-client" : "connected");
       if (!request.requestId || !request.tool) return false;
       let result: unknown;
       let error: string | undefined;
-      try { result = executeTool(request.tool, request.arguments ?? {}, contextRef.current); } catch (thrown) { error = thrown instanceof Error ? thrown.message : "Tool execution failed."; }
-      await fetch(`${baseUrl}/bridge/respond`, { method: "POST", headers: { ...authHeaders, "content-type": "application/json" }, body: JSON.stringify({ requestId: request.requestId, result, error }), signal: controller.signal });
+      try {
+        const currentSession = getSession(contextRef.current);
+        if (request.editorSessionId !== session.editorSessionId || currentSession.editorSessionId !== request.editorSessionId) throw new Error("Target Editor session changed before this tool call could execute; choose a live session and retry.");
+        result = executeTool(request.tool, request.arguments ?? {}, contextRef.current);
+      } catch (thrown) { error = thrown instanceof Error ? thrown.message : "Tool execution failed."; }
+      await fetch(`${baseUrl}/bridge/respond`, { method: "POST", headers: { ...authHeaders, "content-type": "application/json" }, body: JSON.stringify({ requestId: request.requestId, editorSessionId: request.editorSessionId, result, error }), signal: controller.signal });
       return true;
     };
     // The bridge's own /bridge/poll answers immediately (queued call or
@@ -125,7 +174,7 @@ export function useAIBridgeClient(enabled: boolean, host: string, port: number, 
       }
     };
     void loop();
-    return () => { cancelled = true; controller.abort(); };
+    return () => { cancelled = true; window.removeEventListener("pagehide", handlePageHide); controller.abort(); closeSession(activeSession); };
   }, [enabled, host, port, token]);
 
   return status;

@@ -56,7 +56,7 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
     // that forwards an arbitrary tool name.
     expect(source).toMatch(/READ_TOOLS\.has\(name\)\s*\|\|\s*VIEW_ONLY_TOOLS\.has\(name\)\s*\|\|\s*PROPOSAL_TOOLS\.has\(name\)/);
     const catalogNames = [...source.matchAll(/name:\s*"([a-z_]+)"/g)].map((match) => match[1]);
-    expect(new Set(catalogNames)).toEqual(new Set(["get_document_summary", "get_selection", "get_viewport_snapshot", "fit_all", "propose_edit"]));
+    expect(new Set(catalogNames)).toEqual(new Set(["list_editor_sessions", "get_document_summary", "get_selection", "get_viewport_snapshot", "fit_all", "propose_edit"]));
   });
 
   it("requires the bearer token on every route, including the poll/respond pair, before any routing decision", () => {
@@ -71,6 +71,13 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
     expect(tokenCheckIndex).toBeLessThan(mcpRouteIndex);
     expect(tokenCheckIndex).toBeLessThan(pollRouteIndex);
     expect(tokenCheckIndex).toBeLessThan(respondRouteIndex);
+  });
+
+  it("binds every pending request and response to an explicit Editor session", () => {
+    expect(source).toContain("call.editorSessionId === session.editorSessionId");
+    expect(source).toContain("body.editorSessionId !== call.editorSessionId");
+    expect(source).toContain("Tool '${name}' requires an explicit editorSessionId");
+    expect(source).toContain("requests are never redirected to another tab");
   });
 
   it("bounds request body size so the bridge cannot be used to exhaust memory", () => {

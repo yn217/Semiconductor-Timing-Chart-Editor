@@ -21,6 +21,7 @@ const HOST = "127.0.0.1"; // never 0.0.0.0 -- localhost-only by construction.
 const PORT = Number(process.env.AI_BRIDGE_PORT ?? 4610);
 const TOKEN = process.env.AI_BRIDGE_TOKEN ?? randomBytes(24).toString("hex");
 const POLL_TIMEOUT_MS = 25_000;
+const EDITOR_SESSION_TIMEOUT_MS = 15_000;
 
 // #395 item 4 (MCP Tool Surface): the exact whitelist. Nothing outside
 // this list can ever be invoked, regardless of what a client sends --
@@ -35,12 +36,15 @@ const VIEW_ONLY_TOOLS = new Set(["fit_all"]);
 // "apply" tool for a document-changing proposal at all: a human must open
 // the AI Assistant panel and manually Validate + Apply it.
 const PROPOSAL_TOOLS = new Set(["propose_edit"]);
+const sessionInput = { type: "string", minLength: 1, maxLength: 128, description: "Explicit live Editor session id returned by list_editor_sessions." };
+const sessionSchema = { type: "object", properties: { editorSessionId: sessionInput }, required: ["editorSessionId"], additionalProperties: false };
 const TOOL_CATALOG = [
-  { name: "get_document_summary", description: "Read-only summary of the current document (title, signal/annotation/transaction counts, timeline length). Never mutates anything." },
-  { name: "get_selection", description: "Read-only current selection (selected Signal/Group/Annotation/Transaction id, if any). Never mutates anything." },
-  { name: "get_viewport_snapshot", description: "Read-only structured Element Map: every signal's stable id, name, role, type, group and visibility, plus current selection, zoom and cycle count. Does not include a raw pixel image -- edits must target the stable ids returned here, never pixel coordinates. Never mutates anything." },
-  { name: "fit_all", description: "View-only: fit the complete timeline into the viewport. Canonical/History/Dirty delta is always 0." },
-  { name: "propose_edit", description: "Submit a document-changing edit request as a Preview only -- it is never auto-validated or auto-applied. A human must open the AI Assistant panel and manually Validate + Apply it. Takes a single 'query' string argument." },
+  { name: "list_editor_sessions", description: "List live Editor tabs by session id, document title, mode, revision and entity counts. Select one session id and pass it to every other tool; no document content is returned here.", inputSchema: { type: "object", properties: {}, additionalProperties: false } },
+  { name: "get_document_summary", description: "Read-only summary of the explicitly targeted Editor document (title, signal/annotation/transaction counts, timeline length). Never mutates anything.", inputSchema: sessionSchema },
+  { name: "get_selection", description: "Read-only current selection for the explicitly targeted Editor session (selected Signal/Group/Annotation/Transaction id, if any). Never mutates anything.", inputSchema: sessionSchema },
+  { name: "get_viewport_snapshot", description: "Read-only structured Element Map for the explicitly targeted Editor session: every signal's stable id, name, role, type, group and visibility, plus current selection, zoom and cycle count. Does not include a raw pixel image. Never mutates anything.", inputSchema: sessionSchema },
+  { name: "fit_all", description: "View-only: fit the complete timeline in the explicitly targeted Editor session. Canonical/History/Dirty delta is always 0.", inputSchema: sessionSchema },
+  { name: "propose_edit", description: "Submit a document-changing edit request to the explicitly targeted Editor session as a Preview only -- it is never auto-validated or auto-applied. A human must open the AI Assistant panel and manually Validate + Apply it.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, query: { type: "string", minLength: 1 } }, required: ["editorSessionId", "query"], additionalProperties: false } },
 ];
 
 function timingSafeTokenEquals(candidate) {
@@ -57,12 +61,12 @@ function bearerToken(req, url) {
   return url.searchParams.get("token") ?? undefined;
 }
 
-// Deliberately simple: no long-poll/waiter matching. /bridge/poll always
-// answers immediately (queued call or null); the browser tab is
-// responsible for polling on its own short interval (see
-// ai-bridge-client.ts). This trades a little latency for a design with no
-// concurrent-request races to get right.
-/** Not-yet-dispatched calls, in arrival order. */
+// Polling remains immediate, but calls are bound to an explicit Editor
+// session. A shared token authorizes transport only; it never identifies
+// which document is allowed to receive a call.
+const editorSessions = new Map();
+const sessionByTab = new Map();
+/** Not-yet-dispatched calls, in arrival order, each bound to editorSessionId. */
 const queuedCalls = [];
 /** Dispatched to a poller, awaiting /bridge/respond, keyed by requestId. */
 const inFlightCalls = new Map();
@@ -86,14 +90,84 @@ function removeEverywhere(requestId) {
   inFlightCalls.delete(requestId);
 }
 
-function queueToolCall(tool, args) {
+function staleSessionError(editorSessionId) {
+  return new Error(`Editor session '${editorSessionId}' is stale or unavailable. Call list_editor_sessions and target a live editorSessionId; requests are never redirected to another tab.`);
+}
+
+function rejectSessionCalls(editorSessionId) {
+  for (let index = queuedCalls.length - 1; index >= 0; index -= 1) {
+    const call = queuedCalls[index];
+    if (call.editorSessionId !== editorSessionId) continue;
+    queuedCalls.splice(index, 1);
+    clearTimeout(call.timeout);
+    call.reject(staleSessionError(editorSessionId));
+  }
+  for (const [requestId, call] of inFlightCalls) {
+    if (call.editorSessionId !== editorSessionId) continue;
+    inFlightCalls.delete(requestId);
+    clearTimeout(call.timeout);
+    call.reject(staleSessionError(editorSessionId));
+  }
+}
+
+function removeEditorSession(editorSessionId) {
+  const session = editorSessions.get(editorSessionId);
+  if (!session) return false;
+  editorSessions.delete(editorSessionId);
+  if (sessionByTab.get(session.tabId) === editorSessionId) sessionByTab.delete(session.tabId);
+  rejectSessionCalls(editorSessionId);
+  return true;
+}
+
+function pruneStaleSessions(now = Date.now()) {
+  for (const [editorSessionId, session] of editorSessions) {
+    if (now - session.lastSeenAt > EDITOR_SESSION_TIMEOUT_MS) removeEditorSession(editorSessionId);
+  }
+}
+
+function registerEditorSession(body) {
+  pruneStaleSessions();
+  const { tabId, editorSessionId, documentId, documentTitle } = body ?? {};
+  if (![tabId, editorSessionId, documentId].every((value) => typeof value === "string" && value.length > 0 && value.length <= 128)) {
+    throw new Error("Editor poll requires tabId, editorSessionId, and documentId strings (1..128 characters). ");
+  }
+  if (typeof documentTitle !== "string" || documentTitle.length > 256) throw new Error("Editor poll requires a documentTitle string up to 256 characters.");
+  const previousSessionId = sessionByTab.get(tabId);
+  if (previousSessionId && previousSessionId !== editorSessionId) removeEditorSession(previousSessionId);
+  const existing = editorSessions.get(editorSessionId);
+  if (existing && (existing.tabId !== tabId || existing.documentId !== documentId)) {
+    removeEditorSession(editorSessionId);
+    throw staleSessionError(editorSessionId);
+  }
+  const count = (value) => Number.isSafeInteger(value) && value >= 0 ? value : 0;
+  const session = existing ?? { tabId, editorSessionId, documentId, createdAt: Date.now() };
+  session.documentTitle = documentTitle;
+  session.mode = ["Cycle", "Transaction", "Combined"].includes(body.mode) ? body.mode : "Unknown";
+  session.revision = count(body.revision);
+  session.cycleCount = count(body.cycleCount);
+  session.signalCount = count(body.signalCount);
+  session.transactionCount = count(body.transactionCount);
+  session.annotationCount = count(body.annotationCount);
+  session.bookmarkCount = count(body.bookmarkCount);
+  session.lastSeenAt = Date.now();
+  editorSessions.set(editorSessionId, session);
+  sessionByTab.set(tabId, editorSessionId);
+  return session;
+}
+
+function listEditorSessions() {
+  pruneStaleSessions();
+  return [...editorSessions.values()].map(({ editorSessionId, documentId, documentTitle, mode, revision, cycleCount, signalCount, transactionCount, annotationCount, bookmarkCount, createdAt, lastSeenAt }) => ({ editorSessionId, documentId, documentTitle, mode, revision, cycleCount, signalCount, transactionCount, annotationCount, bookmarkCount, createdAt, lastSeenAt }));
+}
+
+function queueToolCall(editorSessionId, tool, args) {
   return new Promise((resolve, reject) => {
     const requestId = randomUUID();
     const timeout = setTimeout(() => {
       removeEverywhere(requestId);
-      reject(new Error("Timed out waiting for the connected browser tab to respond (is a browser tab actually connected with the bridge enabled?)."));
+      reject(new Error(`Timed out waiting for Editor session '${editorSessionId}' to respond. The target may be inactive; requests are never redirected to another tab.`));
     }, POLL_TIMEOUT_MS);
-    queuedCalls.push({ requestId, tool, args: args ?? {}, resolve, reject, timeout });
+    queuedCalls.push({ requestId, editorSessionId, tool, args: args ?? {}, resolve, reject, timeout });
   });
 }
 
@@ -128,13 +202,20 @@ async function handleMcp(res, body) {
   if (method === "tools/list") { reply({ tools: TOOL_CATALOG }); return; }
   if (method === "tools/call") {
     const name = params?.name;
-    if (typeof name !== "string" || !(READ_TOOLS.has(name) || VIEW_ONLY_TOOLS.has(name) || PROPOSAL_TOOLS.has(name))) { replyError(-32601, `Unknown or unauthorized tool '${name}'. Only ${[...READ_TOOLS, ...VIEW_ONLY_TOOLS, ...PROPOSAL_TOOLS].join(", ")} are exposed.`); return; }
+    if (name === "list_editor_sessions") { markExternalClientSeen(); reply({ content: [{ type: "text", text: JSON.stringify(listEditorSessions()) }], isError: false }); return; }
+    if (typeof name !== "string" || !(READ_TOOLS.has(name) || VIEW_ONLY_TOOLS.has(name) || PROPOSAL_TOOLS.has(name))) { replyError(-32601, `Unknown or unauthorized tool '${name}'. Only list_editor_sessions, ${[...READ_TOOLS, ...VIEW_ONLY_TOOLS, ...PROPOSAL_TOOLS].join(", ")} are exposed.`); return; }
+    const args = params?.arguments;
+    const editorSessionId = args?.editorSessionId;
+    if (typeof editorSessionId !== "string" || editorSessionId.length === 0) { replyError(-32602, `Tool '${name}' requires an explicit editorSessionId from list_editor_sessions.`); return; }
+    pruneStaleSessions();
+    if (!editorSessions.has(editorSessionId)) { replyError(-32004, staleSessionError(editorSessionId).message); return; }
     markExternalClientSeen();
     try {
-      const result = await queueToolCall(name, params?.arguments);
+      const { editorSessionId: _targetSessionId, ...toolArgs } = args;
+      const result = await queueToolCall(editorSessionId, name, toolArgs);
       reply({ content: [{ type: "text", text: JSON.stringify(result) }], isError: false });
     } catch (error) {
-      replyError(-32000, error instanceof Error ? error.message : "Tool call failed.");
+      replyError(error instanceof Error && error.message.startsWith("Editor session '") ? -32004 : -32000, error instanceof Error ? error.message : "Tool call failed.");
     }
     return;
   }
@@ -167,22 +248,40 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (req.method === "GET" && url.pathname === "/bridge/poll") {
-    const next = queuedCalls.shift();
+  if (req.method === "POST" && url.pathname === "/bridge/poll") {
+    let body;
+    try { body = await readJsonBody(req); } catch (error) { sendJson(res, 400, { error: error instanceof Error ? error.message : "Bad request." }); return; }
+    let session;
+    try { session = registerEditorSession(body); } catch (error) { sendJson(res, 400, { error: error instanceof Error ? error.message : "Invalid Editor session." }); return; }
+    const nextIndex = queuedCalls.findIndex((call) => call.editorSessionId === session.editorSessionId);
+    const next = nextIndex >= 0 ? queuedCalls.splice(nextIndex, 1)[0] : undefined;
     if (next) {
       inFlightCalls.set(next.requestId, next);
-      sendJson(res, 200, { requestId: next.requestId, tool: next.tool, arguments: next.args, externalClientConnected: isExternalClientConnected() });
+      sendJson(res, 200, { requestId: next.requestId, editorSessionId: session.editorSessionId, tool: next.tool, arguments: next.args, externalClientConnected: isExternalClientConnected() });
       return;
     }
-    sendJson(res, 200, { requestId: null, externalClientConnected: isExternalClientConnected() });
+    sendJson(res, 200, { requestId: null, editorSessionId: session.editorSessionId, externalClientConnected: isExternalClientConnected() });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/bridge/close") {
+    let body;
+    try { body = await readJsonBody(req); } catch (error) { sendJson(res, 400, { error: error instanceof Error ? error.message : "Bad request." }); return; }
+    const session = typeof body?.editorSessionId === "string" ? editorSessions.get(body.editorSessionId) : undefined;
+    if (session && session.tabId !== body.tabId) { sendJson(res, 403, { error: "Editor session does not belong to this tabId." }); return; }
+    const closed = session ? removeEditorSession(session.editorSessionId) : false;
+    sendJson(res, 200, { closed });
     return;
   }
 
   if (req.method === "POST" && url.pathname === "/bridge/respond") {
     let body;
     try { body = await readJsonBody(req); } catch (error) { sendJson(res, 400, { error: error instanceof Error ? error.message : "Bad request." }); return; }
+    pruneStaleSessions();
     const call = typeof body?.requestId === "string" ? inFlightCalls.get(body.requestId) : undefined;
     if (!call) { sendJson(res, 404, { error: "Unknown or already-resolved requestId." }); return; }
+    if (body.editorSessionId !== call.editorSessionId) { sendJson(res, 403, { error: "Response editorSessionId does not match the targeted request." }); return; }
+    if (!editorSessions.has(call.editorSessionId)) { removeEverywhere(call.requestId); clearTimeout(call.timeout); call.reject(staleSessionError(call.editorSessionId)); sendJson(res, 410, { error: "Target Editor session is stale." }); return; }
     removeEverywhere(body.requestId);
     clearTimeout(call.timeout);
     if (body.error) call.reject(new Error(String(body.error)));
@@ -194,9 +293,14 @@ const server = createServer(async (req, res) => {
   sendJson(res, 404, { error: "Not found." });
 });
 
+const sessionSweep = setInterval(pruneStaleSessions, 1_000);
+sessionSweep.unref();
+
 server.listen(PORT, HOST, () => {
+  const address = server.address();
+  const listeningPort = typeof address === "object" && address ? address.port : PORT;
   // eslint-disable-next-line no-console
-  console.log(`[ai-bridge] listening on http://${HOST}:${PORT} (localhost-only)`);
+  console.log(`[ai-bridge] listening on http://${HOST}:${listeningPort} (localhost-only)`);
   console.log(`[ai-bridge] token: ${TOKEN}`);
   console.log("[ai-bridge] paste this token into the Editor's AI Settings > Agent Connection to authorize a browser tab.");
 });
