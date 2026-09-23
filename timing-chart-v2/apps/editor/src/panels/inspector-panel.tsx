@@ -1,5 +1,5 @@
 import { groupColorFor, resolveTransactionColor } from "../transaction-color.js";
-import { cyclesPerTc, cyclesToTc, tcFieldLabel, tcToCycles, tcUnitLabel } from "../transaction-tc.js";
+import { cyclesToTc, tcFieldLabel, tcToCycles, tcUnitLabel } from "../transaction-tc.js";
 import type { ReactNode } from "react";
 import { memo, startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
@@ -111,7 +111,7 @@ function InspectorSpacerDraft({ spacer, onApply, onDelete }: { readonly spacer: 
   </form>;
 }
 
-export function InspectorPanel({ signal, selectedSignalIds, group, annotation, transaction, bookmark, collapsedGroup, onToggleGroupCollapse, registry, document, viewport, commands, onReveal, onCancel, onClose, onDeleteBookmark, onToggleTransactionSignal, onGroupPreview, onAnnotationPreview, minimapMode = "signal" }: { readonly signal: Signal | undefined; readonly selectedSignalIds?: ReadonlySet<SignalId>; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly bookmark: Bookmark | undefined; readonly collapsedGroup: boolean; readonly onToggleGroupCollapse: (() => void) | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void; readonly onDeleteBookmark: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void; readonly onGroupPreview?: (groupId: GroupId, style: SignalGroupStyle | undefined) => void; readonly onAnnotationPreview?: (annotationId: AnnotationId, draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => void; readonly minimapMode?: "signal" | "transaction" }) {
+export function InspectorPanel({ signal, selectedSignalIds, group, annotation, transaction, bookmark, collapsedGroup, onToggleGroupCollapse, registry, document, cyclesPerTc: tcPer = 10, viewport, commands, onReveal, onCancel, onClose, onDeleteBookmark, onToggleTransactionSignal, onGroupPreview, onAnnotationPreview, minimapMode = "signal" }: { readonly signal: Signal | undefined; readonly selectedSignalIds?: ReadonlySet<SignalId>; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly bookmark: Bookmark | undefined; readonly collapsedGroup: boolean; readonly onToggleGroupCollapse: (() => void) | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly cyclesPerTc?: number; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void; readonly onDeleteBookmark: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void; readonly onGroupPreview?: (groupId: GroupId, style: SignalGroupStyle | undefined) => void; readonly onAnnotationPreview?: (annotationId: AnnotationId, draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => void; readonly minimapMode?: "signal" | "transaction" }) {
   if ((selectedSignalIds?.size ?? 0) > 1) return <InspectorMultiSelection count={selectedSignalIds!.size} registry={registry} document={document} viewport={viewport} onCancel={onCancel} onClose={onClose} />;
   const [name, setName] = useState(signal?.name ?? "");
   const [groupName, setGroupName] = useState(group?.name ?? "");
@@ -128,7 +128,6 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings | undefined>(signal?.type === "clock" ? signal.edgeCounter : undefined);
   const phaseDraft = usePendingPhaseDraft(transaction);
   const [transactionName, setTransactionName] = useState(transaction?.name ?? "");
-  const tcPer = cyclesPerTc(document);
   const [transactionStart, setTransactionStart] = useState(transaction?.start ?? 0);
   const [transactionEnd, setTransactionEnd] = useState(transaction?.end ?? 1);
   const [transactionLane, setTransactionLane] = useState(transaction?.laneId ?? "lane_0");

@@ -4,14 +4,54 @@ import { canonicalFixture } from "../fixtures/canonical";
 
 // Bottom Panel Visual Reference pass (#402/#426): Name moved to Inspector
 // (its sole owner now) -- Bottom's own duplicate Name field was removed.
-async function makeDirty(page: import("@playwright/test").Page) {
+async function makeDirty(page: import("@playwright/test").Page, signalId = "sig_cycle_request") {
   const host = page.getByTestId("cycle-surface");
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await host.locator(`[data-role='frozen-row'][data-row-id='${signalId}']`).click();
   const name = page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true });
   await name.fill("UNSAVED_REQUEST");
   await name.press("Enter");
   await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
+}
+
+async function openReplacementFromRibbon(page: import("@playwright/test").Page, title: string) {
+  await page.getByRole("button", { name: "File", exact: true }).click();
+  const openButton = page.getByTestId("ribbon").getByRole("button", { name: "Open", exact: true });
+  const chooserPromise = page.waitForEvent("filechooser");
+  await openButton.click();
+  const chooser = await chooserPromise;
+  const replacement = canonicalFixture();
+  replacement.document.title = title;
+  await chooser.setFiles({ name: `${title}.tcd`, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(replacement)) });
+  const dialog = page.getByTestId("unsaved-file-dialog");
+  await expect(dialog).toBeVisible();
+  return { dialog, openButton };
+}
+
+async function expectActionButtonHitTarget(dialog: import("@playwright/test").Locator, action: "cancel" | "discard" | "save") {
+  const report = await dialog.getByTestId(`unsaved-${action}`).evaluate((button) => {
+    const rect = button.getBoundingClientRect();
+    const style = getComputedStyle(button);
+    const target = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return {
+      width: rect.width,
+      height: rect.height,
+      disabled: (button as HTMLButtonElement).disabled,
+      ariaDisabled: button.getAttribute("aria-disabled"),
+      inert: button.closest("[inert]") !== null,
+      pointerEvents: style.pointerEvents,
+      color: style.color,
+      receivesCenterHit: target === button || button.contains(target),
+    };
+  });
+  expect(report.width).toBeGreaterThan(0);
+  expect(report.height).toBeGreaterThan(0);
+  expect(report.disabled).toBe(false);
+  expect(report.ariaDisabled).not.toBe("true");
+  expect(report.inert).toBe(false);
+  expect(report.pointerEvents).not.toBe("none");
+  expect(report.color).not.toBe("rgb(255, 255, 255)");
+  expect(report.receivesCenterHit).toBe(true);
 }
 
 test("dirty New uses Cancel and Discard without losing the current document", async ({ page }) => {
@@ -72,6 +112,28 @@ test("Escape on the unsaved-changes dialog behaves exactly like Cancel", async (
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 
+test("dirty Open keeps keyboard focus inside the dialog and Enter activates the focused action", async ({ page }) => {
+  await page.goto("/");
+  await makeDirty(page);
+  const { dialog } = await openReplacementFromRibbon(page, "Keyboard Target");
+  const cancel = page.getByTestId("unsaved-cancel");
+  const discard = page.getByTestId("unsaved-discard");
+  const save = page.getByTestId("unsaved-save");
+
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(save).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(discard).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator(".app-titlebar h1")).toHaveText("Keyboard Target");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+});
+
 test("dirty Open uses Save before replacing the document", async ({ page }) => {
   await page.goto("/");
   await makeDirty(page);
@@ -110,6 +172,45 @@ test("dirty Open keeps the current document on Cancel and replaces it on Discard
   await page.getByTestId("unsaved-discard").click();
   await expect(page.getByTestId("unsaved-file-dialog")).toHaveCount(0);
   await expect(page.locator(".app-titlebar h1")).toHaveText("Discarded Into Replacement");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+});
+
+test("dirty Open actions stay readable and pointer-operable through the production picker in dark color scheme", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
+  await makeDirty(page);
+  const host = page.getByTestId("cycle-surface");
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeName = await page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true }).inputValue();
+
+  const cancelCase = await openReplacementFromRibbon(page, "Cancel production picker target");
+  await expect(page.getByTestId("unsaved-cancel")).toBeFocused();
+  for (const action of ["cancel", "discard", "save"] as const) await expectActionButtonHitTarget(cancelCase.dialog, action);
+  await cancelCase.dialog.getByTestId("unsaved-cancel").click();
+  await expect(cancelCase.dialog).toHaveCount(0);
+  await expect(cancelCase.openButton).toBeFocused();
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true })).toHaveValue(beforeName);
+  await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
+
+  const discardCase = await openReplacementFromRibbon(page, "Discard production picker target");
+  await discardCase.dialog.getByTestId("unsaved-discard").click();
+  await expect(discardCase.dialog).toHaveCount(0);
+  await expect(page.locator(".app-titlebar h1")).toHaveText("Discard production picker target");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
+  await makeDirty(page, "sig_clk");
+  const saveCase = await openReplacementFromRibbon(page, "Save production picker target");
+  const downloadPromise = page.waitForEvent("download");
+  await saveCase.dialog.getByTestId("unsaved-save").click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("Discard production picker target.tcd");
+  await expect(saveCase.dialog).toHaveCount(0);
+  await expect(page.locator(".app-titlebar h1")).toHaveText("Save production picker target");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
 });
@@ -266,8 +367,11 @@ test("Open discards an entity-keyed Inspector draft when the replacement documen
   };
 
   await open(makeDocument("Document A", "A Transaction"), "draft-a.tcd");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
   await page.getByTestId("transaction-lanes").locator("[data-transaction-id='tx_shared']").click();
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
   const inspectorName = page.getByTestId("inspector").getByLabel("Transaction name", { exact: true });
   await inspectorName.fill("A Draft Only");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");

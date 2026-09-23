@@ -5,8 +5,8 @@ import type { CanonicalDocument } from "@timing-chart-v2/schema";
  * surfaces. Canonical time is always integer system cycles; TC is display-only (cycles / cyclesPerTC).
  */
 export function cyclesPerTc(document: Pick<CanonicalDocument, "transactionTimeScale">): number {
-  const value = document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1;
-  return Number.isFinite(value) && value > 0 ? value : 1;
+  const value = document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 10;
+  return Number.isInteger(value) && value >= 1 ? value : 10;
 }
 
 /** Canonical cycles -> TC display number (fractional TC allowed, never rounded away silently; trimmed to 3 decimals). */
