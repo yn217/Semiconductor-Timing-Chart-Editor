@@ -3,6 +3,90 @@
   "consolidations": [
     {
       "from": {
+        "file": "full-gui.spec.ts",
+        "title": "keeps view-only selection, tabs, zoom and panel state out of History and WaveDrom"
+      },
+      "to": {
+        "file": "performance-view-only-validation.spec.ts",
+        "title": "view-only GUI operations do not validate or semantically rerender the document"
+      },
+      "protectedInvariant": "Composed view-only selection, tabs, zoom and panel operations do not mutate History or trigger semantic validation/rendering.",
+      "reason": "The focused replacement exercises the same operations and additionally protects Dirty, validation, RowLayout, and pane resizer/scroll-owner counters."
+    },
+    {
+      "from": {
+        "file": "golden-samples.spec.ts",
+        "title": "switches representative Golden Samples through production File Input without stale row ownership"
+      },
+      "to": {
+        "file": "golden-samples.spec.ts",
+        "title": "opens all 20 immutable Golden Samples in the production browser path"
+      },
+      "protectedInvariant": "Sequential production File Input replacement leaves only current canonical row identities, without stale or duplicate rows.",
+      "reason": "The all-20 production Open journey verifies exact canonical Left/Frozen row identity after each replacement, covering the representative A-to-B switch subset."
+    },
+    {
+      "from": {
+        "file": "transaction-export.spec.ts",
+        "title": "preserves canonical Split View content through Save/Open"
+      },
+      "to": {
+        "file": "transaction-export.spec.ts",
+        "title": "creates, edits, links, saves and reopens one canonical Transaction"
+      },
+      "protectedInvariant": "Canonical Transaction identity and timing survive production Save/Open with clean History after reopening.",
+      "reason": "The replacement verifies more persisted Transaction fields, stable linked Signal identity, Undo/Redo and History reset; separate Combined projection cases retain mode coverage."
+    },
+    {
+      "from": {
+        "file": "transaction-export.spec.ts",
+        "title": "Export dialog applies page and fit settings to the exported scene"
+      },
+      "to": {
+        "file": "transaction-export.spec.ts",
+        "title": "keeps long document layout metadata through page-fit SVG, PNG and PDF export"
+      },
+      "protectedInvariant": "Production Export page size/orientation/fit/margin settings produce the expected page viewBox and page-content layer.",
+      "reason": "The replacement preserves the page-content layer and exact A4 portrait/page-fit/margin assertion, then covers metadata, alternate orientation/fit, PNG and PDF."
+    },
+    {
+      "from": {
+        "file": "signal-split.spec.ts",
+        "title": "Upper and Lower scroll vertically independently while sharing one horizontal time domain"
+      },
+      "to": {
+        "file": "acceptance-397-sample-d.spec.ts",
+        "title": "Signal Split ON shows the same 24-Signal row sequence in both panes with independent vertical scroll and shared horizontal scroll, OFF returns to one viewport, view-only throughout"
+      },
+      "protectedInvariant": "Upper/Lower Vertical scrolling stays independent while both panes share the horizontal time mapping and view-only state.",
+      "reason": "The Sample D replacement exercises real vertical overflow in both directions, shared horizontal scrolling and zoom, row parity, view-only invariants, and Split OFF using a representative 24-Signal production fixture; the default-fixture predecessor only scrolled Upper and checked ruler transforms."
+    },
+    {
+      "from": {
+        "file": "ribbon-more-popover-closure.spec.ts",
+        "title": "does not create horizontal Ribbon overflow at 1024px"
+      },
+      "to": {
+        "file": "ribbon-responsive-overflow.spec.ts",
+        "title": "keeps Home commands reachable without a Ribbon scrollbar at 1024px"
+      },
+      "protectedInvariant": "The Ribbon fits within the viewport at 1024px without horizontal scrolling, and compact Home commands remain reachable through More.",
+      "reason": "The replacement covers the same no-overflow invariant and additionally verifies the compact More menu's command reachability in the same browser journey."
+    },
+    {
+      "from": {
+        "file": "ribbon-more-popover-closure.spec.ts",
+        "title": "does not create horizontal Ribbon overflow at 1280px"
+      },
+      "to": {
+        "file": "ribbon-responsive-overflow.spec.ts",
+        "title": "keeps Home commands reachable without a Ribbon scrollbar at 1280px"
+      },
+      "protectedInvariant": "The Ribbon fits within the viewport at 1280px without horizontal scrolling.",
+      "reason": "The replacement checks the same no-overflow condition while also protecting the expected wide-layout major Ribbon groups."
+    },
+    {
+      "from": {
         "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
         "title": "ruler returns to cycle 0 after scroll-away-and-return at zoom 50%"
       },

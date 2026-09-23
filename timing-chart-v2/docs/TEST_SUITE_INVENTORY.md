@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 326 spec files and 949 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 326 spec files and 942 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 949/949 cases reviewed.
+Semantic review progress: 942/942 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,8 +10,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 484 |
-| `nightly` | 193 |
+| `integration` | 478 |
+| `nightly` | 191 |
 | `performance` | 54 |
 | `pr` | 253 |
 | `visual` | 177 |
@@ -114,9 +114,9 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `file-beforeunload-dirty-guard.spec.ts` | 1 | 1/1 reviewed |
 | `file-ribbon-blank-controls.spec.ts` | 1 | 1/1 reviewed |
 | `font-style-commit-contract.spec.ts` | 1 | 1/1 reviewed |
-| `full-gui.spec.ts` | 46 | 46/46 reviewed |
+| `full-gui.spec.ts` | 45 | 45/45 reviewed |
 | `ghost-trace-delete.spec.ts` | 1 | 1/1 reviewed |
-| `golden-samples.spec.ts` | 3 | 3/3 reviewed |
+| `golden-samples.spec.ts` | 2 | 2/2 reviewed |
 | `grid-zoom-alignment.spec.ts` | 1 | 1/1 reviewed |
 | `group-band.spec.ts` | 3 | 3/3 reviewed |
 | `group-clipboard-parity.spec.ts` | 2 | 2/2 reviewed |
@@ -284,7 +284,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `ribbon-caption-layout.spec.ts` | 2 | 2/2 reviewed |
 | `ribbon-cursor-ab.spec.ts` | 2 | 2/2 reviewed |
 | `ribbon-layout.spec.ts` | 2 | 2/2 reviewed |
-| `ribbon-more-popover-closure.spec.ts` | 6 | 6/6 reviewed |
+| `ribbon-more-popover-closure.spec.ts` | 4 | 4/4 reviewed |
 | `ribbon-responsive-overflow.spec.ts` | 3 | 3/3 reviewed |
 | `ribbon-tabs.spec.ts` | 5 | 5/5 reviewed |
 | `ribbon-transaction-context.spec.ts` | 3 | 3/3 reviewed |
@@ -301,7 +301,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `signal-spacing.spec.ts` | 3 | 3/3 reviewed |
 | `signal-split-no-assignment-control.spec.ts` | 1 | 1/1 reviewed |
 | `signal-split-render-routing.spec.ts` | 3 | 3/3 reviewed |
-| `signal-split.spec.ts` | 2 | 2/2 reviewed |
+| `signal-split.spec.ts` | 1 | 1/1 reviewed |
 | `signal-type-label-registry.spec.ts` | 2 | 2/2 reviewed |
 | `signal-visibility-recover.spec.ts` | 1 | 1/1 reviewed |
 | `spacer-clipboard-reorder.spec.ts` | 1 | 1/1 reviewed |
@@ -328,7 +328,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `transaction-bottom-toolbar-add-ungroup.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-drag.spec.ts` | 11 | 11/11 reviewed |
 | `transaction-empty-state-create-lane-fix.spec.ts` | 1 | 1/1 reviewed |
-| `transaction-export.spec.ts` | 16 | 16/16 reviewed |
+| `transaction-export.spec.ts` | 14 | 14/14 reviewed |
 | `transaction-group-management.spec.ts` | 4 | 4/4 reviewed |
 | `transaction-gui-authoring.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-inspector-apply-validation.spec.ts` | 3 | 3/3 reviewed |
@@ -540,6 +540,13 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 
 ## Consolidation/replacement map
 
+- `full-gui.spec.ts` “keeps view-only selection, tabs, zoom and panel state out of History and WaveDrom” → `performance-view-only-validation.spec.ts` “view-only GUI operations do not validate or semantically rerender the document”. **Invariant:** Composed view-only selection, tabs, zoom and panel operations do not mutate History or trigger semantic validation/rendering. **Reason:** The focused replacement exercises the same operations and additionally protects Dirty, validation, RowLayout, and pane resizer/scroll-owner counters.
+- `golden-samples.spec.ts` “switches representative Golden Samples through production File Input without stale row ownership” → `golden-samples.spec.ts` “opens all 20 immutable Golden Samples in the production browser path”. **Invariant:** Sequential production File Input replacement leaves only current canonical row identities, without stale or duplicate rows. **Reason:** The all-20 production Open journey verifies exact canonical Left/Frozen row identity after each replacement, covering the representative A-to-B switch subset.
+- `transaction-export.spec.ts` “preserves canonical Split View content through Save/Open” → `transaction-export.spec.ts` “creates, edits, links, saves and reopens one canonical Transaction”. **Invariant:** Canonical Transaction identity and timing survive production Save/Open with clean History after reopening. **Reason:** The replacement verifies more persisted Transaction fields, stable linked Signal identity, Undo/Redo and History reset; separate Combined projection cases retain mode coverage.
+- `transaction-export.spec.ts` “Export dialog applies page and fit settings to the exported scene” → `transaction-export.spec.ts` “keeps long document layout metadata through page-fit SVG, PNG and PDF export”. **Invariant:** Production Export page size/orientation/fit/margin settings produce the expected page viewBox and page-content layer. **Reason:** The replacement preserves the page-content layer and exact A4 portrait/page-fit/margin assertion, then covers metadata, alternate orientation/fit, PNG and PDF.
+- `signal-split.spec.ts` “Upper and Lower scroll vertically independently while sharing one horizontal time domain” → `acceptance-397-sample-d.spec.ts` “Signal Split ON shows the same 24-Signal row sequence in both panes with independent vertical scroll and shared horizontal scroll, OFF returns to one viewport, view-only throughout”. **Invariant:** Upper/Lower Vertical scrolling stays independent while both panes share the horizontal time mapping and view-only state. **Reason:** The Sample D replacement exercises real vertical overflow in both directions, shared horizontal scrolling and zoom, row parity, view-only invariants, and Split OFF using a representative 24-Signal production fixture; the default-fixture predecessor only scrolled Upper and checked ruler transforms.
+- `ribbon-more-popover-closure.spec.ts` “does not create horizontal Ribbon overflow at 1024px” → `ribbon-responsive-overflow.spec.ts` “keeps Home commands reachable without a Ribbon scrollbar at 1024px”. **Invariant:** The Ribbon fits within the viewport at 1024px without horizontal scrolling, and compact Home commands remain reachable through More. **Reason:** The replacement covers the same no-overflow invariant and additionally verifies the compact More menu's command reachability in the same browser journey.
+- `ribbon-more-popover-closure.spec.ts` “does not create horizontal Ribbon overflow at 1280px” → `ribbon-responsive-overflow.spec.ts` “keeps Home commands reachable without a Ribbon scrollbar at 1280px”. **Invariant:** The Ribbon fits within the viewport at 1280px without horizontal scrolling. **Reason:** The replacement checks the same no-overflow condition while also protecting the expected wide-layout major Ribbon groups.
 - `issue-738-ruler-origin-after-scroll-return.spec.ts` “ruler returns to cycle 0 after scroll-away-and-return at zoom 50%” → `issue-738-ruler-origin-after-scroll-return.spec.ts` “ruler returns to cycle 0 after scroll-away-and-return across zoom levels”. **Invariant:** At each supported zoom level (50%, 200%, 800%), far right scroll and return keeps cycle zero as the leftmost ruler origin. **Reason:** The same 5,000-cycle fixture and interaction were previously booted once per zoom. One page now exercises all three zoom levels sequentially while retaining each zoom's three far-scroll return assertions.
 - `issue-738-ruler-origin-after-scroll-return.spec.ts` “ruler returns to cycle 0 after scroll-away-and-return at zoom 200%” → `issue-738-ruler-origin-after-scroll-return.spec.ts` “ruler returns to cycle 0 after scroll-away-and-return across zoom levels”. **Invariant:** At each supported zoom level (50%, 200%, 800%), far right scroll and return keeps cycle zero as the leftmost ruler origin. **Reason:** Consolidated into the single-session multi-zoom ruler-origin contract; individual zoom iterations and scroll anchors remain explicit.
 - `issue-738-ruler-origin-after-scroll-return.spec.ts` “ruler returns to cycle 0 after scroll-away-and-return at zoom 800%” → `issue-738-ruler-origin-after-scroll-return.spec.ts` “ruler returns to cycle 0 after scroll-away-and-return across zoom levels”. **Invariant:** At each supported zoom level (50%, 200%, 800%), far right scroll and return keeps cycle zero as the leftmost ruler origin. **Reason:** Consolidated into the single-session multi-zoom ruler-origin contract; individual zoom iterations and scroll anchors remain explicit.

@@ -4536,24 +4536,6 @@
     },
     {
       "file": "full-gui.spec.ts",
-      "title": "keeps view-only selection, tabs, zoom and panel state out of History and WaveDrom",
-      "domain": "view-only-composed-state-invariance",
-      "originIssue": 175,
-      "type": "ARCHITECTURE_GUARD",
-      "costClass": "FAST",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Sequential selection, Bottom tab, Ribbon tab, zoom, and Inspector visibility operations leave History/session commits and waveform/local geometry counters unchanged.",
-      "duplicateGroup": "view-only-invalidation-boundaries",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": [
-        "integration"
-      ],
-      "decision": "MOVE_LAYER",
-      "reason": "performance-view-only-validation.spec.ts observes these same operations separately and also protects Dirty, validator, RowLayout, and both pane resizers/scroll owners. Retain that focused owner-level contract instead of this weaker overlapping full-GUI check.",
-      "replacementTest": "performance-view-only-validation.spec.ts — view-only GUI operations do not validate or semantically rerender the document"
-    },
-    {
-      "file": "full-gui.spec.ts",
       "title": "Left Signal/Group rows expose V1 role and visibility controls through SemanticCommand",
       "domain": "left-tree-visibility-command-history",
       "originIssue": null,
@@ -4927,24 +4909,6 @@
       "decision": "KEEP",
       "reason": "This is the broad immutable compatibility matrix across all sample documents, including production rendering, diagnostic capture, feature coverage, and per-sample Save/Open. Its size and artifact generation justify nightly-only execution rather than routine PR.",
       "replacementTest": null
-    },
-    {
-      "file": "golden-samples.spec.ts",
-      "title": "switches representative Golden Samples through production File Input without stale row ownership",
-      "domain": "golden-sample-switch-stale-row-ownership",
-      "originIssue": null,
-      "type": "ARCHITECTURE_GUARD",
-      "costClass": "FAST",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Replacing one Golden Sample with another through production File Input leaves only the destination document's canonical row identities, with no stale or duplicate Left Tree rows.",
-      "duplicateGroup": "golden-sample-production-matrix",
-      "executionTier": "TIER_4_HEAVY_INTEGRATION",
-      "profiles": [
-        "nightly"
-      ],
-      "decision": "MOVE_LAYER",
-      "reason": "The all-20 Open/Save/Open matrix already opens each sample sequentially through the same File Input replacement route and checks exact canonical Left/Frozen row identity after every replacement, which subsumes this two-sample subset.",
-      "replacementTest": "golden-samples.spec.ts — opens all 20 immutable Golden Samples in the production browser path"
     },
     {
       "file": "grid-zoom-alignment.spec.ts",
@@ -9173,42 +9137,6 @@
     },
     {
       "file": "ribbon-more-popover-closure.spec.ts",
-      "title": "does not create horizontal Ribbon overflow at 1024px",
-      "domain": "ribbon-horizontal-overflow",
-      "originIssue": null,
-      "type": "GEOMETRY_CONTRACT",
-      "costClass": "FAST",
-      "measuredRuntimeMs": null,
-      "primaryContract": "At 1024px, the Home Ribbon's scroll width does not exceed its client width.",
-      "duplicateGroup": "ribbon-horizontal-overflow-breakpoints",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": [
-        "integration"
-      ],
-      "decision": "MOVE_LAYER",
-      "reason": "The 1024px responsive-overflow case already asserts the same no-scrollbar width invariant and additionally opens More to verify command reachability; retaining this standalone assertion duplicates that breakpoint.",
-      "replacementTest": "ribbon-responsive-overflow.spec.ts::keeps Home commands reachable without a Ribbon scrollbar at 1024px"
-    },
-    {
-      "file": "ribbon-more-popover-closure.spec.ts",
-      "title": "does not create horizontal Ribbon overflow at 1280px",
-      "domain": "ribbon-horizontal-overflow",
-      "originIssue": null,
-      "type": "GEOMETRY_CONTRACT",
-      "costClass": "FAST",
-      "measuredRuntimeMs": null,
-      "primaryContract": "At 1280px, the Home Ribbon's scroll width does not exceed its client width.",
-      "duplicateGroup": "ribbon-horizontal-overflow-breakpoints",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": [
-        "integration"
-      ],
-      "decision": "MOVE_LAYER",
-      "reason": "The 1280px responsive-overflow case already asserts the same no-scrollbar width invariant and also verifies the major-group composition; this standalone width-only assertion is redundant at that breakpoint.",
-      "replacementTest": "ribbon-responsive-overflow.spec.ts::keeps Home commands reachable without a Ribbon scrollbar at 1280px"
-    },
-    {
-      "file": "ribbon-more-popover-closure.spec.ts",
       "title": "does not create horizontal Ribbon overflow at 1672px",
       "domain": "ribbon-horizontal-overflow",
       "originIssue": null,
@@ -10248,24 +10176,6 @@
       "decision": "KEEP",
       "reason": "Sample D covers dual-pane shared horizontal time and independent vertical scroll, but this additionally creates a nonzero Upper scroll position, removes/recreates Lower, and proves Upper's scroll survives that lifecycle.",
       "replacementTest": null
-    },
-    {
-      "file": "signal-split.spec.ts",
-      "title": "Upper and Lower scroll vertically independently while sharing one horizontal time domain",
-      "domain": "signal-split-independent-scroll-axes",
-      "originIssue": 573,
-      "type": "GEOMETRY_CONTRACT",
-      "costClass": "FAST",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Upper and Lower vertical scroll positions are independent while both rulers consume the same horizontal scroll and zoom domain.",
-      "duplicateGroup": "signal-split-scroll-ownership",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": [
-        "integration"
-      ],
-      "decision": "MOVE_LAYER",
-      "reason": "Sample D verifies both panes' independently changing scroll positions and shared horizontal alignment with a 24-Signal fixture that provides real overflow; this short default-fixture test only moves Upper vertically and compares ruler transforms.",
-      "replacementTest": "acceptance-397-sample-d.spec.ts::Signal Split ON shows the same 24-Signal row sequence in both panes with independent vertical scroll and shared horizontal scroll, OFF returns to one viewport, view-only throughout"
     },
     {
       "file": "signal-type-label-registry.spec.ts",
@@ -11896,24 +11806,6 @@
     },
     {
       "file": "transaction-export.spec.ts",
-      "title": "Export dialog applies page and fit settings to the exported scene",
-      "domain": "export-page-fit-settings-effect",
-      "originIssue": null,
-      "type": "GEOMETRY_CONTRACT",
-      "costClass": "FAST",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Production Export dialog page size/orientation/fit/margin choices affect the resulting SVG page viewBox and expose the page-content layer.",
-      "duplicateGroup": "export-page-fit-metadata",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": [
-        "integration"
-      ],
-      "decision": "MOVE_LAYER",
-      "reason": "The richer page-fit case already configures A4 portrait/page fit/margin and asserts the same 794×1123 viewBox, then additionally verifies long metadata, alternate landscape/width geometry, PNG dimensions and PDF output. This single-export subset adds little protection; preserve its page-content-layer assertion in that richer case if the layer contract remains required.",
-      "replacementTest": "transaction-export.spec.ts — keeps long document layout metadata through page-fit SVG, PNG and PDF export"
-    },
-    {
-      "file": "transaction-export.spec.ts",
       "title": "exports both synchronized signal and transaction layers from Split View",
       "domain": "combined-export-content-layers",
       "originIssue": null,
@@ -12057,25 +11949,6 @@
       "decision": "KEEP",
       "reason": "The sibling drag cases establish user-visible move/resize and preview semantics; this adds the separate shared Snap Service/index invalidation and stable lane-owner lifecycle contract, so it belongs in integration rather than duplicating PR drag journeys.",
       "replacementTest": null
-    },
-    {
-      "file": "transaction-export.spec.ts",
-      "title": "preserves canonical Split View content through Save/Open",
-      "domain": "transaction-combined-save-open-redundant",
-      "originIssue": null,
-      "type": "SAVE_OPEN_EXPORT",
-      "costClass": "HEAVY",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Transaction name and timing survive Save/Open after the file was authored in Combined view.",
-      "duplicateGroup": "transaction-save-open-lifecycle",
-      "executionTier": "TIER_4_HEAVY_INTEGRATION",
-      "profiles": [
-        "integration",
-        "nightly"
-      ],
-      "decision": "MOVE_LAYER",
-      "reason": "Despite its title, the case does not restore Combined mode or assert both rendered layers after Open; it only checks Transaction name/start/end. The fuller author/edit/link/Save/Open journey in the same spec checks the same canonical persistence with more fields and History, while separate Combined cases cover mode projection and export.",
-      "replacementTest": "transaction-export.spec.ts — creates, edits, links, saves and reopens one canonical Transaction"
     },
     {
       "file": "transaction-export.spec.ts",

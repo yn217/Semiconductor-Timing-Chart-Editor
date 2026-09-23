@@ -1309,23 +1309,3 @@ test("keeps global shortcuts focus-aware and IME-safe", async ({ page }) => {
   await owner.evaluate((element) => element.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, isComposing: true })));
   await expect(page.getByTestId("cycle-surface").locator("[data-role='annotation-owner']")).toHaveCount(1);
 });
-
-test("keeps view-only selection, tabs, zoom and panel state out of History and WaveDrom", async ({ page }) => {
-  await ready(page);
-  const host = page.getByTestId("cycle-surface");
-  const surface = host.locator("[data-role='timing-chart-surface']");
-  const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
-  const sessionBefore = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as Record<string, number>;
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
-  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
-  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
-  await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click();
-  await page.getByTestId("ribbon").getByRole("button", { name: "Inspector", exact: true }).click();
-  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
-  const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
-  expect(after.waveDromRenders).toBe(before.waveDromRenders);
-  expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
-  const sessionAfter = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as Record<string, number>;
-  expect(sessionAfter.validationRuns).toBe(sessionBefore.validationRuns);
-  expect(sessionAfter.commits).toBe(sessionBefore.commits);
-});

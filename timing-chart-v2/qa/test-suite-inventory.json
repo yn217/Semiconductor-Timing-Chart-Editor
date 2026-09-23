@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T15:14:50.931Z",
+  "generatedAt": "2026-09-23T15:37:53.999Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,11 +12,11 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 326,
-  "caseCount": 949,
-  "reviewedCaseCount": 949,
+  "caseCount": 942,
+  "reviewedCaseCount": 942,
   "curatedProfileCounts": {
-    "integration": 484,
-    "nightly": 193,
+    "integration": 478,
+    "nightly": 191,
     "performance": 54,
     "pr": 253,
     "visual": 177
@@ -6898,32 +6898,6 @@
       "contractId": "global-shortcut-input-focus-and-ime-guard"
     },
     {
-      "file": "full-gui.spec.ts",
-      "suitePath": [],
-      "line": 1313,
-      "title": "keeps view-only selection, tabs, zoom and panel state out of History and WaveDrom",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "view-only-composed-state-invariance",
-      "originIssue": 175,
-      "type": "ARCHITECTURE_GUARD",
-      "costClass": "FAST",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Sequential selection, Bottom tab, Ribbon tab, zoom, and Inspector visibility operations leave History/session commits and waveform/local geometry counters unchanged.",
-      "duplicateGroup": "view-only-invalidation-boundaries",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "MOVE_LAYER",
-      "reason": "performance-view-only-validation.spec.ts observes these same operations separately and also protects Dirty, validator, RowLayout, and both pane resizers/scroll owners. Retain that focused owner-level contract instead of this weaker overlapping full-GUI check.",
-      "replacementTest": "performance-view-only-validation.spec.ts — view-only GUI operations do not validate or semantically rerender the document",
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "integration"
-      ],
-      "contractId": "view-only-composed-state-invariance"
-    },
-    {
       "file": "ghost-trace-delete.spec.ts",
       "suitePath": [],
       "line": 6,
@@ -6979,32 +6953,6 @@
       "file": "golden-samples.spec.ts",
       "suitePath": [],
       "line": 160,
-      "title": "switches representative Golden Samples through production File Input without stale row ownership",
-      "project": "chromium",
-      "timeoutMs": 120000,
-      "tags": [],
-      "annotations": [],
-      "domain": "golden-sample-switch-stale-row-ownership",
-      "originIssue": null,
-      "type": "ARCHITECTURE_GUARD",
-      "costClass": "FAST",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Replacing one Golden Sample with another through production File Input leaves only the destination document's canonical row identities, with no stale or duplicate Left Tree rows.",
-      "duplicateGroup": "golden-sample-production-matrix",
-      "executionTier": "TIER_4_HEAVY_INTEGRATION",
-      "decision": "MOVE_LAYER",
-      "reason": "The all-20 Open/Save/Open matrix already opens each sample sequentially through the same File Input replacement route and checks exact canonical Left/Frozen row identity after every replacement, which subsumes this two-sample subset.",
-      "replacementTest": "golden-samples.spec.ts — opens all 20 immutable Golden Samples in the production browser path",
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "nightly"
-      ],
-      "contractId": "golden-sample-switch-stale-row-ownership"
-    },
-    {
-      "file": "golden-samples.spec.ts",
-      "suitePath": [],
-      "line": 189,
       "title": "exports SVG, PNG and PDF for all 20 immutable Golden Samples without mutating Canonical state",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -17214,62 +17162,6 @@
         "Home Ribbon More overlay"
       ],
       "line": 5,
-      "title": "does not create horizontal Ribbon overflow at 1024px",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "ribbon-horizontal-overflow",
-      "originIssue": null,
-      "type": "GEOMETRY_CONTRACT",
-      "costClass": "FAST",
-      "measuredRuntimeMs": null,
-      "primaryContract": "At 1024px, the Home Ribbon's scroll width does not exceed its client width.",
-      "duplicateGroup": "ribbon-horizontal-overflow-breakpoints",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "MOVE_LAYER",
-      "reason": "The 1024px responsive-overflow case already asserts the same no-scrollbar width invariant and additionally opens More to verify command reachability; retaining this standalone assertion duplicates that breakpoint.",
-      "replacementTest": "ribbon-responsive-overflow.spec.ts::keeps Home commands reachable without a Ribbon scrollbar at 1024px",
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "integration"
-      ],
-      "contractId": "ribbon-horizontal-overflow"
-    },
-    {
-      "file": "ribbon-more-popover-closure.spec.ts",
-      "suitePath": [
-        "Home Ribbon More overlay"
-      ],
-      "line": 5,
-      "title": "does not create horizontal Ribbon overflow at 1280px",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "ribbon-horizontal-overflow",
-      "originIssue": null,
-      "type": "GEOMETRY_CONTRACT",
-      "costClass": "FAST",
-      "measuredRuntimeMs": null,
-      "primaryContract": "At 1280px, the Home Ribbon's scroll width does not exceed its client width.",
-      "duplicateGroup": "ribbon-horizontal-overflow-breakpoints",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "MOVE_LAYER",
-      "reason": "The 1280px responsive-overflow case already asserts the same no-scrollbar width invariant and also verifies the major-group composition; this standalone width-only assertion is redundant at that breakpoint.",
-      "replacementTest": "ribbon-responsive-overflow.spec.ts::keeps Home commands reachable without a Ribbon scrollbar at 1280px",
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "integration"
-      ],
-      "contractId": "ribbon-horizontal-overflow"
-    },
-    {
-      "file": "ribbon-more-popover-closure.spec.ts",
-      "suitePath": [
-        "Home Ribbon More overlay"
-      ],
-      "line": 5,
       "title": "does not create horizontal Ribbon overflow at 1672px",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -18777,32 +18669,6 @@
         "integration"
       ],
       "contractId": "signal-split-toggle-scroll-retention"
-    },
-    {
-      "file": "signal-split.spec.ts",
-      "suitePath": [],
-      "line": 41,
-      "title": "Upper and Lower scroll vertically independently while sharing one horizontal time domain",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "signal-split-independent-scroll-axes",
-      "originIssue": 573,
-      "type": "GEOMETRY_CONTRACT",
-      "costClass": "FAST",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Upper and Lower vertical scroll positions are independent while both rulers consume the same horizontal scroll and zoom domain.",
-      "duplicateGroup": "signal-split-scroll-ownership",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "MOVE_LAYER",
-      "reason": "Sample D verifies both panes' independently changing scroll positions and shared horizontal alignment with a 24-Signal fixture that provides real overflow; this short default-fixture test only moves Upper vertically and compares ruler transforms.",
-      "replacementTest": "acceptance-397-sample-d.spec.ts::Signal Split ON shows the same 24-Signal row sequence in both panes with independent vertical scroll and shared horizontal scroll, OFF returns to one viewport, view-only throughout",
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "integration"
-      ],
-      "contractId": "signal-split-independent-scroll-axes"
     },
     {
       "file": "signal-type-label-registry.spec.ts",
@@ -21322,33 +21188,6 @@
       "file": "transaction-export.spec.ts",
       "suitePath": [],
       "line": 169,
-      "title": "preserves canonical Split View content through Save/Open",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "transaction-combined-save-open-redundant",
-      "originIssue": null,
-      "type": "SAVE_OPEN_EXPORT",
-      "costClass": "HEAVY",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Transaction name and timing survive Save/Open after the file was authored in Combined view.",
-      "duplicateGroup": "transaction-save-open-lifecycle",
-      "executionTier": "TIER_4_HEAVY_INTEGRATION",
-      "decision": "MOVE_LAYER",
-      "reason": "Despite its title, the case does not restore Combined mode or assert both rendered layers after Open; it only checks Transaction name/start/end. The fuller author/edit/link/Save/Open journey in the same spec checks the same canonical persistence with more fields and History, while separate Combined cases cover mode projection and export.",
-      "replacementTest": "transaction-export.spec.ts — creates, edits, links, saves and reopens one canonical Transaction",
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "integration",
-        "nightly"
-      ],
-      "contractId": "transaction-combined-save-open-redundant"
-    },
-    {
-      "file": "transaction-export.spec.ts",
-      "suitePath": [],
-      "line": 192,
       "title": "keeps the Split View surface contract and view mode changes view-only",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21374,7 +21213,7 @@
     {
       "file": "transaction-export.spec.ts",
       "suitePath": [],
-      "line": 225,
+      "line": 202,
       "title": "Split View Home exposes command-backed Transaction actions",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21400,7 +21239,7 @@
     {
       "file": "transaction-export.spec.ts",
       "suitePath": [],
-      "line": 243,
+      "line": 220,
       "title": "cross-highlights stable linked Signals when a Transaction is selected",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21426,7 +21265,7 @@
     {
       "file": "transaction-export.spec.ts",
       "suitePath": [],
-      "line": 268,
+      "line": 245,
       "title": "ripples Transaction ranges through Timeline edits with exact Undo",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21452,7 +21291,7 @@
     {
       "file": "transaction-export.spec.ts",
       "suitePath": [],
-      "line": 282,
+      "line": 259,
       "title": "moves and resizes Transaction edges through the shared rendered-geometry Snap Service",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21478,7 +21317,7 @@
     {
       "file": "transaction-export.spec.ts",
       "suitePath": [],
-      "line": 306,
+      "line": 283,
       "title": "keeps TransactionLanes mounted across ten repeated semantic moves",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21505,7 +21344,7 @@
     {
       "file": "transaction-export.spec.ts",
       "suitePath": [],
-      "line": 338,
+      "line": 315,
       "title": "exports deterministic SVG plus PNG and PDF from Canonical ExportScene",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21531,7 +21370,7 @@
     {
       "file": "transaction-export.spec.ts",
       "suitePath": [],
-      "line": 371,
+      "line": 348,
       "title": "exports canonical Header/Footer through browser SVG, PNG and PDF",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21557,7 +21396,7 @@
     {
       "file": "transaction-export.spec.ts",
       "suitePath": [],
-      "line": 407,
+      "line": 384,
       "title": "keeps long document layout metadata through page-fit SVG, PNG and PDF export",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21584,7 +21423,7 @@
     {
       "file": "transaction-export.spec.ts",
       "suitePath": [],
-      "line": 461,
+      "line": 439,
       "title": "copies deterministic SVG and PNG through browser Clipboard export",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21606,32 +21445,6 @@
         "integration"
       ],
       "contractId": "export-browser-clipboard-formats"
-    },
-    {
-      "file": "transaction-export.spec.ts",
-      "suitePath": [],
-      "line": 493,
-      "title": "Export dialog applies page and fit settings to the exported scene",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "export-page-fit-settings-effect",
-      "originIssue": null,
-      "type": "GEOMETRY_CONTRACT",
-      "costClass": "FAST",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Production Export dialog page size/orientation/fit/margin choices affect the resulting SVG page viewBox and expose the page-content layer.",
-      "duplicateGroup": "export-page-fit-metadata",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "MOVE_LAYER",
-      "reason": "The richer page-fit case already configures A4 portrait/page fit/margin and asserts the same 794×1123 viewBox, then additionally verifies long metadata, alternate landscape/width geometry, PNG dimensions and PDF output. This single-export subset adds little protection; preserve its page-content-layer assertion in that richer case if the layer contract remains required.",
-      "replacementTest": "transaction-export.spec.ts — keeps long document layout metadata through page-fit SVG, PNG and PDF export",
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "integration"
-      ],
-      "contractId": "export-page-fit-settings-effect"
     },
     {
       "file": "transaction-group-management.spec.ts",
@@ -25615,8 +25428,8 @@
     },
     {
       "file": "full-gui.spec.ts",
-      "caseCount": 46,
-      "reviewedCaseCount": 46,
+      "caseCount": 45,
+      "reviewedCaseCount": 45,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -25635,8 +25448,8 @@
     },
     {
       "file": "golden-samples.spec.ts",
-      "caseCount": 3,
-      "reviewedCaseCount": 3,
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": 300,
       "candidateSignals": [],
@@ -27376,8 +27189,8 @@
     },
     {
       "file": "ribbon-more-popover-closure.spec.ts",
-      "caseCount": 6,
-      "reviewedCaseCount": 6,
+      "caseCount": 4,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -27535,8 +27348,8 @@
     },
     {
       "file": "signal-split.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -27805,8 +27618,8 @@
     },
     {
       "file": "transaction-export.spec.ts",
-      "caseCount": 16,
-      "reviewedCaseCount": 16,
+      "caseCount": 14,
+      "reviewedCaseCount": 14,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [],
@@ -28370,6 +28183,90 @@
     }
   ],
   "consolidationMap": [
+    {
+      "from": {
+        "file": "full-gui.spec.ts",
+        "title": "keeps view-only selection, tabs, zoom and panel state out of History and WaveDrom"
+      },
+      "to": {
+        "file": "performance-view-only-validation.spec.ts",
+        "title": "view-only GUI operations do not validate or semantically rerender the document"
+      },
+      "protectedInvariant": "Composed view-only selection, tabs, zoom and panel operations do not mutate History or trigger semantic validation/rendering.",
+      "reason": "The focused replacement exercises the same operations and additionally protects Dirty, validation, RowLayout, and pane resizer/scroll-owner counters."
+    },
+    {
+      "from": {
+        "file": "golden-samples.spec.ts",
+        "title": "switches representative Golden Samples through production File Input without stale row ownership"
+      },
+      "to": {
+        "file": "golden-samples.spec.ts",
+        "title": "opens all 20 immutable Golden Samples in the production browser path"
+      },
+      "protectedInvariant": "Sequential production File Input replacement leaves only current canonical row identities, without stale or duplicate rows.",
+      "reason": "The all-20 production Open journey verifies exact canonical Left/Frozen row identity after each replacement, covering the representative A-to-B switch subset."
+    },
+    {
+      "from": {
+        "file": "transaction-export.spec.ts",
+        "title": "preserves canonical Split View content through Save/Open"
+      },
+      "to": {
+        "file": "transaction-export.spec.ts",
+        "title": "creates, edits, links, saves and reopens one canonical Transaction"
+      },
+      "protectedInvariant": "Canonical Transaction identity and timing survive production Save/Open with clean History after reopening.",
+      "reason": "The replacement verifies more persisted Transaction fields, stable linked Signal identity, Undo/Redo and History reset; separate Combined projection cases retain mode coverage."
+    },
+    {
+      "from": {
+        "file": "transaction-export.spec.ts",
+        "title": "Export dialog applies page and fit settings to the exported scene"
+      },
+      "to": {
+        "file": "transaction-export.spec.ts",
+        "title": "keeps long document layout metadata through page-fit SVG, PNG and PDF export"
+      },
+      "protectedInvariant": "Production Export page size/orientation/fit/margin settings produce the expected page viewBox and page-content layer.",
+      "reason": "The replacement preserves the page-content layer and exact A4 portrait/page-fit/margin assertion, then covers metadata, alternate orientation/fit, PNG and PDF."
+    },
+    {
+      "from": {
+        "file": "signal-split.spec.ts",
+        "title": "Upper and Lower scroll vertically independently while sharing one horizontal time domain"
+      },
+      "to": {
+        "file": "acceptance-397-sample-d.spec.ts",
+        "title": "Signal Split ON shows the same 24-Signal row sequence in both panes with independent vertical scroll and shared horizontal scroll, OFF returns to one viewport, view-only throughout"
+      },
+      "protectedInvariant": "Upper/Lower Vertical scrolling stays independent while both panes share the horizontal time mapping and view-only state.",
+      "reason": "The Sample D replacement exercises real vertical overflow in both directions, shared horizontal scrolling and zoom, row parity, view-only invariants, and Split OFF using a representative 24-Signal production fixture; the default-fixture predecessor only scrolled Upper and checked ruler transforms."
+    },
+    {
+      "from": {
+        "file": "ribbon-more-popover-closure.spec.ts",
+        "title": "does not create horizontal Ribbon overflow at 1024px"
+      },
+      "to": {
+        "file": "ribbon-responsive-overflow.spec.ts",
+        "title": "keeps Home commands reachable without a Ribbon scrollbar at 1024px"
+      },
+      "protectedInvariant": "The Ribbon fits within the viewport at 1024px without horizontal scrolling, and compact Home commands remain reachable through More.",
+      "reason": "The replacement covers the same no-overflow invariant and additionally verifies the compact More menu's command reachability in the same browser journey."
+    },
+    {
+      "from": {
+        "file": "ribbon-more-popover-closure.spec.ts",
+        "title": "does not create horizontal Ribbon overflow at 1280px"
+      },
+      "to": {
+        "file": "ribbon-responsive-overflow.spec.ts",
+        "title": "keeps Home commands reachable without a Ribbon scrollbar at 1280px"
+      },
+      "protectedInvariant": "The Ribbon fits within the viewport at 1280px without horizontal scrolling.",
+      "reason": "The replacement checks the same no-overflow condition while also protecting the expected wide-layout major Ribbon groups."
+    },
     {
       "from": {
         "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
