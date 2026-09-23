@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T08:00:58.807Z",
+  "generatedAt": "2026-09-23T08:02:32.906Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 953,
+  "reviewedCaseCount": 957,
   "curatedProfileCounts": {
-    "integration": 487,
+    "integration": 489,
     "nightly": 194,
     "performance": 54,
-    "pr": 259,
+    "pr": 261,
     "visual": 171
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -24101,18 +24101,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "zoom-cross-surface-semantic-x-alignment",
+      "originIssue": 573,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 50/100/150/200% zoom, a stable Transaction start and vertical-line Annotation anchor at source cycle 2 share the ruler's screen X without double scaling.",
+      "duplicateGroup": "shared-time-axis-zoom-alignment",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Cross-surface semantic alignment is a central Combined/shared-time-axis contract and is checked over four zoom factors. Note: the test resolves the newly created Annotation using `.last()`; that selector should eventually be replaced by a stable-ID-based lookup under the project’s overlay identity rule, though this audit does not edit test code.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "zoom-text-fidelity.spec.ts",
@@ -24123,18 +24126,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "zoom-glyph-scale-and-cycle-x-alignment",
+      "originIssue": 587,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Text glyph aspect ratios remain invariant across 50/100/150/200% zoom and the cycle-3 waveform transition stays aligned to the ruler; frozen labels remain fixed under zoom.",
+      "duplicateGroup": "zoom-text-fidelity",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Distinctly verifies text readability and geometry alignment across zoom levels, including the frozen-column invariant; complements cross-surface Transaction/Annotation alignment with waveform glyph behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "zoom-text-fidelity.spec.ts",
@@ -24145,18 +24151,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "zoom-view-only-and-render-reuse",
+      "originIssue": 587,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Zoom in/out leaves Canonical revision and History unchanged and does not increment WaveDrom render or LocalGeometry build counters.",
+      "duplicateGroup": "zoom-view-only-render-reuse",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Focused performance/ownership invariant with direct counters; complements geometry tests by ensuring zoom remains presentation-only and reuses waveform/geometry work.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "zoom-text-fidelity.spec.ts",
@@ -24167,18 +24176,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "measured-wave-scale-countertransformed-text",
+      "originIssue": 587,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "WaveDrom screen presentation scale is positive, text applies the reciprocal scale to keep glyph size constant, and visible text geometry remains nonzero.",
+      "duplicateGroup": "zoom-text-fidelity",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Focused numeric contract for measured presentation scaling and reciprocal glyph counter-transform; it verifies nonzero rendered text but does not itself assert a waveform boundary, which is covered by sibling tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "zoom-text-fidelity.spec.ts",
@@ -27569,16 +27581,16 @@
     {
       "file": "zoom-cross-surface-alignment.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "zoom-text-fidelity.spec.ts",
       "caseCount": 5,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -27587,7 +27599,7 @@
         "geometryRead",
         "explicitWait"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     }
   ],
   "duplicateTitleCandidates": [],

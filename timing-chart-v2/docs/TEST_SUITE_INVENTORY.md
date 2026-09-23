@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 953/959 cases reviewed.
+Semantic review progress: 957/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 487 |
+| `integration` | 489 |
 | `nightly` | 194 |
 | `performance` | 54 |
-| `pr` | 259 |
+| `pr` | 261 |
 | `visual` | 171 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -350,8 +350,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `wavedrom-security.spec.ts` | 1 | 1/1 reviewed |
 | `workspace-preset-density.spec.ts` | 1 | 1/1 reviewed |
 | `workspace-zoom-isolation.spec.ts` | 2 | 2/2 reviewed |
-| `zoom-cross-surface-alignment.spec.ts` | 1 | 0/1 reviewed |
-| `zoom-text-fidelity.spec.ts` | 5 | 0/5 reviewed |
+| `zoom-cross-surface-alignment.spec.ts` | 1 | 1/1 reviewed |
+| `zoom-text-fidelity.spec.ts` | 5 | 3/5 reviewed |
 
 ## Static review candidates
 
