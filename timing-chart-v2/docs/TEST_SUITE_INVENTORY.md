@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 350/963 cases reviewed.
+Semantic review progress: 354/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,8 +10,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 149 |
-| `nightly` | 109 |
+| `integration` | 153 |
+| `nightly` | 112 |
 | `performance` | 20 |
 | `pr` | 116 |
 | `visual` | 82 |
@@ -35,7 +35,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `annotation-line-rendering.spec.ts` | 4 | 4/4 reviewed |
 | `annotation-marker-vertical-span.spec.ts` | 1 | 1/1 reviewed |
 | `annotation-multi-select-font.spec.ts` | 1 | 1/1 reviewed |
-| `annotation-multiline-and-export-shapes.spec.ts` | 4 | 0/4 reviewed |
+| `annotation-multiline-and-export-shapes.spec.ts` | 4 | 4/4 reviewed |
 | `annotation-presentation-controls.spec.ts` | 6 | 6/6 reviewed |
 | `annotation-presentation.spec.ts` | 1 | 1/1 reviewed |
 | `annotation-preview-update.spec.ts` | 3 | 3/3 reviewed |

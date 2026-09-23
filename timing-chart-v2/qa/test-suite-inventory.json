@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T01:17:37.282Z",
+  "generatedAt": "2026-09-23T01:22:21.518Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,10 +13,10 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 350,
+  "reviewedCaseCount": 354,
   "curatedProfileCounts": {
-    "integration": 149,
-    "nightly": 109,
+    "integration": 153,
+    "nightly": 112,
     "performance": 20,
     "pr": 116,
     "visual": 82
@@ -2035,18 +2035,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "callout-multiline-live-export",
+      "originIssue": 377,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Applying a multi-line Callout label preserves its line breaks in the live Annotation and emits each line in the actual SVG export.",
+      "duplicateGroup": "callout-multiline-live-export",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This checks immediate Export of an applied multi-line draft; the separate Save/Open journey proves persistence after document replacement, so the shared output shape is covered at two distinct lifecycle boundaries rather than duplicated in PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "annotation-multiline-and-export-shapes.spec.ts",
@@ -2057,18 +2060,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bracket-svg-export-shape",
+      "originIssue": 377,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The actual SVG export renders Bracket's cap glyphs as a distinct shape rather than falling back to a plain Range line.",
+      "duplicateGroup": "annotation-svg-export-shapes",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This protects a Bracket-specific exported glyph absent from the other Range/Marker export checks; preserve the production download/export assertion in the heavy tier.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-multiline-and-export-shapes.spec.ts",
@@ -2079,18 +2086,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "marker-svg-export-shape",
+      "originIssue": 377,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Marker SVG export contains a visible vertical tick with non-zero height, corresponding to its semantic glyph.",
+      "duplicateGroup": "annotation-svg-export-shapes",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The Marker-specific vertical tick differs from the Vertical Line export contract and must stay separately asserted at the export boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-multiline-and-export-shapes.spec.ts",
@@ -2101,18 +2112,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "callout-multiline-save-open",
+      "originIssue": 377,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Multi-line Callout text retains line boundaries in the live overlay and SVG export after production Save/Open.",
+      "duplicateGroup": "callout-multiline-live-export",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The real serialization/replacement path is the unique persistence contract not covered by immediate export; keep it in the heavier integration tier.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-presentation-controls.spec.ts",
@@ -22568,11 +22583,11 @@
     {
       "file": "annotation-multiline-and-export-shapes.spec.ts",
       "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "annotation-presentation-controls.spec.ts",
