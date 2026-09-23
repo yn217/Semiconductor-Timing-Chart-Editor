@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:08:26.680Z",
+  "generatedAt": "2026-09-23T05:09:24.851Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 648,
+  "reviewedCaseCount": 651,
   "curatedProfileCounts": {
-    "integration": 301,
+    "integration": 302,
     "nightly": 162,
     "performance": 44,
-    "pr": 189,
+    "pr": 191,
     "visual": 131
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -6672,18 +6672,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "group-band-presentation-apply-persistence-export",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Group Band Inspector applies scope/style fields as one semantic change, preserves derived spacing, survives Undo/Redo and Save/Open, appears in SVG/PNG/PDF exports, and avoids waveform/local-geometry rebuilds.",
+      "duplicateGroup": "group-band-inspector-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the complete applied Group Band presentation and serialization/export journey. The adjacent tests cover rejection and transient preview/cancel instead, not persistence or exported semantics.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "group-band.spec.ts",
@@ -6694,18 +6697,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "group-band-invalid-opacity-rejection",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "An out-of-range Group opacity draft is rejected at Apply without changing Canonical revision, History, Dirty state, or the committed document.",
+      "duplicateGroup": "group-band-inspector-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The valid Apply and transient-preview tests cannot detect acceptance of an invalid numeric value or accidental semantic mutation on rejected Apply; retain the focused negative boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "group-band.spec.ts",
@@ -6716,18 +6722,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "group-band-transient-preview-cancel",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Valid Group Band draft values immediately preview their derived row/header presentation while Canonical/History/Dirty remain unchanged, and Cancel restores committed styles and disclosure state.",
+      "duplicateGroup": "group-band-inspector-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Applied-state persistence does not prove live draft projection or exact rollback on Cancel. This protects the independent preview owner/lifecycle before semantic Apply.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "group-clipboard-parity.spec.ts",
@@ -23981,11 +23990,11 @@
     {
       "file": "group-band.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "group-clipboard-parity.spec.ts",
