@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T04:59:00.191Z",
+  "generatedAt": "2026-09-23T05:00:31.600Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 625,
+  "reviewedCaseCount": 631,
   "curatedProfileCounts": {
-    "integration": 291,
+    "integration": 293,
     "nightly": 159,
     "performance": 44,
-    "pr": 180,
+    "pr": 184,
     "visual": 130
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -6072,18 +6072,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bottom-signal-context-editor-composition",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Selecting a Signal routes the Bottom Panel to the continuous V1 Signal Context Editor in the shared center column, with the expected Signal identity and event table visible.",
+      "duplicateGroup": "bottom-signal-context-editor",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Bottom sizing/reference tests protect panel geometry, while event editor tests protect editing details; this compact production composition assertion links selection identity, center-column ownership, and the actual Signal Context surface.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -6094,18 +6097,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "fit-selection-ruler-geometry-and-fit-all",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Ruler selection and Fit Selection use authoritative cycle geometry to fit the selected source range inside the viewport; Fit All resets horizontal navigation without changing document or render state.",
+      "duplicateGroup": "fit-selection-source-geometry",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This verifies the normal uncollapsed source-geometry route and the paired Fit All reset contract. The collapsed-TimeGroup case covers a separate mapping boundary and cannot replace the basic fit/navigation flow.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -6116,18 +6122,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "fit-selection-collapsed-timegroup-source-boundary",
+      "originIssue": 587,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Fit Selection maps selected source boundaries through a collapsed TimeGroup and fits the resulting displayed range while Canonical, History, and Dirty remain unchanged.",
+      "duplicateGroup": "fit-selection-source-geometry",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Folded/collapsed display mapping is a separate source-to-display geometry contract; an uncollapsed Fit Selection test cannot expose a regression in boundary resolution across a TimeGroup.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -6138,18 +6147,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "canvas-ruler-selection-playhead-geometry",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Selecting a cycle from the Ruler places the playhead at that same authoritative geometry boundary, with no entity selection, Canonical/History mutation, or waveform/local-geometry rebuild.",
+      "duplicateGroup": "ruler-selection-and-playhead",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Range-hit testing and bookmark tests use the Ruler for different interactions; this is the direct single-cycle selection-to-playhead projection and zero-invalidation contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -6160,18 +6172,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-range-drag-reverse-extension-cancel",
+      "originIssue": 573,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Real pointer range drags normalize reverse endpoints, Shift-extend an existing range, preview without mutation, and Escape cancels an active preview without committing it.",
+      "duplicateGroup": "cycle-range-drag-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Focused drag regressions protect individual coordinate boundaries; this test preserves the distinct user interaction sequence for reverse selection, extension, active preview, and Escape cancellation in one real-pointer route.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -6182,18 +6197,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "cycle-viewport-keyboard-navigation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Keyboard End/Home/PageDown navigates the horizontal and vertical Cycle viewport while Canonical, History, WaveDrom, and local geometry remain unchanged.",
+      "duplicateGroup": "cycle-viewport-navigation-inputs",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Scroll-owner tests validate programmatic and pointer-driven geometry; this uniquely verifies keyboard focus and native key routing across both axes with zero semantic/render invalidation.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -23876,7 +23894,7 @@
     {
       "file": "full-gui.spec.ts",
       "caseCount": 41,
-      "reviewedCaseCount": 22,
+      "reviewedCaseCount": 28,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
