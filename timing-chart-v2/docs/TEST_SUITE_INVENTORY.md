@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 326 spec files and 958 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 326 spec files and 956 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 958/958 cases reviewed.
+Semantic review progress: 956/956 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 488 |
+| `integration` | 486 |
 | `nightly` | 195 |
 | `performance` | 54 |
 | `pr` | 254 |
-| `visual` | 172 |
+| `visual` | 170 |
 
 ## Top recorded per-case runtimes
 
@@ -204,9 +204,9 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-747-a11y-and-sort-matrix.spec.ts` | 1 | 1/1 reviewed |
 | `issue-747-bottom-settings.spec.ts` | 1 | 1/1 reviewed |
 | `issue-747-geometry-acceptance.spec.ts` | 2 | 2/2 reviewed |
-| `issue-748-add-and-focus-journey.spec.ts` | 2 | 2/2 reviewed |
+| `issue-748-add-and-focus-journey.spec.ts` | 1 | 1/1 reviewed |
 | `issue-748-transaction-left-header.spec.ts` | 1 | 1/1 reviewed |
-| `issue-748-tree-menu-and-parity.spec.ts` | 2 | 2/2 reviewed |
+| `issue-748-tree-menu-and-parity.spec.ts` | 1 | 1/1 reviewed |
 | `issue-749-move-to-group-submenu.spec.ts` | 2 | 2/2 reviewed |
 | `issue-750-custom-tc-scale.spec.ts` | 1 | 1/1 reviewed |
 | `issue-750-geometry-10-to-50.spec.ts` | 3 | 3/3 reviewed |
@@ -589,6 +589,10 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-740-741-756-cycle-layout.spec.ts` “#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1672x941” → `issue-740-741-756-cycle-layout.spec.ts` “#756 Cycle left rail spans Main + Bottom at both supported viewports”. **Invariant:** The left rail reaches the workspace bottom and the timeline scrollbar remains above the Bottom splitter at desktop viewport size. **Reason:** Runs both desktop and compact geometry assertions in one loaded Cycle workspace while restoring Bottom visibility between viewport sizes.
 - `issue-746-visible-group-create.spec.ts` “Tree and Bottom expose visible Group creation at 1280x720” → `issue-746-visible-group-create.spec.ts` “Tree and Bottom expose visible Group creation at both supported viewports”. **Invariant:** The Tree header and Bottom each create a visible Group and Undo restores the original collection at compact width. **Reason:** Runs the existing two-size Tree/Bottom create-and-Undo journey in one workspace while retaining width-specific visible bounds and header-overflow assertions.
 - `issue-746-visible-group-create.spec.ts` “Tree and Bottom expose visible Group creation at 1672x941” → `issue-746-visible-group-create.spec.ts` “Tree and Bottom expose visible Group creation at both supported viewports”. **Invariant:** The Tree header and Bottom each create a visible Group and Undo restores the original collection at desktop width. **Reason:** Runs the existing two-size Tree/Bottom create-and-Undo journey in one workspace while retaining width-specific visible bounds and header-overflow assertions.
+- `issue-748-add-and-focus-journey.spec.ts` “left-pane Add and keyboard journey at 1280x720” → `issue-748-add-and-focus-journey.spec.ts` “left-pane Add and keyboard journey at both supported viewports”. **Invariant:** Left-pane Add creates one stable Transaction with one History step, More does not reflow, and keyboard navigation skips Signals at compact width. **Reason:** Runs the repeated add/focus assertions at both viewport widths in one loaded Transaction workspace, recalculating the baseline stable IDs and History depth per size.
+- `issue-748-add-and-focus-journey.spec.ts` “left-pane Add and keyboard journey at 1672x941” → `issue-748-add-and-focus-journey.spec.ts` “left-pane Add and keyboard journey at both supported viewports”. **Invariant:** Left-pane Add creates one stable Transaction with one History step, More does not reflow, and keyboard navigation skips Signals at desktop width. **Reason:** Runs the repeated add/focus assertions at both viewport widths in one loaded Transaction workspace, recalculating the baseline stable IDs and History depth per size.
+- `issue-748-tree-menu-and-parity.spec.ts` “Transaction Tree menu behaviour and Cycle parity at 1280x720” → `issue-748-tree-menu-and-parity.spec.ts` “Transaction Tree menu behaviour and Cycle parity at both supported viewports”. **Invariant:** Cycle/Transaction header geometry parity, menu focus/keyboard behavior, view-only disclosure and semantic visibility commands work at compact width. **Reason:** Runs the existing geometry and menu state journey at both viewport sizes within one app session; each iteration takes fresh canonical, History and row-count baselines.
+- `issue-748-tree-menu-and-parity.spec.ts` “Transaction Tree menu behaviour and Cycle parity at 1672x941” → `issue-748-tree-menu-and-parity.spec.ts` “Transaction Tree menu behaviour and Cycle parity at both supported viewports”. **Invariant:** Cycle/Transaction header geometry parity, menu focus/keyboard behavior, view-only disclosure and semantic visibility commands work at desktop width. **Reason:** Runs the existing geometry and menu state journey at both viewport sizes within one app session; each iteration takes fresh canonical, History and row-count baselines.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 

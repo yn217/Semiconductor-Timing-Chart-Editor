@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T11:20:40.295Z",
+  "generatedAt": "2026-09-23T11:23:27.948Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,14 +12,14 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 326,
-  "caseCount": 958,
-  "reviewedCaseCount": 958,
+  "caseCount": 956,
+  "reviewedCaseCount": 956,
   "curatedProfileCounts": {
-    "integration": 488,
+    "integration": 486,
     "nightly": 195,
     "performance": 54,
     "pr": 254,
-    "visual": 172
+    "visual": 170
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -11797,8 +11797,8 @@
     {
       "file": "issue-748-add-and-focus-journey.spec.ts",
       "suitePath": [],
-      "line": 6,
-      "title": "left-pane Add and keyboard journey at 1280x720",
+      "line": 5,
+      "title": "left-pane Add and keyboard journey at both supported viewports",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -11812,33 +11812,7 @@
       "duplicateGroup": "transaction-tree-responsive-header",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "decision": "KEEP",
-      "reason": "This combines a real semantic create with stable-ID cross-surface projection and responsive header/focus behavior. Both viewport variants protect the panel's width-sensitive density and are not reducible to an isolated command test.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "integration",
-        "visual"
-      ]
-    },
-    {
-      "file": "issue-748-add-and-focus-journey.spec.ts",
-      "suitePath": [],
-      "line": 6,
-      "title": "left-pane Add and keyboard journey at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "transaction-tree-add-and-keyboard-focus",
-      "originIssue": 748,
-      "type": "USER_JOURNEY",
-      "costClass": "HEAVY",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Left Tree Add creates one stable Transaction visible in Tree, Timeline and Bottom with one History unit; More does not reflow the pane; keyboard traversal skips the removed Signals switch.",
-      "duplicateGroup": "transaction-tree-responsive-header",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "KEEP",
-      "reason": "This combines a real semantic create with stable-ID cross-surface projection and responsive header/focus behavior. Both viewport variants protect the panel's width-sensitive density and are not reducible to an isolated command test.",
+      "reason": "This combines a real semantic create with stable-ID cross-surface projection and responsive header/focus behavior. Both viewport sizes remain asserted in one loaded workspace, avoiding a duplicate startup while preserving width-sensitive density checks.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -11874,8 +11848,8 @@
     {
       "file": "issue-748-tree-menu-and-parity.spec.ts",
       "suitePath": [],
-      "line": 6,
-      "title": "Transaction Tree menu behaviour and Cycle parity at 1280x720",
+      "line": 5,
+      "title": "Transaction Tree menu behaviour and Cycle parity at both supported viewports",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -11889,33 +11863,7 @@
       "duplicateGroup": "transaction-tree-responsive-header",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "decision": "KEEP",
-      "reason": "It protects explicit Cycle/Transaction geometry parity at both accepted viewport sizes together with distinct disclosure and visibility semantics. Those width assertions are the reason to retain both variants; menu presence alone overlaps the header smoke but not its state behavior.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "integration",
-        "visual"
-      ]
-    },
-    {
-      "file": "issue-748-tree-menu-and-parity.spec.ts",
-      "suitePath": [],
-      "line": 6,
-      "title": "Transaction Tree menu behaviour and Cycle parity at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "transaction-tree-menu-and-cycle-parity",
-      "originIssue": 748,
-      "type": "VISUAL_ACCEPTANCE",
-      "costClass": "HEAVY",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Transaction Tree control dimensions match Cycle where required; the named menu supports Escape/focus return, view-only Expand/Collapse All, and semantic Show/Hide All.",
-      "duplicateGroup": "transaction-tree-responsive-header",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "KEEP",
-      "reason": "It protects explicit Cycle/Transaction geometry parity at both accepted viewport sizes together with distinct disclosure and visibility semantics. Those width assertions are the reason to retain both variants; menu presence alone overlaps the header smoke but not its state behavior.",
+      "reason": "It protects explicit Cycle/Transaction geometry parity at both accepted viewport sizes together with distinct disclosure and visibility semantics. Both sizes run in one loaded workspace; menu presence alone overlaps the header smoke but not its state behavior.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -25797,8 +25745,8 @@
     },
     {
       "file": "issue-748-add-and-focus-journey.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "748",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
@@ -25815,8 +25763,8 @@
     },
     {
       "file": "issue-748-tree-menu-and-parity.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "748",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -28224,6 +28172,54 @@
       },
       "protectedInvariant": "The Tree header and Bottom each create a visible Group and Undo restores the original collection at desktop width.",
       "reason": "Runs the existing two-size Tree/Bottom create-and-Undo journey in one workspace while retaining width-specific visible bounds and header-overflow assertions."
+    },
+    {
+      "from": {
+        "file": "issue-748-add-and-focus-journey.spec.ts",
+        "title": "left-pane Add and keyboard journey at 1280x720"
+      },
+      "to": {
+        "file": "issue-748-add-and-focus-journey.spec.ts",
+        "title": "left-pane Add and keyboard journey at both supported viewports"
+      },
+      "protectedInvariant": "Left-pane Add creates one stable Transaction with one History step, More does not reflow, and keyboard navigation skips Signals at compact width.",
+      "reason": "Runs the repeated add/focus assertions at both viewport widths in one loaded Transaction workspace, recalculating the baseline stable IDs and History depth per size."
+    },
+    {
+      "from": {
+        "file": "issue-748-add-and-focus-journey.spec.ts",
+        "title": "left-pane Add and keyboard journey at 1672x941"
+      },
+      "to": {
+        "file": "issue-748-add-and-focus-journey.spec.ts",
+        "title": "left-pane Add and keyboard journey at both supported viewports"
+      },
+      "protectedInvariant": "Left-pane Add creates one stable Transaction with one History step, More does not reflow, and keyboard navigation skips Signals at desktop width.",
+      "reason": "Runs the repeated add/focus assertions at both viewport widths in one loaded Transaction workspace, recalculating the baseline stable IDs and History depth per size."
+    },
+    {
+      "from": {
+        "file": "issue-748-tree-menu-and-parity.spec.ts",
+        "title": "Transaction Tree menu behaviour and Cycle parity at 1280x720"
+      },
+      "to": {
+        "file": "issue-748-tree-menu-and-parity.spec.ts",
+        "title": "Transaction Tree menu behaviour and Cycle parity at both supported viewports"
+      },
+      "protectedInvariant": "Cycle/Transaction header geometry parity, menu focus/keyboard behavior, view-only disclosure and semantic visibility commands work at compact width.",
+      "reason": "Runs the existing geometry and menu state journey at both viewport sizes within one app session; each iteration takes fresh canonical, History and row-count baselines."
+    },
+    {
+      "from": {
+        "file": "issue-748-tree-menu-and-parity.spec.ts",
+        "title": "Transaction Tree menu behaviour and Cycle parity at 1672x941"
+      },
+      "to": {
+        "file": "issue-748-tree-menu-and-parity.spec.ts",
+        "title": "Transaction Tree menu behaviour and Cycle parity at both supported viewports"
+      },
+      "protectedInvariant": "Cycle/Transaction header geometry parity, menu focus/keyboard behavior, view-only disclosure and semantic visibility commands work at desktop width.",
+      "reason": "Runs the existing geometry and menu state journey at both viewport sizes within one app session; each iteration takes fresh canonical, History and row-count baselines."
     }
   ]
 }

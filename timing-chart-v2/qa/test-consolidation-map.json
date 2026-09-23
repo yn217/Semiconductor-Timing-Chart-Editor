@@ -432,6 +432,30 @@
       "to": { "file": "issue-746-visible-group-create.spec.ts", "title": "Tree and Bottom expose visible Group creation at both supported viewports" },
       "protectedInvariant": "The Tree header and Bottom each create a visible Group and Undo restores the original collection at desktop width.",
       "reason": "Runs the existing two-size Tree/Bottom create-and-Undo journey in one workspace while retaining width-specific visible bounds and header-overflow assertions."
+    },
+    {
+      "from": { "file": "issue-748-add-and-focus-journey.spec.ts", "title": "left-pane Add and keyboard journey at 1280x720" },
+      "to": { "file": "issue-748-add-and-focus-journey.spec.ts", "title": "left-pane Add and keyboard journey at both supported viewports" },
+      "protectedInvariant": "Left-pane Add creates one stable Transaction with one History step, More does not reflow, and keyboard navigation skips Signals at compact width.",
+      "reason": "Runs the repeated add/focus assertions at both viewport widths in one loaded Transaction workspace, recalculating the baseline stable IDs and History depth per size."
+    },
+    {
+      "from": { "file": "issue-748-add-and-focus-journey.spec.ts", "title": "left-pane Add and keyboard journey at 1672x941" },
+      "to": { "file": "issue-748-add-and-focus-journey.spec.ts", "title": "left-pane Add and keyboard journey at both supported viewports" },
+      "protectedInvariant": "Left-pane Add creates one stable Transaction with one History step, More does not reflow, and keyboard navigation skips Signals at desktop width.",
+      "reason": "Runs the repeated add/focus assertions at both viewport widths in one loaded Transaction workspace, recalculating the baseline stable IDs and History depth per size."
+    },
+    {
+      "from": { "file": "issue-748-tree-menu-and-parity.spec.ts", "title": "Transaction Tree menu behaviour and Cycle parity at 1280x720" },
+      "to": { "file": "issue-748-tree-menu-and-parity.spec.ts", "title": "Transaction Tree menu behaviour and Cycle parity at both supported viewports" },
+      "protectedInvariant": "Cycle/Transaction header geometry parity, menu focus/keyboard behavior, view-only disclosure and semantic visibility commands work at compact width.",
+      "reason": "Runs the existing geometry and menu state journey at both viewport sizes within one app session; each iteration takes fresh canonical, History and row-count baselines."
+    },
+    {
+      "from": { "file": "issue-748-tree-menu-and-parity.spec.ts", "title": "Transaction Tree menu behaviour and Cycle parity at 1672x941" },
+      "to": { "file": "issue-748-tree-menu-and-parity.spec.ts", "title": "Transaction Tree menu behaviour and Cycle parity at both supported viewports" },
+      "protectedInvariant": "Cycle/Transaction header geometry parity, menu focus/keyboard behavior, view-only disclosure and semantic visibility commands work at desktop width.",
+      "reason": "Runs the existing geometry and menu state journey at both viewport sizes within one app session; each iteration takes fresh canonical, History and row-count baselines."
     }
   ]
 }

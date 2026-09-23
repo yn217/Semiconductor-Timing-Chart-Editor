@@ -1427,7 +1427,7 @@
         "visual"
       ],
       "decision": "KEEP",
-      "reason": "This combines a real semantic create with stable-ID cross-surface projection and responsive header/focus behavior. Both viewport variants protect the panel's width-sensitive density and are not reducible to an isolated command test.",
+      "reason": "This combines a real semantic create with stable-ID cross-surface projection and responsive header/focus behavior. Both viewport sizes remain asserted in one loaded workspace, avoiding a duplicate startup while preserving width-sensitive density checks.",
       "replacementTest": null
     },
     {
@@ -1462,7 +1462,7 @@
         "visual"
       ],
       "decision": "KEEP",
-      "reason": "It protects explicit Cycle/Transaction geometry parity at both accepted viewport sizes together with distinct disclosure and visibility semantics. Those width assertions are the reason to retain both variants; menu presence alone overlaps the header smoke but not its state behavior.",
+      "reason": "It protects explicit Cycle/Transaction geometry parity at both accepted viewport sizes together with distinct disclosure and visibility semantics. Both sizes run in one loaded workspace; menu presence alone overlaps the header smoke but not its state behavior.",
       "replacementTest": null
     },
     {
