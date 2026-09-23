@@ -3393,6 +3393,22 @@
       "replacementTest": null
     },
     {
+      "file": "gui-density-tokens.spec.ts",
+      "title": "Event Table controls never silently fall back to the browser's native font size",
+      "domain": "event-table-controls-design-token-typography",
+      "originIssue": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "SMALL",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Event-row inputs, row-action buttons, transition submit controls, and quick-value buttons use a supported Design System typography size instead of browser-default 16px, aligned with the Inspector and declared font tokens.",
+      "duplicateGroup": "design-token-control-typography",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["visual"],
+      "decision": "KEEP",
+      "reason": "This measures computed production styles on controls that previously escaped styled ancestors; source token existence cannot prove CSS inheritance reaches these mounted event-table controls. The focused browser check is small and directly protects the regression.",
+      "replacementTest": null
+    },
+    {
       "file": "qa-fresh-state-journeys.spec.ts",
       "title": "J9 Bottom follows the selected entity kind",
       "domain": "bottom-panel-selection",

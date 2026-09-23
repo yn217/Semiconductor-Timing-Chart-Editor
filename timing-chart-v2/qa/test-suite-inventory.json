@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:10:43.331Z",
+  "generatedAt": "2026-09-23T05:11:45.605Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 653,
+  "reviewedCaseCount": 654,
   "curatedProfileCounts": {
     "integration": 303,
     "nightly": 162,
     "performance": 44,
     "pr": 192,
-    "visual": 131
+    "visual": 132
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -6822,18 +6822,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "event-table-controls-design-token-typography",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Event-row inputs, row-action buttons, transition submit controls, and quick-value buttons use a supported Design System typography size instead of browser-default 16px, aligned with the Inspector and declared font tokens.",
+      "duplicateGroup": "design-token-control-typography",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This measures computed production styles on controls that previously escaped styled ancestors; source token existence cannot prove CSS inheritance reaches these mounted event-table controls. The focused browser check is small and directly protects the regression.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "gui-inspector-resize.spec.ts",
@@ -24023,13 +24026,13 @@
     {
       "file": "gui-density-tokens.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "gui-inspector-resize.spec.ts",
