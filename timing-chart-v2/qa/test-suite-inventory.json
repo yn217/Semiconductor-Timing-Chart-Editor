@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T03:35:48.805Z",
+  "generatedAt": "2026-09-23T03:50:24.566Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 965,
-  "reviewedCaseCount": 539,
+  "reviewedCaseCount": 555,
   "curatedProfileCounts": {
-    "integration": 237,
+    "integration": 246,
     "nightly": 148,
     "performance": 36,
     "pr": 163,
-    "visual": 120
+    "visual": 127
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -13894,18 +13894,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "label-anchor-source-display-save-open",
+      "originIssue": 376,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A standalone LabelAnchor rebases the visible ruler from source cycle 5 to display label 1000 both with and without a folded TimeGroup; Undo removes only the fold, and Save/Open preserves the canonical source/display pair.",
+      "duplicateGroup": "label-anchor-source-display-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This single cross-owner journey covers parsed canonical source/display data, no-fold and folded ruler projection, Undo, and a real Save/Open round trip. DOM attributes are used to expose the semantic source/display mapping while the rendered ruler text is also asserted; command tests provide the cheaper validation/lifecycle layer but cannot prove the shared projection path.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "layout-inspector.spec.ts",
@@ -14017,18 +14020,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-tree-header-action-visual-alignment",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": 10600,
+      "primaryContract": "Left Tree header title and Add/More controls remain aligned and usable at minimum, normal, and maximum pane widths; Add/More menus still open and resizing remains view-only.",
+      "duplicateGroup": "left-tree-header-visual-layout",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The contract is explicitly pixel/layout-sensitive, relies on rendered element bounds and fixed gap tolerances, and takes 10.6s; keep this single case in the visual profile. It complements icon-asset and responsive-pane checks by protecting control alignment through actual Add/More use and resizing, rather than repeating those contracts.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "left-pane-constraint.spec.ts",
@@ -14039,18 +14045,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-pane-minimum-start-constraint",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 3600,
+      "primaryContract": "On the visual-reference route at 1672x941, the left-pane separator starts at the approved 265px minimum, exposes the 265–420px bounds, and neither an outward keyboard press nor pointer drag shrinks it below minimum.",
+      "duplicateGroup": "left-pane-minimum-start-constraint",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This protects the visual-reference route's Cycle-oriented fixture/initial owner; its measured runtime is below 10s. The normal-route counterpart starts from a different document/workspace path, so retain both route contracts rather than dropping one as a duplicate.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "left-pane-constraint.spec.ts",
@@ -14061,18 +14070,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-pane-minimum-start-constraint",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 7700,
+      "primaryContract": "On the normal product route at 1672x941, the left-pane separator starts at the approved 265px minimum, exposes the 265–420px bounds, and neither an outward keyboard press nor pointer drag shrinks it below minimum.",
+      "duplicateGroup": "left-pane-minimum-start-constraint",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This protects the normal route's default Transaction-document startup followed by Cycle initialization; its measured runtime is below 10s. The reference-route counterpart has a different initial document/workspace owner and is retained separately.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "left-tree-action-icons.spec.ts",
@@ -14083,18 +14095,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-tree-header-actions-view-only-contract",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "primaryContract": "From the production Cycle Tree header, users can open/close More and Add menus with focus restored on Escape, expand groups, and clear a filter without changing document/history/dirty state.",
+      "duplicateGroup": "left-tree-header-actions",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "MOVE_LAYER",
+      "reason": "Keep the user-visible menu/focus and view-only behavior, but move exact SVG child counts, pseudo-element text, and renderer-counter equality into component/architecture-level coverage. left-tree-critical-icons.spec.ts already owns cross-fixture SVG topology; this E2E should not couple user behavior to those DOM internals.",
+      "replacementTest": "Retain a focused user-journey E2E for accessible Add/More, Escape focus restoration, Expand All, filter clear, and canonical/history/dirty invariance; cover owned SVG markup and render-counter invalidation in component/architecture tests.",
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "left-tree-compact-footer.spec.ts",
@@ -14105,18 +14120,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-tree-compact-footer-responsive-acceptance",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 9700,
+      "primaryContract": "At 1280x720, the Cycle Left Tree footer remains compact without horizontal overflow or redundant hierarchy UI, while Add/More entry points work without document mutation.",
+      "duplicateGroup": "left-tree-compact-footer",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This checks a real compact viewport boundary plus footer content and action discoverability; its 9.7s focused runtime belongs in visual acceptance rather than routine PR. The larger viewport case is retained separately for its distinct supported viewport contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "left-tree-compact-footer.spec.ts",
@@ -14127,18 +14145,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-tree-compact-footer-responsive-acceptance",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 6900,
+      "primaryContract": "At 1672x941, the Cycle Left Tree footer remains compact without horizontal overflow or redundant hierarchy UI, while Add/More entry points work without document mutation.",
+      "duplicateGroup": "left-tree-compact-footer",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This protects the reference-sized production viewport; the laptop counterpart is also retained because responsive width can change wrapping/overflow and both measured runs are short enough for the visual profile.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "left-tree-critical-icons.spec.ts",
@@ -14149,18 +14170,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-tree-critical-icon-rendering",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Visibility, row More, and group-collapse icons render with owned SVG geometry consistently in the normal and visual-reference Cycle fixtures.",
+      "duplicateGroup": "left-tree-critical-icon-svg",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is a cross-fixture rendering contract for the core navigation icons, distinct from Add/More header actions and from user menu behavior. Its SVG topology selectors are implementation-coupled, so keep it out of routine PR and prefer moving the invariant to component tests when such coverage exists.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "left-tree-interaction.spec.ts",
@@ -14171,18 +14195,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-tree-collapse-projection-contract",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 9000,
+      "primaryContract": "Collapsing a Left Tree group hides only its navigation descendants, preserves frozen/timing rows and wave owners, and restores the exact stable row order without changing Canonical or History.",
+      "duplicateGroup": "left-tree-projection-separation",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This guards separation between navigation disclosure and timing projection across three groups and exact row restoration; the DOM projection assertions are appropriate as an integration owner contract rather than routine user smoke.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "left-tree-interaction.spec.ts",
@@ -14193,18 +14220,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-tree-visibility-projection-contract",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": 3700,
+      "primaryContract": "Toggling Signal visibility keeps its navigation row while removing and restoring frozen/timing rows and the Wave owner for the same stable signal ID.",
+      "duplicateGroup": "left-tree-projection-separation",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This isolates visibility projection from group collapse: the same stable signal identity remains navigable while only its derived presentation surfaces change. It complements collapse coverage without duplicating it.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "left-tree-interaction.spec.ts",
@@ -14215,18 +14245,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-tree-context-menu-and-insertion-flow",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": 4600,
+      "primaryContract": "Row and group More affordances open the supported shared menus, and adding a Signal after selecting a row inserts it at the expected stable position after a group reorder.",
+      "duplicateGroup": "left-tree-context-and-insertion",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This verifies a compound production journey across context menus, group ordering, selection, and semantic insertion placement; it is distinct from header menu affordance and simpler command-unit coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "left-tree-menu-contrast.spec.ts",
@@ -14237,18 +14270,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-tree-menu-contrast-keyboard-accessibility",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Left Tree More and row context menus retain readable normal/hover/disabled colors, visible keyboard focus and arrow navigation, Escape dismissal, and no document mutation.",
+      "duplicateGroup": "left-tree-menu-accessibility-visual-state",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Computed color assertions are theme/visual acceptance, while focus traversal and Escape dismissal cover keyboard accessibility not guaranteed by the menu-open/focus-return checks in other tests. Keep this combined state matrix outside routine PR runs.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "left-tree-projection-policy-correction.spec.ts",
@@ -14259,18 +14295,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "left-tree-collapse-projection-separation",
+      "originIssue": 184,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Collapsing a group compacts Left Tree descendants while preserving Cycle frozen/timing/wave surfaces and stable row order without document/history/dirty or expensive geometry/render work.",
+      "duplicateGroup": "left-tree-projection-separation",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The case measures relative positions and owner counters across tree and Cycle projections, which provides geometry/invalidation evidence beyond the compact collapse-and-restore user flow; retain as the integration-level projection contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "left-tree-projection-policy-correction.spec.ts",
@@ -14281,18 +14320,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "left-tree-visibility-inspector-projection-separation",
+      "originIssue": 184,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A hidden Signal remains hidden when its Left Tree group is collapsed, and applying visibility from Inspector restores Cycle surfaces without implicitly expanding the tree; disclosure and visibility stay independent.",
+      "duplicateGroup": "left-tree-projection-separation",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This covers the cross-owner edge case where Inspector changes visibility while the navigation group is collapsed; the simpler visible-row toggle contract does not prove that disclosure remains independent.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "left-tree-type-filter.spec.ts",
@@ -14303,18 +14345,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "left-tree-combined-filter-view-only",
+      "originIssue": 184,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1000px, combining type and text filters shows only matching Left Tree rows, leaves timing/frozen/wave surfaces intact, and does not change Canonical, History, Dirty, or render counters.",
+      "duplicateGroup": "left-tree-combined-filter-responsive",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This independently validates compact-width availability and view-only semantics under the same type/text filtering journey; it protects a separate supported viewport boundary rather than duplicating the 1672px contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "left-tree-type-filter.spec.ts",
@@ -14325,18 +14370,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "left-tree-combined-filter-view-only",
+      "originIssue": 184,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1672px, combining type and text filters shows only matching Left Tree rows, leaves timing/frozen/wave surfaces intact, and does not change Canonical, History, Dirty, or render counters.",
+      "duplicateGroup": "left-tree-combined-filter-responsive",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This validates the normal supported-width user flow across Input/Output/Wire/Comment filters, text matching, and no-mutation behavior. The compact-width counterpart remains necessary for responsive layout/filter coexistence.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "listener-lifecycle.spec.ts",
@@ -25119,11 +25167,11 @@
     {
       "file": "label-anchor-source-display.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "layout-inspector.spec.ts",
@@ -25139,100 +25187,100 @@
     {
       "file": "left-header-action-alignment.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "left-pane-constraint.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "left-tree-action-icons.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "left-tree-compact-footer.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "left-tree-critical-icons.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "left-tree-interaction.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "left-tree-menu-contrast.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "left-tree-projection-policy-correction.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "left-tree-type-filter.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "listener-lifecycle.spec.ts",

@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 965 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 539/965 cases reviewed.
+Semantic review progress: 555/965 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 237 |
+| `integration` | 246 |
 | `nightly` | 148 |
 | `performance` | 36 |
 | `pr` | 163 |
-| `visual` | 120 |
+| `visual` | 127 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -222,17 +222,17 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-777-current-v2-samples-acceptance.spec.ts` | 10 | 10/10 reviewed |
 | `keyboard-shortcut-router.spec.ts` | 4 | 4/4 reviewed |
 | `keyboard-tabs-resizers.spec.ts` | 2 | 2/2 reviewed |
-| `label-anchor-source-display.spec.ts` | 1 | 0/1 reviewed |
+| `label-anchor-source-display.spec.ts` | 1 | 1/1 reviewed |
 | `layout-inspector.spec.ts` | 4 | 4/4 reviewed |
-| `left-header-action-alignment.spec.ts` | 1 | 0/1 reviewed |
-| `left-pane-constraint.spec.ts` | 2 | 0/2 reviewed |
-| `left-tree-action-icons.spec.ts` | 1 | 0/1 reviewed |
-| `left-tree-compact-footer.spec.ts` | 2 | 0/2 reviewed |
-| `left-tree-critical-icons.spec.ts` | 1 | 0/1 reviewed |
-| `left-tree-interaction.spec.ts` | 3 | 0/3 reviewed |
-| `left-tree-menu-contrast.spec.ts` | 1 | 0/1 reviewed |
-| `left-tree-projection-policy-correction.spec.ts` | 2 | 0/2 reviewed |
-| `left-tree-type-filter.spec.ts` | 2 | 0/2 reviewed |
+| `left-header-action-alignment.spec.ts` | 1 | 1/1 reviewed |
+| `left-pane-constraint.spec.ts` | 2 | 2/2 reviewed |
+| `left-tree-action-icons.spec.ts` | 1 | 1/1 reviewed |
+| `left-tree-compact-footer.spec.ts` | 2 | 2/2 reviewed |
+| `left-tree-critical-icons.spec.ts` | 1 | 1/1 reviewed |
+| `left-tree-interaction.spec.ts` | 3 | 3/3 reviewed |
+| `left-tree-menu-contrast.spec.ts` | 1 | 1/1 reviewed |
+| `left-tree-projection-policy-correction.spec.ts` | 2 | 2/2 reviewed |
+| `left-tree-type-filter.spec.ts` | 2 | 2/2 reviewed |
 | `listener-lifecycle.spec.ts` | 2 | 0/2 reviewed |
 | `local-geometry-dom-batch.spec.ts` | 1 | 0/1 reviewed |
 | `measurement-anchor-drag.spec.ts` | 5 | 0/5 reviewed |
