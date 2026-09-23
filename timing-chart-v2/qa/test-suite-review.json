@@ -10420,9 +10420,7 @@
       "primaryContract": "Cycle Inspector does not expose the retired per-Signal Upper/Lower/Both Split Pane assignment control.",
       "duplicateGroup": "signal-split-retired-assignment",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": [
-        "pr"
-      ],
+      "profiles": [],
       "decision": "MOVE_LAYER",
       "reason": "The existing Sample D dual-viewport acceptance already selects a Signal and asserts the retired Split Pane Inspector control is absent while exercising the canonical shared-row product model; this default-document absence-only check adds no distinct fixture or state transition.",
       "replacementTest": "acceptance-397-sample-d.spec.ts::Signal Split ON shows the same 24-Signal row sequence in both panes with independent vertical scroll and shared horizontal scroll, OFF returns to one viewport, view-only throughout"
@@ -10456,9 +10454,7 @@
       "primaryContract": "Retired per-Signal split assignment metadata/control must not affect the shared Split view; toggling Split remains view-only.",
       "duplicateGroup": "signal-split-retired-assignment",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": [
-        "pr"
-      ],
+      "profiles": [],
       "decision": "MOVE_LAYER",
       "reason": "Despite its title, the test does not load legacy assignment data or assert Canonical/History/Dirty deltas; it only opens Split and checks that the Inspector field is absent. Sample D asserts the actual view-only ON/OFF flow and retired-control absence in the full shared-row model, so it supersedes this misleading default-fixture case.",
       "replacementTest": "acceptance-397-sample-d.spec.ts::Signal Split ON shows the same 24-Signal row sequence in both panes with independent vertical scroll and shared horizontal scroll, OFF returns to one viewport, view-only throughout"
@@ -10474,9 +10470,7 @@
       "primaryContract": "Both Split panes project the same first five canonical timing-row IDs in the default Cycle fixture.",
       "duplicateGroup": "signal-split-canonical-row-sequence",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": [
-        "pr"
-      ],
+      "profiles": [],
       "decision": "MOVE_LAYER",
       "reason": "The Sample D acceptance checks the complete 24-Signal canonical row sequence across both panes plus independent vertical/shared horizontal scroll and view-only behavior; its richer fixture subsumes this five-row prefix assertion.",
       "replacementTest": "acceptance-397-sample-d.spec.ts::Signal Split ON shows the same 24-Signal row sequence in both panes with independent vertical scroll and shared horizontal scroll, OFF returns to one viewport, view-only throughout"
