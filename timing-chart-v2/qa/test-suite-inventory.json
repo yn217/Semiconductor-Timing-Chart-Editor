@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:25:53.174Z",
+  "generatedAt": "2026-09-23T07:27:22.012Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,11 +13,11 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 873,
+  "reviewedCaseCount": 877,
   "curatedProfileCounts": {
-    "integration": 457,
-    "nightly": 177,
-    "performance": 48,
+    "integration": 460,
+    "nightly": 178,
+    "performance": 49,
     "pr": 235,
     "visual": 150
   },
@@ -20912,18 +20912,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-linked-signal-cross-highlight",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Selecting a Transaction in Combined view highlights Cycle rows for its linked stable Signal IDs, and changing selection clears the highlight without Canonical/History/render mutation.",
+      "duplicateGroup": "transaction-linked-signal-projection",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This checks the cross-pane stable-ID projection lifecycle, including highlight creation/removal and view-only owner counters. Linked-signal persistence alone does not prove the Cycle surface follows Transaction selection.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-export.spec.ts",
@@ -20934,18 +20937,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-range-timeline-ripple-undo",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A Timeline insertion before a Transaction shifts its start/end by the inserted amount, and one Undo restores the exact original range.",
+      "duplicateGroup": "transaction-timeline-range-transform",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the only integrated Transaction-specific check that a shared Timeline transform remaps both canonical range endpoints and that History reverses the same transformation. Generic timeline-cycle tests do not assert Transaction projection values.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-export.spec.ts",
@@ -20956,18 +20962,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-shared-snap-lane-index-invalidation",
+      "originIssue": 556,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Real Transaction move/resize gestures resolve shared ruler geometry, update the lane index after each commit, and preserve the TransactionLanes mount owner across projection changes.",
+      "duplicateGroup": "transaction-shared-snap-owner-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The sibling drag cases establish user-visible move/resize and preview semantics; this adds the separate shared Snap Service/index invalidation and stable lane-owner lifecycle contract, so it belongs in integration rather than duplicating PR drag journeys.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-export.spec.ts",
@@ -20978,18 +20987,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-repeated-move-incremental-performance",
+      "originIssue": 604,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Ten Inspector Apply moves keep TransactionLanes mounted, avoid full MiniMap rebuilds, produce incremental overview updates, and capture per-operation latency evidence.",
+      "duplicateGroup": "transaction-incremental-overview-and-owner-cost",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is an explicit repeated-operation performance/owner-retention probe with ten mutations, counters, latency samples and an attached evidence artifact; keep it in performance/nightly, not routine PR correctness.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "transaction-export.spec.ts",
@@ -26888,7 +26901,7 @@
     {
       "file": "transaction-export.spec.ts",
       "caseCount": 16,
-      "reviewedCaseCount": 7,
+      "reviewedCaseCount": 11,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [],
