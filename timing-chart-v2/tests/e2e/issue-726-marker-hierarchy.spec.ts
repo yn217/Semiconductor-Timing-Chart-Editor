@@ -12,7 +12,8 @@ test("unselected bookmark markers are secondary and strengthen on hover", async 
   const rest = await alpha();
   expect(rest.width).toBeLessThanOrEqual(1);
   expect(rest.color).toMatch(/rgba?\(.*[,/]\s*0?\.\d+\)/);
-  await marker.hover({ force: true });
+  // Use normal pointer hit testing: force would hide a marker/bar stacking bug.
+  await marker.hover();
   const hover = await alpha();
   expect(hover.width).toBeGreaterThanOrEqual(2);
 });
