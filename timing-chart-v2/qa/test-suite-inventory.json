@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:02:02.715Z",
+  "generatedAt": "2026-09-23T07:03:21.162Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,9 +13,9 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 823,
+  "reviewedCaseCount": 827,
   "curatedProfileCounts": {
-    "integration": 421,
+    "integration": 425,
     "nightly": 172,
     "performance": 45,
     "pr": 230,
@@ -19380,18 +19380,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "timeline-delete-range-boundary-state",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Deleting a half-open interval preserves the active value at the join, updates terminal ruler geometry and renderer consumers, and is represented by one undoable semantic operation.",
+      "duplicateGroup": "timeline-range-transform-boundaries",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This validates the resulting signal value at the deletion join and terminal boundary after a real transform, not merely the new timeline length. Insert/Move coverage protects different transform contracts.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19402,18 +19405,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "marker-gap-display-time-projection",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A Marker is positioned through shared geometry without WaveDrom/local-geometry work; collapsing a Gap compresses semantic display time and reprojects hidden Markers at the fold while regenerating timing geometry, and removing the Gap restores hidden cycles.",
+      "duplicateGroup": "marker-and-timegroup-axis-projection",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The combined case intentionally distinguishes view-geometry-only Marker creation from semantic axis compression, including hidden-in-fold discoverability and invalidation differences. Neither Marker-only nor TimeGroup-only lifecycle tests prove the interaction.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19424,18 +19430,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "time-group-multi-field-apply-undo",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Applying multiple TimeGroup presentation fields, including expansion state, is one semantic/history unit and Undo restores the original name, collapsed Gap label, and ruler marker.",
+      "duplicateGroup": "time-group-edit-history-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The multi-TimeGroup persistence test covers Save/Open and collapse history but does not undo the multi-field editor Apply itself. This directly protects draft-to-command grouping and restoration of the original projected marker.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19446,18 +19455,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bookmark-navigation-view-only-selection",
+      "originIssue": 388,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Next Bookmark navigates to the Bookmark's source-cycle interval and selects the same stable Bookmark in the Bottom panel without changing Canonical revision or History.",
+      "duplicateGroup": "bookmark-navigation-stable-selection",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This couples shared geometry navigation to stable Bookmark selection across the ruler/canvas and Bottom manager. Separate Bookmark edit and context-menu tests do not prove Previous/Next navigation or stable selection identity.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -26600,7 +26612,7 @@
     {
       "file": "timeline-editor.spec.ts",
       "caseCount": 29,
-      "reviewedCaseCount": 14,
+      "reviewedCaseCount": 18,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
