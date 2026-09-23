@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:13:18.876Z",
+  "generatedAt": "2026-09-23T05:17:53.195Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 656,
+  "reviewedCaseCount": 659,
   "curatedProfileCounts": {
-    "integration": 303,
+    "integration": 304,
     "nightly": 162,
     "performance": 44,
-    "pr": 192,
-    "visual": 134
+    "pr": 193,
+    "visual": 135
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -6922,18 +6922,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "v8-shell-visual-and-view-only-contract",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At the locked desktop viewport, the production shell, left tree, ribbon, pane geometry, selection/status, and clock preview match the v8 contract while collapse/expand and preview leave canonical state and render counters unchanged.",
+      "duplicateGroup": "v8-shell-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The test is the integrated v8 shell acceptance with explicit layout metrics and zero-mutation checks. production-presentation-equivalence compares normal and visual-reference routes to each other but does not assert this approved shell contract; narrower badge/MiniMap coverage is not a substitute for its tree, ribbon, status, and preview checks.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "gui-reference-v8.spec.ts",
@@ -6944,18 +6947,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "v8-inspector-style-apply-invalidation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Applying the v8 Inspector style draft creates one History operation, updates the selected signal's rendered styles, and avoids WaveDrom rerender and local geometry rebuild.",
+      "duplicateGroup": "inspector-style-apply-boundary",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "inspector-capability.spec.ts checks the field set and semantic Apply route; this v8 case additionally asserts concrete CSS results and zero WaveDrom/local-geometry work for a presentation-only style edit, guarding a distinct render invalidation boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "gui-reference-v8.spec.ts",
@@ -6966,18 +6972,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "home-secondary-action-command-routing",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Home's Timeline secondary action navigates to the owning tab and creates one History unit; Undo reverts it, and the More menu's Problems action activates the Problems Bottom tab.",
+      "duplicateGroup": "home-command-routing",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This verifies command routing and navigation from Home's secondary surfaces, including the owning Timeline tab and Problems Bottom tab; home-command-surface.spec.ts covers grouped controls and stable-ID Select All, not these execution routes.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "gui-split-view-visual.spec.ts",
@@ -24064,7 +24073,7 @@
     {
       "file": "gui-reference-v8.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24072,7 +24081,7 @@
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "gui-split-view-visual.spec.ts",
