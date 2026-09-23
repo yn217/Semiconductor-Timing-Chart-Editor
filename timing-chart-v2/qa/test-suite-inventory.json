@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T11:00:07.475Z",
+  "generatedAt": "2026-09-23T11:05:09.525Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,7 +11,7 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 327,
+  "specFileCount": 326,
   "caseCount": 962,
   "reviewedCaseCount": 962,
   "curatedProfileCounts": {
@@ -11139,81 +11139,6 @@
       ]
     },
     {
-      "file": "issue-737-multi-select.spec.ts",
-      "suitePath": [],
-      "line": 3,
-      "title": "Bottom Transaction table uses click/Ctrl/Shift selection without checkboxes or history changes",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "transaction-bottom-multi-selection",
-      "originIssue": 737,
-      "type": "USER_JOURNEY",
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": "Click/Ctrl/Shift/Ctrl+A operate on the Bottom row selection set without checkboxes; Duplicate acts on the selected set as one History unit and Undo restores the original count.",
-      "duplicateGroup": null,
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "decision": "KEEP",
-      "reason": "This exercises bulk mutation and one-step undo in addition to selection grammar, unlike the selection-only compact journey; preserve both contracts.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "pr"
-      ]
-    },
-    {
-      "file": "issue-737-selection-gestures.spec.ts",
-      "suitePath": [],
-      "line": 9,
-      "title": "Bottom grid selection gestures at 1280x720",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "transaction-bottom-selection",
-      "originIssue": 737,
-      "type": "USER_JOURNEY",
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": "Bottom grid supports click/Ctrl/Shift selection, visible-order ranges under filtering, Ctrl+A scoped away from text inputs, and accessible selected/disclosure state without Canonical/History changes.",
-      "duplicateGroup": null,
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "decision": "KEEP",
-      "reason": "Retain one compact viewport for viewport-independent selection semantics; the removed desktop duplicate is mapped in qa/test-consolidation-map.json and responsive geometry remains tested at both viewports by #747 geometry acceptance.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "pr"
-      ]
-    },
-    {
-      "file": "issue-737-selection-gestures.spec.ts",
-      "suitePath": [],
-      "line": 62,
-      "title": "Bottom grid exposes aria-selected and aria-expanded with named disclosure controls",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "transaction-bottom-selection",
-      "originIssue": 737,
-      "type": "USER_JOURNEY",
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": "Bottom grid supports click/Ctrl/Shift selection, visible-order ranges under filtering, Ctrl+A scoped away from text inputs, and accessible selected/disclosure state without Canonical/History changes.",
-      "duplicateGroup": null,
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "decision": "KEEP",
-      "reason": "Retain one compact viewport for viewport-independent selection semantics; the removed desktop duplicate is mapped in qa/test-consolidation-map.json and responsive geometry remains tested at both viewports by #747 geometry acceptance.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "pr"
-      ]
-    },
-    {
       "file": "issue-738-ruler-hit-area.spec.ts",
       "suitePath": [],
       "line": 30,
@@ -22124,6 +22049,81 @@
       ]
     },
     {
+      "file": "transaction-selection.contract.spec.ts",
+      "suitePath": [],
+      "line": 3,
+      "title": "Bottom Transaction table uses click/Ctrl/Shift selection without checkboxes or history changes",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "transaction-bottom-multi-selection",
+      "originIssue": 737,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Click/Ctrl/Shift/Ctrl+A operate on the Bottom selection set without checkboxes; Duplicate acts on the selected set as one History unit and Undo restores the original row count.",
+      "duplicateGroup": "transaction-bottom-selection-737",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Preserves the bulk Duplicate/Undo user journey alongside the selection contract without replacing its distinct one-unit history assertion.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
+    },
+    {
+      "file": "transaction-selection.contract.spec.ts",
+      "suitePath": [],
+      "line": 40,
+      "title": "Bottom grid selection gestures at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "transaction-bottom-selection",
+      "originIssue": 737,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Bottom grid supports click/Ctrl/Shift selection, visible-order ranges under filtering, Ctrl+A scoped away from text inputs, and view-only state.",
+      "duplicateGroup": "transaction-bottom-selection-737",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Retains the compact selection grammar journey; responsive Bottom geometry remains separately covered at both supported viewports.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
+    },
+    {
+      "file": "transaction-selection.contract.spec.ts",
+      "suitePath": [],
+      "line": 91,
+      "title": "Bottom grid exposes aria-selected and aria-expanded with named disclosure controls",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "transaction-bottom-selection-accessibility",
+      "originIssue": 737,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Selected state is available to assistive technology and not conveyed by color alone; phase disclosure has an expanded state and named control.",
+      "duplicateGroup": "transaction-bottom-selection-737",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Retains the dedicated accessibility and disclosure journey within the stable selection contract suite.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
+    },
+    {
       "file": "transaction-signal-picker.spec.ts",
       "suitePath": [],
       "line": 30,
@@ -25775,26 +25775,6 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
-      "file": "issue-737-multi-select.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 1,
-      "originIssue": "737",
-      "declaredTimeoutMs": null,
-      "candidateSignals": [],
-      "semanticReviewStatus": "REVIEWED"
-    },
-    {
-      "file": "issue-737-selection-gestures.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
-      "originIssue": "737",
-      "declaredTimeoutMs": null,
-      "candidateSignals": [
-        "getComputedStyle"
-      ],
-      "semanticReviewStatus": "REVIEWED"
-    },
-    {
       "file": "issue-738-ruler-hit-area.spec.ts",
       "caseCount": 4,
       "reviewedCaseCount": 4,
@@ -27326,6 +27306,17 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "transaction-selection.contract.spec.ts",
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [
+        "getComputedStyle"
+      ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
       "file": "transaction-signal-picker.spec.ts",
       "caseCount": 4,
       "reviewedCaseCount": 4,
@@ -27778,7 +27769,7 @@
         "title": "Bottom grid selection gestures at 1672x941"
       },
       "to": {
-        "file": "issue-737-selection-gestures.spec.ts",
+        "file": "transaction-selection.contract.spec.ts",
         "title": "Bottom grid selection gestures at 1280x720"
       },
       "protectedInvariant": "Click/Ctrl/Shift selection, visible-order filtering, Ctrl+A scoping, and view-only Canonical/History behavior are viewport-independent.",
@@ -28203,6 +28194,42 @@
       },
       "protectedInvariant": "Start sort asc/desc and return-to-document-order preserve exact stable-ID row sequences; sorting changes only view state.",
       "reason": "The #747 matrix now asserts explicit hand-authored stable-ID orders for Start/End, preserves the selected ID, returns to original document order, and retains Canonical/History checks. Removed duplicate separate app startup."
+    },
+    {
+      "from": {
+        "file": "issue-737-multi-select.spec.ts",
+        "title": "Bottom Transaction table uses click/Ctrl/Shift selection without checkboxes or history changes"
+      },
+      "to": {
+        "file": "transaction-selection.contract.spec.ts",
+        "title": "Bottom Transaction table uses click/Ctrl/Shift selection without checkboxes or history changes"
+      },
+      "protectedInvariant": "Click/Ctrl/Shift/Ctrl+A selection, checkbox absence, multi-duplicate as one History unit, and one-step Undo remain covered.",
+      "reason": "Moved the unchanged bulk mutation journey into the stable Transaction selection contract suite while preserving its own test case and metadata."
+    },
+    {
+      "from": {
+        "file": "issue-737-selection-gestures.spec.ts",
+        "title": "Bottom grid selection gestures at 1280x720"
+      },
+      "to": {
+        "file": "transaction-selection.contract.spec.ts",
+        "title": "Bottom grid selection gestures at 1280x720"
+      },
+      "protectedInvariant": "Visible-order selection ranges under filtering, input-scoped Ctrl+A, and view-only state remain covered at 1280x720.",
+      "reason": "Moved the unchanged compact production journey into the stable Transaction selection contract suite; two-viewport geometry acceptance remains separate."
+    },
+    {
+      "from": {
+        "file": "issue-737-selection-gestures.spec.ts",
+        "title": "Bottom grid exposes aria-selected and aria-expanded with named disclosure controls"
+      },
+      "to": {
+        "file": "transaction-selection.contract.spec.ts",
+        "title": "Bottom grid exposes aria-selected and aria-expanded with named disclosure controls"
+      },
+      "protectedInvariant": "Selected state is exposed semantically and beyond color alone; expandable phase rows use named controls with aria-expanded state.",
+      "reason": "Moved the unchanged accessibility journey into the stable Transaction selection contract suite while preserving its distinct invariant and traceability."
     }
   ]
 }

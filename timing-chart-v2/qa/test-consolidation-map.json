@@ -43,7 +43,7 @@
         "title": "Bottom grid selection gestures at 1672x941"
       },
       "to": {
-        "file": "issue-737-selection-gestures.spec.ts",
+        "file": "transaction-selection.contract.spec.ts",
         "title": "Bottom grid selection gestures at 1280x720"
       },
       "protectedInvariant": "Click/Ctrl/Shift selection, visible-order filtering, Ctrl+A scoping, and view-only Canonical/History behavior are viewport-independent.",
@@ -366,6 +366,24 @@
       "to": { "file": "issue-747-a11y-and-sort-matrix.spec.ts", "title": "Bottom sort matrix and settings a11y at 1280x720" },
       "protectedInvariant": "Start sort asc/desc and return-to-document-order preserve exact stable-ID row sequences; sorting changes only view state.",
       "reason": "The #747 matrix now asserts explicit hand-authored stable-ID orders for Start/End, preserves the selected ID, returns to original document order, and retains Canonical/History checks. Removed duplicate separate app startup."
+    },
+    {
+      "from": { "file": "issue-737-multi-select.spec.ts", "title": "Bottom Transaction table uses click/Ctrl/Shift selection without checkboxes or history changes" },
+      "to": { "file": "transaction-selection.contract.spec.ts", "title": "Bottom Transaction table uses click/Ctrl/Shift selection without checkboxes or history changes" },
+      "protectedInvariant": "Click/Ctrl/Shift/Ctrl+A selection, checkbox absence, multi-duplicate as one History unit, and one-step Undo remain covered.",
+      "reason": "Moved the unchanged bulk mutation journey into the stable Transaction selection contract suite while preserving its own test case and metadata."
+    },
+    {
+      "from": { "file": "issue-737-selection-gestures.spec.ts", "title": "Bottom grid selection gestures at 1280x720" },
+      "to": { "file": "transaction-selection.contract.spec.ts", "title": "Bottom grid selection gestures at 1280x720" },
+      "protectedInvariant": "Visible-order selection ranges under filtering, input-scoped Ctrl+A, and view-only state remain covered at 1280x720.",
+      "reason": "Moved the unchanged compact production journey into the stable Transaction selection contract suite; two-viewport geometry acceptance remains separate."
+    },
+    {
+      "from": { "file": "issue-737-selection-gestures.spec.ts", "title": "Bottom grid exposes aria-selected and aria-expanded with named disclosure controls" },
+      "to": { "file": "transaction-selection.contract.spec.ts", "title": "Bottom grid exposes aria-selected and aria-expanded with named disclosure controls" },
+      "protectedInvariant": "Selected state is exposed semantically and beyond color alone; expandable phase rows use named controls with aria-expanded state.",
+      "reason": "Moved the unchanged accessibility journey into the stable Transaction selection contract suite while preserving its distinct invariant and traceability."
     }
   ]
 }

@@ -1275,40 +1275,6 @@
       "replacementTest": null
     },
     {
-      "file": "issue-737-multi-select.spec.ts",
-      "domain": "transaction-bottom-multi-selection",
-      "originIssue": 737,
-      "type": "USER_JOURNEY",
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": "Click/Ctrl/Shift/Ctrl+A operate on the Bottom row selection set without checkboxes; Duplicate acts on the selected set as one History unit and Undo restores the original count.",
-      "duplicateGroup": null,
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": [
-        "pr"
-      ],
-      "decision": "KEEP",
-      "reason": "This exercises bulk mutation and one-step undo in addition to selection grammar, unlike the selection-only compact journey; preserve both contracts.",
-      "replacementTest": null
-    },
-    {
-      "file": "issue-737-selection-gestures.spec.ts",
-      "domain": "transaction-bottom-selection",
-      "originIssue": 737,
-      "type": "USER_JOURNEY",
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": "Bottom grid supports click/Ctrl/Shift selection, visible-order ranges under filtering, Ctrl+A scoped away from text inputs, and accessible selected/disclosure state without Canonical/History changes.",
-      "duplicateGroup": null,
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": [
-        "pr"
-      ],
-      "decision": "KEEP",
-      "reason": "Retain one compact viewport for viewport-independent selection semantics; the removed desktop duplicate is mapped in qa/test-consolidation-map.json and responsive geometry remains tested at both viewports by #747 geometry acceptance.",
-      "replacementTest": null
-    },
-    {
       "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
       "domain": "ruler-origin-after-rebase-stress",
       "originIssue": 738,
@@ -14656,6 +14622,54 @@
       "profiles": ["pr"],
       "decision": "KEEP",
       "reason": "Reset is a distinct, inexpensive user action with a view-only invariant; one desktop case is sufficient because the behavior is not viewport-specific.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-selection.contract.spec.ts",
+      "title": "Bottom Transaction table uses click/Ctrl/Shift selection without checkboxes or history changes",
+      "domain": "transaction-bottom-multi-selection",
+      "originIssue": 737,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Click/Ctrl/Shift/Ctrl+A operate on the Bottom selection set without checkboxes; Duplicate acts on the selected set as one History unit and Undo restores the original row count.",
+      "duplicateGroup": "transaction-bottom-selection-737",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["pr"],
+      "decision": "KEEP",
+      "reason": "Preserves the bulk Duplicate/Undo user journey alongside the selection contract without replacing its distinct one-unit history assertion.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-selection.contract.spec.ts",
+      "title": "Bottom grid selection gestures at 1280x720",
+      "domain": "transaction-bottom-selection",
+      "originIssue": 737,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Bottom grid supports click/Ctrl/Shift selection, visible-order ranges under filtering, Ctrl+A scoped away from text inputs, and view-only state.",
+      "duplicateGroup": "transaction-bottom-selection-737",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["pr"],
+      "decision": "KEEP",
+      "reason": "Retains the compact selection grammar journey; responsive Bottom geometry remains separately covered at both supported viewports.",
+      "replacementTest": null
+    },
+    {
+      "file": "transaction-selection.contract.spec.ts",
+      "title": "Bottom grid exposes aria-selected and aria-expanded with named disclosure controls",
+      "domain": "transaction-bottom-selection-accessibility",
+      "originIssue": 737,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Selected state is available to assistive technology and not conveyed by color alone; phase disclosure has an expanded state and named control.",
+      "duplicateGroup": "transaction-bottom-selection-737",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["pr"],
+      "decision": "KEEP",
+      "reason": "Retains the dedicated accessibility and disclosure journey within the stable selection contract suite.",
       "replacementTest": null
     }
   ]

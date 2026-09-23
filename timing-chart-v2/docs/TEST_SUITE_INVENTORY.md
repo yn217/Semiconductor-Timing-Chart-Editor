@@ -1,6 +1,6 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 327 spec files and 962 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 326 spec files and 962 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
 Semantic review progress: 962/962 cases reviewed.
 
@@ -193,8 +193,6 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-727-minimap-affordance.spec.ts` | 1 | 1/1 reviewed |
 | `issue-728-group-double-click.spec.ts` | 1 | 1/1 reviewed |
 | `issue-729-dirty-title.spec.ts` | 1 | 1/1 reviewed |
-| `issue-737-multi-select.spec.ts` | 1 | 1/1 reviewed |
-| `issue-737-selection-gestures.spec.ts` | 2 | 2/2 reviewed |
 | `issue-738-ruler-hit-area.spec.ts` | 4 | 4/4 reviewed |
 | `issue-738-ruler-origin-after-scroll-return.spec.ts` | 7 | 7/7 reviewed |
 | `issue-738-stress-real-input.spec.ts` | 2 | 2/2 reviewed |
@@ -345,6 +343,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `transaction-phase-bars.spec.ts` | 4 | 4/4 reviewed |
 | `transaction-ribbon-groups.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-selection-smoke.spec.ts` | 1 | 1/1 reviewed |
+| `transaction-selection.contract.spec.ts` | 3 | 3/3 reviewed |
 | `transaction-signal-picker.spec.ts` | 4 | 4/4 reviewed |
 | `transaction-startup-fixture-matrix.spec.ts` | 4 | 4/4 reviewed |
 | `transaction-startup-large-fixture.spec.ts` | 2 | 2/2 reviewed |
@@ -435,7 +434,6 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-725-keyboard-journey.spec.ts` | geometryRead |
 | `issue-726-lane-hover.spec.ts` | getComputedStyle |
 | `issue-726-marker-hierarchy.spec.ts` | getComputedStyle |
-| `issue-737-selection-gestures.spec.ts` | getComputedStyle |
 | `issue-738-ruler-origin-after-scroll-return.spec.ts` | dataset, geometryRead |
 | `issue-738-stress-real-input.spec.ts` | dataset, geometryRead |
 | `issue-738-stress-rebase.spec.ts` | dataset, geometryRead |
@@ -507,6 +505,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `transaction-minimap-overview.spec.ts` | getComputedStyle |
 | `transaction-phase-bars.spec.ts` | geometryRead |
 | `transaction-ribbon-groups.spec.ts` | dataset |
+| `transaction-selection.contract.spec.ts` | getComputedStyle |
 | `transaction-startup-fixture-matrix.spec.ts` | querySelector |
 | `transaction-startup-large-fixture.spec.ts` | querySelector, dataset |
 | `transaction-startup-metrics.spec.ts` | dataset |
@@ -543,7 +542,7 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-629-combined-tree-inspector.spec.ts` “Combined: selecting a Transaction in the Tree after a Signal switches the Inspector to Transaction” → `inspector-selection-context.contract.spec.ts` “Combined: selecting a Transaction in the Tree after a Signal switches the Inspector to Transaction”. **Invariant:** Combined Inspector follows stable selected entity kind from a Signal to a Transaction without History mutation. **Reason:** Moved the Issue-specific check into the stable Inspector selection/context contract suite while preserving its individual production journey and #629 traceability.
 - `issue-629-inspector-mode-context.spec.ts` “Inspector follows active workspace context and retains hidden stable selection at 1280x720” → `inspector-selection-context.contract.spec.ts` “Inspector follows active workspace context and retains hidden stable selection at 1280x720”. **Invariant:** Inspector follows active workspace and restores hidden Transaction/Signal selection by stable identity through Cycle/Transaction/Combined without document/history changes. **Reason:** Moved the compact cross-mode user journey into the stable Inspector selection/context contract suite; test behavior is unchanged and #629 origin metadata is retained.
 - `issue-701-layout-return.spec.ts` “Layout Inspector is reachable again after clearing the Transaction selection” → `inspector-selection-context.contract.spec.ts` “Layout Inspector is reachable again after clearing the Transaction selection”. **Invariant:** Clearing selected Transaction restores Layout Inspector; reselecting returns to entity properties without changing History. **Reason:** Moved the distinct selection-clear lifecycle into the stable Inspector selection/context suite with #701 traceability.
-- `issue-737-selection-gestures.spec.ts` “Bottom grid selection gestures at 1672x941” → `issue-737-selection-gestures.spec.ts` “Bottom grid selection gestures at 1280x720”. **Invariant:** Click/Ctrl/Shift selection, visible-order filtering, Ctrl+A scoping, and view-only Canonical/History behavior are viewport-independent. **Reason:** Removed the duplicate desktop execution; the compact viewport retains the full semantic journey, while issue-747-geometry-acceptance.spec.ts continues to verify responsive geometry at both 1280x720 and 1672x941.
+- `issue-737-selection-gestures.spec.ts` “Bottom grid selection gestures at 1672x941” → `transaction-selection.contract.spec.ts` “Bottom grid selection gestures at 1280x720”. **Invariant:** Click/Ctrl/Shift selection, visible-order filtering, Ctrl+A scoping, and view-only Canonical/History behavior are viewport-independent. **Reason:** Removed the duplicate desktop execution; the compact viewport retains the full semantic journey, while issue-747-geometry-acceptance.spec.ts continues to verify responsive geometry at both 1280x720 and 1672x941.
 - `issue-747-a11y-and-sort-matrix.spec.ts` “Bottom sort matrix and settings a11y at 1672x941” → `issue-747-a11y-and-sort-matrix.spec.ts` “Bottom sort matrix and settings a11y at 1280x720”. **Invariant:** Start/End sort direction, selected-ID retention, view-only sort, named settings gear, and Escape popover close are width-independent semantic behavior. **Reason:** Removed the redundant desktop semantic run. The compact case retains the complete a11y/sort journey, and issue-747-geometry-acceptance.spec.ts still verifies the layout-specific behavior at both supported viewports.
 - `issue-625-timeline-only-hscroll.spec.ts` “Cycle FixedColumns sit outside the horizontal scroll owner at 1280x720” → `issue-625-cycle-fixed-columns-scroll.spec.ts` “Cycle fixed columns stay stationary through native scrollbar drag at 1280x720”. **Invariant:** Timeline-only horizontal scrolling keeps fixed columns stationary and the visible scrollbar aligned to the time-domain region. **Reason:** Removed the implementation-coupled browser case that forced --wave-width, asserted overflow/DOM ancestry, and re-derived scroll-owner topology. The production-path native-scroll journey now also measures visible scrollbar alignment at this width; check:cycle-scroll-owner protects the structural owner contract without launching a browser.
 - `issue-625-timeline-only-hscroll.spec.ts` “Cycle FixedColumns sit outside the horizontal scroll owner at 1672x941” → `issue-625-cycle-fixed-columns-scroll.spec.ts` “Cycle fixed columns stay stationary through native scrollbar drag at 1672x941”. **Invariant:** Timeline-only horizontal scrolling keeps fixed columns stationary and the visible scrollbar aligned to the time-domain region. **Reason:** Removed the implementation-coupled browser case that forced --wave-width, asserted overflow/DOM ancestry, and re-derived scroll-owner topology. The production-path native-scroll journey now also measures visible scrollbar alignment at this width; check:cycle-scroll-owner protects the structural owner contract without launching a browser.
@@ -579,6 +578,9 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-725-draft-markers.spec.ts` “edited Bottom row cells show a draft marker and double-click focuses the editor” → `transaction-bottom-draft.contract.spec.ts` “Bottom draft edit is visibly marked and Escape restores the committed value without deselecting”. **Invariant:** Double-click focuses the field; changed draft styling and marker appear; Escape restores committed appearance/value without a History mutation. **Reason:** Combined with the focused Escape cancellation journey so both visual feedback and draft lifecycle assertions run in one production fixture load.
 - `issue-725-escape-revert.spec.ts` “Escape in the active Bottom row reverts a dirty draft before deselecting” → `transaction-bottom-draft.contract.spec.ts` “Bottom draft edit is visibly marked and Escape restores the committed value without deselecting”. **Invariant:** Escape resets the active Bottom draft to its canonical value while retaining selection and History unchanged. **Reason:** The source assertion is retained in the merged journey, which additionally proves the dirty indicator clears and selection remains stable.
 - `issue-737-bottom-sort.spec.ts` “Bottom Transaction table sorts by Start as view state only” → `issue-747-a11y-and-sort-matrix.spec.ts` “Bottom sort matrix and settings a11y at 1280x720”. **Invariant:** Start sort asc/desc and return-to-document-order preserve exact stable-ID row sequences; sorting changes only view state. **Reason:** The #747 matrix now asserts explicit hand-authored stable-ID orders for Start/End, preserves the selected ID, returns to original document order, and retains Canonical/History checks. Removed duplicate separate app startup.
+- `issue-737-multi-select.spec.ts` “Bottom Transaction table uses click/Ctrl/Shift selection without checkboxes or history changes” → `transaction-selection.contract.spec.ts` “Bottom Transaction table uses click/Ctrl/Shift selection without checkboxes or history changes”. **Invariant:** Click/Ctrl/Shift/Ctrl+A selection, checkbox absence, multi-duplicate as one History unit, and one-step Undo remain covered. **Reason:** Moved the unchanged bulk mutation journey into the stable Transaction selection contract suite while preserving its own test case and metadata.
+- `issue-737-selection-gestures.spec.ts` “Bottom grid selection gestures at 1280x720” → `transaction-selection.contract.spec.ts` “Bottom grid selection gestures at 1280x720”. **Invariant:** Visible-order selection ranges under filtering, input-scoped Ctrl+A, and view-only state remain covered at 1280x720. **Reason:** Moved the unchanged compact production journey into the stable Transaction selection contract suite; two-viewport geometry acceptance remains separate.
+- `issue-737-selection-gestures.spec.ts` “Bottom grid exposes aria-selected and aria-expanded with named disclosure controls” → `transaction-selection.contract.spec.ts` “Bottom grid exposes aria-selected and aria-expanded with named disclosure controls”. **Invariant:** Selected state is exposed semantically and beyond color alone; expandable phase rows use named controls with aria-expanded state. **Reason:** Moved the unchanged accessibility journey into the stable Transaction selection contract suite while preserving its distinct invariant and traceability.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 
