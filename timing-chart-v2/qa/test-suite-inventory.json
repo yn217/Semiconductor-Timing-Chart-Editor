@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T02:32:45.538Z",
+  "generatedAt": "2026-09-23T02:34:34.722Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 475,
+  "reviewedCaseCount": 480,
   "curatedProfileCounts": {
-    "integration": 212,
-    "nightly": 129,
+    "integration": 215,
+    "nightly": 130,
     "performance": 23,
-    "pr": 150,
+    "pr": 152,
     "visual": 107
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -13956,11 +13956,11 @@
       "type": "VISUAL_ACCEPTANCE",
       "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": "Applying persisted label widths/alignment/overflow updates the rendered columns independently of transient splitter width, and Reset restores documented defaults.",
+      "primaryContract": "Applying persisted label widths/alignment/overflow updates the rendered columns independently from the transient splitter, and Reset restores defaults.",
       "duplicateGroup": "layout-settings-lifecycle",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "decision": "KEEP",
-      "reason": "It currently asserts exact internal CSS grid templates, whitespace, and render counters; retain the layout contract in visual tier while decoupling assertions from incidental DOM/CSS details where possible.",
+      "reason": "It asserts internal CSS grid templates, whitespace, and render counters; retain the layout contract in visual tier while decoupling from incidental DOM/CSS details.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -17475,18 +17475,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-generator-command-persistence",
+      "originIssue": 400,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Generating a pulse writes ordinary Signal values in one undoable semantic operation and Save/Open preserves those values.",
+      "duplicateGroup": "signal-generator-contracts",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Covers canonical result, Undo/Redo, and a real file Save/Open cycle; retain as heavy integration rather than normal PR coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "signal-generator.spec.ts",
@@ -17497,18 +17501,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-generator-periodic-validation",
+      "originIssue": 400,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Periodic generation honors suppressed periods, while an invalid width/period combination is rejected without Canonical or History mutation.",
+      "duplicateGroup": "signal-generator-contracts",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Combines a specialized periodic expansion with rejected-Apply safety; the table-driven arithmetic/validator portion should be moved to a cheaper layer where available.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-generator.spec.ts",
@@ -17519,18 +17526,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-generator-duty-and-type-scope",
+      "originIssue": 400,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Duty configuration generates expected binary values and the generator action is absent for non-binary signal types.",
+      "duplicateGroup": "signal-generator-contracts",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Protects a distinct duty-mode conversion and type-capability boundary; retain one browser journey for UI gating, with arithmetic type cases covered in validator/unit tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "signal-generator.spec.ts",
@@ -17541,18 +17551,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-generator-noop-draft",
+      "originIssue": 402,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "When generator parameters produce the existing Signal values, the Generate action becomes unavailable and does not add another History entry.",
+      "duplicateGroup": "signal-generator-contracts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a concise no-op protection against needless canonical mutation after the editor draft resets.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "signal-generator.spec.ts",
@@ -17563,18 +17576,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-generator-disclosure-draft-retention",
+      "originIssue": 402,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Collapsing and reopening the secondary Generator disclosure preserves its unapplied values and leaves Canonical and History unchanged.",
+      "duplicateGroup": "signal-generator-contracts",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "A short Draft lifecycle boundary distinct from Generate Apply; protects discoverability priority and non-destructive disclosure behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "signal-spacing.spec.ts",
@@ -25453,11 +25469,11 @@
     {
       "file": "signal-generator.spec.ts",
       "caseCount": 5,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 5,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "signal-spacing.spec.ts",
