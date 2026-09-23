@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 674/959 cases reviewed.
+Semantic review progress: 677/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,7 +10,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 313 |
+| `integration` | 316 |
 | `nightly` | 163 |
 | `performance` | 44 |
 | `pr` | 197 |
@@ -104,7 +104,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `gui-v1-ribbon-labels.spec.ts` | 1 | 1/1 reviewed |
 | `gui-visual-acceptance.spec.ts` | 1 | 1/1 reviewed |
 | `history-retention.spec.ts` | 1 | 1/1 reviewed |
-| `home-command-surface.spec.ts` | 24 | 9/24 reviewed |
+| `home-command-surface.spec.ts` | 24 | 12/24 reviewed |
 | `home-ribbon-timegroup-cleanup.spec.ts` | 1 | 0/1 reviewed |
 | `icon-button-dialog-close.spec.ts` | 5 | 5/5 reviewed |
 | `incremental-invalidation-matrix.spec.ts` | 1 | 0/1 reviewed |
