@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:33:52.078Z",
+  "generatedAt": "2026-09-23T05:35:21.601Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 689,
+  "reviewedCaseCount": 690,
   "curatedProfileCounts": {
     "integration": 324,
     "nightly": 163,
     "performance": 44,
-    "pr": 199,
+    "pr": 200,
     "visual": 139
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -7748,18 +7748,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "home-layout-timegroup-route-cleanup",
+      "originIssue": 416,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "primaryContract": "Home has no duplicate Time Group or interval-editor commands; the Timeline owns the Time Group creation action and creating it commits one History entry.",
+      "duplicateGroup": "home-timeline-command-ownership",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "MOVE_LAYER",
+      "reason": "This journey is fully covered only by pairing the dedicated Home command-label test (asserts duplicate Home controls are absent and Auto Space remains) with gui-reference-v8.spec.ts's V8 secondary-actions test (creates the Time Group from Timeline, verifies one History entry, and Undo). Keeping this third copy duplicates the same #416 path; retain its assertions in those focused contracts instead.",
+      "replacementTest": "home-command-surface.spec.ts — Home command labels describe their observable action; gui-reference-v8.spec.ts — V8 Home secondary actions stay connected to real navigation and semantic commands",
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "icon-button-dialog-close.spec.ts",
@@ -24247,11 +24250,11 @@
     {
       "file": "home-ribbon-timegroup-cleanup.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "icon-button-dialog-close.spec.ts",
