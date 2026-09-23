@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T02:40:32.196Z",
+  "generatedAt": "2026-09-23T02:42:22.667Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 500,
+  "reviewedCaseCount": 504,
   "curatedProfileCounts": {
-    "integration": 226,
+    "integration": 229,
     "nightly": 137,
     "performance": 26,
-    "pr": 156,
+    "pr": 157,
     "visual": 109
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -20095,18 +20095,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-group-create-cross-surface",
+      "originIssue": 700,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Creating an empty Transaction Group shows it immediately, assigning a Transaction updates the Tree/Bottom projection, and multiple groups are distinct Undoable entities.",
+      "duplicateGroup": "transaction-group-management",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "A multi-surface Group lifecycle with identity/count and undo/redo assertions; retain as integration coverage rather than routine PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-group-management.spec.ts",
@@ -20117,18 +20120,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-group-rename-delete-undo",
+      "originIssue": 700,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inline rename updates all Group projections; Ungroup removes only the Group, preserves its Transactions, and Undo/Redo restores exact ownership.",
+      "duplicateGroup": "transaction-group-management",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Protects canonical Group identity and membership through rename/delete/Undo, a distinct CRUD lifecycle from creation.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-group-management.spec.ts",
@@ -20139,18 +20145,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-group-collapse-view-only",
+      "originIssue": 700,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Collapsing/expanding a Transaction Group hides/restores its lane bars without deleting entities or changing History.",
+      "duplicateGroup": "transaction-group-view-state",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "A concise user-visible view-state contract with explicit zero-History behavior, distinct from semantic Group CRUD.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-group-management.spec.ts",
@@ -20161,18 +20170,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-ribbon-ungroup-applicability",
+      "originIssue": 700,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Ribbon Ungroup availability follows the selected Transaction's Group membership, and activation ungroups without deleting the Transaction in one Undoable operation.",
+      "duplicateGroup": "transaction-group-management",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Exercises a separate Ribbon command adapter and disabled-state boundary; retain until command parity is cheaper to verify through shared adapter contracts.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-gui-authoring.spec.ts",
@@ -25828,11 +25840,11 @@
     {
       "file": "transaction-group-management.spec.ts",
       "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-gui-authoring.spec.ts",
