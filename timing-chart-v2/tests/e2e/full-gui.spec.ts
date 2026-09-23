@@ -73,30 +73,6 @@ test("Left tree Add surface exposes real Signal/Clock/Bus/State/Group commands",
   await expect(page.getByTestId("signal-count-status")).toHaveText("Signals: 9");
 });
 
-test("Inspector keeps the V1 sectioned editor geometry for a selected clock", async ({ page }) => {
-  await page.setViewportSize({ width: 1672, height: 941 });
-  await ready(page);
-  const host = page.getByTestId("cycle-surface");
-  const surface = host.locator("[data-role='timing-chart-surface']");
-  const revision = await host.getAttribute("data-canonical-revision");
-  const history = await page.getByTestId("history-status").textContent();
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
-  const inspector = page.getByTestId("inspector");
-  await expect(inspector).toHaveCSS("width", "297px");
-  await expect(inspector.getByTestId("minimap")).toBeVisible();
-  await expect(page.locator(".left-panel-tail").getByTestId("minimap")).toHaveCount(0);
-  await expect(inspector.locator("header")).toContainText("Inspector");
-  await expect(inspector.locator("section")).toHaveCount(6);
-  await expect(inspector.getByRole("heading", { name: "Clock Generator" })).toBeVisible();
-  await expect(inspector.getByRole("heading", { name: "Edge Counter" })).toBeVisible();
-  await expect(inspector.getByLabel("Inspector clock period")).toBeVisible();
-  await expect(inspector.getByLabel("Inspector edge counter mode")).toBeVisible();
-  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
-  await expect(page.getByTestId("history-status")).toHaveText(history!);
-  await expect(surface).toHaveAttribute("data-render-counters", /waveDromRenders/);
-  await page.screenshot({ path: ".tmp_gui_reference/gui-batch-inspector-minimap-1672x941.png", animations: "disabled" });
-});
-
 for (const route of ["Ribbon", "Keyboard", "Context Menu", "Inspector"] as const) {
   test(`routes Annotation delete through the shared command registry from ${route}`, async ({ page }) => {
     await ready(page);

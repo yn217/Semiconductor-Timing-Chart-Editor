@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T04:42:26.972Z",
+  "generatedAt": "2026-09-23T04:45:46.368Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,13 +12,13 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 332,
-  "caseCount": 960,
-  "reviewedCaseCount": 603,
+  "caseCount": 959,
+  "reviewedCaseCount": 605,
   "curatedProfileCounts": {
     "integration": 283,
     "nightly": 159,
     "performance": 44,
-    "pr": 166,
+    "pr": 168,
     "visual": 130
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -5522,18 +5522,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-tree-visibility-command-history",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Left Tree exposes role/visibility actions; hiding a Signal preserves its navigation row, hides derived waveform surfaces, and is one Undoable SemanticCommand.",
+      "duplicateGroup": "left-tree-visibility-projection-contract",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Existing Left Tree visibility coverage proves projection hide/show but not the semantic History/Undo route; this test protects command wiring and reversibility from the actual tree control.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -5544,45 +5547,26 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-tree-add-command-surface",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Left Tree Add menu offers the supported authoring command set and selecting Bus creates a canonical Signal through one History operation.",
+      "duplicateGroup": "left-tree-add-menu-contract",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Dedicated tests cover selected individual creation types, but no retained contract inventories the production menu's full supported command surface and verifies a real command commits through it.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 76,
-      "title": "Inspector keeps the V1 sectioned editor geometry for a selected clock",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "full-gui.spec.ts",
-      "suitePath": [],
-      "line": 101,
+      "line": 77,
       "title": "routes Annotation delete through the shared command registry from Context Menu",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5604,7 +5588,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 101,
+      "line": 77,
       "title": "routes Annotation delete through the shared command registry from Inspector",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5626,7 +5610,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 101,
+      "line": 77,
       "title": "routes Annotation delete through the shared command registry from Keyboard",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5648,7 +5632,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 101,
+      "line": 77,
       "title": "routes Annotation delete through the shared command registry from Ribbon",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5670,7 +5654,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 116,
+      "line": 92,
       "title": "applies Inspector drafts, exposes Problems/JSON, and toggles panels",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5692,7 +5676,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 142,
+      "line": 118,
       "title": "applies Annotation Inspector drafts through one semantic command",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5714,7 +5698,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 161,
+      "line": 137,
       "title": "edits Header and Footer metadata through Document Properties and reopens it",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5736,7 +5720,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 225,
+      "line": 201,
       "title": "Document Properties keeps Header and Legend edits in one Apply/Cancel transaction",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5758,7 +5742,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 249,
+      "line": 225,
       "title": "Save As downloads the canonical document with a requested filename without mutation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5780,7 +5764,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 275,
+      "line": 251,
       "title": "edits and displays the Legend through the canonical presentation command",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5802,7 +5786,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 297,
+      "line": 273,
       "title": "Legend position supports drag and keyboard nudge through legend.update",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5824,7 +5808,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 318,
+      "line": 294,
       "title": "Legend editor exposes stable-ID label, visibility and ordering controls",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5846,7 +5830,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 338,
+      "line": 314,
       "title": "edits Legend entry labels, visibility and order, then preserves them through Save/Open and export",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5868,7 +5852,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 386,
+      "line": 362,
       "title": "exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registration",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5890,7 +5874,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 450,
+      "line": 426,
       "title": "filters the Signal/Group tree by display name, path, role, or group without mutating the document",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5912,7 +5896,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 478,
+      "line": 454,
       "title": "View controls expose geometry-backed Grid/Snap and a pannable MiniMap viewport",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5934,7 +5918,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 495,
+      "line": 471,
       "title": "View controls expose functional Ruler and MiniMap visibility toggles without mutation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5956,7 +5940,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 526,
+      "line": 502,
       "title": "MiniMap renders a derived waveform overview for every canonical row without mutation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -5978,7 +5962,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 544,
+      "line": 520,
       "title": "MiniMap viewport drag pans the real viewport without canonical or render mutation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6000,7 +5984,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 571,
+      "line": 547,
       "title": "Status Bar exposes derived selection, range, view and renderer state without mutating the document",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6022,7 +6006,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 596,
+      "line": 572,
       "title": "Bottom Signal Context Editor keeps the V1 continuous center editing surface",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6044,7 +6028,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 610,
+      "line": 586,
       "title": "Fit Selection is a view-only navigation action backed by ruler geometry",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6066,7 +6050,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 654,
+      "line": 630,
       "title": "Fit Selection resolves source boundaries through a collapsed TimeGroup",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6088,7 +6072,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 681,
+      "line": 657,
       "title": "Canvas cycle selection exposes a ruler-geometry-backed playhead without mutation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6110,7 +6094,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 698,
+      "line": 674,
       "title": "Canvas range drag supports reverse and Shift extension while Escape cancels preview",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6132,7 +6116,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 752,
+      "line": 728,
       "title": "Canvas keyboard navigation pans the viewport without canonical or render mutation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6154,7 +6138,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 774,
+      "line": 750,
       "title": "applies Signal Inspector capability fields as one semantic operation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6176,7 +6160,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 828,
+      "line": 804,
       "title": "#477: Label Style keeps a common dirty/Apply lifecycle across repeated edits and Background actually renders",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6198,7 +6182,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 911,
+      "line": 887,
       "title": "Signal Inspector properties survive Undo/Redo and Save/Open",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6220,7 +6204,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 954,
+      "line": 930,
       "title": "applies Group Inspector presentation properties as one semantic operation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6242,7 +6226,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 971,
+      "line": 947,
       "title": "applies Transaction Inspector phases through one semantic operation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6264,7 +6248,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1006,
+      "line": 982,
       "title": "applies Clock Generator Inspector drafts with editable duty and one history entry",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6286,7 +6270,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1027,
+      "line": 1003,
       "title": "Clock Inspector exposes common Signal Properties and style through one command",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6308,7 +6292,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1061,
+      "line": 1037,
       "title": "edits a Comment Row through the dedicated Bottom Context Editor",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6330,7 +6314,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1099,
+      "line": 1075,
       "title": "renders Comment Row content at the shared cycle-0 canvas boundary",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6352,7 +6336,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1121,
+      "line": 1097,
       "title": "saves and reopens through the application service boundary",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6374,7 +6358,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1155,
+      "line": 1131,
       "title": "renders Clock Edge Numbers from actual Geometry without WaveDrom regeneration",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6396,7 +6380,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1201,
+      "line": 1177,
       "title": "keeps global shortcuts focus-aware and IME-safe",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6418,7 +6402,7 @@
     {
       "file": "full-gui.spec.ts",
       "suitePath": [],
-      "line": 1215,
+      "line": 1191,
       "title": "keeps view-only selection, tabs, zoom and panel state out of History and WaveDrom",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6801,7 +6785,7 @@
     {
       "file": "gui-reference-v8.spec.ts",
       "suitePath": [],
-      "line": 133,
+      "line": 137,
       "title": "applies the v8 Signal Inspector style controls as one semantic operation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6823,7 +6807,7 @@
     {
       "file": "gui-reference-v8.spec.ts",
       "suitePath": [],
-      "line": 171,
+      "line": 175,
       "title": "V8 Home secondary actions stay connected to real navigation and semantic commands",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -23831,12 +23815,12 @@
     },
     {
       "file": "full-gui.spec.ts",
-      "caseCount": 42,
-      "reviewedCaseCount": 0,
+      "caseCount": 41,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "ghost-trace-delete.spec.ts",
@@ -26685,6 +26669,18 @@
       },
       "protectedInvariant": "Group disclosure changes navigation descendants only, preserves frozen/timing/wave rows and stable order, and causes no document/history/render mutation.",
       "reason": "The retained test exercises all three groups and stable row restoration while checking derived surfaces and render counters; the removed test repeated the same projection lifecycle for one group and added icon-path implementation detail."
+    },
+    {
+      "from": {
+        "file": "full-gui.spec.ts",
+        "title": "Inspector keeps the V1 sectioned editor geometry for a selected clock"
+      },
+      "to": {
+        "file": "gui-reference-v8.spec.ts",
+        "title": "matches the v8 shell contract without mutating canonical state"
+      },
+      "protectedInvariant": "The reference Clock Inspector exposes its Clock Generator and Edge Counter controls within the established shell width without mutating the document.",
+      "reason": "The v8 reference contract already opens with Clock selected and checks Inspector/minimap geometry, section headings, and no-mutation render state. The replacement now also requires the Clock period and Edge Counter mode controls to be visible; raw section count was implementation-specific."
     },
     {
       "from": {

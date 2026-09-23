@@ -2593,6 +2593,38 @@
       "replacementTest": null
     },
     {
+      "file": "full-gui.spec.ts",
+      "title": "Left Signal/Group rows expose V1 role and visibility controls through SemanticCommand",
+      "domain": "left-tree-visibility-command-history",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
+      "measuredRuntimeMs": null,
+      "primaryContract": "The Left Tree exposes role/visibility actions; hiding a Signal preserves its navigation row, hides derived waveform surfaces, and is one Undoable SemanticCommand.",
+      "duplicateGroup": "left-tree-visibility-projection-contract",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["pr"],
+      "decision": "KEEP",
+      "reason": "Existing Left Tree visibility coverage proves projection hide/show but not the semantic History/Undo route; this test protects command wiring and reversibility from the actual tree control.",
+      "replacementTest": null
+    },
+    {
+      "file": "full-gui.spec.ts",
+      "title": "Left tree Add surface exposes real Signal/Clock/Bus/State/Group commands",
+      "domain": "left-tree-add-command-surface",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "The Left Tree Add menu offers the supported authoring command set and selecting Bus creates a canonical Signal through one History operation.",
+      "duplicateGroup": "left-tree-add-menu-contract",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["pr"],
+      "decision": "KEEP",
+      "reason": "Dedicated tests cover selected individual creation types, but no retained contract inventories the production menu's full supported command surface and verifies a real command commits through it.",
+      "replacementTest": null
+    },
+    {
       "file": "qa-fresh-state-journeys.spec.ts",
       "title": "J9 Bottom follows the selected entity kind",
       "domain": "bottom-panel-selection",

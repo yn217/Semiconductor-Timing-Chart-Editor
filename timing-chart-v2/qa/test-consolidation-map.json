@@ -26,6 +26,12 @@
       "reason": "The retained test exercises all three groups and stable row restoration while checking derived surfaces and render counters; the removed test repeated the same projection lifecycle for one group and added icon-path implementation detail."
     },
     {
+      "from": { "file": "full-gui.spec.ts", "title": "Inspector keeps the V1 sectioned editor geometry for a selected clock" },
+      "to": { "file": "gui-reference-v8.spec.ts", "title": "matches the v8 shell contract without mutating canonical state" },
+      "protectedInvariant": "The reference Clock Inspector exposes its Clock Generator and Edge Counter controls within the established shell width without mutating the document.",
+      "reason": "The v8 reference contract already opens with Clock selected and checks Inspector/minimap geometry, section headings, and no-mutation render state. The replacement now also requires the Clock period and Edge Counter mode controls to be visible; raw section count was implementation-specific."
+    },
+    {
       "from": {
         "file": "qa-fresh-state-journeys.spec.ts",
         "title": "J6 annotation create -> drag -> Escape leaves Canonical untouched"

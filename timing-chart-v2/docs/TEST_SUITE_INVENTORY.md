@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 332 spec files and 960 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 603/960 cases reviewed.
+Semantic review progress: 605/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -13,7 +13,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `integration` | 283 |
 | `nightly` | 159 |
 | `performance` | 44 |
-| `pr` | 166 |
+| `pr` | 168 |
 | `visual` | 130 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -87,7 +87,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `file-beforeunload-dirty-guard.spec.ts` | 1 | 1/1 reviewed |
 | `file-ribbon-blank-controls.spec.ts` | 1 | 1/1 reviewed |
 | `font-style-commit-contract.spec.ts` | 1 | 1/1 reviewed |
-| `full-gui.spec.ts` | 42 | 0/42 reviewed |
+| `full-gui.spec.ts` | 41 | 2/41 reviewed |
 | `ghost-trace-delete.spec.ts` | 1 | 0/1 reviewed |
 | `golden-samples.spec.ts` | 3 | 0/3 reviewed |
 | `grid-zoom-alignment.spec.ts` | 1 | 1/1 reviewed |
@@ -522,6 +522,7 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `full-gui.spec.ts` “keeps the V1 Home Ribbon dense without horizontal scrolling” → `gui-reference-v8.spec.ts` “matches the v8 shell contract without mutating canonical state”. **Invariant:** The desktop Home Ribbon retains its intended height/group structure and does not introduce horizontal scrolling. **Reason:** The target already verifies the desktop Ribbon height, non-overflow, major-group count, title/tabs/status dimensions, and group visibility in the same production presentation contract.
 - `full-gui.spec.ts` “Left Signal/Group filter is positioned in the V1 pane header and remains DOM-only” → `left-tree-type-filter.spec.ts` “combines the Left Tree type and text filters without mutation at 1672px”. **Invariant:** Text filtering changes only Left Tree presentation, leaves Canonical/History untouched, and clearing the query restores rows while preserving type filter state. **Reason:** The retained type+text filter journey already verifies view-only state across both widths; it now uses the visible Clear signal tree filter control rather than only filling an empty string. Header placement remains checked by the v8 reference contract.
 - `full-gui.spec.ts` “Group header chevron collapses derived rows without mutating Canonical or History” → `left-tree-interaction.spec.ts` “collapses only Left Tree descendants and restores stable rows without a canonical mutation”. **Invariant:** Group disclosure changes navigation descendants only, preserves frozen/timing/wave rows and stable order, and causes no document/history/render mutation. **Reason:** The retained test exercises all three groups and stable row restoration while checking derived surfaces and render counters; the removed test repeated the same projection lifecycle for one group and added icon-path implementation detail.
+- `full-gui.spec.ts` “Inspector keeps the V1 sectioned editor geometry for a selected clock” → `gui-reference-v8.spec.ts` “matches the v8 shell contract without mutating canonical state”. **Invariant:** The reference Clock Inspector exposes its Clock Generator and Edge Counter controls within the established shell width without mutating the document. **Reason:** The v8 reference contract already opens with Clock selected and checks Inspector/minimap geometry, section headings, and no-mutation render state. The replacement now also requires the Clock period and Edge Counter mode controls to be visible; raw section count was implementation-specific.
 - `qa-fresh-state-journeys.spec.ts` “J6 annotation create -> drag -> Escape leaves Canonical untouched” → `keyboard-shortcut-router.spec.ts` “Escape cancels an in-progress Annotation drag, closes the context menu, and resets dependency-arrow pick”. **Invariant:** Escape cancels a real Annotation drag without changing Canonical revision, History, or Dirty state and without runtime errors. **Reason:** The keyboard lifecycle test already creates an Annotation through production UI, resolves its stable ID, performs a real pointer drag, and asserts revision and History preservation; it now also checks Dirty and runtime errors. Keeping the stronger test removes a duplicate fresh journey without weakening the cancellation contract.
 - `issue-737-selection-gestures.spec.ts` “Bottom grid selection gestures at 1672x941” → `issue-737-selection-gestures.spec.ts` “Bottom grid selection gestures at 1280x720”. **Invariant:** Click/Ctrl/Shift selection, visible-order filtering, Ctrl+A scoping, and view-only Canonical/History behavior are viewport-independent. **Reason:** Removed the duplicate desktop execution; the compact viewport retains the full semantic journey, while issue-747-geometry-acceptance.spec.ts continues to verify responsive geometry at both 1280x720 and 1672x941.
 - `issue-747-a11y-and-sort-matrix.spec.ts` “Bottom sort matrix and settings a11y at 1672x941” → `issue-747-a11y-and-sort-matrix.spec.ts` “Bottom sort matrix and settings a11y at 1280x720”. **Invariant:** Start/End sort direction, selected-ID retention, view-only sort, named settings gear, and Escape popover close are width-independent semantic behavior. **Reason:** Removed the redundant desktop semantic run. The compact case retains the complete a11y/sort journey, and issue-747-geometry-acceptance.spec.ts still verifies the layout-specific behavior at both supported viewports.

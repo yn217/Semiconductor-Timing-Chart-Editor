@@ -90,6 +90,10 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(page.getByTestId("revision-status")).toBeHidden();
   await expect(page.getByTestId("history-status")).toBeHidden();
   await expect(page.getByTestId("inspector")).toContainText("Clock");
+  await expect(page.getByTestId("inspector").getByRole("heading", { name: "Clock Generator" })).toBeVisible();
+  await expect(page.getByTestId("inspector").getByRole("heading", { name: "Edge Counter" })).toBeVisible();
+  await expect(page.getByTestId("inspector").getByLabel("Inspector clock period")).toBeVisible();
+  await expect(page.getByTestId("inspector").getByLabel("Inspector edge counter mode")).toBeVisible();
   await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true })).toBeVisible();
   await expect(page.getByTestId("clock-context-toolbar").locator("svg")).toHaveCount(5);
   await expect(page.getByTestId("follow-selection").locator(".." )).toContainText("Follow Selection");
