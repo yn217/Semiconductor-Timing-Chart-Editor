@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T10:16:06.782Z",
+  "generatedAt": "2026-09-23T10:18:46.574Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -18,7 +18,7 @@
     "integration": 491,
     "nightly": 195,
     "performance": 54,
-    "pr": 259,
+    "pr": 258,
     "visual": 175
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -6159,9 +6159,7 @@
       "reason": "The dedicated minimap-viewport-closure test already performs real pointer pans and additionally verifies bidirectional horizontal/vertical scroll mapping, resize, edge clamping, remount, and all view-only counters. This weaker Cycle-only assertion is redundant in the broad full-gui spec.",
       "replacementTest": "minimap-viewport-closure.spec.ts — MiniMap viewport indicator follows live scroll, resize, pan and remount state",
       "reviewStatus": "REVIEWED",
-      "profiles": [
-        "pr"
-      ]
+      "profiles": []
     },
     {
       "file": "full-gui.spec.ts",

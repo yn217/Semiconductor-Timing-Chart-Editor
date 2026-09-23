@@ -4784,9 +4784,7 @@
       "primaryContract": "A real MiniMap pointer drag pans the production viewport and updates its indicator without Canonical/History mutation or waveform/local-geometry rebuilds.",
       "duplicateGroup": "minimap-pointer-pan",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": [
-        "pr"
-      ],
+      "profiles": [],
       "decision": "MOVE_LAYER",
       "reason": "The dedicated minimap-viewport-closure test already performs real pointer pans and additionally verifies bidirectional horizontal/vertical scroll mapping, resize, edge clamping, remount, and all view-only counters. This weaker Cycle-only assertion is redundant in the broad full-gui spec.",
       "replacementTest": "minimap-viewport-closure.spec.ts — MiniMap viewport indicator follows live scroll, resize, pan and remount state"
