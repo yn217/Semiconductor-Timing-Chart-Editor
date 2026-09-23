@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
+import { buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import type { AnnotationId, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 
@@ -58,6 +58,24 @@ describe("deterministic AI proposal provider", () => {
     expect(renamed.ok).toBe(true);
     if (renamed.ok) expect(renamed.proposal.commands).toEqual([expect.objectContaining({ type: "group.rename", groupId: document.signalGroups[0]!.id, name: "Controls" })]);
     expect(buildTypedSignalGroupProposal(document, 22, "propose_rename_signal_group", { groupId: "missing", name: "X" })).toEqual({ ok: false, message: "Signal Group 'missing' does not exist in the current document." });
+  });
+
+  it("maps typed Transaction proposals to existing Transaction SemanticCommands", () => {
+    const base = canonicalFixture();
+    const document = { ...base, transactions: [{ id: "transaction_1" as TransactionId, name: "Read", start: 1, end: 4, laneId: "lane_0" }] };
+    const created = buildTypedTransactionProposal(document, 23, "propose_create_transaction", { name: "Write", start: 4, end: 7 });
+    expect(created.ok).toBe(true);
+    if (created.ok) expect(created.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.create", transaction: expect.objectContaining({ name: "Write", start: 4, end: 7, laneId: "lane_0" }) })]);
+    const moved = buildTypedTransactionProposal(document, 23, "propose_move_transaction", { transactionId: "transaction_1", start: 2 });
+    expect(moved.ok).toBe(true);
+    if (moved.ok) expect(moved.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.move", transactionId: "transaction_1", start: 2 })]);
+    const resized = buildTypedTransactionProposal(document, 23, "propose_resize_transaction", { transactionId: "transaction_1", edge: "end", value: 6 });
+    expect(resized.ok).toBe(true);
+    if (resized.ok) expect(resized.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.resize", transactionId: "transaction_1", edge: "end", value: 6 })]);
+    const deleted = buildTypedTransactionProposal(document, 23, "propose_delete_transaction", { transactionId: "transaction_1" });
+    expect(deleted.ok).toBe(true);
+    if (deleted.ok) expect(deleted.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.delete", transactionId: "transaction_1" })]);
+    expect(buildTypedTransactionProposal(document, 23, "propose_move_transaction", { transactionId: "missing", start: 2 })).toEqual({ ok: false, message: "Transaction 'missing' does not exist in the current document." });
   });
 
   it("returns a revisioned semantic proposal without mutating the source document", () => {

@@ -109,6 +109,33 @@ export function buildTypedSignalGroupProposal(document: CanonicalDocument, revis
   return { ok: false, message: `Unsupported typed Signal Group proposal '${tool}'.` };
 }
 
+export function buildTypedTransactionProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  const transactionId = args.transactionId;
+  if (tool === "propose_create_transaction") {
+    const name = args.name; const start = args.start; const end = args.end;
+    if (typeof name !== "string" || !name.trim() || !Number.isSafeInteger(start) || !Number.isSafeInteger(end) || (start as number) < 0 || (end as number) <= (start as number) || (end as number) > document.timeline.cycleCount) return { ok: false, message: "propose_create_transaction requires a name and integer source-cycle boundaries within the timeline with end > start." };
+    const groupId = args.groupId;
+    if (groupId !== undefined && (typeof groupId !== "string" || !document.transactionGroups?.some((group) => group.id === groupId))) return { ok: false, message: `Transaction Group '${String(groupId)}' does not exist in the current document.` };
+    const created = { id: nextEntityId("transaction", document), name: name.trim(), start: start as number, end: end as number, laneId: typeof args.laneId === "string" && args.laneId.trim() ? args.laneId.trim() : "lane_0", ...(typeof groupId === "string" ? { groupId: groupId as never } : {}) };
+    return { ok: true, proposal: proposal(revision, `Create Transaction ${created.name}`, [command({ type: "transaction.create", transaction: created }, "typed_create_transaction")]) };
+  }
+  if (typeof transactionId !== "string" || !transactionId) return { ok: false, message: `${tool} requires a stable transactionId.` };
+  const transaction = document.transactions.find((item) => item.id === transactionId);
+  if (!transaction) return { ok: false, message: `Transaction '${transactionId}' does not exist in the current document.` };
+  if (tool === "propose_move_transaction") {
+    const start = args.start;
+    if (!Number.isSafeInteger(start) || (start as number) < 0 || (start as number) + transaction.end - transaction.start > document.timeline.cycleCount) return { ok: false, message: "propose_move_transaction requires an integer source-cycle start that keeps the Transaction inside the timeline." };
+    return { ok: true, proposal: proposal(revision, `Move ${transaction.name} to cycle ${start}`, [command({ type: "transaction.move", transactionId: transaction.id, start: start as number }, "typed_move_transaction")]) };
+  }
+  if (tool === "propose_resize_transaction") {
+    const edge = args.edge; const value = args.value;
+    if ((edge !== "start" && edge !== "end") || !Number.isSafeInteger(value) || (value as number) < 0 || (value as number) > document.timeline.cycleCount) return { ok: false, message: "propose_resize_transaction requires edge start/end and an integer source-cycle boundary within the timeline." };
+    return { ok: true, proposal: proposal(revision, `Resize ${transaction.name} ${edge} to ${value}`, [command({ type: "transaction.resize", transactionId: transaction.id, edge, value: value as number }, "typed_resize_transaction")]) };
+  }
+  if (tool === "propose_delete_transaction") return { ok: true, proposal: proposal(revision, `Delete ${transaction.name}`, [command({ type: "transaction.delete", transactionId: transaction.id }, "typed_delete_transaction")]) };
+  return { ok: false, message: `Unsupported typed Transaction proposal '${tool}'.` };
+}
+
 /** Provider-neutral boundary. Implementations may be backed by a mock, local
  * model, or remote service, but they return proposals only; Canonical changes
  * are always applied by the editor's SemanticCommand owner. */
