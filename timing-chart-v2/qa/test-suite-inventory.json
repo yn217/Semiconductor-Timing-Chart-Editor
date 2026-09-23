@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T02:42:22.667Z",
+  "generatedAt": "2026-09-23T02:44:30.747Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 504,
+  "reviewedCaseCount": 515,
   "curatedProfileCounts": {
     "integration": 229,
-    "nightly": 137,
+    "nightly": 139,
     "performance": 26,
     "pr": 157,
-    "visual": 109
+    "visual": 120
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -8312,18 +8312,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-visibility-visual-reversibility",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Signal visibility changes the expected left/tree and waveform regions; Undo restores and Redo reapplies the visual state without unexplained console/resource errors.",
+      "duplicateGroup": "interaction-visual-bundles",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Captures artifact bundles with stable-region diagnostics and semantic revisions; keep in visual acceptance, outside ordinary PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "interaction-visual-scenarios.spec.ts",
@@ -8334,18 +8337,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-visibility-pixel-reversibility",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Signal hide/Undo/Redo images return to their corresponding visual states within the declared pixel-delta tolerance.",
+      "duplicateGroup": "interaction-visual-bundles",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Full-screenshot PNG comparisons are expensive and sensitive to global rendering; retain as automated visual/nightly evidence, not focused PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "nightly"
+      ]
     },
     {
       "file": "interaction-visual-scenarios.spec.ts",
@@ -8356,18 +8363,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-pixel-reversibility",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Annotation add/Undo/Redo screenshots return to their expected pixel states after normalizing the active Ribbon tab.",
+      "duplicateGroup": "interaction-visual-bundles",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "A full-screen pixel equivalence check provides broad rendering evidence; keep automated in visual/nightly and avoid running in routine PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "nightly"
+      ]
     },
     {
       "file": "interaction-visual-scenarios.spec.ts",
@@ -8378,18 +8389,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-lifecycle-visual-bundle",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Annotation creation changes the annotation surface, and Undo/Redo removes/restores it while review artifacts retain diagnostics and stable-region evidence.",
+      "duplicateGroup": "interaction-visual-bundles",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The artifact-backed lifecycle review adds diagnostics beyond the pixel-only test; retain in visual gate while consolidating duplicated setup/captures.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "interaction-visual-scenarios.spec.ts",
@@ -8400,18 +8414,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "group-collapse-visual-view-only",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Group collapse/expand visibly changes the tree while Canonical revision and History remain unchanged.",
+      "duplicateGroup": "interaction-visual-bundles",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Protects a view-only visual state with review artifacts; keep under the visual profile rather than PR, where lighter semantic assertions already establish the invariant.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "interaction-visual-scenarios.spec.ts",
@@ -8422,18 +8439,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-selection-visual-view-only",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Signal selection produces a visible selected state without canonical/history changes or unnecessary render-counter changes.",
+      "duplicateGroup": "interaction-visual-bundles",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Captures user-visible selection feedback and visual review artifacts; remove implementation counters from a future product-contract replacement if not needed for a separate architecture guard.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "interaction-visual-scenarios.spec.ts",
@@ -8444,18 +8464,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "zoom-fit-visual-roundtrip",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Zoom and Fit visibly update/restore the time view while Canonical revision and History remain unchanged.",
+      "duplicateGroup": "interaction-visual-bundles",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Maintains artifact-backed visual evidence for time-axis presentation changes; not needed on every semantic PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "interaction-visual-scenarios.spec.ts",
@@ -8466,18 +8489,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-pane-resize-visual-view-only",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Resizing the left pane visibly updates owned label/header geometry without mutating document revision or History.",
+      "duplicateGroup": "interaction-visual-bundles",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Panel geometry is explicitly visual and emits artifact bundles; keep in visual tier while avoiding duplicate viewport-specific browser copies.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "interaction-visual-scenarios.spec.ts",
@@ -8488,18 +8514,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "timeline-insert-visual-undo-redo",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Timeline insertion updates ruler/rows, Undo restores the original cycle count, and Redo reapplies the same visual/document change.",
+      "duplicateGroup": "interaction-visual-bundles",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Combines a semantic timeline mutation with artifact-backed visual reversibility; keep one representative visual case, not an additional general PR smoke.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "interaction-visual-scenarios.spec.ts",
@@ -8510,18 +8539,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bottom-resize-visual-view-only",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Resizing Bottom Editor changes its visible geometry without Canonical revision or History mutation.",
+      "duplicateGroup": "interaction-visual-bundles",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Bottom-pane splitter geometry is a visual contract; retain its artifact evidence in visual profile.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "interaction-visual-scenarios.spec.ts",
@@ -8532,18 +8564,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "inspector-resize-visual-view-only",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Resizing Inspector changes its visible geometry without Canonical revision or History mutation.",
+      "duplicateGroup": "interaction-visual-bundles",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Inspector splitter geometry is an independent panel contract; keep in the visual suite and report runtime once collected.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "issue-441-ribbon-label-integrity.spec.ts",
@@ -23867,11 +23902,11 @@
     {
       "file": "interaction-visual-scenarios.spec.ts",
       "caseCount": 11,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 11,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-441-ribbon-label-integrity.spec.ts",

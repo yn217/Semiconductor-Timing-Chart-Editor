@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 504/963 cases reviewed.
+Semantic review progress: 515/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -11,10 +11,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | Profile | Reviewed cases |
 | --- | ---: |
 | `integration` | 229 |
-| `nightly` | 137 |
+| `nightly` | 139 |
 | `performance` | 26 |
 | `pr` | 157 |
-| `visual` | 109 |
+| `visual` | 120 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -116,7 +116,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `inspector-hide-compacts-rows.spec.ts` | 1 | 0/1 reviewed |
 | `inspector-multi-selection.spec.ts` | 3 | 0/3 reviewed |
 | `inspector-waveform-style.spec.ts` | 2 | 0/2 reviewed |
-| `interaction-visual-scenarios.spec.ts` | 11 | 0/11 reviewed |
+| `interaction-visual-scenarios.spec.ts` | 11 | 11/11 reviewed |
 | `issue-441-ribbon-label-integrity.spec.ts` | 3 | 3/3 reviewed |
 | `issue-554-transaction-journey.spec.ts` | 2 | 2/2 reviewed |
 | `issue-573-combined-divider-pinned.spec.ts` | 1 | 1/1 reviewed |
