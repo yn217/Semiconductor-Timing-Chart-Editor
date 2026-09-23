@@ -17,6 +17,10 @@ async function createTransaction(page: Page, name = "DMA Read", start = 2, end =
   await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Workspace preset").selectOption("transaction");
+  // The helpers' start/end arguments are source-cycle coordinates. Set the
+  // visible TC scale through the production control so entering those values
+  // keeps them in source cycles and inside the 24-cycle startup sample.
+  await page.getByTestId("transaction-tc-scale").selectOption("1");
   const editor = page.getByTestId("transaction-editor");
   const inspector = page.getByTestId("inspector");
   await inspector.getByLabel("Transaction name", { exact: true }).fill(name);
@@ -129,9 +133,7 @@ test("exports both synchronized signal and transaction layers from Split View", 
 
 test("exports SVG, PNG and PDF from Split View through the shared ExportScene", async ({ page }) => {
   await ready(page);
-  // startInCycleSample loads a 24-cycle document (2 TC at the default scale);
-  // keep the edited Transaction range valid so Apply actually commits the name.
-  await createTransaction(page, "Split All Formats", 0, 2);
+  await createTransaction(page, "Split All Formats", 2, 6);
   await page.getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.getByTestId("transaction-lanes")).toBeVisible();
 
@@ -270,7 +272,11 @@ test("moves and resizes Transaction edges through the shared rendered-geometry S
   const body = bar.locator("span").first();
   const bodyBox = await body.boundingBox();
   const cycle4 = await page.getByTestId("cycle-ruler").locator("[data-cycle='4']").boundingBox();
-  await page.mouse.move(bodyBox!.x + bodyBox!.width / 2, bodyBox!.y + bodyBox!.height / 2); await page.mouse.down(); await page.mouse.move(cycle4!.x + 1, cycle4!.y + 10); await page.mouse.up();
+  // Start near the bar's leading edge (cycle 2), then end at cycle 4. The
+  // old midpoint start was already cycle 4, so its 1px movement never crossed
+  // the drag threshold and the test did not actually move the Transaction.
+  await page.mouse.move(bodyBox!.x + 2, bodyBox!.y + bodyBox!.height / 2); await page.mouse.down(); await page.mouse.move(cycle4!.x + 1, cycle4!.y + 10);
+  await page.mouse.up();
   await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("4");
   await expect(lanes).toHaveAttribute("data-mount-serial", mountSerial!);
   await expect.poll(async () => Number(await lanes.getAttribute("data-lane-index-builds"))).toBeGreaterThan(initialLaneIndexBuilds);
