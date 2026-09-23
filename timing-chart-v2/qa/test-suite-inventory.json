@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T01:42:13.929Z",
+  "generatedAt": "2026-09-23T01:47:43.409Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 410,
+  "reviewedCaseCount": 415,
   "curatedProfileCounts": {
-    "integration": 189,
-    "nightly": 121,
+    "integration": 191,
+    "nightly": 122,
     "performance": 22,
-    "pr": 125,
-    "visual": 91
+    "pr": 127,
+    "visual": 92
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -3926,18 +3926,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "clock-generator-toolbar-visual-affordance",
+      "originIssue": 210,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Clock Generator toolbar icon glyphs remain compact and do not expand to the browser's default oversized SVG dimensions.",
+      "duplicateGroup": "clock-generator-toolbar-visuals",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is a narrow visible affordance regression that is not a semantic command concern; retain in the visual profile instead of routine PR integration.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "clock-presentation-closure.spec.ts",
@@ -3948,18 +3951,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "clock-generator-suppressed-slots-relative-to-start",
+      "originIssue": 210,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Clock suppressed-period slots are interpreted relative to a delayed generator start and a valid edit commits as one History operation.",
+      "duplicateGroup": "clock-generator-suppressed-slot-semantics",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The delayed-start origin is the semantic edge case and this compact UI command journey gives it a routine regression guard.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "clock-presentation-closure.spec.ts",
@@ -3970,18 +3976,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "clock-edit-waveform-edge-counter-and-recovery",
+      "originIssue": 210,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Invalid generator/suppressed-period drafts are rejected without History corruption; a corrected generator updates the waveform, edge-counter settings update overlays, and final valid Apply succeeds.",
+      "duplicateGroup": "clock-generator-apply-render-recovery",
+      "executionTier": "TIER_4_SLOW_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "This covers end-to-end validation and recovery across waveform and edge-counter surfaces. Exact render-counter deltas are implementation-coupled and should be owned by the existing incremental-invalidation contract suite, not treated as an additional GUI-level acceptance oracle.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "clock-preview.spec.ts",
@@ -3992,18 +4002,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "clock-preview-draft-cancel",
+      "originIssue": 332,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Preview reflects the selected Clock's uncommitted Period draft, preserves Canonical/History/Dirty, and Cancel restores the committed waveform.",
+      "duplicateGroup": "clock-preview-draft-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the primary preview effect + explicit cancel safety boundary; the preview must be visibly tied to the real waveform rather than a status flag alone.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "clock-preview.spec.ts",
@@ -4014,18 +4027,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "clock-preview-toggle-off",
+      "originIssue": 332,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Turning Preview off discards the transient waveform and restores the canonical Clock view without requiring Apply or Cancel.",
+      "duplicateGroup": "clock-preview-draft-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Toggle-off is an independent exit path from Preview and is not guaranteed by the explicit Cancel test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "clock-preview.spec.ts",
@@ -23000,29 +23016,29 @@
     {
       "file": "clock-generator-toolbar-icon-size.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "clock-presentation-closure.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
-      "originIssue": null,
-      "declaredTimeoutMs": null,
-      "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "clock-preview.spec.ts",
-      "caseCount": 4,
       "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
+      "file": "clock-preview.spec.ts",
+      "caseCount": 4,
+      "reviewedCaseCount": 4,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "clockless-time-axis.spec.ts",

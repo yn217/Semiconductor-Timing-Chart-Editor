@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 410/963 cases reviewed.
+Semantic review progress: 415/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 189 |
-| `nightly` | 121 |
+| `integration` | 191 |
+| `nightly` | 122 |
 | `performance` | 22 |
-| `pr` | 125 |
-| `visual` | 91 |
+| `pr` | 127 |
+| `visual` | 92 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -59,9 +59,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `callout-body-anchor-drag.spec.ts` | 3 | 3/3 reviewed |
 | `checkbox-dark-color-scheme.spec.ts` | 1 | 1/1 reviewed |
 | `clipboard-entity-parity.spec.ts` | 4 | 4/4 reviewed |
-| `clock-generator-toolbar-icon-size.spec.ts` | 1 | 0/1 reviewed |
-| `clock-presentation-closure.spec.ts` | 2 | 0/2 reviewed |
-| `clock-preview.spec.ts` | 4 | 2/4 reviewed |
+| `clock-generator-toolbar-icon-size.spec.ts` | 1 | 1/1 reviewed |
+| `clock-presentation-closure.spec.ts` | 2 | 2/2 reviewed |
+| `clock-preview.spec.ts` | 4 | 4/4 reviewed |
 | `clockless-time-axis.spec.ts` | 7 | 7/7 reviewed |
 | `combined-column-resize-alignment.spec.ts` | 1 | 1/1 reviewed |
 | `combined-left-panel-transaction-tree.spec.ts` | 2 | 2/2 reviewed |
