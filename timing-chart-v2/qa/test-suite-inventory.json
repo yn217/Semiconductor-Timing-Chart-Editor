@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T10:32:45.860Z",
+  "generatedAt": "2026-09-23T10:42:27.444Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,7 +11,7 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 330,
+  "specFileCount": 329,
   "caseCount": 965,
   "reviewedCaseCount": 965,
   "curatedProfileCounts": {
@@ -10911,83 +10911,6 @@
       ]
     },
     {
-      "file": "issue-722-splitter-discoverability.spec.ts",
-      "suitePath": [],
-      "line": 6,
-      "title": "Bottom and Inspector splitters are discoverable at 1280x720",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "splitter-discoverability-and-view-state",
-      "originIssue": 722,
-      "type": "GEOMETRY_CONTRACT",
-      "costClass": "HEAVY",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Bottom and Inspector splitters expose usable hit areas and resize affordance, preserve user sizing across selection/mode changes, and do not mutate document state.",
-      "duplicateGroup": "splitter-affordance-722",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "KEEP",
-      "reason": "This complements the 125%-scale pointer case by checking both splitter orientations, hover discovery and keyboard sizing across mode round trips; these are separate view-state contracts.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "integration",
-        "visual"
-      ]
-    },
-    {
-      "file": "issue-722-splitter-discoverability.spec.ts",
-      "suitePath": [],
-      "line": 6,
-      "title": "Bottom and Inspector splitters are discoverable at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "splitter-discoverability-and-view-state",
-      "originIssue": 722,
-      "type": "GEOMETRY_CONTRACT",
-      "costClass": "HEAVY",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Bottom and Inspector splitters expose usable hit areas and resize affordance, preserve user sizing across selection/mode changes, and do not mutate document state.",
-      "duplicateGroup": "splitter-affordance-722",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "KEEP",
-      "reason": "This complements the 125%-scale pointer case by checking both splitter orientations, hover discovery and keyboard sizing across mode round trips; these are separate view-state contracts.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "integration",
-        "visual"
-      ]
-    },
-    {
-      "file": "issue-722-splitter-reset.spec.ts",
-      "suitePath": [],
-      "line": 3,
-      "title": "double-clicking the Bottom and Inspector splitters restores default sizes without touching the document",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "splitter-reset-view-state",
-      "originIssue": 722,
-      "type": "USER_JOURNEY",
-      "costClass": "FAST",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Double-clicking either splitter restores its default size without changing History or Dirty state.",
-      "duplicateGroup": "splitter-affordance-722",
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "decision": "KEEP",
-      "reason": "Reset is a distinct, inexpensive user action with a view-only invariant; one desktop case is sufficient because the behavior is not viewport-specific.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "pr"
-      ]
-    },
-    {
       "file": "issue-723-status-diagnostics.spec.ts",
       "suitePath": [],
       "line": 3,
@@ -18951,6 +18874,83 @@
       ]
     },
     {
+      "file": "splitter-view-state.contract.spec.ts",
+      "suitePath": [],
+      "line": 6,
+      "title": "Bottom and Inspector splitters are discoverable at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "splitter-discoverability-and-view-state",
+      "originIssue": 722,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Bottom and Inspector splitters expose usable hit areas and resize affordance, preserve user sizing across selection/mode changes, and do not mutate document state.",
+      "duplicateGroup": "splitter-affordance-722",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Compact viewport is retained because panel geometry and usable splitter targets are width/height-sensitive.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ]
+    },
+    {
+      "file": "splitter-view-state.contract.spec.ts",
+      "suitePath": [],
+      "line": 6,
+      "title": "Bottom and Inspector splitters are discoverable at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "splitter-discoverability-and-view-state",
+      "originIssue": 722,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Bottom and Inspector splitters expose usable hit areas and resize affordance, preserve user sizing across selection/mode changes, and do not mutate document state.",
+      "duplicateGroup": "splitter-affordance-722",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Desktop viewport is retained as the reference geometry counterpart to the compact viewport contract.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ]
+    },
+    {
+      "file": "splitter-view-state.contract.spec.ts",
+      "suitePath": [],
+      "line": 45,
+      "title": "double-clicking the Bottom and Inspector splitters restores default sizes without touching the document",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "splitter-reset-view-state",
+      "originIssue": 722,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Double-clicking either splitter restores its default size without changing History or Dirty state.",
+      "duplicateGroup": "splitter-affordance-722",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Reset is a distinct, inexpensive user action with a view-only invariant; one desktop case is sufficient because the behavior is not viewport-specific.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
+    },
+    {
       "file": "stable-id-collision.spec.ts",
       "suitePath": [],
       "line": 3,
@@ -25769,27 +25769,6 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
-      "file": "issue-722-splitter-discoverability.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
-      "originIssue": "722",
-      "declaredTimeoutMs": null,
-      "candidateSignals": [
-        "getComputedStyle",
-        "explicitWait"
-      ],
-      "semanticReviewStatus": "REVIEWED"
-    },
-    {
-      "file": "issue-722-splitter-reset.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 1,
-      "originIssue": "722",
-      "declaredTimeoutMs": null,
-      "candidateSignals": [],
-      "semanticReviewStatus": "REVIEWED"
-    },
-    {
       "file": "issue-723-status-diagnostics.spec.ts",
       "caseCount": 2,
       "reviewedCaseCount": 2,
@@ -27103,6 +27082,18 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "splitter-view-state.contract.spec.ts",
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
+      "originIssue": null,
+      "declaredTimeoutMs": null,
+      "candidateSignals": [
+        "getComputedStyle",
+        "explicitWait"
+      ],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
       "file": "stable-id-collision.spec.ts",
       "caseCount": 1,
       "reviewedCaseCount": 1,
@@ -28211,6 +28202,42 @@
       },
       "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
       "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": {
+        "file": "issue-722-splitter-discoverability.spec.ts",
+        "title": "Bottom and Inspector splitters are discoverable at 1280x720"
+      },
+      "to": {
+        "file": "splitter-view-state.contract.spec.ts",
+        "title": "Bottom and Inspector splitters are discoverable at 1280x720"
+      },
+      "protectedInvariant": "Both splitter orientations remain discoverable and keyboard-operable across responsive layouts without changing Canonical, History or Dirty state.",
+      "reason": "Moved the unchanged production journey into a stable splitter view-state contract suite; case-level viewport metadata and #722 traceability are retained."
+    },
+    {
+      "from": {
+        "file": "issue-722-splitter-discoverability.spec.ts",
+        "title": "Bottom and Inspector splitters are discoverable at 1672x941"
+      },
+      "to": {
+        "file": "splitter-view-state.contract.spec.ts",
+        "title": "Bottom and Inspector splitters are discoverable at 1672x941"
+      },
+      "protectedInvariant": "Both splitter orientations remain discoverable and keyboard-operable across responsive layouts without changing Canonical, History or Dirty state.",
+      "reason": "Moved the unchanged production journey into a stable splitter view-state contract suite; case-level viewport metadata and #722 traceability are retained."
+    },
+    {
+      "from": {
+        "file": "issue-722-splitter-reset.spec.ts",
+        "title": "double-clicking the Bottom and Inspector splitters restores default sizes without touching the document"
+      },
+      "to": {
+        "file": "splitter-view-state.contract.spec.ts",
+        "title": "double-clicking the Bottom and Inspector splitters restores default sizes without touching the document"
+      },
+      "protectedInvariant": "Double-clicking either splitter restores the documented default view size without changing History or Dirty state.",
+      "reason": "Moved the distinct fast reset journey into the stable splitter suite while retaining its PR profile and #722 traceability."
     }
   ]
 }

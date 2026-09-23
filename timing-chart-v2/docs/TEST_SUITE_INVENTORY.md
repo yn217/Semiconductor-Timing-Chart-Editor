@@ -1,6 +1,6 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 330 spec files and 965 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 329 spec files and 965 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
 Semantic review progress: 965/965 cases reviewed.
 
@@ -185,8 +185,6 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-720-menu-dialog-affordance.spec.ts` | 2 | 2/2 reviewed |
 | `issue-721-visual-channels.spec.ts` | 3 | 3/3 reviewed |
 | `issue-722-display-scale-125.spec.ts` | 2 | 2/2 reviewed |
-| `issue-722-splitter-discoverability.spec.ts` | 2 | 2/2 reviewed |
-| `issue-722-splitter-reset.spec.ts` | 1 | 1/1 reviewed |
 | `issue-723-status-diagnostics.spec.ts` | 2 | 2/2 reviewed |
 | `issue-724-search-scope.spec.ts` | 1 | 1/1 reviewed |
 | `issue-725-draft-markers.spec.ts` | 1 | 1/1 reviewed |
@@ -315,6 +313,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `spacer-row.spec.ts` | 1 | 1/1 reviewed |
 | `spacer.spec.ts` | 1 | 1/1 reviewed |
 | `split-active-pane.spec.ts` | 6 | 6/6 reviewed |
+| `splitter-view-state.contract.spec.ts` | 3 | 3/3 reviewed |
 | `stable-id-collision.spec.ts` | 1 | 1/1 reviewed |
 | `stable-surface.spec.ts` | 1 | 1/1 reviewed |
 | `status-context.spec.ts` | 4 | 4/4 reviewed |
@@ -434,7 +433,6 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-720-menu-dialog-affordance.spec.ts` | geometryRead |
 | `issue-721-visual-channels.spec.ts` | getComputedStyle |
 | `issue-722-display-scale-125.spec.ts` | geometryRead |
-| `issue-722-splitter-discoverability.spec.ts` | getComputedStyle, explicitWait |
 | `issue-723-status-diagnostics.spec.ts` | querySelector, geometryRead |
 | `issue-725-draft-markers.spec.ts` | getComputedStyle |
 | `issue-725-keyboard-journey.spec.ts` | geometryRead |
@@ -498,6 +496,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `runtime-owner-acceptance.spec.ts` | getComputedStyle |
 | `signal-editor.spec.ts` | geometryRead |
 | `signal-split.spec.ts` | getComputedStyle |
+| `splitter-view-state.contract.spec.ts` | getComputedStyle, explicitWait |
 | `stable-id-collision.spec.ts` | querySelector |
 | `stable-surface.spec.ts` | dataset |
 | `timeline-editor.spec.ts` | dataset, geometryRead |
@@ -575,6 +574,9 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact in Cycle at 1024x700” → `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700”. **Invariant:** Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width. **Reason:** The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup.
 - `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact in Transaction at 1024x700” → `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700”. **Invariant:** Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width. **Reason:** The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup.
 - `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact in Combined at 1024x700” → `issue-441-ribbon-label-integrity.spec.ts` “Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700”. **Invariant:** Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width. **Reason:** The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup.
+- `issue-722-splitter-discoverability.spec.ts` “Bottom and Inspector splitters are discoverable at 1280x720” → `splitter-view-state.contract.spec.ts` “Bottom and Inspector splitters are discoverable at 1280x720”. **Invariant:** Both splitter orientations remain discoverable and keyboard-operable across responsive layouts without changing Canonical, History or Dirty state. **Reason:** Moved the unchanged production journey into a stable splitter view-state contract suite; case-level viewport metadata and #722 traceability are retained.
+- `issue-722-splitter-discoverability.spec.ts` “Bottom and Inspector splitters are discoverable at 1672x941” → `splitter-view-state.contract.spec.ts` “Bottom and Inspector splitters are discoverable at 1672x941”. **Invariant:** Both splitter orientations remain discoverable and keyboard-operable across responsive layouts without changing Canonical, History or Dirty state. **Reason:** Moved the unchanged production journey into a stable splitter view-state contract suite; case-level viewport metadata and #722 traceability are retained.
+- `issue-722-splitter-reset.spec.ts` “double-clicking the Bottom and Inspector splitters restores default sizes without touching the document” → `splitter-view-state.contract.spec.ts` “double-clicking the Bottom and Inspector splitters restores default sizes without touching the document”. **Invariant:** Double-clicking either splitter restores the documented default view size without changing History or Dirty state. **Reason:** Moved the distinct fast reset journey into the stable splitter suite while retaining its PR profile and #722 traceability.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 

@@ -1104,7 +1104,7 @@
       "replacementTest": null
     },
     {
-      "file": "issue-722-splitter-discoverability.spec.ts",
+      "file": "splitter-view-state.contract.spec.ts",
       "domain": "splitter-discoverability-and-view-state",
       "originIssue": 722,
       "type": "GEOMETRY_CONTRACT",
@@ -1118,24 +1118,7 @@
         "visual"
       ],
       "decision": "KEEP",
-      "reason": "This complements the 125%-scale pointer case by checking both splitter orientations, hover discovery and keyboard sizing across mode round trips; these are separate view-state contracts.",
-      "replacementTest": null
-    },
-    {
-      "file": "issue-722-splitter-reset.spec.ts",
-      "domain": "splitter-reset-view-state",
-      "originIssue": 722,
-      "type": "USER_JOURNEY",
-      "costClass": "FAST",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Double-clicking either splitter restores its default size without changing History or Dirty state.",
-      "duplicateGroup": "splitter-affordance-722",
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "profiles": [
-        "pr"
-      ],
-      "decision": "KEEP",
-      "reason": "Reset is a distinct, inexpensive user action with a view-only invariant; one desktop case is sufficient because the behavior is not viewport-specific.",
+      "reason": "Stable Splitter contract suite: this checks both orientations, hover discovery, keyboard sizing and mode round trips. The separate 125%-scale journey remains in its specialized spec.",
       "replacementTest": null
     },
     {
@@ -14661,6 +14644,54 @@
       "profiles": ["pr"],
       "decision": "KEEP",
       "reason": "The selection-clear/restore transition is a separate user-visible path, retained alongside mode-context selection in the consolidated contract suite.",
+      "replacementTest": null
+    },
+    {
+      "file": "splitter-view-state.contract.spec.ts",
+      "title": "Bottom and Inspector splitters are discoverable at 1280x720",
+      "domain": "splitter-discoverability-and-view-state",
+      "originIssue": 722,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Bottom and Inspector splitters expose usable hit areas and resize affordance, preserve user sizing across selection/mode changes, and do not mutate document state.",
+      "duplicateGroup": "splitter-affordance-722",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": ["integration", "visual"],
+      "decision": "KEEP",
+      "reason": "Compact viewport is retained because panel geometry and usable splitter targets are width/height-sensitive.",
+      "replacementTest": null
+    },
+    {
+      "file": "splitter-view-state.contract.spec.ts",
+      "title": "Bottom and Inspector splitters are discoverable at 1672x941",
+      "domain": "splitter-discoverability-and-view-state",
+      "originIssue": 722,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Bottom and Inspector splitters expose usable hit areas and resize affordance, preserve user sizing across selection/mode changes, and do not mutate document state.",
+      "duplicateGroup": "splitter-affordance-722",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": ["integration", "visual"],
+      "decision": "KEEP",
+      "reason": "Desktop viewport is retained as the reference geometry counterpart to the compact viewport contract.",
+      "replacementTest": null
+    },
+    {
+      "file": "splitter-view-state.contract.spec.ts",
+      "title": "double-clicking the Bottom and Inspector splitters restores default sizes without touching the document",
+      "domain": "splitter-reset-view-state",
+      "originIssue": 722,
+      "type": "USER_JOURNEY",
+      "costClass": "FAST",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Double-clicking either splitter restores its default size without changing History or Dirty state.",
+      "duplicateGroup": "splitter-affordance-722",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["pr"],
+      "decision": "KEEP",
+      "reason": "Reset is a distinct, inexpensive user action with a view-only invariant; one desktop case is sufficient because the behavior is not viewport-specific.",
       "replacementTest": null
     }
   ]

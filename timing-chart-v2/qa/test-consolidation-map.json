@@ -318,6 +318,24 @@
       "to": { "file": "issue-441-ribbon-label-integrity.spec.ts", "title": "Ribbon labels are intact across Cycle, Transaction and Combined at 1024x700" },
       "protectedInvariant": "Every Ribbon tab's labels remain readable and every control stays within the Ribbon in Cycle, Transaction and Combined at each tested responsive width.",
       "reason": "The retained per-viewport test traverses all three modes and every tab in one loaded app, preserving the full combination while removing repeated app setup."
+    },
+    {
+      "from": { "file": "issue-722-splitter-discoverability.spec.ts", "title": "Bottom and Inspector splitters are discoverable at 1280x720" },
+      "to": { "file": "splitter-view-state.contract.spec.ts", "title": "Bottom and Inspector splitters are discoverable at 1280x720" },
+      "protectedInvariant": "Both splitter orientations remain discoverable and keyboard-operable across responsive layouts without changing Canonical, History or Dirty state.",
+      "reason": "Moved the unchanged production journey into a stable splitter view-state contract suite; case-level viewport metadata and #722 traceability are retained."
+    },
+    {
+      "from": { "file": "issue-722-splitter-discoverability.spec.ts", "title": "Bottom and Inspector splitters are discoverable at 1672x941" },
+      "to": { "file": "splitter-view-state.contract.spec.ts", "title": "Bottom and Inspector splitters are discoverable at 1672x941" },
+      "protectedInvariant": "Both splitter orientations remain discoverable and keyboard-operable across responsive layouts without changing Canonical, History or Dirty state.",
+      "reason": "Moved the unchanged production journey into a stable splitter view-state contract suite; case-level viewport metadata and #722 traceability are retained."
+    },
+    {
+      "from": { "file": "issue-722-splitter-reset.spec.ts", "title": "double-clicking the Bottom and Inspector splitters restores default sizes without touching the document" },
+      "to": { "file": "splitter-view-state.contract.spec.ts", "title": "double-clicking the Bottom and Inspector splitters restores default sizes without touching the document" },
+      "protectedInvariant": "Double-clicking either splitter restores the documented default view size without changing History or Dirty state.",
+      "reason": "Moved the distinct fast reset journey into the stable splitter suite while retaining its PR profile and #722 traceability."
     }
   ]
 }
