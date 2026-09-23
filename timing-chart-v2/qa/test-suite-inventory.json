@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:32:33.520Z",
+  "generatedAt": "2026-09-23T05:33:52.078Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 686,
+  "reviewedCaseCount": 689,
   "curatedProfileCounts": {
     "integration": 324,
     "nightly": 163,
     "performance": 44,
-    "pr": 198,
-    "visual": 137
+    "pr": 199,
+    "visual": 139
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -7673,18 +7673,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "shared-rename-dialog-apply-cancel-escape",
+      "originIssue": 291,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Home Rename opens the app-owned dialog with focus, Cancel and Escape discard the draft and restore focus without history change, while Apply commits exactly one rename operation.",
+      "duplicateGroup": "rename-dialog-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the focused production lifecycle for the shared Rename dialog, covering both visible Cancel and Escape plus the single-command Apply path. Other context-menu tests only route to the dialog and do not protect its draft/focus/commit semantics.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "home-command-surface.spec.ts",
@@ -7695,18 +7698,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "home-ribbon-label-wrapping-geometry",
+      "originIssue": 439,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1280x720, the selected Home Ribbon command labels wrap only at word boundaries, use no more than two lines, and the Ribbon has no horizontal overflow.",
+      "duplicateGroup": "home-ribbon-label-wrapping-responsive-matrix",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Compact width has distinct wrapping/overflow pressure from the 1672px viewport and is a required responsive counterpart; command-overflow tests do not assert text fragment boundaries.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "home-command-surface.spec.ts",
@@ -7717,18 +7723,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "home-ribbon-label-wrapping-geometry",
+      "originIssue": 439,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1672x941, the selected Home Ribbon command labels wrap only at word boundaries, use no more than two lines, and the Ribbon has no horizontal overflow.",
+      "duplicateGroup": "home-ribbon-label-wrapping-responsive-matrix",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This captures text-fragment geometry for long Home labels at the reference viewport. Ribbon overflow tests only assert command discoverability, not mid-word splitting or line count.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "home-ribbon-timegroup-cleanup.spec.ts",
@@ -24225,7 +24234,7 @@
     {
       "file": "home-command-surface.spec.ts",
       "caseCount": 24,
-      "reviewedCaseCount": 21,
+      "reviewedCaseCount": 24,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -24233,7 +24242,7 @@
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "home-ribbon-timegroup-cleanup.spec.ts",
