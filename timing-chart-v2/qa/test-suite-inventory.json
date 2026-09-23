@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T01:26:39.307Z",
+  "generatedAt": "2026-09-23T01:32:46.869Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 370,
+  "reviewedCaseCount": 389,
   "curatedProfileCounts": {
-    "integration": 164,
-    "nightly": 116,
-    "performance": 20,
-    "pr": 118,
-    "visual": 85
+    "integration": 172,
+    "nightly": 119,
+    "performance": 22,
+    "pr": 121,
+    "visual": 91
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -4070,18 +4070,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "clockless-time-axis-persistence",
+      "originIssue": 205,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A clockless document displays a Time axis and preserves that semantic state through Save/Open and SVG export, without fabricating a Clock waveform.",
+      "duplicateGroup": "clockless-time-axis-contract",
+      "executionTier": "TIER_4_SLOW_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "This crosses axis projection, Save/Open, and export; retain as one end-to-end persistence journey in slower integration/nightly profiles.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly",
+        "integration"
+      ]
     },
     {
       "file": "clockless-time-axis.spec.ts",
@@ -4092,18 +4096,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "reference-clock-identity-and-fallback",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Hiding a reference Clock retains its time-axis identity; deleting it selects defined clockless fallback, and Undo/Redo restores/removes the original stable Clock semantics.",
+      "duplicateGroup": "reference-clock-stable-identity",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The visibility/delete/restore lifecycle is a focused stable-ID and fallback contract with exact History assertions, distinct from export persistence.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "clockless-time-axis.spec.ts",
@@ -4114,18 +4121,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "reference-clock-explicit-selection",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Selecting a real Clock assigns it as reference by stable identity and creates exactly one History unit without fabricating Clock data.",
+      "duplicateGroup": "reference-clock-stable-identity",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the compact positive selection path complementary to hide/delete fallback and Undo/Redo; it is suitable for focused PR verification.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "clockless-time-axis.spec.ts",
@@ -4136,18 +4146,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "clockless-axis-owner-snap",
+      "originIssue": 556,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Transaction snapping on a clockless axis uses the actual visible TimeAxis owner row rather than a hidden first row, and applies the resulting time to the intended transaction.",
+      "duplicateGroup": "time-axis-owner-snapping",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This exercises a real pointer gesture and the shared owner selection in a concrete non-first-row fixture; retain as focused integration coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "clockless-time-axis.spec.ts",
@@ -4158,18 +4171,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-clipboard-semantic-identity",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Transaction duplication preserves semantic metadata and timing while allocating a fresh stable ID; copying itself is view-only.",
+      "duplicateGroup": "transaction-clipboard-identity",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This protects semantic copy/duplicate behavior and stable ID allocation through production commands; it is distinct from table deletion targeting.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "clockless-time-axis.spec.ts",
@@ -4180,18 +4196,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-bottom-stable-delete-target",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Deleting a Transaction from the Bottom editor removes the exact displayed stable ID and creates one History operation.",
+      "duplicateGroup": "transaction-bottom-targeting",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The test verifies stable target resolution at the user-facing table boundary and its single-undo contract; keep in focused PR coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "clockless-time-axis.spec.ts",
@@ -4202,18 +4221,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "spacer-clipboard-semantic-identity",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Duplicating a standalone Spacer preserves its semantic height while allocating a distinct stable row ID.",
+      "duplicateGroup": "row-clipboard-stable-identity",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Spacer height and identity are a distinct clipboard contract from Transaction duplication and are not covered by transaction-only tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "combined-column-resize-alignment.spec.ts",
@@ -4224,18 +4246,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "combined-shared-time-axis-alignment",
+      "originIssue": 573,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Transaction start, semantic phase boundary, and end remain screen-X aligned with matching Cycle boundaries before and after production column resizing.",
+      "duplicateGroup": "combined-shared-axis-geometry",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is a focused visible cross-pane geometry contract using the real layout editor; DOM geometry assertions are necessary to prove the shared-axis invariant and are not replaced by state/unit tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "combined-left-panel-transaction-tree.spec.ts",
@@ -4246,18 +4271,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "combined-left-rail-tree-layout",
+      "originIssue": 593,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Combined composes the production Transaction Tree and Cycle frozen columns without overlap, and tree selection is view-only.",
+      "duplicateGroup": "combined-left-rail-composition",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The first case verifies actual panel geometry plus stable selection/history behavior. It protects Combined-specific composition rather than duplicating standalone tree tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "combined-left-panel-transaction-tree.spec.ts",
@@ -4268,18 +4296,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "combined-left-rail-mode-isolation",
+      "originIssue": 593,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Combined left-tree sizing does not leak into standalone Transaction mode, and Cycle mode retains its own frozen rows without the Transaction tree.",
+      "duplicateGroup": "combined-left-rail-composition",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The mode-isolation assertions protect distinct runtime composition boundaries and complement, rather than repeat, the Combined layout case.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "combined-long-fixture-acceptance.spec.ts",
@@ -4290,18 +4321,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "combined-large-fixture-scroll-and-splitter",
+      "originIssue": 573,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At the compact supported viewport, a 10k-cycle Combined document retains real horizontal/vertical overflow, independent pane scroll, minimum heights, and view-only state.",
+      "duplicateGroup": "combined-large-fixture-acceptance",
+      "executionTier": "TIER_4_SLOW_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "The compact viewport has independent clipping and minimum-height risks; the width variant is not redundant with desktop and remains nightly/performance-only.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly",
+        "performance"
+      ]
     },
     {
       "file": "combined-long-fixture-acceptance.spec.ts",
@@ -4312,18 +4347,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "combined-large-fixture-scroll-and-splitter",
+      "originIssue": 573,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A 10k-cycle, transaction-heavy Combined document supports horizontal overflow, independent pane vertical scrolling, bounded pane mounting, splitter limits, and zero canonical mutation.",
+      "duplicateGroup": "combined-large-fixture-acceptance",
+      "executionTier": "TIER_4_SLOW_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "The realistic large fixture and 90-second bound exercise virtualization and scroll/splitter interactions that are inappropriate for every PR run; it is direct #573 closure evidence and must remain scheduled.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "nightly",
+        "performance"
+      ]
     },
     {
       "file": "command-parity-delete.spec.ts",
@@ -4378,18 +4417,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-default-time-geometry-pitch",
+      "originIssue": 572,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 100% zoom the presentation scale remains near native geometry scale, and Fit All followed by reset returns to the document geometry width.",
+      "duplicateGroup": "cycle-default-pitch-regression",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This protects the semantic meaning of 100% zoom and the recovery path after viewport-fit; it is a focused geometry contract, not a screenshot threshold test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "cycle-frozen-columns-scroll.spec.ts",
@@ -4400,18 +4442,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-frozen-column-scroll-layout",
+      "originIssue": 598,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At compact width, frozen columns stay pinned/clipped while the time pane scrolls, and keyboard resizing remains view-only.",
+      "duplicateGroup": "cycle-frozen-columns-scroll",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Compact width changes clipping pressure and available timeline space; this variant independently protects the responsive layout contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "cycle-frozen-columns-scroll.spec.ts",
@@ -4422,18 +4467,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-frozen-column-scroll-layout",
+      "originIssue": 598,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "During horizontal time scrolling, frozen labels keep their screen position and width, clip overflow, remain above scrolling content, and keyboard resizing changes width without Canonical mutation.",
+      "duplicateGroup": "cycle-frozen-columns-scroll",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Frozen geometry, clipping, stacking, and keyboard resize are observable layout contracts. The desktop viewport checks the reference-width arrangement.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "cycle-ruler-long-document-pitch.spec.ts",
@@ -4444,18 +4492,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-ruler-label-density",
+      "originIssue": 587,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "When adjacent cycle boundaries have sufficient screen pitch, displayed ruler labels remain contiguous by one even on documents longer than 80 cycles.",
+      "duplicateGroup": "cycle-ruler-presentation-density",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This guards presentation tick thinning independently from semantic geometry coverage and avoids a brittle fixed total-tick expectation.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "cycle-scroll-pitch-invariant.spec.ts",
@@ -4466,18 +4517,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-ruler-grid-scroll-geometry",
+      "originIssue": 573,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At compact width, horizontal scrolling preserves known source-cycle pitch and ruler/grid alignment without document/history/dirty changes.",
+      "duplicateGroup": "cycle-ruler-grid-scroll-pitch",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Compact width alters scroll range and clipping; retain as a visible responsive counterpart while the desktop contract runs in integration.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "cycle-scroll-pitch-invariant.spec.ts",
@@ -4488,18 +4542,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycle-ruler-grid-scroll-geometry",
+      "originIssue": 573,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Horizontal scrolling changes the visible range but not the screen pitch of known source cycles, and Ruler/Grid pitch stay mutually aligned without Canonical, History, or Dirty changes.",
+      "duplicateGroup": "cycle-ruler-grid-scroll-pitch",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This directly protects the shared time-axis geometry invariant across actual wheel scrolling; the desktop width is the primary routine focused acceptance.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "design-system-foundation.spec.ts",
@@ -6412,18 +6469,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "cycle-grid-ruler-zoom-alignment",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The same semantic Cycle boundary remains aligned between ruler and geometry grid through a view-only zoom, without canonical revision, history depth, or render-counter changes.",
+      "duplicateGroup": "cycle-ruler-grid-geometry-alignment",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a fast core geometry contract with explicit zero-mutation assertions and belongs in PR-level focused coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "group-band.spec.ts",
@@ -22902,41 +22962,41 @@
     {
       "file": "clockless-time-axis.spec.ts",
       "caseCount": 7,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 7,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "combined-column-resize-alignment.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "combined-left-panel-transaction-tree.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "combined-long-fixture-acceptance.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": 90000,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "command-parity-delete.spec.ts",
@@ -22959,7 +23019,7 @@
     {
       "file": "cycle-default-pitch.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22968,36 +23028,36 @@
         "geometryRead",
         "explicitWait"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "cycle-frozen-columns-scroll.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "cycle-ruler-long-document-pitch.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "cycle-scroll-pitch-invariant.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "design-system-foundation.spec.ts",
@@ -23184,11 +23244,11 @@
     {
       "file": "grid-zoom-alignment.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "group-band.spec.ts",

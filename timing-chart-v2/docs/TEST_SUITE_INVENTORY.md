@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 370/963 cases reviewed.
+Semantic review progress: 389/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 164 |
-| `nightly` | 116 |
-| `performance` | 20 |
-| `pr` | 118 |
-| `visual` | 85 |
+| `integration` | 172 |
+| `nightly` | 119 |
+| `performance` | 22 |
+| `pr` | 121 |
+| `visual` | 91 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -62,16 +62,16 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `clock-generator-toolbar-icon-size.spec.ts` | 1 | 0/1 reviewed |
 | `clock-presentation-closure.spec.ts` | 2 | 0/2 reviewed |
 | `clock-preview.spec.ts` | 4 | 2/4 reviewed |
-| `clockless-time-axis.spec.ts` | 7 | 0/7 reviewed |
-| `combined-column-resize-alignment.spec.ts` | 1 | 0/1 reviewed |
-| `combined-left-panel-transaction-tree.spec.ts` | 2 | 0/2 reviewed |
-| `combined-long-fixture-acceptance.spec.ts` | 2 | 0/2 reviewed |
+| `clockless-time-axis.spec.ts` | 7 | 7/7 reviewed |
+| `combined-column-resize-alignment.spec.ts` | 1 | 1/1 reviewed |
+| `combined-left-panel-transaction-tree.spec.ts` | 2 | 2/2 reviewed |
+| `combined-long-fixture-acceptance.spec.ts` | 2 | 2/2 reviewed |
 | `command-parity-delete.spec.ts` | 1 | 0/1 reviewed |
 | `comment-row-draft-consistency.spec.ts` | 1 | 0/1 reviewed |
-| `cycle-default-pitch.spec.ts` | 1 | 0/1 reviewed |
-| `cycle-frozen-columns-scroll.spec.ts` | 2 | 0/2 reviewed |
-| `cycle-ruler-long-document-pitch.spec.ts` | 1 | 0/1 reviewed |
-| `cycle-scroll-pitch-invariant.spec.ts` | 2 | 0/2 reviewed |
+| `cycle-default-pitch.spec.ts` | 1 | 1/1 reviewed |
+| `cycle-frozen-columns-scroll.spec.ts` | 2 | 2/2 reviewed |
+| `cycle-ruler-long-document-pitch.spec.ts` | 1 | 1/1 reviewed |
+| `cycle-scroll-pitch-invariant.spec.ts` | 2 | 2/2 reviewed |
 | `design-system-foundation.spec.ts` | 1 | 0/1 reviewed |
 | `diagnostic-aggregator.spec.ts` | 8 | 0/8 reviewed |
 | `dialog-esc-lifecycle.spec.ts` | 1 | 0/1 reviewed |
@@ -90,7 +90,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `full-gui.spec.ts` | 46 | 0/46 reviewed |
 | `ghost-trace-delete.spec.ts` | 1 | 0/1 reviewed |
 | `golden-samples.spec.ts` | 3 | 0/3 reviewed |
-| `grid-zoom-alignment.spec.ts` | 1 | 0/1 reviewed |
+| `grid-zoom-alignment.spec.ts` | 1 | 1/1 reviewed |
 | `group-band.spec.ts` | 3 | 0/3 reviewed |
 | `group-clipboard-parity.spec.ts` | 2 | 0/2 reviewed |
 | `gui-bottom-resize.spec.ts` | 1 | 1/1 reviewed |
