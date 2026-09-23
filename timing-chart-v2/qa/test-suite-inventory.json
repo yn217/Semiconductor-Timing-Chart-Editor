@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T00:19:51.466Z",
+  "generatedAt": "2026-09-23T00:31:01.970Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,14 +12,14 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 333,
-  "caseCount": 971,
-  "reviewedCaseCount": 195,
+  "caseCount": 970,
+  "reviewedCaseCount": 199,
   "curatedProfileCounts": {
-    "integration": 48,
+    "integration": 51,
     "nightly": 42,
     "performance": 17,
-    "pr": 82,
-    "visual": 52
+    "pr": 83,
+    "visual": 55
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -12218,112 +12218,105 @@
     {
       "file": "issue-765-transaction-no-phantom-vscroll.spec.ts",
       "suitePath": [],
-      "line": 20,
+      "line": 21,
       "title": "scroll extent equals the Transaction content (and fits when there is room) at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-scroll-extent-and-virtual-lane-reachability",
+      "originIssue": 765,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Fit-sized Transaction lanes create no phantom vertical overflow; a real 50-Transaction canonical document has one scroll owner and can reveal its far lane through user wheel input without page scrolling or document mutation.",
+      "duplicateGroup": "transaction-vertical-overflow-owner",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The two viewport cases protect the fit/no-phantom boundary, and one compact tall-document case covers virtual lane reachability through production Open and real wheel interaction. The prior DOM minHeight mutation was removed because it did not prove a tall canonical document.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ]
     },
     {
       "file": "issue-765-transaction-no-phantom-vscroll.spec.ts",
       "suitePath": [],
-      "line": 20,
+      "line": 21,
       "title": "scroll extent equals the Transaction content (and fits when there is room) at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-scroll-extent-and-virtual-lane-reachability",
+      "originIssue": 765,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Fit-sized Transaction lanes create no phantom vertical overflow; a real 50-Transaction canonical document has one scroll owner and can reveal its far lane through user wheel input without page scrolling or document mutation.",
+      "duplicateGroup": "transaction-vertical-overflow-owner",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The two viewport cases protect the fit/no-phantom boundary, and one compact tall-document case covers virtual lane reachability through production Open and real wheel interaction. The prior DOM minHeight mutation was removed because it did not prove a tall canonical document.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ]
     },
     {
       "file": "issue-765-transaction-no-phantom-vscroll.spec.ts",
       "suitePath": [],
-      "line": 53,
+      "line": 54,
       "title": "a genuinely tall Transaction document keeps all lanes reachable through the one vertical owner",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-scroll-extent-and-virtual-lane-reachability",
+      "originIssue": 765,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Fit-sized Transaction lanes create no phantom vertical overflow; a real 50-Transaction canonical document has one scroll owner and can reveal its far lane through user wheel input without page scrolling or document mutation.",
+      "duplicateGroup": "transaction-vertical-overflow-owner",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The two viewport cases protect the fit/no-phantom boundary, and one compact tall-document case covers virtual lane reachability through production Open and real wheel interaction. The prior DOM minHeight mutation was removed because it did not prove a tall canonical document.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "visual"
+      ]
     },
     {
       "file": "issue-766-cycle-plural.spec.ts",
       "suitePath": [],
-      "line": 5,
-      "title": "Time Scale readout uses singular/plural correctly at 1280x720",
+      "line": 4,
+      "title": "Time Scale readout uses singular/plural correctly",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cycles-per-tc-singular-plural-copy",
+      "originIssue": 766,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "FAST",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The visible TC scale readout uses singular 'cycle' for one and plural 'cycles' for other supported scale values, without changing its semantic scale behavior.",
+      "duplicateGroup": "cycles-per-tc-copy-766",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The copy behavior is independent of viewport dimensions; the compact viewport retains the three-value user-visible wording check without a redundant desktop duplicate.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
-    },
-    {
-      "file": "issue-766-cycle-plural.spec.ts",
-      "suitePath": [],
-      "line": 5,
-      "title": "Time Scale readout uses singular/plural correctly at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
@@ -23962,23 +23955,22 @@
     {
       "file": "issue-765-transaction-no-phantom-vscroll.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": "765",
-      "declaredTimeoutMs": null,
+      "declaredTimeoutMs": 60,
       "candidateSignals": [
-        "styleMutation",
         "explicitWait"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-766-cycle-plural.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "766",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-767-zoom-keeps-glyph-shape.spec.ts",
@@ -25737,6 +25729,18 @@
       },
       "protectedInvariant": "Hiding Cycle Bottom removes the reserved space and is view-only.",
       "reason": "The compact case was a duplicate of the retained #740 contract; the shared file continues to exercise #741 and #756 independently."
+    },
+    {
+      "from": {
+        "file": "issue-766-cycle-plural.spec.ts",
+        "title": "Time Scale readout uses singular/plural correctly at 1672x941"
+      },
+      "to": {
+        "file": "issue-766-cycle-plural.spec.ts",
+        "title": "Time Scale readout uses singular/plural correctly"
+      },
+      "protectedInvariant": "TC singular/plural copy is correct for values 1, 10 and 50.",
+      "reason": "Copy is viewport-independent; the retained compact case checks the same three supported values and no singular 'cycles' regression."
     }
   ]
 }

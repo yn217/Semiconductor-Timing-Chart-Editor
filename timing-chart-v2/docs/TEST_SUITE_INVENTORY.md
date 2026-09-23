@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 333 spec files and 971 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 333 spec files and 970 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 195/971 cases reviewed.
+Semantic review progress: 199/970 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 48 |
+| `integration` | 51 |
 | `nightly` | 42 |
 | `performance` | 17 |
-| `pr` | 82 |
-| `visual` | 52 |
+| `pr` | 83 |
+| `visual` | 55 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -208,8 +208,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-761-start-input-width.spec.ts` | 2 | 0/2 reviewed |
 | `issue-763-retained-phase-drafts.spec.ts` | 2 | 2/2 reviewed |
 | `issue-764-group-header-sticky.spec.ts` | 2 | 0/2 reviewed |
-| `issue-765-transaction-no-phantom-vscroll.spec.ts` | 3 | 0/3 reviewed |
-| `issue-766-cycle-plural.spec.ts` | 2 | 0/2 reviewed |
+| `issue-765-transaction-no-phantom-vscroll.spec.ts` | 3 | 3/3 reviewed |
+| `issue-766-cycle-plural.spec.ts` | 1 | 1/1 reviewed |
 | `issue-767-zoom-keeps-glyph-shape.spec.ts` | 3 | 3/3 reviewed |
 | `issue-768-mode-switch-budget.spec.ts` | 1 | 1/1 reviewed |
 | `issue-769-tree-virtualization-keyboard.spec.ts` | 5 | 5/5 reviewed |
@@ -438,7 +438,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-760-combined-horizontal-wheel.spec.ts` | querySelector |
 | `issue-761-start-input-width.spec.ts` | geometryRead |
 | `issue-764-group-header-sticky.spec.ts` | querySelector, elementContains, geometryRead |
-| `issue-765-transaction-no-phantom-vscroll.spec.ts` | styleMutation, explicitWait |
+| `issue-765-transaction-no-phantom-vscroll.spec.ts` | explicitWait |
 | `issue-767-zoom-keeps-glyph-shape.spec.ts` | getComputedStyle, dataset, geometryRead |
 | `issue-768-mode-switch-budget.spec.ts` | querySelector |
 | `issue-770-filtered-selection-scope.spec.ts` | querySelector |
@@ -538,6 +538,7 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-740-cycle-bottom-hidden-geometry.spec.ts` “Cycle releases Bottom space when hidden at 1280x720” → `issue-740-cycle-bottom-hidden.spec.ts` “Cycle releases Bottom space when hidden at 1280x720”. **Invariant:** Hiding Cycle Bottom releases the lower workspace space; the state survives a mode round-trip and can be restored without document mutation. **Reason:** The compact viewport's user-visible gap and hidden-state journey remain covered in the retained test; the removed assertion was coupled to CSS grid-template-row implementation details.
 - `issue-740-741-756-cycle-layout.spec.ts` “#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at 1672x941” → `issue-740-cycle-bottom-hidden.spec.ts` “Cycle releases Bottom space when hidden at 1672x941”. **Invariant:** Hiding Cycle Bottom removes the reserved space and is view-only. **Reason:** The removed case repeated the hide state, panel-to-workspace edge and hidden resizer assertions; the retained #740 journey covers those with stronger Dirty/revision checks, while #756 coverage remains in the same spec.
 - `issue-740-741-756-cycle-layout.spec.ts` “#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at 1280x720” → `issue-740-cycle-bottom-hidden.spec.ts` “Cycle releases Bottom space when hidden at 1280x720”. **Invariant:** Hiding Cycle Bottom removes the reserved space and is view-only. **Reason:** The compact case was a duplicate of the retained #740 contract; the shared file continues to exercise #741 and #756 independently.
+- `issue-766-cycle-plural.spec.ts` “Time Scale readout uses singular/plural correctly at 1672x941” → `issue-766-cycle-plural.spec.ts` “Time Scale readout uses singular/plural correctly”. **Invariant:** TC singular/plural copy is correct for values 1, 10 and 50. **Reason:** Copy is viewport-independent; the retained compact case checks the same three supported values and no singular 'cycles' regression.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 

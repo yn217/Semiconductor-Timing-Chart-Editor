@@ -204,6 +204,18 @@
       },
       "protectedInvariant": "Hiding Cycle Bottom removes the reserved space and is view-only.",
       "reason": "The compact case was a duplicate of the retained #740 contract; the shared file continues to exercise #741 and #756 independently."
+    },
+    {
+      "from": {
+        "file": "issue-766-cycle-plural.spec.ts",
+        "title": "Time Scale readout uses singular/plural correctly at 1672x941"
+      },
+      "to": {
+        "file": "issue-766-cycle-plural.spec.ts",
+        "title": "Time Scale readout uses singular/plural correctly"
+      },
+      "protectedInvariant": "TC singular/plural copy is correct for values 1, 10 and 50.",
+      "reason": "Copy is viewport-independent; the retained compact case checks the same three supported values and no singular 'cycles' regression."
     }
   ]
 }
