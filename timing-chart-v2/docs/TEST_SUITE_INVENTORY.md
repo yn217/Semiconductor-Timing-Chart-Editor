@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 709/959 cases reviewed.
+Semantic review progress: 717/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 338 |
+| `integration` | 344 |
 | `nightly` | 163 |
 | `performance` | 44 |
-| `pr` | 202 |
+| `pr` | 204 |
 | `visual` | 142 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -257,7 +257,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `qa-cross-mode-journey.spec.ts` | 2 | 2/2 reviewed |
 | `qa-fresh-state-journeys.spec.ts` | 9 | 9/9 reviewed |
 | `reference-clock-conversion.spec.ts` | 4 | 4/4 reviewed |
-| `reorder-visibility.spec.ts` | 8 | 0/8 reviewed |
+| `reorder-visibility.spec.ts` | 8 | 8/8 reviewed |
 | `reset-semantics-inspector.spec.ts` | 2 | 0/2 reviewed |
 | `resource-budget-ui-routes.spec.ts` | 7 | 0/7 reviewed |
 | `result-aware-create-effects.spec.ts` | 2 | 0/2 reviewed |

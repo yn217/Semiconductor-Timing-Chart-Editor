@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:47:15.088Z",
+  "generatedAt": "2026-09-23T05:52:01.992Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 709,
+  "reviewedCaseCount": 717,
   "curatedProfileCounts": {
-    "integration": 338,
+    "integration": 344,
     "nightly": 163,
     "performance": 44,
-    "pr": 202,
+    "pr": 204,
     "visual": 142
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -16250,18 +16250,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "left-tree-empty-group-create-command",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Tree Add menu creates an empty Group in one History operation, selects it in the Group Inspector, and causes no WaveDrom/local-geometry rebuild; Undo removes it.",
+      "duplicateGroup": "left-tree-empty-group-create",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This protects the direct Left Tree Add adapter for creating an empty Group and its one-command/zero-render effects. The broader empty-group projection/persistence journey covers cross-surface lifecycle but not this exact Add-menu command boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "reorder-visibility.spec.ts",
@@ -16272,18 +16275,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "group-inspector-collapse-view-state",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Inspector's Group collapsed property tracks Tree disclosure and can collapse/expand that Group without Canonical/History mutation or waveform/geometry rebuild.",
+      "duplicateGroup": "group-collapse-view-state",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The other reviewed Group-collapse tests focus on Left Tree-only disclosure and projection separation; this specifically tests the Inspector adapter/state reflection and zero-invalidation behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "reorder-visibility.spec.ts",
@@ -16294,18 +16300,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-visibility-stable-owner-reuse",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Tree visibility removes/restores the selected Signal's derived surfaces while preserving its SVG node identity and avoiding WaveDrom/local-geometry rebuild; only row positions update.",
+      "duplicateGroup": "signal-visibility-owner-locality",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "left-tree-interaction.spec.ts verifies navigation-row retention and derived-surface presence, while this protects stable SVG reuse and renderer/geometry locality across hide/show. Inspector visibility alignment is a separate adapter and row-geometry regression.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "reorder-visibility.spec.ts",
@@ -16316,18 +16325,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-reorder-owner-locality",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Real Tree drag reorder changes canonical/frozen order and row positions while preserving stable waveform owner order/identity and causing no WaveDrom or local-geometry rebuild.",
+      "duplicateGroup": "signal-reorder-owner-locality",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The companion Undo/Redo case verifies exact order restoration across surfaces but does not assert reorder's incremental rendering boundary; this case protects owner reuse and row-position-only invalidation.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "reorder-visibility.spec.ts",
@@ -16338,18 +16350,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-group-tree-dnd-order",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Dragging the Payload Group above Control moves the group's complete stable Signal block as one semantic History operation without waveform/local-geometry rebuild.",
+      "duplicateGroup": "cycle-group-reorder-dnd",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the Cycle Left Tree group-reorder adapter and verifies the complete canonical block order plus one semantic commit. Transaction group drag tests exercise a different entity/domain owner and do not replace it.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "reorder-visibility.spec.ts",
@@ -16360,18 +16375,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-move-to-empty-group-identity-role",
+      "originIssue": 402,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Moving a selected Signal into an otherwise empty Group through Bottom's Group dropdown preserves its stable identity and semantic role, updates the live current-group marker, and creates one reversible command.",
+      "duplicateGroup": "signal-move-between-groups",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "signal-editor-group-dropdown.spec.ts moves a Signal into populated Payload; this case covers the empty Scratch Group destination, where membership projection and group visibility differ, while also asserting role/identity and History.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "reorder-visibility.spec.ts",
@@ -16382,18 +16400,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-reorder-cross-surface-undo-redo",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A signal reorder is undone/redone with exact Left/Frozen row order, unchanged Timing owner membership, stable SVG node identity, and correct History state.",
+      "duplicateGroup": "signal-reorder-history-projection",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This uniquely verifies history replay across Canonical-derived Left/Frozen order and Timing's deliberately stable owner set/SVG identity. The immediate reorder test covers incremental invalidation, not Undo/Redo projection convergence.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "reorder-visibility.spec.ts",
@@ -16404,18 +16425,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-reorder-preview-cancel-noop",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Ending a signal reorder drag after establishing a drop preview cancels the preview, clears drop-position state, and leaves Canonical revision and History unchanged.",
+      "duplicateGroup": "signal-reorder-cancel-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Committed reorder and Undo/Redo coverage do not exercise the pre-commit drag cancellation boundary; this is the only focused guard that a canceled preview is view-only and cannot create a semantic mutation.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "reset-semantics-inspector.spec.ts",
@@ -25883,14 +25907,14 @@
     {
       "file": "reorder-visibility.spec.ts",
       "caseCount": 8,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 8,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "reset-semantics-inspector.spec.ts",
