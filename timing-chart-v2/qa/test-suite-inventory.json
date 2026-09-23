@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T04:20:45.939Z",
+  "generatedAt": "2026-09-23T04:25:21.854Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,11 +13,11 @@
   },
   "specFileCount": 332,
   "caseCount": 965,
-  "reviewedCaseCount": 587,
+  "reviewedCaseCount": 593,
   "curatedProfileCounts": {
-    "integration": 269,
+    "integration": 274,
     "nightly": 157,
-    "performance": 43,
+    "performance": 44,
     "pr": 166,
     "visual": 129
   },
@@ -15489,18 +15489,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "gui-frame-response-latency",
+      "originIssue": 175,
+      "type": "PERFORMANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Representative real GUI clicks and scrolls complete through the next browser animation frame under the declared responsiveness budget, measured in Chromium rather than Playwright RPC wall time.",
+      "duplicateGroup": "interaction-response-performance",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The in-page capture distinguishes browser interaction/frame response from automation transport delay and samples selection, Ribbon, zoom, panel visibility, and scroll. This is performance evidence, not a replacement for semantic invariants; keep it in the performance profile rather than PR smoke.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance"
+      ]
     },
     {
       "file": "performance-view-only-validation.spec.ts",
@@ -15511,18 +15514,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "view-only-owner-invalidation",
+      "originIssue": 175,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Selection, Ribbon/Bottom tabs, zoom, workspace/density, panel visibility, pane resizing, and scrolling do not change Canonical/History/Dirty or trigger validation, WaveDrom rendering, local geometry, or RowLayout rebuilds.",
+      "duplicateGroup": "view-only-invalidation-boundaries",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This broader action set includes pane resizers and workspace/density state not present in performance-closure.spec.ts case 615. Case 615 separately verifies whole-document validatorInvocations remain unchanged and that explicit Refresh Checks increments exactly once; retain both because the counters/owners and protected invalidation boundaries differ.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "pinned-bottom-target.spec.ts",
@@ -15533,18 +15539,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bottom-pin-signal-visibility-and-duplicate-identity",
+      "originIssue": 213,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "With Bottom Pin active, visibility and Clock duplicate actions continue targeting the displayed stable Signal ID after global selection changes to another Signal.",
+      "duplicateGroup": "bottom-pin-stable-target-by-entity-route",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the production regression for selection-relative Signal actions under Pin and covers two distinct command adapters (visibility and duplicate) against a changed live selection. Existing unit tests only cover pin snapshot capture, not the action target identity.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "pinned-bottom-target.spec.ts",
@@ -15555,18 +15564,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bottom-pin-annotation-collection-identity",
+      "originIssue": 213,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Changing Signal selection while Bottom Pin retains the Annotation collection surface, and collection Delete removes exactly the created stable Annotation ID without affecting other annotations or the newly selected Signal.",
+      "duplicateGroup": "bottom-pin-stable-target-by-entity-route",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Annotation collection lifetime and delete routing are distinct from Signal/Transaction action adapters; the test resolves and checks the created entity identity through the real GUI collection.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "pinned-bottom-target.spec.ts",
@@ -15577,18 +15589,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bottom-pin-signal-delete-identity",
+      "originIssue": 213,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After selection moves from the pinned Signal to another Signal, Bottom Delete removes the pinned stable ID, preserves the current selection target, creates one History operation, and clears the deleted pin safely.",
+      "duplicateGroup": "bottom-pin-stable-target-by-entity-route",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Delete has separate mutation and post-delete selection/pin cleanup semantics from visibility/duplicate actions; retain one focused production route for that behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "pinned-bottom-target.spec.ts",
@@ -15599,18 +15614,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bottom-pin-transaction-inspector-identity",
+      "originIssue": 213,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A pinned Transaction remains the Bottom/Inspector target across Combined mode and unrelated Signal selection, and Apply edits that Transaction's stable ID without mutating the Signal or another Transaction.",
+      "duplicateGroup": "bottom-pin-stable-target-by-entity-route",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This crosses Transaction authoring, Bottom pin state, Combined mode, tree selection, and Inspector Apply; its route is materially different from the Signal and Annotation actions and cannot be proven by the pin-capture unit test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "production-presentation-equivalence.spec.ts",
@@ -25580,29 +25598,29 @@
     {
       "file": "performance-internal-latency.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "performance-view-only-validation.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "pinned-bottom-target.spec.ts",
       "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "production-presentation-equivalence.spec.ts",

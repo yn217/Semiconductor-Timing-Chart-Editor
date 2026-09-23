@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 965 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 587/965 cases reviewed.
+Semantic review progress: 593/965 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,9 +10,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 269 |
+| `integration` | 274 |
 | `nightly` | 157 |
-| `performance` | 43 |
+| `performance` | 44 |
 | `pr` | 166 |
 | `visual` | 129 |
 
@@ -250,9 +250,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `open-validation-handoff.spec.ts` | 3 | 3/3 reviewed |
 | `perf-755-far-jump-longtask.spec.ts` | 1 | 1/1 reviewed |
 | `performance-closure.spec.ts` | 11 | 11/11 reviewed |
-| `performance-internal-latency.spec.ts` | 1 | 0/1 reviewed |
-| `performance-view-only-validation.spec.ts` | 1 | 0/1 reviewed |
-| `pinned-bottom-target.spec.ts` | 4 | 0/4 reviewed |
+| `performance-internal-latency.spec.ts` | 1 | 1/1 reviewed |
+| `performance-view-only-validation.spec.ts` | 1 | 1/1 reviewed |
+| `pinned-bottom-target.spec.ts` | 4 | 4/4 reviewed |
 | `production-presentation-equivalence.spec.ts` | 1 | 0/1 reviewed |
 | `qa-cross-mode-journey.spec.ts` | 2 | 0/2 reviewed |
 | `qa-fresh-state-journeys.spec.ts` | 10 | 6/10 reviewed |
