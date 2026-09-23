@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
 // #765: the standalone Transaction timeline's vertical extent is exactly its own content (ruler + lanes); the hidden Cycle signal plane
 // never adds to it, so a scrollbar appears only when the lanes genuinely exceed the viewport.
@@ -51,11 +52,36 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
 }
 
 test("a genuinely tall Transaction document keeps all lanes reachable through the one vertical owner", async ({ page }) => {
-  await openTransaction(page, { width: 1280, height: 720 });
-  await page.locator(".transaction-lanes").evaluate((el) => { (el as HTMLElement).style.minHeight = "900px"; });
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const source = generatePerformanceDocument({ signalCount: 50, cycleCount: 100, profile: "transaction-heavy" });
+  const tallDocument = {
+    ...source,
+    transactions: source.transactions.map((transaction, index) => ({ ...transaction, laneId: `overflow_lane_${index}` })),
+  };
+  // Load canonical data through production Open; do not fake overflow by styling rendered DOM.
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "tall-transaction-layout.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(tallDocument)) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.locator(".transaction-lanes")).toBeVisible();
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "50");
+  const history = await page.getByTestId("history-status").innerText();
+  const dirty = await page.getByTestId("dirty-status").innerText();
   const m = await metrics(page);
   expect(m.sh).toBeGreaterThan(m.ch + 100);
-  await owner(page).evaluate((el) => { el.scrollTop = el.scrollHeight; });
+  const viewportBox = (await owner(page).boundingBox())!;
+  await page.mouse.move(viewportBox.x + viewportBox.width / 2, viewportBox.y + viewportBox.height / 2);
+  await page.mouse.wheel(0, 1_700);
+  await expect.poll(() => owner(page).evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+  const finalTransaction = page.locator("[data-transaction-id='txn_perf_49']");
+  await expect(finalTransaction).toBeVisible();
+  const finalBarBox = (await finalTransaction.boundingBox())!;
+  expect(finalBarBox.y).toBeGreaterThanOrEqual(viewportBox.y - 1);
+  expect(finalBarBox.y + finalBarBox.height).toBeLessThanOrEqual(viewportBox.y + viewportBox.height + 1);
   expect(await owner(page).evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
   expect(await page.evaluate(() => document.documentElement.scrollHeight - document.documentElement.clientHeight)).toBeLessThanOrEqual(1);
+  await expect(page.getByTestId("history-status")).toHaveText(history);
+  await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
 });

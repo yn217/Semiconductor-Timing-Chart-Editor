@@ -579,7 +579,10 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     element.dataset.transactionFirstReadyAt = String(Date.now());
   });
 
-  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-tree-row-builds={treeRowBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight, top: viewMode === "Transaction" ? 34 - virtualWindow.top : undefined } as React.CSSProperties}>
+  // This absolute layer is inside the scrolling .cycle-viewport. Applying the
+  // virtual scroll offset here as well would subtract it twice and strand
+  // offscreen lanes above the viewport.
+  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-tree-row-builds={treeRowBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
