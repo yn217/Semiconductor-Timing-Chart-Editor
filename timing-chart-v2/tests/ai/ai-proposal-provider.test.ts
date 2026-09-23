@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
+import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import type { AnnotationId, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 
@@ -91,6 +91,26 @@ describe("deterministic AI proposal provider", () => {
     expect(deleted.ok).toBe(true);
     if (deleted.ok) expect(deleted.proposal.commands).toEqual([expect.objectContaining({ type: "bookmark.delete", bookmarkId: "bookmark_1" })]);
     expect(buildTypedBookmarkProposal(document, 24, "propose_move_bookmark", { bookmarkId: "missing", cycle: 1 })).toEqual({ ok: false, message: "Bookmark 'missing' does not exist in the current document." });
+  });
+
+  it("maps typed Annotation create/update/delete to stable-ID SemanticCommands and rejects invalid source ranges", () => {
+    const base = canonicalFixture();
+    const document = { ...base, annotations: [{ id: "annotation_1" as AnnotationId, type: "text" as const, label: "Note", visible: true, color: "#d04a36", anchor: { signalId: "sig_data" as SignalId, cycle: 1, point: "cycle-start" as const } }] };
+    const created = buildTypedAnnotationProposal(document, 25, "propose_create_annotation", { type: "range", signalId: "sig_data", start: 2, end: 5, label: "Window" });
+    expect(created.ok).toBe(true);
+    if (created.ok) expect(created.proposal).toMatchObject({ baseRevision: 25, commands: [expect.objectContaining({ type: "annotation.create", annotation: expect.objectContaining({ type: "range", label: "Window", start: { signalId: "sig_data", cycle: 2, point: "cycle-start" }, end: { signalId: "sig_data", cycle: 4, point: "cycle-end" } }) })] });
+
+    const updated = buildTypedAnnotationProposal(document, 26, "propose_update_annotation", { annotationId: "annotation_1", visible: false, color: "#112233" });
+    expect(updated.ok).toBe(true);
+    if (updated.ok) expect(updated.proposal.commands).toEqual([expect.objectContaining({ type: "annotation.updateProperties", annotationId: "annotation_1", label: "Note", visible: false, color: "#112233" })]);
+    const deleted = buildTypedAnnotationProposal(document, 27, "propose_delete_annotation", { annotationId: "annotation_1" });
+    expect(deleted.ok).toBe(true);
+    if (deleted.ok) expect(deleted.proposal.commands).toEqual([expect.objectContaining({ type: "annotation.delete", annotationId: "annotation_1" })]);
+    expect(buildTypedAnnotationProposal(document, 25, "propose_create_annotation", { type: "range", signalId: "missing", start: 2, end: 5 })).toEqual({ ok: false, message: "Signal 'missing' does not exist in the current document." });
+    expect(buildTypedAnnotationProposal(document, 25, "propose_create_annotation", { type: "range", signalId: "sig_data", start: 2, end: 99 })).toEqual({ ok: false, message: "propose_create_annotation requires integer source-cycle boundaries within the timeline with end > start." });
+    expect(buildTypedAnnotationProposal(document, 26, "propose_update_annotation", { annotationId: "missing", label: "X" })).toEqual({ ok: false, message: "Annotation 'missing' does not exist in the current document." });
+    expect(buildTypedAnnotationProposal(document, 26, "propose_update_annotation", { annotationId: "annotation_1", color: "red" })).toEqual({ ok: false, message: "color must be a six-digit hexadecimal color." });
+    expect(document.annotations[0]).toMatchObject({ label: "Note", visible: true, color: "#d04a36" });
   });
 
   it("returns a revisioned semantic proposal without mutating the source document", () => {

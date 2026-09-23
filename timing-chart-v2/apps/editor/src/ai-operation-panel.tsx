@@ -3,7 +3,7 @@ import { useRef, type ReactNode } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { planCommand } from "@timing-chart-v2/commands";
 import { validateCanonicalDocument, type CanonicalDocument, type DocumentProblem, type GroupId, type SignalId } from "@timing-chart-v2/schema";
-import { buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
+import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
 import { useAIBridgeClient, type AIBridgeStatus } from "./ai-bridge-client.js";
 
 function proposalValidationProblems(document: CanonicalDocument, proposal: AIProposal): readonly DocumentProblem[] {
@@ -240,6 +240,8 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
           ? buildTypedTransactionProposal(document, revision, tool, args)
           : tool === "propose_create_bookmark" || tool === "propose_move_bookmark" || tool === "propose_delete_bookmark"
             ? buildTypedBookmarkProposal(document, revision, tool, args)
+            : tool === "propose_create_annotation" || tool === "propose_update_annotation" || tool === "propose_delete_annotation"
+              ? buildTypedAnnotationProposal(document, revision, tool, args)
             : buildTypedSignalProposal(document, revision, tool, args);
     if (result.ok) {
       const violation = result.proposal.commands.map((proposedCommand) => scopeViolationMessage(scope, document, proposedCommand, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId)).find((message) => message !== undefined);

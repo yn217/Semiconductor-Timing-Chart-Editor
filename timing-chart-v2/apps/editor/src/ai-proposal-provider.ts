@@ -1,5 +1,5 @@
 import type { SemanticCommand } from "@timing-chart-v2/commands";
-import type { CanonicalDocument, GroupId, SignalId, ValueSignal } from "@timing-chart-v2/schema";
+import type { AnnotationId, AnnotationType, CanonicalDocument, GroupId, SignalId, ValueSignal } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { createAnnotation } from "./create-annotation.js";
@@ -154,6 +154,45 @@ export function buildTypedBookmarkProposal(document: CanonicalDocument, revision
   }
   if (tool === "propose_delete_bookmark") return { ok: true, proposal: proposal(revision, `Delete Bookmark ${bookmark.name}`, [command({ type: "bookmark.delete", bookmarkId: bookmark.id }, "typed_delete_bookmark")]) };
   return { ok: false, message: `Unsupported typed Bookmark proposal '${tool}'.` };
+}
+
+/** Annotation edits are expressed in stable semantic IDs and source cycles;
+ * they only create a Preview and still pass through the normal validator. */
+export function buildTypedAnnotationProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  if (tool === "propose_create_annotation") {
+    const type = args.type;
+    const signalId = args.signalId;
+    const start = args.start;
+    const end = args.end;
+    const supportedTypes: readonly AnnotationType[] = ["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency", "timingRegion", "ghostTrace", "rectangle", "ellipse", "connector", "textbox"];
+    if (typeof type !== "string" || !supportedTypes.includes(type as AnnotationType)) return { ok: false, message: "propose_create_annotation requires a supported Annotation type." };
+    if (typeof signalId !== "string" || !document.signals.some((signal) => signal.id === signalId && signal.type !== "commentRow")) return { ok: false, message: `Signal '${String(signalId ?? "")}' does not exist in the current document.` };
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || (start as number) < 0 || (end as number) <= (start as number) || (end as number) > document.timeline.cycleCount) return { ok: false, message: "propose_create_annotation requires integer source-cycle boundaries within the timeline with end > start." };
+    const created = createAnnotation(type as AnnotationType, signalId as SignalId, { start: start as number, end: end as number }, document);
+    const label = args.label;
+    const annotation = typeof label === "string" && label.trim() ? { ...created, label: label.trim() } : created;
+    return { ok: true, proposal: proposal(revision, `Create ${annotation.type} Annotation ${annotation.label}`, [command({ type: "annotation.create", annotation }, "typed_create_annotation")]) };
+  }
+  const annotationId = args.annotationId;
+  if (typeof annotationId !== "string" || !annotationId) return { ok: false, message: `${tool} requires a stable annotationId.` };
+  const annotation = document.annotations.find((item) => item.id === annotationId);
+  if (!annotation) return { ok: false, message: `Annotation '${annotationId}' does not exist in the current document.` };
+  if (tool === "propose_delete_annotation") return { ok: true, proposal: proposal(revision, `Delete Annotation ${annotation.label}`, [command({ type: "annotation.delete", annotationId: annotation.id }, "typed_delete_annotation")]) };
+  if (tool === "propose_update_annotation") {
+    const label = args.label;
+    const visible = args.visible;
+    const color = args.color;
+    if (label !== undefined && (typeof label !== "string" || !label.trim())) return { ok: false, message: "label must be a non-empty string when supplied." };
+    if (visible !== undefined && typeof visible !== "boolean") return { ok: false, message: "visible must be a boolean." };
+    if (color !== undefined && (typeof color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(color))) return { ok: false, message: "color must be a six-digit hexadecimal color." };
+    if (label === undefined && visible === undefined && color === undefined) return { ok: false, message: "propose_update_annotation requires label, visible, or color." };
+    const updatedLabel = typeof label === "string" ? label.trim() : annotation.label;
+    const updatedVisible = typeof visible === "boolean" ? visible : annotation.visible;
+    const updatedColor = typeof color === "string" ? color : annotation.color;
+    const fields = { type: "annotation.updateProperties" as const, annotationId: annotation.id, label: updatedLabel, visible: updatedVisible, ...(updatedColor === undefined ? {} : { color: updatedColor }), ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }), ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.labelOffset === undefined ? {} : { labelOffset: annotation.labelOffset }), ...(annotation.style === undefined ? {} : { style: annotation.style }), ...(annotation.measurement === undefined ? {} : { measurement: annotation.measurement }) };
+    return { ok: true, proposal: proposal(revision, `Update Annotation ${annotation.label}`, [command(fields, "typed_update_annotation")]) };
+  }
+  return { ok: false, message: `Unsupported typed Annotation proposal '${tool}'.` };
 }
 
 /** Provider-neutral boundary. Implementations may be backed by a mock, local

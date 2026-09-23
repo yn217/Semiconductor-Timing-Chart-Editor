@@ -148,7 +148,7 @@ function executeTool(tool: string, args: Record<string, unknown>, context: AIBri
     if (typeof query !== "string" || !query.trim()) throw new Error("propose_edit requires a non-empty 'query' string argument.");
     return context.onProposeEdit(query);
   }
-  if (tool === "propose_rename_signal" || tool === "propose_update_signal" || tool === "propose_move_signal" || tool === "propose_insert_cycles" || tool === "propose_delete_cycles" || tool === "propose_move_range" || tool === "propose_create_signal_group" || tool === "propose_rename_signal_group" || tool === "propose_create_transaction" || tool === "propose_move_transaction" || tool === "propose_resize_transaction" || tool === "propose_delete_transaction" || tool === "propose_create_bookmark" || tool === "propose_move_bookmark" || tool === "propose_delete_bookmark") {
+  if (tool === "propose_rename_signal" || tool === "propose_update_signal" || tool === "propose_move_signal" || tool === "propose_insert_cycles" || tool === "propose_delete_cycles" || tool === "propose_move_range" || tool === "propose_create_signal_group" || tool === "propose_rename_signal_group" || tool === "propose_create_transaction" || tool === "propose_move_transaction" || tool === "propose_resize_transaction" || tool === "propose_delete_transaction" || tool === "propose_create_bookmark" || tool === "propose_move_bookmark" || tool === "propose_delete_bookmark" || tool === "propose_create_annotation" || tool === "propose_update_annotation" || tool === "propose_delete_annotation") {
     if (!context.onProposeTypedEdit) throw new Error(`${tool} is not available in the current surface.`);
     return context.onProposeTypedEdit(tool, args);
   }

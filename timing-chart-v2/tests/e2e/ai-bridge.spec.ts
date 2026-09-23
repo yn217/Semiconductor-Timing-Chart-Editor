@@ -80,7 +80,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_view_context", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_transaction", "get_transaction_groups", "get_transaction_phases", "get_linked_signals", "get_annotations", "get_bookmarks", "get_time_groups", "get_problems", "fit_all", "propose_edit", "propose_rename_signal", "propose_update_signal", "propose_move_signal", "propose_insert_cycles", "propose_delete_cycles", "propose_move_range", "propose_create_signal_group", "propose_rename_signal_group", "propose_create_transaction", "propose_move_transaction", "propose_resize_transaction", "propose_delete_transaction", "propose_create_bookmark", "propose_move_bookmark", "propose_delete_bookmark"]);
+  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_view_context", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_transaction", "get_transaction_groups", "get_transaction_phases", "get_linked_signals", "get_annotations", "get_bookmarks", "get_time_groups", "get_problems", "fit_all", "propose_edit", "propose_rename_signal", "propose_update_signal", "propose_move_signal", "propose_insert_cycles", "propose_delete_cycles", "propose_move_range", "propose_create_signal_group", "propose_rename_signal_group", "propose_create_transaction", "propose_move_transaction", "propose_resize_transaction", "propose_delete_transaction", "propose_create_bookmark", "propose_move_bookmark", "propose_delete_bookmark", "propose_create_annotation", "propose_update_annotation", "propose_delete_annotation"]);
 
   // Read-only: reflects the real, live document -- never a canned/fake value.
   const summary = await callTool("get_document_summary");
@@ -159,6 +159,11 @@ test("get_transactions, get_annotations, get_bookmarks and get_problems are read
   const annotationData = JSON.parse(annotations.body.result!.content[0]!.text) as { annotations: readonly { id: string; type: string; visible: boolean; locked: boolean }[] };
   expect(Array.isArray(annotationData.annotations)).toBe(true);
   for (const annotation of annotationData.annotations) expect(annotation).toEqual(expect.objectContaining({ id: expect.any(String), type: expect.any(String), visible: expect.any(Boolean), locked: expect.any(Boolean) }));
+
+  const annotationProposal = await callTool("propose_create_annotation", TOKEN, { type: "text", signalId: "sig_cycle_request", start: 4, end: 5, label: "External note" });
+  expect(annotationProposal.body.result!.isError).toBe(false);
+  expect(JSON.parse(annotationProposal.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ summary: expect.stringContaining("External note"), requiresApproval: true }));
+  await expect(ai.getByText(/External note/)).toBeVisible();
 
   const bookmarks = await callTool("get_bookmarks");
   expect(bookmarks.body.result!.isError).toBe(false);
