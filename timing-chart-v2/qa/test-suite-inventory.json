@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:04:43.900Z",
+  "generatedAt": "2026-09-23T07:06:03.159Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,9 +13,9 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 831,
+  "reviewedCaseCount": 835,
   "curatedProfileCounts": {
-    "integration": 429,
+    "integration": 433,
     "nightly": 172,
     "performance": 45,
     "pr": 230,
@@ -19580,18 +19580,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "timeline-history-owner-and-fixed-bookmark-ribbon",
+      "originIssue": 388,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Timeline Undo and Home Redo share one History owner, and adding Bookmarks leaves the Ribbon Bookmark group dimensions/control count fixed while Bottom duplication creates a fresh stable ID.",
+      "duplicateGroup": "bookmark-ribbon-history-ownership",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This checks command-owner reuse and a structural no-per-entity-Ribbon-growth invariant, beyond the collection-row count/navigation test. The combined five-create/undo/redo/duplicate journey is the only direct guard for these architecture boundaries.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19602,18 +19605,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "standalone-label-anchor-full-lifecycle",
+      "originIssue": 376,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A standalone Label Anchor rebases displayed ruler labels without omitting source time, rejects a conflicting source atomically, supports one-step edit Undo/Redo, survives Save/Open, and deletes back to the original source labels without an Axis Break.",
+      "duplicateGroup": "standalone-label-anchor-display-mapping",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the full production lifecycle for a non-folding display-number anchor, including conflict rejection and history. Fold/TimeGroup tests exercise omitted time, not standalone label mapping semantics.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19624,18 +19630,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "label-anchor-svg-export-mapping-parity",
+      "originIssue": 376,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Document-scope SVG export renders Label Anchor display values from the shared DisplayTimeMapping rather than source cycle values and emits no Axis Break marker for a pure label rebase.",
+      "duplicateGroup": "standalone-label-anchor-display-mapping",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The editor lifecycle does not verify export projection; this independently checks serialized SVG ruler labels and no-fold semantics at the export boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19646,18 +19655,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "time-group-recent-reopen-presentation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A named/commented TimeGroup with custom fold label survives Save→New→Recent/Open and remains visible as the intended Timeline entry and ruler marker.",
+      "duplicateGroup": "time-group-edit-history-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The multi-TimeGroup lifecycle saves then reimports the downloaded file and asserts exact canonical metadata; this separate Recent workflow protects the user's saved-document picker and restoration of the edited presentation into Timeline/ruler UI.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -26624,7 +26636,7 @@
     {
       "file": "timeline-editor.spec.ts",
       "caseCount": 29,
-      "reviewedCaseCount": 22,
+      "reviewedCaseCount": 26,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
