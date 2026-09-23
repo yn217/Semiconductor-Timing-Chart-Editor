@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 449/963 cases reviewed.
+Semantic review progress: 461/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 203 |
+| `integration` | 205 |
 | `nightly` | 128 |
 | `performance` | 23 |
-| `pr` | 144 |
-| `visual` | 96 |
+| `pr` | 149 |
+| `visual` | 101 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -268,7 +268,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `ribbon-layout.spec.ts` | 2 | 0/2 reviewed |
 | `ribbon-more-popover-closure.spec.ts` | 6 | 0/6 reviewed |
 | `ribbon-responsive-overflow.spec.ts` | 3 | 0/3 reviewed |
-| `ribbon-tabs.spec.ts` | 5 | 0/5 reviewed |
+| `ribbon-tabs.spec.ts` | 5 | 5/5 reviewed |
 | `ribbon-transaction-context.spec.ts` | 3 | 0/3 reviewed |
 | `ribbon-visual-scenario-matrix.spec.ts` | 2 | 0/2 reviewed |
 | `ruler-reference-clock.spec.ts` | 2 | 0/2 reviewed |
@@ -343,7 +343,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `value-signal-compatibility.spec.ts` | 7 | 7/7 reviewed |
 | `view-metrics-owner.spec.ts` | 1 | 0/1 reviewed |
 | `view-mode-readability.spec.ts` | 3 | 0/3 reviewed |
-| `view-ribbon-slot.spec.ts` | 7 | 0/7 reviewed |
+| `view-ribbon-slot.spec.ts` | 7 | 7/7 reviewed |
 | `visual-grammar-cross-component.spec.ts` | 2 | 0/2 reviewed |
 | `visual-reference-lifecycle.spec.ts` | 1 | 0/1 reviewed |
 | `visual-regression-modes.spec.ts` | 6 | 0/6 reviewed |
