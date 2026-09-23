@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T10:20:16.553Z",
+  "generatedAt": "2026-09-23T10:28:22.714Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,7 +11,7 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 332,
+  "specFileCount": 330,
   "caseCount": 965,
   "reviewedCaseCount": 965,
   "curatedProfileCounts": {
@@ -8586,6 +8586,81 @@
       ]
     },
     {
+      "file": "inspector-selection-context.contract.spec.ts",
+      "suitePath": [],
+      "line": 3,
+      "title": "Combined: selecting a Transaction in the Tree after a Signal switches the Inspector to Transaction",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "combined-inspector-entity-switch",
+      "originIssue": 629,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "In Combined mode, selecting a Transaction after a Signal switches Inspector entity context without changing History.",
+      "duplicateGroup": "inspector-mode-context",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The Combined Tree selection path is a distinct inspector-owner contract, preserved in the consolidated Inspector selection/context suite.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
+    },
+    {
+      "file": "inspector-selection-context.contract.spec.ts",
+      "suitePath": [],
+      "line": 15,
+      "title": "Inspector follows active workspace context and retains hidden stable selection at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "inspector-mode-context-and-stable-selection",
+      "originIssue": 629,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Inspector projection follows active workspace and restores hidden Transaction/Signal selection by stable identity through Cycle/Transaction/Combined without data or History changes.",
+      "duplicateGroup": "inspector-mode-context",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The compact cross-mode stable-selection lifecycle remains distinct and preserves its Canonical/History/Dirty and page-error assertions.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
+    },
+    {
+      "file": "inspector-selection-context.contract.spec.ts",
+      "suitePath": [],
+      "line": 70,
+      "title": "Layout Inspector is reachable again after clearing the Transaction selection",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": "inspector-layout-after-selection-clear",
+      "originIssue": 701,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Clearing a selected Transaction restores the Inspector Layout section and selecting it again returns to entity properties without changing History.",
+      "duplicateGroup": "inspector-mode-context",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The selection-clear/restore transition is a separate user-visible path, retained alongside mode-context selection in the consolidated contract suite.",
+      "replacementTest": null,
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
+    },
+    {
       "file": "inspector-waveform-style.spec.ts",
       "suitePath": [],
       "line": 26,
@@ -9526,56 +9601,6 @@
       ]
     },
     {
-      "file": "issue-629-combined-tree-inspector.spec.ts",
-      "suitePath": [],
-      "line": 3,
-      "title": "Combined: selecting a Transaction in the Tree after a Signal switches the Inspector to Transaction",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "combined-inspector-entity-switch",
-      "originIssue": 629,
-      "type": "USER_JOURNEY",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": null,
-      "primaryContract": "In Combined mode, selecting a Transaction after a Signal switches Inspector entity context without changing History.",
-      "duplicateGroup": "inspector-mode-context",
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "decision": "KEEP",
-      "reason": "The multi-mode context suite does not select a Transaction from the Combined Tree after a Signal, so this small direct user path is complementary rather than duplicated.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "pr"
-      ]
-    },
-    {
-      "file": "issue-629-inspector-mode-context.spec.ts",
-      "suitePath": [],
-      "line": 3,
-      "title": "Inspector follows active workspace context and retains hidden stable selection at 1280x720",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "inspector-mode-context-and-stable-selection",
-      "originIssue": 629,
-      "type": "USER_JOURNEY",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Inspector projection follows active workspace and restores hidden Transaction/Signal selection by stable identity through Cycle/Transaction/Combined without data or History changes.",
-      "duplicateGroup": "inspector-mode-context",
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "decision": "KEEP",
-      "reason": "The cross-mode stable selection lifecycle is a distinct owner contract. Its desktop duplicate was removed because neither test asserts viewport geometry; the compact test retains the complete journey and error check.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "pr"
-      ]
-    },
-    {
       "file": "issue-630-active-mode-title.spec.ts",
       "suitePath": [],
       "line": 4,
@@ -10126,31 +10151,6 @@
       "executionTier": "TIER_2_FOCUSED_BROWSER",
       "decision": "KEEP",
       "reason": "This is a distinct cross-surface Draft/Apply production journey; unit state tests alone cannot prove both editors show the same draft.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "pr"
-      ]
-    },
-    {
-      "file": "issue-701-layout-return.spec.ts",
-      "suitePath": [],
-      "line": 3,
-      "title": "Layout Inspector is reachable again after clearing the Transaction selection",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "inspector-layout-after-selection-clear",
-      "originIssue": 701,
-      "type": "USER_JOURNEY",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Clearing a selected Transaction restores the Inspector Layout section and selecting it again returns to entity properties without changing History.",
-      "duplicateGroup": "inspector-mode-context",
-      "executionTier": "TIER_2_FOCUSED_BROWSER",
-      "decision": "KEEP",
-      "reason": "This is a user-visible selection-clear transition not covered by #629's mode switching or stable-selection restoration. Keep the focused guard while noting its coordinate-based blank-tree click as a candidate for a named production clear-selection control in a later harness review.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -25328,6 +25328,15 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "inspector-selection-context.contract.spec.ts",
+      "caseCount": 3,
+      "reviewedCaseCount": 3,
+      "originIssue": null,
+      "declaredTimeoutMs": 60,
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
+    },
+    {
       "file": "inspector-waveform-style.spec.ts",
       "caseCount": 2,
       "reviewedCaseCount": 2,
@@ -25490,24 +25499,6 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
-      "file": "issue-629-combined-tree-inspector.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 1,
-      "originIssue": "629",
-      "declaredTimeoutMs": null,
-      "candidateSignals": [],
-      "semanticReviewStatus": "REVIEWED"
-    },
-    {
-      "file": "issue-629-inspector-mode-context.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 1,
-      "originIssue": "629",
-      "declaredTimeoutMs": 60,
-      "candidateSignals": [],
-      "semanticReviewStatus": "REVIEWED"
-    },
-    {
       "file": "issue-630-active-mode-title.spec.ts",
       "caseCount": 1,
       "reviewedCaseCount": 1,
@@ -25657,15 +25648,6 @@
       "caseCount": 1,
       "reviewedCaseCount": 1,
       "originIssue": "698",
-      "declaredTimeoutMs": null,
-      "candidateSignals": [],
-      "semanticReviewStatus": "REVIEWED"
-    },
-    {
-      "file": "issue-701-layout-return.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 1,
-      "originIssue": "701",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
       "semanticReviewStatus": "REVIEWED"
@@ -27860,6 +27842,42 @@
   "consolidationMap": [
     {
       "from": {
+        "file": "issue-629-combined-tree-inspector.spec.ts",
+        "title": "Combined: selecting a Transaction in the Tree after a Signal switches the Inspector to Transaction"
+      },
+      "to": {
+        "file": "inspector-selection-context.contract.spec.ts",
+        "title": "Combined: selecting a Transaction in the Tree after a Signal switches the Inspector to Transaction"
+      },
+      "protectedInvariant": "Combined Inspector follows stable selected entity kind from a Signal to a Transaction without History mutation.",
+      "reason": "Moved the Issue-specific check into the stable Inspector selection/context contract suite while preserving its individual production journey and #629 traceability."
+    },
+    {
+      "from": {
+        "file": "issue-629-inspector-mode-context.spec.ts",
+        "title": "Inspector follows active workspace context and retains hidden stable selection at 1280x720"
+      },
+      "to": {
+        "file": "inspector-selection-context.contract.spec.ts",
+        "title": "Inspector follows active workspace context and retains hidden stable selection at 1280x720"
+      },
+      "protectedInvariant": "Inspector follows active workspace and restores hidden Transaction/Signal selection by stable identity through Cycle/Transaction/Combined without document/history changes.",
+      "reason": "Moved the compact cross-mode user journey into the stable Inspector selection/context contract suite; test behavior is unchanged and #629 origin metadata is retained."
+    },
+    {
+      "from": {
+        "file": "issue-701-layout-return.spec.ts",
+        "title": "Layout Inspector is reachable again after clearing the Transaction selection"
+      },
+      "to": {
+        "file": "inspector-selection-context.contract.spec.ts",
+        "title": "Layout Inspector is reachable again after clearing the Transaction selection"
+      },
+      "protectedInvariant": "Clearing selected Transaction restores Layout Inspector; reselecting returns to entity properties without changing History.",
+      "reason": "Moved the distinct selection-clear lifecycle into the stable Inspector selection/context suite with #701 traceability."
+    },
+    {
+      "from": {
         "file": "issue-737-selection-gestures.spec.ts",
         "title": "Bottom grid selection gestures at 1672x941"
       },
@@ -27948,7 +27966,7 @@
         "title": "Inspector follows active workspace context and retains hidden stable selection at 1672x941"
       },
       "to": {
-        "file": "issue-629-inspector-mode-context.spec.ts",
+        "file": "inspector-selection-context.contract.spec.ts",
         "title": "Inspector follows active workspace context and retains hidden stable selection at 1280x720"
       },
       "protectedInvariant": "Inspector content follows the active mode and restores hidden selected entities by stable identity without Canonical, History or Dirty changes.",

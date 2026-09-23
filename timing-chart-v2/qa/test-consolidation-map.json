@@ -3,6 +3,42 @@
   "consolidations": [
     {
       "from": {
+        "file": "issue-629-combined-tree-inspector.spec.ts",
+        "title": "Combined: selecting a Transaction in the Tree after a Signal switches the Inspector to Transaction"
+      },
+      "to": {
+        "file": "inspector-selection-context.contract.spec.ts",
+        "title": "Combined: selecting a Transaction in the Tree after a Signal switches the Inspector to Transaction"
+      },
+      "protectedInvariant": "Combined Inspector follows stable selected entity kind from a Signal to a Transaction without History mutation.",
+      "reason": "Moved the Issue-specific check into the stable Inspector selection/context contract suite while preserving its individual production journey and #629 traceability."
+    },
+    {
+      "from": {
+        "file": "issue-629-inspector-mode-context.spec.ts",
+        "title": "Inspector follows active workspace context and retains hidden stable selection at 1280x720"
+      },
+      "to": {
+        "file": "inspector-selection-context.contract.spec.ts",
+        "title": "Inspector follows active workspace context and retains hidden stable selection at 1280x720"
+      },
+      "protectedInvariant": "Inspector follows active workspace and restores hidden Transaction/Signal selection by stable identity through Cycle/Transaction/Combined without document/history changes.",
+      "reason": "Moved the compact cross-mode user journey into the stable Inspector selection/context contract suite; test behavior is unchanged and #629 origin metadata is retained."
+    },
+    {
+      "from": {
+        "file": "issue-701-layout-return.spec.ts",
+        "title": "Layout Inspector is reachable again after clearing the Transaction selection"
+      },
+      "to": {
+        "file": "inspector-selection-context.contract.spec.ts",
+        "title": "Layout Inspector is reachable again after clearing the Transaction selection"
+      },
+      "protectedInvariant": "Clearing selected Transaction restores Layout Inspector; reselecting returns to entity properties without changing History.",
+      "reason": "Moved the distinct selection-clear lifecycle into the stable Inspector selection/context suite with #701 traceability."
+    },
+    {
+      "from": {
         "file": "issue-737-selection-gestures.spec.ts",
         "title": "Bottom grid selection gestures at 1672x941"
       },
@@ -91,7 +127,7 @@
         "title": "Inspector follows active workspace context and retains hidden stable selection at 1672x941"
       },
       "to": {
-        "file": "issue-629-inspector-mode-context.spec.ts",
+        "file": "inspector-selection-context.contract.spec.ts",
         "title": "Inspector follows active workspace context and retains hidden stable selection at 1280x720"
       },
       "protectedInvariant": "Inspector content follows the active mode and restores hidden selected entities by stable identity without Canonical, History or Dirty changes.",
