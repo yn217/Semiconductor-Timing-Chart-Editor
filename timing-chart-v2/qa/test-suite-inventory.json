@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:49:37.455Z",
+  "generatedAt": "2026-09-23T07:50:52.459Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 921,
+  "reviewedCaseCount": 925,
   "curatedProfileCounts": {
-    "integration": 478,
+    "integration": 479,
     "nightly": 186,
     "performance": 54,
-    "pr": 247,
+    "pr": 250,
     "visual": 159
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -22599,18 +22599,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "mode-specific-frozen-pane-splitter-ownership",
+      "originIssue": 429,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Frozen-pane resizer exists in Cycle, is absent in Transaction and Combined, while Combined retains its separate Left panel resizer; switching modes restores the Cycle resizer.",
+      "duplicateGroup": "mode-specific-panel-resizers",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Checks distinct ownership of the Cycle-only inner frozen-column splitter versus the Combined left-panel splitter over a mode round-trip; prevents an inert hit target from leaking across modes.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-viewport-hscroll.spec.ts",
@@ -22621,18 +22624,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-horizontal-scrollbar-clipping",
+      "originIssue": 586,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After real zoom-induced horizontal overflow, the Transaction cycle viewport remains inside its clipping panel and its scrollLeft responds to horizontal scrolling.",
+      "duplicateGroup": "transaction-horizontal-scroll",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "A focused geometry regression for the previously clipped scrollbar. It explicitly requires real overflow before checking scrollability, avoiding a vacuous scrollLeft=0 pass.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "tree-drag-drop.spec.ts",
@@ -22643,18 +22649,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-tree-reorder-drag-undo-redo",
+      "originIssue": 565,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A production row drag changes sibling order without losing identities, one History operation is created, and Undo/Redo restores the before/after order exactly.",
+      "duplicateGroup": "signal-tree-drag-reorder",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Primary complete drag reorder lifecycle for Signal siblings, including order permutation, identity set preservation, and Undo/Redo. Other drag cases cover rejection or other row kinds, not this full Signal route.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "tree-drag-drop.spec.ts",
@@ -22665,18 +22674,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-tree-invalid-self-drop-noop",
+      "originIssue": 565,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Dropping a Signal onto itself leaves stable row order, Canonical revision, and History unchanged.",
+      "duplicateGroup": "signal-tree-drag-invalid-drop",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Distinct rejection/no-op contract at the DnD boundary; valid-drop Undo/Redo cases cannot prove that invalid targets do not dispatch mutations.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "tree-drag-drop.spec.ts",
@@ -27277,33 +27289,33 @@
     {
       "file": "transaction-tree-no-frozen-pane-handle.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-viewport-hscroll.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "tree-drag-drop.spec.ts",
       "caseCount": 5,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "tree-keyboard.spec.ts",
