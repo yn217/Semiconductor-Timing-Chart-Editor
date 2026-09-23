@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("Bottom Phases tab shows parent context, top Apply/Revert and live validation", async ({ page }) => {
+test("Bottom Phase editor preserves draft/validation and stable Phase identity through Start-order projection", async ({ page }) => {
   await page.goto("/?transaction-demo");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
@@ -36,17 +36,9 @@ test("Bottom Phases tab shows parent context, top Apply/Revert and live validati
   await expect(page.getByTestId("history-status")).toHaveText(history);
   await tab.getByRole("button", { name: "Revert" }).click();
   await expect(tab.getByLabel("Bottom Phase 1 name")).not.toHaveValue("KEEP_ME");
-});
 
-// #751 identity + ordering + shared validation: rows are shown in Start-time order, edits/deletes follow the Phase (not the displayed
-// position), and Bottom and Inspector share one draft and one validation result.
-test("Phase rows follow Start-time order; edit and delete resolve the Phase, not the display index; validation wording is TC-safe", async ({ page }) => {
-  await page.goto("/?transaction-demo");
-  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
-  await page.getByTestId("transaction-left-tree-row-demo_txn_read").click();
-  await page.locator(".bottom-tabs").getByRole("tab", { name: "Phases", exact: true }).click();
-  const tab = page.getByTestId("transaction-bottom-phases");
+  // Continue the complementary stable-identity/order contract in this same production session.
+  // The first draft was reverted above, so the Phase projection starts from canonical fixture data.
   const rows = tab.locator(".transaction-bottom-phase-table .transaction-bottom-phase-row[data-phase-uid]");
   const count = await rows.count();
   expect(count).toBeGreaterThanOrEqual(2);
@@ -55,7 +47,7 @@ test("Phase rows follow Start-time order; edit and delete resolve the Phase, not
   const initialNames = await names();
   const initialStarts = await starts();
   expect([...initialStarts].sort((a, b) => a - b)).toEqual(initialStarts);
-  const history = await page.getByTestId("history-status").innerText();
+  await expect(page.getByTestId("history-status")).toHaveText(history);
 
   // Move the LAST phase's Start before everything else: it must jump to the top of the Start-time projection, keeping its name.
   const lastUid = await rows.nth(count - 1).getAttribute("data-phase-uid");

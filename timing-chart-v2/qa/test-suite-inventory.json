@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T11:30:16.928Z",
+  "generatedAt": "2026-09-23T11:43:14.470Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,14 +12,14 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 326,
-  "caseCount": 954,
-  "reviewedCaseCount": 954,
+  "caseCount": 953,
+  "reviewedCaseCount": 953,
   "curatedProfileCounts": {
     "integration": 485,
     "nightly": 195,
     "performance": 54,
-    "pr": 254,
-    "visual": 168
+    "pr": 253,
+    "visual": 167
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -12024,7 +12024,7 @@
       "file": "issue-751-bottom-phase-editor.spec.ts",
       "suitePath": [],
       "line": 3,
-      "title": "Bottom Phases tab shows parent context, top Apply/Revert and live validation",
+      "title": "Bottom Phase editor preserves draft/validation and stable Phase identity through Start-order projection",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -12038,33 +12038,7 @@
       "duplicateGroup": null,
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "decision": "KEEP",
-      "reason": "The two cases cover complementary user-visible layout/draft validation and stable-identity behavior after display sorting. A model test cannot prove the editor presentation or that row actions resolve the correct canonical Phase.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "pr",
-        "visual"
-      ]
-    },
-    {
-      "file": "issue-751-bottom-phase-editor.spec.ts",
-      "suitePath": [],
-      "line": 43,
-      "title": "Phase rows follow Start-time order; edit and delete resolve the Phase, not the display index; validation wording is TC-safe",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "transaction-bottom-phase-editor",
-      "originIssue": 751,
-      "type": "USER_JOURNEY",
-      "costClass": "HEAVY",
-      "measuredRuntimeMs": null,
-      "primaryContract": "Phase editing exposes parent context, sticky Apply/Revert and coverage validation; stable Phase identity survives Start-order projection while edits/deletes target the intended Phase.",
-      "duplicateGroup": null,
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "KEEP",
-      "reason": "The two cases cover complementary user-visible layout/draft validation and stable-identity behavior after display sorting. A model test cannot prove the editor presentation or that row actions resolve the correct canonical Phase.",
+      "reason": "One consolidated production journey preserves complementary user-visible layout/draft validation and stable-identity behavior after display sorting in a single application session. A model test cannot prove the editor presentation or that row actions resolve the correct canonical Phase.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -25774,8 +25748,8 @@
     },
     {
       "file": "issue-751-bottom-phase-editor.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "751",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -28217,6 +28191,30 @@
       },
       "protectedInvariant": "Compressed Transaction names remain accessible and no artificial horizontal scroll extent appears at desktop width.",
       "reason": "The unchanged clipping/extent assertions run at both widths after one transaction-demo load with the same 50-cycle display scale."
+    },
+    {
+      "from": {
+        "file": "issue-751-bottom-phase-editor.spec.ts",
+        "title": "Bottom Phases tab shows parent context, top Apply/Revert and live validation"
+      },
+      "to": {
+        "file": "issue-751-bottom-phase-editor.spec.ts",
+        "title": "Bottom Phase editor preserves draft/validation and stable Phase identity through Start-order projection"
+      },
+      "protectedInvariant": "Phase parent context, Apply/Revert placement, draft retention/reversion, live validation, and unchanged History remain protected.",
+      "reason": "The Phase editor lifecycle and stable-identity/order checks use the same transaction-demo fixture and tab. Running them sequentially after Revert preserves both journeys while avoiding a duplicate application startup."
+    },
+    {
+      "from": {
+        "file": "issue-751-bottom-phase-editor.spec.ts",
+        "title": "Phase rows follow Start-time order; edit and delete resolve the Phase, not the display index; validation wording is TC-safe"
+      },
+      "to": {
+        "file": "issue-751-bottom-phase-editor.spec.ts",
+        "title": "Bottom Phase editor preserves draft/validation and stable Phase identity through Start-order projection"
+      },
+      "protectedInvariant": "Start-time projection order remains separate from stable Phase identity, delete resolves by Phase ID, and shared TC-safe validation does not mutate History.",
+      "reason": "Both complementary Phase user journeys now run in one app session; the initial draft is reverted before the identity/order assertions, retaining each original check."
     }
   ]
 }

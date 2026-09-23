@@ -1497,7 +1497,7 @@
         "visual"
       ],
       "decision": "KEEP",
-      "reason": "The two cases cover complementary user-visible layout/draft validation and stable-identity behavior after display sorting. A model test cannot prove the editor presentation or that row actions resolve the correct canonical Phase.",
+      "reason": "One consolidated production journey preserves complementary user-visible layout/draft validation and stable-identity behavior after display sorting in a single application session. A model test cannot prove the editor presentation or that row actions resolve the correct canonical Phase.",
       "replacementTest": null
     },
     {

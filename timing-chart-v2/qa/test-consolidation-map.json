@@ -480,6 +480,18 @@
       "to": { "file": "issue-750-geometry-10-to-50.spec.ts", "title": "compressed Transaction has no clipped labels or artificial scroll extent at both supported viewports" },
       "protectedInvariant": "Compressed Transaction names remain accessible and no artificial horizontal scroll extent appears at desktop width.",
       "reason": "The unchanged clipping/extent assertions run at both widths after one transaction-demo load with the same 50-cycle display scale."
+    },
+    {
+      "from": { "file": "issue-751-bottom-phase-editor.spec.ts", "title": "Bottom Phases tab shows parent context, top Apply/Revert and live validation" },
+      "to": { "file": "issue-751-bottom-phase-editor.spec.ts", "title": "Bottom Phase editor preserves draft/validation and stable Phase identity through Start-order projection" },
+      "protectedInvariant": "Phase parent context, Apply/Revert placement, draft retention/reversion, live validation, and unchanged History remain protected.",
+      "reason": "The Phase editor lifecycle and stable-identity/order checks use the same transaction-demo fixture and tab. Running them sequentially after Revert preserves both journeys while avoiding a duplicate application startup."
+    },
+    {
+      "from": { "file": "issue-751-bottom-phase-editor.spec.ts", "title": "Phase rows follow Start-time order; edit and delete resolve the Phase, not the display index; validation wording is TC-safe" },
+      "to": { "file": "issue-751-bottom-phase-editor.spec.ts", "title": "Bottom Phase editor preserves draft/validation and stable Phase identity through Start-order projection" },
+      "protectedInvariant": "Start-time projection order remains separate from stable Phase identity, delete resolves by Phase ID, and shared TC-safe validation does not mutate History.",
+      "reason": "Both complementary Phase user journeys now run in one app session; the initial draft is reverted before the identity/order assertions, retaining each original check."
     }
   ]
 }
