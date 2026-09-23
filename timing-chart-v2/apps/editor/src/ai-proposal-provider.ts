@@ -1,5 +1,5 @@
 import type { SemanticCommand } from "@timing-chart-v2/commands";
-import type { AnnotationId, AnnotationType, CanonicalDocument, GroupId, SignalId, ValueSignal } from "@timing-chart-v2/schema";
+import type { AnnotationId, AnnotationType, CanonicalDocument, GroupId, SignalId, TransactionId, TransactionPhase, ValueSignal } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { createAnnotation } from "./create-annotation.js";
@@ -116,8 +116,32 @@ export function buildTypedTransactionProposal(document: CanonicalDocument, revis
     if (typeof name !== "string" || !name.trim() || !Number.isSafeInteger(start) || !Number.isSafeInteger(end) || (start as number) < 0 || (end as number) <= (start as number) || (end as number) > document.timeline.cycleCount) return { ok: false, message: "propose_create_transaction requires a name and integer source-cycle boundaries within the timeline with end > start." };
     const groupId = args.groupId;
     if (groupId !== undefined && (typeof groupId !== "string" || !document.transactionGroups?.some((group) => group.id === groupId))) return { ok: false, message: `Transaction Group '${String(groupId)}' does not exist in the current document.` };
-    const created = { id: nextEntityId("transaction", document), name: name.trim(), start: start as number, end: end as number, laneId: typeof args.laneId === "string" && args.laneId.trim() ? args.laneId.trim() : "lane_0", ...(typeof groupId === "string" ? { groupId: groupId as never } : {}) };
-    return { ok: true, proposal: proposal(revision, `Create Transaction ${created.name}`, [command({ type: "transaction.create", transaction: created }, "typed_create_transaction")]) };
+    if (args.laneId !== undefined && (typeof args.laneId !== "string" || !args.laneId.trim())) return { ok: false, message: "laneId must be a non-empty string when supplied." };
+    if (args.color !== undefined && (typeof args.color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(args.color))) return { ok: false, message: "color must be a six-digit hexadecimal color." };
+    if (args.description !== undefined && typeof args.description !== "string") return { ok: false, message: "description must be a string when supplied." };
+    const phasesInput = args.phases;
+    if (phasesInput !== undefined && !Array.isArray(phasesInput)) return { ok: false, message: "phases must be an array of name/start/end source-cycle ranges." };
+    const phases: TransactionPhase[] = [];
+    for (const [index, item] of (phasesInput ?? []).entries()) {
+      if (typeof item !== "object" || item === null) return { ok: false, message: `phases[${index}] must contain a name, start, and end.` };
+      const phase = item as Record<string, unknown>;
+      if (typeof phase.name !== "string" || !phase.name.trim() || !Number.isSafeInteger(phase.start) || !Number.isSafeInteger(phase.end) || (phase.start as number) < (start as number) || (phase.end as number) > (end as number) || (phase.end as number) <= (phase.start as number)) return { ok: false, message: `phases[${index}] must be a named, non-empty source-cycle range inside the Transaction.` };
+      phases.push({ name: phase.name.trim(), start: phase.start as number, end: phase.end as number });
+    }
+    const orderedPhases = [...phases].sort((a, b) => a.start - b.start || a.end - b.end);
+    if (orderedPhases.some((phase, index) => index > 0 && phase.start < orderedPhases[index - 1]!.end)) return { ok: false, message: "Transaction Phases must not overlap." };
+    const linkedInput = args.linkedSignalIds;
+    if (linkedInput !== undefined && !Array.isArray(linkedInput)) return { ok: false, message: "linkedSignalIds must be an array of stable Signal IDs." };
+    const linkedSignalIds = (linkedInput ?? []) as unknown[];
+    if (linkedSignalIds.some((id) => typeof id !== "string" || !document.signals.some((signal) => signal.id === id && signal.type !== "commentRow"))) return { ok: false, message: "Every linkedSignalId must identify an existing timing Signal." };
+    if (new Set(linkedSignalIds).size !== linkedSignalIds.length) return { ok: false, message: "linkedSignalIds cannot contain duplicates." };
+    const createdId = nextEntityId("transaction", document) as TransactionId;
+    const created = { id: createdId, name: name.trim(), start: start as number, end: end as number, laneId: typeof args.laneId === "string" && args.laneId.trim() ? args.laneId.trim() : "lane_0", ...(typeof groupId === "string" ? { groupId: groupId as never } : {}), ...(typeof args.color === "string" ? { color: args.color } : {}), ...(typeof args.description === "string" ? { description: args.description } : {}) };
+    const commands: SemanticCommand[] = [command({ type: "transaction.create", transaction: created }, "typed_create_transaction")];
+    for (const phase of orderedPhases) commands.push(command({ type: "transaction.phaseAdd", transactionId: createdId, phase }, "typed_add_transaction_phase"));
+    for (const signalId of linkedSignalIds as SignalId[]) commands.push(command({ type: "transaction.linkSignal", transactionId: createdId, signalId }, "typed_link_transaction_signal"));
+    const detail = [phases.length ? `${phases.length} Phase${phases.length === 1 ? "" : "s"}` : undefined, linkedSignalIds.length ? `${linkedSignalIds.length} linked Signal${linkedSignalIds.length === 1 ? "" : "s"}` : undefined].filter(Boolean).join(" and ");
+    return { ok: true, proposal: proposal(revision, `Create Transaction ${created.name}${detail ? ` with ${detail}` : ""}`, commands) };
   }
   if (typeof transactionId !== "string" || !transactionId) return { ok: false, message: `${tool} requires a stable transactionId.` };
   const transaction = document.transactions.find((item) => item.id === transactionId);

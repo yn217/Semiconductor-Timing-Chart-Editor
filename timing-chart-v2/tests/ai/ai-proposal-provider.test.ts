@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { type SemanticCommand } from "@timing-chart-v2/commands";
+import { CommandHistorySession } from "@timing-chart-v2/history";
 import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
-import type { AnnotationId, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CommandId, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 
 describe("deterministic AI proposal provider", () => {
   it("builds a typed stable-ID rename proposal without mutating the canonical document", () => {
@@ -76,6 +78,37 @@ describe("deterministic AI proposal provider", () => {
     expect(deleted.ok).toBe(true);
     if (deleted.ok) expect(deleted.proposal.commands).toEqual([expect.objectContaining({ type: "transaction.delete", transactionId: "transaction_1" })]);
     expect(buildTypedTransactionProposal(document, 23, "propose_move_transaction", { transactionId: "missing", start: 2 })).toEqual({ ok: false, message: "Transaction 'missing' does not exist in the current document." });
+  });
+
+  it("builds one revisioned Transaction+Phases+Signals proposal and commits it atomically as one History entry", () => {
+    const base = canonicalFixture();
+    const document = { ...base, timeline: { ...base.timeline, end: 50, cycleCount: 50 } };
+    const input = { name: "MCP_READ", start: 10, end: 40, phases: [{ name: "Address", start: 10, end: 16 }, { name: "Data", start: 16, end: 32 }, { name: "Response", start: 32, end: 40 }], linkedSignalIds: ["sig_clk", "sig_data"] };
+    const built = buildTypedTransactionProposal(document, 31, "propose_create_transaction", input);
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    expect(built.proposal.baseRevision).toBe(31);
+    expect(built.proposal.commands).toHaveLength(6);
+    expect(built.proposal.summary).toContain("3 Phases and 2 linked Signals");
+    const session = new CommandHistorySession(document);
+    const before = JSON.stringify(session.getSnapshot().document);
+    const applied = session.executeBatch("cmd_ai_transaction_bundle" as CommandId, built.proposal.commands);
+    expect(applied.ok).toBe(true);
+    expect(session.historyState()).toMatchObject({ undoDepth: 1, dirty: true });
+    const created = session.getSnapshot().document.transactions.find((transaction) => transaction.name === "MCP_READ");
+    expect(created).toMatchObject({ start: 10, end: 40, phases: input.phases, linkedSignals: input.linkedSignalIds });
+    expect(session.undo().ok).toBe(true);
+    expect(JSON.stringify(session.getSnapshot().document)).toBe(before);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 1, dirty: false });
+
+    const invalidCommands = built.proposal.commands.map((item, index) => index === built.proposal.commands.length - 1 ? { ...item, signalId: "missing_signal" } as SemanticCommand : item);
+    const rejected = new CommandHistorySession(document);
+    const rejectedBaseline = rejected.getSnapshot();
+    expect(rejected.executeBatch("cmd_ai_transaction_invalid_bundle" as CommandId, invalidCommands)).toMatchObject({ ok: false, reason: "invalid" });
+    expect(rejected.getSnapshot()).toBe(rejectedBaseline);
+    expect(rejected.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+    expect(buildTypedTransactionProposal(document, 31, "propose_create_transaction", { ...input, phases: [...input.phases, { name: "Overlap", start: 15, end: 18 }] })).toEqual({ ok: false, message: "Transaction Phases must not overlap." });
+    expect(buildTypedTransactionProposal(document, 31, "propose_create_transaction", { ...input, color: "purple" })).toEqual({ ok: false, message: "color must be a six-digit hexadecimal color." });
   });
 
   it("maps typed Bookmark proposals to existing Bookmark SemanticCommands", () => {

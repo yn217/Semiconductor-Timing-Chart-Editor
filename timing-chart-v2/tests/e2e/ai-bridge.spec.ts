@@ -181,6 +181,47 @@ test("get_transactions, get_annotations, get_bookmarks and get_problems are read
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
 });
 
+test("external Transaction+Phases+Signals proposal validates and applies as one atomic History entry", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeDirty = await page.getByTestId("dirty-status").textContent();
+
+  const response = await callTool("propose_create_transaction", TOKEN, {
+    name: "MCP_READ", start: 10, end: 40,
+    phases: [{ name: "Address", start: 10, end: 16 }, { name: "Data", start: 16, end: 32 }, { name: "Response", start: 32, end: 40 }],
+    linkedSignalIds: ["sig_cycle_request", "sig_cycle_ready"],
+  });
+  expect(response.body.result!.isError).toBe(false);
+  expect(JSON.parse(response.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ summary: "Create Transaction MCP_READ with 3 Phases and 2 linked Signals", requiresApproval: true }));
+  await expect(ai.getByTestId("ai-preview")).toContainText("3 Phases and 2 linked Signals");
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText(beforeDirty!);
+
+  await ai.getByTestId("ai-validate").click();
+  await ai.getByTestId("ai-apply").click();
+  await expect(ai.getByTestId("ai-status")).toHaveText("Applied · one atomic SemanticCommand transaction");
+  await expect(host).toHaveAttribute("data-canonical-revision", "1");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  const lanes = page.getByTestId("transaction-lanes");
+  await expect(lanes.locator('[data-transaction-id][title="MCP_READ"]')).toBeVisible();
+
+  await page.locator(".ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect(lanes.locator('[data-transaction-id][title="MCP_READ"]')).toHaveCount(0);
+});
+
 test("propose_edit builds a Preview only -- it never auto-validates or auto-applies, and a human must still Validate + Apply it themselves", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
