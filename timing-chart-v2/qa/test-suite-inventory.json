@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T04:45:46.368Z",
+  "generatedAt": "2026-09-23T04:48:03.564Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 605,
+  "reviewedCaseCount": 609,
   "curatedProfileCounts": {
     "integration": 283,
     "nightly": 159,
     "performance": 44,
-    "pr": 168,
+    "pr": 172,
     "visual": 130
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -5572,18 +5572,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-delete-command-adapters",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Annotation context-menu Delete action removes the intended stable Annotation and Undo restores it.",
+      "duplicateGroup": "annotation-delete-command-adapters",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Right-click target selection and menu dispatch are a separate production adapter; generic context-menu and other-entity Delete journeys do not prove stable Annotation targeting.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -5594,18 +5597,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-delete-command-adapters",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Inspector Delete Annotation button removes the selected Annotation through the shared command registry and Undo restores it.",
+      "duplicateGroup": "annotation-delete-command-adapters",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Inspector deletion is a dedicated entity/editor adapter with its own selected-ID routing; other UI routes cannot detect an Inspector targeting regression.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -5616,18 +5622,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-delete-command-adapters",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The focused Annotation receives the Delete keyboard action through the shared command registry and Undo restores it.",
+      "duplicateGroup": "annotation-delete-command-adapters",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Keyboard dispatch depends on Annotation focus and its specific target adapter; Ribbon or context-menu tests do not cover that routing path.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -5638,18 +5647,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-delete-command-adapters",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Ribbon Delete adapter deletes the selected stable Annotation through the shared command registry and Undo restores the Annotation.",
+      "duplicateGroup": "annotation-delete-command-adapters",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The shared command implementation is common, but this test covers the Ribbon-specific selection/dispatch adapter for Annotation identity; other entity Delete coverage cannot prove this route.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -23816,7 +23828,7 @@
     {
       "file": "full-gui.spec.ts",
       "caseCount": 41,
-      "reviewedCaseCount": 2,
+      "reviewedCaseCount": 6,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
