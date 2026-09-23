@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T04:33:27.216Z",
+  "generatedAt": "2026-09-23T04:38:16.262Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,10 +13,10 @@
   },
   "specFileCount": 332,
   "caseCount": 964,
-  "reviewedCaseCount": 599,
+  "reviewedCaseCount": 603,
   "curatedProfileCounts": {
-    "integration": 279,
-    "nightly": 157,
+    "integration": 283,
+    "nightly": 159,
     "performance": 44,
     "pr": 166,
     "visual": 130
@@ -4831,18 +4831,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "shared-modal-escape-cancel-lifecycle",
+      "originIssue": 208,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Escape dismisses Bulk Registration, Properties, Save As, Export, and Hardware Hierarchy dialogs without Canonical/History/Dirty mutation; draft cancellation/preservation follows each dialog's contract.",
+      "duplicateGroup": "dialog-escape-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This covers five distinct shared-modal consumer routes and checks that Escape cancels editable drafts where required while preserving the Bulk Registration draft; the unsaved-file Escape test covers a different destructive-confirmation dialog and does not replace these consumers.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "document-properties.spec.ts",
@@ -5367,18 +5370,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "feature-showcase-startup-save-open",
+      "originIssue": 575,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The built-in startup Feature Showcase is the expected canonical document, renders representative Cycle/Transaction/Combined content, and preserves all entities through production Save/Open at compact viewport size.",
+      "duplicateGroup": "feature-showcase-startup-roundtrip",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This repeats the semantic round trip at a width that constrains the tree, transaction table, and inspector differently; responsive content/fit assertions make the viewport variant a distinct acceptance rather than a redundant rerun.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "feature-showcase-startup.spec.ts",
@@ -5389,18 +5396,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "feature-showcase-startup-save-open",
+      "originIssue": 575,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The built-in startup Feature Showcase is the expected canonical document, renders representative Cycle/Transaction/Combined content, and preserves all entities through production Save/Open at desktop reference size.",
+      "duplicateGroup": "feature-showcase-startup-roundtrip",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is the only full startup-document Save/Open round trip covering Signals, Transactions, phases, Annotations, Bookmarks, and all three modes; its broad fixture contract belongs in integration/nightly, not ordinary PR verification.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "feature-showcase-startup.spec.ts",
@@ -5411,18 +5422,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "showcase-cross-mode-time-axis-scroll",
+      "originIssue": 573,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A known Transaction interval remains aligned to Cycle-derived time boundaries before/after horizontal scroll and Transaction/Combined mode round trips.",
+      "duplicateGroup": "combined-shared-time-axis-behavior",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "It exercises scroll and mode transition on the normal startup Showcase as a visible cross-owner geometry journey; scale-ratio tests and Combined-only fixtures cover different transitions and do not establish this round-trip behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "file-beforeunload-dirty-guard.spec.ts",
@@ -23778,11 +23792,11 @@
     {
       "file": "dialog-esc-lifecycle.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "document-properties.spec.ts",
@@ -23865,13 +23879,13 @@
     {
       "file": "feature-showcase-startup.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": 60,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "file-beforeunload-dirty-guard.spec.ts",

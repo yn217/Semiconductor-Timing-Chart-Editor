@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 964 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 599/964 cases reviewed.
+Semantic review progress: 603/964 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,8 +10,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 279 |
-| `nightly` | 157 |
+| `integration` | 283 |
+| `nightly` | 159 |
 | `performance` | 44 |
 | `pr` | 166 |
 | `visual` | 130 |
@@ -74,7 +74,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `cycle-scroll-pitch-invariant.spec.ts` | 2 | 2/2 reviewed |
 | `design-system-foundation.spec.ts` | 1 | 1/1 reviewed |
 | `diagnostic-aggregator.spec.ts` | 8 | 8/8 reviewed |
-| `dialog-esc-lifecycle.spec.ts` | 1 | 0/1 reviewed |
+| `dialog-esc-lifecycle.spec.ts` | 1 | 1/1 reviewed |
 | `document-properties.spec.ts` | 1 | 1/1 reviewed |
 | `edge-counter-compact.spec.ts` | 5 | 5/5 reviewed |
 | `edit-commit-contract.spec.ts` | 5 | 5/5 reviewed |
@@ -83,7 +83,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `export-diagnostics.spec.ts` | 2 | 2/2 reviewed |
 | `export-fold-mapping.spec.ts` | 1 | 1/1 reviewed |
 | `export-user-text-boundary.spec.ts` | 1 | 1/1 reviewed |
-| `feature-showcase-startup.spec.ts` | 3 | 0/3 reviewed |
+| `feature-showcase-startup.spec.ts` | 3 | 3/3 reviewed |
 | `file-beforeunload-dirty-guard.spec.ts` | 1 | 1/1 reviewed |
 | `file-ribbon-blank-controls.spec.ts` | 1 | 1/1 reviewed |
 | `font-style-commit-contract.spec.ts` | 1 | 1/1 reviewed |
