@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:58:07.531Z",
+  "generatedAt": "2026-09-23T07:59:22.747Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 945,
+  "reviewedCaseCount": 949,
   "curatedProfileCounts": {
     "integration": 485,
-    "nightly": 190,
+    "nightly": 194,
     "performance": 54,
     "pr": 257,
-    "visual": 167
+    "visual": 171
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -23891,18 +23891,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "whole-screen-layout-snapshot-cycle-viewport-matrix",
+      "originIssue": 429,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Cycle mode whole-screen snapshots at 1280x720 and 1672x941 remain within their reviewed Playwright baselines after readiness and transition suppression.",
+      "duplicateGroup": "whole-screen-layout-snapshots",
+      "executionTier": "TIER_4_PERFORMANCE_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "One review record covers the test's two parameterized viewport executions because both share file/title key. This coarse full-screen layout net complements targeted ruler/grid and panel geometry tests; no baselines or thresholds are altered.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "nightly"
+      ]
     },
     {
       "file": "visual-regression-modes.spec.ts",
@@ -23915,18 +23919,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "whole-screen-layout-snapshot-cycle-viewport-matrix",
+      "originIssue": 429,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Cycle mode whole-screen snapshots at 1280x720 and 1672x941 remain within their reviewed Playwright baselines after readiness and transition suppression.",
+      "duplicateGroup": "whole-screen-layout-snapshots",
+      "executionTier": "TIER_4_PERFORMANCE_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "One review record covers the test's two parameterized viewport executions because both share file/title key. This coarse full-screen layout net complements targeted ruler/grid and panel geometry tests; no baselines or thresholds are altered.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "nightly"
+      ]
     },
     {
       "file": "visual-regression-modes.spec.ts",
@@ -23939,18 +23947,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "whole-screen-layout-snapshot-transaction-viewport-matrix",
+      "originIssue": 429,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Transaction mode whole-screen snapshots at 1280x720 and 1672x941 remain within their reviewed Playwright baselines after readiness and transition suppression.",
+      "duplicateGroup": "whole-screen-layout-snapshots",
+      "executionTier": "TIER_4_PERFORMANCE_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "One review record covers the test's compact and wide parameterized executions. Retain as coarse whole-screen regression protection, separate from focused Transaction Tree/Bottom geometry contracts; no baselines or thresholds are altered.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "nightly"
+      ]
     },
     {
       "file": "visual-regression-modes.spec.ts",
@@ -23963,18 +23975,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "whole-screen-layout-snapshot-transaction-viewport-matrix",
+      "originIssue": 429,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Transaction mode whole-screen snapshots at 1280x720 and 1672x941 remain within their reviewed Playwright baselines after readiness and transition suppression.",
+      "duplicateGroup": "whole-screen-layout-snapshots",
+      "executionTier": "TIER_4_PERFORMANCE_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "One review record covers the test's compact and wide parameterized executions. Retain as coarse whole-screen regression protection, separate from focused Transaction Tree/Bottom geometry contracts; no baselines or thresholds are altered.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "nightly"
+      ]
     },
     {
       "file": "wavedrom-security.spec.ts",
@@ -27505,11 +27521,11 @@
     {
       "file": "visual-regression-modes.spec.ts",
       "caseCount": 6,
-      "reviewedCaseCount": 2,
+      "reviewedCaseCount": 6,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "wavedrom-security.spec.ts",

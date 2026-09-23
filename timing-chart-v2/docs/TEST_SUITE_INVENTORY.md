@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 945/959 cases reviewed.
+Semantic review progress: 949/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -11,10 +11,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | Profile | Reviewed cases |
 | --- | ---: |
 | `integration` | 485 |
-| `nightly` | 190 |
+| `nightly` | 194 |
 | `performance` | 54 |
 | `pr` | 257 |
-| `visual` | 167 |
+| `visual` | 171 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -346,7 +346,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `view-ribbon-slot.spec.ts` | 7 | 7/7 reviewed |
 | `visual-grammar-cross-component.spec.ts` | 2 | 2/2 reviewed |
 | `visual-reference-lifecycle.spec.ts` | 1 | 1/1 reviewed |
-| `visual-regression-modes.spec.ts` | 6 | 2/6 reviewed |
+| `visual-regression-modes.spec.ts` | 6 | 6/6 reviewed |
 | `wavedrom-security.spec.ts` | 1 | 0/1 reviewed |
 | `workspace-preset-density.spec.ts` | 1 | 0/1 reviewed |
 | `workspace-zoom-isolation.spec.ts` | 2 | 0/2 reviewed |
