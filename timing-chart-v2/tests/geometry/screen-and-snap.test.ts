@@ -151,6 +151,35 @@ describe("Screen Geometry and snapping", () => {
     expect(service.metrics().candidateCount).toBe(index.entries().length);
   });
 
+  it("bounds snap candidate generation to retained geometry in a large timeline", () => {
+    const source = canonicalFixture();
+    const signal = source.signals.find((item) => item.type !== "commentRow")!;
+    const retained = [48_000, 48_001, 48_002];
+    const map = new ImmutableLocalGeometryMap(signal.id, retained.flatMap((cycle, index) => [
+      { cycle, point: "cycle-start" as const, position: { x: index * 40, y: 0 } },
+      { cycle, point: "cycle-center" as const, position: { x: index * 40 + 20, y: 0 } },
+      { cycle, point: "value-center" as const, position: { x: index * 40 + 20, y: 0 } },
+      { cycle, point: "row-center" as const, position: { x: index * 40 + 20, y: 0 } },
+    ]));
+    let geometryLookups = 0;
+    const windowedMap = {
+      signalId: signal.id,
+      cycleBoundaryEntries: () => map.cycleBoundaryEntries(),
+      find: (anchor: Parameters<typeof map.find>[0]) => { geometryLookups += 1; return map.find(anchor); },
+    };
+    const document = { ...source, timeline: { ...source.timeline, cycleCount: 100_000 }, signals: [signal], bookmarks: [], annotations: [] };
+    const index = new SemanticSnapCandidateService().build({
+      document,
+      geometryMaps: new Map([[signal.id, windowedMap]]),
+      rowY: new Map([[signal.id, 0]]),
+      renderedCycleCount: 100_000,
+    });
+
+    expect(index.entries().filter((candidate) => candidate.kind === "cycle-boundary").map((candidate) => candidate.anchor.cycle)).toEqual(retained);
+    expect(index.entries().every((candidate) => retained.includes(candidate.anchor.cycle))).toBe(true);
+    expect(geometryLookups).toBeLessThanOrEqual(retained.length * 8);
+  });
+
   it("does not reintroduce hidden annotation targets as snap candidates", () => {
     const source = canonicalFixture();
     const hidden = { ...source.signals[0]!, display: { ...source.signals[0]!.display, visible: false } };

@@ -338,9 +338,16 @@ export class SemanticSnapCandidateService {
       const map = input.geometryMaps.get(signal.id);
       if (!map) continue;
       const y = input.rowY.get(signal.id) ?? 0;
-      for (let renderedCycle = 0; renderedCycle <= renderedCycleCount; renderedCycle += 1) {
-        const cycle = sourceCycleForRenderedCycle(renderedCycle);
-        if (cycle === undefined) continue;
+      // Geometry maps are already windowed by the renderer. Iterate their
+      // retained semantic boundaries instead of scanning the full display
+      // timeline (which can be 100k cycles) and probing the map for misses.
+      // The fallback preserves compatibility with custom map providers that
+      // do not publish boundary entries; production WaveDrom/uniform maps do.
+      const boundaryCycles = map.cycleBoundaryEntries?.().map((entry) => entry.cycle);
+      const retainedCycles = boundaryCycles && boundaryCycles.length > 0
+        ? boundaryCycles.filter((cycle) => cycle === input.document.timeline.cycleCount || renderedCycleForSourceCycle(cycle) !== undefined)
+        : Array.from({ length: renderedCycleCount + 1 }, (_, renderedCycle) => sourceCycleForRenderedCycle(renderedCycle)).filter((cycle): cycle is number => cycle !== undefined);
+      for (const cycle of retainedCycles) {
         const points: readonly { readonly point: AnchorPoint; readonly kind: SnapKind }[] = [
           { point: "cycle-start", kind: "cycle-boundary" },
           ...(cycle === input.document.timeline.cycleCount ? [] : [{ point: "cycle-center" as const, kind: "cycle-center" as const }]),

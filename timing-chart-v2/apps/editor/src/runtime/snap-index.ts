@@ -6,6 +6,7 @@ export function buildSnapIndex(document: CanonicalDocument, projection: RenderPr
   const timeAxis = resolveTimeAxisGeometry(document, maps);
   const axisOwnerSignalId = timeAxis.ownerSignalId;
   const referenceMap = timeAxis.geometry;
+  const documentSignalIds = new Set(document.signals.map((signal) => signal.id));
   const screenMaps = new Map<SignalId, LocalGeometryMap>([...maps.entries()].map(([id, map]) => [id, {
     signalId: map.signalId,
     find: (anchor: SemanticAnchor) => {
@@ -19,7 +20,7 @@ export function buildSnapIndex(document: CanonicalDocument, projection: RenderPr
     document,
     geometryMaps: screenMaps,
     ...(axisOwnerSignalId === undefined ? {} : { axisOwnerSignalId }),
-    rowY: new Map(projection.rowLayout.flatMap((row) => document.signals.some((signal) => signal.id === row.rowId) ? [[row.rowId as SignalId, row.y] as const] : [])),
+    rowY: new Map(projection.rowLayout.flatMap((row) => documentSignalIds.has(row.rowId as SignalId) ? [[row.rowId as SignalId, row.y] as const] : [])),
     renderedCycleCount: mapping.displayCycleCount,
     sourceCycleForRenderedCycle: (renderedCycle) => renderedCycle === mapping.displayCycleCount ? document.timeline.cycleCount : mapping.displayToSource[renderedCycle],
     renderedCycleForSourceCycle: (sourceCycle) => mapping.sourceToDisplay[sourceCycle],
