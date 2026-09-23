@@ -7207,21 +7207,21 @@
     },
     {
       "file": "left-tree-action-icons.spec.ts",
-      "title": "Left Tree header actions use owned SVG icons without changing the document",
+      "title": "Left Tree header actions preserve keyboard focus and leave the document unchanged",
       "domain": "left-tree-header-actions-view-only-contract",
       "originIssue": null,
       "type": "USER_JOURNEY",
       "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": "From the production Cycle Tree header, users can open/close More and Add menus with focus restored on Escape, expand groups, and clear a filter without changing document/history/dirty state.",
+      "primaryContract": "From the production Cycle Tree header, users can open/close accessible More and Add menus with focus restored on Escape, expand groups, and clear a filter without changing Canonical, History, or Dirty state.",
       "duplicateGroup": "left-tree-header-actions",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "profiles": [
         "integration"
       ],
-      "decision": "MOVE_LAYER",
-      "reason": "Keep the user-visible menu/focus and view-only behavior, but move exact SVG child counts, pseudo-element text, and renderer-counter equality into component/architecture-level coverage. left-tree-critical-icons.spec.ts already owns cross-fixture SVG topology; this E2E should not couple user behavior to those DOM internals.",
-      "replacementTest": "Retain a focused user-journey E2E for accessible Add/More, Escape focus restoration, Expand All, filter clear, and canonical/history/dirty invariance; cover owned SVG markup and render-counter invalidation in component/architecture tests."
+      "decision": "KEEP",
+      "reason": "This user journey now asserts only accessible production actions, Escape focus restoration, filter behavior, and Canonical/History/Dirty outcomes. Exact SVG topology remains isolated in the visual icon contract instead of being coupled to this interaction test.",
+      "replacementTest": null
     },
     {
       "file": "left-tree-compact-footer.spec.ts",
@@ -14093,7 +14093,7 @@
         "integration"
       ],
       "decision": "KEEP",
-      "reason": "Cross-surface semantic alignment is a central Combined/shared-time-axis contract and is checked over four zoom factors. Note: the test resolves the newly created Annotation using `.last()`; that selector should eventually be replaced by a stable-ID-based lookup under the project’s overlay identity rule, though this audit does not edit test code.",
+      "reason": "Cross-surface semantic alignment is a central Combined/shared-time-axis contract and is checked over four zoom factors. The created Annotation is resolved by stable ID from the before/after canonical identity set and the overlay is queried with that same ID, not DOM order.",
       "replacementTest": null
     },
     {

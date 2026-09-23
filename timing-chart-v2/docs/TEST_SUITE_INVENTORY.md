@@ -462,7 +462,6 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `keyboard-shortcut-router.spec.ts` | dataset |
 | `layout-inspector.spec.ts` | geometryRead |
 | `left-header-action-alignment.spec.ts` | querySelector, geometryRead |
-| `left-tree-action-icons.spec.ts` | getComputedStyle |
 | `left-tree-compact-footer.spec.ts` | geometryRead |
 | `left-tree-critical-icons.spec.ts` | querySelector |
 | `left-tree-interaction.spec.ts` | dataset |
