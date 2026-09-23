@@ -37,10 +37,15 @@ for (const [width, height] of [[1672, 941], [1280, 720]] as const) {
     const list = editor.locator(".transaction-list");
     const header = list.locator(".transaction-list-header");
     await expect(header).toBeVisible();
-    await expect(header).toHaveText("NameGroupLaneStart CycleEnd CycleDuration (cycles)# PhasesLinked SignalsColorDescription"); // empty document: 1 cycle = 1 cycle, no TC scale
+    await expect(header).toHaveText("NameGroupLaneStart (TC)End (TC)Duration (TC)# PhasesLinked SignalsColorDescription"); // the default Transaction scale is 1 TC = 10 source cycles
 
     const rows = list.locator(".transaction-list-row");
     await expect(rows).toHaveCount(2);
+    for (const row of await rows.all()) {
+      const rowHeight = await row.evaluate((element) => element.getBoundingClientRect().height);
+      expect(rowHeight, "Transaction Bottom rows stay within the approved dense 28–32px range").toBeGreaterThanOrEqual(28);
+      expect(rowHeight, "Transaction Bottom rows stay within the approved dense 28–32px range").toBeLessThanOrEqual(32);
+    }
     // The just-created, still-ungrouped row shows an em dash in the Group
     // column instead of skipping it -- keeps every row on the same fixed
     // 8-column grid as the header.
