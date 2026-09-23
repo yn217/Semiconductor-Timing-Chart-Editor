@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { probeAIBridge } from "../apps/editor/src/ai-bridge-client.js";
 
 type RpcResponse = { result?: { content?: readonly { text: string }[]; isError?: boolean }; error?: { code: number; message: string } };
 type EditorSession = { tabId: string; editorSessionId: string; documentId: string; documentTitle: string };
@@ -82,6 +83,15 @@ describe("Agent Bridge Editor-session routing", () => {
     bridge.kill();
     await new Promise<void>((resolve) => bridge?.once("exit", () => resolve()));
     bridge = undefined;
+  });
+
+  it("supports a loopback-only, no-secret setup liveness probe", async () => {
+    const port = Number(new URL(baseUrl).port);
+    expect(await probeAIBridge("127.0.0.1", port)).toBe(true);
+    expect(await probeAIBridge("example.com", port)).toBe(false);
+    const response = await fetch(`${baseUrl}/bridge/poll`, { method: "OPTIONS" });
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
   });
 
   it("lists live sessions and sends a read call only to the explicitly selected document", async () => {

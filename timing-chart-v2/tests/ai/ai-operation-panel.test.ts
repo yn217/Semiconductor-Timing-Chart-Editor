@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isAIPreviewFresh } from "../../apps/editor/src/ai-operation-panel.js";
 import { buildAIClientConfig, buildAIMcpEndpoint } from "../../apps/editor/src/ai-connection-guide.js";
+import { classifyAIBridgeFailure, isLoopbackBridgeHost } from "../../apps/editor/src/ai-bridge-client.js";
 
 describe("AI document-scoped freshness", () => {
   it("rejects same-revision proposals from an older document epoch synchronously", () => {
@@ -30,5 +31,14 @@ describe("external MCP setup config", () => {
     expect(claude.mcpServers["timing-chart"]?.url).toBe(endpoint);
     expect(claude.mcpServers["timing-chart"]?.headers.Authorization).toBe("Bearer ${TIMING_CHART_MCP_TOKEN}");
     expect(generic.mcpServers["timing-chart"]?.headers.Authorization).toBe("Bearer ${TIMING_CHART_MCP_TOKEN}");
+  });
+});
+
+describe("bridge setup diagnostics", () => {
+  it("classifies a missing process separately from a rejected token", () => {
+    expect(classifyAIBridgeFailure(new TypeError("Failed to fetch"))).toBe("unavailable");
+    expect(classifyAIBridgeFailure(new Error("Bridge rejected the configured token."))).toBe("invalid-token");
+    expect(isLoopbackBridgeHost("127.0.0.1")).toBe(true);
+    expect(isLoopbackBridgeHost("example.com")).toBe(false);
   });
 });

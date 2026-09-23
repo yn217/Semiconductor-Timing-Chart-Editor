@@ -4,7 +4,7 @@ import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { planCommand } from "@timing-chart-v2/commands";
 import { validateCanonicalDocument, type CanonicalDocument, type DocumentProblem, type GroupId, type SignalId } from "@timing-chart-v2/schema";
 import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
-import { useAIBridgeClient, type AIBridgeStatus } from "./ai-bridge-client.js";
+import { probeAIBridge, useAIBridgeClient, type AIBridgeStatus } from "./ai-bridge-client.js";
 import { buildAIClientConfig, buildAIMcpEndpoint, type AIClientSetup } from "./ai-connection-guide.js";
 
 function proposalValidationProblems(document: CanonicalDocument, proposal: AIProposal): readonly DocumentProblem[] {
@@ -122,6 +122,7 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
   const [connectionGuideOpen, setConnectionGuideOpen] = useState(false);
   const [setupClient, setSetupClient] = useState<AIClientSetup>("codex");
   const [copyStatus, setCopyStatus] = useState("");
+  const [localBridgeFound, setLocalBridgeFound] = useState<boolean>();
   const [activityLog, setActivityLog] = useState<readonly ActivityEntry[]>([]);
   const previousDocumentEpochRef = useRef(documentEpoch);
   // Activity entries outlive the retention window: the retained array is a
@@ -132,6 +133,19 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
   const providerName = provider === deterministicMockAIProposalProvider ? "Local deterministic (offline)" : "Custom provider";
   const mcpEndpoint = buildAIMcpEndpoint(bridgeHost, bridgePort);
   const setupConfig = buildAIClientConfig(setupClient, mcpEndpoint);
+  useEffect(() => {
+    if (!connectionGuideOpen) return undefined;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const check = async () => {
+      const found = await probeAIBridge(bridgeHost, bridgePort);
+      if (cancelled) return;
+      setLocalBridgeFound(found);
+      if (!found) timer = setTimeout(() => void check(), 1200);
+    };
+    void check();
+    return () => { cancelled = true; if (timer !== undefined) clearTimeout(timer); };
+  }, [connectionGuideOpen, bridgeHost, bridgePort]);
   const copySetupText = async (text: string, label: string) => {
     try {
       if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
@@ -322,7 +336,7 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
         <button type="button" data-testid="ai-connection-guide-toggle" aria-expanded={connectionGuideOpen} onClick={() => setConnectionGuideOpen((open) => !open)}>{connectionGuideOpen ? "Hide setup guide" : "How to connect"}</button>
         {connectionGuideOpen && <div className="ai-connection-guide" data-testid="ai-connection-guide">
           <ol>
-            <li><strong>1. Start the local bridge</strong><span>From the project folder, run this command in a terminal. The process prints its bearer token; keep it private.</span><pre>npm run ai-bridge</pre><button type="button" onClick={() => void copySetupText("npm run ai-bridge", "Bridge command")}>Copy command</button></li>
+            <li><strong>1. Start the local bridge</strong><span>From the project folder, run this command in a terminal. The process prints its bearer token; keep it private.</span><pre>npm run ai-bridge</pre><button type="button" onClick={() => void copySetupText("npm run ai-bridge", "Bridge command")}>Copy command</button><button type="button" data-testid="ai-check-bridge" onClick={() => void probeAIBridge(bridgeHost, bridgePort).then(setLocalBridgeFound)}>Check Bridge</button><output data-testid="ai-bridge-probe" role="status">{localBridgeFound === true ? `Bridge found at ${bridgeHost}:${bridgePort}` : localBridgeFound === false ? `Cannot reach Local Agent Bridge at ${bridgeHost}:${bridgePort}. Run: npm run ai-bridge` : "Checking localhost for the bridge…"}</output></li>
             <li><strong>2. Configure your MCP client</strong><span>Choose a client and add this configuration. The secret is referenced through an environment variable, not copied into the config.</span><label>Client<select aria-label="MCP client setup" value={setupClient} onChange={(event) => setSetupClient(event.target.value as AIClientSetup)}><option value="codex">Codex</option><option value="claude-code">Claude Code</option><option value="generic">Other MCP client</option></select></label><pre data-testid="ai-client-config">{setupConfig}</pre><button type="button" onClick={() => void copySetupText(setupConfig, "MCP config")}>Copy config</button><span className="inspector-note">Set <code>TIMING_CHART_MCP_TOKEN</code> to the token printed by the bridge in the MCP client's launch environment. In Windows PowerShell, use <code>$env:TIMING_CHART_MCP_TOKEN = "&lt;token&gt;"</code>, then start the client from that same terminal. Add the TOML to <code>~/.codex/config.toml</code> for Codex, or the JSON entry to <code>.mcp.json</code> for Claude Code. Other clients may require their own auth-header syntax.</span></li>
             <li><strong>3. Connect and verify</strong><span>Paste the token below and enable external agents. “Bridge running” only confirms local reachability; “External AI client connected” requires a real MCP client request.</span></li>
           </ol>
@@ -333,7 +347,7 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
         {/* #778 Phase 1: "Bridge running" and "a real external AI client is attached" are different facts and
             must never be worded the same way -- a truthful status is required so a user can tell a merely-
             started local process from an actual Claude Code/Codex/MCP-client connection. */}
-        <output data-testid="ai-bridge-status" role="status" data-bridge-status={bridgeStatus}>Status: {bridgeStatus === "connected-external-client" ? "External AI client connected" : bridgeStatus === "connected" ? "Bridge running · no external AI client connected yet" : bridgeStatus === "connecting" ? "Connecting…" : bridgeStatus === "error" ? "Disconnected · check the token and that the bridge is running" : "Disconnected"}</output>
+        <output data-testid="ai-bridge-status" role="status" data-bridge-status={bridgeStatus}>Status: {bridgeStatus === "connected-external-client" ? "External AI client connected" : bridgeStatus === "connected" ? "Bridge running · no external AI client connected yet" : bridgeStatus === "connecting" ? "Connecting…" : bridgeStatus === "token-required" ? "Bridge found · enter the connection token" : bridgeStatus === "invalid-token" ? "Bridge rejected the token · copy the token printed when it started" : bridgeStatus === "unavailable" ? `Cannot reach Local Agent Bridge at ${bridgeHost}:${bridgePort} · run npm run ai-bridge` : bridgeStatus === "error" ? "Connection failed · verify localhost settings" : "Disconnected"}</output>
       </div>
       <div className="ai-settings-section"><h4>Provider</h4><span className="inspector-note">{providerName}</span></div>
     </div>}

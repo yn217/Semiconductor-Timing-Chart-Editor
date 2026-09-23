@@ -16,7 +16,7 @@ import type { AIViewIntent } from "./ai-proposal-provider.js";
 // the latter is an explicitly prohibited shortcut. "connected" now means Bridge-reachable-but-no-external-
 // client-seen; "connected-external-client" means a real client has spoken to the bridge's /mcp endpoint
 // within the last EXTERNAL_CLIENT_TIMEOUT_MS window server-side.
-export type AIBridgeStatus = "disabled" | "connecting" | "connected" | "connected-external-client" | "error";
+export type AIBridgeStatus = "disabled" | "connecting" | "connected" | "connected-external-client" | "token-required" | "invalid-token" | "unavailable" | "error";
 
 export type AIBridgeContext = {
   readonly document: CanonicalDocument;
@@ -160,6 +160,24 @@ export function isLoopbackBridgeHost(host: string): boolean {
   return LOOPBACK_BRIDGE_HOSTS.has(host.trim().toLowerCase());
 }
 
+/** A no-credential liveness probe; the bridge's OPTIONS handler returns no
+ * document or token data. Keep it loopback-only and use it only for setup UX. */
+export async function probeAIBridge(host: string, port: number): Promise<boolean> {
+  if (!isLoopbackBridgeHost(host)) return false;
+  try {
+    const response = await fetch(`http://${host}:${port}/bridge/poll`, { method: "OPTIONS", cache: "no-store" });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+export function classifyAIBridgeFailure(error: unknown): AIBridgeStatus {
+  if (error instanceof Error && error.message === "Bridge rejected the configured token.") return "invalid-token";
+  if (error instanceof TypeError || (error instanceof Error && /failed to fetch|networkerror/i.test(error.message))) return "unavailable";
+  return "error";
+}
+
 export function useAIBridgeClient(enabled: boolean, host: string, port: number, token: string, context: AIBridgeContext): AIBridgeStatus {
   const [status, setStatus] = useState<AIBridgeStatus>("disabled");
   const contextRef = useRef(context);
@@ -170,7 +188,7 @@ export function useAIBridgeClient(enabled: boolean, host: string, port: number, 
 
   useEffect(() => {
     if (!enabled) { setStatus("disabled"); return undefined; }
-    if (!token) { setStatus("error"); return undefined; }
+    if (!token) { setStatus("token-required"); return undefined; }
     // The Editor only ever talks to a local Agent Bridge (#569): never poll or answer a non-loopback host.
     if (!isLoopbackBridgeHost(host)) { setStatus("error"); return undefined; }
     let cancelled = false;
@@ -253,7 +271,7 @@ export function useAIBridgeClient(enabled: boolean, host: string, port: number, 
     const loop = async () => {
       while (!cancelled) {
         let hadRequest = false;
-        try { hadRequest = await pollOnce(); } catch (error) { if (!cancelled) { if (error instanceof DOMException && error.name === "AbortError") return; setStatus("error"); await new Promise((resolve) => setTimeout(resolve, 3000)); continue; } }
+        try { hadRequest = await pollOnce(); } catch (error) { if (!cancelled) { if (error instanceof DOMException && error.name === "AbortError") return; setStatus(classifyAIBridgeFailure(error)); await new Promise((resolve) => setTimeout(resolve, 3000)); continue; } }
         if (!hadRequest && !cancelled) await new Promise((resolve) => setTimeout(resolve, IDLE_POLL_INTERVAL_MS));
       }
     };
