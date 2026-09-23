@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:27:22.012Z",
+  "generatedAt": "2026-09-23T07:28:43.560Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,10 +13,10 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 877,
+  "reviewedCaseCount": 881,
   "curatedProfileCounts": {
-    "integration": 460,
-    "nightly": 178,
+    "integration": 464,
+    "nightly": 179,
     "performance": 49,
     "pr": 235,
     "visual": 150
@@ -21013,18 +21013,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "canonical-export-scene-deterministic-layer-content",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Canonical ExportScene output is deterministic across repeated SVG/PDF export, includes Transaction/Signal/wave-engine/edge-counter semantics, excludes editor-only overlays, and emits valid PNG/PDF artifacts.",
+      "duplicateGroup": "canonical-export-scene-contracts",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the direct canonical-scene artifact contract: stable semantic layer IDs, edge counters, renderer provenance, editor-chrome exclusion, and repeatability. It is distinct from Combined export and page-metadata layout checks.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-export.spec.ts",
@@ -21035,18 +21038,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "export-canonical-header-footer",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Applied canonical document subtitle and footer metadata appear in SVG and valid PNG/PDF export output without changing revision, History, or rendering counters during export.",
+      "duplicateGroup": "export-document-metadata",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This uniquely verifies document-level Header/Footer metadata flows from the canonical Properties command into browser exports across all three formats while export itself is view-only.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-export.spec.ts",
@@ -21057,18 +21063,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "export-page-fit-long-document-metadata",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A4 portrait/page-fit and landscape/width-fit exports retain long descriptions, notes, preconditions, constraints, exceptions, and footer metadata within correct page viewBoxes across SVG/PNG/PDF outputs.",
+      "duplicateGroup": "export-page-fit-metadata",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The multi-format matrix combines lengthy canonical metadata, two page/orientation/fit configurations and output geometry checks; preserve as a release-level export layout regression rather than routine PR coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "transaction-export.spec.ts",
@@ -21079,18 +21089,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "export-browser-clipboard-formats",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The production Export dialog copies deterministic scene SVG text and PNG image data to the browser Clipboard with correct MIME types, without changing Canonical, History, or session counters.",
+      "duplicateGroup": "export-clipboard-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Clipboard permission and MIME-type behavior are separate browser APIs from file downloads; this uniquely verifies both SVG text and PNG image clipboard routes and view-only state.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-export.spec.ts",
@@ -26901,7 +26914,7 @@
     {
       "file": "transaction-export.spec.ts",
       "caseCount": 16,
-      "reviewedCaseCount": 11,
+      "reviewedCaseCount": 15,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [],
