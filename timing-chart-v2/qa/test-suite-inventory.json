@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T03:54:52.200Z",
+  "generatedAt": "2026-09-23T03:56:22.941Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 965,
-  "reviewedCaseCount": 563,
+  "reviewedCaseCount": 570,
   "curatedProfileCounts": {
-    "integration": 251,
-    "nightly": 149,
+    "integration": 256,
+    "nightly": 151,
     "performance": 37,
     "pr": 165,
-    "visual": 127
+    "visual": 129
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -14596,18 +14596,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "measurement-layout-rendering-history-persistence",
+      "originIssue": 205,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Measurement marker kinds, arrow direction, and extension-line sides visibly affect production projection, apply as one History unit, restore through Undo/Redo, and persist through Save/Open.",
+      "duplicateGroup": "measurement-layout-lifecycle",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is a full semantic-to-rendered layout and persistence lifecycle spanning four editor fields and actual file I/O; retain as heavy acceptance, not routine PR verification.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "measurement-export-matrix.spec.ts",
@@ -14618,18 +14622,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "measurement-svg-export-layout-matrix",
+      "originIssue": 205,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "SVG export preserves marker kinds, inward/outward arrow layout, per-side extension lines, stable Annotation IDs, and distinct auto-stacked lanes for overlapping same-Signal Measurements.",
+      "duplicateGroup": "measurement-svg-export-matrix",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This combines two overlapping authored Measurements, multiple layout configurations, and downloaded SVG inspection. Cross-Signal ratio and the simpler auto-lane algorithm have separate tests; keep this remaining same-Signal export combination in the heavy lifecycle tier.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "measurement-lane-stacking.spec.ts",
@@ -14640,18 +14648,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "measurement-auto-lane-allocation",
+      "originIssue": 205,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Two fully overlapping Measurements without explicit lanes are assigned different automatic lanes rather than both remaining on lane 0.",
+      "duplicateGroup": "measurement-auto-lane-packing",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the base collision-packing invariant; the three-Measurement test below covers exhaustion of both existing lanes, which is a distinct allocator boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "measurement-lane-stacking.spec.ts",
@@ -14662,18 +14673,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "measurement-auto-lane-allocation",
+      "originIssue": 205,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A third Measurement overlapping both existing stacks is placed on a new lane 2 rather than reusing either occupied lane.",
+      "duplicateGroup": "measurement-auto-lane-packing",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This tests the allocator's next-free-lane behavior after both current lanes are occupied and cannot be inferred from the pairwise overlap case.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "measurement-lane-stacking.spec.ts",
@@ -14684,18 +14698,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "measurement-cross-signal-ratio-export",
+      "originIssue": 205,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A file-opened cross-Signal ratio Measurement resolves both ratio anchors in production projection and retains ratio anchor semantics in exported SVG.",
+      "duplicateGroup": "measurement-cross-signal-ratio",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This specifically spans two stable Signal IDs, ratio-based endpoints, production document loading, and export. Same-Signal visual/lane tests do not exercise cross-Signal anchor resolution.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "measurement-top-row-clip.spec.ts",
@@ -14706,18 +14723,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "measurement-ruler-overlap-avoidance",
+      "originIssue": 418,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A Measurement anchored to the first Signal chooses below-row placement so its label, body, and markers do not overlap the Cycle Ruler.",
+      "duplicateGroup": "measurement-top-row-placement",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This checks real rendered bounding-box non-overlap at the ruler boundary, a distinct visual clipping condition not covered by semantic layout command tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "measurement-top-row-clip.spec.ts",
@@ -14728,18 +14748,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "measurement-ruler-overlap-avoidance",
+      "originIssue": 418,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A Measurement on a row with sufficient clearance retains the default above-the-line side instead of applying the top-row fallback globally.",
+      "duplicateGroup": "measurement-top-row-placement",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the positive counterpart to the top-row fallback: it prevents a broad below-row placement policy from regressing Measurements with normal clearance.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "mechanical-visual-diagnostics.spec.ts",
@@ -25344,42 +25367,42 @@
     {
       "file": "measurement-dimension-layout.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": 2000,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "measurement-export-matrix.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": 2000,
       "candidateSignals": [
         "dataset"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "measurement-lane-stacking.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": 2000,
       "candidateSignals": [
         "dataset"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "measurement-top-row-clip.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "mechanical-visual-diagnostics.spec.ts",
