@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:55:55.495Z",
+  "generatedAt": "2026-09-23T07:58:07.531Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 941,
+  "reviewedCaseCount": 945,
   "curatedProfileCounts": {
-    "integration": 484,
-    "nightly": 187,
+    "integration": 485,
+    "nightly": 190,
     "performance": 54,
     "pr": 257,
-    "visual": 164
+    "visual": 167
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -23782,18 +23782,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cross-component-panel-collision-wide",
+      "originIssue": 429,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At wide viewport, ribbon does not overflow and Ribbon/Inspector/Bottom/visible timeline regions do not collide in Signal, Annotation, Bookmark, and Transaction contexts after representative authoring actions.",
+      "duplicateGroup": "cross-component-panel-collision",
+      "executionTier": "TIER_4_PERFORMANCE_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "Wide viewport counterpart to the compact cross-component layout sweep. Context coverage matches while responsive geometry is evaluated at a distinct size; not suitable as routine PR load.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "nightly"
+      ]
     },
     {
       "file": "visual-reference-lifecycle.spec.ts",
@@ -23804,18 +23808,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "production-route-repeated-mount-lifecycle",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "INTEGRATION",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Repeatedly mounting and closing pages at the visual-reference and production routes reaches Cycle readiness with no console errors or uncaught page errors.",
+      "duplicateGroup": "production-route-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Exercises repeated route/page lifecycle in one browser context and explicitly captures console/page errors; a single startup smoke cannot catch unmount/remount leaks.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "visual-regression-modes.spec.ts",
@@ -23828,18 +23835,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "whole-screen-layout-snapshot-combined-viewport-matrix",
+      "originIssue": 429,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Combined mode whole-screen layout snapshots at both 1280x720 and 1672x941 remain within their reviewed Playwright baseline diff thresholds after readiness and transition suppression.",
+      "duplicateGroup": "whole-screen-layout-snapshots",
+      "executionTier": "TIER_4_PERFORMANCE_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "The same parameterized test title represents two distinct viewport executions (compact and wide); inventory review keys by file/title, so keep one matrix record covering both. This is a coarse regression net for layout-shape defects that targeted assertions can miss, not a substitute for focused geometry acceptance. No snapshot threshold/baseline changes are part of review.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "nightly"
+      ]
     },
     {
       "file": "visual-regression-modes.spec.ts",
@@ -23852,18 +23863,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "whole-screen-layout-snapshot-combined-viewport-matrix",
+      "originIssue": 429,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Combined mode whole-screen layout snapshots at both 1280x720 and 1672x941 remain within their reviewed Playwright baseline diff thresholds after readiness and transition suppression.",
+      "duplicateGroup": "whole-screen-layout-snapshots",
+      "executionTier": "TIER_4_PERFORMANCE_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "The same parameterized test title represents two distinct viewport executions (compact and wide); inventory review keys by file/title, so keep one matrix record covering both. This is a coarse regression net for layout-shape defects that targeted assertions can miss, not a substitute for focused geometry acceptance. No snapshot threshold/baseline changes are part of review.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "nightly"
+      ]
     },
     {
       "file": "visual-regression-modes.spec.ts",
@@ -27469,32 +27484,32 @@
     {
       "file": "visual-grammar-cross-component.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 1,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector",
         "geometryRead"
       ],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "visual-reference-lifecycle.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "visual-regression-modes.spec.ts",
       "caseCount": 6,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "wavedrom-security.spec.ts",
