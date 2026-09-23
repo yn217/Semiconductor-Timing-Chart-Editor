@@ -2689,6 +2689,38 @@
       "replacementTest": null
     },
     {
+      "file": "full-gui.spec.ts",
+      "title": "applies Inspector drafts, exposes Problems/JSON, and toggles panels",
+      "domain": "inspector-validation-and-panel-lifecycle",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
+      "measuredRuntimeMs": null,
+      "primaryContract": "After applying a Signal Inspector name/visibility edit, Problems and JSON validation remain usable and View commands can hide Inspector and Bottom without breaking the workspace.",
+      "duplicateGroup": "full-editor-surface-smoke",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": ["integration"],
+      "decision": "KEEP",
+      "reason": "This is a cross-panel application journey joining semantic Inspector Apply, visible validation, JSON validation, and workspace panel visibility; isolated tests prove each control but not that the surfaces compose after an edit.",
+      "replacementTest": null
+    },
+    {
+      "file": "full-gui.spec.ts",
+      "title": "applies Annotation Inspector drafts through one semantic command",
+      "domain": "annotation-inspector-multi-field-apply",
+      "originIssue": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Label and color edits to one selected Annotation are applied together as one semantic History unit, update the matching Inspector/overlay, and do not rebuild waveform or local geometry owners.",
+      "duplicateGroup": "annotation-inspector-apply-and-invalidation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["pr"],
+      "decision": "KEEP",
+      "reason": "Preview lifecycle tests protect draft visibility and Apply, while invalidation tests protect color-only owner counts; this is the combined two-field single-commit path with stable overlay and no-waveform-rerender assertions.",
+      "replacementTest": null
+    },
+    {
       "file": "qa-fresh-state-journeys.spec.ts",
       "title": "J9 Bottom follows the selected entity kind",
       "domain": "bottom-panel-selection",
