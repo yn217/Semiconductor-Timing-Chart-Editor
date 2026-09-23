@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:00:31.600Z",
+  "generatedAt": "2026-09-23T05:02:39.717Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 631,
+  "reviewedCaseCount": 637,
   "curatedProfileCounts": {
-    "integration": 293,
+    "integration": 297,
     "nightly": 159,
     "performance": 44,
-    "pr": 184,
+    "pr": 186,
     "visual": 130
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -6222,18 +6222,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-inspector-mixed-capability-and-style-apply",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A mixed Signal Inspector draft containing name, role, type, width, bus format, and label style is applied through the real GUI; waveform-affecting changes rebuild only the expected owners, while a later style-only Apply updates styling without waveform or geometry rebuilds.",
+      "duplicateGroup": "signal-inspector-apply-and-invalidation",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "inspector-capability.spec.ts protects transient draft and one-command behavior, while signal-editor tests focus on individual routes. This mixed multi-Apply case uniquely distinguishes semantic waveform invalidation from style-only updates and verifies the rendered row presentation.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -6244,18 +6247,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "signal-label-style-repeat-apply-undo-reselect",
+      "originIssue": 477,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Repeated Label Style color/bold/background edits enable Apply, each commit creates one History step, selected-row background renders, Undo/Redo is exact, reselection reloads canonical style without stale draft, and editing remains possible afterward.",
+      "duplicateGroup": "signal-label-style-apply-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The capability test exercises a couple of style edits but not repeated dirty baselines, Undo/Redo, selected-row background visibility, or reselection draft reset; this remains the targeted #477 lifecycle regression.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -6266,18 +6272,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-inspector-properties-history-persistence",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Signal name/role/type/width/bus-format Inspector edits are reversible through Undo/Redo and remain intact after a real Save/Open, with History reset on session replacement.",
+      "duplicateGroup": "signal-inspector-persistence",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Focused capability tests prove Apply and Undo, but not the serialized Save/Open handoff after Redo or History reset on document replacement. Retain this as the Signal Inspector persistence boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -6288,18 +6297,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "group-inspector-waveform-extension-projection",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Applying Group name/background/opacity/waveform extension through the Inspector creates one semantic history operation and updates the matching timing-row presentation.",
+      "duplicateGroup": "group-inspector-presentation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Group Band integration tests focus on label-scope styling and persistence; this compact contract verifies the distinct waveform extension projection plus one-command Inspector Apply.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -6310,18 +6322,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-create-and-inspector-phase-apply",
+      "originIssue": 397,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A Transaction created from the Bottom flow receives two structured Inspector Phase drafts in one subsequent Apply/history operation, and the committed Phase names remain associated with the selected Transaction.",
+      "duplicateGroup": "transaction-phase-inspector-authoring",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Large Sample A covers editing a pre-populated Phase set, while this verifies fresh Transaction creation followed by multi-Phase Inspector drafting and exact separate creation/edit history boundaries.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -6332,18 +6347,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "clock-generator-inspector-fields-one-command",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Clock start/period/duty/phase/initial/polarity can be drafted and applied together through the Clock Inspector as one semantic History operation, with the committed duty and phase reloaded in the editor.",
+      "duplicateGroup": "clock-generator-inspector-apply",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Clock Preview tests cover transient rendering and a period Apply from the Bottom Editor; they do not cover the Inspector's full generator field set or one-command commit boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "full-gui.spec.ts",
@@ -23894,7 +23912,7 @@
     {
       "file": "full-gui.spec.ts",
       "caseCount": 41,
-      "reviewedCaseCount": 28,
+      "reviewedCaseCount": 34,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],

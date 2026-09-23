@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 631/959 cases reviewed.
+Semantic review progress: 637/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 293 |
+| `integration` | 297 |
 | `nightly` | 159 |
 | `performance` | 44 |
-| `pr` | 184 |
+| `pr` | 186 |
 | `visual` | 130 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -87,7 +87,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `file-beforeunload-dirty-guard.spec.ts` | 1 | 1/1 reviewed |
 | `file-ribbon-blank-controls.spec.ts` | 1 | 1/1 reviewed |
 | `font-style-commit-contract.spec.ts` | 1 | 1/1 reviewed |
-| `full-gui.spec.ts` | 41 | 28/41 reviewed |
+| `full-gui.spec.ts` | 41 | 34/41 reviewed |
 | `ghost-trace-delete.spec.ts` | 1 | 0/1 reviewed |
 | `golden-samples.spec.ts` | 3 | 0/3 reviewed |
 | `grid-zoom-alignment.spec.ts` | 1 | 1/1 reviewed |
