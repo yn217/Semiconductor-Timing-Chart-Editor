@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:54:35.851Z",
+  "generatedAt": "2026-09-23T07:55:55.495Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 937,
+  "reviewedCaseCount": 941,
   "curatedProfileCounts": {
     "integration": 484,
-    "nightly": 186,
+    "nightly": 187,
     "performance": 54,
-    "pr": 256,
-    "visual": 161
+    "pr": 257,
+    "visual": 164
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -23506,18 +23506,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "view-mode-segment-dark-scheme-readability-compact",
+      "originIssue": 401,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Under dark color scheme at 1280x720, all three View Mode segments remain within the viewport and retain strong foreground/background luminance separation when unselected or active.",
+      "duplicateGroup": "view-mode-readability",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Compact viewport half of the dark-scheme readability defect regression. It checks actual computed colors and containment rather than brittle pixel snapshots; wide counterpart covers a different width.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "view-mode-readability.spec.ts",
@@ -23528,18 +23531,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "view-mode-segment-dark-scheme-readability-wide",
+      "originIssue": 401,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Under dark color scheme at 1672x941, all three View Mode segments remain within the viewport and retain strong foreground/background luminance separation when unselected or active.",
+      "duplicateGroup": "view-mode-readability",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Wide viewport counterpart to the compact dark-scheme readability regression; viewport containment and computed style are evaluated at this distinct supported size.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "view-mode-readability.spec.ts",
@@ -23550,18 +23556,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "view-mode-keyboard-focus-and-layout-stability",
+      "originIssue": 401,
+      "type": "ACCESSIBILITY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Keyboard navigation produces a visible focus outline when the browser marks the control focus-visible; changing the selected mode segment preserves its width/height and does not mutate Canonical/History.",
+      "duplicateGroup": "view-mode-readability",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Focus-ring assertion is conditional on browser focus-visible classification, while layout stability and view-only assertions are unconditional. Keep with that limitation recorded; this is the only direct keyboard focus contract for the top mode selector here.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "view-ribbon-slot.spec.ts",
@@ -23747,18 +23756,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "cross-component-panel-collision-compact",
+      "originIssue": 429,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At compact viewport, ribbon does not overflow and Ribbon/Inspector/Bottom/visible timeline regions do not collide in Signal, Annotation, Bookmark, and Transaction contexts after representative authoring actions.",
+      "duplicateGroup": "cross-component-panel-collision",
+      "executionTier": "TIER_4_PERFORMANCE_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "Broad cross-surface responsive layout sweep creates several contexts and authoring states; keep as visual/nightly acceptance rather than routine PR. This compact viewport case is paired with the wide case.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual",
+        "nightly"
+      ]
     },
     {
       "file": "visual-grammar-cross-component.spec.ts",
@@ -27432,13 +27445,13 @@
     {
       "file": "view-mode-readability.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "view-ribbon-slot.spec.ts",
@@ -27456,14 +27469,14 @@
     {
       "file": "visual-grammar-cross-component.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "visual-reference-lifecycle.spec.ts",
