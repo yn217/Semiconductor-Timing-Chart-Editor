@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:03:21.162Z",
+  "generatedAt": "2026-09-23T07:04:43.900Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,9 +13,9 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 827,
+  "reviewedCaseCount": 831,
   "curatedProfileCounts": {
-    "integration": 425,
+    "integration": 429,
     "nightly": 172,
     "performance": 45,
     "pr": 230,
@@ -19480,18 +19480,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "ruler-context-bookmark-command-and-geometry",
+      "originIssue": 388,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Right-clicking a geometry-backed source-cycle ruler tick exposes the Bookmark command; invoking it creates one stable Bookmark at the same screen X, opens its manager, and commits exactly one semantic/history step.",
+      "duplicateGroup": "bookmark-creation-entrypoints",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Other Bookmark journeys use the Ribbon or Bottom panel; this uniquely verifies the Ruler context-menu adapter, mapping-derived position, and one-step command wiring.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19502,18 +19505,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bottom-bookmark-edit-save-open-undo",
+      "originIssue": 388,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Editing Bookmark name/cycle/comment in the Bottom panel commits through the semantic owner, survives Save/Open with the selected tab restored, and Delete is undoable.",
+      "duplicateGroup": "bookmark-bottom-editor-persistence",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the only Bottom inline editor + persistence + delete/undo lifecycle. Ruler context creation and navigation tests do not exercise field editing or restored document content.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19524,18 +19530,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bookmark-ruler-alignment-zoom-scroll",
+      "originIssue": 388,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Bookmark marker and its matching source-cycle tick remain aligned within one pixel at 50/100/150/200% zoom and at horizontal-scroll end, while the operations remain view-only.",
+      "duplicateGroup": "bookmark-marker-time-axis-alignment",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This specifically covers marker-to-ruler screen geometry across the full zoom preset set and nonzero horizontal scroll; lifecycle tests validate identity/data, not synchronized projection under transforms.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19546,18 +19555,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bookmark-many-item-identity-and-navigation",
+      "originIssue": 388,
+      "type": "PERFORMANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A 100-item Bookmark collection preserves distinct stable rows including same-cycle peers; double-click navigation across representative positions updates playhead without changing Canonical, History, or renderer counters.",
+      "duplicateGroup": "bookmark-collection-scale-and-identity",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is bounded collection-scale and identity/navigation coverage rather than a benchmark: 100 stable rows, duplicate-time items, and representative early/middle/late jumps. It complements the 100k TimeMapping performance case without inheriting its cost class.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -26612,7 +26624,7 @@
     {
       "file": "timeline-editor.spec.ts",
       "caseCount": 29,
-      "reviewedCaseCount": 18,
+      "reviewedCaseCount": 22,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
