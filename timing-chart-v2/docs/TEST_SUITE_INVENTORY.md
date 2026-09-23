@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 333 spec files and 970 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 199/970 cases reviewed.
+Semantic review progress: 207/970 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 51 |
+| `integration` | 55 |
 | `nightly` | 42 |
 | `performance` | 17 |
-| `pr` | 83 |
-| `visual` | 55 |
+| `pr` | 87 |
+| `visual` | 59 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -205,9 +205,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-757-far-scroll-window-coverage.spec.ts` | 1 | 1/1 reviewed |
 | `issue-759-group-disclosure-shared.spec.ts` | 1 | 1/1 reviewed |
 | `issue-760-combined-horizontal-wheel.spec.ts` | 1 | 1/1 reviewed |
-| `issue-761-start-input-width.spec.ts` | 2 | 0/2 reviewed |
+| `issue-761-start-input-width.spec.ts` | 2 | 2/2 reviewed |
 | `issue-763-retained-phase-drafts.spec.ts` | 2 | 2/2 reviewed |
-| `issue-764-group-header-sticky.spec.ts` | 2 | 0/2 reviewed |
+| `issue-764-group-header-sticky.spec.ts` | 2 | 2/2 reviewed |
 | `issue-765-transaction-no-phantom-vscroll.spec.ts` | 3 | 3/3 reviewed |
 | `issue-766-cycle-plural.spec.ts` | 1 | 1/1 reviewed |
 | `issue-767-zoom-keeps-glyph-shape.spec.ts` | 3 | 3/3 reviewed |
@@ -215,11 +215,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-769-tree-virtualization-keyboard.spec.ts` | 5 | 5/5 reviewed |
 | `issue-770-filtered-selection-scope.spec.ts` | 2 | 2/2 reviewed |
 | `issue-771-many-small-groups-virtualized.spec.ts` | 1 | 1/1 reviewed |
-| `issue-772-retained-bookmark-drafts.spec.ts` | 1 | 0/1 reviewed |
+| `issue-772-retained-bookmark-drafts.spec.ts` | 1 | 1/1 reviewed |
 | `issue-773-bottom-tab-round-trip.spec.ts` | 1 | 1/1 reviewed |
 | `issue-774-visibility-preserves-selection.spec.ts` | 2 | 2/2 reviewed |
-| `issue-775-annotation-draft-isolation.spec.ts` | 1 | 0/1 reviewed |
-| `issue-776-signal-inspector-draft-sync.spec.ts` | 2 | 0/2 reviewed |
+| `issue-775-annotation-draft-isolation.spec.ts` | 1 | 1/1 reviewed |
+| `issue-776-signal-inspector-draft-sync.spec.ts` | 2 | 2/2 reviewed |
 | `issue-777-current-v2-samples-acceptance.spec.ts` | 10 | 0/10 reviewed |
 | `keyboard-shortcut-router.spec.ts` | 4 | 0/4 reviewed |
 | `keyboard-tabs-resizers.spec.ts` | 2 | 0/2 reviewed |
