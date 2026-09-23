@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T04:02:17.618Z",
+  "generatedAt": "2026-09-23T04:20:45.939Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,11 +13,11 @@
   },
   "specFileCount": 332,
   "caseCount": 965,
-  "reviewedCaseCount": 583,
+  "reviewedCaseCount": 587,
   "curatedProfileCounts": {
-    "integration": 266,
-    "nightly": 156,
-    "performance": 42,
+    "integration": 269,
+    "nightly": 157,
+    "performance": 43,
     "pr": 166,
     "visual": 129
   },
@@ -15106,18 +15106,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "open-validated-document-handoff",
+      "originIssue": 208,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The production Save -> file-input Open route hands the parser-trusted canonical document into a fresh session without a second validation or semantic commit, and resets History/Dirty exactly once.",
+      "duplicateGroup": "open-validated-handoff",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Core unit coverage proves the DocumentSession accepts parser-trusted data without revalidation, but only this production file route verifies the GUI passes that trusted result through the replacement lifecycle and reports the correct session counters. Keep one integration boundary check; do not expand it into a large Open matrix.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "open-validation-handoff.spec.ts",
@@ -15128,18 +15131,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "open-file-byte-budget",
+      "originIssue": 208,
+      "type": "SECURITY_INVARIANT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A production Open request above MAX_OPEN_FILE_BYTES is rejected before File.text/parse and leaves the current canonical revision, History, Dirty state, and document title unchanged while surfacing a user-visible problem.",
+      "duplicateGroup": "open-resource-budget-guards",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The actual browser File input route is required to prove the size guard precedes file reading and that diagnostics/state preservation reach the UI. Lower-level byte-budget logic can be unit-tested, but cannot replace this single production-boundary check; retain outside routine PR smoke because it allocates a >32 MB File.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "open-validation-handoff.spec.ts",
@@ -15150,18 +15156,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "open-canonical-resource-budget",
+      "originIssue": 208,
+      "type": "SECURITY_INVARIANT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A syntactically valid Open document that exceeds the canonical cycle resource budget is rejected before replacing the active session; revision, History, Dirty state, and title remain unchanged and the user receives a resource-limit diagnostic.",
+      "duplicateGroup": "open-resource-budget-guards",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This exercises parse/migrate/validate plus the GUI replacement boundary with a real file-input payload and checks the old document survives. Core unit tests cover commit-time resource rejection, not this Open route's user-visible diagnostic and no-replacement contract, so keep one bounded integration test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "perf-755-far-jump-longtask.spec.ts",
@@ -15172,18 +15181,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "far-jump-long-task-budget",
+      "originIssue": 755,
+      "type": "PERFORMANCE_INVARIANT",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A far horizontal viewport jump in Combined mode on a 100-signal/10,000-cycle document stays within the production main-thread long-task budget and does not fall back to per-cycle SVG WaveDrom nodes.",
+      "duplicateGroup": "far-jump-performance-budget",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This is an intentionally large performance measurement with tracing, long-task observation, and a 1M signal-cycle document. Keep it in the dedicated performance/nightly tier; it is not a routine correctness or PR test and was not run during inventory review.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "performance-closure.spec.ts",
@@ -25533,22 +25546,22 @@
     {
       "file": "open-validation-handoff.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "perf-755-far-jump-longtask.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": 180,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "performance-closure.spec.ts",
