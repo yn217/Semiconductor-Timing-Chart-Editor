@@ -3,7 +3,7 @@ import { useRef, type ReactNode } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { planCommand } from "@timing-chart-v2/commands";
 import { validateCanonicalDocument, type CanonicalDocument, type DocumentProblem, type GroupId, type SignalId } from "@timing-chart-v2/schema";
-import { buildTypedSignalProposal, deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
+import { buildTypedSignalProposal, buildTypedTimelineProposal, deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
 import { useAIBridgeClient, type AIBridgeStatus } from "./ai-bridge-client.js";
 
 function proposalValidationProblems(document: CanonicalDocument, proposal: AIProposal): readonly DocumentProblem[] {
@@ -232,7 +232,9 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
     return { summary: result.proposal.summary, baseRevision: result.proposal.baseRevision, kind: result.proposal.kind, requiresApproval: true, message: "Proposal ready for review -- open the AI Assistant panel to Validate and Apply it." };
   };
   const onProposeTypedEdit = (tool: string, args: Readonly<Record<string, unknown>>): { readonly error: string } | { readonly summary: string; readonly baseRevision: number; readonly kind: string; readonly requiresApproval: true; readonly message: string } => {
-    let result = buildTypedSignalProposal(document, revision, tool, args);
+    let result = tool === "propose_insert_cycles" || tool === "propose_delete_cycles" || tool === "propose_move_range"
+      ? buildTypedTimelineProposal(document, revision, tool, args)
+      : buildTypedSignalProposal(document, revision, tool, args);
     if (result.ok) {
       const violation = result.proposal.commands.map((proposedCommand) => scopeViolationMessage(scope, document, proposedCommand, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId)).find((message) => message !== undefined);
       if (violation) result = { ok: false, message: violation };

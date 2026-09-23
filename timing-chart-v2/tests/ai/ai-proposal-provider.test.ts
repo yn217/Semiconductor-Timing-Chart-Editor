@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTypedSignalProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
+import { buildTypedSignalProposal, buildTypedTimelineProposal, deterministicMockAIProposalProvider } from "../../apps/editor/src/ai-proposal-provider.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import type { AnnotationId, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 
@@ -32,6 +32,21 @@ describe("deterministic AI proposal provider", () => {
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.proposal.commands).toEqual([expect.objectContaining({ type: "signal.move", signalId: "sig_data", targetGroupId: "grp_aux", index: 0 })]);
     expect(buildTypedSignalProposal(document, 14, "propose_move_signal", { signalId: "sig_data", targetGroupId: "missing" })).toEqual({ ok: false, message: "Signal Group 'missing' does not exist in the current document." });
+  });
+
+  it("maps typed cycle-range proposals to existing timeline SemanticCommands", () => {
+    const document = canonicalFixture();
+    const inserted = buildTypedTimelineProposal(document, 21, "propose_insert_cycles", { at: 4, count: 2 });
+    expect(inserted.ok).toBe(true);
+    if (inserted.ok) expect(inserted.proposal.commands).toEqual([expect.objectContaining({ type: "timeline.insert", at: 4, count: 2 })]);
+    const deleted = buildTypedTimelineProposal(document, 21, "propose_delete_cycles", { start: 2, end: 5 });
+    expect(deleted.ok).toBe(true);
+    if (deleted.ok) expect(deleted.proposal.commands).toEqual([expect.objectContaining({ type: "timeline.delete", start: 2, end: 5 })]);
+    const moved = buildTypedTimelineProposal(document, 21, "propose_move_range", { start: 2, end: 5, to: 7 });
+    expect(moved.ok).toBe(true);
+    if (moved.ok) expect(moved.proposal.commands).toEqual([expect.objectContaining({ type: "timeline.moveRange", start: 2, end: 5, to: 7 })]);
+    expect(buildTypedTimelineProposal(document, 21, "propose_delete_cycles", { start: 5, end: 5 })).toEqual({ ok: false, message: "propose_delete_cycles requires integer boundaries within the timeline and end > start." });
+    expect(document.timeline.cycleCount).toBe(canonicalFixture().timeline.cycleCount);
   });
 
   it("returns a revisioned semantic proposal without mutating the source document", () => {

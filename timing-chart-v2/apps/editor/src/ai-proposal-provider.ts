@@ -66,6 +66,27 @@ export function buildTypedSignalProposal(document: CanonicalDocument, revision: 
   return { ok: true, proposal: proposal(revision, `Rename ${signal.display.name} to ${normalizedName}`, [command({ type: "signal.rename", signalId: signal.id, name: normalizedName }, "typed_rename_signal")]) };
 }
 
+export function buildTypedTimelineProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  const integer = (key: string): number | undefined => Number.isSafeInteger(args[key]) ? args[key] as number : undefined;
+  const commandFor = (fields: object, summary: string, scope: string): AIProposalResult => ({ ok: true, proposal: proposal(revision, summary, [command(fields, scope)]) });
+  if (tool === "propose_insert_cycles") {
+    const at = integer("at"); const count = integer("count");
+    if (at === undefined || count === undefined || at < 0 || at > document.timeline.cycleCount || count <= 0) return { ok: false, message: "propose_insert_cycles requires integer at within the timeline and positive integer count." };
+    return commandFor({ type: "timeline.insert", at, count }, `Insert ${count} cycles at ${at}`, "typed_insert_cycles");
+  }
+  if (tool === "propose_delete_cycles") {
+    const start = integer("start"); const end = integer("end");
+    if (start === undefined || end === undefined || start < 0 || end <= start || end > document.timeline.cycleCount) return { ok: false, message: "propose_delete_cycles requires integer boundaries within the timeline and end > start." };
+    return commandFor({ type: "timeline.delete", start, end }, `Delete cycles ${start}–${end}`, "typed_delete_cycles");
+  }
+  if (tool === "propose_move_range") {
+    const start = integer("start"); const end = integer("end"); const to = integer("to");
+    if (start === undefined || end === undefined || to === undefined || start < 0 || end <= start || end > document.timeline.cycleCount || to < 0 || to > document.timeline.cycleCount) return { ok: false, message: "propose_move_range requires integer source/target boundaries within the timeline and end > start." };
+    return commandFor({ type: "timeline.moveRange", start, end, to }, `Move cycles ${start}–${end} to ${to}`, "typed_move_range");
+  }
+  return { ok: false, message: `Unsupported typed timeline proposal '${tool}'.` };
+}
+
 /** Provider-neutral boundary. Implementations may be backed by a mock, local
  * model, or remote service, but they return proposals only; Canonical changes
  * are always applied by the editor's SemanticCommand owner. */
