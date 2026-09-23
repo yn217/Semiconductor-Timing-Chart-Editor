@@ -1340,7 +1340,7 @@
         "visual"
       ],
       "decision": "KEEP",
-      "reason": "The test asserts user-visible region geometry, hidden/visible state and view-only invariants in the real workspace; this is the single retained guard after removing duplicate variants that repeated the same hide/round-trip/show flow or inspected CSS grid tracks directly.",
+      "reason": "The test asserts user-visible region geometry, hidden/visible state and view-only invariants at both supported viewport sizes in one workspace; Bottom is restored between sizes. This is the single retained guard after removing duplicate variants that repeated the same hide/round-trip/show flow or inspected CSS grid tracks directly.",
       "replacementTest": null
     },
     {
