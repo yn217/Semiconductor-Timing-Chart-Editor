@@ -2,6 +2,30 @@
   "schemaVersion": 1,
   "consolidations": [
     {
+      "from": { "file": "full-gui.spec.ts", "title": "matches the locked desktop pane geometry at the Golden viewport" },
+      "to": { "file": "gui-reference-v8.spec.ts", "title": "matches the v8 shell contract without mutating canonical state" },
+      "protectedInvariant": "At the desktop reference viewport, ribbon/workspace/bottom/inspector geometry stays aligned to the approved shell dimensions.",
+      "reason": "The v8 shell contract already measures the same reference viewport and was strengthened to assert workspace top, Bottom X/height, and Inspector X/width alongside shell geometry; the separate test only repeated those fixed coordinates."
+    },
+    {
+      "from": { "file": "full-gui.spec.ts", "title": "keeps the V1 Home Ribbon dense without horizontal scrolling" },
+      "to": { "file": "gui-reference-v8.spec.ts", "title": "matches the v8 shell contract without mutating canonical state" },
+      "protectedInvariant": "The desktop Home Ribbon retains its intended height/group structure and does not introduce horizontal scrolling.",
+      "reason": "The target already verifies the desktop Ribbon height, non-overflow, major-group count, title/tabs/status dimensions, and group visibility in the same production presentation contract."
+    },
+    {
+      "from": { "file": "full-gui.spec.ts", "title": "Left Signal/Group filter is positioned in the V1 pane header and remains DOM-only" },
+      "to": { "file": "left-tree-type-filter.spec.ts", "title": "combines the Left Tree type and text filters without mutation at 1672px" },
+      "protectedInvariant": "Text filtering changes only Left Tree presentation, leaves Canonical/History untouched, and clearing the query restores rows while preserving type filter state.",
+      "reason": "The retained type+text filter journey already verifies view-only state across both widths; it now uses the visible Clear signal tree filter control rather than only filling an empty string. Header placement remains checked by the v8 reference contract."
+    },
+    {
+      "from": { "file": "full-gui.spec.ts", "title": "Group header chevron collapses derived rows without mutating Canonical or History" },
+      "to": { "file": "left-tree-interaction.spec.ts", "title": "collapses only Left Tree descendants and restores stable rows without a canonical mutation" },
+      "protectedInvariant": "Group disclosure changes navigation descendants only, preserves frozen/timing/wave rows and stable order, and causes no document/history/render mutation.",
+      "reason": "The retained test exercises all three groups and stable row restoration while checking derived surfaces and render counters; the removed test repeated the same projection lifecycle for one group and added icon-path implementation detail."
+    },
+    {
       "from": {
         "file": "qa-fresh-state-journeys.spec.ts",
         "title": "J6 annotation create -> drag -> Escape leaves Canonical untouched"

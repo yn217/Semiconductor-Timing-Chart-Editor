@@ -32,12 +32,14 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   expect(metrics.tabs).toMatchObject({ y: 31, height: 34 });
   expect(metrics.ribbon).toMatchObject({ y: 65, height: 102 });
   expect(metrics.leftWidth).toBe(265);
+  expect(metrics.workspace.y).toBe(167);
+  expect(metrics.bottom).toMatchObject({ x: 265, height: 240 });
   // frozenWidth is always Math.max(frozenPaneWidthState, layout.roleColumnWidth
   // + layout.signalNameWidth). The V8 fixture uses the approved 61 + 148
   // columns, so both normal and visual-reference routes expose the same 209px
   // minimum from the current document layout.
   expect(metrics.frozenWidth).toBe(209);
-  expect(metrics.inspector.width).toBe(297);
+  expect(metrics.inspector).toMatchObject({ x: 1375, width: 297 });
   expect(metrics.bottom.height).toBe(240);
   expect(metrics.status.height).toBe(25);
   expect(metrics.ribbonOverflow.scrollWidth).toBeLessThanOrEqual(metrics.ribbonOverflow.clientWidth + 1);

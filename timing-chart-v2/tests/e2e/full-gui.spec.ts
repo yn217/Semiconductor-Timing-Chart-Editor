@@ -34,49 +34,6 @@ async function createTextAnnotation(page: Page) {
   return host.locator("[data-role='annotation-owner']").last();
 }
 
-test("matches the locked desktop pane geometry at the Golden viewport", async ({ page }) => {
-  await page.setViewportSize({ width: 1672, height: 941 });
-  await ready(page);
-  const ribbon = await page.getByTestId("ribbon").boundingBox();
-  const workspace = await page.locator(".desktop-workspace").boundingBox();
-  const bottom = await page.getByTestId("bottom-editor").boundingBox();
-  const inspector = await page.getByTestId("inspector").boundingBox();
-  expect(ribbon).toMatchObject({ y: 65, height: 102 });
-  expect(workspace).toMatchObject({ y: 167 });
-  expect(bottom).toMatchObject({ x: 265, height: 240 }); // #756: Bottom belongs to the center stack, right of the continuous left rail
-  expect(inspector).toMatchObject({ x: 1375, width: 297 });
-  await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction" })).toHaveCount(0);
-  // Renamed from .ribbon-group to .ribbon-major-group by the PowerPoint-style
-  // ribbon redesign; the Home tab also grew an 8th group (Transaction) since
-  // this count was last locked -- both confirmed current/intentional via
-  // live production DOM, not a regression.
-  // #406: Home Ribbon's group set is now ActiveContext-dependent for
-  // Time/Layout (Cycle/Signal-only), but Transaction stays common (see
-  // the scoped-decision comment on commonRibbonGroups in
-  // minimal-cycle-view-ribbon.tsx) -- so the default Cycle context still
-  // shows all 8 groups.
-  await expect(page.locator(".ribbon-major-group")).toHaveCount(8);
-});
-
-test("keeps the V1 Home Ribbon dense without horizontal scrolling", async ({ page }) => {
-  await page.setViewportSize({ width: 1672, height: 941 });
-  await ready(page);
-  const ribbon = page.getByTestId("ribbon");
-  const metrics = await ribbon.evaluate((element) => ({
-    clientWidth: element.clientWidth,
-    scrollWidth: element.scrollWidth,
-    height: element.getBoundingClientRect().height,
-    groupWidths: [...element.querySelectorAll<HTMLElement>(".ribbon-major-group")].map((group) => Math.round(group.getBoundingClientRect().width)),
-  }));
-  expect(metrics.height).toBe(102);
-  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
-  expect(metrics.groupWidths.length).toBe(8);
-  await expect(page.locator(".app-titlebar")).toHaveCSS("height", "31px");
-  await expect(page.locator(".ribbon-tabs")).toHaveCSS("height", "34px");
-  await expect(page.locator(".status-bar")).toHaveCSS("height", "25px");
-  await page.screenshot({ path: ".tmp_gui_reference/gui-batch-shell-dut-1672x941.png", animations: "disabled" });
-});
-
 test("Left Signal/Group rows expose V1 role and visibility controls through SemanticCommand", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
   await ready(page);
@@ -94,24 +51,6 @@ test("Left Signal/Group rows expose V1 role and visibility controls through Sema
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
   await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toHaveCount(1);
-});
-
-test("Left Signal/Group filter is positioned in the V1 pane header and remains DOM-only", async ({ page }) => {
-  await page.setViewportSize({ width: 1672, height: 941 });
-  await ready(page);
-  const host = page.getByTestId("cycle-surface");
-  const search = page.getByTestId("signal-tree-search-top");
-  await expect(search).toBeVisible();
-  await expect(search).toHaveValue("");
-  const revision = await host.getAttribute("data-canonical-revision");
-  const history = await page.getByTestId("history-status").textContent();
-  await search.fill("ready");
-  await expect(host.locator("[data-role='left-row'][data-name='READY']")).toBeVisible();
-  await expect(host.locator("[data-role='left-row'][data-name='REQUEST']")).toBeHidden();
-  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
-  await expect(page.getByTestId("history-status")).toHaveText(history!);
-  await page.getByRole("button", { name: "Clear signal tree filter" }).click();
-  await expect(host.locator("[data-role='left-row'][data-name='REQUEST']")).toBeVisible();
 });
 
 test("Left tree Add surface exposes real Signal/Clock/Bus/State/Group commands", async ({ page }) => {
@@ -132,41 +71,6 @@ test("Left tree Add surface exposes real Signal/Clock/Bus/State/Group commands",
   await expect(host).toHaveAttribute("data-canonical-revision", "1");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(page.getByTestId("signal-count-status")).toHaveText("Signals: 9");
-});
-
-test("Group header chevron collapses derived rows without mutating Canonical or History", async ({ page }) => {
-  await page.setViewportSize({ width: 1672, height: 941 });
-  await ready(page);
-  const host = page.getByTestId("cycle-surface");
-  const surface = host.locator("[data-role='timing-chart-surface']");
-  const revision = await host.getAttribute("data-canonical-revision");
-  const history = await page.getByTestId("history-status").textContent();
-  const counters = await surface.getAttribute("data-render-counters");
-  const initialCounters = JSON.parse(counters!);
-  const controlHeader = host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control']");
-  await expect(host.locator("[data-role='left-group-header']")).toHaveCount(3);
-  await expect(host.locator("[data-role='frozen-group-header']")).toHaveCount(3);
-  await expect(host.locator("[data-role='timing-group-header']")).toHaveCount(3);
-  await expect(controlHeader).toHaveAttribute("data-group-name", "Control");
-  await page.screenshot({ path: ".tmp_gui_reference/gui-batch-group-headers-1672x941.png" });
-  await expect(controlHeader).toBeVisible();
-  await controlHeader.locator("[data-role='tree-collapse']").click();
-  await expect(host).toHaveAttribute("data-collapsed-groups", "grp_cycle_control");
-  await expect(controlHeader.locator("[data-role='tree-collapse']")).toHaveAttribute("aria-expanded", "false");
-  await expect(controlHeader.locator("[data-role='tree-collapse'] svg path")).toHaveAttribute("d", "M9 6l6 6-6 6");
-  await expect(host.locator("[data-role='left-row'][data-group-id='grp_cycle_control']")).toHaveCount(0);
-  await expect(host.locator("[data-role='frozen-row'][data-group-id='grp_cycle_control']")).toHaveCount(5);
-  await expect(host.locator("[data-role='timing-row'][data-group-id='grp_cycle_control']")).toHaveCount(5);
-  await expect(host.locator("[data-role='wave-owner'][data-group-id='grp_cycle_control']")).toHaveCount(5);
-  await expect(host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_payload']")).toBeVisible();
-  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
-  await expect(page.getByTestId("history-status")).toHaveText(history!);
-  await expect.poll(async () => JSON.parse((await surface.getAttribute("data-render-counters"))!).waveDromRenders).toBe(initialCounters.waveDromRenders);
-  await expect.poll(async () => JSON.parse((await surface.getAttribute("data-render-counters"))!).localGeometryBuilds).toBe(initialCounters.localGeometryBuilds);
-  await controlHeader.locator("[data-role='tree-collapse']").click();
-  await expect(host).toHaveAttribute("data-collapsed-groups", "");
-  await expect(controlHeader.locator("[data-role='tree-collapse']")).toHaveAttribute("aria-expanded", "true");
-  await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toBeVisible();
 });
 
 test("Inspector keeps the V1 sectioned editor geometry for a selected clock", async ({ page }) => {
