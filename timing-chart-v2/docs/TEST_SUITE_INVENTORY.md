@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 515/963 cases reviewed.
+Semantic review progress: 526/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 229 |
-| `nightly` | 139 |
-| `performance` | 26 |
-| `pr` | 157 |
+| `integration` | 235 |
+| `nightly` | 141 |
+| `performance` | 27 |
+| `pr` | 161 |
 | `visual` | 120 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -306,7 +306,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `transaction-bottom-panel-table.spec.ts` | 2 | 0/2 reviewed |
 | `transaction-bottom-phase-linked-signals.spec.ts` | 1 | 0/1 reviewed |
 | `transaction-bottom-toolbar-add-ungroup.spec.ts` | 1 | 0/1 reviewed |
-| `transaction-drag.spec.ts` | 11 | 0/11 reviewed |
+| `transaction-drag.spec.ts` | 11 | 11/11 reviewed |
 | `transaction-empty-state-create-lane-fix.spec.ts` | 1 | 0/1 reviewed |
 | `transaction-export.spec.ts` | 16 | 0/16 reviewed |
 | `transaction-group-management.spec.ts` | 4 | 4/4 reviewed |
