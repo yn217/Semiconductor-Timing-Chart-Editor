@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T02:46:34.649Z",
+  "generatedAt": "2026-09-23T02:51:24.359Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 526,
+  "reviewedCaseCount": 537,
   "curatedProfileCounts": {
-    "integration": 235,
-    "nightly": 141,
-    "performance": 27,
-    "pr": 161,
+    "integration": 236,
+    "nightly": 148,
+    "performance": 36,
+    "pr": 162,
     "visual": 120
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -15045,18 +15045,21 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "view-only-invalidation-cost",
+      "originIssue": 175,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Selection, panel, zoom, scroll, and explicit Refresh Checks leave document/history unchanged; passive operations avoid expensive validator/render work while Refresh Checks invokes validation once.",
+      "duplicateGroup": "incremental-invalidation-performance",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Separates semantic no-mutation behavior from internal cost counters; retain the expensive-owner invariant as integration/architecture evidence rather than a generic user journey.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "performance-closure.spec.ts",
@@ -15067,18 +15070,21 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "snap-index-invalidation-contract",
+      "originIssue": 174,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Renaming a Signal does not rebuild the time-geometry SnapIndex because the edit is non-geometric.",
+      "duplicateGroup": "incremental-invalidation-performance",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This guards an owner/invalidation cost boundary using internal counters; keep it in a dedicated performance/architecture gate and add cheaper invalidation-policy unit coverage where available.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance"
+      ]
     },
     {
       "file": "performance-closure.spec.ts",
@@ -15089,18 +15095,22 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "snap-index-viewport-retarget",
+      "originIssue": 174,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A viewport jump retargets SnapIndex queries to newly visible rows without scanning every row and still resolves a bottom-row annotation endpoint.",
+      "duplicateGroup": "incremental-invalidation-performance",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Uses a 1k Signal document, vertical virtualization, pointer queries, and internal build/visit counters; retain in heavy performance validation, not PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "performance-closure.spec.ts",
@@ -15111,18 +15121,21 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "renderer-diagnostics-pull-model",
+      "originIssue": 174,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Heavy per-signal diagnostic maps are absent from published hot-path attributes but remain available through an explicit pull snapshot API.",
+      "duplicateGroup": "incremental-invalidation-performance",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is an internal observability/serialization architecture contract rather than user behavior; keep in the dedicated performance architecture gate and avoid general E2E duplication.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance"
+      ]
     },
     {
       "file": "performance-closure.spec.ts",
@@ -15133,18 +15146,21 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "medium-scale-interaction-performance-guard",
+      "originIssue": 175,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "On the 100x500 representative fixture, user-visible interaction performance is sampled while selection/reorder/edit/annotation/view preserve documented render, geometry, History, and dirty-state invariants.",
+      "duplicateGroup": "medium-scale-performance-gates",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The test explicitly defines a PR guard with a representative, not 10k+, fixture and reports median/p95; retain in PR pending measured runtime evidence, while replacing exact internal counters with user-cost budgets where possible.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "performance-closure.spec.ts",
@@ -15155,18 +15171,22 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "large-document-virtualized-owner-bounds",
+      "originIssue": 174,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A 1000x1000 document maintains viewport-scale mounted rows/owners and bounded caches through repeated vertical scrolling, with no duplicate stable Signal bindings.",
+      "duplicateGroup": "large-document-performance",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Large synthetic document plus repeated scroll and owner/cache diagnostics is an intentional performance gate; preserve it outside the routine PR suite.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "performance-closure.spec.ts",
@@ -15177,18 +15197,22 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "large-document-open-save-performance",
+      "originIssue": 174,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A valid 1000x1000 fixture can open and save while browser-level timing and resource evidence is recorded.",
+      "duplicateGroup": "large-document-performance",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Large-document Open/Save is a high-cost persistence benchmark; retain as automated integration/performance evidence and do not run in ordinary focused PR verification.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "performance-closure.spec.ts",
@@ -15199,18 +15223,22 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "large-document-viewport-projection-scaling",
+      "originIssue": 174,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "For 1k/5k/10k Signal documents, viewport scrolling visits a bounded row set without full scans or RowLayout rebuilds.",
+      "duplicateGroup": "large-document-performance",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This multi-size scaling sweep is explicit large-fixture performance coverage; keep it automated in performance/nightly rather than routine PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "performance-closure.spec.ts",
@@ -15221,18 +15249,22 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "document-open-owner-retention",
+      "originIssue": 174,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Repeated document replacement releases stale renderer/row owners and handlers, keeps caches bounded, and leaves the new active Signal editable.",
+      "duplicateGroup": "large-document-open-lifecycle",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Exercises repeated Open, forced GC, owner/cache diagnostics, and a final edit; preserve as automated nightly lifecycle coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "performance-closure.spec.ts",
@@ -15243,18 +15275,22 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "open-first-correct-paint-scale",
+      "originIssue": 174,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "First correct render after Open has reported median/p95 measurements across small, representative, and long-cycle documents.",
+      "duplicateGroup": "large-document-open-lifecycle",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Runs repeated Opens across multiple fixtures to produce scale-specific timing distributions; this is a benchmark, not a correctness smoke.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "performance-closure.spec.ts",
@@ -15265,18 +15301,22 @@
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "nightly-heavy-profile-sweep",
+      "originIssue": 174,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Nightly PERF_SCALE execution exercises annotation-heavy 500x500 and transaction-heavy 1000x1000 profiles and records renderer/DOM diagnostics.",
+      "duplicateGroup": "large-document-performance",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is the heaviest profile and was previously permanently skipped because test:perf:nightly did not set PERF_SCALE; the runner is being corrected to make the nightly path actually execute it.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "performance-internal-latency.spec.ts",
@@ -25320,7 +25360,7 @@
     {
       "file": "performance-closure.spec.ts",
       "caseCount": 11,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 11,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [
@@ -25329,7 +25369,7 @@
         "geometryRead",
         "explicitWait"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "performance-internal-latency.spec.ts",
