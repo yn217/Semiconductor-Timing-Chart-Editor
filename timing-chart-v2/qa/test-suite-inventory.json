@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:00:13.721Z",
+  "generatedAt": "2026-09-23T07:02:02.715Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 819,
+  "reviewedCaseCount": 823,
   "curatedProfileCounts": {
-    "integration": 418,
+    "integration": 421,
     "nightly": 172,
     "performance": 45,
-    "pr": 229,
+    "pr": 230,
     "visual": 144
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -19280,18 +19280,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "default-clock-timeline-insert-smoke",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The ordinary uncontrolled default Clock permits a half-open range insertion through the production Timeline editor and produces one canonical/history change with the expected cycle count.",
+      "duplicateGroup": "default-clock-timeline-transform-smokes",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The broader transform matrix repeats insertion as its first operation, but this isolated short PR smoke gives direct low-cost feedback for the common insertion path without requiring the four-operation matrix to run.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19302,18 +19305,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "default-clock-timeline-transform-matrix",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Insert, delete, duplicate, and move through the ordinary Timeline UI each produce one semantic/history operation and the expected resulting timeline length with an uncontrolled periodic Clock.",
+      "duplicateGroup": "default-clock-timeline-transform-smokes",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The matrix covers the four user-facing transform commands against the ordinary default Clock. Its repeated fresh-page setup is more expensive than the dedicated insertion smoke, but each operation protects a separate adapter/command route.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19324,18 +19330,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "uncontrolled-clock-move-range-history",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Moving a source-time range also moves the uncontrolled Clock generator start, and Undo/Redo restore/apply the matching generator start.",
+      "duplicateGroup": "timeline-transform-clock-source-ripple",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The ordinary transform matrix checks resulting timeline lengths but does not inspect Clock generator metadata. This directly guards source-time generator ripple and its reversible history behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19346,18 +19355,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "timeline-transform-save-open-roundtrip",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A committed timeline insertion survives Save, New, and production Recent/Open with the resulting cycle count and shifted Signal events intact, while the reopened document starts with clean History.",
+      "duplicateGroup": "timeline-transform-clock-source-ripple",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This complements the Clock move Undo/Redo test with serialization and restore of transformed Signal data. Neither an in-memory command test nor the TimeGroup-specific persistence case proves this timeline-edit Save/Open route.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -26588,7 +26600,7 @@
     {
       "file": "timeline-editor.spec.ts",
       "caseCount": 29,
-      "reviewedCaseCount": 10,
+      "reviewedCaseCount": 14,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
