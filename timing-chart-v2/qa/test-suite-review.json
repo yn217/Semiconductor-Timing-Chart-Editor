@@ -2036,12 +2036,12 @@
       "type": "ACCESSIBILITY_CONTRACT",
       "costClass": "FAST",
       "measuredRuntimeMs": null,
-      "primaryContract": "Transaction mode has no keyboard-operable fixed-width sidebar separator, while Cycle retains its functional separator.",
+      "primaryContract": "Transaction mode has no keyboard-operable fixed-width sidebar separator, while Cycle retains its functional separator whose ARIA width changes on ArrowRight.",
       "duplicateGroup": null,
       "executionTier": "TIER_2_FOCUSED_BROWSER",
       "profiles": ["pr"],
       "decision": "KEEP",
-      "reason": "This is a concise real keyboard/focus contract for the mode-specific control and is separate from the Cycle rail geometry cases in the same spec file.",
+      "reason": "This subsumes the standalone #741 no-resizer/keyboard case in one journey: the inert control is absent in Transaction, and the real Cycle separator remains keyboard-operable. It is separate from the Cycle rail geometry cases in the same spec file.",
       "replacementTest": null
     },
     {

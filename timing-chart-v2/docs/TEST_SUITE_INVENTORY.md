@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 333 spec files and 970 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 332 spec files and 969 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 207/970 cases reviewed.
+Semantic review progress: 207/969 cases reviewed.
 
 ## Curated profile membership
 
@@ -181,7 +181,6 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-738-stress-rebase.spec.ts` | 4 | 4/4 reviewed |
 | `issue-740-741-756-cycle-layout.spec.ts` | 3 | 3/3 reviewed |
 | `issue-740-cycle-bottom-hidden.spec.ts` | 2 | 2/2 reviewed |
-| `issue-741-transaction-no-left-resizer.spec.ts` | 1 | 0/1 reviewed |
 | `issue-744-diagnostics-freshness.spec.ts` | 2 | 0/2 reviewed |
 | `issue-746-visible-group-create.spec.ts` | 2 | 0/2 reviewed |
 | `issue-747-a11y-and-sort-matrix.spec.ts` | 1 | 1/1 reviewed |
@@ -539,6 +538,7 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-740-741-756-cycle-layout.spec.ts` “#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at 1672x941” → `issue-740-cycle-bottom-hidden.spec.ts` “Cycle releases Bottom space when hidden at 1672x941”. **Invariant:** Hiding Cycle Bottom removes the reserved space and is view-only. **Reason:** The removed case repeated the hide state, panel-to-workspace edge and hidden resizer assertions; the retained #740 journey covers those with stronger Dirty/revision checks, while #756 coverage remains in the same spec.
 - `issue-740-741-756-cycle-layout.spec.ts` “#740 Cycle: hiding Bottom returns every Bottom/splitter row to the timing canvas at 1280x720” → `issue-740-cycle-bottom-hidden.spec.ts` “Cycle releases Bottom space when hidden at 1280x720”. **Invariant:** Hiding Cycle Bottom removes the reserved space and is view-only. **Reason:** The compact case was a duplicate of the retained #740 contract; the shared file continues to exercise #741 and #756 independently.
 - `issue-766-cycle-plural.spec.ts` “Time Scale readout uses singular/plural correctly at 1672x941” → `issue-766-cycle-plural.spec.ts` “Time Scale readout uses singular/plural correctly”. **Invariant:** TC singular/plural copy is correct for values 1, 10 and 50. **Reason:** Copy is viewport-independent; the retained compact case checks the same three supported values and no singular 'cycles' regression.
+- `issue-741-transaction-no-left-resizer.spec.ts` “Transaction mode exposes no keyboard-operable left-pane separator” → `issue-740-741-756-cycle-layout.spec.ts` “#741 Transaction fixed-width sidebar exposes no focusable ghost resizer and hides no width mutation”. **Invariant:** Transaction has no focusable ghost resizer, while Cycle retains a functional keyboard-operable separator. **Reason:** The retained #741 case now checks both the Transaction absence and a Cycle ArrowRight change to aria-valuenow; the standalone test duplicated the absence assertion and only added the latter half.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 

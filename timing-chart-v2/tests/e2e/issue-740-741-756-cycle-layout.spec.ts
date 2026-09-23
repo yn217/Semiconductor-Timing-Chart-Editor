@@ -15,7 +15,12 @@ test("#741 Transaction fixed-width sidebar exposes no focusable ghost resizer an
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
   await expect(page.getByTestId("left-pane-resizer")).toHaveCount(0);
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
-  await expect(page.getByTestId("left-pane-resizer")).toHaveCount(1);
+  const separator = page.getByTestId("left-pane-resizer");
+  await expect(separator).toHaveCount(1);
+  const before = await separator.getAttribute("aria-valuenow");
+  await separator.focus();
+  await page.keyboard.press("ArrowRight");
+  expect(await separator.getAttribute("aria-valuenow")).not.toBe(before);
 });
 
 for (const size of SIZES) {

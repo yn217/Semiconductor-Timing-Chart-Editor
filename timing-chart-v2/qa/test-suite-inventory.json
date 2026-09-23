@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T00:34:19.571Z",
+  "generatedAt": "2026-09-23T00:37:08.112Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,8 +11,8 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 333,
-  "caseCount": 970,
+  "specFileCount": 332,
+  "caseCount": 969,
   "reviewedCaseCount": 207,
   "curatedProfileCounts": {
     "integration": 55,
@@ -10838,11 +10838,11 @@
       "type": "ACCESSIBILITY_CONTRACT",
       "costClass": "FAST",
       "measuredRuntimeMs": null,
-      "primaryContract": "Transaction mode has no keyboard-operable fixed-width sidebar separator, while Cycle retains its functional separator.",
+      "primaryContract": "Transaction mode has no keyboard-operable fixed-width sidebar separator, while Cycle retains its functional separator whose ARIA width changes on ArrowRight.",
       "duplicateGroup": null,
       "executionTier": "TIER_2_FOCUSED_BROWSER",
       "decision": "KEEP",
-      "reason": "This is a concise real keyboard/focus contract for the mode-specific control and is separate from the Cycle rail geometry cases in the same spec file.",
+      "reason": "This subsumes the standalone #741 no-resizer/keyboard case in one journey: the inert control is absent in Transaction, and the real Cycle separator remains keyboard-operable. It is separate from the Cycle rail geometry cases in the same spec file.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -10852,7 +10852,7 @@
     {
       "file": "issue-740-741-756-cycle-layout.spec.ts",
       "suitePath": [],
-      "line": 22,
+      "line": 27,
       "title": "#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -10878,7 +10878,7 @@
     {
       "file": "issue-740-741-756-cycle-layout.spec.ts",
       "suitePath": [],
-      "line": 22,
+      "line": 27,
       "title": "#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -10952,28 +10952,6 @@
         "integration",
         "visual"
       ]
-    },
-    {
-      "file": "issue-741-transaction-no-left-resizer.spec.ts",
-      "suitePath": [],
-      "line": 3,
-      "title": "Transaction mode exposes no keyboard-operable left-pane separator",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
-      "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
     },
     {
       "file": "issue-744-diagnostics-freshness.spec.ts",
@@ -23700,15 +23678,6 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
-      "file": "issue-741-transaction-no-left-resizer.spec.ts",
-      "caseCount": 1,
-      "reviewedCaseCount": 0,
-      "originIssue": "741",
-      "declaredTimeoutMs": null,
-      "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
-    },
-    {
       "file": "issue-744-diagnostics-freshness.spec.ts",
       "caseCount": 2,
       "reviewedCaseCount": 0,
@@ -25769,6 +25738,18 @@
       },
       "protectedInvariant": "TC singular/plural copy is correct for values 1, 10 and 50.",
       "reason": "Copy is viewport-independent; the retained compact case checks the same three supported values and no singular 'cycles' regression."
+    },
+    {
+      "from": {
+        "file": "issue-741-transaction-no-left-resizer.spec.ts",
+        "title": "Transaction mode exposes no keyboard-operable left-pane separator"
+      },
+      "to": {
+        "file": "issue-740-741-756-cycle-layout.spec.ts",
+        "title": "#741 Transaction fixed-width sidebar exposes no focusable ghost resizer and hides no width mutation"
+      },
+      "protectedInvariant": "Transaction has no focusable ghost resizer, while Cycle retains a functional keyboard-operable separator.",
+      "reason": "The retained #741 case now checks both the Transaction absence and a Cycle ArrowRight change to aria-valuenow; the standalone test duplicated the absence assertion and only added the latter half."
     }
   ]
 }

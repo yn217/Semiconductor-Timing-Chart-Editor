@@ -216,6 +216,18 @@
       },
       "protectedInvariant": "TC singular/plural copy is correct for values 1, 10 and 50.",
       "reason": "Copy is viewport-independent; the retained compact case checks the same three supported values and no singular 'cycles' regression."
+    },
+    {
+      "from": {
+        "file": "issue-741-transaction-no-left-resizer.spec.ts",
+        "title": "Transaction mode exposes no keyboard-operable left-pane separator"
+      },
+      "to": {
+        "file": "issue-740-741-756-cycle-layout.spec.ts",
+        "title": "#741 Transaction fixed-width sidebar exposes no focusable ghost resizer and hides no width mutation"
+      },
+      "protectedInvariant": "Transaction has no focusable ghost resizer, while Cycle retains a functional keyboard-operable separator.",
+      "reason": "The retained #741 case now checks both the Transaction absence and a Cycle ArrowRight change to aria-valuenow; the standalone test duplicated the absence assertion and only added the latter half."
     }
   ]
 }
