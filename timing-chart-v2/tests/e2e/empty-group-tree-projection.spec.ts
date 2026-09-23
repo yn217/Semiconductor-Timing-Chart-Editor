@@ -164,13 +164,20 @@ test("renders the first signal inserted into an initially empty group", async ({
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   const surface = host.locator("[data-role='timing-chart-surface']");
+  await revealTreeBottom(page);
+  const existingIds = await surface.locator("[data-role='left-row'][data-group-id='grp_cycle_scratch']").evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId).filter((id): id is string => Boolean(id)));
+
   await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Insert", exact: true }).click();
   await page.getByTestId("insert-ribbon").getByRole("button", { name: "Event", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await revealTreeBottom(page);
 
-  const created = surface.locator("[data-role='left-row'][data-group-id='grp_cycle_scratch']").last();
-  const createdId = await created.getAttribute("data-row-id");
+  const rows = surface.locator("[data-role='left-row'][data-group-id='grp_cycle_scratch']");
+  await expect.poll(async () => (await rows.evaluateAll((items) => items.map((row) => (row as HTMLElement).dataset.rowId).filter(Boolean))).filter((id) => !existingIds.includes(id!)).length).toBe(1);
+  const currentIds = await rows.evaluateAll((items) => items.map((row) => (row as HTMLElement).dataset.rowId).filter((id): id is string => Boolean(id)));
+  const createdIds = currentIds.filter((id) => !existingIds.includes(id));
+  expect(createdIds).toHaveLength(1);
+  const [createdId] = createdIds;
   expect(createdId).toBeTruthy();
   await expect(surface.locator(`[data-role='left-row'][data-row-id='${createdId}']`)).toHaveCount(1);
   await expect(surface.locator(`[data-role='frozen-row'][data-row-id='${createdId}']`)).toHaveCount(1);
