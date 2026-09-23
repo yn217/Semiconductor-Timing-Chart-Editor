@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:43:35.225Z",
+  "generatedAt": "2026-09-23T05:44:43.517Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 700,
+  "reviewedCaseCount": 703,
   "curatedProfileCounts": {
-    "integration": 330,
+    "integration": 332,
     "nightly": 163,
     "performance": 44,
-    "pr": 201,
+    "pr": 202,
     "visual": 142
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -8398,18 +8398,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "inspector-multiselect-context-and-hide-undo",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Selecting 2+ Signals changes Inspector context to a truthful Multi-Selection summary; bulk Hide acts on the full selected set in one History entry, Undo restores both, and returning to one selection restores the Signal Inspector.",
+      "duplicateGroup": "inspector-multiselection-bulk-actions",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This covers Inspector context switching and its own bulk Hide adapter/Undo path. Ribbon multiselect tests do not exercise Inspector's type-aware context or fallback after reducing the selection.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "inspector-multi-selection.spec.ts",
@@ -8420,18 +8423,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "inspector-multiselect-delete-atomicity",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inspector Delete Selected removes exactly all selected stable Signal IDs as a single History operation and Undo restores the full set.",
+      "duplicateGroup": "inspector-multiselection-bulk-actions",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the Inspector-specific Delete adapter and checks exact entity removal, counts, atomic history, and Undo. The Home multi-selection Delete route is a different production command surface.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "inspector-multi-selection.spec.ts",
@@ -8442,18 +8448,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "inspector-multiselect-isolate-atomicity",
+      "originIssue": 431,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Show Only Selected leaves the full selected Signal set visible, hides every unselected Signal in one History entry, and Undo restores unselected visibility.",
+      "duplicateGroup": "inspector-multiselection-bulk-actions",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Isolation is distinct from Hide Selected and is an explicit #431 productivity action; only this test checks the selected-vs-unselected batch semantics and Undo behavior in the Inspector.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "inspector-waveform-style.spec.ts",
@@ -24371,11 +24380,11 @@
     {
       "file": "inspector-multi-selection.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "inspector-waveform-style.spec.ts",
