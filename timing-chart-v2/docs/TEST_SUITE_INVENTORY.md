@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 425/963 cases reviewed.
+Semantic review progress: 430/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 196 |
+| `integration` | 197 |
 | `nightly` | 126 |
 | `performance` | 23 |
-| `pr` | 129 |
-| `visual` | 94 |
+| `pr` | 132 |
+| `visual` | 95 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -66,7 +66,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `combined-column-resize-alignment.spec.ts` | 1 | 1/1 reviewed |
 | `combined-left-panel-transaction-tree.spec.ts` | 2 | 2/2 reviewed |
 | `combined-long-fixture-acceptance.spec.ts` | 2 | 2/2 reviewed |
-| `command-parity-delete.spec.ts` | 1 | 0/1 reviewed |
+| `command-parity-delete.spec.ts` | 1 | 1/1 reviewed |
 | `comment-row-draft-consistency.spec.ts` | 1 | 0/1 reviewed |
 | `cycle-default-pitch.spec.ts` | 1 | 1/1 reviewed |
 | `cycle-frozen-columns-scroll.spec.ts` | 2 | 2/2 reviewed |
@@ -75,17 +75,17 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `design-system-foundation.spec.ts` | 1 | 0/1 reviewed |
 | `diagnostic-aggregator.spec.ts` | 8 | 8/8 reviewed |
 | `dialog-esc-lifecycle.spec.ts` | 1 | 0/1 reviewed |
-| `document-properties.spec.ts` | 1 | 0/1 reviewed |
+| `document-properties.spec.ts` | 1 | 1/1 reviewed |
 | `edge-counter-compact.spec.ts` | 5 | 5/5 reviewed |
 | `edit-commit-contract.spec.ts` | 5 | 5/5 reviewed |
 | `empty-group-tree-projection.spec.ts` | 3 | 3/3 reviewed |
 | `event-pulse-lifecycle.spec.ts` | 2 | 2/2 reviewed |
 | `export-diagnostics.spec.ts` | 2 | 2/2 reviewed |
-| `export-fold-mapping.spec.ts` | 1 | 0/1 reviewed |
-| `export-user-text-boundary.spec.ts` | 1 | 0/1 reviewed |
+| `export-fold-mapping.spec.ts` | 1 | 1/1 reviewed |
+| `export-user-text-boundary.spec.ts` | 1 | 1/1 reviewed |
 | `feature-showcase-startup.spec.ts` | 3 | 0/3 reviewed |
 | `file-beforeunload-dirty-guard.spec.ts` | 1 | 1/1 reviewed |
-| `file-ribbon-blank-controls.spec.ts` | 1 | 0/1 reviewed |
+| `file-ribbon-blank-controls.spec.ts` | 1 | 1/1 reviewed |
 | `font-style-commit-contract.spec.ts` | 1 | 0/1 reviewed |
 | `full-gui.spec.ts` | 46 | 0/46 reviewed |
 | `ghost-trace-delete.spec.ts` | 1 | 0/1 reviewed |
@@ -377,7 +377,6 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `cycle-default-pitch.spec.ts` | querySelector, getComputedStyle, geometryRead, explicitWait |
 | `cycle-frozen-columns-scroll.spec.ts` | getComputedStyle |
 | `design-system-foundation.spec.ts` | querySelector, getComputedStyle, directDomMutation, geometryRead |
-| `document-properties.spec.ts` | querySelector |
 | `edge-counter-compact.spec.ts` | querySelector, geometryRead |
 | `empty-group-tree-projection.spec.ts` | dataset, explicitWait |
 | `feature-showcase-startup.spec.ts` | geometryRead |

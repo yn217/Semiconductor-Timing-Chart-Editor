@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T01:54:49.515Z",
+  "generatedAt": "2026-09-23T02:00:11.811Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 425,
+  "reviewedCaseCount": 430,
   "curatedProfileCounts": {
-    "integration": 196,
+    "integration": 197,
     "nightly": 126,
     "performance": 23,
-    "pr": 129,
-    "visual": 94
+    "pr": 132,
+    "visual": 95
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -4405,18 +4405,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-delete-command-adapter-parity",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Ribbon, context-menu, and keyboard Delete remove the selected stable Signal through equivalent behavior, each restoring it with one Undo.",
+      "duplicateGroup": "signal-delete-adapter-parity",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This directly guards command-adapter parity at three production interaction surfaces and one-step Undo; the compact single-signal path is suitable for routine PR verification.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "comment-row-draft-consistency.spec.ts",
@@ -4839,23 +4842,26 @@
       "file": "document-properties.spec.ts",
       "suitePath": [],
       "line": 3,
-      "title": "Document Properties icon-only actions use accessible inline SVG buttons",
+      "title": "Document Properties legend reorder actions are named and keyboard operable",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "document-properties-legend-reorder-accessibility",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Legend reorder actions expose accessible names, communicate disabled boundaries, and support keyboard activation while changing the visible stable-ID order.",
+      "duplicateGroup": "document-properties-legend-reorder",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The previous test froze private icon SVG/path counts; it now proves the actual accessible action and keyboard-reorder behavior independent of the icon implementation.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "edge-counter-compact.spec.ts",
@@ -5305,18 +5311,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "collapsed-timegroup-svg-export-projection",
+      "originIssue": 202,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "SVG export applies the same collapsed TimeGroup projection as the editor, omits hidden cycle labels and Axis Break markers, and does not alter source document data.",
+      "duplicateGroup": "timegroup-export-projection",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This proves user-visible export projection parity for shared time mapping; on-screen fold behavior alone does not establish the downloaded SVG's geometry or labels.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "export-user-text-boundary.spec.ts",
@@ -5327,18 +5336,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "svg-export-untrusted-document-text",
+      "originIssue": 209,
+      "type": "SECURITY_INVARIANT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Adversarial document text is XML-escaped as text and cannot create active script, event-handler, image, or javascript URL content in exported SVG.",
+      "duplicateGroup": "svg-export-untrusted-text-safety",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a concise security boundary at the actual user-triggered SVG export path; lower-level escaping tests cannot prove the composed export artifact is inert.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "feature-showcase-startup.spec.ts",
@@ -5440,18 +5452,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "file-ribbon-visible-control-layout",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "File Ribbon exposes only named, visible, focusable, non-overlapping actions, and key File dialogs can be opened at the supported desktop widths.",
+      "duplicateGroup": "file-ribbon-control-affordance",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is a responsive layout/affordance audit at multiple widths rather than a command semantic test; keep in the visual profile to protect no-op/blank slot regressions.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "font-style-commit-contract.spec.ts",
@@ -23116,11 +23131,11 @@
     {
       "file": "command-parity-delete.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "comment-row-draft-consistency.spec.ts",
@@ -23209,13 +23224,11 @@
     {
       "file": "document-properties.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
-      "candidateSignals": [
-        "querySelector"
-      ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "candidateSignals": [],
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "edge-counter-compact.spec.ts",
@@ -23271,20 +23284,20 @@
     {
       "file": "export-fold-mapping.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "export-user-text-boundary.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "feature-showcase-startup.spec.ts",
@@ -23309,14 +23322,14 @@
     {
       "file": "file-ribbon-blank-controls.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "font-style-commit-contract.spec.ts",
