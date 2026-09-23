@@ -112,6 +112,28 @@ test("Escape on the unsaved-changes dialog behaves exactly like Cancel", async (
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 
+test("dirty Open keeps keyboard focus inside the dialog and Enter activates the focused action", async ({ page }) => {
+  await page.goto("/");
+  await makeDirty(page);
+  const { dialog } = await openReplacementFromRibbon(page, "Keyboard Target");
+  const cancel = page.getByTestId("unsaved-cancel");
+  const discard = page.getByTestId("unsaved-discard");
+  const save = page.getByTestId("unsaved-save");
+
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(save).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(cancel).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(discard).toBeFocused();
+  await page.keyboard.press("Enter");
+
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator(".app-titlebar h1")).toHaveText("Keyboard Target");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+});
+
 test("dirty Open uses Save before replacing the document", async ({ page }) => {
   await page.goto("/");
   await makeDirty(page);
