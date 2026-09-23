@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 389/963 cases reviewed.
+Semantic review progress: 400/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 172 |
-| `nightly` | 119 |
+| `integration` | 181 |
+| `nightly` | 120 |
 | `performance` | 22 |
-| `pr` | 121 |
+| `pr` | 123 |
 | `visual` | 91 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -73,18 +73,18 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `cycle-ruler-long-document-pitch.spec.ts` | 1 | 1/1 reviewed |
 | `cycle-scroll-pitch-invariant.spec.ts` | 2 | 2/2 reviewed |
 | `design-system-foundation.spec.ts` | 1 | 0/1 reviewed |
-| `diagnostic-aggregator.spec.ts` | 8 | 0/8 reviewed |
+| `diagnostic-aggregator.spec.ts` | 8 | 8/8 reviewed |
 | `dialog-esc-lifecycle.spec.ts` | 1 | 0/1 reviewed |
 | `document-properties.spec.ts` | 1 | 0/1 reviewed |
 | `edge-counter-compact.spec.ts` | 5 | 0/5 reviewed |
 | `edit-commit-contract.spec.ts` | 5 | 0/5 reviewed |
 | `empty-group-tree-projection.spec.ts` | 3 | 0/3 reviewed |
 | `event-pulse-lifecycle.spec.ts` | 2 | 0/2 reviewed |
-| `export-diagnostics.spec.ts` | 2 | 0/2 reviewed |
+| `export-diagnostics.spec.ts` | 2 | 2/2 reviewed |
 | `export-fold-mapping.spec.ts` | 1 | 0/1 reviewed |
 | `export-user-text-boundary.spec.ts` | 1 | 0/1 reviewed |
 | `feature-showcase-startup.spec.ts` | 3 | 0/3 reviewed |
-| `file-beforeunload-dirty-guard.spec.ts` | 1 | 0/1 reviewed |
+| `file-beforeunload-dirty-guard.spec.ts` | 1 | 1/1 reviewed |
 | `file-ribbon-blank-controls.spec.ts` | 1 | 0/1 reviewed |
 | `font-style-commit-contract.spec.ts` | 1 | 0/1 reviewed |
 | `full-gui.spec.ts` | 46 | 0/46 reviewed |

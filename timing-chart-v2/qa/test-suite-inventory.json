@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T01:32:46.869Z",
+  "generatedAt": "2026-09-23T01:39:58.630Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 389,
+  "reviewedCaseCount": 400,
   "curatedProfileCounts": {
-    "integration": 172,
-    "nightly": 119,
+    "integration": 181,
+    "nightly": 120,
     "performance": 22,
-    "pr": 121,
+    "pr": 123,
     "visual": 91
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -4589,18 +4589,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "structured-diagnostics-rejected-clock-update",
+      "originIssue": 269,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A rejected Clock semantic command reports its diagnostic, preserves canonical/history and the prior waveform, then clears the problem after a valid retry.",
+      "duplicateGroup": "diagnostic-source-recovery-visibility",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This verifies the full rejected-command to Problems-panel recovery path and the no-partial-waveform-mutation guarantee; neither is proven by schema tests alone.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "diagnostic-aggregator.spec.ts",
@@ -4611,18 +4614,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "structured-diagnostics-open-failure",
+      "originIssue": 269,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Malformed JSON opened through the production file input yields a structured syntax diagnostic with source location in Problems.",
+      "duplicateGroup": "diagnostic-source-recovery-visibility",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a compact high-value malformed-file boundary that protects user-facing recovery and is suitable for routine PR coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "diagnostic-aggregator.spec.ts",
@@ -4633,18 +4639,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "structured-diagnostics-wave-render-failure",
+      "originIssue": 269,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A render failure identifies the affected stable Signal and provides actionable recovery guidance without changing Canonical or History.",
+      "duplicateGroup": "diagnostic-source-recovery-visibility",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Localization by stable Signal ID and actionable recovery text are distinct from parser/command errors and must be verified through the visible production Problems surface.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "diagnostic-aggregator.spec.ts",
@@ -4655,18 +4664,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "structured-diagnostics-migration-warning-lifecycle",
+      "originIssue": 269,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Opening a legacy V1 document surfaces a migration warning, and replacing it with a valid V2 document clears that stale diagnostic.",
+      "duplicateGroup": "diagnostic-source-recovery-visibility",
+      "executionTier": "TIER_4_SLOW_OR_NIGHTLY",
+      "decision": "KEEP",
+      "reason": "This verifies migration diagnostics across two production Open replacements and stale-diagnostic clearing; retain it in integration/nightly rather than PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "diagnostic-aggregator.spec.ts",
@@ -4677,18 +4690,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "structured-diagnostics-command-rejection-recovery",
+      "originIssue": 269,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A rejected semantic command exposes its command ID, target stable ID, field path, and time-unit context; a successful correction clears the error.",
+      "duplicateGroup": "diagnostic-source-recovery-visibility",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The contract covers diagnostic provenance and recovery across an actual editor command; generic Problems rendering checks do not prove those payload details.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "diagnostic-aggregator.spec.ts",
@@ -4699,18 +4715,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "file-save-recent-storage-failure-isolation",
+      "originIssue": 269,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A successful authoritative download remains successful if optional Recent-document storage fails, with a warning that accurately distinguishes the two outcomes.",
+      "duplicateGroup": "file-operation-storage-failure-isolation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The fault-injected browser storage failure verifies separation of durable file Save from optional metadata persistence and prevents misleading failure reporting.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "diagnostic-aggregator.spec.ts",
@@ -4721,18 +4740,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "recent-document-read-storage-failure",
+      "originIssue": 269,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A Recent-document storage read failure is reported with operation, source, stage, cause, and recovery while keeping the Editor mounted.",
+      "duplicateGroup": "file-operation-storage-failure-isolation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The read path is a separate failure boundary from Save/write failure and uniquely asserts no application crash plus technical diagnostic detail.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "diagnostic-aggregator.spec.ts",
@@ -4743,18 +4765,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "authoritative-file-save-failure-dirty-state",
+      "originIssue": 269,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "If authoritative file Save preparation fails, the Editor reports SAVE_FAILED and preserves the document's Modified state and History.",
+      "duplicateGroup": "file-save-failure-state-preservation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This fault injection protects the authoritative-save boundary and dirty/history preservation; it is distinct from optional Recent-storage failure.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "dialog-esc-lifecycle.spec.ts",
@@ -5149,18 +5174,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "export-download-failure-diagnostics",
+      "originIssue": 269,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Failed browser download preparation for export is reported with operation and recovery guidance, while Canonical, History, and Dirty remain unchanged.",
+      "duplicateGroup": "export-side-effect-failure-diagnostics",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The failure happens at the browser download boundary after SVG generation and must not be conflated with clipboard-write failure; keep as focused integration coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "export-diagnostics.spec.ts",
@@ -5171,18 +5199,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "export-clipboard-failure-diagnostics",
+      "originIssue": 269,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Clipboard write rejection is surfaced with clipboard-specific operation and recovery guidance without mutating document/history state.",
+      "duplicateGroup": "export-side-effect-failure-diagnostics",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Clipboard permission failure is a separate external side effect from file download failure, with its own actionable diagnostic contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "export-fold-mapping.spec.ts",
@@ -5303,18 +5334,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "beforeunload-history-dirty-guard",
+      "originIssue": 208,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The beforeunload guard reflects clean/dirty History state through a real edit/Undo lifecycle and itself does not change Canonical or History.",
+      "duplicateGroup": "dirty-state-unload-guard",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a compact state-safety contract for unsaved navigation protection that cannot be fully inferred from the dirty indicator alone.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "file-ribbon-blank-controls.spec.ts",
@@ -23076,11 +23110,11 @@
     {
       "file": "diagnostic-aggregator.spec.ts",
       "caseCount": 8,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 8,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "dialog-esc-lifecycle.spec.ts",
@@ -23147,11 +23181,11 @@
     {
       "file": "export-diagnostics.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "export-fold-mapping.spec.ts",
@@ -23185,11 +23219,11 @@
     {
       "file": "file-beforeunload-dirty-guard.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "file-ribbon-blank-controls.spec.ts",
