@@ -263,7 +263,7 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
   const onProposeTypedEdit = (tool: string, args: Readonly<Record<string, unknown>>): { readonly error: string } | { readonly summary: string; readonly baseRevision: number; readonly kind: string; readonly requiresApproval: true; readonly message: string } => {
     let result = tool === "propose_insert_cycles" || tool === "propose_delete_cycles" || tool === "propose_move_range" || tool === "propose_duplicate_range"
       ? buildTypedTimelineProposal(document, revision, tool, args)
-      : tool === "propose_create_signal_group" || tool === "propose_rename_signal_group"
+      : tool === "propose_create_signal_group" || tool === "propose_rename_signal_group" || tool === "propose_move_signal_group" || tool === "propose_delete_signal_group"
         ? buildTypedSignalGroupProposal(document, revision, tool, args)
       : tool === "propose_create_transaction_group" || tool === "propose_rename_transaction_group" || tool === "propose_delete_transaction_group"
         ? buildTypedTransactionGroupProposal(document, revision, tool, args)
