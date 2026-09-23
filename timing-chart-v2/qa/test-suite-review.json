@@ -4415,6 +4415,54 @@
       "decision": "KEEP",
       "reason": "This is a responsive layout/affordance audit at multiple widths rather than a command semantic test; keep in the visual profile to protect no-op/blank slot regressions.",
       "replacementTest": null
+    },
+    {
+      "file": "comment-row-draft-consistency.spec.ts",
+      "title": "Comment Row Line Spacing follows the same Draft -> Apply contract as Title/Body (no per-keystroke History entries)",
+      "domain": "comment-row-line-spacing-draft-apply",
+      "originIssue": 426,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Changing Comment Row line spacing stays local until Apply, commits the completed draft once, and Cancel restores the last committed value without changing History.",
+      "duplicateGroup": "comment-row-draft-apply-contract",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["pr"],
+      "decision": "KEEP",
+      "reason": "This compact visible Draft/Apply/Cancel journey protects the historical per-keystroke Semantic Command regression and the user-observable History boundary; state-only tests cannot prove the wired control path.",
+      "replacementTest": null
+    },
+    {
+      "file": "font-style-commit-contract.spec.ts",
+      "title": "Font Family/Size/Color commit once on blur or Enter, and Clear formatting is scoped and no-op when already clear",
+      "domain": "annotation-font-style-commit-boundaries",
+      "originIssue": 331,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Font Family, Size, and Color each commit one History unit at their documented completion boundary; repeated blur and Clear Formatting when already clear do not create extra History entries.",
+      "duplicateGroup": "annotation-font-style-commit-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "profiles": ["integration"],
+      "decision": "KEEP",
+      "reason": "This single journey crosses three distinct editor completion events plus scoped clear/no-op behavior. Keep the complete semantic lifecycle in integration rather than adding its multi-commit sequence to every PR run.",
+      "replacementTest": null
+    },
+    {
+      "file": "design-system-foundation.spec.ts",
+      "title": "non-Home design-system primitives own stable button and icon geometry",
+      "domain": "design-system-ribbon-primitive-geometry",
+      "originIssue": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "SMALL",
+      "measuredRuntimeMs": null,
+      "primaryContract": "The non-Home design-system ribbon button primitive preserves its documented minimum hit width, button height, icon dimensions, label containment, and token value.",
+      "duplicateGroup": "ribbon-primitive-geometry",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "profiles": ["visual"],
+      "decision": "KEEP",
+      "reason": "This deliberately isolates the reusable design-system primitive and its token geometry, so keep it out of semantic PR journeys and in the visual contract profile. It is a primitive-level check, not evidence that every production Ribbon surface mounts the primitive.",
+      "replacementTest": null
     }
   ]
 }

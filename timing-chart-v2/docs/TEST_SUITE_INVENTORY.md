@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 430/963 cases reviewed.
+Semantic review progress: 433/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 197 |
+| `integration` | 198 |
 | `nightly` | 126 |
 | `performance` | 23 |
-| `pr` | 132 |
-| `visual` | 95 |
+| `pr` | 133 |
+| `visual` | 96 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -67,12 +67,12 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `combined-left-panel-transaction-tree.spec.ts` | 2 | 2/2 reviewed |
 | `combined-long-fixture-acceptance.spec.ts` | 2 | 2/2 reviewed |
 | `command-parity-delete.spec.ts` | 1 | 1/1 reviewed |
-| `comment-row-draft-consistency.spec.ts` | 1 | 0/1 reviewed |
+| `comment-row-draft-consistency.spec.ts` | 1 | 1/1 reviewed |
 | `cycle-default-pitch.spec.ts` | 1 | 1/1 reviewed |
 | `cycle-frozen-columns-scroll.spec.ts` | 2 | 2/2 reviewed |
 | `cycle-ruler-long-document-pitch.spec.ts` | 1 | 1/1 reviewed |
 | `cycle-scroll-pitch-invariant.spec.ts` | 2 | 2/2 reviewed |
-| `design-system-foundation.spec.ts` | 1 | 0/1 reviewed |
+| `design-system-foundation.spec.ts` | 1 | 1/1 reviewed |
 | `diagnostic-aggregator.spec.ts` | 8 | 8/8 reviewed |
 | `dialog-esc-lifecycle.spec.ts` | 1 | 0/1 reviewed |
 | `document-properties.spec.ts` | 1 | 1/1 reviewed |
@@ -86,7 +86,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `feature-showcase-startup.spec.ts` | 3 | 0/3 reviewed |
 | `file-beforeunload-dirty-guard.spec.ts` | 1 | 1/1 reviewed |
 | `file-ribbon-blank-controls.spec.ts` | 1 | 1/1 reviewed |
-| `font-style-commit-contract.spec.ts` | 1 | 0/1 reviewed |
+| `font-style-commit-contract.spec.ts` | 1 | 1/1 reviewed |
 | `full-gui.spec.ts` | 46 | 0/46 reviewed |
 | `ghost-trace-delete.spec.ts` | 1 | 0/1 reviewed |
 | `golden-samples.spec.ts` | 3 | 0/3 reviewed |
