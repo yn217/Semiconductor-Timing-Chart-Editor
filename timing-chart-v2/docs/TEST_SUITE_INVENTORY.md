@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 354/963 cases reviewed.
+Semantic review progress: 370/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 153 |
-| `nightly` | 112 |
+| `integration` | 164 |
+| `nightly` | 116 |
 | `performance` | 20 |
-| `pr` | 116 |
-| `visual` | 82 |
+| `pr` | 118 |
+| `visual` | 85 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -26,9 +26,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `acceptance-429-transaction-colors.spec.ts` | 4 | 4/4 reviewed |
 | `acceptance-429-transaction-composition.spec.ts` | 32 | 32/32 reviewed |
 | `advanced-json-diagnostic.spec.ts` | 7 | 7/7 reviewed |
-| `ai-bridge.spec.ts` | 5 | 0/5 reviewed |
-| `ai-domain-coverage.spec.ts` | 1 | 0/1 reviewed |
-| `ai-proposal-workflow.spec.ts` | 10 | 0/10 reviewed |
+| `ai-bridge.spec.ts` | 5 | 5/5 reviewed |
+| `ai-domain-coverage.spec.ts` | 1 | 1/1 reviewed |
+| `ai-proposal-workflow.spec.ts` | 10 | 10/10 reviewed |
 | `annotation-bottom-list.spec.ts` | 1 | 1/1 reviewed |
 | `annotation-highlight-position-mode.spec.ts` | 2 | 2/2 reviewed |
 | `annotation-inspector-anchor.spec.ts` | 1 | 1/1 reviewed |
