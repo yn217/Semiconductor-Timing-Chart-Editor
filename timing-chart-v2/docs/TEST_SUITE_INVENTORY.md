@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 326 spec files and 959 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 326 spec files and 958 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 959/959 cases reviewed.
+Semantic review progress: 958/958 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 489 |
+| `integration` | 488 |
 | `nightly` | 195 |
 | `performance` | 54 |
 | `pr` | 254 |
-| `visual` | 173 |
+| `visual` | 172 |
 
 ## Top recorded per-case runtimes
 
@@ -200,7 +200,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-740-741-756-cycle-layout.spec.ts` | 2 | 2/2 reviewed |
 | `issue-740-cycle-bottom-hidden.spec.ts` | 2 | 2/2 reviewed |
 | `issue-744-diagnostics-freshness.spec.ts` | 2 | 2/2 reviewed |
-| `issue-746-visible-group-create.spec.ts` | 2 | 2/2 reviewed |
+| `issue-746-visible-group-create.spec.ts` | 1 | 1/1 reviewed |
 | `issue-747-a11y-and-sort-matrix.spec.ts` | 1 | 1/1 reviewed |
 | `issue-747-bottom-settings.spec.ts` | 1 | 1/1 reviewed |
 | `issue-747-geometry-acceptance.spec.ts` | 2 | 2/2 reviewed |
@@ -587,6 +587,8 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-738-ruler-hit-area.spec.ts` “ruler cell is the hit target, in Transaction at 1672x941” → `issue-738-ruler-hit-area.spec.ts` “ruler cell hit targets and bidirectional range gestures in Transaction at both supported viewports”. **Invariant:** Compressed Transaction ruler hit targets and both drag directions remain covered at the desktop viewport. **Reason:** Desktop assertions remain intact in the same Transaction-mode journey after viewport reflow, avoiding another app startup.
 - `issue-740-741-756-cycle-layout.spec.ts` “#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1280x720” → `issue-740-741-756-cycle-layout.spec.ts` “#756 Cycle left rail spans Main + Bottom at both supported viewports”. **Invariant:** The left rail reaches the workspace bottom and the timeline scrollbar remains above the Bottom splitter at compact viewport size. **Reason:** Runs both desktop and compact geometry assertions in one loaded Cycle workspace while restoring Bottom visibility between viewport sizes.
 - `issue-740-741-756-cycle-layout.spec.ts` “#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1672x941” → `issue-740-741-756-cycle-layout.spec.ts` “#756 Cycle left rail spans Main + Bottom at both supported viewports”. **Invariant:** The left rail reaches the workspace bottom and the timeline scrollbar remains above the Bottom splitter at desktop viewport size. **Reason:** Runs both desktop and compact geometry assertions in one loaded Cycle workspace while restoring Bottom visibility between viewport sizes.
+- `issue-746-visible-group-create.spec.ts` “Tree and Bottom expose visible Group creation at 1280x720” → `issue-746-visible-group-create.spec.ts` “Tree and Bottom expose visible Group creation at both supported viewports”. **Invariant:** The Tree header and Bottom each create a visible Group and Undo restores the original collection at compact width. **Reason:** Runs the existing two-size Tree/Bottom create-and-Undo journey in one workspace while retaining width-specific visible bounds and header-overflow assertions.
+- `issue-746-visible-group-create.spec.ts` “Tree and Bottom expose visible Group creation at 1672x941” → `issue-746-visible-group-create.spec.ts` “Tree and Bottom expose visible Group creation at both supported viewports”. **Invariant:** The Tree header and Bottom each create a visible Group and Undo restores the original collection at desktop width. **Reason:** Runs the existing two-size Tree/Bottom create-and-Undo journey in one workspace while retaining width-specific visible bounds and header-overflow assertions.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 

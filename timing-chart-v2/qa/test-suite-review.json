@@ -1358,7 +1358,7 @@
         "visual"
       ],
       "decision": "KEEP",
-      "reason": "Both viewport cases are intentional: the contract includes visible control bounds and header overflow, which are width-dependent, in addition to the shared Tree/Bottom command and Undo journey. The test observes visible controls and semantic collection changes rather than requiring a specific DOM ownership structure.",
+      "reason": "Both viewport checks remain because control bounds and header overflow depend on width; they now run in one loaded Transaction workspace. Each size still exercises Tree and Bottom creation, History change, Group counts and two-step Undo.",
       "replacementTest": null
     },
     {

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T11:17:35.249Z",
+  "generatedAt": "2026-09-23T11:20:40.295Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,14 +12,14 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 326,
-  "caseCount": 959,
-  "reviewedCaseCount": 959,
+  "caseCount": 958,
+  "reviewedCaseCount": 958,
   "curatedProfileCounts": {
-    "integration": 489,
+    "integration": 488,
     "nightly": 195,
     "performance": 54,
     "pr": 254,
-    "visual": 173
+    "visual": 172
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -11671,8 +11671,8 @@
     {
       "file": "issue-746-visible-group-create.spec.ts",
       "suitePath": [],
-      "line": 5,
-      "title": "Tree and Bottom expose visible Group creation at 1280x720",
+      "line": 4,
+      "title": "Tree and Bottom expose visible Group creation at both supported viewports",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -11686,33 +11686,7 @@
       "duplicateGroup": "transaction-group-creation-discoverability-746",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "decision": "KEEP",
-      "reason": "Both viewport cases are intentional: the contract includes visible control bounds and header overflow, which are width-dependent, in addition to the shared Tree/Bottom command and Undo journey. The test observes visible controls and semantic collection changes rather than requiring a specific DOM ownership structure.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "integration",
-        "visual"
-      ]
-    },
-    {
-      "file": "issue-746-visible-group-create.spec.ts",
-      "suitePath": [],
-      "line": 5,
-      "title": "Tree and Bottom expose visible Group creation at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "transaction-group-creation-discoverability",
-      "originIssue": 746,
-      "type": "USER_JOURNEY",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": 3600,
-      "primaryContract": "Visible Group creation is reachable from both the Transaction Tree and Bottom toolbar at desktop and compact widths; each creation updates the displayed Group collection and Undo restores the initial collection.",
-      "duplicateGroup": "transaction-group-creation-discoverability-746",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "KEEP",
-      "reason": "Both viewport cases are intentional: the contract includes visible control bounds and header overflow, which are width-dependent, in addition to the shared Tree/Bottom command and Undo journey. The test observes visible controls and semantic collection changes rather than requiring a specific DOM ownership structure.",
+      "reason": "Both viewport checks remain because control bounds and header overflow depend on width; they now run in one loaded Transaction workspace. Each size still exercises Tree and Bottom creation, History change, Group counts and two-step Undo.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -25779,8 +25753,8 @@
     },
     {
       "file": "issue-746-visible-group-create.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "746",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -28226,6 +28200,30 @@
       },
       "protectedInvariant": "The left rail reaches the workspace bottom and the timeline scrollbar remains above the Bottom splitter at desktop viewport size.",
       "reason": "Runs both desktop and compact geometry assertions in one loaded Cycle workspace while restoring Bottom visibility between viewport sizes."
+    },
+    {
+      "from": {
+        "file": "issue-746-visible-group-create.spec.ts",
+        "title": "Tree and Bottom expose visible Group creation at 1280x720"
+      },
+      "to": {
+        "file": "issue-746-visible-group-create.spec.ts",
+        "title": "Tree and Bottom expose visible Group creation at both supported viewports"
+      },
+      "protectedInvariant": "The Tree header and Bottom each create a visible Group and Undo restores the original collection at compact width.",
+      "reason": "Runs the existing two-size Tree/Bottom create-and-Undo journey in one workspace while retaining width-specific visible bounds and header-overflow assertions."
+    },
+    {
+      "from": {
+        "file": "issue-746-visible-group-create.spec.ts",
+        "title": "Tree and Bottom expose visible Group creation at 1672x941"
+      },
+      "to": {
+        "file": "issue-746-visible-group-create.spec.ts",
+        "title": "Tree and Bottom expose visible Group creation at both supported viewports"
+      },
+      "protectedInvariant": "The Tree header and Bottom each create a visible Group and Undo restores the original collection at desktop width.",
+      "reason": "Runs the existing two-size Tree/Bottom create-and-Undo journey in one workspace while retaining width-specific visible bounds and header-overflow assertions."
     }
   ]
 }

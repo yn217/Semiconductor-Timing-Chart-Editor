@@ -420,6 +420,18 @@
       "to": { "file": "issue-740-741-756-cycle-layout.spec.ts", "title": "#756 Cycle left rail spans Main + Bottom at both supported viewports" },
       "protectedInvariant": "The left rail reaches the workspace bottom and the timeline scrollbar remains above the Bottom splitter at desktop viewport size.",
       "reason": "Runs both desktop and compact geometry assertions in one loaded Cycle workspace while restoring Bottom visibility between viewport sizes."
+    },
+    {
+      "from": { "file": "issue-746-visible-group-create.spec.ts", "title": "Tree and Bottom expose visible Group creation at 1280x720" },
+      "to": { "file": "issue-746-visible-group-create.spec.ts", "title": "Tree and Bottom expose visible Group creation at both supported viewports" },
+      "protectedInvariant": "The Tree header and Bottom each create a visible Group and Undo restores the original collection at compact width.",
+      "reason": "Runs the existing two-size Tree/Bottom create-and-Undo journey in one workspace while retaining width-specific visible bounds and header-overflow assertions."
+    },
+    {
+      "from": { "file": "issue-746-visible-group-create.spec.ts", "title": "Tree and Bottom expose visible Group creation at 1672x941" },
+      "to": { "file": "issue-746-visible-group-create.spec.ts", "title": "Tree and Bottom expose visible Group creation at both supported viewports" },
+      "protectedInvariant": "The Tree header and Bottom each create a visible Group and Undo restores the original collection at desktop width.",
+      "reason": "Runs the existing two-size Tree/Bottom create-and-Undo journey in one workspace while retaining width-specific visible bounds and header-overflow assertions."
     }
   ]
 }
