@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T11:46:49.224Z",
+  "generatedAt": "2026-09-23T11:48:53.333Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,14 +12,14 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 326,
-  "caseCount": 952,
-  "reviewedCaseCount": 952,
+  "caseCount": 951,
+  "reviewedCaseCount": 951,
   "curatedProfileCounts": {
-    "integration": 485,
+    "integration": 484,
     "nightly": 195,
     "performance": 54,
     "pr": 253,
-    "visual": 166
+    "visual": 165
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -12555,8 +12555,8 @@
     {
       "file": "issue-761-start-input-width.spec.ts",
       "suitePath": [],
-      "line": 5,
-      "title": "Start (cycle) input is readable at 1280x720",
+      "line": 6,
+      "title": "Start (cycle) input is readable at both supported viewports",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -12570,33 +12570,7 @@
       "duplicateGroup": null,
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "decision": "KEEP",
-      "reason": "The measured input width and sibling-boundary check protect a real compact-layout constraint; both viewports are intentional because narrow width can change flex allocation.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "integration",
-        "visual"
-      ]
-    },
-    {
-      "file": "issue-761-start-input-width.spec.ts",
-      "suitePath": [],
-      "line": 5,
-      "title": "Start (cycle) input is readable at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "cycle-transition-start-input-readability",
-      "originIssue": 761,
-      "type": "GEOMETRY_CONTRACT",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": null,
-      "primaryContract": "The Cycle transition Start input can display multi-digit cycle values at both supported viewport widths without clipping or displacing Value/Comment controls.",
-      "duplicateGroup": null,
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "KEEP",
-      "reason": "The measured input width and sibling-boundary check protect a real compact-layout constraint; both viewports are intentional because narrow width can change flex allocation.",
+      "reason": "The measured input width and sibling-boundary check protect a real compact-layout constraint; both viewports remain intentional because narrow width can change flex allocation, and are measured sequentially with the same draft in one app session.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -25829,8 +25803,8 @@
     },
     {
       "file": "issue-761-start-input-width.spec.ts",
-      "caseCount": 2,
-      "reviewedCaseCount": 2,
+      "caseCount": 1,
+      "reviewedCaseCount": 1,
       "originIssue": "761",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -28214,6 +28188,30 @@
       },
       "protectedInvariant": "Desktop Bottom table/header/Phase geometry remains aligned through settings, selection, sort and expansion without document/history changes.",
       "reason": "Runs the existing responsive geometry journey at desktop width in the same application session; the viewport is resized and geometry re-measured independently."
+    },
+    {
+      "from": {
+        "file": "issue-761-start-input-width.spec.ts",
+        "title": "Start (cycle) input is readable at 1280x720"
+      },
+      "to": {
+        "file": "issue-761-start-input-width.spec.ts",
+        "title": "Start (cycle) input is readable at both supported viewports"
+      },
+      "protectedInvariant": "The multi-digit Cycle Start draft fits within the compact Signal transition row without clipping or pushing neighboring controls outside.",
+      "reason": "Measures the same draft at compact width after resizing the existing Cycle workspace rather than launching a second app session."
+    },
+    {
+      "from": {
+        "file": "issue-761-start-input-width.spec.ts",
+        "title": "Start (cycle) input is readable at 1672x941"
+      },
+      "to": {
+        "file": "issue-761-start-input-width.spec.ts",
+        "title": "Start (cycle) input is readable at both supported viewports"
+      },
+      "protectedInvariant": "The multi-digit Cycle Start draft remains readable at desktop width while keeping Value and Comment controls within the transition row.",
+      "reason": "Measures desktop flex allocation in the same workspace and with the same draft used by the compact-width assertion."
     }
   ]
 }

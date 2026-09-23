@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 326 spec files and 952 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 326 spec files and 951 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 952/952 cases reviewed.
+Semantic review progress: 951/951 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 485 |
+| `integration` | 484 |
 | `nightly` | 195 |
 | `performance` | 54 |
 | `pr` | 253 |
-| `visual` | 166 |
+| `visual` | 165 |
 
 ## Top recorded per-case runtimes
 
@@ -222,7 +222,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-757-far-scroll-window-coverage.spec.ts` | 1 | 1/1 reviewed |
 | `issue-759-group-disclosure-shared.spec.ts` | 1 | 1/1 reviewed |
 | `issue-760-combined-horizontal-wheel.spec.ts` | 1 | 1/1 reviewed |
-| `issue-761-start-input-width.spec.ts` | 2 | 2/2 reviewed |
+| `issue-761-start-input-width.spec.ts` | 1 | 1/1 reviewed |
 | `issue-763-retained-phase-drafts.spec.ts` | 2 | 2/2 reviewed |
 | `issue-764-group-header-sticky.spec.ts` | 2 | 2/2 reviewed |
 | `issue-765-transaction-no-phantom-vscroll.spec.ts` | 3 | 3/3 reviewed |
@@ -601,6 +601,8 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-751-bottom-phase-editor.spec.ts` “Phase rows follow Start-time order; edit and delete resolve the Phase, not the display index; validation wording is TC-safe” → `issue-751-bottom-phase-editor.spec.ts` “Bottom Phase editor preserves draft/validation and stable Phase identity through Start-order projection”. **Invariant:** Start-time projection order remains separate from stable Phase identity, delete resolves by Phase ID, and shared TC-safe validation does not mutate History. **Reason:** Both complementary Phase user journeys now run in one app session; the initial draft is reverted before the identity/order assertions, retaining each original check.
 - `issue-747-geometry-acceptance.spec.ts` “Bottom table geometry is stable under settings, selection, sort and Phase expansion at 1280x720” → `issue-747-geometry-acceptance.spec.ts` “Bottom table geometry is stable under settings, selection, sort and Phase expansion at both viewports”. **Invariant:** Compact-width Bottom table/header/Phase geometry remains aligned through settings, selection, sort and expansion without document/history changes. **Reason:** Runs the existing responsive geometry journey at compact width after a single transaction-demo startup; all per-viewport geometry and state baselines are retained.
 - `issue-747-geometry-acceptance.spec.ts` “Bottom table geometry is stable under settings, selection, sort and Phase expansion at 1672x941” → `issue-747-geometry-acceptance.spec.ts` “Bottom table geometry is stable under settings, selection, sort and Phase expansion at both viewports”. **Invariant:** Desktop Bottom table/header/Phase geometry remains aligned through settings, selection, sort and expansion without document/history changes. **Reason:** Runs the existing responsive geometry journey at desktop width in the same application session; the viewport is resized and geometry re-measured independently.
+- `issue-761-start-input-width.spec.ts` “Start (cycle) input is readable at 1280x720” → `issue-761-start-input-width.spec.ts` “Start (cycle) input is readable at both supported viewports”. **Invariant:** The multi-digit Cycle Start draft fits within the compact Signal transition row without clipping or pushing neighboring controls outside. **Reason:** Measures the same draft at compact width after resizing the existing Cycle workspace rather than launching a second app session.
+- `issue-761-start-input-width.spec.ts` “Start (cycle) input is readable at 1672x941” → `issue-761-start-input-width.spec.ts` “Start (cycle) input is readable at both supported viewports”. **Invariant:** The multi-digit Cycle Start draft remains readable at desktop width while keeping Value and Comment controls within the transition row. **Reason:** Measures desktop flex allocation in the same workspace and with the same draft used by the compact-width assertion.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 

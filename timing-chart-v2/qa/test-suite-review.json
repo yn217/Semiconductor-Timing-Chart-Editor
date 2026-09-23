@@ -1618,7 +1618,7 @@
         "visual"
       ],
       "decision": "KEEP",
-      "reason": "The measured input width and sibling-boundary check protect a real compact-layout constraint; both viewports are intentional because narrow width can change flex allocation.",
+      "reason": "The measured input width and sibling-boundary check protect a real compact-layout constraint; both viewports remain intentional because narrow width can change flex allocation, and are measured sequentially with the same draft in one app session.",
       "replacementTest": null
     },
     {
