@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T10:06:24.735Z",
+  "generatedAt": "2026-09-23T10:12:17.450Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -18,7 +18,7 @@
     "integration": 491,
     "nightly": 195,
     "performance": 54,
-    "pr": 263,
+    "pr": 262,
     "visual": 175
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -15121,9 +15121,7 @@
       "reason": "The case uses page.setContent and an in-memory synthetic DOM only; tests/harness/mechanical-diagnostics.test.ts already exercises the same negative categories directly at the harness unit layer, making this E2E wrapper duplicate coverage without testing the production app.",
       "replacementTest": "tests/harness/mechanical-diagnostics.test.ts",
       "reviewStatus": "REVIEWED",
-      "profiles": [
-        "pr"
-      ]
+      "profiles": []
     },
     {
       "file": "minimal-cycle-view.spec.ts",
