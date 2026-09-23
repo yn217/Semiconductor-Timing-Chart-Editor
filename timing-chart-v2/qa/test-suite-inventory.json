@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:10:42.200Z",
+  "generatedAt": "2026-09-23T07:12:13.394Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 847,
+  "reviewedCaseCount": 851,
   "curatedProfileCounts": {
-    "integration": 441,
+    "integration": 444,
     "nightly": 175,
     "performance": 48,
     "pr": 231,
-    "visual": 144
+    "visual": 145
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -19983,18 +19983,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "cycle-range-overlay-home-command",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Invoking the Home Ribbon's single-Cycle Insert while a selected range is visible keeps the resulting range band aligned to the updated ruler mapping.",
+      "duplicateGroup": "cycle-range-band-after-transform",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Cases 788–790 exercise Timeline-owned insert commands and history; this ensures the separate Home Ribbon adapter feeds the same post-transform range projection correctly.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-range-band-presentation.spec.ts",
@@ -20005,18 +20008,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "cycle-range-overlay-insert-interior",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inserting before a nonzero selected source range keeps its half-open range band attached to the correct source-cycle ticks and updates the timeline length/history once.",
+      "duplicateGroup": "cycle-range-band-after-transform",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The neighboring cases cover insertion at source zero, after the terminal selection, and Home command routing. This checks the ordinary nonzero Timeline insertion location so boundary-specific behavior cannot mask interior remapping errors.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-range-band-presentation.spec.ts",
@@ -20027,18 +20033,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "cycle-range-overlay-insert-terminal",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After horizontally revealing and selecting the terminal cycle, Insert after preserves a valid aligned selection band and exposes the new exclusive terminal ruler tick.",
+      "duplicateGroup": "cycle-range-band-after-transform",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the right-terminal edge counterpart to the source-zero insertion case and exercises far-right scroll/terminal mapping; normal interior insertion does not protect this boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-range-edit-readability.spec.ts",
@@ -20049,18 +20058,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "timeline-range-edit-responsive-readability-compact",
+      "originIssue": 396,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1280x720, Selected and Target range preview lines remain vertically separate and inside their own Ribbon cell, all Range Edit controls remain non-overlapping/inside the group, and group height matches Insert.",
+      "duplicateGroup": "timeline-range-edit-responsive-readability",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the compact approved viewport where long range values are most likely to wrap or overlap; the wide sibling cannot replace breakpoint-specific readability evidence.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "timeline-range-edit-readability.spec.ts",
@@ -26700,22 +26712,22 @@
     {
       "file": "timeline-range-band-presentation.spec.ts",
       "caseCount": 9,
-      "reviewedCaseCount": 6,
+      "reviewedCaseCount": 9,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "timeline-range-edit-readability.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "timeline-range-hitarea-closure.spec.ts",
