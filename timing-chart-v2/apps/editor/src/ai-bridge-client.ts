@@ -39,6 +39,7 @@ export type AIBridgeContext = {
   // its implementation in ai-operation-panel.tsx for exactly what it
   // returns and why it deliberately omits a raw pixel image.
   readonly onGetViewportSnapshot: (() => unknown) | undefined;
+  readonly onGetViewContext: (() => unknown) | undefined;
 };
 
 function documentSummary(document: CanonicalDocument) {
@@ -53,6 +54,10 @@ function documentSummary(document: CanonicalDocument) {
 
 function executeTool(tool: string, args: Record<string, unknown>, context: AIBridgeContext): unknown {
   if (tool === "get_document_summary") return documentSummary(context.document);
+  if (tool === "get_view_context") {
+    if (!context.onGetViewContext) throw new Error("get_view_context is not available in the current surface.");
+    return context.onGetViewContext();
+  }
   if (tool === "get_selection") return { selectedSignalId: context.selectedSignalId, selectedGroupId: context.selectedGroupId, selectedAnnotationId: context.selectedAnnotationId, selectedTransactionId: context.selectedTransactionId };
   if (tool === "fit_all") {
     if (!context.onViewIntent) throw new Error("fit_all is not available in the current surface.");
@@ -112,13 +117,27 @@ function executeTool(tool: string, args: Record<string, unknown>, context: AIBri
     };
   }
   if (tool === "get_annotations") {
+    const type = args.type;
+    const visibleRange = args.visibleRange;
+    if (type !== undefined && typeof type !== "string") throw new Error("type must be a string.");
+    if (visibleRange !== undefined && (typeof visibleRange !== "object" || visibleRange === null || typeof (visibleRange as { start?: unknown }).start !== "number" || typeof (visibleRange as { end?: unknown }).end !== "number" || !Number.isFinite((visibleRange as { start: number }).start) || !Number.isFinite((visibleRange as { end: number }).end) || (visibleRange as { start: number }).start > (visibleRange as { end: number }).end)) throw new Error("visibleRange must contain finite source-cycle start/end values with start <= end.");
+    const sourceRange = visibleRange as { start: number; end: number } | undefined;
     const anchorSummary = (anchor: { readonly signalId?: SignalId; readonly cycle: number } | undefined) => anchor === undefined ? undefined : { signalId: anchor.signalId, cycle: anchor.cycle };
+    const annotations = context.document.annotations.filter((annotation) => {
+      if (type !== undefined && annotation.type !== type) return false;
+      if (sourceRange === undefined) return true;
+      const cycles = [annotation.anchor?.cycle, annotation.start?.cycle, annotation.end?.cycle, annotation.from?.cycle, annotation.to?.cycle].filter((cycle): cycle is number => typeof cycle === "number");
+      return cycles.length > 0 && Math.max(...cycles) >= sourceRange.start && Math.min(...cycles) <= sourceRange.end;
+    });
     return {
-      annotations: context.document.annotations.map((annotation) => ({ id: annotation.id, type: annotation.type, label: annotation.label, visible: annotation.visible, locked: annotation.locked ?? false, anchor: anchorSummary(annotation.anchor), start: anchorSummary(annotation.start), end: anchorSummary(annotation.end), from: anchorSummary(annotation.from), to: anchorSummary(annotation.to) })),
+      annotations: annotations.map((annotation) => ({ id: annotation.id, type: annotation.type, label: annotation.label, visible: annotation.visible, locked: annotation.locked ?? false, anchor: anchorSummary(annotation.anchor), start: anchorSummary(annotation.start), end: anchorSummary(annotation.end), from: anchorSummary(annotation.from), to: anchorSummary(annotation.to) })),
     };
   }
   if (tool === "get_bookmarks") {
     return { bookmarks: context.document.bookmarks.map((bookmark) => ({ id: bookmark.id, name: bookmark.name, cycle: bookmark.start, comment: bookmark.comment })) };
+  }
+  if (tool === "get_time_groups") {
+    return { timeGroups: context.document.timeGroups.map((group) => ({ id: group.id, name: group.name, start: group.start, end: group.end, category: group.category })) };
   }
   if (tool === "get_problems") {
     return { problems: validateCanonicalDocument(context.document).map((problem) => ({ code: problem.code, path: problem.path, message: problem.message })) };

@@ -80,13 +80,15 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_transaction", "get_transaction_groups", "get_transaction_phases", "get_linked_signals", "get_annotations", "get_bookmarks", "get_problems", "fit_all", "propose_edit", "propose_rename_signal", "propose_update_signal", "propose_move_signal"]);
+  expect(tools).toEqual(["list_editor_sessions", "get_document_summary", "get_view_context", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_transaction", "get_transaction_groups", "get_transaction_phases", "get_linked_signals", "get_annotations", "get_bookmarks", "get_time_groups", "get_problems", "fit_all", "propose_edit", "propose_rename_signal", "propose_update_signal", "propose_move_signal"]);
 
   // Read-only: reflects the real, live document -- never a canned/fake value.
   const summary = await callTool("get_document_summary");
   const parsedSummary = JSON.parse(summary.body.result!.content[0]!.text) as { title: string; signalCount: number };
   expect(parsedSummary.title).toBe("Sample -- Transaction Mode");
   expect(parsedSummary.signalCount).toBe(8);
+  const viewContext = await callTool("get_view_context");
+  expect(JSON.parse(viewContext.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ mode: "Cycle", zoom: expect.any(Number), selection: expect.objectContaining({ selectedSignalId: "sig_cycle_request" }) }));
 
   const selection = await callTool("get_selection");
   const parsedSelection = JSON.parse(selection.body.result!.content[0]!.text) as { selectedSignalId: string };
@@ -162,6 +164,8 @@ test("get_transactions, get_annotations, get_bookmarks and get_problems are read
   expect(bookmarks.body.result!.isError).toBe(false);
   const bookmarkData = JSON.parse(bookmarks.body.result!.content[0]!.text) as { bookmarks: readonly { id: string; name: string; cycle: number }[] };
   expect(Array.isArray(bookmarkData.bookmarks)).toBe(true);
+  const timeGroups = await callTool("get_time_groups");
+  expect(JSON.parse(timeGroups.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ timeGroups: expect.any(Array) }));
 
   const problems = await callTool("get_problems");
   expect(problems.body.result!.isError).toBe(false);

@@ -278,7 +278,8 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
       elementMap,
     };
   };
-  const bridgeStatus = useAIBridgeClient(bridgeEnabled, bridgeHost, bridgePort, bridgeToken, { document, documentEpoch, revision, mode, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, onViewIntent, onProposeEdit, onProposeTypedEdit, onGetViewportSnapshot });
+  const onGetViewContext = () => ({ mode, range, zoom: getZoom?.(), selection: { selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId } });
+  const bridgeStatus = useAIBridgeClient(bridgeEnabled, bridgeHost, bridgePort, bridgeToken, { document, documentEpoch, revision, mode, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, onViewIntent, onProposeEdit, onProposeTypedEdit, onGetViewportSnapshot, onGetViewContext });
   useEffect(() => { onBridgeStatusChange?.(bridgeStatus); }, [bridgeStatus, onBridgeStatusChange]);
 
   return <section className="ai-operation-panel" data-testid="ai-operation-panel">
