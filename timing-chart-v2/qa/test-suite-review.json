@@ -6689,38 +6689,20 @@
     },
     {
       "file": "issue-750-geometry-10-to-50.spec.ts",
-      "title": "compressed Transaction: no clipped labels and no artificial scroll extent at 1280x720",
+      "title": "compressed Transaction has no clipped labels or artificial scroll extent at both supported viewports",
       "domain": "transaction-tc-compressed-responsive-layout",
       "originIssue": 750,
       "type": "VISUAL_ACCEPTANCE",
       "costClass": "MEDIUM",
-      "measuredRuntimeMs": 7800,
-      "primaryContract": "At compact width, compressed Transaction labels do not clip or disappear and scrollWidth reflects the presented content without artificial overflow.",
+      "measuredRuntimeMs": null,
+      "primaryContract": "At compact and desktop widths, compressed Transaction labels do not clip or disappear and scrollWidth reflects the presented content without artificial overflow.",
       "duplicateGroup": "transaction-tc-compressed-responsive-layout",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "profiles": [
         "visual"
       ],
       "decision": "KEEP",
-      "reason": "The contract is explicitly width-dependent: a narrow bar and compact viewport can expose clipping and false scroll extent not present at desktop size.",
-      "replacementTest": null
-    },
-    {
-      "file": "issue-750-geometry-10-to-50.spec.ts",
-      "title": "compressed Transaction: no clipped labels and no artificial scroll extent at 1672x941",
-      "domain": "transaction-tc-compressed-responsive-layout",
-      "originIssue": 750,
-      "type": "VISUAL_ACCEPTANCE",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": 7800,
-      "primaryContract": "At desktop width, compressed Transaction labels do not clip or disappear and scrollWidth reflects the presented content without artificial overflow.",
-      "duplicateGroup": "transaction-tc-compressed-responsive-layout",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": [
-        "visual"
-      ],
-      "decision": "KEEP",
-      "reason": "The desktop counterpart is retained because width changes determine which short bars can display their names and whether the timeline acquires false overflow.",
+      "reason": "The responsive contract remains width-dependent: a narrow bar can expose clipping and false scroll extent differently at desktop and compact sizes. Both are measured in one document session at the selected 50-cycle scale.",
       "replacementTest": null
     },
     {

@@ -468,6 +468,18 @@
       "to": { "file": "issue-740-cycle-bottom-hidden.spec.ts", "title": "Cycle releases Bottom space when hidden at both supported viewports" },
       "protectedInvariant": "Hiding Bottom releases Cycle space and mode round-trip does not alter document/history/dirty at desktop viewport.",
       "reason": "Runs both sizes in one workspace and restores Bottom to its visible state after each pass, preserving independent responsive geometry and state-baseline checks."
+    },
+    {
+      "from": { "file": "issue-750-geometry-10-to-50.spec.ts", "title": "compressed Transaction: no clipped labels and no artificial scroll extent at 1280x720" },
+      "to": { "file": "issue-750-geometry-10-to-50.spec.ts", "title": "compressed Transaction has no clipped labels or artificial scroll extent at both supported viewports" },
+      "protectedInvariant": "Compressed Transaction names remain accessible and no artificial horizontal scroll extent appears at compact width.",
+      "reason": "The unchanged clipping/extent assertions run at both widths after one transaction-demo load with the same 50-cycle display scale."
+    },
+    {
+      "from": { "file": "issue-750-geometry-10-to-50.spec.ts", "title": "compressed Transaction: no clipped labels and no artificial scroll extent at 1672x941" },
+      "to": { "file": "issue-750-geometry-10-to-50.spec.ts", "title": "compressed Transaction has no clipped labels or artificial scroll extent at both supported viewports" },
+      "protectedInvariant": "Compressed Transaction names remain accessible and no artificial horizontal scroll extent appears at desktop width.",
+      "reason": "The unchanged clipping/extent assertions run at both widths after one transaction-demo load with the same 50-cycle display scale."
     }
   ]
 }

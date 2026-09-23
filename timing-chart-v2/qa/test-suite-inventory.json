@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T11:28:06.265Z",
+  "generatedAt": "2026-09-23T11:30:16.928Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,14 +12,14 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 326,
-  "caseCount": 955,
-  "reviewedCaseCount": 955,
+  "caseCount": 954,
+  "reviewedCaseCount": 954,
   "curatedProfileCounts": {
     "integration": 485,
     "nightly": 195,
     "performance": 54,
     "pr": 254,
-    "visual": 169
+    "visual": 168
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -11948,8 +11948,8 @@
     {
       "file": "issue-750-geometry-10-to-50.spec.ts",
       "suitePath": [],
-      "line": 60,
-      "title": "compressed Transaction: no clipped labels and no artificial scroll extent at 1280x720",
+      "line": 59,
+      "title": "compressed Transaction has no clipped labels or artificial scroll extent at both supported viewports",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -11958,37 +11958,12 @@
       "originIssue": 750,
       "type": "VISUAL_ACCEPTANCE",
       "costClass": "MEDIUM",
-      "measuredRuntimeMs": 7800,
-      "primaryContract": "At compact width, compressed Transaction labels do not clip or disappear and scrollWidth reflects the presented content without artificial overflow.",
+      "measuredRuntimeMs": null,
+      "primaryContract": "At compact and desktop widths, compressed Transaction labels do not clip or disappear and scrollWidth reflects the presented content without artificial overflow.",
       "duplicateGroup": "transaction-tc-compressed-responsive-layout",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "decision": "KEEP",
-      "reason": "The contract is explicitly width-dependent: a narrow bar and compact viewport can expose clipping and false scroll extent not present at desktop size.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "visual"
-      ]
-    },
-    {
-      "file": "issue-750-geometry-10-to-50.spec.ts",
-      "suitePath": [],
-      "line": 60,
-      "title": "compressed Transaction: no clipped labels and no artificial scroll extent at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "transaction-tc-compressed-responsive-layout",
-      "originIssue": 750,
-      "type": "VISUAL_ACCEPTANCE",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": 7800,
-      "primaryContract": "At desktop width, compressed Transaction labels do not clip or disappear and scrollWidth reflects the presented content without artificial overflow.",
-      "duplicateGroup": "transaction-tc-compressed-responsive-layout",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "KEEP",
-      "reason": "The desktop counterpart is retained because width changes determine which short bars can display their names and whether the timeline acquires false overflow.",
+      "reason": "The responsive contract remains width-dependent: a narrow bar can expose clipping and false scroll extent differently at desktop and compact sizes. Both are measured in one document session at the selected 50-cycle scale.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -25766,8 +25741,8 @@
     },
     {
       "file": "issue-750-geometry-10-to-50.spec.ts",
-      "caseCount": 3,
-      "reviewedCaseCount": 3,
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": "750",
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -28218,6 +28193,30 @@
       },
       "protectedInvariant": "Hiding Bottom releases Cycle space and mode round-trip does not alter document/history/dirty at desktop viewport.",
       "reason": "Runs both sizes in one workspace and restores Bottom to its visible state after each pass, preserving independent responsive geometry and state-baseline checks."
+    },
+    {
+      "from": {
+        "file": "issue-750-geometry-10-to-50.spec.ts",
+        "title": "compressed Transaction: no clipped labels and no artificial scroll extent at 1280x720"
+      },
+      "to": {
+        "file": "issue-750-geometry-10-to-50.spec.ts",
+        "title": "compressed Transaction has no clipped labels or artificial scroll extent at both supported viewports"
+      },
+      "protectedInvariant": "Compressed Transaction names remain accessible and no artificial horizontal scroll extent appears at compact width.",
+      "reason": "The unchanged clipping/extent assertions run at both widths after one transaction-demo load with the same 50-cycle display scale."
+    },
+    {
+      "from": {
+        "file": "issue-750-geometry-10-to-50.spec.ts",
+        "title": "compressed Transaction: no clipped labels and no artificial scroll extent at 1672x941"
+      },
+      "to": {
+        "file": "issue-750-geometry-10-to-50.spec.ts",
+        "title": "compressed Transaction has no clipped labels or artificial scroll extent at both supported viewports"
+      },
+      "protectedInvariant": "Compressed Transaction names remain accessible and no artificial horizontal scroll extent appears at desktop width.",
+      "reason": "The unchanged clipping/extent assertions run at both widths after one transaction-demo load with the same 50-cycle display scale."
     }
   ]
 }

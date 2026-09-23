@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 326 spec files and 955 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 326 spec files and 954 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 955/955 cases reviewed.
+Semantic review progress: 954/954 cases reviewed.
 
 ## Curated profile membership
 
@@ -14,7 +14,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `nightly` | 195 |
 | `performance` | 54 |
 | `pr` | 254 |
-| `visual` | 169 |
+| `visual` | 168 |
 
 ## Top recorded per-case runtimes
 
@@ -36,12 +36,12 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | 8700 | `pr` | `issue-750-custom-tc-scale.spec.ts` | Custom TC scale accepts only a positive integer and never applies an invalid draft |
 | 8600 | `visual` | `issue-767-zoom-keeps-glyph-shape.spec.ts` | zoom does not stretch Transaction text at 1280x720 |
 | 8100 | `pr` | `issue-767-zoom-keeps-glyph-shape.spec.ts` | a narrow Transaction bar keeps a body drag handle and can be moved |
-| 7800 | `visual` | `issue-750-geometry-10-to-50.spec.ts` | compressed Transaction: no clipped labels and no artificial scroll extent at 1280x720 |
-| 7800 | `visual` | `issue-750-geometry-10-to-50.spec.ts` | compressed Transaction: no clipped labels and no artificial scroll extent at 1672x941 |
 | 7700 | `visual` | `left-pane-constraint.spec.ts` | left pane starts at the approved minimum without a resize jump (/) |
 | 7600 | `pr` | `issue-744-diagnostics-freshness.spec.ts` | timing diagnostics stay current across a semantic edit, Undo and Redo (no silent clear) |
 | 6900 | `visual` | `left-tree-compact-footer.spec.ts` | keeps the left tree footer compact at the Golden viewport |
 | 6600 | `performance` | `local-geometry-dom-batch.spec.ts` | keeps WaveDrom DOM writes and Local Geometry reads inside one render batch |
+| 6500 | `integration`, `nightly` | `issue-757-far-scroll-window-coverage.spec.ts` | a far scrollLeft jump repaints the window at the viewport, not from cycle 0 |
+| 6400 | `integration` | `listener-lifecycle.spec.ts` | registers the Left Tree keydown handler exactly once per mount (no duplicate listener) |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -209,7 +209,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-748-tree-menu-and-parity.spec.ts` | 1 | 1/1 reviewed |
 | `issue-749-move-to-group-submenu.spec.ts` | 2 | 2/2 reviewed |
 | `issue-750-custom-tc-scale.spec.ts` | 1 | 1/1 reviewed |
-| `issue-750-geometry-10-to-50.spec.ts` | 3 | 3/3 reviewed |
+| `issue-750-geometry-10-to-50.spec.ts` | 2 | 2/2 reviewed |
 | `issue-750-ruler-follows-tc-scale.spec.ts` | 1 | 1/1 reviewed |
 | `issue-750-tc-scale-selector.spec.ts` | 1 | 1/1 reviewed |
 | `issue-751-bottom-phase-editor.spec.ts` | 2 | 2/2 reviewed |
@@ -595,6 +595,8 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-748-tree-menu-and-parity.spec.ts` “Transaction Tree menu behaviour and Cycle parity at 1672x941” → `issue-748-tree-menu-and-parity.spec.ts` “Transaction Tree menu behaviour and Cycle parity at both supported viewports”. **Invariant:** Cycle/Transaction header geometry parity, menu focus/keyboard behavior, view-only disclosure and semantic visibility commands work at desktop width. **Reason:** Runs the existing geometry and menu state journey at both viewport sizes within one app session; each iteration takes fresh canonical, History and row-count baselines.
 - `issue-740-cycle-bottom-hidden.spec.ts` “Cycle releases Bottom space when hidden at 1280x720” → `issue-740-cycle-bottom-hidden.spec.ts` “Cycle releases Bottom space when hidden at both supported viewports”. **Invariant:** Hiding Bottom releases Cycle space and mode round-trip does not alter document/history/dirty at compact viewport. **Reason:** Runs both sizes in one workspace and restores Bottom to its visible state after each pass, preserving independent responsive geometry and state-baseline checks.
 - `issue-740-cycle-bottom-hidden.spec.ts` “Cycle releases Bottom space when hidden at 1672x941” → `issue-740-cycle-bottom-hidden.spec.ts` “Cycle releases Bottom space when hidden at both supported viewports”. **Invariant:** Hiding Bottom releases Cycle space and mode round-trip does not alter document/history/dirty at desktop viewport. **Reason:** Runs both sizes in one workspace and restores Bottom to its visible state after each pass, preserving independent responsive geometry and state-baseline checks.
+- `issue-750-geometry-10-to-50.spec.ts` “compressed Transaction: no clipped labels and no artificial scroll extent at 1280x720” → `issue-750-geometry-10-to-50.spec.ts` “compressed Transaction has no clipped labels or artificial scroll extent at both supported viewports”. **Invariant:** Compressed Transaction names remain accessible and no artificial horizontal scroll extent appears at compact width. **Reason:** The unchanged clipping/extent assertions run at both widths after one transaction-demo load with the same 50-cycle display scale.
+- `issue-750-geometry-10-to-50.spec.ts` “compressed Transaction: no clipped labels and no artificial scroll extent at 1672x941” → `issue-750-geometry-10-to-50.spec.ts` “compressed Transaction has no clipped labels or artificial scroll extent at both supported viewports”. **Invariant:** Compressed Transaction names remain accessible and no artificial horizontal scroll extent appears at desktop width. **Reason:** The unchanged clipping/extent assertions run at both widths after one transaction-demo load with the same 50-cycle display scale.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 
