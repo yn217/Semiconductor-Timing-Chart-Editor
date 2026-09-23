@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 475/963 cases reviewed.
+Semantic review progress: 480/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 212 |
-| `nightly` | 129 |
+| `integration` | 215 |
+| `nightly` | 130 |
 | `performance` | 23 |
-| `pr` | 150 |
+| `pr` | 152 |
 | `visual` | 107 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -279,7 +279,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `signal-editor.spec.ts` | 18 | 0/18 reviewed |
 | `signal-event-table-draft-hint.spec.ts` | 1 | 0/1 reviewed |
 | `signal-filter-clear-affordance.spec.ts` | 1 | 0/1 reviewed |
-| `signal-generator.spec.ts` | 5 | 0/5 reviewed |
+| `signal-generator.spec.ts` | 5 | 5/5 reviewed |
 | `signal-spacing.spec.ts` | 3 | 0/3 reviewed |
 | `signal-split-no-assignment-control.spec.ts` | 1 | 0/1 reviewed |
 | `signal-split-render-routing.spec.ts` | 3 | 0/3 reviewed |
