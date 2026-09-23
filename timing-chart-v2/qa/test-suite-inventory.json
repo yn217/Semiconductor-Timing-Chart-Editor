@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:09:17.592Z",
+  "generatedAt": "2026-09-23T07:10:42.200Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,9 +13,9 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 843,
+  "reviewedCaseCount": 847,
   "curatedProfileCounts": {
-    "integration": 437,
+    "integration": 441,
     "nightly": 175,
     "performance": 48,
     "pr": 231,
@@ -19883,18 +19883,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "cycle-range-band-zoom-scroll-alignment",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The central range band remains aligned to source-cycle ticks and the frozen signal column after horizontal scroll at every supported zoom preset, while selection remains view-only.",
+      "duplicateGroup": "cycle-range-band-presentation",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The sibling verifies static and dragged bands at base zoom; this adds the full preset matrix plus nonzero horizontal scroll and checks alignment against the frozen-column boundary, a distinct coordinate-transform surface.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-range-band-presentation.spec.ts",
@@ -19905,18 +19908,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "cycle-range-overlay-after-insert",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After Cycle Insert transforms the timeline with an active selection, the selection overlay remains a valid half-open range and its band edges still align to the remapped source ticks.",
+      "duplicateGroup": "cycle-range-band-after-transform",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Selection visuals must follow the semantic range transform and updated DisplayTimeMapping; pre-transform range geometry tests do not prove this re-projection.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-range-band-presentation.spec.ts",
@@ -19927,18 +19933,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "cycle-range-overlay-insert-at-zero",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inserting at the first selected Cycle preserves a valid selection band at source zero, updates the cycle count by the period-compatible amount, and keeps mapped band/ticks aligned.",
+      "duplicateGroup": "cycle-range-band-after-transform",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the left-terminal edge case for post-transform overlay projection and uses the periodic Clock's valid insertion quantum; interior/default insert coverage does not exercise the zero boundary.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-range-band-presentation.spec.ts",
@@ -19949,18 +19958,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "cycle-range-overlay-insert-history-refresh",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The selected overlay stays geometry-aligned after Insert after, then after Undo and Redo the latest source range and ruler mapping remain synchronized with updated timeline length/history.",
+      "duplicateGroup": "cycle-range-band-after-transform",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This uniquely verifies overlay invalidation across both backward and forward History transitions after a transform; immediate post-insert assertions alone cannot catch stale geometry on Undo/Redo.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-range-band-presentation.spec.ts",
@@ -26688,7 +26700,7 @@
     {
       "file": "timeline-range-band-presentation.spec.ts",
       "caseCount": 9,
-      "reviewedCaseCount": 2,
+      "reviewedCaseCount": 6,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
