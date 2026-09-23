@@ -120,9 +120,16 @@
 .ai-settings .checkline input { width: auto; }
 .ai-settings-section { display: flex; flex-direction: column; gap: 4px; }
 .ai-settings-section label { display: flex; flex-direction: column; gap: 2px; color: #43536a; }
-.ai-settings-section input[type="text"], .ai-settings-section input:not([type]) { height: 24px; border: 1px solid #c3ceda; border-radius: 3px; padding: 0 6px; font-size: 10px; }
+.ai-settings-section input[type="text"], .ai-settings-section input[type="password"], .ai-settings-section input:not([type]) { height: 24px; border: 1px solid #c3ceda; border-radius: 3px; padding: 0 6px; font-size: 10px; }
 .ai-settings-section code { padding: 1px 4px; border-radius: 2px; background: #e7ecf2; font-family: Consolas, monospace; }
 .ai-settings-section output { color: #304761; font-weight: 650; }
+.ai-connection-guide { display: flex; flex-direction: column; gap: 6px; padding: 7px; border: 1px solid #d5dee8; border-radius: 3px; background: #fff; }
+.ai-connection-guide ol { display: grid; gap: 8px; margin: 0; padding-left: 22px; }
+.ai-connection-guide li { display: grid; justify-items: start; gap: 4px; }
+.ai-connection-guide li > span { color: #52677d; }
+.ai-connection-guide pre { max-width: 100%; overflow: auto; margin: 0; padding: 6px; border: 1px solid #d8e0e8; border-radius: 3px; background: #f4f7fa; color: #24384f; font: 10px/1.4 Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.ai-connection-guide select { min-height: 24px; }
+.ai-connection-guide output { color: #304761; }
 
 .ai-activity-log { color: #5c6b7e; font-size: 10px; }
 .ai-activity-log summary { cursor: pointer; color: #334a64; font-weight: 650; }

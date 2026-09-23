@@ -5,6 +5,7 @@ import { planCommand } from "@timing-chart-v2/commands";
 import { validateCanonicalDocument, type CanonicalDocument, type DocumentProblem, type GroupId, type SignalId } from "@timing-chart-v2/schema";
 import { buildTypedAnnotationProposal, buildTypedBookmarkProposal, buildTypedSignalGroupProposal, buildTypedSignalProposal, buildTypedTimelineProposal, buildTypedTransactionProposal, deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
 import { useAIBridgeClient, type AIBridgeStatus } from "./ai-bridge-client.js";
+import { buildAIClientConfig, buildAIMcpEndpoint, type AIClientSetup } from "./ai-connection-guide.js";
 
 function proposalValidationProblems(document: CanonicalDocument, proposal: AIProposal): readonly DocumentProblem[] {
   if (proposal.kind === "view-only") return proposal.commands.length === 0 && proposal.viewIntent ? [] : [{ code: "AI_VIEW_INTENT_INVALID", path: "$.ai.proposal", message: "View-only proposals cannot contain document commands." }];
@@ -118,6 +119,9 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
   const [approvalPolicy, setApprovalPolicy] = useState<ApprovalPolicy>("always");
   const [scope, setScope] = useState<AIScope>("document");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [connectionGuideOpen, setConnectionGuideOpen] = useState(false);
+  const [setupClient, setSetupClient] = useState<AIClientSetup>("codex");
+  const [copyStatus, setCopyStatus] = useState("");
   const [activityLog, setActivityLog] = useState<readonly ActivityEntry[]>([]);
   const previousDocumentEpochRef = useRef(documentEpoch);
   // Activity entries outlive the retention window: the retained array is a
@@ -126,6 +130,17 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
   // React/audit ID.
   const nextActivityId = useRef(0);
   const providerName = provider === deterministicMockAIProposalProvider ? "Local deterministic (offline)" : "Custom provider";
+  const mcpEndpoint = buildAIMcpEndpoint(bridgeHost, bridgePort);
+  const setupConfig = buildAIClientConfig(setupClient, mcpEndpoint);
+  const copySetupText = async (text: string, label: string) => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(text);
+      setCopyStatus(`${label} copied`);
+    } catch {
+      setCopyStatus("Copy unavailable · select and copy the text manually");
+    }
+  };
   useEffect(() => {
     if (previousDocumentEpochRef.current === documentEpoch) return;
     previousDocumentEpochRef.current = documentEpoch;
@@ -293,7 +308,7 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
   useEffect(() => { onBridgeStatusChange?.(bridgeStatus); }, [bridgeStatus, onBridgeStatusChange]);
 
   return <section className="ai-operation-panel" data-testid="ai-operation-panel">
-    <div className="ai-query-row">{icon}<label>Semantic query<input aria-label="AI semantic query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="rename selected signal to REQ" /></label><button type="button" onClick={() => buildPreview()}>Preview</button><button type="button" data-testid="ai-settings-toggle" aria-expanded={settingsOpen} onClick={() => setSettingsOpen((value) => !value)}>Settings</button></div>
+    <div className="ai-query-row">{icon}<label>Semantic query<input aria-label="AI semantic query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="rename selected signal to REQ" /></label><button type="button" onClick={() => buildPreview()}>Preview</button><button type="button" data-testid="ai-connect-external" onClick={() => { setSettingsOpen(true); setConnectionGuideOpen(true); }}>Connect External AI</button><button type="button" data-testid="ai-settings-toggle" aria-expanded={settingsOpen} onClick={() => setSettingsOpen((value) => !value)}>Settings</button></div>
     <div className="ai-scope">Scope: <label>{" "}<select aria-label="AI context scope" data-testid="ai-scope-select" value={scope} onChange={(event) => setScope(event.target.value as AIScope)}><option value="selection">Selection</option><option value="current-view">Current View</option><option value="document">Document</option></select></label> · Revision: {revision} · Canonical read-only query · Allowed to edit: {scopeLabel(scope)}</div>
     {settingsOpen && <div className="ai-settings" data-testid="ai-settings">
       <h4>AI Settings</h4>
@@ -303,9 +318,18 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
         <label className="checkline"><input type="radio" name="ai-approval-policy" aria-label="Auto-apply view-only operations" checked={approvalPolicy === "auto-view-only"} onChange={() => setApprovalPolicy("auto-view-only")} />Auto-apply view-only operations</label>
       </fieldset>
       <div className="ai-settings-section"><h4>Agent Connection</h4>
-        <span className="inspector-note">Protocol: MCP (Streamable HTTP, simplified) · Bridge: {bridgeHost}:{bridgePort} · Start it with <code>npm run ai-bridge</code>.</span>
+        <span className="inspector-note">MCP over local HTTP · endpoint <code>{mcpEndpoint}</code>. The editor does not start background processes; start the bridge from a terminal.</span>
+        <button type="button" data-testid="ai-connection-guide-toggle" aria-expanded={connectionGuideOpen} onClick={() => setConnectionGuideOpen((open) => !open)}>{connectionGuideOpen ? "Hide setup guide" : "How to connect"}</button>
+        {connectionGuideOpen && <div className="ai-connection-guide" data-testid="ai-connection-guide">
+          <ol>
+            <li><strong>1. Start the local bridge</strong><span>From the project folder, run this command in a terminal. The process prints its bearer token; keep it private.</span><pre>npm run ai-bridge</pre><button type="button" onClick={() => void copySetupText("npm run ai-bridge", "Bridge command")}>Copy command</button></li>
+            <li><strong>2. Configure your MCP client</strong><span>Choose a client and add this configuration. The secret is referenced through an environment variable, not copied into the config.</span><label>Client<select aria-label="MCP client setup" value={setupClient} onChange={(event) => setSetupClient(event.target.value as AIClientSetup)}><option value="codex">Codex</option><option value="claude-code">Claude Code</option><option value="generic">Other MCP client</option></select></label><pre data-testid="ai-client-config">{setupConfig}</pre><button type="button" onClick={() => void copySetupText(setupConfig, "MCP config")}>Copy config</button><span className="inspector-note">Set <code>TIMING_CHART_MCP_TOKEN</code> to the token printed by the bridge in the MCP client's launch environment. In Windows PowerShell, use <code>$env:TIMING_CHART_MCP_TOKEN = "&lt;token&gt;"</code>, then start the client from that same terminal. Add the TOML to <code>~/.codex/config.toml</code> for Codex, or the JSON entry to <code>.mcp.json</code> for Claude Code. Other clients may require their own auth-header syntax.</span></li>
+            <li><strong>3. Connect and verify</strong><span>Paste the token below and enable external agents. “Bridge running” only confirms local reachability; “External AI client connected” requires a real MCP client request.</span></li>
+          </ol>
+          {copyStatus && <output role="status" data-testid="ai-setup-copy-status">{copyStatus}</output>}
+        </div>}
         <label className="checkline"><input type="checkbox" aria-label="Enable external agents" checked={bridgeEnabled} onChange={(event) => onBridgeEnabledChange(event.target.checked)} />Enable external agents</label>
-        <label>Local connection token<input aria-label="Bridge connection token" value={bridgeToken} onChange={(event) => onBridgeTokenChange(event.target.value)} placeholder="paste the token printed by npm run ai-bridge" /></label>
+        <label>Local connection token<input aria-label="Bridge connection token" type="password" autoComplete="off" value={bridgeToken} onChange={(event) => onBridgeTokenChange(event.target.value)} placeholder="paste the token printed by npm run ai-bridge" /></label>
         {/* #778 Phase 1: "Bridge running" and "a real external AI client is attached" are different facts and
             must never be worded the same way -- a truthful status is required so a user can tell a merely-
             started local process from an actual Claude Code/Codex/MCP-client connection. */}

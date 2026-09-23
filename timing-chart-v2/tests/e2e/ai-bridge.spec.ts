@@ -58,6 +58,23 @@ test.afterEach(() => {
   bridge = undefined;
 });
 
+test("external AI setup guide exposes client configs without copying a bearer secret", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-connect-external").click();
+  const guide = ai.getByTestId("ai-connection-guide");
+  await expect(guide).toBeVisible();
+  await expect(guide).toContainText("npm run ai-bridge");
+  await expect(guide.getByTestId("ai-client-config")).toContainText("bearer_token_env_var");
+  await guide.getByLabel("MCP client setup").selectOption("claude-code");
+  await expect(guide.getByTestId("ai-client-config")).toContainText('"type": "http"');
+  await expect(guide.getByTestId("ai-client-config")).toContainText("${TIMING_CHART_MCP_TOKEN}");
+  await expect(guide.getByLabel("Bridge connection token")).toHaveAttribute("type", "password");
+  await expect(guide).not.toContainText(TOKEN);
+});
+
 test("a test MCP client can connect, read the live document/selection, and request a view-only operation with zero Canonical/History/Dirty delta", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
