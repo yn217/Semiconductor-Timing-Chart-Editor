@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T03:53:42.086Z",
+  "generatedAt": "2026-09-23T03:54:52.200Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 965,
-  "reviewedCaseCount": 558,
+  "reviewedCaseCount": 563,
   "curatedProfileCounts": {
-    "integration": 247,
-    "nightly": 148,
+    "integration": 251,
+    "nightly": 149,
     "performance": 37,
-    "pr": 164,
+    "pr": 165,
     "visual": 127
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -14470,18 +14470,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "measurement-anchor-independent-endpoint-drag",
+      "originIssue": 205,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Dragging a Measurement start handle previews without Canonical/History changes, commits only the start endpoint in one History unit, and does not rebuild unrelated WaveDrom or Local Geometry owners.",
+      "duplicateGroup": "measurement-anchor-drag",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the full start-endpoint geometry/preview/commit boundary, including incremental-render invariants; the opposite endpoint has a separate direction-specific case, while cheaper command tests cannot validate pointer projection.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "measurement-anchor-drag.spec.ts",
@@ -14492,18 +14495,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "measurement-anchor-independent-endpoint-drag",
+      "originIssue": 205,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Dragging a Measurement end handle changes that endpoint only and produces exactly one History unit, leaving the start anchor unchanged.",
+      "duplicateGroup": "measurement-anchor-drag",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "End-edge projection can diverge from start-edge behavior and is not implied by the start-handle case; retain this direction-specific acceptance until both handles are exercised by one parameterized test with equivalent assertions.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "measurement-anchor-drag.spec.ts",
@@ -14514,18 +14520,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "measurement-anchor-drag-escape-cancel",
+      "originIssue": 205,
+      "type": "USER_JOURNEY",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Pressing Escape during an active Measurement handle drag cancels preview and restores the exact pre-drag Canonical and History state.",
+      "duplicateGroup": "measurement-anchor-drag-cancellation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is a concise cancellation journey at the active-pointer lifecycle boundary; Undo/Redo tests cover committed edits, not Escape before commit.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "measurement-anchor-drag.spec.ts",
@@ -14536,18 +14545,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "measurement-anchor-drag-persistence-lifecycle",
+      "originIssue": 205,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A moved Measurement anchor is one reversible semantic edit and its resulting annotation geometry survives an actual Save/New/Open round trip.",
+      "duplicateGroup": "measurement-anchor-save-open",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "Combines pointer geometry, exact Undo/Redo restoration, file download, document replacement, and Open; keep as a heavy persistence lifecycle rather than routine PR validation.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "measurement-anchor-drag.spec.ts",
@@ -14558,18 +14571,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "measurement-anchor-shared-geometry-stability",
+      "originIssue": 205,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The same stable Measurement anchors remain semantically resolved across 50/100/150/200% zoom, horizontal scroll, and Signal reorder.",
+      "duplicateGroup": "measurement-anchor-shared-geometry",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This covers shared geometry rebinding across multiple view transforms and a row reorder, distinct from endpoint drag or persistence. It reads semantic aria labels rather than requiring screen pixels to remain fixed; the direct scroll mutation and fixed wait should be replaced with observable scroll completion when this test is next touched.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "measurement-dimension-layout.spec.ts",
@@ -25317,13 +25333,13 @@
     {
       "file": "measurement-anchor-drag.spec.ts",
       "caseCount": 5,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 5,
       "originIssue": null,
       "declaredTimeoutMs": 2000,
       "candidateSignals": [
         "explicitWait"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "measurement-dimension-layout.spec.ts",

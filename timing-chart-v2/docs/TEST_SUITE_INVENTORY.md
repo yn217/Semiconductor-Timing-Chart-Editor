@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 965 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 558/965 cases reviewed.
+Semantic review progress: 563/965 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 247 |
-| `nightly` | 148 |
+| `integration` | 251 |
+| `nightly` | 149 |
 | `performance` | 37 |
-| `pr` | 164 |
+| `pr` | 165 |
 | `visual` | 127 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -235,7 +235,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `left-tree-type-filter.spec.ts` | 2 | 2/2 reviewed |
 | `listener-lifecycle.spec.ts` | 2 | 2/2 reviewed |
 | `local-geometry-dom-batch.spec.ts` | 1 | 1/1 reviewed |
-| `measurement-anchor-drag.spec.ts` | 5 | 0/5 reviewed |
+| `measurement-anchor-drag.spec.ts` | 5 | 5/5 reviewed |
 | `measurement-dimension-layout.spec.ts` | 1 | 0/1 reviewed |
 | `measurement-export-matrix.spec.ts` | 1 | 0/1 reviewed |
 | `measurement-lane-stacking.spec.ts` | 3 | 0/3 reviewed |
