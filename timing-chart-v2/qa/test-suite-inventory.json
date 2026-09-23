@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T00:56:24.232Z",
+  "generatedAt": "2026-09-23T01:02:02.478Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 271,
+  "reviewedCaseCount": 315,
   "curatedProfileCounts": {
-    "integration": 115,
-    "nightly": 95,
-    "performance": 17,
-    "pr": 88,
-    "visual": 68
+    "integration": 127,
+    "nightly": 98,
+    "performance": 20,
+    "pr": 105,
+    "visual": 80
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -1254,18 +1254,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "advanced-json-editor-and-validation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Advanced JSON parse/validation feedback is deterministic, scoped edits preserve a dirty draft until accepted, and rejected or clipboard-failed actions leave canonical document state unchanged.",
+      "duplicateGroup": "advanced-json-editor-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "These cases span JSON parsing, canonical validation, selected-object draft isolation, rejection, formatting and clipboard behavior. They form a distinct production editor workflow and are kept together in the integration tier rather than duplicated across many tiny browser tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "advanced-json-diagnostic.spec.ts",
@@ -1276,18 +1279,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "advanced-json-editor-and-validation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Advanced JSON parse/validation feedback is deterministic, scoped edits preserve a dirty draft until accepted, and rejected or clipboard-failed actions leave canonical document state unchanged.",
+      "duplicateGroup": "advanced-json-editor-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "These cases span JSON parsing, canonical validation, selected-object draft isolation, rejection, formatting and clipboard behavior. They form a distinct production editor workflow and are kept together in the integration tier rather than duplicated across many tiny browser tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "advanced-json-diagnostic.spec.ts",
@@ -1298,18 +1304,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "advanced-json-editor-and-validation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Advanced JSON parse/validation feedback is deterministic, scoped edits preserve a dirty draft until accepted, and rejected or clipboard-failed actions leave canonical document state unchanged.",
+      "duplicateGroup": "advanced-json-editor-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "These cases span JSON parsing, canonical validation, selected-object draft isolation, rejection, formatting and clipboard behavior. They form a distinct production editor workflow and are kept together in the integration tier rather than duplicated across many tiny browser tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "advanced-json-diagnostic.spec.ts",
@@ -1320,18 +1329,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "advanced-json-editor-and-validation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Advanced JSON parse/validation feedback is deterministic, scoped edits preserve a dirty draft until accepted, and rejected or clipboard-failed actions leave canonical document state unchanged.",
+      "duplicateGroup": "advanced-json-editor-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "These cases span JSON parsing, canonical validation, selected-object draft isolation, rejection, formatting and clipboard behavior. They form a distinct production editor workflow and are kept together in the integration tier rather than duplicated across many tiny browser tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "advanced-json-diagnostic.spec.ts",
@@ -1342,18 +1354,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "advanced-json-editor-and-validation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Advanced JSON parse/validation feedback is deterministic, scoped edits preserve a dirty draft until accepted, and rejected or clipboard-failed actions leave canonical document state unchanged.",
+      "duplicateGroup": "advanced-json-editor-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "These cases span JSON parsing, canonical validation, selected-object draft isolation, rejection, formatting and clipboard behavior. They form a distinct production editor workflow and are kept together in the integration tier rather than duplicated across many tiny browser tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "advanced-json-diagnostic.spec.ts",
@@ -1364,18 +1379,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "advanced-json-editor-and-validation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Advanced JSON parse/validation feedback is deterministic, scoped edits preserve a dirty draft until accepted, and rejected or clipboard-failed actions leave canonical document state unchanged.",
+      "duplicateGroup": "advanced-json-editor-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "These cases span JSON parsing, canonical validation, selected-object draft isolation, rejection, formatting and clipboard behavior. They form a distinct production editor workflow and are kept together in the integration tier rather than duplicated across many tiny browser tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "advanced-json-diagnostic.spec.ts",
@@ -1386,18 +1404,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "advanced-json-editor-and-validation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Advanced JSON parse/validation feedback is deterministic, scoped edits preserve a dirty draft until accepted, and rejected or clipboard-failed actions leave canonical document state unchanged.",
+      "duplicateGroup": "advanced-json-editor-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "These cases span JSON parsing, canonical validation, selected-object draft isolation, rejection, formatting and clipboard behavior. They form a distinct production editor workflow and are kept together in the integration tier rather than duplicated across many tiny browser tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "ai-bridge.spec.ts",
@@ -2222,18 +2243,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-preview-apply-lifecycle",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Annotation label/color preview remains view-only, is discarded on Cancel or selection change, and Apply commits the same preview in one SemanticCommand.",
+      "duplicateGroup": "entity-preview-apply-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the Annotation-specific visible Preview/Cancel/selection-change/Apply boundary; lower-level draft tests do not prove the live overlay and canonical command outcome stay synchronized.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "annotation-preview-update.spec.ts",
@@ -2690,18 +2714,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-bottom-virtualization-budget",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Bottom Annotation list keeps mounted rows bounded at 1k, 5k and 20k entities while End navigation reaches the logical final item.",
+      "duplicateGroup": "annotation-bottom-virtualization-budget",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "Large canonical fixture creation and virtualization-boundary navigation are performance-scale acceptance, not routine UI regression. The three sizes provide scaling evidence and remain automatically collected in performance/nightly.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-virtualization-closure.spec.ts",
@@ -2712,18 +2740,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-bottom-virtualization-budget",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Bottom Annotation list keeps mounted rows bounded at 1k, 5k and 20k entities while End navigation reaches the logical final item.",
+      "duplicateGroup": "annotation-bottom-virtualization-budget",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "Large canonical fixture creation and virtualization-boundary navigation are performance-scale acceptance, not routine UI regression. The three sizes provide scaling evidence and remain automatically collected in performance/nightly.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "annotation-virtualization-closure.spec.ts",
@@ -2734,18 +2766,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-bottom-virtualization-budget",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Bottom Annotation list keeps mounted rows bounded at 1k, 5k and 20k entities while End navigation reaches the logical final item.",
+      "duplicateGroup": "annotation-bottom-virtualization-budget",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "Large canonical fixture creation and virtualization-boundary navigation are performance-scale acceptance, not routine UI regression. The three sizes provide scaling evidence and remain automatically collected in performance/nightly.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "architecture-probe.spec.ts",
@@ -2756,18 +2792,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "svg-local-geometry-extraction-architecture",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The WaveDrom SVG surface exposes the Local Geometry anchors required by downstream timeline geometry consumers.",
+      "duplicateGroup": "renderer-local-geometry-extractor",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The test directly probes the SVG extractor and is implementation-coupled; its value is architectural handoff coverage, not a user journey. Keep it isolated from the routine PR profile while geometry unit/property contracts cover semantic mapping.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "arrange-disabled-reasons.spec.ts",
@@ -2778,18 +2817,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "arrange-command-affordance",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
+      "primaryContract": "Arrange controls distinguish a context-unavailable command from an enabled action and communicate the reason for the unavailable state.",
       "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Disabled affordance and its explanation are user-visible command behavior; the single focused browser case is cheaper and more authoritative than source-only assertions about rendered command state.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "arrange-menu-keyboard-nav.spec.ts",
@@ -2800,18 +2842,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "arrange-menu-keyboard-navigation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The Arrange menu supports Arrow and Home/End navigation and moves focus to the first item when opened.",
+      "duplicateGroup": "menu-keyboard-navigation",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This verifies the actual menu focus/keyboard contract through browser interaction; it is distinct from disabled-reason wording and remains one compact accessibility journey.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "arrow-endpoint-drag.spec.ts",
@@ -2822,18 +2867,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-arrow-endpoint-drag",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Dragging either Arrow endpoint changes only that endpoint, preview cancellation restores the exact committed geometry, and view-only cancellation does not mutate Canonical/History/Dirty.",
+      "duplicateGroup": "annotation-endpoint-drag-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Endpoint ownership and pointer-cancel behavior depend on real hit targets and pointer capture; pure geometry tests cannot prove the production handles route gestures to the intended semantic anchor.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "arrow-endpoint-drag.spec.ts",
@@ -2844,18 +2892,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-arrow-endpoint-drag",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Dragging either Arrow endpoint changes only that endpoint, preview cancellation restores the exact committed geometry, and view-only cancellation does not mutate Canonical/History/Dirty.",
+      "duplicateGroup": "annotation-endpoint-drag-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Endpoint ownership and pointer-cancel behavior depend on real hit targets and pointer capture; pure geometry tests cannot prove the production handles route gestures to the intended semantic anchor.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "axis-break-compression.spec.ts",
@@ -2866,18 +2917,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "timegroup-axis-break-compression",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Collapsing a TimeGroup reduces the presented axis extent rather than merely drawing an overlay over unchanged time geometry.",
+      "duplicateGroup": "timegroup-axis-break-compression",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This single browser case proves the user-visible compression boundary; pure mapping tests cover calculations, but cannot establish that the production timeline extent actually changes.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "badge-parity.spec.ts",
@@ -2888,18 +2942,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "tree-and-wave-badge-alignment",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Cycle Tree and frozen waveform badges share the same horizontal alignment at both 1000px and desktop width.",
+      "duplicateGroup": "signal-role-badge-alignment",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Badge alignment is width-sensitive visual geometry; both widths are required to expose wrapping/column pressure and belong in the visual profile rather than the PR semantic path.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "badge-parity.spec.ts",
@@ -2910,18 +2967,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "tree-and-wave-badge-alignment",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Cycle Tree and frozen waveform badges share the same horizontal alignment at both 1000px and desktop width.",
+      "duplicateGroup": "signal-role-badge-alignment",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Badge alignment is width-sensitive visual geometry; both widths are required to expose wrapping/column pressure and belong in the visual profile rather than the PR semantic path.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "badge-visual-evidence.spec.ts",
@@ -2932,18 +2992,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "signal-role-badge-visual-evidence",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Role badge visual evidence is captured against the approved rendered surface without changing Golden thresholds or masks.",
+      "duplicateGroup": "signal-role-badge-alignment",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is a selected visual evidence surface, not a separate semantic interaction check; preserve it in the visual profile and keep the immutable baseline/threshold policy unchanged.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "bottom-bookmark-navigation.spec.ts",
@@ -2954,18 +3017,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bottom-bookmark-navigation-and-draft",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Bottom Bookmark Previous/Next use the shared selected-Bookmark resolver without document mutation, while Bookmark edits remain drafts until Apply and Cancel discards them.",
+      "duplicateGroup": "bookmark-navigation-view-state",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Navigation and draft commit are separate but closely scoped Bottom Bookmark user contracts; both verify that the UI routes through the existing owner and does not create premature History changes.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "bottom-bookmark-navigation.spec.ts",
@@ -2976,18 +3042,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bottom-bookmark-navigation-and-draft",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Bottom Bookmark Previous/Next use the shared selected-Bookmark resolver without document mutation, while Bookmark edits remain drafts until Apply and Cancel discards them.",
+      "duplicateGroup": "bookmark-navigation-view-state",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Navigation and draft commit are separate but closely scoped Bottom Bookmark user contracts; both verify that the UI routes through the existing owner and does not create premature History changes.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "bottom-context.spec.ts",
@@ -3108,18 +3177,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bottom-selected-row-contrast-and-focus",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Selected Bookmark/Transaction rows remain readable at compact and desktop widths, and Bookmark keyboard focus remains visible through hover without document mutation.",
+      "duplicateGroup": "bottom-row-selection-contrast",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The two widths protect responsive readability and the final case adds focus/hover state contrast; this is a visual contract, so it stays out of routine semantic PR tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "bottom-editor-row-contrast.spec.ts",
@@ -3130,18 +3202,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bottom-selected-row-contrast-and-focus",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Selected Bookmark/Transaction rows remain readable at compact and desktop widths, and Bookmark keyboard focus remains visible through hover without document mutation.",
+      "duplicateGroup": "bottom-row-selection-contrast",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The two widths protect responsive readability and the final case adds focus/hover state contrast; this is a visual contract, so it stays out of routine semantic PR tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "bottom-editor-row-contrast.spec.ts",
@@ -3152,18 +3227,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bottom-selected-row-contrast-and-focus",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Selected Bookmark/Transaction rows remain readable at compact and desktop widths, and Bookmark keyboard focus remains visible through hover without document mutation.",
+      "duplicateGroup": "bottom-row-selection-contrast",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The two widths protect responsive readability and the final case adds focus/hover state contrast; this is a visual contract, so it stays out of routine semantic PR tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "bottom-panel-cancel-apply-height.spec.ts",
@@ -3174,18 +3252,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bottom-editor-action-control-alignment",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "FAST",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Bookmark Bottom Editor Cancel and Apply controls have equal rendered height so the paired commit actions form one aligned control group.",
+      "duplicateGroup": "bottom-editor-action-control-alignment",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The rendered-size assertion is a narrow UI geometry guard and cannot be proved by semantic unit tests; keep it in the visual profile rather than launching a broader user journey.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "bottom-panel-full-width.spec.ts",
@@ -3196,18 +3277,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bottom-panel-left-rail-boundary",
+      "originIssue": 428,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At compact and desktop widths, the Bottom shell begins after the persistent left rail rather than extending under or being split from it.",
+      "duplicateGroup": "bottom-left-rail-continuity",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The shell boundary is responsive geometry and the two viewport values exercise distinct available-width constraints; keep both visual cases, not one arbitrarily selected width.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "bottom-panel-full-width.spec.ts",
@@ -3218,18 +3302,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bottom-panel-left-rail-boundary",
+      "originIssue": 428,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At compact and desktop widths, the Bottom shell begins after the persistent left rail rather than extending under or being split from it.",
+      "duplicateGroup": "bottom-left-rail-continuity",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The shell boundary is responsive geometry and the two viewport values exercise distinct available-width constraints; keep both visual cases, not one arbitrarily selected width.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "bottom-splitter-interaction-closure.spec.ts",
@@ -3240,18 +3327,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bottom-panel-splitter-contract",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The dedicated Bottom splitter responds continuously across its hit area, clamps to documented bounds, cleans up capture on cancellation, and preserves native horizontal scrolling beside it without document mutation.",
+      "duplicateGroup": "bottom-panel-splitter-interaction",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Each case protects a distinct user-visible boundary—drag initiation, min/max clamp, cancel lifecycle, or adjacent horizontal scroll affordance. The focused set is small enough for PR and avoids asserting private grid-template values.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "bottom-splitter-interaction-closure.spec.ts",
@@ -3262,18 +3352,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bottom-panel-splitter-contract",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The dedicated Bottom splitter responds continuously across its hit area, clamps to documented bounds, cleans up capture on cancellation, and preserves native horizontal scrolling beside it without document mutation.",
+      "duplicateGroup": "bottom-panel-splitter-interaction",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Each case protects a distinct user-visible boundary—drag initiation, min/max clamp, cancel lifecycle, or adjacent horizontal scroll affordance. The focused set is small enough for PR and avoids asserting private grid-template values.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "bottom-splitter-interaction-closure.spec.ts",
@@ -3284,18 +3377,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bottom-panel-splitter-contract",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The dedicated Bottom splitter responds continuously across its hit area, clamps to documented bounds, cleans up capture on cancellation, and preserves native horizontal scrolling beside it without document mutation.",
+      "duplicateGroup": "bottom-panel-splitter-interaction",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Each case protects a distinct user-visible boundary—drag initiation, min/max clamp, cancel lifecycle, or adjacent horizontal scroll affordance. The focused set is small enough for PR and avoids asserting private grid-template values.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "bottom-splitter-interaction-closure.spec.ts",
@@ -3306,18 +3402,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bottom-panel-splitter-contract",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The dedicated Bottom splitter responds continuously across its hit area, clamps to documented bounds, cleans up capture on cancellation, and preserves native horizontal scrolling beside it without document mutation.",
+      "duplicateGroup": "bottom-panel-splitter-interaction",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Each case protects a distinct user-visible boundary—drag initiation, min/max clamp, cancel lifecycle, or adjacent horizontal scroll affordance. The focused set is small enough for PR and avoids asserting private grid-template values.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "bottom-tab-header-visibility.spec.ts",
@@ -3328,18 +3427,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bottom-tab-switching-and-color-scheme-contrast",
+      "originIssue": 391,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "All configured Bottom tab headers remain visible/switchable, and inactive/hover/active tab states stay legible under light and dark color schemes.",
+      "duplicateGroup": "bottom-tab-header-visibility",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The cases verify different visual states and color schemes; checking all tab headers also protects width pressure. These are visual acceptance assertions, not repeated semantic command journeys.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "bottom-tab-header-visibility.spec.ts",
@@ -3350,18 +3452,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bottom-tab-switching-and-color-scheme-contrast",
+      "originIssue": 391,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "All configured Bottom tab headers remain visible/switchable, and inactive/hover/active tab states stay legible under light and dark color schemes.",
+      "duplicateGroup": "bottom-tab-header-visibility",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The cases verify different visual states and color schemes; checking all tab headers also protects width pressure. These are visual acceptance assertions, not repeated semantic command journeys.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "bulk-registration-strict.spec.ts",
@@ -3372,18 +3477,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bulk-signal-registration-preview-validation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Bulk Signal Registration derives bus width and requires a strict Preview; invalid types and duplicate paths are rejected without canonical/history mutation.",
+      "duplicateGroup": "bulk-registration-strict-preview",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Preview acceptance/rejection and no-mutation behavior cross the real dialog and semantic import boundary; these two focused cases are the smallest browser proof complementary to parser/schema unit tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "bulk-registration-strict.spec.ts",
@@ -3394,18 +3502,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bulk-signal-registration-preview-validation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Bulk Signal Registration derives bus width and requires a strict Preview; invalid types and duplicate paths are rejected without canonical/history mutation.",
+      "duplicateGroup": "bulk-registration-strict-preview",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Preview acceptance/rejection and no-mutation behavior cross the real dialog and semantic import boundary; these two focused cases are the smallest browser proof complementary to parser/schema unit tests.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "callout-body-anchor-drag.spec.ts",
@@ -3416,18 +3527,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-callout-body-and-anchor-drag",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Dragging the Callout label body moves only the label, dragging its anchor preserves relative offset, and Escape restores committed geometry without Canonical/History/Dirty mutation.",
+      "duplicateGroup": "annotation-pointer-handle-ownership",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The body-vs-anchor hit-target ownership and cancellation semantics require real pointer interaction against rendered handles; geometry unit tests cannot prove that the correct production handle receives each gesture.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "callout-body-anchor-drag.spec.ts",
@@ -3438,18 +3552,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-callout-body-and-anchor-drag",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Dragging the Callout label body moves only the label, dragging its anchor preserves relative offset, and Escape restores committed geometry without Canonical/History/Dirty mutation.",
+      "duplicateGroup": "annotation-pointer-handle-ownership",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The body-vs-anchor hit-target ownership and cancellation semantics require real pointer interaction against rendered handles; geometry unit tests cannot prove that the correct production handle receives each gesture.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "callout-body-anchor-drag.spec.ts",
@@ -3460,18 +3577,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "annotation-callout-body-and-anchor-drag",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Dragging the Callout label body moves only the label, dragging its anchor preserves relative offset, and Escape restores committed geometry without Canonical/History/Dirty mutation.",
+      "duplicateGroup": "annotation-pointer-handle-ownership",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The body-vs-anchor hit-target ownership and cancellation semantics require real pointer interaction against rendered handles; geometry unit tests cannot prove that the correct production handle receives each gesture.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "checkbox-dark-color-scheme.spec.ts",
@@ -3482,18 +3602,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "checkbox-dark-scheme-contrast",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "FAST",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Native/custom checkboxes expose a visible bordered box in dark color-scheme for checked and unchecked state instead of blending into a solid dark square.",
+      "duplicateGroup": "checkbox-dark-scheme-contrast",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is one compact visual accessibility guard; a source-only color token check would not prove the resulting browser-rendered checkbox contrast.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "clipboard-entity-parity.spec.ts",
@@ -3504,18 +3627,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "semantic-clipboard-entity-parity",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Copy/Paste preserves or regenerates stable IDs and semantic fields according to each entity's contract, Cut is atomic, and Undo/Redo restores the canonical entity and references.",
+      "duplicateGroup": "clipboard-stable-id-semantics",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The Signal/Comment/Annotation/Transaction cases exercise different stable-ID and reference policies through production clipboard commands. Keep this cross-entity semantic contract in integration rather than repeating the full matrix on every PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "clipboard-entity-parity.spec.ts",
@@ -3526,18 +3652,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "semantic-clipboard-entity-parity",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Copy/Paste preserves or regenerates stable IDs and semantic fields according to each entity's contract, Cut is atomic, and Undo/Redo restores the canonical entity and references.",
+      "duplicateGroup": "clipboard-stable-id-semantics",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The Signal/Comment/Annotation/Transaction cases exercise different stable-ID and reference policies through production clipboard commands. Keep this cross-entity semantic contract in integration rather than repeating the full matrix on every PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "clipboard-entity-parity.spec.ts",
@@ -3548,18 +3677,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "semantic-clipboard-entity-parity",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Copy/Paste preserves or regenerates stable IDs and semantic fields according to each entity's contract, Cut is atomic, and Undo/Redo restores the canonical entity and references.",
+      "duplicateGroup": "clipboard-stable-id-semantics",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The Signal/Comment/Annotation/Transaction cases exercise different stable-ID and reference policies through production clipboard commands. Keep this cross-entity semantic contract in integration rather than repeating the full matrix on every PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "clipboard-entity-parity.spec.ts",
@@ -3570,18 +3702,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "semantic-clipboard-entity-parity",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Copy/Paste preserves or regenerates stable IDs and semantic fields according to each entity's contract, Cut is atomic, and Undo/Redo restores the canonical entity and references.",
+      "duplicateGroup": "clipboard-stable-id-semantics",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The Signal/Comment/Annotation/Transaction cases exercise different stable-ID and reference policies through production clipboard commands. Keep this cross-entity semantic contract in integration rather than repeating the full matrix on every PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "clock-generator-toolbar-icon-size.spec.ts",
@@ -22224,11 +22359,11 @@
     {
       "file": "advanced-json-diagnostic.spec.ts",
       "caseCount": 7,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 7,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "ai-bridge.spec.ts",
@@ -22347,11 +22482,11 @@
     {
       "file": "annotation-preview-update.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 2,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "annotation-snap.spec.ts",
@@ -22365,61 +22500,61 @@
     {
       "file": "annotation-virtualization-closure.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "architecture-probe.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "arrange-disabled-reasons.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "arrange-menu-keyboard-nav.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "arrow-endpoint-drag.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "axis-break-compression.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "badge-parity.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22427,27 +22562,27 @@
         "getComputedStyle",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "badge-visual-evidence.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "bottom-bookmark-navigation.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "bottom-context.spec.ts",
@@ -22461,51 +22596,51 @@
     {
       "file": "bottom-editor-row-contrast.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "bottom-panel-cancel-apply-height.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "bottom-panel-full-width.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "bottom-splitter-interaction-closure.spec.ts",
       "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "bottom-tab-header-visibility.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
@@ -22514,45 +22649,45 @@
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "bulk-registration-strict.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "callout-body-anchor-drag.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "checkbox-dark-color-scheme.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "clipboard-entity-parity.spec.ts",
       "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "clock-generator-toolbar-icon-size.spec.ts",

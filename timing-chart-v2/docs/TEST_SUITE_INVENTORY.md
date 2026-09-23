@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 271/963 cases reviewed.
+Semantic review progress: 315/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 115 |
-| `nightly` | 95 |
-| `performance` | 17 |
-| `pr` | 88 |
-| `visual` | 68 |
+| `integration` | 127 |
+| `nightly` | 98 |
+| `performance` | 20 |
+| `pr` | 105 |
+| `visual` | 80 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -25,7 +25,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `acceptance-397-sample-d.spec.ts` | 4 | 4/4 reviewed |
 | `acceptance-429-transaction-colors.spec.ts` | 4 | 4/4 reviewed |
 | `acceptance-429-transaction-composition.spec.ts` | 32 | 32/32 reviewed |
-| `advanced-json-diagnostic.spec.ts` | 7 | 0/7 reviewed |
+| `advanced-json-diagnostic.spec.ts` | 7 | 7/7 reviewed |
 | `ai-bridge.spec.ts` | 5 | 0/5 reviewed |
 | `ai-domain-coverage.spec.ts` | 1 | 0/1 reviewed |
 | `ai-proposal-workflow.spec.ts` | 10 | 0/10 reviewed |
@@ -38,27 +38,27 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `annotation-multiline-and-export-shapes.spec.ts` | 4 | 0/4 reviewed |
 | `annotation-presentation-controls.spec.ts` | 6 | 0/6 reviewed |
 | `annotation-presentation.spec.ts` | 1 | 0/1 reviewed |
-| `annotation-preview-update.spec.ts` | 3 | 2/3 reviewed |
+| `annotation-preview-update.spec.ts` | 3 | 3/3 reviewed |
 | `annotation-snap.spec.ts` | 18 | 0/18 reviewed |
-| `annotation-virtualization-closure.spec.ts` | 3 | 0/3 reviewed |
-| `architecture-probe.spec.ts` | 1 | 0/1 reviewed |
-| `arrange-disabled-reasons.spec.ts` | 1 | 0/1 reviewed |
-| `arrange-menu-keyboard-nav.spec.ts` | 1 | 0/1 reviewed |
-| `arrow-endpoint-drag.spec.ts` | 2 | 0/2 reviewed |
-| `axis-break-compression.spec.ts` | 1 | 0/1 reviewed |
-| `badge-parity.spec.ts` | 2 | 0/2 reviewed |
-| `badge-visual-evidence.spec.ts` | 1 | 0/1 reviewed |
-| `bottom-bookmark-navigation.spec.ts` | 2 | 0/2 reviewed |
+| `annotation-virtualization-closure.spec.ts` | 3 | 3/3 reviewed |
+| `architecture-probe.spec.ts` | 1 | 1/1 reviewed |
+| `arrange-disabled-reasons.spec.ts` | 1 | 1/1 reviewed |
+| `arrange-menu-keyboard-nav.spec.ts` | 1 | 1/1 reviewed |
+| `arrow-endpoint-drag.spec.ts` | 2 | 2/2 reviewed |
+| `axis-break-compression.spec.ts` | 1 | 1/1 reviewed |
+| `badge-parity.spec.ts` | 2 | 2/2 reviewed |
+| `badge-visual-evidence.spec.ts` | 1 | 1/1 reviewed |
+| `bottom-bookmark-navigation.spec.ts` | 2 | 2/2 reviewed |
 | `bottom-context.spec.ts` | 5 | 0/5 reviewed |
-| `bottom-editor-row-contrast.spec.ts` | 3 | 0/3 reviewed |
-| `bottom-panel-cancel-apply-height.spec.ts` | 1 | 0/1 reviewed |
-| `bottom-panel-full-width.spec.ts` | 2 | 0/2 reviewed |
-| `bottom-splitter-interaction-closure.spec.ts` | 4 | 0/4 reviewed |
-| `bottom-tab-header-visibility.spec.ts` | 2 | 0/2 reviewed |
-| `bulk-registration-strict.spec.ts` | 2 | 0/2 reviewed |
-| `callout-body-anchor-drag.spec.ts` | 3 | 0/3 reviewed |
-| `checkbox-dark-color-scheme.spec.ts` | 1 | 0/1 reviewed |
-| `clipboard-entity-parity.spec.ts` | 4 | 0/4 reviewed |
+| `bottom-editor-row-contrast.spec.ts` | 3 | 3/3 reviewed |
+| `bottom-panel-cancel-apply-height.spec.ts` | 1 | 1/1 reviewed |
+| `bottom-panel-full-width.spec.ts` | 2 | 2/2 reviewed |
+| `bottom-splitter-interaction-closure.spec.ts` | 4 | 4/4 reviewed |
+| `bottom-tab-header-visibility.spec.ts` | 2 | 2/2 reviewed |
+| `bulk-registration-strict.spec.ts` | 2 | 2/2 reviewed |
+| `callout-body-anchor-drag.spec.ts` | 3 | 3/3 reviewed |
+| `checkbox-dark-color-scheme.spec.ts` | 1 | 1/1 reviewed |
+| `clipboard-entity-parity.spec.ts` | 4 | 4/4 reviewed |
 | `clock-generator-toolbar-icon-size.spec.ts` | 1 | 0/1 reviewed |
 | `clock-presentation-closure.spec.ts` | 2 | 0/2 reviewed |
 | `clock-preview.spec.ts` | 4 | 2/4 reviewed |
