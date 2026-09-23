@@ -60,7 +60,10 @@ test("Ribbon Bold applies to every selected Annotation as one atomic commit, eac
   await page.getByTestId("ribbon-annotation-font-bold").click();
   await expect(page.getByTestId("history-status")).toHaveText(`History ${depthBefore + 1} / Redo 0`);
 
-  const styles = await owners.evaluateAll((elements) => elements.map((element) => ({ id: (element as HTMLElement).dataset.annotationId, fontWeight: (element.querySelector("[data-role='annotation-label']") as HTMLElement | null)?.style.fontWeight })));
+  const styles = await Promise.all([first, second].map(async (owner) => owner.evaluate((element) => ({
+    id: (element as HTMLElement).dataset.annotationId,
+    fontWeight: (element.querySelector("[data-role='annotation-label']") as HTMLElement | null)?.style.fontWeight
+  }))));
   const firstStyle = styles.find((item) => item.id === firstId);
   const secondStyle = styles.find((item) => item.id === secondId);
   expect(firstStyle?.fontWeight).toBe("bold");
