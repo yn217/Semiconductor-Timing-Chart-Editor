@@ -23,14 +23,16 @@ test("#741 Transaction fixed-width sidebar exposes no focusable ghost resizer an
   expect(await separator.getAttribute("aria-valuenow")).not.toBe(before);
 });
 
-for (const size of SIZES) {
-  test(`#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at ${size.width}x${size.height}`, async ({ page }) => {
+test("#756 Cycle left rail spans Main + Bottom at both supported viewports", async ({ page }) => {
+  await page.setViewportSize(SIZES[0]);
+  await toCycle(page);
+  const measure = () => page.evaluate(() => {
+    const box = (s: string) => { const e = document.querySelector<HTMLElement>(s); if (!e) return null; const b = e.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom }; };
+    return { tree: box("[data-role='left-tree-rows']"), bottom: box(".bottom-editor"), splitter: box(".bottom-resize-track"), track: box("[data-testid='timeline-hscroll']"), workspace: box(".desktop-workspace"), rail: box(".left-workspace-rail"), panel: box(".cycle-panel") };
+  });
+
+  for (const size of SIZES) {
     await page.setViewportSize(size);
-    await toCycle(page);
-    const measure = () => page.evaluate(() => {
-      const box = (s: string) => { const e = document.querySelector<HTMLElement>(s); if (!e) return null; const b = e.getBoundingClientRect(); return { left: b.left, right: b.right, top: b.top, bottom: b.bottom }; };
-      return { tree: box("[data-role='left-tree-rows']"), bottom: box(".bottom-editor"), splitter: box(".bottom-resize-track"), track: box("[data-testid='timeline-hscroll']"), workspace: box(".desktop-workspace"), rail: box(".left-workspace-rail"), panel: box(".cycle-panel") };
-    });
     const visible = await measure();
     // The tree column is not clipped at the Main area: it continues under the Bottom row, down to the workspace bottom.
     expect(visible.tree!.bottom).toBeGreaterThanOrEqual(visible.bottom!.bottom - 2);
@@ -47,5 +49,7 @@ for (const size of SIZES) {
     const hidden = await measure();
     expect(Math.abs(hidden.panel!.bottom - hidden.workspace!.bottom)).toBeLessThanOrEqual(1);
     await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
-  });
-}
+    await page.getByTestId("ribbon").getByRole("button", { name: "Bottom Editor", exact: true }).click();
+    await expect(page.locator("main.editor-shell")).toHaveAttribute("data-bottom-visible", "true");
+  }
+});

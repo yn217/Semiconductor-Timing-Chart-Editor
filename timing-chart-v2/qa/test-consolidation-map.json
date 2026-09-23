@@ -408,6 +408,18 @@
       "to": { "file": "issue-738-ruler-hit-area.spec.ts", "title": "ruler cell hit targets and bidirectional range gestures in Transaction at both supported viewports" },
       "protectedInvariant": "Compressed Transaction ruler hit targets and both drag directions remain covered at the desktop viewport.",
       "reason": "Desktop assertions remain intact in the same Transaction-mode journey after viewport reflow, avoiding another app startup."
+    },
+    {
+      "from": { "file": "issue-740-741-756-cycle-layout.spec.ts", "title": "#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1280x720" },
+      "to": { "file": "issue-740-741-756-cycle-layout.spec.ts", "title": "#756 Cycle left rail spans Main + Bottom at both supported viewports" },
+      "protectedInvariant": "The left rail reaches the workspace bottom and the timeline scrollbar remains above the Bottom splitter at compact viewport size.",
+      "reason": "Runs both desktop and compact geometry assertions in one loaded Cycle workspace while restoring Bottom visibility between viewport sizes."
+    },
+    {
+      "from": { "file": "issue-740-741-756-cycle-layout.spec.ts", "title": "#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1672x941" },
+      "to": { "file": "issue-740-741-756-cycle-layout.spec.ts", "title": "#756 Cycle left rail spans Main + Bottom at both supported viewports" },
+      "protectedInvariant": "The left rail reaches the workspace bottom and the timeline scrollbar remains above the Bottom splitter at desktop viewport size.",
+      "reason": "Runs both desktop and compact geometry assertions in one loaded Cycle workspace while restoring Bottom visibility between viewport sizes."
     }
   ]
 }

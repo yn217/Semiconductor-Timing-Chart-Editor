@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 326 spec files and 960 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 326 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 960/960 cases reviewed.
+Semantic review progress: 959/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 490 |
+| `integration` | 489 |
 | `nightly` | 195 |
 | `performance` | 54 |
 | `pr` | 254 |
-| `visual` | 174 |
+| `visual` | 173 |
 
 ## Top recorded per-case runtimes
 
@@ -197,7 +197,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-738-ruler-origin-after-scroll-return.spec.ts` | 7 | 7/7 reviewed |
 | `issue-738-stress-real-input.spec.ts` | 2 | 2/2 reviewed |
 | `issue-738-stress-rebase.spec.ts` | 4 | 4/4 reviewed |
-| `issue-740-741-756-cycle-layout.spec.ts` | 3 | 3/3 reviewed |
+| `issue-740-741-756-cycle-layout.spec.ts` | 2 | 2/2 reviewed |
 | `issue-740-cycle-bottom-hidden.spec.ts` | 2 | 2/2 reviewed |
 | `issue-744-diagnostics-freshness.spec.ts` | 2 | 2/2 reviewed |
 | `issue-746-visible-group-create.spec.ts` | 2 | 2/2 reviewed |
@@ -585,6 +585,8 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 - `issue-738-ruler-hit-area.spec.ts` “ruler cell is the hit target, in Cycle at 1672x941” → `issue-738-ruler-hit-area.spec.ts` “ruler cell hit targets and bidirectional range gestures in Cycle at both supported viewports”. **Invariant:** Cycle ruler hit targets and both drag directions remain covered at the desktop viewport. **Reason:** Desktop assertions remain intact in the same Cycle-mode journey after viewport reflow, avoiding another app startup.
 - `issue-738-ruler-hit-area.spec.ts` “ruler cell is the hit target, in Transaction at 1280x720” → `issue-738-ruler-hit-area.spec.ts` “ruler cell hit targets and bidirectional range gestures in Transaction at both supported viewports”. **Invariant:** Compressed Transaction ruler hit targets and both drag directions remain covered at the compact viewport. **Reason:** Compact assertions now run in the Transaction-mode viewport loop within one app session, alongside the desktop counterpart.
 - `issue-738-ruler-hit-area.spec.ts` “ruler cell is the hit target, in Transaction at 1672x941” → `issue-738-ruler-hit-area.spec.ts` “ruler cell hit targets and bidirectional range gestures in Transaction at both supported viewports”. **Invariant:** Compressed Transaction ruler hit targets and both drag directions remain covered at the desktop viewport. **Reason:** Desktop assertions remain intact in the same Transaction-mode journey after viewport reflow, avoiding another app startup.
+- `issue-740-741-756-cycle-layout.spec.ts` “#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1280x720” → `issue-740-741-756-cycle-layout.spec.ts` “#756 Cycle left rail spans Main + Bottom at both supported viewports”. **Invariant:** The left rail reaches the workspace bottom and the timeline scrollbar remains above the Bottom splitter at compact viewport size. **Reason:** Runs both desktop and compact geometry assertions in one loaded Cycle workspace while restoring Bottom visibility between viewport sizes.
+- `issue-740-741-756-cycle-layout.spec.ts` “#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1672x941” → `issue-740-741-756-cycle-layout.spec.ts` “#756 Cycle left rail spans Main + Bottom at both supported viewports”. **Invariant:** The left rail reaches the workspace bottom and the timeline scrollbar remains above the Bottom splitter at desktop viewport size. **Reason:** Runs both desktop and compact geometry assertions in one loaded Cycle workspace while restoring Bottom visibility between viewport sizes.
 
 Per-case titles, source lines, project, timeout, tags, annotations, and classification fields are in [`qa/test-suite-inventory.json`](../qa/test-suite-inventory.json). Curated classifications are maintained in [`qa/test-suite-review.json`](../qa/test-suite-review.json) so regeneration does not erase review work.
 

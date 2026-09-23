@@ -6598,7 +6598,7 @@
     },
     {
       "file": "issue-740-741-756-cycle-layout.spec.ts",
-      "title": "#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1280x720",
+      "title": "#756 Cycle left rail spans Main + Bottom at both supported viewports",
       "domain": "cycle-left-rail-continuity",
       "originIssue": 756,
       "type": "GEOMETRY_CONTRACT",
@@ -6612,26 +6612,7 @@
         "visual"
       ],
       "decision": "KEEP",
-      "reason": "The compact viewport can expose rail clipping and overflow relationships that differ from desktop; retain this width-specific layout acceptance.",
-      "replacementTest": null
-    },
-    {
-      "file": "issue-740-741-756-cycle-layout.spec.ts",
-      "title": "#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1672x941",
-      "domain": "cycle-left-rail-continuity",
-      "originIssue": 756,
-      "type": "GEOMETRY_CONTRACT",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": null,
-      "primaryContract": "At both supported viewport sizes, the Cycle Tree reaches the workspace bottom, stays beside rather than under the Bottom table, and the timeline scrollbar remains attached above the Bottom splitter.",
-      "duplicateGroup": "cycle-left-rail-continuity",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "profiles": [
-        "integration",
-        "visual"
-      ],
-      "decision": "KEEP",
-      "reason": "This measures the structural left-rail relationship and scrollbar boundary across both viewport sizes; it complements the #740 bottom-hidden test without repeating its hide/show journey.",
+      "reason": "The same geometry contract runs at desktop and compact widths in one loaded Cycle workspace, retaining both responsive assertions while removing one redundant app startup. The Bottom hide/show sequence is restored between viewport sizes.",
       "replacementTest": null
     },
     {

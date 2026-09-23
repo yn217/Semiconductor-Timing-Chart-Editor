@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T11:13:17.260Z",
+  "generatedAt": "2026-09-23T11:17:35.249Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,14 +12,14 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 326,
-  "caseCount": 960,
-  "reviewedCaseCount": 960,
+  "caseCount": 959,
+  "reviewedCaseCount": 959,
   "curatedProfileCounts": {
-    "integration": 490,
+    "integration": 489,
     "nightly": 195,
     "performance": 54,
     "pr": 254,
-    "visual": 174
+    "visual": 173
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -11543,8 +11543,8 @@
     {
       "file": "issue-740-741-756-cycle-layout.spec.ts",
       "suitePath": [],
-      "line": 27,
-      "title": "#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1280x720",
+      "line": 26,
+      "title": "#756 Cycle left rail spans Main + Bottom at both supported viewports",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -11558,33 +11558,7 @@
       "duplicateGroup": "cycle-left-rail-continuity",
       "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
       "decision": "KEEP",
-      "reason": "The compact viewport can expose rail clipping and overflow relationships that differ from desktop; retain this width-specific layout acceptance.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "integration",
-        "visual"
-      ]
-    },
-    {
-      "file": "issue-740-741-756-cycle-layout.spec.ts",
-      "suitePath": [],
-      "line": 27,
-      "title": "#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1672x941",
-      "project": "chromium",
-      "timeoutMs": 30000,
-      "tags": [],
-      "annotations": [],
-      "domain": "cycle-left-rail-continuity",
-      "originIssue": 756,
-      "type": "GEOMETRY_CONTRACT",
-      "costClass": "MEDIUM",
-      "measuredRuntimeMs": null,
-      "primaryContract": "At both supported viewport sizes, the Cycle Tree reaches the workspace bottom, stays beside rather than under the Bottom table, and the timeline scrollbar remains attached above the Bottom splitter.",
-      "duplicateGroup": "cycle-left-rail-continuity",
-      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
-      "decision": "KEEP",
-      "reason": "This measures the structural left-rail relationship and scrollbar boundary across both viewport sizes; it complements the #740 bottom-hidden test without repeating its hide/show journey.",
+      "reason": "The same geometry contract runs at desktop and compact widths in one loaded Cycle workspace, retaining both responsive assertions while removing one redundant app startup. The Bottom hide/show sequence is restored between viewport sizes.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -25771,8 +25745,8 @@
     },
     {
       "file": "issue-740-741-756-cycle-layout.spec.ts",
-      "caseCount": 3,
-      "reviewedCaseCount": 3,
+      "caseCount": 2,
+      "reviewedCaseCount": 2,
       "originIssue": "740",
       "declaredTimeoutMs": 30,
       "candidateSignals": [
@@ -28228,6 +28202,30 @@
       },
       "protectedInvariant": "Compressed Transaction ruler hit targets and both drag directions remain covered at the desktop viewport.",
       "reason": "Desktop assertions remain intact in the same Transaction-mode journey after viewport reflow, avoiding another app startup."
+    },
+    {
+      "from": {
+        "file": "issue-740-741-756-cycle-layout.spec.ts",
+        "title": "#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1280x720"
+      },
+      "to": {
+        "file": "issue-740-741-756-cycle-layout.spec.ts",
+        "title": "#756 Cycle left rail spans Main + Bottom at both supported viewports"
+      },
+      "protectedInvariant": "The left rail reaches the workspace bottom and the timeline scrollbar remains above the Bottom splitter at compact viewport size.",
+      "reason": "Runs both desktop and compact geometry assertions in one loaded Cycle workspace while restoring Bottom visibility between viewport sizes."
+    },
+    {
+      "from": {
+        "file": "issue-740-741-756-cycle-layout.spec.ts",
+        "title": "#756 Cycle left rail spans Main + Bottom as one column (tree viewport reaches the workspace bottom) at 1672x941"
+      },
+      "to": {
+        "file": "issue-740-741-756-cycle-layout.spec.ts",
+        "title": "#756 Cycle left rail spans Main + Bottom at both supported viewports"
+      },
+      "protectedInvariant": "The left rail reaches the workspace bottom and the timeline scrollbar remains above the Bottom splitter at desktop viewport size.",
+      "reason": "Runs both desktop and compact geometry assertions in one loaded Cycle workspace while restoring Bottom visibility between viewport sizes."
     }
   ]
 }
