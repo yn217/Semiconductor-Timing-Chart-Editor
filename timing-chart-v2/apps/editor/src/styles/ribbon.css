@@ -103,9 +103,14 @@
 
 .ai-scope { color: #5c6b7e; }
 
-.ai-preview { display: flex; align-items: center; gap: 8px; padding: 3px 5px; border: 1px solid #9ebbd8; background: #eef7ff; }
+.ai-preview { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 5px; border: 1px solid #9ebbd8; background: #eef7ff; }
 
 .ai-preview span { color: #5c6b7e; }
+
+.ai-preview-commands { flex: 1 0 100%; display: grid; gap: 3px; margin: 0; padding: 0 0 0 22px; color: #26384d; font-size: 10px; }
+.ai-preview-commands li { padding-left: 2px; }
+.ai-preview-commands li > span { display: block; color: #26384d; font-weight: 650; }
+.ai-preview-commands small { display: block; color: #5c6b7e; }
 
 /* #395 PR2 (partial): Settings/Activity Log sections inside the same
    AIOperationPanel -- see ai-operation-panel.tsx for why these are real,

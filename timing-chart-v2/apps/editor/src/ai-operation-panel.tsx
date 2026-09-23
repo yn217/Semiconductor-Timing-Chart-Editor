@@ -65,6 +65,64 @@ export function isAIPreviewFresh(input: { readonly proposalEpoch: number | undef
   return input.proposalEpoch !== undefined && input.proposalEpoch === input.currentEpoch && input.proposalRevision === input.currentRevision;
 }
 
+/** Render a reviewable, ordered summary of the actual semantic commands in
+ * an external proposal. Stable IDs are included so same-named entities are
+ * never ambiguous to a reviewer. */
+export function describeAIProposalCommands(document: CanonicalDocument, commands: readonly SemanticCommand[]): readonly Readonly<{ title: string; detail: string }>[] {
+  const proposedTransactionNames = new Map<string, string>();
+  const transactionName = (id: string) => proposedTransactionNames.get(id) ?? document.transactions.find((item) => item.id === id)?.name ?? id;
+  const signalName = (id: string) => document.signals.find((item) => item.id === id)?.display.name ?? id;
+  return commands.map((command) => {
+    switch (command.type) {
+      case "transaction.create": {
+        proposedTransactionNames.set(command.transaction.id, command.transaction.name);
+        return { title: `Create Transaction ${command.transaction.name}`, detail: `${command.transaction.start}–${command.transaction.end} source cycles · ID ${command.transaction.id}` };
+      }
+      case "transaction.phaseAdd":
+        return { title: `Add Phase ${command.phase.name} to ${transactionName(command.transactionId)}`, detail: `${command.phase.start}–${command.phase.end} source cycles · Transaction ID ${command.transactionId}` };
+      case "transaction.phaseUpdate":
+        return { title: `Update Phase ${command.phase.name} in ${transactionName(command.transactionId)}`, detail: `${command.phase.start}–${command.phase.end} source cycles · Transaction ID ${command.transactionId}` };
+      case "transaction.phaseDelete": {
+        const phase = document.transactions.find((item) => item.id === command.transactionId)?.phases?.[command.phaseIndex];
+        return { title: `Delete Phase ${phase?.name ?? `#${command.phaseIndex + 1}`} from ${transactionName(command.transactionId)}`, detail: `Transaction ID ${command.transactionId}` };
+      }
+      case "transaction.linkSignal":
+      case "transaction.unlinkSignal":
+        return { title: `${command.type === "transaction.linkSignal" ? "Link" : "Unlink"} Signal ${signalName(command.signalId)} ${command.type === "transaction.linkSignal" ? "to" : "from"} ${transactionName(command.transactionId)}`, detail: `Signal ID ${command.signalId} · Transaction ID ${command.transactionId}` };
+      case "transaction.update":
+        return { title: `Update Transaction ${transactionName(command.transactionId)}`, detail: `${command.start}–${command.end} source cycles · Transaction ID ${command.transactionId}` };
+      case "transaction.move":
+        return { title: `Move Transaction ${transactionName(command.transactionId)}`, detail: `Start at source cycle ${command.start} · Transaction ID ${command.transactionId}` };
+      case "transaction.resize":
+        return { title: `Resize Transaction ${transactionName(command.transactionId)} ${command.edge}`, detail: `Boundary ${command.value} source cycles · Transaction ID ${command.transactionId}` };
+      case "transaction.delete":
+        return { title: `Delete Transaction ${transactionName(command.transactionId)}`, detail: `Transaction ID ${command.transactionId}` };
+      case "signal.rename":
+        return { title: `Rename Signal ${signalName(command.signalId)} to ${command.name}`, detail: `Signal ID ${command.signalId}` };
+      case "signal.move":
+        return { title: `Move Signal ${signalName(command.signalId)}`, detail: `Signal ID ${command.signalId} · Group ID ${command.targetGroupId} · position ${command.index + 1}` };
+      case "group.create":
+        return { title: `Create Signal Group ${command.group.name}`, detail: `Group ID ${command.group.id}` };
+      case "group.rename":
+        return { title: `Rename Signal Group to ${command.name}`, detail: `Group ID ${command.groupId}` };
+      case "group.move":
+        return { title: `Move Signal Group to position ${command.index + 1}`, detail: `Group ID ${command.groupId}` };
+      case "group.delete":
+        return { title: "Delete Signal Group", detail: `Group ID ${command.groupId}` };
+      case "timeline.insert":
+        return { title: `Insert ${command.count} cycles`, detail: `At source cycle ${command.at}` };
+      case "timeline.delete":
+        return { title: "Delete source-cycle range", detail: `${command.start}–${command.end}` };
+      case "timeline.moveRange":
+        return { title: "Move source-cycle range", detail: `${command.start}–${command.end} to ${command.to}` };
+      case "timeline.duplicateRange":
+        return { title: "Duplicate source-cycle range", detail: `${command.start}–${command.end} at ${command.at}` };
+      default:
+        return { title: command.type.replaceAll(".", " "), detail: `Command ID ${command.id}` };
+    }
+  });
+}
+
 // #395 PR5 (part 3): "Context / Scope" -- the acceptance list's own item 2
 // ("Scope can be switched Selection / Current View / Document") names a
 // real, switchable control, not a static label. Every existing command
@@ -357,7 +415,7 @@ export function AIOperationPanel({ document, documentEpoch, revision, mode, sele
       </div>
       <div className="ai-settings-section"><h4>Provider</h4><span className="inspector-note">{providerName}</span></div>
     </div>}
-    {preview && <div className="ai-preview" data-testid="ai-preview"><strong>{preview.summary}</strong><span>Base revision {preview.baseRevision}</span><button type="button" data-testid="ai-validate" onClick={() => validatePreview()}>Validate Proposal</button><button type="button" data-testid="ai-apply" onClick={() => applyPreview()}>Apply Preview</button><button type="button" onClick={cancelPreview}>Cancel</button></div>}
+    {preview && <div className="ai-preview" data-testid="ai-preview"><strong>{preview.summary}</strong><span>Base revision {preview.baseRevision}</span>{preview.commands.length > 0 && <ol className="ai-preview-commands" data-testid="ai-preview-commands">{describeAIProposalCommands(document, preview.commands).map((item, index) => <li key={`${preview.commands[index]!.id}:${index}`}><span>{item.title}</span><small>{item.detail}</small></li>)}</ol>}<button type="button" data-testid="ai-validate" onClick={() => validatePreview()}>Validate Proposal</button><button type="button" data-testid="ai-apply" onClick={() => applyPreview()}>Apply Preview</button><button type="button" onClick={cancelPreview}>Cancel</button></div>}
     <output role="status" data-testid="ai-status">{status}</output>
     <details className="ai-activity-log" data-testid="ai-activity-log">
       <summary>AI Activity ({activityLog.length})</summary>

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isAIPreviewFresh } from "../../apps/editor/src/ai-operation-panel.js";
+import { describeAIProposalCommands, isAIPreviewFresh } from "../../apps/editor/src/ai-operation-panel.js";
 import { buildAIClientConfig, buildAIMcpEndpoint } from "../../apps/editor/src/ai-connection-guide.js";
 import { classifyAIBridgeFailure, isLoopbackBridgeHost } from "../../apps/editor/src/ai-bridge-client.js";
+import { buildTypedTransactionProposal } from "../../apps/editor/src/ai-proposal-provider.js";
+import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("AI document-scoped freshness", () => {
   it("rejects same-revision proposals from an older document epoch synchronously", () => {
@@ -12,6 +14,36 @@ describe("AI document-scoped freshness", () => {
   it("requires both the shared epoch and revision for a validated Apply", () => {
     expect(isAIPreviewFresh({ proposalEpoch: undefined, currentEpoch: 5, proposalRevision: 7, currentRevision: 7 })).toBe(false);
     expect(isAIPreviewFresh({ proposalEpoch: 5, currentEpoch: 5, proposalRevision: 6, currentRevision: 7 })).toBe(false);
+  });
+});
+
+describe("AI proposal review details", () => {
+  it("lists compound Transaction, Phase, and Signal-link commands with source ranges and stable IDs", () => {
+    const base = canonicalFixture();
+    const document = { ...base, timeline: { ...base.timeline, end: 24, cycleCount: 24 } };
+    const built = buildTypedTransactionProposal(document, 7, "propose_create_transaction", {
+      name: "MCP Read",
+      start: 4,
+      end: 20,
+      phases: [{ name: "Address", start: 4, end: 8 }, { name: "Data", start: 8, end: 16 }, { name: "Response", start: 16, end: 20 }],
+      linkedSignalIds: ["sig_clk", "sig_data"],
+    });
+    expect(built.ok).toBe(true);
+    if (!built.ok) return;
+    const details = describeAIProposalCommands(document, built.proposal.commands);
+    expect(details).toHaveLength(6);
+    expect(details.map((item) => item.title)).toEqual([
+      "Create Transaction MCP Read",
+      "Add Phase Address to MCP Read",
+      "Add Phase Data to MCP Read",
+      "Add Phase Response to MCP Read",
+      "Link Signal CLK to MCP Read",
+      "Link Signal DATA to MCP Read",
+    ]);
+    expect(details[0]?.detail).toMatch(/4–20 source cycles · ID transaction_/);
+    expect(details[1]?.detail).toContain("4–8 source cycles");
+    expect(details[4]?.detail).toContain("Signal ID sig_clk");
+    expect(details[4]?.detail).toContain("Transaction ID transaction_");
   });
 });
 

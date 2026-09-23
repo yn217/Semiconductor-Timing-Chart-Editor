@@ -241,6 +241,13 @@ test("external Transaction+Phases+Signals proposal validates and applies as one 
   expect(response.body.result!.isError).toBe(false);
   expect(JSON.parse(response.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ summary: "Create Transaction MCP_READ with 3 Phases and 2 linked Signals", requiresApproval: true }));
   await expect(ai.getByTestId("ai-preview")).toContainText("3 Phases and 2 linked Signals");
+  const proposalCommands = ai.getByTestId("ai-preview-commands");
+  await expect(proposalCommands.locator("li")).toHaveCount(6);
+  await expect(proposalCommands).toContainText("Create Transaction MCP_READ");
+  await expect(proposalCommands).toContainText("Add Phase Address to MCP_READ");
+  await expect(proposalCommands).toContainText("10–16 source cycles");
+  await expect(proposalCommands).toContainText("Link Signal REQUEST to MCP_READ");
+  await expect(proposalCommands).toContainText("Signal ID sig_cycle_request");
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText(beforeDirty!);
