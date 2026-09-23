@@ -86,9 +86,9 @@ test.describe("real scrollbar drag", () => {
   });
 });
 
-for (const zoom of ["50", "200", "800"]) {
-  test(`ruler returns to cycle 0 after scroll-away-and-return at zoom ${zoom}%`, async ({ page }) => {
-    const surface = await open(page, 5_000);
+test("ruler returns to cycle 0 after scroll-away-and-return across zoom levels", async ({ page }) => {
+  const surface = await open(page, 5_000);
+  for (const zoom of ["50", "200", "800"]) {
     await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
     await page.getByLabel("Zoom preset").selectOption(zoom);
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
@@ -101,5 +101,5 @@ for (const zoom of ["50", "200", "800"]) {
       await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
       await expect.poll(async () => { const s = await rulerState(page); return s.scrollLeft === 0 ? s.firstVisibleCycle : `scrollLeft ${s.scrollLeft}`; }, { message: `zoom ${zoom} after return from ${far}` }).toBe(0);
     }
-  });
-}
+  }
+});

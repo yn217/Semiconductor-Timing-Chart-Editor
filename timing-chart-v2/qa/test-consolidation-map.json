@@ -3,6 +3,42 @@
   "consolidations": [
     {
       "from": {
+        "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
+        "title": "ruler returns to cycle 0 after scroll-away-and-return at zoom 50%"
+      },
+      "to": {
+        "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
+        "title": "ruler returns to cycle 0 after scroll-away-and-return across zoom levels"
+      },
+      "protectedInvariant": "At each supported zoom level (50%, 200%, 800%), far right scroll and return keeps cycle zero as the leftmost ruler origin.",
+      "reason": "The same 5,000-cycle fixture and interaction were previously booted once per zoom. One page now exercises all three zoom levels sequentially while retaining each zoom's three far-scroll return assertions."
+    },
+    {
+      "from": {
+        "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
+        "title": "ruler returns to cycle 0 after scroll-away-and-return at zoom 200%"
+      },
+      "to": {
+        "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
+        "title": "ruler returns to cycle 0 after scroll-away-and-return across zoom levels"
+      },
+      "protectedInvariant": "At each supported zoom level (50%, 200%, 800%), far right scroll and return keeps cycle zero as the leftmost ruler origin.",
+      "reason": "Consolidated into the single-session multi-zoom ruler-origin contract; individual zoom iterations and scroll anchors remain explicit."
+    },
+    {
+      "from": {
+        "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
+        "title": "ruler returns to cycle 0 after scroll-away-and-return at zoom 800%"
+      },
+      "to": {
+        "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
+        "title": "ruler returns to cycle 0 after scroll-away-and-return across zoom levels"
+      },
+      "protectedInvariant": "At each supported zoom level (50%, 200%, 800%), far right scroll and return keeps cycle zero as the leftmost ruler origin.",
+      "reason": "Consolidated into the single-session multi-zoom ruler-origin contract; individual zoom iterations and scroll anchors remain explicit."
+    },
+    {
+      "from": {
         "file": "issue-629-combined-tree-inspector.spec.ts",
         "title": "Combined: selecting a Transaction in the Tree after a Signal switches the Inspector to Transaction"
       },

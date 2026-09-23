@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T11:48:53.333Z",
+  "generatedAt": "2026-09-23T14:37:42.354Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,11 +12,11 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 326,
-  "caseCount": 951,
-  "reviewedCaseCount": 951,
+  "caseCount": 949,
+  "reviewedCaseCount": 949,
   "curatedProfileCounts": {
     "integration": 484,
-    "nightly": 195,
+    "nightly": 193,
     "performance": 54,
     "pr": 253,
     "visual": 165
@@ -11293,58 +11293,8 @@
     {
       "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
       "suitePath": [],
-      "line": 90,
-      "title": "ruler returns to cycle 0 after scroll-away-and-return at zoom 200%",
-      "project": "chromium",
-      "timeoutMs": 240000,
-      "tags": [],
-      "annotations": [],
-      "domain": "ruler-origin-after-rebase-stress",
-      "originIssue": 738,
-      "type": "ISSUE_REGRESSION",
-      "costClass": "VERY_HEAVY",
-      "measuredRuntimeMs": null,
-      "primaryContract": "After repeated far/stepped/native-scroll/zoom returns to scrollLeft zero, ruler source origin remains cycle zero and aligned to the waveform origin.",
-      "duplicateGroup": "ruler-origin-rebase-738",
-      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
-      "decision": "KEEP",
-      "reason": "This seven-case stress matrix includes 100,000-cycle input, native scrollbar-thumb interaction, and three zoom variants; it must remain automatically executable but not inflate the normal PR path. Its exact runtime is not yet measured on this branch.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "nightly"
-      ]
-    },
-    {
-      "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
-      "suitePath": [],
-      "line": 90,
-      "title": "ruler returns to cycle 0 after scroll-away-and-return at zoom 50%",
-      "project": "chromium",
-      "timeoutMs": 240000,
-      "tags": [],
-      "annotations": [],
-      "domain": "ruler-origin-after-rebase-stress",
-      "originIssue": 738,
-      "type": "ISSUE_REGRESSION",
-      "costClass": "VERY_HEAVY",
-      "measuredRuntimeMs": null,
-      "primaryContract": "After repeated far/stepped/native-scroll/zoom returns to scrollLeft zero, ruler source origin remains cycle zero and aligned to the waveform origin.",
-      "duplicateGroup": "ruler-origin-rebase-738",
-      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
-      "decision": "KEEP",
-      "reason": "This seven-case stress matrix includes 100,000-cycle input, native scrollbar-thumb interaction, and three zoom variants; it must remain automatically executable but not inflate the normal PR path. Its exact runtime is not yet measured on this branch.",
-      "replacementTest": null,
-      "reviewStatus": "REVIEWED",
-      "profiles": [
-        "nightly"
-      ]
-    },
-    {
-      "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
-      "suitePath": [],
-      "line": 90,
-      "title": "ruler returns to cycle 0 after scroll-away-and-return at zoom 800%",
+      "line": 89,
+      "title": "ruler returns to cycle 0 after scroll-away-and-return across zoom levels",
       "project": "chromium",
       "timeoutMs": 240000,
       "tags": [],
@@ -25503,8 +25453,8 @@
     },
     {
       "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
-      "caseCount": 7,
-      "reviewedCaseCount": 7,
+      "caseCount": 5,
+      "reviewedCaseCount": 5,
       "originIssue": "738",
       "declaredTimeoutMs": 300,
       "candidateSignals": [
@@ -27445,6 +27395,42 @@
     }
   ],
   "consolidationMap": [
+    {
+      "from": {
+        "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
+        "title": "ruler returns to cycle 0 after scroll-away-and-return at zoom 50%"
+      },
+      "to": {
+        "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
+        "title": "ruler returns to cycle 0 after scroll-away-and-return across zoom levels"
+      },
+      "protectedInvariant": "At each supported zoom level (50%, 200%, 800%), far right scroll and return keeps cycle zero as the leftmost ruler origin.",
+      "reason": "The same 5,000-cycle fixture and interaction were previously booted once per zoom. One page now exercises all three zoom levels sequentially while retaining each zoom's three far-scroll return assertions."
+    },
+    {
+      "from": {
+        "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
+        "title": "ruler returns to cycle 0 after scroll-away-and-return at zoom 200%"
+      },
+      "to": {
+        "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
+        "title": "ruler returns to cycle 0 after scroll-away-and-return across zoom levels"
+      },
+      "protectedInvariant": "At each supported zoom level (50%, 200%, 800%), far right scroll and return keeps cycle zero as the leftmost ruler origin.",
+      "reason": "Consolidated into the single-session multi-zoom ruler-origin contract; individual zoom iterations and scroll anchors remain explicit."
+    },
+    {
+      "from": {
+        "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
+        "title": "ruler returns to cycle 0 after scroll-away-and-return at zoom 800%"
+      },
+      "to": {
+        "file": "issue-738-ruler-origin-after-scroll-return.spec.ts",
+        "title": "ruler returns to cycle 0 after scroll-away-and-return across zoom levels"
+      },
+      "protectedInvariant": "At each supported zoom level (50%, 200%, 800%), far right scroll and return keeps cycle zero as the leftmost ruler origin.",
+      "reason": "Consolidated into the single-session multi-zoom ruler-origin contract; individual zoom iterations and scroll anchors remain explicit."
+    },
     {
       "from": {
         "file": "issue-629-combined-tree-inspector.spec.ts",

@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 326 spec files and 951 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 326 spec files and 949 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 951/951 cases reviewed.
+Semantic review progress: 949/949 cases reviewed.
 
 ## Curated profile membership
 
@@ -11,7 +11,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | Profile | Reviewed cases |
 | --- | ---: |
 | `integration` | 484 |
-| `nightly` | 195 |
+| `nightly` | 193 |
 | `performance` | 54 |
 | `pr` | 253 |
 | `visual` | 165 |
@@ -194,7 +194,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-728-group-double-click.spec.ts` | 1 | 1/1 reviewed |
 | `issue-729-dirty-title.spec.ts` | 1 | 1/1 reviewed |
 | `issue-738-ruler-hit-area.spec.ts` | 2 | 2/2 reviewed |
-| `issue-738-ruler-origin-after-scroll-return.spec.ts` | 7 | 7/7 reviewed |
+| `issue-738-ruler-origin-after-scroll-return.spec.ts` | 5 | 5/5 reviewed |
 | `issue-738-stress-real-input.spec.ts` | 2 | 2/2 reviewed |
 | `issue-738-stress-rebase.spec.ts` | 4 | 4/4 reviewed |
 | `issue-740-741-756-cycle-layout.spec.ts` | 2 | 2/2 reviewed |
@@ -539,6 +539,9 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 
 ## Consolidation/replacement map
 
+- `issue-738-ruler-origin-after-scroll-return.spec.ts` “ruler returns to cycle 0 after scroll-away-and-return at zoom 50%” → `issue-738-ruler-origin-after-scroll-return.spec.ts` “ruler returns to cycle 0 after scroll-away-and-return across zoom levels”. **Invariant:** At each supported zoom level (50%, 200%, 800%), far right scroll and return keeps cycle zero as the leftmost ruler origin. **Reason:** The same 5,000-cycle fixture and interaction were previously booted once per zoom. One page now exercises all three zoom levels sequentially while retaining each zoom's three far-scroll return assertions.
+- `issue-738-ruler-origin-after-scroll-return.spec.ts` “ruler returns to cycle 0 after scroll-away-and-return at zoom 200%” → `issue-738-ruler-origin-after-scroll-return.spec.ts` “ruler returns to cycle 0 after scroll-away-and-return across zoom levels”. **Invariant:** At each supported zoom level (50%, 200%, 800%), far right scroll and return keeps cycle zero as the leftmost ruler origin. **Reason:** Consolidated into the single-session multi-zoom ruler-origin contract; individual zoom iterations and scroll anchors remain explicit.
+- `issue-738-ruler-origin-after-scroll-return.spec.ts` “ruler returns to cycle 0 after scroll-away-and-return at zoom 800%” → `issue-738-ruler-origin-after-scroll-return.spec.ts` “ruler returns to cycle 0 after scroll-away-and-return across zoom levels”. **Invariant:** At each supported zoom level (50%, 200%, 800%), far right scroll and return keeps cycle zero as the leftmost ruler origin. **Reason:** Consolidated into the single-session multi-zoom ruler-origin contract; individual zoom iterations and scroll anchors remain explicit.
 - `issue-629-combined-tree-inspector.spec.ts` “Combined: selecting a Transaction in the Tree after a Signal switches the Inspector to Transaction” → `inspector-selection-context.contract.spec.ts` “Combined: selecting a Transaction in the Tree after a Signal switches the Inspector to Transaction”. **Invariant:** Combined Inspector follows stable selected entity kind from a Signal to a Transaction without History mutation. **Reason:** Moved the Issue-specific check into the stable Inspector selection/context contract suite while preserving its individual production journey and #629 traceability.
 - `issue-629-inspector-mode-context.spec.ts` “Inspector follows active workspace context and retains hidden stable selection at 1280x720” → `inspector-selection-context.contract.spec.ts` “Inspector follows active workspace context and retains hidden stable selection at 1280x720”. **Invariant:** Inspector follows active workspace and restores hidden Transaction/Signal selection by stable identity through Cycle/Transaction/Combined without document/history changes. **Reason:** Moved the compact cross-mode user journey into the stable Inspector selection/context contract suite; test behavior is unchanged and #629 origin metadata is retained.
 - `issue-701-layout-return.spec.ts` “Layout Inspector is reachable again after clearing the Transaction selection” → `inspector-selection-context.contract.spec.ts` “Layout Inspector is reachable again after clearing the Transaction selection”. **Invariant:** Clearing selected Transaction restores Layout Inspector; reselecting returns to entity properties without changing History. **Reason:** Moved the distinct selection-clear lifecycle into the stable Inspector selection/context suite with #701 traceability.
