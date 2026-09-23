@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 332 spec files and 965 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 537/963 cases reviewed.
+Semantic review progress: 539/965 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 236 |
+| `integration` | 237 |
 | `nightly` | 148 |
 | `performance` | 36 |
-| `pr` | 162 |
+| `pr` | 163 |
 | `visual` | 120 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -221,7 +221,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `issue-776-signal-inspector-draft-sync.spec.ts` | 2 | 2/2 reviewed |
 | `issue-777-current-v2-samples-acceptance.spec.ts` | 10 | 10/10 reviewed |
 | `keyboard-shortcut-router.spec.ts` | 4 | 4/4 reviewed |
-| `keyboard-tabs-resizers.spec.ts` | 2 | 0/2 reviewed |
+| `keyboard-tabs-resizers.spec.ts` | 2 | 2/2 reviewed |
 | `label-anchor-source-display.spec.ts` | 1 | 0/1 reviewed |
 | `layout-inspector.spec.ts` | 4 | 4/4 reviewed |
 | `left-header-action-alignment.spec.ts` | 1 | 0/1 reviewed |
@@ -337,7 +337,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `tree-drag-drop.spec.ts` | 5 | 0/5 reviewed |
 | `tree-keyboard.spec.ts` | 2 | 0/2 reviewed |
 | `undo-redo-selection-context.spec.ts` | 3 | 0/3 reviewed |
-| `unsaved-file-dialog.spec.ts` | 12 | 12/12 reviewed |
+| `unsaved-file-dialog.spec.ts` | 14 | 12/14 reviewed |
 | `v8-gui-contract-coverage.spec.ts` | 1 | 1/1 reviewed |
 | `value-label-layout.spec.ts` | 1 | 0/1 reviewed |
 | `value-signal-compatibility.spec.ts` | 7 | 7/7 reviewed |
@@ -492,7 +492,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `transaction-tree-control-parity.spec.ts` | querySelector, geometryRead |
 | `transaction-viewport-hscroll.spec.ts` | geometryRead |
 | `tree-drag-drop.spec.ts` | dataset |
-| `unsaved-file-dialog.spec.ts` | explicitWait |
+| `unsaved-file-dialog.spec.ts` | getComputedStyle, elementContains, geometryRead, explicitWait |
 | `v8-gui-contract-coverage.spec.ts` | geometryRead |
 | `value-label-layout.spec.ts` | querySelector |
 | `view-metrics-owner.spec.ts` | dataset, geometryRead |

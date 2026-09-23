@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T02:51:24.359Z",
+  "generatedAt": "2026-09-23T03:35:48.805Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -12,13 +12,13 @@
     "retryAndFlakySummary": null
   },
   "specFileCount": 332,
-  "caseCount": 963,
-  "reviewedCaseCount": 537,
+  "caseCount": 965,
+  "reviewedCaseCount": 539,
   "curatedProfileCounts": {
-    "integration": 236,
+    "integration": 237,
     "nightly": 148,
     "performance": 36,
-    "pr": 162,
+    "pr": 163,
     "visual": 120
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -6875,7 +6875,7 @@
     {
       "file": "gui-reference-v8.spec.ts",
       "suitePath": [],
-      "line": 130,
+      "line": 131,
       "title": "applies the v8 Signal Inspector style controls as one semantic operation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -6897,7 +6897,7 @@
     {
       "file": "gui-reference-v8.spec.ts",
       "suitePath": [],
-      "line": 168,
+      "line": 169,
       "title": "V8 Home secondary actions stay connected to real navigation and semantic commands",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -12049,7 +12049,7 @@
     {
       "file": "issue-750-geometry-10-to-50.spec.ts",
       "suitePath": [],
-      "line": 63,
+      "line": 60,
       "title": "compressed Transaction: no clipped labels and no artificial scroll extent at 1280x720",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -12074,7 +12074,7 @@
     {
       "file": "issue-750-geometry-10-to-50.spec.ts",
       "suitePath": [],
-      "line": 63,
+      "line": 60,
       "title": "compressed Transaction: no clipped labels and no artificial scroll extent at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -12100,7 +12100,7 @@
       "file": "issue-750-ruler-follows-tc-scale.spec.ts",
       "suitePath": [],
       "line": 7,
-      "title": "Transaction ruler labels follow cycles-per-TC (10 -> 5 -> 1 -> Undo) and Cycle mode stays in cycles",
+      "title": "Transaction ruler labels follow the view-only cycles-per-TC scale and Cycle mode stays in cycles",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -12109,12 +12109,12 @@
       "originIssue": 750,
       "type": "GEOMETRY_CONTRACT",
       "costClass": "MEDIUM",
-      "measuredRuntimeMs": 9200,
-      "primaryContract": "Transaction ruler labels and source-cycle boundaries follow 10/5/1 cycles-per-TC, Undo restores the prior scale, and Cycle mode continues to label source cycles.",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Transaction ruler labels and source-cycle boundaries follow 10/5/1 cycles-per-TC while Canonical revision, History, and Dirty stay unchanged; Cycle mode continues to label source cycles.",
       "duplicateGroup": null,
       "executionTier": "TIER_2_FOCUSED_BROWSER",
       "decision": "KEEP",
-      "reason": "The mode-crossing ruler journey protects the shared display-unit contract, complementary to the bar-width/canonical geometry test; known label/source anchors are independent fixture expectations.",
+      "reason": "The mode-crossing ruler journey protects the shared view-only display-unit contract, complementary to the Bottom re-expression case; expected source-cycle labels are hand-authored anchors.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -12125,7 +12125,7 @@
       "file": "issue-750-tc-scale-selector.spec.ts",
       "suitePath": [],
       "line": 3,
-      "title": "Transaction header exposes a cycles-per-TC selector that is one undoable edit",
+      "title": "Transaction header exposes a cycles-per-TC view preference without canonical history changes",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -12134,12 +12134,12 @@
       "originIssue": 750,
       "type": "USER_JOURNEY",
       "costClass": "MEDIUM",
-      "measuredRuntimeMs": 8300,
-      "primaryContract": "Changing the header cycles-per-TC selector updates displayed Bottom values while preserving entity identity, and creates exactly one Undoable view-setting history operation.",
+      "measuredRuntimeMs": null,
+      "primaryContract": "Changing the header cycles-per-TC preference re-expresses Bottom Start/End/Duration while preserving Name/Group/Lane, Canonical revision, History, and Dirty.",
       "duplicateGroup": null,
       "executionTier": "TIER_2_FOCUSED_BROWSER",
       "decision": "KEEP",
-      "reason": "This verifies the actual ribbon selector to Bottom projection to Undo path; it is distinct from ruler-label progression and invalid custom draft validation.",
+      "reason": "This verifies the header preference to Bottom-unit projection and its view-only state boundary; it is distinct from ruler-label progression and custom draft validation.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
@@ -13844,18 +13844,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "bottom-tab-keyboard-accessibility",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Keyboard users can move between Bottom tabs with arrow and End keys; focus, selected-tab state, and the labelled tabpanel stay synchronized without changing the document.",
+      "duplicateGroup": "bottom-tab-keyboard-contract",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Accessible keyboard navigation and ARIA panel ownership are observable user contracts that pure state tests cannot establish in the rendered application. This is a compact one-page journey and distinct from pointer-based Bottom tab coverage.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "keyboard-tabs-resizers.spec.ts",
@@ -13866,18 +13869,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "splitter-keyboard-bounds-view-state",
+      "originIssue": 722,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "All four focusable pane separators respond to their orientation-specific keyboard controls, stop at declared minimum/maximum values, and leave Canonical revision, History, and Dirty unchanged.",
+      "duplicateGroup": "splitter-keyboard-resize-contract",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This exercises four distinct production splitter owners and both boundaries through real keyboard events; the repeated extreme-boundary navigation is intentionally not part of the routine PR profile. Existing #722 discoverability/reset tests cover pointer affordance and double-click defaults, not keyboard resizing at both limits.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "label-anchor-source-display.spec.ts",
@@ -21338,7 +21344,7 @@
       "file": "transaction-time-scale.spec.ts",
       "suitePath": [],
       "line": 10,
-      "title": "Transaction Time Scale is set through the Ribbon panel, reflected in the status label, and exact-Undo/Redo",
+      "title": "Transaction TC display scale is view-only, persists as a workspace preference, and leaves canonical history clean",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -21359,7 +21365,7 @@
     {
       "file": "transaction-time-scale.spec.ts",
       "suitePath": [],
-      "line": 48,
+      "line": 53,
       "title": "Transaction Time Scale panel rejects an invalid ratio and Cancel/Escape discard the draft",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21381,7 +21387,7 @@
     {
       "file": "transaction-time-scale.spec.ts",
       "suitePath": [],
-      "line": 67,
+      "line": 72,
       "title": "GUI Apply preserves an existing secondary clock when editing an unrelated time-scale field",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21799,7 +21805,7 @@
     {
       "file": "unsaved-file-dialog.spec.ts",
       "suitePath": [],
-      "line": 17,
+      "line": 57,
       "title": "dirty New uses Cancel and Discard without losing the current document",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21824,7 +21830,7 @@
     {
       "file": "unsaved-file-dialog.spec.ts",
       "suitePath": [],
-      "line": 51,
+      "line": 91,
       "title": "Escape on the unsaved-changes dialog behaves exactly like Cancel",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21849,7 +21855,29 @@
     {
       "file": "unsaved-file-dialog.spec.ts",
       "suitePath": [],
-      "line": 75,
+      "line": 115,
+      "title": "dirty Open keeps keyboard focus inside the dialog and Enter activates the focused action",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
+    },
+    {
+      "file": "unsaved-file-dialog.spec.ts",
+      "suitePath": [],
+      "line": 137,
       "title": "dirty Open uses Save before replacing the document",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21875,7 +21903,7 @@
     {
       "file": "unsaved-file-dialog.spec.ts",
       "suitePath": [],
-      "line": 91,
+      "line": 153,
       "title": "dirty Open keeps the current document on Cancel and replaces it on Discard",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21901,7 +21929,29 @@
     {
       "file": "unsaved-file-dialog.spec.ts",
       "suitePath": [],
-      "line": 117,
+      "line": 179,
+      "title": "dirty Open actions stay readable and pointer-operable through the production picker in dark color scheme",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
+    },
+    {
+      "file": "unsaved-file-dialog.spec.ts",
+      "suitePath": [],
+      "line": 218,
       "title": "Save As failure keeps the exact revision dirty and leaves the dialog open",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21926,7 +21976,7 @@
     {
       "file": "unsaved-file-dialog.spec.ts",
       "suitePath": [],
-      "line": 136,
+      "line": 237,
       "title": "concurrent Open requests are latest-request-wins",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21951,7 +22001,7 @@
     {
       "file": "unsaved-file-dialog.spec.ts",
       "suitePath": [],
-      "line": 165,
+      "line": 266,
       "title": "Open rechecks Dirty after a delayed file read",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21976,7 +22026,7 @@
     {
       "file": "unsaved-file-dialog.spec.ts",
       "suitePath": [],
-      "line": 193,
+      "line": 294,
       "title": "Open atomically clears document-scoped selection, pin, filter and timeline state",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -22002,7 +22052,7 @@
     {
       "file": "unsaved-file-dialog.spec.ts",
       "suitePath": [],
-      "line": 221,
+      "line": 322,
       "title": "Open resets entity-keyed Transaction bulk selection and Bottom pin across colliding document IDs",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -22028,7 +22078,7 @@
     {
       "file": "unsaved-file-dialog.spec.ts",
       "suitePath": [],
-      "line": 255,
+      "line": 356,
       "title": "Open discards an entity-keyed Inspector draft when the replacement document reuses the ID",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -22053,7 +22103,7 @@
     {
       "file": "unsaved-file-dialog.spec.ts",
       "suitePath": [],
-      "line": 281,
+      "line": 385,
       "title": "Open resets the independent Bookmark selection when the replacement document reuses the ID",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -22078,7 +22128,7 @@
     {
       "file": "unsaved-file-dialog.spec.ts",
       "suitePath": [],
-      "line": 305,
+      "line": 409,
       "title": "future format opens a source-preserving read-only Compatibility Mode",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -25060,11 +25110,11 @@
     {
       "file": "keyboard-tabs-resizers.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": 60000,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "label-anchor-source-display.spec.ts",
@@ -26225,14 +26275,17 @@
     },
     {
       "file": "unsaved-file-dialog.spec.ts",
-      "caseCount": 12,
+      "caseCount": 14,
       "reviewedCaseCount": 12,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
+        "getComputedStyle",
+        "elementContains",
+        "geometryRead",
         "explicitWait"
       ],
-      "semanticReviewStatus": "REVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "v8-gui-contract-coverage.spec.ts",
