@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:06:03.159Z",
+  "generatedAt": "2026-09-23T07:07:48.712Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,11 +13,11 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 835,
+  "reviewedCaseCount": 839,
   "curatedProfileCounts": {
-    "integration": 433,
-    "nightly": 172,
-    "performance": 45,
+    "integration": 436,
+    "nightly": 173,
+    "performance": 46,
     "pr": 230,
     "visual": 144
   },
@@ -19680,18 +19680,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "multiple-axis-break-source-time-projection",
+      "originIssue": 411,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Two separately-created collapsed intervals retain distinct IDs, omit only their respective source cycles, preserve each exclusive end boundary, and create two history steps through the shared mapping.",
+      "duplicateGroup": "multi-timegroup-axis-break-projection",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The multi-TimeGroup lifecycle verifies two marker identities and persistence, but not that two disjoint folds simultaneously remove the correct ruler ticks and preserve each resumed boundary. This covers the shared mapping projection contract.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19702,18 +19705,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "timeline-range-duplicate-semantic-copy",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Duplicating a selected half-open cycle range at a destination copies the expected Signal values into new source-time positions, extends the timeline once, and records exactly one History operation.",
+      "duplicateGroup": "timeline-range-duplicate-move-semantics",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "The general command smoke verifies that Duplicate is enabled and changes timeline length; this asserts actual copied values and destination semantics for a concrete binary waveform range.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-editor.spec.ts",
@@ -19724,18 +19730,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "timeline-range-move-permutation",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Moving a half-open range permutes selected and displaced cycle values at source/destination positions while preserving total timeline length and producing one history operation with a valid terminal boundary.",
+      "duplicateGroup": "timeline-range-duplicate-move-semantics",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "Unlike Duplicate, Move must preserve timeline length and permute displaced source state rather than create a copy. It directly asserts both moved-range and join positions plus exclusive terminal geometry.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "timeline-range-100k.spec.ts",
@@ -19746,18 +19755,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "100k-unsampled-cycle-range-selection",
+      "originIssue": 587,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "After loading a 100k-cycle document and revealing an unsampled cycle boundary, the bounded renderer exposes usable geometry for a real drag across the intended 20-cycle half-open range while ruler ticks/rendered grid work stay bounded and Canonical/History/Dirty remain unchanged.",
+      "duplicateGroup": "100k-cycle-offscreen-geometry-acceptance",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This is a high-cost real-browser large-document acceptance with a 120-second timeout and explicit renderer/mapping instrumentation. Keep it out of routine PR execution; unit mapping benchmarks do not replace the production renderer-to-pointer geometry path. Runtime was not measured in this review.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "timeline-range-100k.spec.ts",
@@ -26636,19 +26649,19 @@
     {
       "file": "timeline-editor.spec.ts",
       "caseCount": 29,
-      "reviewedCaseCount": 26,
+      "reviewedCaseCount": 29,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "timeline-range-100k.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [
@@ -26656,7 +26669,7 @@
         "dataset",
         "geometryRead"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "timeline-range-band-presentation.spec.ts",
