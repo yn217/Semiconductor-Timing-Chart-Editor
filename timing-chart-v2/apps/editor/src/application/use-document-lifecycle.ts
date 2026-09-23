@@ -3,6 +3,7 @@ import type { CommandHistorySession } from "@timing-chart-v2/history";
 import { validateDocumentResourceBudget, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import { commitDocumentReplacement } from "./document-replacement.js";
+import { isLegacyRecentDocument, loadRecentDocument, RECENT_DOCUMENT_METADATA_KEY, recentDocumentMetadata, saveRecentDocument } from "./recent-document-storage.js";
 import { canonicalDocumentOf, createNewDocumentFromProductTemplate, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "../file-document-controller.js";
 
 export type PendingDocumentAction = Readonly<{ kind: "new" | "open"; requestId: number; text?: string }>;
@@ -89,6 +90,7 @@ export function useDocumentLifecycle({
   const [pendingAction, setPendingAction] = useState<PendingDocumentAction | undefined>();
   const [compatibilityPreview, setCompatibilityPreview] = useState<CompatibilityPreview | undefined>();
   const requestIdRef = useRef(0);
+  const recentWriteRef = useRef<Promise<void>>(Promise.resolve());
   const fileReadStartedAtRef = useRef<number | undefined>(undefined);
   const effectsRef = useRef<LifecycleEffects | undefined>(undefined);
 
@@ -205,14 +207,17 @@ export function useDocumentLifecycle({
     if (session.getSnapshot().revision === persistedRevision) session.markClean();
     application.publishHistory();
     application.setRuntimeDiagnostics((current) => current.filter((item) => !isSaveDiagnostic(item)));
-    try {
-      localStorage.setItem("timing-chart-v2.recent", text);
+    const persistRecent = recentWriteRef.current.catch(() => undefined).then(async () => {
+      await saveRecentDocument(text, filename);
+      localStorage.setItem(RECENT_DOCUMENT_METADATA_KEY, recentDocumentMetadata(filename, text));
       application.setProblem("");
-    } catch (error) {
+      application.setRuntimeDiagnostics((current) => current.filter((item) => item.code !== "SAVE_RECENT_FAILED"));
+    });
+    recentWriteRef.current = persistRecent.catch((error: unknown) => {
       const diagnostic = recentSaveWarning(error);
-      application.setRuntimeDiagnostics((current) => [...current, diagnostic]);
+      application.setRuntimeDiagnostics((current) => [...current.filter((item) => item.code !== "SAVE_RECENT_FAILED"), diagnostic]);
       application.setProblem(`Saved successfully. ${diagnostic.message}`);
-    }
+    });
     return true;
   }, [application, persistText, reportSaveFailure]);
 
@@ -224,18 +229,49 @@ export function useDocumentLifecycle({
     performAction(action);
     return true;
   }, [pendingAction, performAction, save]);
-  const openRecent = useCallback(() => {
-    let text: string | null;
-    try { text = localStorage.getItem("timing-chart-v2.recent"); }
+  const openRecent = useCallback(async () => {
+    let stored: string | null;
+    try { stored = localStorage.getItem(RECENT_DOCUMENT_METADATA_KEY); }
     catch (error) {
       const diagnostic = recentOpenFailure(error);
       application.setProblem(diagnostic.message);
       application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
       return false;
     }
-    if (text) { requestOpenText(text); return true; }
-    application.setProblem("No recent document is available.");
-    return false;
+    let legacyText: string | undefined;
+    if (stored) {
+      try { if (isLegacyRecentDocument(JSON.parse(stored))) legacyText = stored; }
+      catch { /* A non-JSON metadata value is not a recoverable legacy document. */ }
+    }
+    try {
+      await recentWriteRef.current;
+      let record: Awaited<ReturnType<typeof loadRecentDocument>>;
+      try { record = await loadRecentDocument(); }
+      catch (error) {
+        if (!legacyText) throw error;
+        requestOpenText(legacyText);
+        return true;
+      }
+      if (record) { requestOpenText(record.text); return true; }
+
+      // One-time compatibility path for documents saved by versions that put
+      // the full serialized document in localStorage. New saves never do so.
+      if (legacyText) {
+        requestOpenText(legacyText);
+        const filename = "Recent document";
+        recentWriteRef.current = saveRecentDocument(legacyText, filename).then(() => {
+          localStorage.setItem(RECENT_DOCUMENT_METADATA_KEY, recentDocumentMetadata(filename, legacyText));
+        }).catch(() => undefined);
+        return true;
+      }
+      application.setProblem("No recent document is available.");
+      return false;
+    } catch (error) {
+      const diagnostic = recentOpenFailure(error);
+      application.setProblem(diagnostic.message);
+      application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
+      return false;
+    }
   }, [application, requestOpenText]);
   const attachEffects = useCallback((effects: LifecycleEffects) => {
     effectsRef.current = effects;

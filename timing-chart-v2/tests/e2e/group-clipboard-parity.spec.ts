@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
+import { readSavedRecentDocument } from "./recent-document-storage.js";
 
 startInCycleSample(test);
 
@@ -33,7 +34,7 @@ test("copies, pastes, and duplicates a group as one semantic batch", async ({ pa
   expect(afterPasteCounters.waveDromRenders).toBeGreaterThan(beforeCounters.waveDromRenders);
   expect(afterPasteCounters.localGeometryBuilds).toBeGreaterThan(beforeCounters.localGeometryBuilds);
 
-  const pastedDocument = await page.evaluate(() => JSON.parse(localStorage.getItem("timing-chart-v2.recent") ?? "null"));
+  const pastedDocument = await page.evaluate(() => localStorage.getItem("timing-chart-v2.recent"));
   expect(pastedDocument).toBeNull();
   await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
@@ -46,7 +47,7 @@ test("copies, pastes, and duplicates a group as one semantic batch", async ({ pa
   await ribbon.getByRole("button", { name: "Save", exact: true }).click();
   await download;
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
-  const savedDocument = await page.evaluate(() => JSON.parse(localStorage.getItem("timing-chart-v2.recent") ?? "null"));
+  const savedDocument = await readSavedRecentDocument(page);
   expect(savedDocument.signalGroups).toHaveLength(5);
   const originalGroup = savedDocument.signalGroups.find((group: { id: string }) => group.id === "grp_cycle_control");
   const copiedGroups = savedDocument.signalGroups.filter((group: { name: string }) => group.name === originalGroup.name);
@@ -87,7 +88,7 @@ test("cuts and pastes a group with its rows as one semantic batch", async ({ pag
   const download = page.waitForEvent("download");
   await ribbon.getByRole("button", { name: "Save", exact: true }).click();
   await download;
-  const savedDocument = await page.evaluate(() => JSON.parse(localStorage.getItem("timing-chart-v2.recent") ?? "null"));
+  const savedDocument = await readSavedRecentDocument(page);
   const groups = savedDocument.signalGroups.filter((group: { name: string }) => group.name === "Payload");
   expect(groups).toHaveLength(1);
   expect(groups[0].id).not.toBe("grp_cycle_payload");
