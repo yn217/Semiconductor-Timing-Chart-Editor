@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:35:21.601Z",
+  "generatedAt": "2026-09-23T05:37:51.323Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,9 +13,9 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 690,
+  "reviewedCaseCount": 691,
   "curatedProfileCounts": {
-    "integration": 324,
+    "integration": 325,
     "nightly": 163,
     "performance": 44,
     "pr": 200,
@@ -7898,18 +7898,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "changeset-owner-invalidation-matrix",
+      "originIssue": 163,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Representative Rename, non-reference waveform edit, Annotation style update, and reference Clock edit invalidate only their owning derived surfaces, using per-signal DOM identity and session/render counters.",
+      "duplicateGroup": "changeset-derived-owner-locality",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the cross-owner ChangeSet integration matrix: it verifies no rebuild for Rename, exactly one waveform-owner replacement for a data edit, overlay-only Annotation resolution, and the reference-clock dependency path. Individual command/presentation tests do not jointly prove locality across derived owners. The newly created Annotation is resolved by its current Inspector stable ID rather than DOM position/order.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "insert-icon-semantics.spec.ts",
@@ -24268,11 +24271,11 @@
     {
       "file": "incremental-invalidation-matrix.spec.ts",
       "caseCount": 1,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "insert-icon-semantics.spec.ts",
