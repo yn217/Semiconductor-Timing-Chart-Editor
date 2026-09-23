@@ -7,7 +7,7 @@ import { createAnnotation } from "./create-annotation.js";
 /** Provider output is either an executable semantic command proposal or an
  * explicit view-only intent handled by the current surface. */
 export type AIProposalKind = "semantic-command" | "view-only" | "sva-spec";
-export type AIViewIntent = "fit-all" | "open-timeline";
+export type AIViewIntent = "fit-all" | "fit-selection" | "open-timeline";
 
 export type AIProposal = Readonly<{
   kind: AIProposalKind;

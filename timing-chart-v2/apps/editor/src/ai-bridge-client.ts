@@ -64,6 +64,11 @@ function executeTool(tool: string, args: Record<string, unknown>, context: AIBri
     context.onViewIntent("fit-all");
     return { applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 };
   }
+  if (tool === "fit_selection") {
+    if (!context.onViewIntent) throw new Error("fit_selection is not available in the current surface.");
+    context.onViewIntent("fit-selection");
+    return { applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 };
+  }
   if (tool === "get_viewport_snapshot") {
     if (!context.onGetViewportSnapshot) throw new Error("get_viewport_snapshot is not available in the current surface.");
     return context.onGetViewportSnapshot();
