@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:28:43.560Z",
+  "generatedAt": "2026-09-23T07:30:20.435Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,10 +13,10 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 881,
+  "reviewedCaseCount": 885,
   "curatedProfileCounts": {
-    "integration": 464,
-    "nightly": 179,
+    "integration": 468,
+    "nightly": 180,
     "performance": 49,
     "pr": 235,
     "visual": 150
@@ -21114,18 +21114,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "export-page-fit-settings-effect",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "GEOMETRY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
-      "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "primaryContract": "Production Export dialog page size/orientation/fit/margin choices affect the resulting SVG page viewBox and expose the page-content layer.",
+      "duplicateGroup": "export-page-fit-metadata",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "MOVE_LAYER",
+      "reason": "The richer page-fit case already configures A4 portrait/page fit/margin and asserts the same 794×1123 viewBox, then additionally verifies long metadata, alternate landscape/width geometry, PNG dimensions and PDF output. This single-export subset adds little protection; preserve its page-content-layer assertion in that richer case if the layer contract remains required.",
+      "replacementTest": "transaction-export.spec.ts — keeps long document layout metadata through page-fit SVG, PNG and PDF export",
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-group-management.spec.ts",
@@ -21236,18 +21239,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-multi-entity-gui-authoring-persistence",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The production GUI authors six Transactions through successive selection transitions, Group/Lane assignment, Phase/link/color edits and Save/Open, retaining the composed semantic table/Inspector data.",
+      "duplicateGroup": "transaction-gui-authoring-lifecycle",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is a large realistic multi-entity authoring journey spanning six creations, group creation/assignment, phases, linked Signal, color, selection changes, and persistence. The stable-ID single-entity sibling does not replace the breadth of composed document data.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ]
     },
     {
       "file": "transaction-gui-authoring.spec.ts",
@@ -21258,18 +21265,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-stable-id-authoring-history-persistence",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ARCHITECTURE_GUARD",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A production-created Transaction keeps one stable ID across edit Apply, Undo/Redo, Cycle/Combined/Transaction mode transitions, and Save/Open while the Inspector and Tree resolve that same entity.",
+      "duplicateGroup": "transaction-gui-authoring-lifecycle",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This isolates stable identity across canonical history and document serialization plus view-owner changes. The multi-entity authoring sibling checks content breadth but does not pin one ID across all those lifecycle transitions.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-inspector-apply-validation.spec.ts",
@@ -21280,18 +21290,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-phase-capacity-disabled-add",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "When authored phases cover the full Transaction range, Inspector and Bottom Phase Add controls are disabled with an explanatory note and no Canonical/History change.",
+      "duplicateGroup": "transaction-phase-add-capacity-and-apply",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This protects the exhausted-capacity negative boundary across both Phase entry points; the sibling proves successful addition when a valid interval exists, so neither state subsumes the other.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-inspector-apply-validation.spec.ts",
@@ -26914,11 +26927,11 @@
     {
       "file": "transaction-export.spec.ts",
       "caseCount": 16,
-      "reviewedCaseCount": 15,
+      "reviewedCaseCount": 16,
       "originIssue": null,
       "declaredTimeoutMs": 120,
       "candidateSignals": [],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-group-management.spec.ts",
@@ -26932,20 +26945,20 @@
     {
       "file": "transaction-gui-authoring.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-inspector-apply-validation.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 1,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "transaction-inspector-bottom-draft-sync.spec.ts",
