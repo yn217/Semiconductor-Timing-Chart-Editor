@@ -57,7 +57,7 @@ async function createReadRequestTransaction(page: Page, { withLinks = false }: {
   }
 }
 
-test("Transaction property edits preserve editor and Inspector identity", async ({ page }) => {
+test("First Inspector Apply synchronizes the Bottom Transaction table", async ({ page }) => {
   await openTransactionMode(page);
   const editor = page.getByTestId("transaction-editor");
   await editor.getByLabel("New Transaction name").fill("Stable Editor");
@@ -208,10 +208,9 @@ test("Phases are added, edited, and deleted through the structured table -- raw 
   await expect(page.getByTestId("history-status")).toHaveText("History 5 / Redo 0");
 });
 
-// #453: bulk operations -- checking several rows exposes a Group/Color/
-// Delete toolbar that acts on every checked row as one atomic command batch,
-// independent of whichever single row (if any) is open for editing.
-test("Bulk-selecting Transactions applies Color and Delete to every checked row as one atomic History entry each", async ({ page }) => {
+// #453: bulk operations use the standard click/Ctrl-click selection grammar
+// and apply Color/Delete through atomic command batches.
+test("Ctrl-selecting Transactions applies Color and Delete as atomic History entries", async ({ page }) => {
   await openTransactionMode(page);
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(6);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");

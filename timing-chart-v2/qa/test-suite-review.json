@@ -11497,7 +11497,7 @@
     },
     {
       "file": "transaction-bottom-phase-linked-signals.spec.ts",
-      "title": "Transaction detail editing lives in the Inspector while Bottom stays table-first with a Draft->Apply row (#703)",
+      "title": "Selecting a Transaction keeps detail in the Inspector while Bottom remains table-first (#703)",
       "domain": "transaction-inspector-and-clean-bottom-row-state",
       "originIssue": 703,
       "type": "ARCHITECTURE_GUARD",
@@ -12443,7 +12443,7 @@
     },
     {
       "file": "transaction-onboarding.spec.ts",
-      "title": "Bulk-selecting Transactions applies Color and Delete to every checked row as one atomic History entry each",
+      "title": "Ctrl-selecting Transactions applies Color and Delete as atomic History entries",
       "domain": "transaction-multiselect-color-delete-atomicity",
       "originIssue": 453,
       "type": "USER_JOURNEY",
@@ -12456,7 +12456,7 @@
         "integration"
       ],
       "decision": "KEEP",
-      "reason": "Adds bulk color and delete atomicity beyond the focused selection/filter tests. The title's checked-row wording is stale: selection uses click/Ctrl-click, not checkboxes. Its color assertions verify a selected row and an unselected row, not every selected row; preserve it with that narrower evidentiary scope.",
+      "reason": "Adds bulk color and delete atomicity beyond the focused selection/filter tests. The color assertions verify a selected row changes and an unselected row does not; Ctrl+A/Delete then removes the visible collection as one History entry and Undo restores it.",
       "replacementTest": null
     },
     {
@@ -12515,7 +12515,7 @@
     },
     {
       "file": "transaction-onboarding.spec.ts",
-      "title": "Transaction property edits preserve editor and Inspector identity",
+      "title": "First Inspector Apply synchronizes the Bottom Transaction table",
       "domain": "transaction-empty-create-inspector-bottom-sync",
       "originIssue": 393,
       "type": "USER_JOURNEY",
@@ -12528,7 +12528,7 @@
         "integration"
       ],
       "decision": "KEEP",
-      "reason": "The title overstates identity: this test does not compare DOM node identity or Inspector mount identity. It does cover the first-create→Inspector Apply→Bottom table synchronization path, which is distinct from editing an already-loaded sample; keep with the narrower contract stated here.",
+      "reason": "This covers the first-create→Inspector Apply→Bottom table synchronization path, distinct from editing an already-loaded sample; the title now describes the observable contract without claiming DOM identity.",
       "replacementTest": null
     },
     {
@@ -12934,20 +12934,20 @@
     },
     {
       "file": "transaction-time-scale.spec.ts",
-      "title": "Transaction Time Scale panel rejects an invalid ratio and Cancel/Escape discard the draft",
+      "title": "Transaction Time Scale rejects an invalid ratio and Cancel/Escape discard valid drafts",
       "domain": "transaction-time-scale-invalid-draft-cancel",
       "originIssue": 397,
       "type": "SEMANTIC_CONTRACT",
       "costClass": "FAST",
       "measuredRuntimeMs": null,
-      "primaryContract": "A zero clock ratio is rejected with an error and disabled Apply; changing draft to a valid value then Cancel leaves persisted scale and History unchanged.",
+      "primaryContract": "A zero clock ratio is rejected with an error and disabled Apply; a valid draft is discarded by both Cancel and Escape without changing persisted scale or History.",
       "duplicateGroup": "transaction-time-scale-lifecycle",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
       "profiles": [
         "pr"
       ],
       "decision": "KEEP",
-      "reason": "Distinct focused validation of invalid draft rejection and cancel non-commit. Despite the title, this test presses Cancel but does not press Escape; the Escape path is not proven by this case.",
+      "reason": "One focused browser case covers invalid draft rejection plus valid-draft discard through both Cancel and Escape without multiplying nearly identical cases.",
       "replacementTest": null
     },
     {

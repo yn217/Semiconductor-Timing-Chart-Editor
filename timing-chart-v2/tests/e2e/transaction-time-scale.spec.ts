@@ -50,13 +50,14 @@ test("Transaction TC display scale is view-only, persists as a workspace prefere
   await expect(page.getByTestId("transaction-tc-scale")).toHaveValue("4");
 });
 
-test("Transaction Time Scale panel rejects an invalid ratio and Cancel/Escape discard the draft", async ({ page }) => {
+test("Transaction Time Scale rejects an invalid ratio and Cancel/Escape discard valid drafts", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
 
   await page.getByTestId("transaction-time-scale-trigger").click();
   const panel = page.getByTestId("transaction-time-scale-panel");
+  await expect(panel).toBeVisible();
   await panel.getByLabel("Clock cycles per Transaction Cycle").fill("0");
   await expect(page.getByTestId("transaction-time-scale-error")).toBeVisible();
   await expect(page.getByTestId("transaction-time-scale-apply")).toBeDisabled();
@@ -64,6 +65,15 @@ test("Transaction Time Scale panel rejects an invalid ratio and Cancel/Escape di
   await panel.getByLabel("Clock cycles per Transaction Cycle").fill("2");
   await panel.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(panel).toHaveCount(0);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.locator("span", { hasText: /^Time Scale:/ })).toContainText("Time Scale: Transaction Cycle (TC)");
+  await expect(page.getByTestId("transaction-tc-scale")).toHaveValue("10");
+
+  await page.getByTestId("transaction-time-scale-trigger").click();
+  await expect(panel).toBeVisible();
+  await panel.getByLabel("Clock cycles per Transaction Cycle").fill("3");
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("transaction-time-scale-panel")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.locator("span", { hasText: /^Time Scale:/ })).toContainText("Time Scale: Transaction Cycle (TC)");
   await expect(page.getByTestId("transaction-tc-scale")).toHaveValue("10");
