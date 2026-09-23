@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 963 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 496/963 cases reviewed.
+Semantic review progress: 500/963 cases reviewed.
 
 ## Curated profile membership
 
@@ -11,9 +11,9 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | Profile | Reviewed cases |
 | --- | ---: |
 | `integration` | 226 |
-| `nightly` | 134 |
-| `performance` | 23 |
-| `pr` | 155 |
+| `nightly` | 137 |
+| `performance` | 26 |
+| `pr` | 156 |
 | `visual` | 109 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
@@ -323,7 +323,7 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `transaction-phase-bars.spec.ts` | 4 | 4/4 reviewed |
 | `transaction-ribbon-groups.spec.ts` | 1 | 0/1 reviewed |
 | `transaction-selection-smoke.spec.ts` | 1 | 1/1 reviewed |
-| `transaction-signal-picker.spec.ts` | 4 | 0/4 reviewed |
+| `transaction-signal-picker.spec.ts` | 4 | 4/4 reviewed |
 | `transaction-startup-fixture-matrix.spec.ts` | 4 | 4/4 reviewed |
 | `transaction-startup-large-fixture.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-startup-metrics.spec.ts` | 2 | 0/2 reviewed |

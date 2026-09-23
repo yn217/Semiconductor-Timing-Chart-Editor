@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T02:38:46.434Z",
+  "generatedAt": "2026-09-23T02:40:32.196Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 332,
   "caseCount": 963,
-  "reviewedCaseCount": 496,
+  "reviewedCaseCount": 500,
   "curatedProfileCounts": {
     "integration": 226,
-    "nightly": 134,
-    "performance": 23,
-    "pr": 155,
+    "nightly": 137,
+    "performance": 26,
+    "pr": 156,
     "visual": 109
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -20924,18 +20924,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "transaction-linked-signal-picker-keyboard",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Users can search and keyboard-navigate the linked Signal picker, link/unlink stable Signal IDs, and Undo/Redo the semantic changes.",
+      "duplicateGroup": "transaction-linked-signal-picker",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "A compact real UI contract for search/accessibility/navigation and semantic link history without an oversized fixture.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ]
     },
     {
       "file": "transaction-signal-picker.spec.ts",
@@ -20946,18 +20949,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "large-signal-picker-virtualization",
+      "originIssue": 463,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "With 10k Signals the linked picker mounts a bounded result set, search reaches the last item, and hierarchical signal context remains available.",
+      "duplicateGroup": "large-transaction-virtualization",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "A 10k canonical fixture and long timeout are intentional scalability coverage; retain as automated performance/nightly evidence and keep it out of routine PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "transaction-signal-picker.spec.ts",
@@ -20968,18 +20975,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-bottom-table-10k-bounded-mount",
+      "originIssue": 463,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A 10k Transaction document mounts fewer than 100 table rows before and after scrolling to the list end.",
+      "duplicateGroup": "large-transaction-virtualization",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This is a direct large-document virtualization budget contract with real 10k loading; retain in the performance gate, not PR.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "transaction-signal-picker.spec.ts",
@@ -20990,18 +21001,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-bottom-table-scaling",
+      "originIssue": 463,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1k/5k/10k Transaction counts the mounted row slice stays bounded while load duration is captured for regression analysis.",
+      "duplicateGroup": "large-transaction-virtualization",
+      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The multi-size sweep captures scalability measurements and is deliberately heavy; keep automated performance evidence separate from functional PR gates and record runtime baselines before claiming budgets.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "transaction-startup-fixture-matrix.spec.ts",
@@ -25949,11 +25964,11 @@
     {
       "file": "transaction-signal-picker.spec.ts",
       "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": null,
       "declaredTimeoutMs": 180,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-startup-fixture-matrix.spec.ts",
