@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 332 spec files and 959 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Runtime metrics: not measured.
-Semantic review progress: 897/959 cases reviewed.
+Semantic review progress: 901/959 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 470 |
-| `nightly` | 182 |
-| `performance` | 50 |
+| `integration` | 471 |
+| `nightly` | 184 |
+| `performance` | 52 |
 | `pr` | 241 |
-| `visual` | 153 |
+| `visual` | 154 |
 
 > This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.
 
@@ -316,8 +316,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 | `transaction-inspector-duration-tc.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-inspector-lane-suggestions.spec.ts` | 1 | 1/1 reviewed |
 | `transaction-lane-labels-visible.spec.ts` | 1 | 1/1 reviewed |
-| `transaction-lane-scaling.spec.ts` | 8 | 6/8 reviewed |
-| `transaction-minimap-overview.spec.ts` | 2 | 0/2 reviewed |
+| `transaction-lane-scaling.spec.ts` | 8 | 8/8 reviewed |
+| `transaction-minimap-overview.spec.ts` | 2 | 2/2 reviewed |
 | `transaction-onboarding.spec.ts` | 7 | 0/7 reviewed |
 | `transaction-partial-update-preserves-fields.spec.ts` | 1 | 0/1 reviewed |
 | `transaction-phase-bars.spec.ts` | 4 | 4/4 reviewed |

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T07:36:03.246Z",
+  "generatedAt": "2026-09-23T07:38:04.245Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,13 +13,13 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 897,
+  "reviewedCaseCount": 901,
   "curatedProfileCounts": {
-    "integration": 470,
-    "nightly": 182,
-    "performance": 50,
+    "integration": 471,
+    "nightly": 184,
+    "performance": 52,
     "pr": 241,
-    "visual": 153
+    "visual": 154
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
   "tests": [
@@ -21617,18 +21617,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-central-scale-interaction-performance",
+      "originIssue": 604,
+      "type": "PERFORMANCE",
+      "costClass": "VERY_HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "At 1k/5k/10k Transactions, record mode-entry/scroll/selection/ten-edit latency and mounted bar/Tree-row counts, while selection avoids index/stack/Tree rebuilds and edits retain TransactionLanes identity.",
+      "duplicateGroup": "transaction-large-document-virtualization",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This is a unique scale matrix with explicit latency ceilings, owner counters and repeated mutation evidence; it belongs in performance/nightly. Caveat: the test scrolls `transaction-left-tree`, but production standalone TransactionLanes listens to `.cycle-viewport`; its recorded scroll timing therefore does not measure lane virtualization response and should not be treated as proof of scroll-bounded projection. The mounted-node thresholds are also coarse (<1,000).",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "transaction-lane-scaling.spec.ts",
@@ -21639,18 +21643,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-single-lane-10k-edit-invalidation",
+      "originIssue": 604,
+      "type": "PERFORMANCE",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "On a 10k Transaction single-lane fixture, applying a selected Transaction timing edit updates stack-row and Tree-row projections by the asserted bounded increment rather than rebuilding all rows.",
+      "duplicateGroup": "transaction-large-document-virtualization",
+      "executionTier": "TIER_4_PERFORMANCE",
+      "decision": "KEEP",
+      "reason": "This is the pathological single-lane/overlap counterpart to the distributed 10k fixture and checks incremental projection counters after an edit. Keep in performance/nightly; it does not claim or measure user-facing latency.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "performance",
+        "nightly"
+      ]
     },
     {
       "file": "transaction-minimap-overview.spec.ts",
@@ -21661,18 +21669,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "transaction-minimap-overview-and-overlay-opacity",
+      "originIssue": 429,
+      "type": "VISUAL_ACCEPTANCE",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "The realistic six-Transaction fixture projects six correctly colored MiniMap segments across four (Group,Lane) rows, and the viewport overlay remains translucent enough not to mask the overview.",
+      "duplicateGroup": "transaction-minimap-overview",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This protects Transaction-specific overview grouping/color projection plus a concrete paint-order defect where an opaque viewport rectangle visually hid valid segment DOM. It intentionally checks alpha/DOM contract rather than fragile pixel output for tiny CAD-scale segments.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "visual"
+      ]
     },
     {
       "file": "transaction-minimap-overview.spec.ts",
@@ -21683,18 +21694,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "minimap-mode-specific-overview-view-only",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "MiniMap switches between Signal-row overview in Cycle mode and Transaction overview in Transaction mode without creating History entries.",
+      "duplicateGroup": "transaction-minimap-overview",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This verifies MiniMap mode ownership/fallback and view-only behavior across mode transitions; the sibling proves Transaction overview content but does not ensure Cycle mode returns to Signal rows.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "transaction-onboarding.spec.ts",
@@ -27039,24 +27053,24 @@
     {
       "file": "transaction-lane-scaling.spec.ts",
       "caseCount": 8,
-      "reviewedCaseCount": 6,
+      "reviewedCaseCount": 8,
       "originIssue": null,
       "declaredTimeoutMs": 180,
       "candidateSignals": [
         "querySelector"
       ],
-      "semanticReviewStatus": "PARTIAL"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-minimap-overview.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "getComputedStyle"
       ],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "transaction-onboarding.spec.ts",
