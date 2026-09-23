@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-23T05:39:11.430Z",
+  "generatedAt": "2026-09-23T05:40:30.315Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,9 +13,9 @@
   },
   "specFileCount": 332,
   "caseCount": 959,
-  "reviewedCaseCount": 694,
+  "reviewedCaseCount": 696,
   "curatedProfileCounts": {
-    "integration": 325,
+    "integration": 327,
     "nightly": 163,
     "performance": 44,
     "pr": 200,
@@ -8248,18 +8248,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "inspector-independent-accordion-view-state",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Inspector accordion sections retain independent expanded state, the Label Style section toggles by pointer and Space, and collapsing it changes no Canonical/History/Dirty or renderer counters.",
+      "duplicateGroup": "inspector-accordion-state",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This protects independent section state, keyboard activation, and a strict view-only invalidation boundary; Inspector field/property tests do not establish those accordion semantics.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "inspector-accordion.spec.ts",
@@ -8270,18 +8273,21 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
+      "domain": "inspector-accordion-state-across-apply",
       "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "SMALL",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Applying a Clock property draft preserves the Inspector's already-expanded Label Style accordion state across the semantic commit/rerender.",
+      "duplicateGroup": "inspector-accordion-state",
+      "executionTier": "TIER_3_STABLE_PRODUCT_CONTRACT",
+      "decision": "KEEP",
+      "reason": "This is the cross-render persistence edge for transient Inspector presentation state, distinct from independent toggle/view-only behavior in the companion test.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration"
+      ]
     },
     {
       "file": "inspector-capability.spec.ts",
@@ -24314,11 +24320,11 @@
     {
       "file": "inspector-accordion.spec.ts",
       "caseCount": 2,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "inspector-capability.spec.ts",
