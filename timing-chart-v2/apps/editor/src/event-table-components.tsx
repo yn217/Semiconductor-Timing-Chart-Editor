@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { quickValueLiteral, quickValueOptions, type ValueSignal } from "@timing-chart-v2/schema";
+import { formatBusValue, quickValueLiteral, quickValueOptions, type SignalValueChange, type ValueSignal } from "@timing-chart-v2/schema";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { resolveValueEditorPolicy } from "./runtime/value-editor-policy.js";
@@ -109,7 +109,7 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
     <output data-testid={`event-row-end-${change.start}`}>{end}</output><output data-testid={`event-row-duration-${change.start}`}>{end - change.start}</output>
     {isEditing
       ? <ValueEditorControl signal={signal} value={value} onChange={setValue} ariaLabel={`Value ${change.start}`} listId={`event-row-value-options-${change.start}`} />
-      : <output data-testid={`event-row-value-${change.start}`}>{change.displayLabel ?? String(change.value)}</output>}
+      : <output data-testid={`event-row-value-${change.start}`}>{formatEventRowValue(signal, change)}</output>}
     {isEditing
       ? <input aria-label={`Comment ${change.start}`} value={comment} onChange={(event) => setComment(event.target.value)} />
       : <output className="event-row-comment" data-testid={`event-row-comment-${change.start}`}>{change.comment ?? ""}</output>}
@@ -139,6 +139,16 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
         </>}
     </span>
   </form>;
+}
+
+/** Match the value shown by the waveform projection while preserving an
+ * explicit presentation label when one is supplied. */
+export function formatEventRowValue(signal: Pick<ValueSignal, "type" | "displayFormat" | "width">, change: Pick<SignalValueChange, "value" | "displayLabel">): string {
+  if (change.displayLabel !== undefined) return change.displayLabel;
+  if (signal.type === "bus" && signal.displayFormat !== undefined) {
+    return formatBusValue(change.value, signal.displayFormat, signal.width);
+  }
+  return String(change.value);
 }
 
 export function QuickValues({ signal, setValue }: { readonly signal: ValueSignal; readonly setValue: (value: string) => void }) {
