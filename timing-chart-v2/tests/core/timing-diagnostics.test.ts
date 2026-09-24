@@ -54,16 +54,40 @@ describe("derived timing diagnostics", () => {
     const document = withSignals(source, [source.signals[0]!, request, acknowledge], [valid]);
     expect(deriveTimingDiagnostics(document, { enabledCategories: ["protocol"] })).toEqual([]);
 
+    const lowerBoundaryAck = { ...acknowledge, values: [{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 6, value: 0 }, { start: 12, value: 1 }] };
+    expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, request, lowerBoundaryAck], [valid]), { enabledCategories: ["protocol"] })).toEqual([]);
+
+    const earlyThenValidAck = { ...acknowledge, values: [{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 4, value: 0 }, { start: 5, value: 1 }] };
+    const oneRequest = { ...request, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    const minTwo: Constraint = { ...valid, data: { ...valid.data, minCycles: 2 } };
+    expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, oneRequest, earlyThenValidAck], [minTwo]), { enabledCategories: ["protocol"] })).toEqual([]);
+    const onlyEarlyAck = { ...acknowledge, values: [{ start: 0, value: 0 }, { start: 3, value: 1 }] };
+    expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, oneRequest, onlyEarlyAck], [minTwo]), { enabledCategories: ["protocol"] })).toMatchObject([
+      { code: "LATENCY_RANGE_VIOLATION", sourceCycle: 2 },
+    ]);
+
     const lateAck = { ...acknowledge, values: [{ start: 0, value: 0 }, { start: 6, value: 1 }] };
     const lateDocument = withSignals(document, [source.signals[0]!, request, lateAck], [valid]);
     expect(deriveTimingDiagnostics(lateDocument, { enabledCategories: ["protocol"] })).toMatchObject([
-      { code: "LATENCY_RANGE_VIOLATION", objectId: valid.id, path: "$.constraints[0].data.acknowledgeSignalId", ruleId: "timing.latency-range" },
-      { code: "LATENCY_RANGE_VIOLATION", objectId: valid.id, path: "$.constraints[0].data.acknowledgeSignalId", ruleId: "timing.latency-range" },
+      { code: "LATENCY_RANGE_VIOLATION", objectId: valid.id, path: "$.constraints[0].data.acknowledgeSignalId", sourceCycle: 2, ruleId: "timing.latency-range" },
+      { code: "LATENCY_RANGE_VIOLATION", objectId: valid.id, path: "$.constraints[0].data.acknowledgeSignalId", sourceCycle: 9, ruleId: "timing.latency-range" },
     ]);
+    const lateFindings = deriveTimingDiagnostics(lateDocument, { enabledCategories: ["protocol"] });
+    expect(lateFindings[0]?.stableKey).not.toBe(lateFindings[1]?.stableKey);
+    expect(deriveTimingDiagnostics(lateDocument, { enabledCategories: ["protocol"] })).toEqual(lateFindings);
+    expect(deriveTimingDiagnostics(lateDocument, { enabledCategories: ["stability"] })).toEqual([]);
 
     const invalid: Constraint = { ...valid, data: { ...valid.data, maxCycles: 0, acknowledgeSignalId: "missing" } };
     expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, request], [invalid]), { enabledCategories: ["protocol"] })).toMatchObject([
       { code: "LATENCY_RANGE_CONSTRAINT_INVALID", path: "$.constraints[0].data", objectId: invalid.id },
+    ]);
+    const invalidRef: Constraint = { ...valid, data: { ...valid.data, acknowledgeSignalId: "missing" } };
+    expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, request], [invalidRef]), { enabledCategories: ["protocol"] })).toMatchObject([
+      { code: "LATENCY_RANGE_CONSTRAINT_INVALID", path: "$.constraints[0].data.acknowledgeSignalId", objectId: invalidRef.id },
+    ]);
+    const clockRef: Constraint = { ...valid, data: { ...valid.data, acknowledgeSignalId: source.signals[0]!.id } };
+    expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, request], [clockRef]), { enabledCategories: ["protocol"] })).toMatchObject([
+      { code: "LATENCY_RANGE_CONSTRAINT_INVALID", path: "$.constraints[0].data.acknowledgeSignalId", objectId: clockRef.id },
     ]);
   });
 
