@@ -1,6 +1,6 @@
 import type { MutableRefObject } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
-import type { CommandId, CanonicalDocument, Annotation, AnnotationId, GroupId, SignalId, Transaction, TransactionId } from "@timing-chart-v2/schema";
+import type { CommandId, CanonicalDocument, Annotation, AnnotationId, BookmarkId, GroupId, SignalId, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { ClipboardActions } from "./clipboard-actions.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
@@ -21,12 +21,13 @@ export interface BottomEditorActionsInput {
   readonly bottomPinned: boolean;
   readonly setBottomPinned: (value: boolean) => void;
   readonly followSelection: boolean;
-  readonly pinnedBottomSelection: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId } | undefined;
-  readonly setPinnedBottomSelection: (value: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId } | undefined) => void;
+  readonly pinnedBottomSelection: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId; readonly bookmarkId?: BookmarkId } | undefined;
+  readonly setPinnedBottomSelection: (value: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId; readonly bookmarkId?: BookmarkId } | undefined) => void;
   readonly selectedSignalId: SignalId | undefined;
   readonly selectedGroupId: GroupId | undefined;
   readonly selectedAnnotationId: AnnotationId | undefined;
   readonly selectedTransactionId: TransactionId | undefined;
+  readonly selectedBookmarkId: BookmarkId | undefined;
 }
 
 export interface BottomEditorActions {
@@ -83,6 +84,7 @@ export function createBottomEditorActions(input: BottomEditorActionsInput): Bott
         ...(input.selectedGroupId === undefined ? {} : { groupId: input.selectedGroupId }),
         ...(input.selectedAnnotationId === undefined ? {} : { annotationId: input.selectedAnnotationId }),
         ...(input.selectedTransactionId === undefined ? {} : { transactionId: input.selectedTransactionId }),
+        ...(input.selectedBookmarkId === undefined ? {} : { bookmarkId: input.selectedBookmarkId }),
       });
     }
     input.setBottomPinned(true);

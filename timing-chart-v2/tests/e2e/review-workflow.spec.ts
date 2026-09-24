@@ -89,3 +89,33 @@ test("Check header separates Filter/Navigation/Summary/Status/Action into non-ov
   await expect(page.getByTestId("review-next")).toBeDisabled();
   await expect(page.getByTestId("review-current-target")).toHaveText("No diagnostic selected");
 });
+
+test("timing check categories are semantic settings with one-step Undo/Redo", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Check", exact: true }).click();
+
+  const protocol = page.getByTestId("review-check-protocol");
+  const unknown = page.getByTestId("review-check-unknown-value");
+  const stability = page.getByTestId("review-check-stability");
+  await expect(protocol).toBeChecked();
+  await expect(unknown).toBeChecked();
+  await expect(stability).toBeChecked();
+  const initialRevision = Number(await host.getAttribute("data-canonical-revision"));
+  await protocol.uncheck();
+  await expect(protocol).not.toBeChecked();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(host).toHaveAttribute("data-canonical-revision", String(initialRevision + 1));
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Check", exact: true }).click();
+  await expect(protocol).toBeChecked();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByRole("button", { name: "Redo", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Check", exact: true }).click();
+  await expect(protocol).not.toBeChecked();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});

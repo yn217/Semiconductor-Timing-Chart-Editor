@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
+import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-chart-v2/core";
 import { parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -159,6 +160,45 @@ describe("pure Semantic Command planning", () => {
     expect(session.getSnapshot().document.layout).toEqual(source.layout);
     expect(session.redo().ok).toBe(true);
     expect(session.getSnapshot().document.layout).toEqual(layout);
+  });
+
+  it("updates timing check categories through one undoable document command", () => {
+    const source = canonicalFixture();
+    const data = source.signals[1]!;
+    if (data.type !== "bus") throw new Error("fixture DATA must be a bus");
+    const document = { ...source, signals: source.signals.map((signal) => signal.id === data.id ? { ...data, values: [{ start: 1, value: "X" }] } : signal) };
+    const session = new CommandHistorySession(document);
+    expect(deriveTimingDiagnostics(session.getSnapshot().document).some((item) => item.category === "unknown-value")).toBe(true);
+
+    const result = session.execute({ id: commandId("cmd_check_settings"), type: "document.updateCheckSettings", checkSettings: { enabledCategories: ["protocol"] } });
+    expect(result).toMatchObject({ ok: true, changeSet: {} });
+    expect(session.getSnapshot().document.checkSettings).toEqual({ enabledCategories: ["protocol"] });
+    expect(deriveTimingDiagnostics(session.getSnapshot().document).some((item) => item.category === "unknown-value")).toBe(false);
+    expect(session.historyState()).toMatchObject({ undoDepth: 1, redoDepth: 0, dirty: true });
+    const reopened = parseDocument(serializeValidatedCanonicalDocument(session.getSnapshot().document));
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect(reopened.document.checkSettings).toEqual({ enabledCategories: ["protocol"] });
+
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.checkSettings).toEqual(document.checkSettings);
+    expect(deriveTimingDiagnostics(session.getSnapshot().document).some((item) => item.category === "unknown-value")).toBe(true);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.checkSettings).toEqual({ enabledCategories: ["protocol"] });
+  });
+
+  it("rejects unsupported or duplicate check categories and canonicalizes all-enabled defaults", () => {
+    const source = canonicalFixture();
+    const session = new CommandHistorySession(source);
+    const invalidUnknown = session.execute({ id: commandId("cmd_check_unknown"), type: "document.updateCheckSettings", checkSettings: { enabledCategories: ["made-up"] } });
+    expect(invalidUnknown).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_CHECK_SETTINGS" }] });
+    const invalidDuplicate = session.execute({ id: commandId("cmd_check_duplicate"), type: "document.updateCheckSettings", checkSettings: { enabledCategories: ["protocol", "protocol"] } });
+    expect(invalidDuplicate).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_CHECK_SETTINGS" }] });
+    const invalidMissingSettings = session.execute({ id: commandId("cmd_check_missing"), type: "document.updateCheckSettings" } as never);
+    expect(invalidMissingSettings).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_CHECK_SETTINGS" }] });
+    const allEnabled = session.execute({ id: commandId("cmd_check_all"), type: "document.updateCheckSettings", checkSettings: { enabledCategories: [...TIMING_DIAGNOSTIC_CATEGORIES] } });
+    expect(allEnabled).toMatchObject({ ok: false, reason: "no-op" });
+    expect(session.getSnapshot().document.checkSettings).toEqual(source.checkSettings);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
   });
 
   it("updates Legend presentation without touching waveform domains", () => {
@@ -804,6 +844,29 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.annotations[0]?.to).not.toHaveProperty("offset");
     expect(session.execute({ id: commandId("cmd_ann_delete"), type: "annotation.delete", annotationId: annotation.id }).ok).toBe(true);
     expect(session.getSnapshot().document.annotations).toEqual([]);
+  });
+
+  it("validates and persists annotation label layout through one undoable semantic update", () => {
+    const annotation: Annotation = { id: "ann_label_layout" as AnnotationId, type: "callout", label: "A long callout label", visible: true, anchor: { cycle: 2, point: "cycle-center" } };
+    const session = new CommandHistorySession({ ...canonicalFixture(), annotations: [annotation] });
+    const initial = session.getSnapshot();
+    const initialHistory = session.historyState().undoDepth;
+    const invalid = session.execute({ id: commandId("ann_label_layout_invalid"), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: true, style: { labelMaxWidth: 23 } });
+    expect(invalid).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_ANNOTATION_STYLE", path: "$.style.labelMaxWidth" }] });
+    expect(session.getSnapshot()).toEqual(initial);
+
+    const applied = session.execute({ id: commandId("ann_label_layout_apply"), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: true, style: { labelWrap: true, labelMaxWidth: 48 } });
+    expect(applied).toMatchObject({ ok: true, changeSet: { annotationStyle: [annotation.id] } });
+    expect(session.getSnapshot().document.annotations[0]?.style).toEqual({ labelWrap: true, labelMaxWidth: 48 });
+    expect(session.historyState().undoDepth).toBe(initialHistory + 1);
+    const serialized = serializeValidatedCanonicalDocument(session.getSnapshot().document);
+    const reopened = parseDocument(serialized);
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect(reopened.document.annotations[0]?.style).toEqual({ labelWrap: true, labelMaxWidth: 48 });
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.annotations[0]).toEqual(annotation);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.annotations[0]?.style).toEqual({ labelWrap: true, labelMaxWidth: 48 });
   });
 
   it("round-trips Marker/Bracket presentation after SemanticCommand edits", () => {
