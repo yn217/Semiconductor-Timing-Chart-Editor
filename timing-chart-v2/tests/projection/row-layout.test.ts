@@ -39,6 +39,37 @@ describe("RowLayout and projection invariants", () => {
     expect(scoped.map((entry) => entry.signalId)).toEqual(["sig_data"]);
   });
 
+  it("resolves ancestor scopes and builds paths relative to the selected scope", () => {
+    const source = canonicalFixture();
+    const document: CanonicalDocument = {
+      ...source,
+      signals: source.signals.map((signal, index) => ({
+        ...signal,
+        source: {
+          ...signal.source,
+          instancePath: index === 0 ? ["top", "u_soc", "u_dma", "u_axi"] : ["top", "u_soc", "u_dma", "u_sram"],
+          signalName: index === 0 ? "arvalid" : "rdata",
+        },
+      })),
+    };
+
+    expect(hardwareHierarchyScopes(document)).toEqual([
+      "top",
+      "top.u_soc",
+      "top.u_soc.u_dma",
+      "top.u_soc.u_dma.u_axi",
+      "top.u_soc.u_dma.u_sram",
+    ]);
+    expect(buildHardwareHierarchyEntries(document, "hierarchy", "top.u_soc.u_dma").map((entry) => ({ id: entry.signalId, relativePath: entry.relativePath }))).toEqual([
+      { id: "sig_clk", relativePath: "u_axi.arvalid" },
+      { id: "sig_data", relativePath: "u_sram.rdata" },
+    ]);
+    expect(buildHardwareHierarchyEntries(document, "hierarchy").map((entry) => entry.relativePath)).toEqual([
+      "top.u_soc.u_dma.u_axi.arvalid",
+      "top.u_soc.u_dma.u_sram.rdata",
+    ]);
+  });
+
   it.each([0, 1, 2])("retains hidden navigation rows and group placement at index %i", (hiddenIndex) => {
     const document = canonicalFixture();
     const template = document.signals[1]!;
