@@ -1,5 +1,5 @@
 import { useTransactionDisclosure } from "./workspace/use-transaction-disclosure.js";
-import type { AIBridgeStatus } from "./ai-bridge-client.js";
+import type { AIBridgeStatus, AIBridgeViewOperation } from "./ai-bridge-client.js";
 import { useCallback, useEffect } from "react";
 import type {
   Dispatch,
@@ -126,6 +126,7 @@ export interface EditorSecondarySurfacesInput {
   };
   readonly workspace: {
     readonly viewMode: ViewMode;
+    readonly setViewMode: (mode: ViewMode) => void;
     readonly activeContext: ActiveContext;
     readonly bottomTabs: readonly BottomTab[];
     readonly bottomTab: BottomTab;
@@ -183,7 +184,7 @@ export interface EditorSecondarySurfacesInput {
   readonly actions: EditorActions;
   readonly setRuntimeDiagnostics: EditorApplicationOwner["setRuntimeDiagnostics"];
   readonly navigateProblem: (path: string) => void;
-  readonly ai: { readonly getZoom: () => number; readonly fitAll: () => void; readonly fitSelection: () => void };
+  readonly ai: { readonly getZoom: () => number; readonly fitAll: () => void; readonly fitSelection: () => void; readonly fitSourceRange: (startCycle: number, endCycle: number) => boolean };
 }
 
 export interface EditorSecondarySurfacesOutput {
@@ -245,6 +246,17 @@ export function useEditorSecondarySurfaces(
     onFitSelection: input.ai.fitSelection,
     onSetSelection: input.actions.selectAIEntity,
     onOpenTimeline: () => workspace.setRibbonTab("Timeline"),
+    onViewOperation: (operation: AIBridgeViewOperation, args: Readonly<Record<string, unknown>>) => {
+      if (operation === "switch_mode") {
+        const mode = args.mode === "Combined" ? "Split" : args.mode;
+        workspace.setViewMode(mode as ViewMode);
+      } else if (operation === "open_panel") {
+        if (args.panel === "inspector") dialog.setInspectorVisible(true);
+        else input.setBottomVisible(true);
+      } else {
+        if (!input.ai.fitSourceRange(args.startCycle as number, args.endCycle as number)) throw new Error("The requested source-cycle range could not be resolved by the shared timeline geometry owner.");
+      }
+    },
     setRuntimeDiagnostics: input.setRuntimeDiagnostics,
   });
   const openTransactionContextMenu = (
