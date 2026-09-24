@@ -117,6 +117,7 @@ export interface EditorSecondarySurfacesInput {
     readonly group: SignalGroup | undefined;
     readonly annotation: Annotation | undefined;
     readonly transaction: Transaction | undefined;
+    readonly bookmark: Bookmark | undefined;
   };
   readonly timeline: {
     readonly range: Readonly<{ start: number; end: number }>;
@@ -355,8 +356,8 @@ export function useEditorSecondarySurfaces(
   );
   const bookmarkEditor = (
     <BookmarkEditor
-      key={`${input.documentEpoch}:${selected.bookmark?.id ?? "none"}:${dialog.bottomResetToken}`}
-      bookmark={selected.bookmark}
+      key={`${input.documentEpoch}:${bottom.bookmark?.id ?? "none"}:${dialog.bottomResetToken}`}
+      bookmark={bottom.bookmark}
       document={input.document}
       history={input.history}
       range={input.timeline.range}

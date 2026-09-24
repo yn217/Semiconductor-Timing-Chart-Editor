@@ -103,7 +103,7 @@
 
 .surface-host [data-annotation-type="textbox"] [data-role="annotation-body"] { display: none; }
 
-.surface-host [data-role="annotation-label"] { z-index: 4; width: max-content; max-width: 180px; padding: 2px 5px; border: 1px solid color-mix(in srgb, var(--annotation-color) 55%, white); border-radius: 3px; background: #fffffff2; color: #25334a; font-size: 10px; cursor: move; }
+.surface-host [data-role="annotation-label"] { z-index: 4; width: max-content; max-width: var(--annotation-label-max-width, 180px); padding: 2px 5px; border: 1px solid color-mix(in srgb, var(--annotation-color) 55%, white); border-radius: 3px; background: #fffffff2; color: #25334a; font-size: 10px; cursor: move; }
 
 .surface-host [data-role="measurement-extension"] { z-index: 1; width: 1px; border-left: 1px dashed var(--annotation-color); pointer-events: none; }
 .surface-host [data-role="measurement-marker"] { z-index: 3; pointer-events: none; }

@@ -818,6 +818,10 @@
 .editor-shell .review-workflow { display: flex; flex: 1 1 auto; min-width: 0; align-items: center; height: 100%; gap: 14px; overflow: hidden; }
 
 .editor-shell .review-workflow > div { position: relative; display: flex; flex: 0 0 auto; align-items: center; gap: 6px; }
+.editor-shell .review-workflow > .review-rules-group { display: flex; flex: 0 0 auto; align-items: center; gap: 6px; min-width: 0; margin: 0; padding: 0 7px; border: 0; }
+.editor-shell .review-rules-group legend { float: left; padding: 0; color: #52647a; font-size: 10px; }
+.editor-shell .review-rules-group label { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; color: #28384d; font-size: 10px; }
+.editor-shell .review-rules-group input { width: 13px; height: 13px; margin: 0; accent-color: #1675c5; }
 
 .editor-shell .review-workflow > div:not(:last-child)::after { content: ""; position: absolute; top: -6px; bottom: -6px; right: -7px; width: 1px; background: #c3cddb; pointer-events: none; }
 

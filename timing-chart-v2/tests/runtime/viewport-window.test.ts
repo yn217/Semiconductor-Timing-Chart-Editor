@@ -1,0 +1,44 @@
+import { describe, expect, it } from "vitest";
+import type { SignalId } from "@timing-chart-v2/schema";
+import { buildViewportWindow } from "../../apps/editor/src/runtime/viewport-window.js";
+import { projectViewportWindow } from "../../apps/editor/src/runtime/viewport-projection.js";
+import { pinnedSignalIdsForEpoch, signalPinStateForEpoch } from "../../apps/editor/src/workspace/signal-pin-state.js";
+
+describe("Signal pin viewport ownership", () => {
+  it("retains the reference clock and multiple user pins by stable ID", () => {
+    const window = buildViewportWindow({ scrollTop: 100, clientHeight: 200 }, "clock-id" as SignalId, ["signal-a", "signal-b", "clock-id"] as SignalId[]);
+    expect(window.pinnedRowIds).toEqual(["clock-id", "signal-a", "signal-b"]);
+    expect(window.stickyRowIds).toEqual(["signal-a", "signal-b", "clock-id"]);
+  });
+
+  it("does not carry pins across document replacement epochs", () => {
+    const state = signalPinStateForEpoch(4, ["signal-a", "signal-b", "signal-a"]);
+    expect(state.ids).toEqual(["signal-a", "signal-b"]);
+    expect(pinnedSignalIdsForEpoch(state, 4)).toEqual(["signal-a", "signal-b"]);
+    expect(pinnedSignalIdsForEpoch(state, 5)).toEqual([]);
+  });
+
+  it("reprojects when stable pin IDs change without vertical scrolling", () => {
+    const signalA = "signal-a" as SignalId;
+    const viewport = { scrollTop: 0, clientHeight: 600 } as HTMLElement;
+    const previousWindow = buildViewportWindow(viewport, undefined, []);
+    const previousProjection = { mountedSignalIds: [signalA] } as never;
+    let receivedWindow: ReturnType<typeof buildViewportWindow> | undefined;
+    let projected = 0;
+
+    projectViewportWindow({
+      viewport,
+      referenceClock: undefined,
+      stickyRowIds: [signalA],
+      snapshot: {} as never,
+      previous: { window: previousWindow, projection: previousProjection },
+      projectionCoordinator: { project: (request) => { projected += 1; receivedWindow = request.viewport; return previousProjection; } },
+      collapsedGroupIds: [],
+      onProjection: (_projection, window) => { receivedWindow = window; },
+    });
+
+    expect(projected).toBe(1);
+    expect(receivedWindow?.stickyRowIds).toEqual([signalA]);
+    expect(receivedWindow?.pinnedRowIds).toEqual([signalA]);
+  });
+});

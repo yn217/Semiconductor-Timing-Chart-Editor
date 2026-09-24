@@ -1,26 +1,17 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   Annotation,
   AnnotationId,
-  SemanticAnchor,
+  CanonicalDocument,
 } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { annotationPropertiesBase } from "./annotation-style-command.js";
-import { useEffect, useRef, useState } from "react";
+import { formatAnnotationAnchor } from "./annotation-anchor-format.js";
 
 const ANNOTATION_ROW_HEIGHT = 27;
 const ANNOTATION_HEADER_HEIGHT = 25;
 const ANNOTATION_OVERSCAN = 8;
-
-/** Shared read-only anchor formatter -- used by both this list's Start/End
- * columns and the Bottom Annotation Editor's own Start/End summary (Visual
- * Reference pass, #426), so the two never drift into showing the same
- * anchor two different ways. */
-export function annotationAnchorText(
-  anchor: SemanticAnchor | undefined,
-): string {
-  return anchor ? `${anchor.signalId ?? "cycle"} @ ${anchor.cycle}` : "—";
-}
 
 /** Doubles as the "selection pane" PowerPoint offers for objects: every
  * Annotation, with a visibility toggle per row, in the same table this
@@ -34,11 +25,13 @@ export function annotationAnchorText(
 export function AnnotationList({
   annotations,
   selectedId,
+  document,
   onSelect,
   commands,
 }: {
   readonly annotations: readonly Annotation[];
   readonly selectedId: AnnotationId | undefined;
+  readonly document: Pick<CanonicalDocument, "signals">;
   readonly onSelect: (id: AnnotationId, additive?: boolean) => void;
   readonly commands: Pick<
     EditorSurfaceCommandController,
@@ -46,6 +39,7 @@ export function AnnotationList({
   >;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
+  const signalNames = useMemo(() => new Map(document.signals.map((signal) => [signal.id, signal.display.name])), [document.signals]);
   const [scrollTop, setScrollTop] = useState(0);
   const viewportHeight = listRef.current?.clientHeight ?? 320;
   const firstVisible = Math.max(0, Math.floor(Math.max(0, scrollTop - ANNOTATION_HEADER_HEIGHT) / ANNOTATION_ROW_HEIGHT) - ANNOTATION_OVERSCAN);
@@ -185,10 +179,12 @@ export function AnnotationList({
           <span className="annotation-list-label">
             {item.label || "(untitled)"}
           </span>
-          <span>
-            {annotationAnchorText(item.start ?? item.from ?? item.anchor)}
+          <span className="annotation-list-anchor" title={`Start: ${formatAnnotationAnchor(item.start ?? item.from ?? item.anchor, signalNames)}`} aria-label={`Start: ${formatAnnotationAnchor(item.start ?? item.from ?? item.anchor, signalNames)}`}>
+            {formatAnnotationAnchor(item.start ?? item.from ?? item.anchor, signalNames)}
           </span>
-          <span>{annotationAnchorText(item.end ?? item.to)}</span>
+          <span className="annotation-list-anchor" title={`End: ${formatAnnotationAnchor(item.end ?? item.to, signalNames)}`} aria-label={`End: ${formatAnnotationAnchor(item.end ?? item.to, signalNames)}`}>
+            {formatAnnotationAnchor(item.end ?? item.to, signalNames)}
+          </span>
           <span
             className="annotation-list-color"
             style={{ background: item.color ?? "transparent" }}
