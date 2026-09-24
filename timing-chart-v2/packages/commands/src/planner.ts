@@ -1,4 +1,4 @@
-import type { ValidationProblem } from "@timing-chart-v2/core";
+import { TIMING_DIAGNOSTIC_CATEGORIES, type ValidationProblem } from "@timing-chart-v2/core";
 import type {
   Annotation,
   CanonicalDocument,
@@ -17,7 +17,7 @@ import type {
   TransactionGroupId,
   ValueSignal,
 } from "@timing-chart-v2/schema";
-import { canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_MAX_WIDTH, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -611,6 +611,24 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const timingRows = orderedVisibleTimingRows(document);
       const changeSet: ChangeSet = { geometryScreenY: timingRows, annotationPosition: annotationsForSignals(document, timingRows), minimapOverview: true };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
+    }
+    case "document.updateCheckSettings": {
+      const rawSettings: unknown = command.checkSettings;
+      if (!rawSettings || typeof rawSettings !== "object" || Array.isArray(rawSettings)
+        || Object.keys(rawSettings).some((key) => key !== "enabledCategories")) {
+        return fail("invalid", "INVALID_CHECK_SETTINGS", "$.checkSettings", "Check settings must contain only supported settings.");
+      }
+      const requested = (rawSettings as { readonly enabledCategories?: unknown }).enabledCategories;
+      if (requested !== undefined && (!Array.isArray(requested)
+        || requested.some((category) => !TIMING_DIAGNOSTIC_CATEGORIES.includes(category as typeof TIMING_DIAGNOSTIC_CATEGORIES[number]))
+        || new Set(requested).size !== requested.length)) {
+        return fail("invalid", "INVALID_CHECK_SETTINGS", "$.checkSettings.enabledCategories", "Enabled check categories must be unique supported categories.");
+      }
+      const requestedCategories = requested as readonly string[] | undefined;
+      const enabled = requestedCategories === undefined ? [] : TIMING_DIAGNOSTIC_CATEGORIES.filter((category) => requestedCategories.includes(category));
+      const checkSettings = enabled.length === TIMING_DIAGNOSTIC_CATEGORIES.length ? {} : { enabledCategories: enabled };
+      if (semanticEqual(document.checkSettings, checkSettings)) return fail("no-op", "NO_OP", "$.checkSettings", "Check settings are unchanged.");
+      return { ok: true, document: { ...document, checkSettings }, changeSet: {}, inverseChangeSet: {} };
     }
     case "legend.update": {
       if (semanticEqual(document.legend, command.legend)) return fail("no-op", "NO_OP", "$.legend", "Legend is unchanged.");
@@ -1336,6 +1354,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const label = command.label.trim();
       if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
       if (!label) return fail("invalid", "INVALID_LABEL", "$.label", "Annotation label cannot be empty.");
+      if (command.style?.labelWrap !== undefined && typeof command.style.labelWrap !== "boolean") return fail("invalid", "INVALID_ANNOTATION_STYLE", "$.style.labelWrap", "Annotation labelWrap must be a boolean.");
+      if (command.style?.labelMaxWidth !== undefined && (typeof command.style.labelMaxWidth !== "number" || !Number.isFinite(command.style.labelMaxWidth) || command.style.labelMaxWidth < ANNOTATION_LABEL_MAX_WIDTH.min || command.style.labelMaxWidth > ANNOTATION_LABEL_MAX_WIDTH.max)) return fail("invalid", "INVALID_ANNOTATION_STYLE", "$.style.labelMaxWidth", `Annotation label maximum width must be between ${ANNOTATION_LABEL_MAX_WIDTH.min} and ${ANNOTATION_LABEL_MAX_WIDTH.max} px.`);
       // Optional style fields are patch semantics.  Do not turn an omitted
       // field into an implicit clear (for example, changing an annotation's
       // color must not erase its independently-authored labelOffset).

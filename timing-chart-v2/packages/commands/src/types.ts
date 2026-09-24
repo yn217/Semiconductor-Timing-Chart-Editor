@@ -2,6 +2,7 @@ import type { CanonicalSnapshot, ValidationProblem } from "@timing-chart-v2/core
 import type {
   CanonicalDocument,
   Layout,
+  CheckSettings,
   AnnotationId,
   Annotation,
   AnnotationGroup,
@@ -43,6 +44,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "document.replace"; document: CanonicalDocument }>
   | Readonly<{ id: CommandId; type: "document.updateMetadata"; title: string; header: CanonicalDocument["document"]["header"]; footer: CanonicalDocument["document"]["footer"] }>
   | Readonly<{ id: CommandId; type: "document.updateLayout"; layout: Layout }>
+  | Readonly<{ id: CommandId; type: "document.updateCheckSettings"; checkSettings: CheckSettings }>
   | Readonly<{ id: CommandId; type: "legend.update"; legend: CanonicalDocument["legend"] }>
   | Readonly<{ id: CommandId; type: "enum.rename"; enumId: string; name: string }>
   | Readonly<{ id: CommandId; type: "enum.delete"; enumId: string }>

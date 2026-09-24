@@ -1,5 +1,6 @@
 import type { GroupId, SignalId } from "@timing-chart-v2/schema";
 import { calculateRowLayout } from "./row-layout.js";
+import { projectPinnedRows } from "./pinned-rows.js";
 import type { ProjectionRequest, ProjectionService, RenderProjection, RowLayoutEntry, VirtualizationWindow } from "./types.js";
 import type { RowLayoutResult } from "./row-layout.js";
 
@@ -111,6 +112,7 @@ export class DefaultProjectionService implements ProjectionService {
     this.#lastMountedRange = [mountedRowsOrdered[0]?.y ?? 0, mountedRowsOrdered.at(-1) ? mountedRowsOrdered.at(-1)!.y + mountedRowsOrdered.at(-1)!.height : 0];
     const mountedMetadata = classifyMountedRows(mountedRowsOrdered);
     const { mountedSignalIds, timingRowIds, frozenLabelRowIds } = mountedMetadata;
+    const pinnedRows = projectPinnedRows({ visibleRowLayout: layout.visibleRows, rowLayout: layout.navigationRows, navigationRowLayout: navigationLayout.navigationRows, stickyRowIds: request.viewport.stickyRowIds ?? [], viewportStartY: request.viewport.viewportStartY, leadingHeaderHeight: layout.groupHeaders[0]?.height ?? 0 });
     const canonicalSignalIds = this.#canonicalSignalIdsFor(document);
     const requestedWaves = request.changeSet.fullDocumentReplace
       ? mountedSignalIds
@@ -124,8 +126,8 @@ export class DefaultProjectionService implements ProjectionService {
       leftRowIds: mountedNavigationRows.map((row) => row.rowId),
       frozenLabelRowIds,
       timingRowIds,
-      rowLayout: layout.navigationRows,
-      navigationRowLayout: navigationLayout.navigationRows,
+      rowLayout: pinnedRows.rowLayout,
+      navigationRowLayout: pinnedRows.navigationRowLayout,
       groupHeaders: layout.groupHeaders,
       leftGroupHeaders: navigationLayout.groupHeaders,
       mountedGroupHeaderIds: mountedGroupHeaders.map((row) => row.rowId),
@@ -164,6 +166,7 @@ export class DefaultProjectionService implements ProjectionService {
     const mountedRowIds = mergeIds(mountedRows.map((row) => row.rowId), mountedNavigationRows.map((row) => row.rowId));
     this.#lastMountedRange = [mountedRows[0]?.y ?? 0, mountedRows.at(-1) ? mountedRows.at(-1)!.y + mountedRows.at(-1)!.height : 0];
     const { mountedSignalIds, timingRowIds, frozenLabelRowIds } = classifyMountedRows(mountedRows);
+    const pinnedRows = projectPinnedRows({ visibleRowLayout: layout.visibleRows, rowLayout: layout.navigationRows, navigationRowLayout: navigationLayout.navigationRows, stickyRowIds: request.viewport.stickyRowIds ?? [], viewportStartY: request.viewport.viewportStartY, leadingHeaderHeight: layout.groupHeaders[0]?.height ?? 0 });
     return {
       ...request.previous!,
       revision: request.snapshot.revision,
@@ -174,6 +177,8 @@ export class DefaultProjectionService implements ProjectionService {
       mountedGroupHeaderIds: mountedGroupHeaders.map((row) => row.rowId),
       mountedLeftGroupHeaderIds: mountedLeftGroupHeaders.map((row) => row.rowId),
       mountedSignalIds,
+      rowLayout: pinnedRows.rowLayout,
+      navigationRowLayout: pinnedRows.navigationRowLayout,
       waveSignalIds: [],
       transform: request.previous!.transform,
       collapsedGroupIds: request.previous!.collapsedGroupIds,

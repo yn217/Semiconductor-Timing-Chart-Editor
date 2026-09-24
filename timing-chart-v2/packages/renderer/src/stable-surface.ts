@@ -1,4 +1,5 @@
 import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
+import { ANNOTATION_LABEL_MAX_WIDTH, wrapAnnotationLabel } from "@timing-chart-v2/schema";
 import { LEFT_TREE_ICON_DOTS, LEFT_TREE_ICON_PATHS, LEFT_TREE_ICON_PUPIL, type LeftTreeIconPathName } from "./left-tree-icon-spec.js";
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
 
@@ -290,6 +291,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       if (row) {
         owner.dataset.groupId = row.groupId;
         owner.dataset.groupStart = String(firstTimingRowByGroup.get(row.groupId) === row.rowId);
+        owner.dataset.pinnedRow = String(row.pinned === true);
         place(owner, row);
         const waveformStyle = parseWaveformStyle(row.displayStyle);
         applyWaveformStyle(owner, waveformStyle);
@@ -332,6 +334,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       const owner = this.#waveOwners.get(signalId);
       const row = rows.get(signalId);
       if (!owner || !row) continue;
+      owner.dataset.pinnedRow = String(row.pinned === true);
       applyWaveformStyle(owner, parseWaveformStyle(row.displayStyle));
     }
     this.#rowLayoutSource = projection.rowLayout;
@@ -787,12 +790,15 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   const label = document.createElement("span");
   label.dataset.role = "annotation-label";
   label.dataset.annotationLabel = "true";
-  label.textContent = primitive.label;
-  // #377: Callout (and any Annotation) supports real multi-line text --
-  // a plain <span> collapses embedded "\n" characters by default, so
-  // pre-wrap is required to actually render them as separate lines.
-  label.style.whiteSpace = "pre-wrap";
-  applyTextStyle(label, parseTextStyle(primitive.style));
+  const labelPresentation = parsePresentationStyle(primitive.style);
+  const textStyle = parseTextStyle(primitive.style);
+  label.textContent = labelPresentation.labelWrap === false ? primitive.label : wrapAnnotationLabel(primitive.label, labelPresentation.labelMaxWidth ?? ANNOTATION_LABEL_MAX_WIDTH.default, textStyle.fontSize);
+  // Authored label layout remains presentation-only but follows the same
+  // persisted style consumed by ExportScene. Missing fields retain the
+  // historical 180px wrap behavior.
+  label.style.whiteSpace = "pre";
+  label.style.maxWidth = "none";
+  applyTextStyle(label, textStyle);
   if (primitive.align) label.style.textAlign = primitive.align; else label.style.removeProperty("text-align");
   label.style.transform = `translate(${(lineFirst.x + lineSecond.x) / 2 + (primitive.labelOffset?.x ?? 0)}px, ${(lineFirst.y + lineSecond.y) / 2 + (primitive.labelOffset?.y ?? (measurementPlacedBelow ? 14 : -14))}px)`;
   // #378: a real (SVG, not Unicode) lock glyph -- `label` is already
@@ -1027,6 +1033,9 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     shell.dataset.name = row.name;
     shell.dataset.groupId = row.groupId;
     shell.dataset.groupName = row.groupName;
+    shell.dataset.pinnedRow = String(row.pinned === true);
+    if (surface === "left" && row.pinned) shell.setAttribute("aria-description", "Pinned Signal; remains visible while scrolling.");
+    else if (surface === "left") shell.removeAttribute("aria-description");
     if (surface === "left") {
       shell.setAttribute("role", "treeitem");
       shell.tabIndex = -1;
@@ -1216,13 +1225,15 @@ function populateGroupHeader(shell: HTMLElement, header: GroupHeaderLayoutEntry)
  * free-form-JsonObject convention as parseTextStyle below -- an absent or
  * malformed value here means "use the shape's existing CSS default",
  * never a thrown error or a garbage inline style. */
-function parsePresentationStyle(style: Record<string, unknown> | undefined): { readonly strokeWidth?: number | undefined; readonly strokeStyle?: "solid" | "dashed" | "dotted" | undefined; readonly fillColor?: string | undefined; readonly fillOpacity?: number | undefined } {
+function parsePresentationStyle(style: Record<string, unknown> | undefined): { readonly strokeWidth?: number | undefined; readonly strokeStyle?: "solid" | "dashed" | "dotted" | undefined; readonly fillColor?: string | undefined; readonly fillOpacity?: number | undefined; readonly labelWrap?: boolean | undefined; readonly labelMaxWidth?: number | undefined } {
   const source = style ?? {};
   return {
     strokeWidth: typeof source.strokeWidth === "number" && source.strokeWidth >= 1 && source.strokeWidth <= 8 ? source.strokeWidth : undefined,
     strokeStyle: source.strokeStyle === "solid" || source.strokeStyle === "dashed" || source.strokeStyle === "dotted" ? source.strokeStyle : undefined,
     fillColor: typeof source.fillColor === "string" && (source.fillColor === "none" || /^#[0-9a-f]{3,8}$/i.test(source.fillColor)) ? source.fillColor : undefined,
     fillOpacity: typeof source.fillOpacity === "number" && source.fillOpacity >= 0 && source.fillOpacity <= 1 ? source.fillOpacity : undefined,
+    labelWrap: typeof source.labelWrap === "boolean" ? source.labelWrap : undefined,
+    labelMaxWidth: typeof source.labelMaxWidth === "number" && source.labelMaxWidth >= ANNOTATION_LABEL_MAX_WIDTH.min && source.labelMaxWidth <= ANNOTATION_LABEL_MAX_WIDTH.max ? source.labelMaxWidth : undefined,
   };
 }
 

@@ -15,10 +15,14 @@ export const TIMING_DIAGNOSTIC_CODES = [
   "HANDSHAKE_DATA_UNSTABLE",
   "LATENCY_RANGE_CONSTRAINT_INVALID",
   "LATENCY_RANGE_VIOLATION",
+  "LATENCY_CONSTRAINT_INVALID",
+  "LATENCY_RESPONSE_MISSING",
+  "LATENCY_OUT_OF_RANGE",
 ] as const;
 
 export type TimingDiagnosticCode = typeof TIMING_DIAGNOSTIC_CODES[number];
-export type TimingDiagnosticCategory = "unknown-value" | "protocol" | "stability";
+export const TIMING_DIAGNOSTIC_CATEGORIES = ["unknown-value", "protocol", "stability"] as const;
+export type TimingDiagnosticCategory = typeof TIMING_DIAGNOSTIC_CATEGORIES[number];
 
 export interface TimingDiagnostic extends DocumentProblem {
   readonly code: TimingDiagnosticCode;
@@ -221,6 +225,29 @@ function firstAssertedAtOrAfter(signal: Signal, cycle: number, polarity: "active
   return signal.values.find((change) => change.start >= cycle && asserted(change, polarity));
 }
 
+function numberFrom(data: ConstraintData, key: string): number | undefined {
+  const value = data[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+function edgeCycles(signal: Signal, edge: "rising" | "falling"): number[] {
+  if (signal.type === "clock" || signal.type === "commentRow") return [];
+  const matches = (before: "high" | "low" | "unknown", after: "high" | "low" | "unknown"): boolean => edge === "rising"
+    ? before === "low" && after === "high"
+    : before === "high" && after === "low";
+  const cycles: number[] = [];
+  for (let index = 1; index < signal.values.length; index += 1) {
+    const before = level(signal.values[index - 1]!.value);
+    const after = level(signal.values[index]!.value);
+    if (matches(before, after)) cycles.push(signal.values[index]!.start);
+  }
+  return cycles;
+}
+
+function isEdgeValueSignal(signal: Signal | undefined): signal is ValueSignal {
+  return signal !== undefined && (signal.type === "binary" || signal.type === "logic" || signal.type === "bus" || signal.type === "pulse");
+}
+
 function handshakeDiagnostics(
   document: CanonicalDocument,
   enabled: ReadonlySet<TimingDiagnosticCategory>,
@@ -288,6 +315,53 @@ function handshakeDiagnostics(
   return problems;
 }
 
+/** Evaluate JSON constraints of the form REQ edge -> ACK edge within N..M cycles. */
+function latencyDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>): TimingDiagnostic[] {
+  if (!enabled.has("protocol")) return [];
+  const problems: TimingDiagnostic[] = [];
+  const signals = new Map(document.signals.map((signal) => [signal.id, signal]));
+  document.constraints.forEach((constraint, constraintIndex) => {
+    if (constraint.type.toLowerCase() !== "latency") return;
+    const data = constraintData(constraint.data);
+    const triggerId = textFrom(data, ["triggerSignalId"]) as SignalId | undefined;
+    const responseId = textFrom(data, ["responseSignalId"]) as SignalId | undefined;
+    const triggerEdge = textFrom(data, ["triggerEdge"]);
+    const responseEdge = textFrom(data, ["responseEdge"]);
+    const minCycles = numberFrom(data, "minCycles");
+    const maxCycles = numberFrom(data, "maxCycles");
+    const trigger = triggerId ? signals.get(triggerId) : undefined;
+    const response = responseId ? signals.get(responseId) : undefined;
+    const basePath = `$.constraints[${constraintIndex}].data`;
+    const invalid = !triggerId || !responseId || !isEdgeValueSignal(trigger) || !isEdgeValueSignal(response)
+      || (triggerEdge !== "rising" && triggerEdge !== "falling")
+      || (responseEdge !== "rising" && responseEdge !== "falling")
+      || minCycles === undefined || !Number.isInteger(minCycles) || minCycles < 0
+      || maxCycles === undefined || !Number.isInteger(maxCycles) || maxCycles < minCycles;
+    if (invalid) {
+      problems.push({ code: "LATENCY_CONSTRAINT_INVALID", category: "protocol", severity: "warning", path: basePath, message: "Latency constraint requires value-signal IDs, rising/falling edges, and integer cycle bounds where 0 ≤ minCycles ≤ maxCycles.", entityId: constraint.id, objectType: "constraint", objectId: constraint.id, source: "validation", stage: "validate" });
+      return;
+    }
+    const triggerCycles = edgeCycles(trigger, triggerEdge);
+    const responseCycles = edgeCycles(response, responseEdge);
+    let responseIndex = 0;
+    const responseIndexInDocument = document.signals.indexOf(response);
+    triggerCycles.forEach((triggerCycle) => {
+      while (responseIndex < responseCycles.length && responseCycles[responseIndex]! < triggerCycle) responseIndex += 1;
+      const responseCycle = responseCycles[responseIndex];
+      if (responseCycle === undefined) {
+        problems.push({ code: "LATENCY_RESPONSE_MISSING", category: "protocol", severity: "warning", path: `$.signals[${responseIndexInDocument}]`, message: `Signal '${response.name}' has no ${responseEdge} edge for '${trigger.name}' ${triggerEdge} at cycle ${triggerCycle}.`, entityId: response.id, objectType: "constraint", objectId: constraint.id, objectLabel: constraint.id, source: "validation", stage: "validate", expected: `${minCycles}..${maxCycles} cycles` });
+        return;
+      }
+      responseIndex += 1;
+      const latency = responseCycle - triggerCycle;
+      if (latency < minCycles || latency > maxCycles) {
+        problems.push({ code: "LATENCY_OUT_OF_RANGE", category: "protocol", severity: "warning", path: `$.signals[${responseIndexInDocument}]`, message: `Signal '${response.name}' edge at cycle ${responseCycle} is ${latency} cycles after '${trigger.name}' at cycle ${triggerCycle}; expected ${minCycles}..${maxCycles}.`, entityId: response.id, objectType: "constraint", objectId: constraint.id, objectLabel: constraint.id, source: "validation", stage: "validate", value: latency, expected: `${minCycles}..${maxCycles} cycles` });
+      }
+    });
+  });
+  return problems;
+}
+
 function diagnosticOrder(left: TimingDiagnostic, right: TimingDiagnostic): number {
   return left.path.localeCompare(right.path) || left.code.localeCompare(right.code) || (left.objectId ?? "").localeCompare(right.objectId ?? "");
 }
@@ -303,12 +377,13 @@ export const TIMING_DIAGNOSTIC_RULES: readonly TimingDiagnosticRule[] = [
   { id: "timing.unknown-value", category: "unknown-value", evaluate: valueDiagnostics },
   { id: "timing.handshake", category: "protocol", evaluate: handshakeDiagnostics },
   { id: "timing.latency-range", category: "protocol", evaluate: latencyRangeDiagnostics },
+  { id: "timing.latency", category: "protocol", evaluate: latencyDiagnostics },
 ];
 
 /** Derive deterministic, non-persistent timing/protocol Problems from Canonical data. */
 export function deriveTimingDiagnostics(document: CanonicalDocument, options: TimingDiagnosticOptions = {}): readonly TimingDiagnostic[] {
   const configured = options.enabledCategories ?? document.checkSettings.enabledCategories;
-  const enabled = new Set<TimingDiagnosticCategory>(configured === undefined ? ["unknown-value", "protocol", "stability"] : configured.filter((category): category is TimingDiagnosticCategory => category === "unknown-value" || category === "protocol" || category === "stability"));
+  const enabled = new Set<TimingDiagnosticCategory>(configured === undefined ? TIMING_DIAGNOSTIC_CATEGORIES : configured.filter((category): category is TimingDiagnosticCategory => TIMING_DIAGNOSTIC_CATEGORIES.some((known) => known === category)));
   return TIMING_DIAGNOSTIC_RULES.flatMap((rule) => rule.evaluate(document, enabled)
     .filter(() => enabled.has(rule.category))
     .map((diagnostic) => ({ ...diagnostic, ruleId: rule.id, stableKey: `${rule.id}:${diagnostic.code}:${diagnostic.objectId ?? diagnostic.entityId ?? ""}:${diagnostic.path}${diagnostic.sourceCycle === undefined ? "" : `:cycle:${diagnostic.sourceCycle}`}` })))
