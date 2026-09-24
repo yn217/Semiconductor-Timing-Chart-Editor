@@ -7,6 +7,7 @@ import { downloadText } from "./download-text.js";
 import { AnnotationList } from "./annotation-list.js";
 import { FontStyleToolbar } from "./font-style-toolbar.js";
 import { StrokeFillToolbar } from "./stroke-fill-toolbar.js";
+import { AnnotationLabelLayoutToolbar } from "./annotation-label-layout-toolbar.js";
 import { annotationCapabilityDisabledReason } from "./annotation-capability-matrix.js";
 import { annotationPropertiesBase } from "./annotation-style-command.js";
 import { DraftStatus } from "./draft-status.js";
@@ -288,6 +289,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
             <summary>Style (Font, Stroke, Fill)</summary>
             <FontStyleToolbar idPrefix="annotation-font" style={styleDraft} onChange={applyFontStyle} />
             <StrokeFillToolbar idPrefix="annotation-stroke-fill" style={styleDraft} onChange={applyFontStyle} strokeDisabled={!!annotationCapabilityDisabledReason(annotation.type, "stroke")} strokeReason={annotationCapabilityDisabledReason(annotation.type, "stroke")} fillDisabled={!!annotationCapabilityDisabledReason(annotation.type, "fill")} fillReason={annotationCapabilityDisabledReason(annotation.type, "fill")} />
+            <AnnotationLabelLayoutToolbar idPrefix="annotation-label-layout" style={styleDraft} onChange={applyFontStyle} />
           </details>
           {/* Section 1: Visible last -- a state toggle, not the Annotation's
               identity or geometry. */}

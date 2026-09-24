@@ -48,3 +48,38 @@ test("switching Bookmark selection keeps an unapplied draft, announced, until Ap
   expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).toBe(revision);
   expect(errors).toEqual([]);
 });
+
+test("Bookmark Bottom Pin follows the pinned stable ID and deletes the displayed Bookmark", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  for (const start of [3, 10]) {
+    await page.getByLabel("Timeline range start").fill(String(start));
+    await page.getByLabel("Timeline range end").fill(String(start + 1));
+    await page.getByRole("button", { name: "Add marker" }).click();
+  }
+  await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
+  const panel = page.getByTestId("bookmark-editor-panel");
+  const rows = panel.getByTestId(/bookmark-row-/);
+  await expect(rows).toHaveCount(2);
+  await rows.nth(0).click();
+  const firstName = await panel.locator("header strong").innerText();
+  expect(firstName).toContain("Editing:");
+  const revision = await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").innerText();
+
+  await page.getByTestId("bottom-settings").click();
+  await page.getByTestId("bottom-pin").click();
+  await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
+  await page.getByTestId("bottom-settings").click();
+  await rows.nth(1).click();
+  await expect(panel.locator("header strong")).toHaveText(firstName);
+  expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).toBe(revision);
+  expect(await page.getByTestId("history-status").innerText()).toBe(history);
+
+  await panel.getByTestId("delete-bottom-bookmark").click();
+  await expect(rows).toHaveCount(1);
+  await expect(panel.locator("header strong")).not.toHaveText(firstName);
+  await expect(panel).toContainText("Editing:");
+  expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).not.toBe(revision);
+});

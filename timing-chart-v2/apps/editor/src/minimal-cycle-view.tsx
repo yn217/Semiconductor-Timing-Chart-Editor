@@ -127,7 +127,7 @@ export function MinimalCycleView() {
   // The normal preview starts on the built-in Transaction sample so a browser
   // refresh immediately shows the populated reference surface. The dedicated
   // visual-reference fixture remains a Cycle-oriented inspection entry point.
-  const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>({
+  const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId, BookmarkId>({
     documentEpoch,
     cycleCount: snapshot.document.timeline.cycleCount,
     initialViewMode: visualReference ? "Cycle" : readPreferredViewMode("Transaction"),
@@ -341,6 +341,8 @@ export function MinimalCycleView() {
   const groupById = useMemo(() => new Map(snapshot.document.signalGroups.map((group) => [group.id, group] as const)), [snapshot.document]);
   const annotationById = useMemo(() => new Map(snapshot.document.annotations.map((annotation) => [annotation.id, annotation] as const)), [snapshot.document]);
   const transactionById = useMemo(() => new Map(snapshot.document.transactions.map((transaction) => [transaction.id, transaction] as const)), [snapshot.document]);
+  const bookmarkById = useMemo(() => new Map(snapshot.document.bookmarks.map((bookmark) => [bookmark.id, bookmark] as const)), [snapshot.document]);
+  const selectedBookmarkIdRef = useRef<BookmarkId | undefined>(undefined);
   const firstNonCommentSignal = useMemo(() => snapshot.document.signals.find((signal) => signal.type !== "commentRow"), [snapshot.document]);
   const referenceClockSignal = useMemo(() => {
     const referenceClockId = snapshot.document.timeline.referenceClock;
@@ -381,6 +383,7 @@ export function MinimalCycleView() {
         ...(selectedGroupId === undefined ? {} : { groupId: selectedGroupId }),
         ...(selectedAnnotationId === undefined ? {} : { annotationId: selectedAnnotationId }),
         ...(selectedTransactionId === undefined ? {} : { transactionId: selectedTransactionId }),
+        ...(selectedBookmarkIdRef.current === undefined ? {} : { bookmarkId: selectedBookmarkIdRef.current }),
       });
     } else if (value && !bottomPinned) {
       setPinnedBottomSelection(undefined);
@@ -392,7 +395,8 @@ export function MinimalCycleView() {
     const targetExists = (pinnedBottomSelection.signalId === undefined || snapshot.document.signals.some((item) => item.id === pinnedBottomSelection.signalId))
       && (pinnedBottomSelection.groupId === undefined || snapshot.document.signalGroups.some((item) => item.id === pinnedBottomSelection.groupId))
       && (pinnedBottomSelection.annotationId === undefined || snapshot.document.annotations.some((item) => item.id === pinnedBottomSelection.annotationId))
-      && (pinnedBottomSelection.transactionId === undefined || snapshot.document.transactions.some((item) => item.id === pinnedBottomSelection.transactionId));
+      && (pinnedBottomSelection.transactionId === undefined || snapshot.document.transactions.some((item) => item.id === pinnedBottomSelection.transactionId))
+      && (pinnedBottomSelection.bookmarkId === undefined || snapshot.document.bookmarks.some((item) => item.id === pinnedBottomSelection.bookmarkId));
     if (!targetExists) {
       if (bottomPinned) setBottomPinned(false);
       if (!followSelection) setFollowSelection(true);
@@ -559,6 +563,8 @@ export function MinimalCycleView() {
     saveAndContinuePendingFileAction,
     requestNewDocument,
   } = actions;
+  selectedBookmarkIdRef.current = selectedBookmarkId;
+  const bottomBookmark = frozen ? (pinnedBottomSelection!.bookmarkId === undefined ? undefined : bookmarkById.get(pinnedBottomSelection!.bookmarkId)) : (selectedBookmarkId === undefined ? undefined : bookmarkById.get(selectedBookmarkId));
   useEditorDialogRuntime({
     dirty: history.dirty,
     documentLifecycle,
@@ -616,7 +622,7 @@ export function MinimalCycleView() {
       nextCommandId,
     },
     selected: { signal: selectedSignal, signalIds: selectedSignalIds, group: selectedGroup, annotation: selectedAnnotation, transaction: selectedTransaction, transactionIds: selectedTransactionIds, bookmark: selectedBookmark, transactionId: selectedTransactionId },
-    bottom: { signal: bottomSignal, group: bottomGroup, annotation: bottomAnnotation, transaction: bottomTransaction },
+    bottom: { signal: bottomSignal, group: bottomGroup, annotation: bottomAnnotation, transaction: bottomTransaction, bookmark: bottomBookmark },
     timeline: { range: timelineRange, collapsedGroupIds, setCollapsedGroups, toggleCollapsedGroup },
     setBottomVisible,
     workspace: { viewMode, activeContext, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionWithFreeze, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, cyclesPerTc, setCyclesPerTc, setRibbonTab },
