@@ -13,6 +13,8 @@ export const TIMING_DIAGNOSTIC_CODES = [
   "HANDSHAKE_CONSTRAINT_INVALID",
   "HANDSHAKE_NO_ACK",
   "HANDSHAKE_DATA_UNSTABLE",
+  "LATENCY_RANGE_CONSTRAINT_INVALID",
+  "LATENCY_RANGE_VIOLATION",
   "LATENCY_CONSTRAINT_INVALID",
   "LATENCY_RESPONSE_MISSING",
   "LATENCY_OUT_OF_RANGE",
@@ -31,6 +33,7 @@ export interface TimingDiagnostic extends DocumentProblem {
   /** Added by the registry evaluator; raw rule-local findings omit these. */
   readonly ruleId?: string;
   readonly stableKey?: string;
+  readonly sourceCycle?: number;
 }
 
 export interface TimingDiagnosticOptions {
@@ -162,6 +165,59 @@ function level(value: string | number): "high" | "low" | "unknown" {
 function asserted(change: SignalValueChange, polarity: "active-high" | "active-low"): boolean {
   const state = level(change.value);
   return state === (polarity === "active-low" ? "low" : "high");
+}
+
+function risingEdges(signal: ValueSignal): readonly number[] {
+  const edges: number[] = [];
+  let previous: "high" | "low" | "unknown" = "unknown";
+  for (const change of signal.values) {
+    const current = level(change.value);
+    if (previous === "low" && current === "high") edges.push(change.start);
+    previous = current;
+  }
+  return edges;
+}
+
+function latencyRangeDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>): TimingDiagnostic[] {
+  if (!enabled.has("protocol")) return [];
+  const problems: TimingDiagnostic[] = [];
+  const signals = new Map(document.signals.map((signal) => [signal.id, signal]));
+  const add = (code: TimingDiagnosticCode, path: string, message: string, constraintId: string, sourceCycle?: number): void => {
+    problems.push({ code, category: "protocol", severity: "warning", path, message, entityId: constraintId, objectType: "constraint", objectId: constraintId, source: "validation", stage: "validate", ...(sourceCycle === undefined ? {} : { sourceCycle }) });
+  };
+
+  document.constraints.forEach((constraint, index) => {
+    if (constraint.type.toLowerCase() !== "latency-range") return;
+    const data = constraintData(constraint.data);
+    const requestId = textFrom(data, ["requestSignalId"]) as SignalId | undefined;
+    const acknowledgeId = textFrom(data, ["acknowledgeSignalId"]) as SignalId | undefined;
+    const minCycles = data.minCycles;
+    const maxCycles = data.maxCycles;
+    const basePath = `$.constraints[${index}].data`;
+    if (!requestId || !acknowledgeId || typeof minCycles !== "number" || !Number.isSafeInteger(minCycles) || minCycles < 0 || typeof maxCycles !== "number" || !Number.isSafeInteger(maxCycles) || maxCycles < minCycles) {
+      add("LATENCY_RANGE_CONSTRAINT_INVALID", basePath, "Latency-range constraint requires requestSignalId, acknowledgeSignalId, and integer minCycles/maxCycles with 0 <= minCycles <= maxCycles.", constraint.id);
+      return;
+    }
+    const request = signals.get(requestId);
+    const acknowledge = signals.get(acknowledgeId);
+    if (!request || (request.type !== "binary" && request.type !== "logic" && request.type !== "pulse")) {
+      add("LATENCY_RANGE_CONSTRAINT_INVALID", `${basePath}.requestSignalId`, `Request signal '${requestId}' does not reference a binary, logic, or pulse signal.`, constraint.id);
+      return;
+    }
+    if (!acknowledge || (acknowledge.type !== "binary" && acknowledge.type !== "logic" && acknowledge.type !== "pulse")) {
+      add("LATENCY_RANGE_CONSTRAINT_INVALID", `${basePath}.acknowledgeSignalId`, `Acknowledge signal '${acknowledgeId}' does not reference a binary, logic, or pulse signal.`, constraint.id);
+      return;
+    }
+    const acknowledgeEdges = risingEdges(acknowledge);
+    for (const requestCycle of risingEdges(request)) {
+      const matchingCycle = acknowledgeEdges.find((cycle) => cycle >= requestCycle && cycle - requestCycle >= minCycles && cycle - requestCycle <= maxCycles);
+      if (matchingCycle !== undefined) continue;
+      const firstLaterCycle = acknowledgeEdges.find((cycle) => cycle >= requestCycle);
+      const observed = firstLaterCycle === undefined ? "no acknowledge rising edge at or after the request" : `no acknowledge rising edge in range (first later edge is ${firstLaterCycle - requestCycle} cycles after the request)`;
+      add("LATENCY_RANGE_VIOLATION", `${basePath}.acknowledgeSignalId`, `Request '${request.name}' rises at cycle ${requestCycle}; ${observed}, expected ${minCycles}..${maxCycles} cycles.`, constraint.id, requestCycle);
+    }
+  });
+  return problems;
 }
 
 function firstAssertedAtOrAfter(signal: Signal, cycle: number, polarity: "active-high" | "active-low"): SignalValueChange | undefined {
@@ -320,6 +376,7 @@ export interface TimingDiagnosticRule {
 export const TIMING_DIAGNOSTIC_RULES: readonly TimingDiagnosticRule[] = [
   { id: "timing.unknown-value", category: "unknown-value", evaluate: valueDiagnostics },
   { id: "timing.handshake", category: "protocol", evaluate: handshakeDiagnostics },
+  { id: "timing.latency-range", category: "protocol", evaluate: latencyRangeDiagnostics },
   { id: "timing.latency", category: "protocol", evaluate: latencyDiagnostics },
 ];
 
@@ -329,6 +386,6 @@ export function deriveTimingDiagnostics(document: CanonicalDocument, options: Ti
   const enabled = new Set<TimingDiagnosticCategory>(configured === undefined ? TIMING_DIAGNOSTIC_CATEGORIES : configured.filter((category): category is TimingDiagnosticCategory => TIMING_DIAGNOSTIC_CATEGORIES.some((known) => known === category)));
   return TIMING_DIAGNOSTIC_RULES.flatMap((rule) => rule.evaluate(document, enabled)
     .filter(() => enabled.has(rule.category))
-    .map((diagnostic) => ({ ...diagnostic, ruleId: rule.id, stableKey: `${rule.id}:${diagnostic.code}:${diagnostic.objectId ?? diagnostic.entityId ?? ""}:${diagnostic.path}` })))
+    .map((diagnostic) => ({ ...diagnostic, ruleId: rule.id, stableKey: `${rule.id}:${diagnostic.code}:${diagnostic.objectId ?? diagnostic.entityId ?? ""}:${diagnostic.path}${diagnostic.sourceCycle === undefined ? "" : `:cycle:${diagnostic.sourceCycle}`}` })))
     .sort(diagnosticOrder);
 }
