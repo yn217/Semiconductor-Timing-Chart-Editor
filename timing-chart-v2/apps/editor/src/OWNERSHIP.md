@@ -75,6 +75,47 @@ controllers are extracted incrementally.
 | Runtime renderer host sizing | `runtime/renderer-host-sizing.ts` | view-only DOM sizing | PR6 helper split |
 | Runtime diagnostics publication | `runtime/runtime-diagnostics.ts` | runtime diagnostics dataset | PR6 helper split |
 
+## Cycle / Transaction / Combined workspace ownership (#593)
+
+This inventory records current presentation owners and remaining shared-shell
+coupling. It is an implementation map, not a claim that real-browser isolation
+acceptance is complete.
+
+| Concern | Classification | Current owner / source | Boundary and remaining coupling |
+| --- | --- | --- | --- |
+| Canonical cycles, entities, commands, History, ChangeSet | `SHARED_SEMANTIC` | schema + `CommandHistorySession` / SemanticCommand; `runtime/timeline-geometry-owner.ts` | One canonical source-time contract; must not be forked by mode. |
+| Display mapping and source-cycle geometry | `SHARED_PRIMITIVE` | `runtime/timeline-geometry-owner.ts`, `runtime/display-boundary.ts`, `runtime/timeline-viewport-runtime.ts` | Shared source-cycle semantics; each visible mode supplies its presentation attachment. |
+| App shell and common workspace DOM | `SHARED_PRIMITIVE` | `editor-shell-view.tsx`, `editor-workspace-view.tsx`, `.desktop-workspace` in `styles/app-shell.css` | One shell and `.cycle-panel` are still reused; mode-root attributes scope layout but do not yet constitute separate workspace components. |
+| Cycle workspace composition | `CYCLE_PRESENTATION` | `workspace/mode-composition.ts`; `.editor-shell[data-view-mode="Cycle"]` rules in `styles/mode-cycle.css` | Owns embedded Signal tree/frozen columns and `data-role="timeline-viewport"`; the Cycle-only horizontal scroll wrapper is selected by `runtime/timeline-scroll-owner.ts`. |
+| Transaction workspace composition | `TRANSACTION_PRESENTATION` | `.cycle-panel.mode-transaction` rules in `styles/mode-transaction.css`; `runtime/transaction-lanes.tsx`; Transaction Tree composition in `editor-workspace-view.tsx` | Standalone Transaction uses the shell viewport as its time scroll owner. Lane geometry still consumes shared `--wave-width` and ruler/grid primitives with mode overrides. |
+| Combined workspace composition | `COMBINED_PRESENTATION` | `CombinedModePanes` in `editor-workspace-view.tsx`; `.cycle-panel.mode-split` rules in `styles/mode-combined.css` | One outer `.cycle-viewport` is the horizontal owner for both panes; Transaction/Cycle vertical scrollers remain local. Do not add two-way horizontal mirroring. |
+| Standalone Cycle/Transaction zoom | `CYCLE_PRESENTATION` / `TRANSACTION_PRESENTATION` | `runtime/use-timeline-navigation-owner.ts` (`zoomByModeRef`) | Zoom values are snapshotted independently on standalone-mode changes; Split uses the active shared time viewport and does not replace standalone snapshots. |
+| Horizontal scroll | mode presentation owners | `runtime/timeline-scroll-owner.ts`; `TimelineHorizontalScrollbar` in `editor-workspace-view.tsx` | Cycle resolves to the inner timeline wrapper; Transaction and Split resolve to their outer viewport. Split deliberately has one shared owner. The positions are DOM-backed, not a separately persisted per-mode state model. |
+| Left/frozen/Inspector/Bottom dimensions | `CYCLE_PRESENTATION` / `TRANSACTION_PRESENTATION` / Combined composition | `workspace/use-workspace-ui-state.ts` (`paneDimensionsByModeRef`); CSS vars published by `minimal-cycle-view.tsx` | Cycle and Transaction snapshots restore independently; Combined uses current composition dimensions. Widths still flow through shared CSS variables. |
+| Cycle frozen columns and splitter DOM | `CYCLE_PRESENTATION` | `editor-workspace-view.tsx`, Cycle timeline surface; `styles/mode-cycle.css`, `styles/app-shell.css` | Cycle timeline wrapper/frozen columns are in the shared surface tree; Transaction hides its signal surface instead of mounting a separate Cycle workspace subtree. Verify Cycle-only controls are not exposed in Transaction DOM during browser acceptance. |
+| Transaction Group/Lane presentation | `TRANSACTION_PRESENTATION` / `COMBINED_PRESENTATION` | `runtime/transaction-lanes.tsx`; `styles/mode-transaction.css` and `styles/mode-combined.css` | Projection/interaction is shared between standalone and Combined; layout adapters differ by mode. Canonical Transaction identity/mutation remains shared. |
+| Ruler, grid, renderer host, annotations, MiniMap | `SHARED_PRIMITIVE` with mode adapters | `runtime/build-ruler.ts`, `runtime/render-geometry-grid.ts`, `runtime/renderer-host-sizing.ts`, `minimap.tsx`; `styles/center-columns.css` | Generic stylesheet still interleaves surface, ruler/grid, frozen-column, and Transaction-lane selectors. Mode styles override selected layout; extraction needs a consumer audit. |
+| Bottom routing, tabs, Follow Selection, Pin | mode-aware shared presentation state | `workspace/use-workspace-ui-state.ts`, `minimal-cycle-view-panels.tsx`, `editor-secondary-surfaces.tsx` | Tab/follow/pin state is tracked per standalone mode; Combined preserves source standalone tab behavior. Commands and selection identity remain shared. |
+| Inspector | `SHARED_PRIMITIVE` with active-context routing | `panels/inspector-panel.tsx`, `editor-secondary-surfaces.tsx`, active context in `use-workspace-ui-state.ts` | Shared Inspector shell; selected entity/context determines content. Not yet separate mode-owned surface components. |
+| Signal Split (Cycle-only dual signal panes) | `CYCLE_PRESENTATION` | `runtime/signal-split-surface-controller.ts`, `runtime/use-signal-split-presentation-sync.ts`, `styles/mode-cycle.css` | Distinct from Combined's Transaction-over-Cycle `Split`; user-facing mode selector says Combined while internal enum remains Split. |
+
+### Concrete remaining architecture work
+
+- The shell still renders a shared `.cycle-panel` and branches between mode
+  content; explicit `CycleWorkspace`, `TransactionWorkspace`, and
+  `CombinedWorkspace` component boundaries do not all exist yet.
+- `center-columns.css` interleaves shared primitives and mode-specific
+  selectors. Consumers include `--gui-left-width`, `--gui-frozen-width`, and
+  `--wave-width`; extracting a block without auditing consumers can shift the
+  time origin or sizing contract.
+- Horizontal scroll resolves to distinct mode DOM owners, and Combined has one
+  shared outer owner, but the complete 1672x941 / 1280x720 switch-resize-return
+  real-browser contract is not verified on current main.
+- `tests/e2e/issue-593-mode-layout-isolation.spec.ts` checks shared-region
+  geometry across mode round-trips; `tests/e2e/mode-isolation-journey.spec.ts`
+  checks selected width/origin ownership. Neither replaces #593's complete
+  real-browser acceptance matrix.
+
 Rules:
 
 - `MinimalCycleView` root allow-list:
