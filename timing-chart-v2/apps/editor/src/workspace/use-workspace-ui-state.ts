@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import { cursorDelta, type SemanticCursorState } from "@timing-chart-v2/projection";
+import type { BookmarkId } from "@timing-chart-v2/schema";
 
 export type DensityMode = "compact" | "comfortable";
 export type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
@@ -72,11 +73,12 @@ export type PaneResizeGesture = { readonly startX: number; readonly startWidth: 
 export type VerticalResizeGesture = { readonly startY: number; readonly startHeight: number };
 export type RatioResizeGesture = { readonly startY: number; readonly startRatio: number; readonly containerHeight: number };
 
-export type BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId> = {
+export type BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId, BookmarkIdType = BookmarkId> = {
   readonly signalId?: SignalId;
   readonly groupId?: GroupId;
   readonly annotationId?: AnnotationId;
   readonly transactionId?: TransactionId;
+  readonly bookmarkId?: BookmarkIdType;
 };
 
 /** Owns presentation-only workspace UI state: ribbon/bottom tabs, view mode,
@@ -84,7 +86,7 @@ export type BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId
  * resize-gesture scratch refs, and the Left Tree filter. None of this is
  * Document/Selection/Timeline canonical state -- every setter here only
  * ever affects layout/chrome, never the .tcd document or command history. */
-export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>(input: { readonly documentEpoch?: number; readonly cycleCount?: number; readonly initialViewMode?: ViewMode } = {}) {
+export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId, BookmarkIdType = BookmarkId>(input: { readonly documentEpoch?: number; readonly cycleCount?: number; readonly initialViewMode?: ViewMode } = {}) {
   const [ribbonTab, setRibbonTab] = useState("Home");
   const [bottomTab, setBottomTab] = useState<BottomTab>(input.initialViewMode === "Transaction" ? "Transaction" : "Signal");
   const lastBottomTabByModeRef = useRef<{ Cycle: BottomTab; Transaction: BottomTab }>({ Cycle: "Signal", Transaction: "Transaction" });
@@ -257,9 +259,9 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   const [bottomPinned, setBottomPinned] = useState(false);
   const bottomPinnedRef = useRef(false);
   bottomPinnedRef.current = bottomPinned;
-  const pinnedBottomSelectionByModeRef = useRef<{ Cycle: BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId> | undefined; Transaction: BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId> | undefined }>({ Cycle: undefined, Transaction: undefined });
-  const [pinnedBottomSelection, setPinnedBottomSelectionState] = useState<BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId> | undefined>();
-  const setPinnedBottomSelection = useCallback((value: SetStateAction<BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId> | undefined>) => {
+  const pinnedBottomSelectionByModeRef = useRef<{ Cycle: BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId, BookmarkIdType> | undefined; Transaction: BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId, BookmarkIdType> | undefined }>({ Cycle: undefined, Transaction: undefined });
+  const [pinnedBottomSelection, setPinnedBottomSelectionState] = useState<BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId, BookmarkIdType> | undefined>();
+  const setPinnedBottomSelection = useCallback((value: SetStateAction<BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId, BookmarkIdType> | undefined>) => {
     const next = typeof value === "function" ? value(pinnedBottomSelection) : value;
     if (viewMode === "Cycle" || viewMode === "Transaction") pinnedBottomSelectionByModeRef.current[viewMode] = next;
     setPinnedBottomSelectionState(next);
