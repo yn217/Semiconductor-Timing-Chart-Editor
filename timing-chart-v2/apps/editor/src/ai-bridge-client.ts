@@ -18,6 +18,7 @@ import type { AIViewIntent } from "./ai-proposal-provider.js";
 // within the last EXTERNAL_CLIENT_TIMEOUT_MS window server-side.
 export type AIBridgeStatus = "disabled" | "connecting" | "connected" | "connected-external-client" | "token-required" | "invalid-token" | "unavailable" | "error";
 export type AISelectionEntityType = "signal" | "group" | "transaction" | "annotation" | "bookmark";
+export type AIBridgeViewOperation = "switch_mode" | "open_panel" | "set_visible_time_range";
 
 export type AIBridgeContext = {
   readonly document: CanonicalDocument;
@@ -29,6 +30,7 @@ export type AIBridgeContext = {
   readonly selectedAnnotationId: string | undefined;
   readonly selectedTransactionId: string | undefined;
   readonly onViewIntent: ((intent: AIViewIntent) => void) | undefined;
+  readonly onViewOperation: ((operation: AIBridgeViewOperation, args: Readonly<Record<string, unknown>>) => void) | undefined;
   readonly onSetSelection: ((target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void) | undefined;
   // #395 PR4: propose_edit's only effect is building a Preview (exactly
   // what clicking Preview in the UI does) -- it never validates or
@@ -83,6 +85,17 @@ export function executeAIBridgeTool(tool: string, args: Record<string, unknown>,
   if (tool === "fit_selection") {
     if (!context.onViewIntent) throw new Error("fit_selection is not available in the current surface.");
     context.onViewIntent("fit-selection");
+    return { applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 };
+  }
+  if (tool === "switch_mode" || tool === "open_panel" || tool === "set_visible_time_range") {
+    if (!context.onViewOperation) throw new Error(`${tool} is not available in the current surface.`);
+    if (tool === "switch_mode" && !["Cycle", "Transaction", "Combined"].includes(String(args.mode))) throw new Error("switch_mode requires mode Cycle, Transaction, or Combined.");
+    if (tool === "open_panel" && !["inspector", "bottom"].includes(String(args.panel))) throw new Error("open_panel requires panel inspector or bottom.");
+    if (tool === "set_visible_time_range") {
+      const { startCycle, endCycle } = args;
+      if (!Number.isSafeInteger(startCycle) || !Number.isSafeInteger(endCycle) || (startCycle as number) < 0 || (endCycle as number) <= (startCycle as number) || (endCycle as number) > context.document.timeline.cycleCount) throw new Error("set_visible_time_range requires safe integer source-cycle boundaries within the document, with startCycle < endCycle.");
+    }
+    context.onViewOperation(tool, args);
     return { applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 };
   }
   if (tool === "get_viewport_snapshot") {

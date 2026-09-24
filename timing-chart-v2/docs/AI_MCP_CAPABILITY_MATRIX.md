@@ -20,7 +20,7 @@ Status is measured against the local Agent Bridge tool catalog in `scripts/ai-br
 | Selection read | `get_selection` | Editor selection owner | Read-only | No | stable selected IDs | n/a | `ai-bridge-session.test.ts` | `ai-bridge.spec.ts` | Implemented |
 | Set selection / reveal entity | `set_selection` | Editor SelectionOwner | View-only | No | Stable entity ID | n/a | `ai-bridge-client.test.ts` | `ai-bridge.spec.ts` | Implemented; browser acceptance not run |
 | Fit all / fit selection | `fit_all`, `fit_selection` | Timeline navigation owner | View-only | No | Current selection for fit-selection | n/a | `ai-bridge-session.test.ts` | `ai-bridge.spec.ts` | Implemented; browser acceptance not run |
-| Open panel / switch mode / set visible time range | — | View intent owners exist where applicable | View-only | No | Stable entity IDs/source range | Canonical source cycles | — | — | Not exposed by MCP |
+| Open panel / switch mode / set visible time range | `open_panel`, `switch_mode`, `set_visible_time_range` | Workspace UI state / shared Timeline navigation owner | View-only | No | Explicit panel/mode/source-cycle range | Canonical source cycles | `ai-bridge-client.test.ts`, `timeline-navigation-controller.test.ts` | `ai-bridge.spec.ts` authored; not run | Implemented; browser acceptance pending |
 | Problems read | `get_problems` | Canonical document validator | Read-only | No | n/a | n/a | `ai-bridge-session.test.ts` | Catalog E2E authored; not run | Implemented |
 | View context / viewport | `get_document_summary`, `get_view_context`, `get_viewport_snapshot` | Canonical document / shared view context | Read-only | No | stable IDs in response | source cycles and zoom | `ai-bridge-session.test.ts` | `ai-bridge.spec.ts` | Implemented |
 | General semantic fallback | `propose_edit` | Deterministic intent parser → SemanticCommand | Document edit | Yes | Selection context | Source cycles when applicable | `ai-proposal-provider.test.ts` | `ai-bridge.spec.ts` | Implemented fallback; typed tools preferred |
@@ -36,6 +36,8 @@ The names below must match the bridge `TOOL_CATALOG`; the security contract test
 `fit_selection`.
 
 `set_selection`.
+
+`switch_mode`, `open_panel`, `set_visible_time_range`.
 
 ## Verification state
 

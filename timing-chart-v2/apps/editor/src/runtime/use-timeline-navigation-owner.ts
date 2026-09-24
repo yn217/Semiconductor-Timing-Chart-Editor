@@ -31,6 +31,7 @@ export type TimelineNavigationOwner = Readonly<{
   setZoom: (zoom: number) => void;
   zoomBy: (delta: number) => void;
   fitSelection: () => void;
+  fitSourceRange: (startCycle: number, endCycle: number) => boolean;
   fitAll: () => void;
   navigateToCycle: (cycle: number) => void;
   attach: (context: TimelineNavigationAttachment) => () => void;
@@ -46,6 +47,7 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
   const zoomStateFrameRef = useRef<number | undefined>(undefined);
   const applyZoomRef = useRef<(zoom: number) => void>(() => undefined);
   const fitSelectionRef = useRef<() => void>(() => undefined);
+  const fitSourceRangeRef = useRef<(startCycle: number, endCycle: number) => boolean>(() => false);
   const fitAllRef = useRef<() => void>(() => undefined);
   const navigateToCycleRef = useRef<(cycle: number) => void>(() => undefined);
 
@@ -73,6 +75,7 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
     setZoom: (next) => applyZoomRef.current(next),
     zoomBy: (delta) => applyZoomRef.current(zoomRef.current + delta),
     fitSelection: () => fitSelectionRef.current(),
+    fitSourceRange: (startCycle, endCycle) => fitSourceRangeRef.current(startCycle, endCycle),
     fitAll: () => fitAllRef.current(),
     navigateToCycle: (cycle) => navigateToCycleRef.current(cycle),
     attach: (context) => {
@@ -121,12 +124,14 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
         publishState: context.publishState,
       });
       fitSelectionRef.current = navigation.fitSelection;
+      fitSourceRangeRef.current = navigation.fitSourceRange;
       fitAllRef.current = navigation.fitAll;
       navigateToCycleRef.current = navigation.navigateToCycle;
 
       return () => {
         applyZoomRef.current = () => undefined;
         fitSelectionRef.current = () => undefined;
+        fitSourceRangeRef.current = () => false;
         fitAllRef.current = () => undefined;
         navigateToCycleRef.current = () => undefined;
       };
