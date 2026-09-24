@@ -291,6 +291,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       if (row) {
         owner.dataset.groupId = row.groupId;
         owner.dataset.groupStart = String(firstTimingRowByGroup.get(row.groupId) === row.rowId);
+        owner.dataset.pinnedRow = String(row.pinned === true);
         place(owner, row);
         const waveformStyle = parseWaveformStyle(row.displayStyle);
         applyWaveformStyle(owner, waveformStyle);
@@ -333,6 +334,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       const owner = this.#waveOwners.get(signalId);
       const row = rows.get(signalId);
       if (!owner || !row) continue;
+      owner.dataset.pinnedRow = String(row.pinned === true);
       applyWaveformStyle(owner, parseWaveformStyle(row.displayStyle));
     }
     this.#rowLayoutSource = projection.rowLayout;
@@ -1031,6 +1033,9 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     shell.dataset.name = row.name;
     shell.dataset.groupId = row.groupId;
     shell.dataset.groupName = row.groupName;
+    shell.dataset.pinnedRow = String(row.pinned === true);
+    if (surface === "left" && row.pinned) shell.setAttribute("aria-description", "Pinned Signal; remains visible while scrolling.");
+    else if (surface === "left") shell.removeAttribute("aria-description");
     if (surface === "left") {
       shell.setAttribute("role", "treeitem");
       shell.tabIndex = -1;

@@ -18,6 +18,8 @@ export interface RowLayoutEntry {
   readonly displayAlign?: "left" | "center" | "right";
   readonly displayOverflow?: "expand" | "ellipsis" | "wrap";
   readonly visible: boolean;
+  /** User-pinned view row. Presentation-only; canonical row order is unchanged. */
+  readonly pinned?: boolean;
   readonly instancePath?: readonly string[];
   readonly fullPath?: string;
   readonly y: number;
@@ -65,6 +67,8 @@ export interface VirtualizationWindow {
   readonly overscanBefore: number;
   readonly overscanAfter: number;
   readonly pinnedRowIds: readonly RowId[];
+  /** Stable IDs whose visible rows stay at the top of the scrolling surfaces. */
+  readonly stickyRowIds?: readonly RowId[];
 }
 
 export interface ProjectionRequest {

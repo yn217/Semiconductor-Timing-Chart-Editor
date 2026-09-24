@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import { cursorDelta, type SemanticCursorState } from "@timing-chart-v2/projection";
 import type { BookmarkId } from "@timing-chart-v2/schema";
+import { pinnedSignalIdsForEpoch, signalPinStateForEpoch } from "./signal-pin-state.js";
 
 export type DensityMode = "compact" | "comfortable";
 export type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
@@ -160,16 +161,28 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   // document save/open payloads or semantic commands.
   const [cursorA, setCursorA] = useState<SemanticCursor>();
   const [cursorB, setCursorB] = useState<SemanticCursor>();
+  const [signalPinState, setSignalPinState] = useState(() => signalPinStateForEpoch<SignalId>(input.documentEpoch, []));
+  const signalPinStateRef = useRef(signalPinState);
+  const getPinnedSignalIds = useCallback((): readonly SignalId[] => pinnedSignalIdsForEpoch(signalPinStateRef.current, input.documentEpoch), [input.documentEpoch]);
+  const setPinnedSignalIds = useCallback((ids: readonly SignalId[]) => {
+    const next = signalPinStateForEpoch(input.documentEpoch, ids);
+    signalPinStateRef.current = next;
+    setSignalPinState(next);
+  }, [input.documentEpoch]);
   const previousDocumentEpochRef = useRef(input.documentEpoch);
   useEffect(() => {
     if (previousDocumentEpochRef.current === input.documentEpoch) return;
     previousDocumentEpochRef.current = input.documentEpoch;
     setCursorA(undefined);
     setCursorB(undefined);
+    const next = signalPinStateForEpoch<SignalId>(input.documentEpoch, []);
+    signalPinStateRef.current = next;
+    setSignalPinState(next);
     // Signal Split is workspace chrome, not document content. Preserve the
     // user's active two-pane presentation across Save/Open replacement; the
     // new document is reprojected into the existing pane layout.
   }, [input.documentEpoch]);
+  const pinnedSignalIds = pinnedSignalIdsForEpoch(signalPinState, input.documentEpoch);
   const cursorState: SemanticCursorState = { ...(cursorA === undefined ? {} : { a: cursorA }), ...(cursorB === undefined ? {} : { b: cursorB }) };
   const setCursor = (which: "a" | "b", sourceTime: number | undefined) => {
     if (sourceTime !== undefined && !Number.isFinite(sourceTime)) return;
@@ -285,6 +298,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     density, setDensity,
     workspacePreset, setWorkspacePreset,
     cursorA, cursorB, cursorState, cursorDelta: cursorDelta(cursorState),
+    pinnedSignalIds, setPinnedSignalIds, getPinnedSignalIds,
     setCursor, clearCursor, moveCursor, swapCursors,
     waveformRestoreRef,
     signalTreeVisible, setSignalTreeVisible,
