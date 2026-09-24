@@ -2,6 +2,28 @@ import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 
 export type HardwareHierarchyView = "group" | "hierarchy";
 
+export interface HardwareHierarchyScopeBreadcrumb {
+  readonly value: string;
+  readonly label: string;
+}
+
+/** Builds view-only ancestor navigation for the selected hierarchy scope. */
+export function hardwareHierarchyScopeBreadcrumbs(scope: string): readonly HardwareHierarchyScopeBreadcrumb[] {
+  const breadcrumbs: HardwareHierarchyScopeBreadcrumb[] = [{ value: "all", label: "All scopes" }];
+  if (scope === "all") return Object.freeze(breadcrumbs);
+  if (scope === "(root)") {
+    breadcrumbs.push({ value: "(root)", label: "(root)" });
+    return Object.freeze(breadcrumbs);
+  }
+
+  let path = "";
+  for (const segment of scope.split(".")) {
+    path = path ? `${path}.${segment}` : segment;
+    breadcrumbs.push({ value: path, label: segment });
+  }
+  return Object.freeze(breadcrumbs);
+}
+
 export interface HardwareHierarchyEntry {
   readonly signalId: SignalId;
   readonly scope: string;
