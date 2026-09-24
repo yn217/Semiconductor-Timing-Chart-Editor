@@ -11,6 +11,7 @@ import { InspectorSection, InspectorFooter, PropertyToggle } from "./inspector-s
 import { useInspectorAccordion } from "./inspector-accordion.js";
 import { InspectorHeaderBar, InspectorSelectionHeader } from "./inspector-selection-header.js";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
+import { formatAnnotationAnchor } from "./annotation-anchor-format.js";
 
 export function InspectorAnnotationEditor({ annotation, document, viewport, commands, onDelete, onCancel, onClose, onPreview }: { readonly annotation: Annotation; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onDelete: () => void; readonly onCancel: () => void; readonly onClose: () => void; readonly onPreview?: (annotationId: AnnotationId, draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => void }) {
   type AnchorField = "anchor" | "start" | "end" | "from" | "to";
@@ -22,9 +23,10 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
   // has start/end, an arrow/dependency has from/to, a marker/text/callout
   // has just anchor) rather than a fixed pair of fields every type shares.
   const rangeAnchors = anchorFields.map((field) => (annotation as Partial<Record<AnchorField, SemanticAnchor>>)[field]).filter((value): value is SemanticAnchor => value !== undefined);
+  const signalNames = new Map(document.signals.map((signal) => [signal.id, signal.display.name]));
   const rangeDetail = rangeAnchors.length >= 2
-    ? `Cycle ${rangeAnchors[0]!.cycle}–${rangeAnchors[rangeAnchors.length - 1]!.cycle}`
-    : rangeAnchors.length === 1 ? `Cycle ${rangeAnchors[0]!.cycle}` : undefined;
+    ? `${formatAnnotationAnchor(rangeAnchors[0], signalNames)} – ${formatAnnotationAnchor(rangeAnchors[rangeAnchors.length - 1], signalNames)}`
+    : rangeAnchors.length === 1 ? formatAnnotationAnchor(rangeAnchors[0], signalNames) : undefined;
   const typeLabel = annotation.type.charAt(0).toUpperCase() + annotation.type.slice(1);
   const [label, setLabel] = useState(annotation.label);
   const [color, setColor] = useState(annotation.color ?? "#d04a36");

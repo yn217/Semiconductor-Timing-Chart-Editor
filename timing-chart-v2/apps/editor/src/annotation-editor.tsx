@@ -241,7 +241,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
           <button type="button" onClick={() => onDuplicate(annotation)}>Duplicate</button>
           <button type="button" className="danger" onClick={onDelete}>Delete</button>
         </div>
-        <AnnotationList annotations={annotations} selectedId={annotation.id} onSelect={onSelect} commands={commands} />
+        <AnnotationList annotations={annotations} selectedId={annotation.id} document={document} onSelect={onSelect} commands={commands} />
       </section>
       <section className="annotation-edit-panel" aria-label="Edit Annotation">
         <h2>Edit Annotation</h2>

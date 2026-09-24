@@ -79,6 +79,6 @@ export function AnnotationCollectionPanel({ annotations, selectedId, document, o
     <div className="annotation-collection-heading">Annotations <span>({annotations.length})</span>{selected && <span className="annotation-collection-selection">Selected: {selected.label || selected.type}</span>}</div>
     {annotations.length === 0
       ? <div className="empty-editor">No annotations yet. Choose a preset and select Create to add one.</div>
-      : <AnnotationList annotations={annotations} selectedId={selectedId} onSelect={onSelect} commands={commands} />}
+      : <AnnotationList annotations={annotations} selectedId={selectedId} document={document} onSelect={onSelect} commands={commands} />}
   </section>;
 }
