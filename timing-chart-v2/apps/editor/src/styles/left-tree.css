@@ -140,6 +140,10 @@
 .editor-shell .surface-host [data-role="frozen-row"],
 .editor-shell .surface-host [data-role="wave-owner"] { height: 31px; }
 
+/* Signal Pin freezes the same semantic row across tree, frozen label,
+   timing lane and waveform without changing Canonical row order. */
+.editor-shell .surface-host [data-pinned-row="true"] { z-index: 14; background-color: #edf5ff; box-shadow: inset 3px 0 #2d78c7, inset 0 -1px #b8cde2; }
+
 .editor-shell .surface-host [data-role="left-tree-rows"],
 .editor-shell .surface-host [data-role="frozen-label-rows"],
 .editor-shell .surface-host [data-role="timing-semantic-rows"],

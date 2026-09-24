@@ -6,3 +6,4 @@ export * from "./cursor.js";
 export * from "./hardware-hierarchy.js";
 export * from "./minimap.js";
 export * from "./signal-split.js";
+export * from "./pinned-rows.js";
