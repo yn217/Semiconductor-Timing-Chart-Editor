@@ -192,9 +192,9 @@
 
 .surface-host [data-filtered-out="true"] { display: none !important; }
 
-.editor-shell .surface-host [data-role="timing-chart-surface"] { grid-template-columns: 265px 209px var(--wave-width, 640px); }
+.editor-shell .surface-host [data-role="timing-chart-surface"] { grid-template-columns: var(--gui-left-width, 265px) var(--gui-frozen-width, 209px) var(--wave-width, 640px); }
 
-.editor-shell .surface-host [data-role="frozen-label-rows"] { left: 265px !important; }
+.editor-shell .surface-host [data-role="frozen-label-rows"] { left: var(--gui-left-width, 265px) !important; }
 
 .editor-shell .surface-host [data-role$="-group-header"] { height: 32px; }
 

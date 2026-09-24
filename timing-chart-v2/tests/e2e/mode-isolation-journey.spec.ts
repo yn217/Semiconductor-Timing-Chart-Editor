@@ -90,6 +90,25 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   await modes.getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Combined", { timeout: 5_000 });
   await expect.poll(() => page.getByTestId("geometry-grid").evaluate((element) => Number.parseFloat(getComputedStyle(element).left))).toBe(Number(await shell.getAttribute("data-left-pane-width")) + Number(await shell.getAttribute("data-frozen-pane-width")));
+  const combinedSurface = page.locator(".split-signal-pane [data-role='timing-chart-surface']").first();
+  const expectCombinedColumnsToFollowOwners = async () => {
+    const columns = await combinedSurface.evaluate((element) => {
+      const shellElement = element.closest<HTMLElement>(".editor-shell")!;
+      const styles = getComputedStyle(element);
+      return {
+        grid: styles.gridTemplateColumns.split(/\s+/).map((track) => Number.parseFloat(track)),
+        left: Number.parseFloat(getComputedStyle(shellElement).getPropertyValue("--gui-left-width")),
+        frozen: Number.parseFloat(getComputedStyle(shellElement).getPropertyValue("--gui-frozen-width")),
+      };
+    });
+    expect(columns.grid[0], "Combined timing surface left column follows the mode's left-width owner").toBe(columns.left);
+    expect(columns.grid[1], "Combined timing surface frozen column follows the frozen-width owner").toBe(columns.frozen);
+  };
+  await expectCombinedColumnsToFollowOwners();
+  const combinedLeftBefore = Number(await shell.getAttribute("data-left-pane-width"));
+  await page.getByTestId("left-pane-resizer").press("ArrowRight");
+  await expect.poll(() => shell.getAttribute("data-left-pane-width").then(Number), { timeout: 5_000, message: "Combined left-width owner must update before checking its rendered grid columns" }).toBeGreaterThan(combinedLeftBefore);
+  await expectCombinedColumnsToFollowOwners();
   await expect(page.locator(".split-transaction-pane")).toBeVisible();
   await expect(page.getByTestId("combined-split-divider")).toBeVisible();
   const combinedViewport = page.getByTestId("cycle-viewport");
