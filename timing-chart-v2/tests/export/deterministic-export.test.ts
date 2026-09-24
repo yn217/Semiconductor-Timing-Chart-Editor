@@ -110,6 +110,14 @@ describe("deterministic document export", () => {
     expect(svg).toContain('lengthAdjust="spacingAndGlyphs"');
   });
 
+  it("exports authored Annotation line spacing using the same font-size multiplier as the live overlay", () => {
+    const base = canonicalFixture();
+    const annotation = { id: "ann_line_spacing" as AnnotationId, type: "callout" as const, label: "first\nsecond", visible: true, anchor: { cycle: 2, point: "cycle-center" as const }, style: { fontSize: 12, lineHeight: 1.8 } };
+    const svg = renderExportSvg(buildExportScene({ ...base, annotations: [annotation] }, { format: "svg", scope: "document" }));
+    expect(svg).toContain('<tspan x="');
+    expect(svg).toContain('dy="21.6">second</tspan>');
+  });
+
   it("exports the canonical editable Legend position", () => {
     const document = { ...canonicalFixture(), legend: { ...canonicalFixture().legend, show: true, position: { x: 36, y: 48 } } };
     const scene = buildExportScene(document, { format: "svg", scope: "document" });

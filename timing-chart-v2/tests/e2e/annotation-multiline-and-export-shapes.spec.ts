@@ -76,9 +76,13 @@ test("authored label wrap width is shared by live overlay and SVG export", async
   const width = editor.getByTestId("inspector-annotation-label-layout-max-width");
   await width.fill("48");
   await width.press("Enter");
+  const lineHeight = editor.getByTestId("inspector-annotation-label-layout-line-height");
+  await lineHeight.fill("1.8");
+  await lineHeight.press("Enter");
   await editor.getByTestId("apply-annotation-properties").click();
 
   const label = callout.locator("[data-role='annotation-label']");
+  await expect(label).toHaveCSS("line-height", "1.8");
   const liveText = await label.textContent();
   expect(liveText?.split("\n").length).toBeGreaterThan(2);
   const annotationId = await callout.getAttribute("data-annotation-id");
@@ -86,6 +90,7 @@ test("authored label wrap width is shared by live overlay and SVG export", async
   const groupMatch = svgText.match(new RegExp(`<g data-annotation-id="${annotationId}"[\\s\\S]*?</g>`));
   expect(groupMatch).not.toBeNull();
   expect((groupMatch![0].match(/<tspan/g) ?? []).length).toBe(liveText!.split("\n").length);
+  expect(groupMatch![0]).toContain('dy="18"');
 });
 
 test("Bracket's exported SVG carries its own cap marks, not a plain Range line", async ({ page }) => {

@@ -6,7 +6,7 @@ import { valueSignalValueProblem } from "./value-signal-compatibility.js";
 import { validateEnumDefinition } from "./enum-semantics.js";
 import { canonicalReferences } from "./reference-registry.js";
 import { validateTimeGroupHierarchy } from "./time-group-hierarchy.js";
-import { ANNOTATION_LABEL_MAX_WIDTH } from "./annotation-label-layout.js";
+import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH } from "./annotation-label-layout.js";
 import { canonicalEntityInventory } from "./canonical-inventory.js";
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, strictRequired: false, allowUnionTypes: true });
@@ -310,6 +310,7 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
     if (annotation.measurement !== undefined && annotation.type !== "measurement") problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].measurement`, "Measurement semantics are only valid for Measurement annotations.", annotation.id));
     if (annotation.style?.labelWrap !== undefined && typeof annotation.style.labelWrap !== "boolean") problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].style.labelWrap`, "Annotation labelWrap must be a boolean.", annotation.id));
     if (annotation.style?.labelMaxWidth !== undefined && (typeof annotation.style.labelMaxWidth !== "number" || !Number.isFinite(annotation.style.labelMaxWidth) || annotation.style.labelMaxWidth < ANNOTATION_LABEL_MAX_WIDTH.min || annotation.style.labelMaxWidth > ANNOTATION_LABEL_MAX_WIDTH.max)) problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].style.labelMaxWidth`, `Annotation label maximum width must be between ${ANNOTATION_LABEL_MAX_WIDTH.min} and ${ANNOTATION_LABEL_MAX_WIDTH.max} px.`, annotation.id));
+    if (annotation.style?.lineHeight !== undefined && (typeof annotation.style.lineHeight !== "number" || !Number.isFinite(annotation.style.lineHeight) || annotation.style.lineHeight < ANNOTATION_LABEL_LINE_HEIGHT.min || annotation.style.lineHeight > ANNOTATION_LABEL_LINE_HEIGHT.max)) problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].style.lineHeight`, `Annotation line spacing must be between ${ANNOTATION_LABEL_LINE_HEIGHT.min} and ${ANNOTATION_LABEL_LINE_HEIGHT.max}.`, annotation.id));
     if (annotation.measurementLayout !== undefined && annotation.type !== "measurement") problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].measurementLayout`, "Measurement layout is only valid for Measurement annotations.", annotation.id));
     if (annotation.verticalSpan !== undefined) {
       if (annotation.type !== "marker") problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].verticalSpan`, "Vertical span is only valid for Marker annotations.", annotation.id));

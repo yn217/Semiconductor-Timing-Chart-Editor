@@ -854,19 +854,22 @@ describe("command execution and atomic history", () => {
     const invalid = session.execute({ id: commandId("ann_label_layout_invalid"), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: true, style: { labelMaxWidth: 23 } });
     expect(invalid).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_ANNOTATION_STYLE", path: "$.style.labelMaxWidth" }] });
     expect(session.getSnapshot()).toEqual(initial);
+    const invalidLineHeight = session.execute({ id: commandId("ann_label_line_height_invalid"), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: true, style: { lineHeight: 3.1 } });
+    expect(invalidLineHeight).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_ANNOTATION_STYLE", path: "$.annotations[0].style.lineHeight" }] });
+    expect(session.getSnapshot()).toEqual(initial);
 
-    const applied = session.execute({ id: commandId("ann_label_layout_apply"), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: true, style: { labelWrap: true, labelMaxWidth: 48 } });
+    const applied = session.execute({ id: commandId("ann_label_layout_apply"), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: true, style: { labelWrap: true, labelMaxWidth: 48, lineHeight: 1.8 } });
     expect(applied).toMatchObject({ ok: true, changeSet: { annotationStyle: [annotation.id] } });
-    expect(session.getSnapshot().document.annotations[0]?.style).toEqual({ labelWrap: true, labelMaxWidth: 48 });
+    expect(session.getSnapshot().document.annotations[0]?.style).toEqual({ labelWrap: true, labelMaxWidth: 48, lineHeight: 1.8 });
     expect(session.historyState().undoDepth).toBe(initialHistory + 1);
     const serialized = serializeValidatedCanonicalDocument(session.getSnapshot().document);
     const reopened = parseDocument(serialized);
     expect(reopened.ok).toBe(true);
-    if (reopened.ok) expect(reopened.document.annotations[0]?.style).toEqual({ labelWrap: true, labelMaxWidth: 48 });
+    if (reopened.ok) expect(reopened.document.annotations[0]?.style).toEqual({ labelWrap: true, labelMaxWidth: 48, lineHeight: 1.8 });
     expect(session.undo().ok).toBe(true);
     expect(session.getSnapshot().document.annotations[0]).toEqual(annotation);
     expect(session.redo().ok).toBe(true);
-    expect(session.getSnapshot().document.annotations[0]?.style).toEqual({ labelWrap: true, labelMaxWidth: 48 });
+    expect(session.getSnapshot().document.annotations[0]?.style).toEqual({ labelWrap: true, labelMaxWidth: 48, lineHeight: 1.8 });
   });
 
   it("round-trips Marker/Bracket presentation after SemanticCommand edits", () => {
