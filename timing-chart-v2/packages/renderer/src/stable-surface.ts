@@ -1,5 +1,5 @@
 import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
-import { ANNOTATION_LABEL_MAX_WIDTH, wrapAnnotationLabel } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, wrapAnnotationLabel } from "@timing-chart-v2/schema";
 import { LEFT_TREE_ICON_DOTS, LEFT_TREE_ICON_PATHS, LEFT_TREE_ICON_PUPIL, type LeftTreeIconPathName } from "./left-tree-icon-spec.js";
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
 
@@ -1247,7 +1247,7 @@ function parseTextStyle(style: Record<string, unknown> | undefined): { readonly 
     fontFamily: typeof source.fontFamily === "string" && source.fontFamily.length <= 120 ? source.fontFamily : undefined,
     fontSize: typeof source.fontSize === "number" && source.fontSize >= 6 && source.fontSize <= 48 ? source.fontSize : undefined,
     textDecoration: typeof source.textDecoration === "string" && /^(|underline|line-through|underline line-through)$/.test(source.textDecoration) ? source.textDecoration : undefined,
-    lineHeight: typeof source.lineHeight === "number" && source.lineHeight >= 1 && source.lineHeight <= 3 ? source.lineHeight : undefined,
+    lineHeight: typeof source.lineHeight === "number" && source.lineHeight >= ANNOTATION_LABEL_LINE_HEIGHT.min && source.lineHeight <= ANNOTATION_LABEL_LINE_HEIGHT.max ? source.lineHeight : undefined,
   };
 }
 

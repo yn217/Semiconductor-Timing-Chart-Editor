@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ANNOTATION_LABEL_MAX_WIDTH, wrapAnnotationLabel } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, wrapAnnotationLabel } from "@timing-chart-v2/schema";
 
 describe("annotation label wrapping", () => {
   it("preserves authored line breaks and deterministically wraps long text", () => {
@@ -15,5 +15,9 @@ describe("annotation label wrapping", () => {
     expect(ANNOTATION_LABEL_MAX_WIDTH).toEqual({ min: 24, max: 2000, default: 180 });
     expect(wrapAnnotationLabel("a reasonably long label", Number.NaN)).toBe(wrapAnnotationLabel("a reasonably long label", 180));
     expect(wrapAnnotationLabel("a reasonably long label", 24, Number.NaN)).toBe(wrapAnnotationLabel("a reasonably long label", 24, 10));
+  });
+
+  it("shares the annotation line-spacing bounds and default across editor and renderer owners", () => {
+    expect(ANNOTATION_LABEL_LINE_HEIGHT).toEqual({ min: 1, max: 3, default: 1.4 });
   });
 });

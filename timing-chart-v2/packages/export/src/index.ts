@@ -1,7 +1,7 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { allocateMeasurementLanes } from "@timing-chart-v2/geometry";
 import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, resolveSourcePosition, type DisplayTimeMapping } from "@timing-chart-v2/projection";
-import { ANNOTATION_LABEL_MAX_WIDTH, anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, valueSignalWaveDomain, wrapAnnotationLabel, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, valueSignalWaveDomain, wrapAnnotationLabel, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId } from "@timing-chart-v2/schema";
 import { renderWaveJsonMarkup, toWaveJson, WAVEDROM_VERSION } from "@timing-chart-v2/wavedrom-adapter";
 
 export interface ExportSettings {
@@ -349,7 +349,8 @@ function multilineText(x: number, y: number, label: string, attrs: string, style
   const fontSize = typeof style?.fontSize === "number" && style.fontSize > 0 ? style.fontSize : 10;
   const lines = (wrap ? wrapAnnotationLabel(label, width, fontSize) : label).split("\n");
   if (lines.length === 1) return `<text x="${x}" y="${y}" ${attrs}>${xml(label)}</text>`;
-  const lineHeight = 13;
+  const authoredLineHeight = typeof style?.lineHeight === "number" && Number.isFinite(style.lineHeight) && style.lineHeight >= ANNOTATION_LABEL_LINE_HEIGHT.min && style.lineHeight <= ANNOTATION_LABEL_LINE_HEIGHT.max ? style.lineHeight : undefined;
+  const lineHeight = authoredLineHeight === undefined ? 13 : fontSize * authoredLineHeight;
   return `<text x="${x}" y="${y}" ${attrs}>${lines.map((line, index) => `<tspan x="${x}" dy="${index === 0 ? 0 : lineHeight}">${xml(line)}</tspan>`).join("")}</text>`;
 }
 

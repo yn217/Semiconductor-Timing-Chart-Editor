@@ -1,4 +1,5 @@
 export const ANNOTATION_LABEL_MAX_WIDTH = Object.freeze({ min: 24, max: 2000, default: 180 });
+export const ANNOTATION_LABEL_LINE_HEIGHT = Object.freeze({ min: 1, max: 3, default: 1.4 });
 
 /** Deterministic approximate text wrapping shared by the live overlay and
  * ExportScene. It preserves authored newlines, wraps at word boundaries,
