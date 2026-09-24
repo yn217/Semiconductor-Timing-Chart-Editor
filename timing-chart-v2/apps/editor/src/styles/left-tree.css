@@ -230,6 +230,10 @@
 .hierarchy-browser header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #d6e0ea; }
 .hierarchy-browser header button { border: 0; background: transparent; font-size: 22px; }
 .hierarchy-browser p { color: #5c6e84; font-size: 11px; }
+.hierarchy-scope-breadcrumb { display: flex; align-items: center; gap: 2px; min-height: 28px; color: #52677d; font-size: 12px; }
+.hierarchy-scope-breadcrumb button { border: 0; padding: 2px 4px; background: transparent; color: #145e9f; cursor: pointer; }
+.hierarchy-scope-breadcrumb button[aria-current="page"] { color: #263b52; font-weight: 600; cursor: default; }
+.hierarchy-scope-breadcrumb button:disabled { opacity: 1; }
 .hierarchy-browser table { width: 100%; border-collapse: collapse; font-size: 11px; }
 .hierarchy-browser th, .hierarchy-browser td { padding: 6px 8px; border: 1px solid #d6dde6; text-align: left; white-space: nowrap; }
 .hierarchy-browser th { background: #f3f6fa; color: #52677d; }

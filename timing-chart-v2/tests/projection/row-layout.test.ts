@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, DefaultProjectionService, calculateRowLayout } from "@timing-chart-v2/projection";
+import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, hardwareHierarchyScopeBreadcrumbs, DefaultProjectionService, calculateRowLayout } from "@timing-chart-v2/projection";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { CanonicalDocument, GroupId, RowId, SignalId, SpacerId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -67,6 +67,20 @@ describe("RowLayout and projection invariants", () => {
     expect(buildHardwareHierarchyEntries(document, "hierarchy").map((entry) => entry.relativePath)).toEqual([
       "top.u_soc.u_dma.u_axi.arvalid",
       "top.u_soc.u_dma.u_sram.rdata",
+    ]);
+  });
+
+  it("builds parent-navigation breadcrumbs without changing hierarchy scope identity", () => {
+    expect(hardwareHierarchyScopeBreadcrumbs("all")).toEqual([{ value: "all", label: "All scopes" }]);
+    expect(hardwareHierarchyScopeBreadcrumbs("(root)")).toEqual([
+      { value: "all", label: "All scopes" },
+      { value: "(root)", label: "(root)" },
+    ]);
+    expect(hardwareHierarchyScopeBreadcrumbs("top.u_soc.u_dma")).toEqual([
+      { value: "all", label: "All scopes" },
+      { value: "top", label: "top" },
+      { value: "top.u_soc", label: "u_soc" },
+      { value: "top.u_soc.u_dma", label: "u_dma" },
     ]);
   });
 
