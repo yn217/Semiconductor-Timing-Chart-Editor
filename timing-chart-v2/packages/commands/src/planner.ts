@@ -1,4 +1,4 @@
-import type { ValidationProblem } from "@timing-chart-v2/core";
+import { TIMING_DIAGNOSTIC_CATEGORIES, type ValidationProblem } from "@timing-chart-v2/core";
 import type {
   Annotation,
   CanonicalDocument,
@@ -611,6 +611,24 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const timingRows = orderedVisibleTimingRows(document);
       const changeSet: ChangeSet = { geometryScreenY: timingRows, annotationPosition: annotationsForSignals(document, timingRows), minimapOverview: true };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
+    }
+    case "document.updateCheckSettings": {
+      const rawSettings: unknown = command.checkSettings;
+      if (!rawSettings || typeof rawSettings !== "object" || Array.isArray(rawSettings)
+        || Object.keys(rawSettings).some((key) => key !== "enabledCategories")) {
+        return fail("invalid", "INVALID_CHECK_SETTINGS", "$.checkSettings", "Check settings must contain only supported settings.");
+      }
+      const requested = (rawSettings as { readonly enabledCategories?: unknown }).enabledCategories;
+      if (requested !== undefined && (!Array.isArray(requested)
+        || requested.some((category) => !TIMING_DIAGNOSTIC_CATEGORIES.includes(category as typeof TIMING_DIAGNOSTIC_CATEGORIES[number]))
+        || new Set(requested).size !== requested.length)) {
+        return fail("invalid", "INVALID_CHECK_SETTINGS", "$.checkSettings.enabledCategories", "Enabled check categories must be unique supported categories.");
+      }
+      const requestedCategories = requested as readonly string[] | undefined;
+      const enabled = requestedCategories === undefined ? [] : TIMING_DIAGNOSTIC_CATEGORIES.filter((category) => requestedCategories.includes(category));
+      const checkSettings = enabled.length === TIMING_DIAGNOSTIC_CATEGORIES.length ? {} : { enabledCategories: enabled };
+      if (semanticEqual(document.checkSettings, checkSettings)) return fail("no-op", "NO_OP", "$.checkSettings", "Check settings are unchanged.");
+      return { ok: true, document: { ...document, checkSettings }, changeSet: {}, inverseChangeSet: {} };
     }
     case "legend.update": {
       if (semanticEqual(document.legend, command.legend)) return fail("no-op", "NO_OP", "$.legend", "Legend is unchanged.");

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_RULES } from "@timing-chart-v2/core";
-import type { CanonicalDocument, Constraint, SignalId } from "@timing-chart-v2/schema";
+import { parseDocument, serializeValidatedCanonicalDocument, type CanonicalDocument, type Constraint, type SignalId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 function withSignals(document: CanonicalDocument, signals: CanonicalDocument["signals"], constraints: readonly Constraint[] = document.constraints): CanonicalDocument {
@@ -15,7 +15,7 @@ function withSignals(document: CanonicalDocument, signals: CanonicalDocument["si
 
 describe("derived timing diagnostics", () => {
   it("evaluates through a shared rule registry with stable semantic keys", () => {
-    expect(TIMING_DIAGNOSTIC_RULES.map((rule) => rule.id)).toEqual(["timing.unknown-value", "timing.handshake"]);
+    expect(TIMING_DIAGNOSTIC_RULES.map((rule) => rule.id)).toEqual(["timing.unknown-value", "timing.handshake", "timing.latency"]);
     const source = canonicalFixture();
     const signal = { ...source.signals[1]!, values: [{ start: 1, value: "X" }] };
     const diagnostic = deriveTimingDiagnostics(withSignals(source, [source.signals[0]!, signal]))[0]!;
@@ -44,6 +44,39 @@ describe("derived timing diagnostics", () => {
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]).toMatchObject({ code: "HANDSHAKE_DATA_UNSTABLE", path: "$.signals[3].values[1].start", objectId: payload.id });
     expect(deriveTimingDiagnostics({ ...document, signals: document.signals.map((signal) => signal.id === acknowledge.id ? { ...signal, values: [{ start: 0, value: 0 }] } : signal) })).toEqual(expect.arrayContaining([expect.objectContaining({ code: "HANDSHAKE_NO_ACK", objectId: constraint.id })]));
+  });
+
+  it("evaluates deterministic latency assertions and preserves them through Save/Open", () => {
+    const source = canonicalFixture();
+    const template = source.signals[1]!;
+    const request = { ...template, id: "sig_latency_req" as SignalId, name: "REQ", values: [{ start: 0, value: "0" }, { start: 2, value: "1" }] };
+    const acknowledge = { ...template, id: "sig_latency_ack" as SignalId, name: "ACK", values: [{ start: 0, value: "0" }, { start: 4, value: "1" }] };
+    const constraint: Constraint = { id: "constraint_latency" as never, type: "latency", data: { triggerSignalId: request.id, triggerEdge: "rising", responseSignalId: acknowledge.id, responseEdge: "rising", minCycles: 1, maxCycles: 3 } };
+    const document = withSignals(source, [source.signals[0]!, request, acknowledge], [constraint]);
+    expect(deriveTimingDiagnostics(document).filter((item) => item.ruleId === "timing.latency")).toEqual([]);
+    expect(deriveTimingDiagnostics(document, { enabledCategories: ["unknown-value"] }).some((item) => item.ruleId === "timing.latency")).toBe(false);
+    const saved = serializeValidatedCanonicalDocument(document);
+    const reopened = parseDocument(saved);
+    expect(reopened.ok, JSON.stringify(reopened)).toBe(true);
+    if (reopened.ok) {
+      expect(reopened.document.constraints).toEqual([constraint]);
+      expect(deriveTimingDiagnostics(reopened.document)).toEqual(deriveTimingDiagnostics(document));
+    }
+
+    const lateAck = { ...acknowledge, values: [{ start: 0, value: "0" }, { start: 6, value: "1" }] };
+    expect(deriveTimingDiagnostics(withSignals(source, [source.signals[0]!, request, lateAck], [constraint])).filter((item) => item.ruleId === "timing.latency")).toMatchObject([
+      { code: "LATENCY_OUT_OF_RANGE", objectId: constraint.id, entityId: lateAck.id, value: 4, expected: "1..3 cycles" },
+    ]);
+
+    const noAck = { ...acknowledge, values: [{ start: 0, value: "0" }] };
+    expect(deriveTimingDiagnostics(withSignals(source, [source.signals[0]!, request, noAck], [constraint])).filter((item) => item.ruleId === "timing.latency")).toMatchObject([
+      { code: "LATENCY_RESPONSE_MISSING", objectId: constraint.id, entityId: noAck.id, expected: "1..3 cycles" },
+    ]);
+
+    const invalid = { ...constraint, data: { ...constraint.data, maxCycles: 0 } };
+    expect(deriveTimingDiagnostics(withSignals(source, [source.signals[0]!, request, acknowledge], [invalid])).filter((item) => item.ruleId === "timing.latency")).toMatchObject([
+      { code: "LATENCY_CONSTRAINT_INVALID", objectId: invalid.id },
+    ]);
   });
 
   it("is deterministic and honors category selection", () => {

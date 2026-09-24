@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockSignal, CommentRow, DocumentProblem, GroupId, JsonObject, SignalId, SignalRole, SpacerId, TimeGroupId, TransactionGroup, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
 import type { AIBridgeStatus } from "./ai-bridge-client.js";
+import { TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-chart-v2/core";
 import { FontStyleToolbar } from "./font-style-toolbar.js";
 import { ArrangeGroup } from "./arrange-group.js";
 import { FindReplacePanel } from "./find-replace-panel.js";
@@ -317,7 +318,11 @@ function Ribbon({ tab, document, revision, range, history, zoom, cyclesPerTc, on
       </div>
     </>}
     {tab === "View" && viewGroups.map((group) => <RibbonGroup key={group.id} spec={group} available={density === "compact" ? "small" : "large"} />)}
-    {tab === "Review" && <div className="ribbon-group review-group"><ReviewWorkflow diagnostics={diagnostics} document={document} selectedSignalId={selectedSignalId} selectedGroupId={selectedGroupId} onNavigate={onNavigateProblem} onShowProblems={onShowProblems} onRefreshChecks={onRefreshChecks} /><output data-testid="review-problems-count">{problemsCount}</output><b>Review</b></div>}
+    {tab === "Review" && <div className="ribbon-group review-group"><ReviewWorkflow diagnostics={diagnostics} document={document} selectedSignalId={selectedSignalId} selectedGroupId={selectedGroupId} onNavigate={onNavigateProblem} onShowProblems={onShowProblems} onRefreshChecks={onRefreshChecks} onToggleCheckCategory={(category, enabled) => {
+      const currentlyEnabled = document.checkSettings.enabledCategories ?? TIMING_DIAGNOSTIC_CATEGORIES;
+      const next = enabled ? [...currentlyEnabled, category] : currentlyEnabled.filter((item) => item !== category);
+      commands.updateCheckSettings({ enabledCategories: TIMING_DIAGNOSTIC_CATEGORIES.filter((item) => next.includes(item)) });
+    }} /><output data-testid="review-problems-count">{problemsCount}</output><b>Review</b></div>}
     {tab === "AI" && <>
       {/* #395 PR1: the full query/preview/apply surface (AIOperationPanel)
           moved to the Bottom Panel's own "AI Assistant" tab -- same
