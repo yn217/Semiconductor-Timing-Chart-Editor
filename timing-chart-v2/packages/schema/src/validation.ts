@@ -4,6 +4,7 @@ import { isStableId } from "./stable-id.js";
 import { CANONICAL_PROBLEM_CODES, SCHEMA_RULE_KEYWORDS, type Annotation, type CanonicalDocument, type CanonicalDocumentProblem, type CanonicalProblemCode, type CanonicalRuleDescriptor, type DocumentProblem, type SchemaProblemCode, type SchemaRuleDescriptor, type SchemaRuleKeyword, type SemanticAnchor, type Signal, type SignalValueChange, type TimeGroup } from "./types.js";
 import { valueSignalValueProblem } from "./value-signal-compatibility.js";
 import { validateEnumDefinition } from "./enum-semantics.js";
+import { parseBusValue } from "./value-format.js";
 import { canonicalReferences } from "./reference-registry.js";
 import { validateTimeGroupHierarchy } from "./time-group-hierarchy.js";
 import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH } from "./annotation-label-layout.js";
@@ -143,40 +144,20 @@ function findForbiddenState(value: unknown, path: string, problems: DocumentProb
   }
 }
 
-function requiredBits(value: string | number, displayFormat: string | undefined): number | undefined {
+function requiredBits(value: string | number): number | undefined {
   if (typeof value === "number") {
     if (!Number.isSafeInteger(value) || value < 0) return undefined;
     return value === 0 ? 1 : value.toString(2).length;
   }
-  const literal = value.trim();
-  const compact = literal.replaceAll("_", "");
-  const validNumericSeparators = !literal.startsWith("_") && !literal.endsWith("_") && !literal.includes("__");
-  if (literal.length === 0) return undefined;
-  if (/^[XZ]$/i.test(literal)) return 1;
-  if (validNumericSeparators && /^0b[01xz]+$/i.test(compact)) {
-    const digits = compact.slice(2);
-    if (/[xz]/i.test(digits)) return digits.length;
-    const normalized = digits.replace(/^0+(?=.)/, "");
-    return normalized === "0" ? 1 : normalized.length;
-  }
-  if (validNumericSeparators && /^0x[0-9a-fxz]+$/i.test(compact)) {
-    const digits = compact.slice(2);
-    if (/[xz]/i.test(digits)) return digits.length * 4;
-    const numeric = BigInt(`0x${digits}`);
+  try {
+    const parsed = parseBusValue(value);
+    if (parsed.kind === "symbolic") return /^[A-Za-z_][A-Za-z0-9_]*$/.test(value.trim()) ? undefined : Number.NaN;
+    if (parsed.kind === "unknown") return parsed.width ?? 1;
+    const numeric = parsed.value!;
     return numeric === 0n ? 1 : numeric.toString(2).length;
+  } catch {
+    return Number.NaN;
   }
-  if (validNumericSeparators && displayFormat === "binary" && /^[01xz]+$/i.test(compact)) {
-    if (/[xz]/i.test(compact)) return compact.length;
-    const normalized = compact.replace(/^0+(?=.)/, "");
-    return normalized === "0" ? 1 : normalized.length;
-  }
-  if (validNumericSeparators && /^[0-9a-fxz]+$/i.test(compact)) {
-    if (/[xz]/i.test(compact)) return compact.length * 4;
-    const numeric = BigInt(`0x${compact}`);
-    return numeric === 0n ? 1 : numeric.toString(2).length;
-  }
-  if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(literal)) return undefined;
-  return Number.NaN;
 }
 
 function validateChanges(signal: Signal, changes: readonly SignalValueChange[], path: string, cycleCount: number, problems: DocumentProblem[]): void {
@@ -189,7 +170,7 @@ function validateChanges(signal: Signal, changes: readonly SignalValueChange[], 
     if (change.start <= previous) problems.push(problem("CHANGE_POINTS_NOT_STRICTLY_SORTED", `${changePath}.start`, "Change points must be strictly increasing with no duplicate start.", signal.id));
     previous = change.start;
     if (signal.type === "bus" && signal.width !== undefined) {
-      const bits = requiredBits(change.value, signal.displayFormat);
+      const bits = requiredBits(change.value);
       if (Number.isNaN(bits)) problems.push(problem("INVALID_BUS_LITERAL", `${changePath}.value`, "Bus value is neither a supported literal nor a symbolic identifier.", signal.id));
       else if (bits !== undefined && bits > signal.width) problems.push(problem("BUS_WIDTH_OVERFLOW", `${changePath}.value`, `Value requires ${bits} bits but signal width is ${signal.width}.`, signal.id));
     }

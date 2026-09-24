@@ -1,6 +1,10 @@
 export type BusValueFormat = "hex" | "binary" | "decimal" | "signed" | "unsigned" | "symbolic";
 export interface ParsedBusValue { readonly kind: "numeric" | "unknown" | "symbolic"; readonly value?: bigint; readonly width?: number }
 const UNKNOWN = /^[xz?]+$/i;
+// Literal radix is semantic input, independent of displayFormat: bare
+// digit-only strings are decimal; A-F-bearing strings are hex; binary/hex
+// strings can be explicit with 0b/0x or sized HDL syntax. displayFormat only
+// controls output formatting. Keep validation and rendering on this policy.
 export function parseBusValue(input: string | number, width?: number): ParsedBusValue {
   if (typeof input === "number") { if (!Number.isSafeInteger(input) || input < 0) throw new Error("Bus numeric values must be non-negative safe integers."); return { kind: "numeric", value: BigInt(input), width: width ?? Math.max(1, input.toString(2).length) }; }
   const source = input.trim().replaceAll("_", "");
