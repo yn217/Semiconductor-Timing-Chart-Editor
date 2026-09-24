@@ -10,7 +10,7 @@ import type { AnnotationType } from "@timing-chart-v2/schema";
  *
  * Reflects ACTUAL current renderer/export support, not an aspirational one:
  * - stroke/fill are the only genuinely type-varying capabilities here.
- * - labelOffset/zOrder/lock/visible/text are already universal -- every
+ * - labelOffset/labelPlacement/zOrder/lock/visible/text are universal -- every
  *   Annotation rides the same generic anchor/History/ExportScene machinery
  *   regardless of type (confirmed by #377's audit and this issue's own
  *   audit: annotation.updateLabelOffset, annotation.bringToFront/
@@ -29,13 +29,13 @@ import type { AnnotationType } from "@timing-chart-v2/schema";
 const STROKE_CAPABLE = new Set<AnnotationType>(["verticalLine", "range", "highlight", "rectangle", "ellipse"]);
 const FILL_CAPABLE = new Set<AnnotationType>(["range", "highlight", "rectangle", "ellipse"]);
 
-export type AnnotationCapability = "stroke" | "fill" | "text" | "labelOffset" | "zOrder" | "lock" | "visible";
+export type AnnotationCapability = "stroke" | "fill" | "text" | "labelOffset" | "labelPlacement" | "zOrder" | "lock" | "visible";
 
 export function hasAnnotationCapability(type: AnnotationType, capability: AnnotationCapability): boolean {
   switch (capability) {
     case "stroke": return STROKE_CAPABLE.has(type);
     case "fill": return FILL_CAPABLE.has(type);
-    case "text": case "labelOffset": case "zOrder": case "lock": case "visible": return true;
+    case "text": case "labelOffset": case "labelPlacement": case "zOrder": case "lock": case "visible": return true;
   }
 }
 

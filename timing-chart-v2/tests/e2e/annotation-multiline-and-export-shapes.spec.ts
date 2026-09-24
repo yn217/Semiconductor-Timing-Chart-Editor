@@ -79,6 +79,7 @@ test("authored label wrap width is shared by live overlay and SVG export", async
   const lineHeight = editor.getByTestId("inspector-annotation-label-layout-line-height");
   await lineHeight.fill("1.8");
   await lineHeight.press("Enter");
+  await editor.getByLabel("Annotation label placement", { exact: true }).selectOption("below");
   await editor.getByTestId("apply-annotation-properties").click();
 
   const label = callout.locator("[data-role='annotation-label']");
@@ -91,6 +92,43 @@ test("authored label wrap width is shared by live overlay and SVG export", async
   expect(groupMatch).not.toBeNull();
   expect((groupMatch![0].match(/<tspan/g) ?? []).length).toBe(liveText!.split("\n").length);
   expect(groupMatch![0]).toContain('dy="18"');
+  const livePosition = await label.evaluate((element) => (element as HTMLElement).style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/)?.slice(1));
+  expect(livePosition).not.toBeNull();
+  expect(groupMatch![0]).toContain(`<text x="${livePosition![0]}" y="${livePosition![1]}"`);
+});
+
+test("annotation label placement presets move the live label between its semantic endpoints and above/below", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+
+  const range = await addAnnotation(page, "range");
+  const editor = page.getByTestId("annotation-editor");
+  const placement = editor.getByLabel("Annotation label placement", { exact: true });
+  const position = async () => range.locator("[data-role='annotation-label']").evaluate((element) => {
+    const match = (element as HTMLElement).style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/);
+    return match ? { x: Number(match[1]), y: Number(match[2]) } : null;
+  });
+  const applyPlacement = async (value: string) => {
+    await placement.selectOption(value);
+    await editor.getByTestId("apply-annotation-properties").click();
+    await expect(range.locator("[data-role='annotation-label']")).toBeVisible();
+    return position();
+  };
+
+  const start = await applyPlacement("start");
+  const center = await applyPlacement("center");
+  const end = await applyPlacement("end");
+  const above = await applyPlacement("above");
+  const below = await applyPlacement("below");
+  expect(start).not.toBeNull(); expect(center).not.toBeNull(); expect(end).not.toBeNull();
+  expect(above).not.toBeNull(); expect(below).not.toBeNull();
+  expect(start!.x).toBeLessThan(center!.x);
+  expect(center!.x).toBeLessThan(end!.x);
+  expect(above!.y).toBeLessThan(center!.y);
+  expect(center!.y).toBeLessThan(below!.y);
 });
 
 test("Bracket's exported SVG carries its own cap marks, not a plain Range line", async ({ page }) => {

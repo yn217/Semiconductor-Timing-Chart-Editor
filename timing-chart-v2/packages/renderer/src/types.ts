@@ -127,6 +127,7 @@ export interface AnnotationOverlayPrimitive {
   readonly anchors: readonly OverlayAnchorPoint[];
   readonly verticalExtent?: Readonly<{ readonly top: number; readonly bottom: number }>;
   readonly labelOffset?: Readonly<{ x: number; y: number }>;
+  readonly labelPlacement?: "start" | "center" | "end" | "above" | "below";
   readonly lineType?: "straight" | "orthogonal" | "curve" | "diagonal";
   readonly arrowhead?: "end" | "start" | "bidirectional" | "none";
   readonly surfaceHeight: number;

@@ -50,6 +50,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
   const [arrowhead, setArrowhead] = useState<NonNullable<Annotation["arrowhead"]>>(annotation.arrowhead ?? "end");
   const [labelX, setLabelX] = useState(annotation.labelOffset?.x ?? 0);
   const [labelY, setLabelY] = useState(annotation.labelOffset?.y ?? -14);
+  const [labelPlacement, setLabelPlacement] = useState<NonNullable<Annotation["labelPlacement"]>>(annotation.labelPlacement ?? "center");
   const [opacity, setOpacity] = useState(annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16));
   const [traceOffsetCycles, setTraceOffsetCycles] = useState(annotation.traceOffsetCycles ?? 0);
   const [measurementProfile, setMeasurementProfile] = useState<MeasurementProfile>(annotation.measurement?.profile ?? "cycle");
@@ -73,6 +74,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
     setLabel(annotation.label); setColor(annotation.color ?? "#d04a36"); setVisible(annotation.visible);
     setLineType(annotation.lineType ?? "straight"); setArrowhead(annotation.arrowhead ?? "end");
     setLabelX(annotation.labelOffset?.x ?? 0); setLabelY(annotation.labelOffset?.y ?? -14);
+    setLabelPlacement(annotation.labelPlacement ?? "center");
     setOpacity(annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16));
     setTraceOffsetCycles(annotation.traceOffsetCycles ?? 0); setStyleDraft(annotation.style ?? {});
     setMeasurementProfile(annotation.measurement?.profile ?? "cycle");
@@ -178,9 +180,10 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
     || (annotation.type === "ghostTrace" && traceOffsetCycles !== (annotation.traceOffsetCycles ?? 0))
     || labelX !== (annotation.labelOffset?.x ?? 0)
     || labelY !== (annotation.labelOffset?.y ?? -14)
+    || labelPlacement !== (annotation.labelPlacement ?? "center")
     || JSON.stringify(styleDraft) !== JSON.stringify(annotation.style ?? {});
   const applyAnnotationProperties = () => {
-    commands.updateAnnotationProperties({ annotationId: annotation.id, ...annotationPropertiesBase(annotation), label, visible, color, ...(lineControlsEnabled ? { lineType, arrowhead } : {}), ...(isOpacityType ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}), labelOffset: { x: labelX, y: labelY }, style: styleDraft });
+    commands.updateAnnotationProperties({ annotationId: annotation.id, ...annotationPropertiesBase(annotation), label, visible, color, ...(lineControlsEnabled ? { lineType, arrowhead } : {}), ...(isOpacityType ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}), labelOffset: { x: labelX, y: labelY }, ...(annotation.labelPlacement === undefined && labelPlacement === "center" ? {} : { labelPlacement }), style: styleDraft });
   };
   // Quick Presets (Section 10): draft-only field shortcuts, never a second
   // Canonical owner -- clicking one only calls the same setLabel/setColor/
@@ -255,6 +258,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
               (packages/export/src/index.ts) both split on "\n" into separate
               visual lines to match. */}
           <label>Label<textarea aria-label="Annotation label" rows={label.includes("\n") ? Math.min(6, label.split("\n").length + 1) : 2} value={label} onChange={(event) => setLabel(event.target.value)} /></label>
+          <label>Label placement<select aria-label="Annotation label placement" value={labelPlacement} onChange={(event) => setLabelPlacement(event.target.value as NonNullable<Annotation["labelPlacement"]>)}><option value="start">Start</option><option value="center">Center</option><option value="end">End</option><option value="above">Above</option><option value="below">Below</option></select></label>
           {/* Section 3: a real, compact Start/End (or single Anchor) editor
               -- Signal + Cycle, the same `annotation.setAnchor` command a
               Canvas endpoint drag or Inspector's fuller Endpoint/Point/

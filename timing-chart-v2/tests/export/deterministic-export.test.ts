@@ -118,6 +118,15 @@ describe("deterministic document export", () => {
     expect(svg).toContain('dy="21.6">second</tspan>');
   });
 
+  it("exports authored Annotation label placement at the selected semantic endpoint", () => {
+    const base = canonicalFixture();
+    const signalId = base.signals[1]!.id;
+    const annotation = { id: "ann_label_end" as AnnotationId, type: "range" as const, label: "End", visible: true, start: { signalId, cycle: 2, point: "cycle-start" as const }, end: { signalId, cycle: 7, point: "cycle-start" as const }, labelOffset: { x: 0, y: 0 }, labelPlacement: "end" as const };
+    const scene = buildExportScene({ ...base, annotations: [annotation] }, { format: "svg", scope: "document" });
+    const projected = scene.annotations.find((item) => item.id === annotation.id)!;
+    expect(renderExportSvg(scene)).toContain(`<text x="${projected.x2}" y="${projected.y2}"`);
+  });
+
   it("exports the canonical editable Legend position", () => {
     const document = { ...canonicalFixture(), legend: { ...canonicalFixture().legend, show: true, position: { x: 36, y: 48 } } };
     const scene = buildExportScene(document, { format: "svg", scope: "document" });
