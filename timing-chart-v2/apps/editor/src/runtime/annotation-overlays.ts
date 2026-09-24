@@ -107,6 +107,7 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
       anchors: [...anchors, ...markerExtentAnchors],
       ...(markerExtent === undefined ? {} : { verticalExtent: markerExtent }),
       ...(annotation.labelOffset === undefined ? {} : { labelOffset: annotation.labelOffset }),
+      ...(annotation.labelPlacement === undefined ? {} : { labelPlacement: annotation.labelPlacement }),
       ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }),
       ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }),
       ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout, measurementLane: measurementLaneById.get(annotation.id) ?? annotation.measurementLayout.lane ?? 0 }),

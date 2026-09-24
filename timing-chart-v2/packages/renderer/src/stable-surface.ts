@@ -800,7 +800,14 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   label.style.maxWidth = "none";
   applyTextStyle(label, textStyle);
   if (primitive.align) label.style.textAlign = primitive.align; else label.style.removeProperty("text-align");
-  label.style.transform = `translate(${(lineFirst.x + lineSecond.x) / 2 + (primitive.labelOffset?.x ?? 0)}px, ${(lineFirst.y + lineSecond.y) / 2 + (primitive.labelOffset?.y ?? (measurementPlacedBelow ? 14 : -14))}px)`;
+  const labelMidpoint = { x: (lineFirst.x + lineSecond.x) / 2, y: (lineFirst.y + lineSecond.y) / 2 };
+  const labelAnchor = primitive.labelPlacement === "start" ? first
+    : primitive.labelPlacement === "end" ? second
+    : labelMidpoint;
+  const labelBaseY = primitive.labelPlacement === "above" ? labelMidpoint.y - 14
+    : primitive.labelPlacement === "below" ? labelMidpoint.y + 14
+    : labelAnchor.y;
+  label.style.transform = `translate(${labelAnchor.x + (primitive.labelOffset?.x ?? 0)}px, ${labelBaseY + (primitive.labelOffset?.y ?? (measurementPlacedBelow ? 14 : -14))}px)`;
   // #378: a real (SVG, not Unicode) lock glyph -- `label` is already
   // `position: absolute` (center-columns.css), which makes it a containing
   // block for this glyph's own `position: absolute`, so it rides along with

@@ -247,6 +247,7 @@ function normalizeAnnotation(value: unknown, index: number, fallbackSignal: Sign
     const offset = record(source.labelOffset);
     result.labelOffset = { x: number(offset.x, 0), y: number(offset.y, 0) };
   }
+  if (["start", "center", "end", "above", "below"].includes(text(source.labelPlacement))) result.labelPlacement = text(source.labelPlacement);
   if (source.positionMode === "cycle-snap" || source.positionMode === "free") result.positionMode = source.positionMode;
   const span = record(source.verticalSpan);
   if (["auto", "rows", "custom"].includes(text(span.mode))) {

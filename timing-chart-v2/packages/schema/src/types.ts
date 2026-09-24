@@ -215,6 +215,8 @@ export interface Annotation {
   readonly from?: SemanticAnchor;
   readonly to?: SemanticAnchor;
   readonly labelOffset?: PixelOffset;
+  /** Semantic label placement relative to the annotation's resolved anchors. */
+  readonly labelPlacement?: "start" | "center" | "end" | "above" | "below";
   readonly style?: JsonObject;
   readonly lineType?: "straight" | "orthogonal" | "curve" | "diagonal";
   readonly arrowhead?: "end" | "start" | "bidirectional" | "none";

@@ -17,7 +17,7 @@ import type {
   TransactionGroupId,
   ValueSignal,
 } from "@timing-chart-v2/schema";
-import { ANNOTATION_LABEL_MAX_WIDTH, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -1354,6 +1354,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const label = command.label.trim();
       if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
       if (!label) return fail("invalid", "INVALID_LABEL", "$.label", "Annotation label cannot be empty.");
+      if (command.labelPlacement !== undefined && !ANNOTATION_LABEL_PLACEMENTS.includes(command.labelPlacement)) return fail("invalid", "INVALID_ANNOTATION_STYLE", "$.labelPlacement", "Annotation label placement is invalid.");
       if (command.style?.labelWrap !== undefined && typeof command.style.labelWrap !== "boolean") return fail("invalid", "INVALID_ANNOTATION_STYLE", "$.style.labelWrap", "Annotation labelWrap must be a boolean.");
       if (command.style?.labelMaxWidth !== undefined && (typeof command.style.labelMaxWidth !== "number" || !Number.isFinite(command.style.labelMaxWidth) || command.style.labelMaxWidth < ANNOTATION_LABEL_MAX_WIDTH.min || command.style.labelMaxWidth > ANNOTATION_LABEL_MAX_WIDTH.max)) return fail("invalid", "INVALID_ANNOTATION_STYLE", "$.style.labelMaxWidth", `Annotation label maximum width must be between ${ANNOTATION_LABEL_MAX_WIDTH.min} and ${ANNOTATION_LABEL_MAX_WIDTH.max} px.`);
       // Optional style fields are patch semantics.  Do not turn an omitted
@@ -1370,6 +1371,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
         ...(command.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: command.traceOffsetCycles }),
         ...(command.opacity === undefined ? {} : { opacity: command.opacity }),
         ...(command.labelOffset === undefined ? {} : { labelOffset: command.labelOffset }),
+        ...(command.labelPlacement === undefined ? {} : { labelPlacement: command.labelPlacement }),
         ...(command.style === undefined ? {} : { style: command.style }),
         ...(command.measurement === undefined ? {} : { measurement: command.measurement }),
         ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout }),
