@@ -196,12 +196,12 @@ function latencyRangeDiagnostics(document: CanonicalDocument, enabled: ReadonlyS
     }
     const request = signals.get(requestId);
     const acknowledge = signals.get(acknowledgeId);
-    if (!request || request.type === "clock" || request.type === "commentRow") {
-      add("LATENCY_RANGE_CONSTRAINT_INVALID", `${basePath}.requestSignalId`, `Request signal '${requestId}' does not reference a value signal.`, constraint.id);
+    if (!request || (request.type !== "binary" && request.type !== "logic" && request.type !== "pulse")) {
+      add("LATENCY_RANGE_CONSTRAINT_INVALID", `${basePath}.requestSignalId`, `Request signal '${requestId}' does not reference a binary, logic, or pulse signal.`, constraint.id);
       return;
     }
-    if (!acknowledge || acknowledge.type === "clock" || acknowledge.type === "commentRow") {
-      add("LATENCY_RANGE_CONSTRAINT_INVALID", `${basePath}.acknowledgeSignalId`, `Acknowledge signal '${acknowledgeId}' does not reference a value signal.`, constraint.id);
+    if (!acknowledge || (acknowledge.type !== "binary" && acknowledge.type !== "logic" && acknowledge.type !== "pulse")) {
+      add("LATENCY_RANGE_CONSTRAINT_INVALID", `${basePath}.acknowledgeSignalId`, `Acknowledge signal '${acknowledgeId}' does not reference a binary, logic, or pulse signal.`, constraint.id);
       return;
     }
     const acknowledgeEdges = risingEdges(acknowledge);

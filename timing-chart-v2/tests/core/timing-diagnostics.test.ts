@@ -89,6 +89,10 @@ describe("derived timing diagnostics", () => {
     expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, request], [clockRef]), { enabledCategories: ["protocol"] })).toMatchObject([
       { code: "LATENCY_RANGE_CONSTRAINT_INVALID", path: "$.constraints[0].data.acknowledgeSignalId", objectId: clockRef.id },
     ]);
+    const busRef: Constraint = { ...valid, data: { ...valid.data, acknowledgeSignalId: source.signals[1]!.id } };
+    expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, request, source.signals[1]!], [busRef]), { enabledCategories: ["protocol"] })).toMatchObject([
+      { code: "LATENCY_RANGE_CONSTRAINT_INVALID", path: "$.constraints[0].data.acknowledgeSignalId", objectId: busRef.id },
+    ]);
   });
 
   it("is deterministic and honors category selection", () => {
