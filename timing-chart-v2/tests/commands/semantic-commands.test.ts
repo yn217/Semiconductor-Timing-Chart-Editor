@@ -846,6 +846,29 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.annotations).toEqual([]);
   });
 
+  it("validates and persists annotation label layout through one undoable semantic update", () => {
+    const annotation: Annotation = { id: "ann_label_layout" as AnnotationId, type: "callout", label: "A long callout label", visible: true, anchor: { cycle: 2, point: "cycle-center" } };
+    const session = new CommandHistorySession({ ...canonicalFixture(), annotations: [annotation] });
+    const initial = session.getSnapshot();
+    const initialHistory = session.historyState().undoDepth;
+    const invalid = session.execute({ id: commandId("ann_label_layout_invalid"), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: true, style: { labelMaxWidth: 23 } });
+    expect(invalid).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_ANNOTATION_STYLE", path: "$.style.labelMaxWidth" }] });
+    expect(session.getSnapshot()).toEqual(initial);
+
+    const applied = session.execute({ id: commandId("ann_label_layout_apply"), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: true, style: { labelWrap: true, labelMaxWidth: 48 } });
+    expect(applied).toMatchObject({ ok: true, changeSet: { annotationStyle: [annotation.id] } });
+    expect(session.getSnapshot().document.annotations[0]?.style).toEqual({ labelWrap: true, labelMaxWidth: 48 });
+    expect(session.historyState().undoDepth).toBe(initialHistory + 1);
+    const serialized = serializeValidatedCanonicalDocument(session.getSnapshot().document);
+    const reopened = parseDocument(serialized);
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect(reopened.document.annotations[0]?.style).toEqual({ labelWrap: true, labelMaxWidth: 48 });
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.annotations[0]).toEqual(annotation);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.annotations[0]?.style).toEqual({ labelWrap: true, labelMaxWidth: 48 });
+  });
+
   it("round-trips Marker/Bracket presentation after SemanticCommand edits", () => {
     const marker: Annotation = {
       id: "ann_marker_roundtrip" as AnnotationId,

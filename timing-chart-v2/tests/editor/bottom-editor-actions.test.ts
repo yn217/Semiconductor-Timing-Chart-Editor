@@ -24,6 +24,7 @@ describe("bottom editor action controller", () => {
       selectedGroupId: undefined,
       selectedAnnotationId: undefined,
       selectedTransactionId: undefined,
+      selectedBookmarkId: undefined,
     });
 
     actions.toggleTransactionSignal("txn" as never, "sig_a" as never);
@@ -54,11 +55,12 @@ describe("bottom editor action controller", () => {
       selectedGroupId: undefined,
       selectedAnnotationId: undefined,
       selectedTransactionId: undefined,
+      selectedBookmarkId: "bookmark_a" as never,
     });
 
     actions.toggleBottomPin();
 
-    expect(setPinnedBottomSelection).toHaveBeenCalledWith({ signalId: "sig_a" });
+    expect(setPinnedBottomSelection).toHaveBeenCalledWith({ signalId: "sig_a", bookmarkId: "bookmark_a" });
     expect(setBottomPinned).toHaveBeenCalledWith(true);
   });
 });
