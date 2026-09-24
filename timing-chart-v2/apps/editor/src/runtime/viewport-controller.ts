@@ -70,7 +70,7 @@ export function createTimelineNavigationController(context: {
   readonly setRange: (range: { readonly start: number; readonly end: number }) => void;
   readonly host: HTMLElement;
   readonly publishState: () => void;
-}): Readonly<{ fitSelection: () => void; fitAll: () => void; navigateToCycle: (cycle: number) => void }> {
+}): Readonly<{ fitSelection: () => void; fitSourceRange: (startCycle: number, endCycle: number) => boolean; fitAll: () => void; navigateToCycle: (cycle: number) => void }> {
   return {
     fitSelection() {
       const document = context.getDocument();
@@ -83,6 +83,19 @@ export function createTimelineNavigationController(context: {
       }
       delete context.host.dataset.timelineNavigationDiagnostic;
       context.runtime.fitSelection(start, end);
+    },
+    fitSourceRange(startCycle, endCycle) {
+      const document = context.getDocument();
+      if (!Number.isSafeInteger(startCycle) || !Number.isSafeInteger(endCycle) || startCycle < 0 || endCycle <= startCycle || endCycle > document.timeline.cycleCount) return false;
+      const start = context.runtime.sourceBoundaryToLocalX(document, startCycle);
+      const end = context.runtime.sourceBoundaryToLocalX(document, endCycle);
+      if (start === undefined || end === undefined || end <= start) {
+        context.host.dataset.timelineNavigationDiagnostic = "fit-source-range-geometry-unavailable";
+        return false;
+      }
+      delete context.host.dataset.timelineNavigationDiagnostic;
+      context.runtime.fitSelection(start, end);
+      return true;
     },
     fitAll() {
       const document = context.getDocument();
