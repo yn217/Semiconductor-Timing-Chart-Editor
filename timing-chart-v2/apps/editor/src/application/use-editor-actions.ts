@@ -92,6 +92,7 @@ export interface EditorActions {
   readonly createSelectedAnnotationForType: (type: AnnotationType) => void;
   readonly replaceDocument: (document: CanonicalDocument) => CommandResult;
   readonly selectAnnotation: (id: AnnotationId) => void;
+  readonly selectLegend: () => void;
   readonly deleteBottomSignal: () => void;
   readonly deleteBottomAnnotation: () => void;
   readonly deleteBottomTransaction: () => void;
@@ -157,6 +158,10 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
   const viewport = input.viewportRef;
 
   const selectBookmark = (id: BookmarkId) => setSelectedBookmarkId(id);
+  const selectLegend = () => {
+    setSelectedBookmarkId(undefined);
+    input.selection.selectLegend();
+  };
   const selectAIEntity = ({ entityType, entityId }: { readonly entityType: AISelectionEntityType; readonly entityId: string }) => {
     if (entityType === "signal") selectHierarchySignal(entityId as SignalId);
     else if (entityType === "group") input.selection.selectGroup(entityId as GroupId);
@@ -449,6 +454,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     createSelectedAnnotationForType,
     replaceDocument,
     selectAnnotation,
+    selectLegend,
     deleteBottomSignal,
     deleteBottomAnnotation,
     deleteBottomTransaction,

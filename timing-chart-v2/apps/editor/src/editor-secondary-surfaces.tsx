@@ -111,6 +111,7 @@ export interface EditorSecondarySurfacesInput {
     readonly transactionIds: ReadonlySet<TransactionId>;
     readonly bookmark: Bookmark | undefined;
     readonly transactionId: TransactionId | undefined;
+    readonly legendSelected: boolean;
   };
   readonly bottom: {
     readonly signal: Signal | undefined;
@@ -218,14 +219,16 @@ export function useEditorSecondarySurfaces(
     : workspace.viewMode === "Transaction"
       ? "Transaction"
       : "Signal";
-  const inspectorSignal = inspectorContext === "Signal" ? selected.signal : undefined;
-  const inspectorSignalIds = inspectorContext === "Signal" ? selected.signalIds : new Set<SignalId>();
-  const inspectorGroup = inspectorContext === "Signal" ? selected.group : undefined;
-  const inspectorAnnotation = inspectorContext === "Signal" ? selected.annotation : undefined;
-  const inspectorTransaction = inspectorContext === "Transaction" ? selected.transaction : undefined;
+  const inspectorLegendSelected = workspace.viewMode !== "Transaction" && selected.legendSelected;
+  const inspectorSignal = !inspectorLegendSelected && inspectorContext === "Signal" ? selected.signal : undefined;
+  const inspectorSignalIds = !inspectorLegendSelected && inspectorContext === "Signal" ? selected.signalIds : new Set<SignalId>();
+  const inspectorGroup = !inspectorLegendSelected && inspectorContext === "Signal" ? selected.group : undefined;
+  const inspectorAnnotation = !inspectorLegendSelected && inspectorContext === "Signal" ? selected.annotation : undefined;
+  const inspectorTransaction = !inspectorLegendSelected && inspectorContext === "Transaction" ? selected.transaction : undefined;
+  const inspectorBookmark = inspectorLegendSelected ? undefined : selected.bookmark;
   const inspectorSelectionKey = inspectorSignalIds.size > 1
     ? `multi:${inspectorSignalIds.size}`
-    : inspectorSignal?.id ?? inspectorGroup?.id ?? inspectorAnnotation?.id ?? inspectorTransaction?.id ?? selected.bookmark?.id ?? "none";
+    : inspectorLegendSelected ? "legend" : inspectorSignal?.id ?? inspectorGroup?.id ?? inspectorAnnotation?.id ?? inspectorTransaction?.id ?? inspectorBookmark?.id ?? "none";
   const { aiBridgeStatus, ...aiAssistantPanel } = useEditorAiAssistantModel({
     document: input.document,
     documentEpoch: input.documentEpoch,
@@ -487,7 +490,7 @@ export function useEditorSecondarySurfaces(
       />
   ) : null;
   const workspaceViewportLegend = (
-    <LegendView document={input.document} commands={surfaceCommands} />
+    <LegendView document={input.document} commands={surfaceCommands} selected={selected.legendSelected} onSelect={input.actions.selectLegend} />
   );
   const workspaceTransactionTree =
     // Combined ("Split") reuses the exact same production Transaction Tree
@@ -630,7 +633,8 @@ export function useEditorSecondarySurfaces(
       group={inspectorGroup}
       annotation={inspectorAnnotation}
       transaction={inspectorTransaction}
-      bookmark={selected.bookmark}
+      legendSelected={inspectorLegendSelected}
+      bookmark={inspectorBookmark}
       collapsedGroup={
         inspectorGroup !== undefined &&
         input.timeline.collapsedGroupIds.has(inspectorGroup.id)

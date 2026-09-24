@@ -95,6 +95,7 @@
 .legend-position-editor label { margin: 0; }
 
 .editor-legend { cursor: grab; }
+.editor-legend[data-selected="true"] { outline: 2px solid #1683e8; outline-offset: 2px; }
 
 .editor-legend:active { cursor: grabbing; }
 
