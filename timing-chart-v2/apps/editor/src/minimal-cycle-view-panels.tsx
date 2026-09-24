@@ -241,7 +241,7 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
         <button type="button" role="menuitem" onClick={() => { onCollapseAllGroups(); onCloseMoreMenu(); }}>Collapse All Groups</button>
         <button type="button" role="menuitem" onClick={() => { onExpandAllGroups(); onCloseMoreMenu(); }}>Expand All Groups</button>
         <button type="button" role="menuitem" onClick={() => { onClearTreeFilter(); onCloseMoreMenu(); }}>Clear Filter</button>
-        <button type="button" role="menuitem" data-testid="hierarchy-open" onClick={() => { onOpenHierarchy(); onCloseMoreMenu(); }}>Hierarchy</button>
+        <button type="button" role="menuitem" data-testid="hierarchy-open" onClick={() => { onOpenHierarchy(); onCloseMoreMenu(); }}>Signal Full Path List / Hierarchy…</button>
       </div>}
     </span>
     <span className="role-column-heading" aria-label="Role">Role</span>

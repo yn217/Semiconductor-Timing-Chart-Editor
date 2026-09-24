@@ -367,6 +367,8 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await expect(row).toHaveAttribute("data-full-path", "dut.data[7:0]");
   await expect(page.getByTestId("scope-breadcrumb")).toHaveText("Scope: dut");
   const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeHistory = await page.getByTestId("history-status").textContent();
+  const beforeDirty = await page.getByTestId("dirty-status").textContent();
   // #470: the Inspector's own "Reveal in Hierarchy" entry point (and its
   // whole "Source / Hierarchy" section) is hidden from normal use -- the
   // Hierarchy Browser is still reachable via the Tree's "More tree actions"
@@ -376,6 +378,24 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await page.getByTestId("hierarchy-open").click();
   const hierarchy = page.getByTestId("hierarchy-browser");
   await expect(hierarchy).toBeVisible();
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
+  await hierarchy.getByTestId("hierarchy-path-search").fill("dut.data[7:0]");
+  await expect(hierarchy.locator("[data-hierarchy-row-id]")).toHaveCount(1);
+  await hierarchy.getByRole("button", { name: "Copy full path dut.data[7:0]" }).click();
+  await expect(hierarchy.getByTestId("hierarchy-copy-status")).toHaveText("Copied 1 full path");
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe("dut.data[7:0]");
+  await hierarchy.getByTestId("hierarchy-path-search").fill("");
+  const clockPathRow = hierarchy.locator("[data-hierarchy-row-id='sig_cycle_clk']");
+  const dataPathRow = hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']");
+  const selectedPathTexts = [await clockPathRow.locator("td").last().textContent(), await dataPathRow.locator("td").last().textContent()];
+  await clockPathRow.getByRole("checkbox").check();
+  await dataPathRow.getByRole("checkbox").check();
+  await hierarchy.getByTestId("copy-selected-hierarchy-paths").click();
+  await expect(hierarchy.getByTestId("hierarchy-copy-status")).toHaveText("Copied 2 full paths");
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(selectedPathTexts.join("\n"));
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(beforeDirty!);
   await expect(hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']")).toContainText("dut");
   await expect(hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']")).toContainText("data[7:0]");
   const displayMode = hierarchy.getByLabel("Hierarchy display mode");
