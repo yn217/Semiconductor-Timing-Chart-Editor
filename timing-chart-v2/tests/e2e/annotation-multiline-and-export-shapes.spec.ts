@@ -47,7 +47,7 @@ test("Callout label holds real multi-line text in the live DOM and exported SVG"
   await editor.getByTestId("apply-annotation-properties").click();
 
   const label = callout.locator("[data-role='annotation-label']");
-  await expect(label).toHaveCSS("white-space", "pre-wrap");
+  await expect(label).toHaveCSS("white-space", "pre");
   await expect(label).toHaveText("Line one\nLine two\nLine three");
   const annotationId = await callout.getAttribute("data-annotation-id");
 
@@ -61,6 +61,31 @@ test("Callout label holds real multi-line text in the live DOM and exported SVG"
   expect(groupMatch![0]).toContain("Line one");
   expect(groupMatch![0]).toContain("Line two");
   expect(groupMatch![0]).toContain("Line three");
+});
+
+test("authored label wrap width is shared by live overlay and SVG export", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  const callout = await addAnnotation(page, "callout");
+  const editor = page.getByTestId("annotation-editor");
+  await editor.getByLabel("Annotation label", { exact: true }).fill("Address phase carries a detailed payload across the bus");
+  await editor.getByRole("button", { name: "Style", exact: true }).click();
+  const width = editor.getByTestId("inspector-annotation-label-layout-max-width");
+  await width.fill("48");
+  await width.press("Enter");
+  await editor.getByTestId("apply-annotation-properties").click();
+
+  const label = callout.locator("[data-role='annotation-label']");
+  const liveText = await label.textContent();
+  expect(liveText?.split("\n").length).toBeGreaterThan(2);
+  const annotationId = await callout.getAttribute("data-annotation-id");
+  const svgText = await exportSvgText(page);
+  const groupMatch = svgText.match(new RegExp(`<g data-annotation-id="${annotationId}"[\\s\\S]*?</g>`));
+  expect(groupMatch).not.toBeNull();
+  expect((groupMatch![0].match(/<tspan/g) ?? []).length).toBe(liveText!.split("\n").length);
 });
 
 test("Bracket's exported SVG carries its own cap marks, not a plain Range line", async ({ page }) => {
@@ -136,7 +161,7 @@ test("Callout's multi-line label survives a real Save/Open round trip, in both t
 
   const reopened = page.getByTestId("cycle-surface").locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}']`);
   const label = reopened.locator("[data-role='annotation-label']");
-  await expect(label).toHaveCSS("white-space", "pre-wrap");
+  await expect(label).toHaveCSS("white-space", "pre");
   await expect(label).toHaveText("Line one\nLine two\nLine three");
 
   const svgText = await exportSvgText(page);
