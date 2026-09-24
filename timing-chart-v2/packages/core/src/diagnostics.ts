@@ -16,7 +16,8 @@ export const TIMING_DIAGNOSTIC_CODES = [
 ] as const;
 
 export type TimingDiagnosticCode = typeof TIMING_DIAGNOSTIC_CODES[number];
-export type TimingDiagnosticCategory = "unknown-value" | "protocol" | "stability";
+export const TIMING_DIAGNOSTIC_CATEGORIES = ["unknown-value", "protocol", "stability"] as const;
+export type TimingDiagnosticCategory = typeof TIMING_DIAGNOSTIC_CATEGORIES[number];
 
 export interface TimingDiagnostic extends DocumentProblem {
   readonly code: TimingDiagnosticCode;
@@ -251,7 +252,7 @@ export const TIMING_DIAGNOSTIC_RULES: readonly TimingDiagnosticRule[] = [
 /** Derive deterministic, non-persistent timing/protocol Problems from Canonical data. */
 export function deriveTimingDiagnostics(document: CanonicalDocument, options: TimingDiagnosticOptions = {}): readonly TimingDiagnostic[] {
   const configured = options.enabledCategories ?? document.checkSettings.enabledCategories;
-  const enabled = new Set<TimingDiagnosticCategory>(configured === undefined ? ["unknown-value", "protocol", "stability"] : configured.filter((category): category is TimingDiagnosticCategory => category === "unknown-value" || category === "protocol" || category === "stability"));
+  const enabled = new Set<TimingDiagnosticCategory>(configured === undefined ? TIMING_DIAGNOSTIC_CATEGORIES : configured.filter((category): category is TimingDiagnosticCategory => TIMING_DIAGNOSTIC_CATEGORIES.some((known) => known === category)));
   return TIMING_DIAGNOSTIC_RULES.flatMap((rule) => rule.evaluate(document, enabled)
     .filter(() => enabled.has(rule.category))
     .map((diagnostic) => ({ ...diagnostic, ruleId: rule.id, stableKey: `${rule.id}:${diagnostic.code}:${diagnostic.objectId ?? diagnostic.entityId ?? ""}:${diagnostic.path}` })))
