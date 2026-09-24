@@ -405,6 +405,18 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await expect(page.getByTestId("bulk-register-preview")).toContainText("width 8");
   await page.getByTestId("bulk-register-apply").click();
   await expect(host).toHaveAttribute("data-history-depth", "1");
+  await page.getByRole("button", { name: "More tree actions" }).click();
+  await page.getByTestId("hierarchy-open").click();
+  const nestedHierarchy = page.getByTestId("hierarchy-browser");
+  await nestedHierarchy.getByLabel("Hierarchy display mode").selectOption("relative");
+  await nestedHierarchy.getByLabel("Hierarchy scope").selectOption("dut");
+  const nestedStatus = nestedHierarchy.locator("tr[data-hierarchy-row-id]").filter({ hasText: "core.status" });
+  const nestedPayload = nestedHierarchy.locator("tr[data-hierarchy-row-id]").filter({ hasText: "core.payload[7:0]" });
+  await expect(nestedStatus).toHaveCount(1);
+  await expect(nestedPayload).toHaveCount(1);
+  await expect(nestedStatus.locator("td").nth(0)).toHaveText("core.status");
+  await expect(nestedPayload.locator("td").nth(0)).toHaveText("core.payload[7:0]");
+  await nestedHierarchy.getByRole("button", { name: "Close hierarchy" }).click();
   await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollTop = element.scrollHeight; });
   await expect(host.locator("[data-role='left-tree-rows'] [data-full-path='dut.core.status']")).toHaveCount(1);
   await expect(host.locator("[data-role='left-tree-rows'] [data-full-path='dut.core.payload[7:0]']")).toHaveCount(1);
