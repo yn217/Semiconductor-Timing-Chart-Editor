@@ -234,6 +234,10 @@
 .hierarchy-scope-breadcrumb button { border: 0; padding: 2px 4px; background: transparent; color: #145e9f; cursor: pointer; }
 .hierarchy-scope-breadcrumb button[aria-current="page"] { color: #263b52; font-weight: 600; cursor: default; }
 .hierarchy-scope-breadcrumb button:disabled { opacity: 1; }
+.hierarchy-toolbar input[type="search"] { min-width: 190px; padding: 4px 6px; border: 1px solid #b8c8d8; border-radius: 3px; }
+.hierarchy-toolbar button:disabled { opacity: 0.55; cursor: not-allowed; }
+.hierarchy-copy-actions { display: flex; align-items: center; gap: 4px; }
+.hierarchy-copy-actions input[type="checkbox"] { width: 14px; height: 14px; margin: 0; }
 .hierarchy-browser table { width: 100%; border-collapse: collapse; font-size: 11px; }
 .hierarchy-browser th, .hierarchy-browser td { padding: 6px 8px; border: 1px solid #d6dde6; text-align: left; white-space: nowrap; }
 .hierarchy-browser th { background: #f3f6fa; color: #52677d; }

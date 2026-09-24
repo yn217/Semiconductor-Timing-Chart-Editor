@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, hardwareHierarchyScopeBreadcrumbs, DefaultProjectionService, calculateRowLayout } from "@timing-chart-v2/projection";
+import { buildHardwareHierarchyEntries, filterHardwareHierarchyEntries, hardwareHierarchyScopes, hardwareHierarchyScopeBreadcrumbs, DefaultProjectionService, calculateRowLayout } from "@timing-chart-v2/projection";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { CanonicalDocument, GroupId, RowId, SignalId, SpacerId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -82,6 +82,19 @@ describe("RowLayout and projection invariants", () => {
       { value: "top.u_soc", label: "u_soc" },
       { value: "top.u_soc.u_dma", label: "u_dma" },
     ]);
+  });
+
+  it("filters the full path review list across canonical hierarchy and display fields", () => {
+    const entries = buildHardwareHierarchyEntries({
+      ...canonicalFixture(),
+      signals: canonicalFixture().signals.map((signal) => signal.id === "sig_data"
+        ? { ...signal, display: { ...signal.display, name: "Payload" }, source: { ...signal.source, instancePath: ["top", "u_dma"] } }
+        : signal),
+    }, "hierarchy");
+    expect(filterHardwareHierarchyEntries(entries, " TOP.U_DMA ").map((entry) => entry.signalId)).toEqual(["sig_data"]);
+    expect(filterHardwareHierarchyEntries(entries, "payload").map((entry) => entry.signalId)).toEqual(["sig_data"]);
+    expect(filterHardwareHierarchyEntries(entries, "main").map((entry) => entry.signalId).sort()).toEqual(["sig_clk", "sig_data"]);
+    expect(filterHardwareHierarchyEntries(entries, "missing")).toEqual([]);
   });
 
   it.each([0, 1, 2])("retains hidden navigation rows and group placement at index %i", (hiddenIndex) => {

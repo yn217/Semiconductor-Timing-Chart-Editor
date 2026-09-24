@@ -30,6 +30,7 @@ export interface HardwareHierarchyEntry {
   readonly instancePath: string;
   readonly relativePath: string;
   readonly signalName: string;
+  readonly displayName: string;
   readonly fullPath: string;
   readonly role: string;
   readonly type: string;
@@ -52,11 +53,18 @@ export function buildHardwareHierarchyEntries(document: CanonicalDocument, view:
     const fullPath = [...instancePathSegments, signal.source.signalName].join(".") || signal.source.signalName;
     const relativePath = [...instancePathSegments.slice(scopeSegments?.length ?? 0), signal.source.signalName].join(".");
     const width = signal.type === "bus" ? `[${signal.source.msb ?? (signal.width ?? 1) - 1}:${signal.source.lsb ?? 0}]` : "—";
-    return [{ signalId: signal.id, scope: instancePath || "(root)", instancePath: instancePath || "(root)", relativePath, signalName: signal.source.signalName, fullPath, role: signal.role, type: signal.type, width, groupId: location.group.id, groupName: location.group.name, groupOrder: location.groupOrder, rowOrder: location.rowOrder } satisfies HardwareHierarchyEntry];
+    return [{ signalId: signal.id, scope: instancePath || "(root)", instancePath: instancePath || "(root)", relativePath, signalName: signal.source.signalName, displayName: signal.display.name, fullPath, role: signal.role, type: signal.type, width, groupId: location.group.id, groupName: location.group.name, groupOrder: location.groupOrder, rowOrder: location.rowOrder } satisfies HardwareHierarchyEntry];
   });
   return Object.freeze([...entries].sort((left, right) => view === "group"
     ? left.groupOrder - right.groupOrder || left.rowOrder - right.rowOrder || left.signalId.localeCompare(right.signalId)
     : left.fullPath.localeCompare(right.fullPath) || left.signalId.localeCompare(right.signalId)));
+}
+
+export function filterHardwareHierarchyEntries(entries: readonly HardwareHierarchyEntry[], query: string): readonly HardwareHierarchyEntry[] {
+  const normalized = query.trim().toLocaleLowerCase();
+  if (normalized.length === 0) return entries;
+  return Object.freeze(entries.filter((entry) => [entry.fullPath, entry.instancePath, entry.signalName, entry.displayName, entry.groupName, entry.role, entry.type, entry.width]
+    .some((value) => value.toLocaleLowerCase().includes(normalized))));
 }
 
 export function hardwareHierarchyScopes(document: CanonicalDocument): readonly string[] {
