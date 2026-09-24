@@ -33,6 +33,8 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
 
   await modes.getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Cycle", { timeout: 5_000 });
+  const cycleTimeOrigin = await page.getByTestId("geometry-grid").evaluate((element) => Number.parseFloat(getComputedStyle(element).left));
+  expect(cycleTimeOrigin).toBe(Number(await shell.getAttribute("data-left-pane-width")) + Number(await shell.getAttribute("data-frozen-pane-width")));
   // #765: standalone Transaction no longer inherits the hidden Cycle rows' height, so the large-document precondition is checked where the rows are shown.
   await expect.poll(() => cycleViewport.evaluate((element) => element.scrollHeight - element.clientHeight), { timeout: 5_000, message: "Cycle viewport must have real vertical overflow before the mode-isolation journey" }).toBeGreaterThan(0);
   const cycleRow = host.locator("[data-role='frozen-row'][data-row-id='sig_perf_1']");
@@ -70,6 +72,7 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
 
   await modes.getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction", { timeout: 5_000 });
+  await expect.poll(() => page.getByTestId("geometry-grid").evaluate((element) => Number.parseFloat(getComputedStyle(element).left))).toBe(0);
   await expect(shell).toHaveAttribute("data-inspector-visible", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Zoom preset").selectOption("200");
@@ -86,6 +89,7 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
 
   await modes.getByRole("button", { name: "Combined", exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Combined", { timeout: 5_000 });
+  await expect.poll(() => page.getByTestId("geometry-grid").evaluate((element) => Number.parseFloat(getComputedStyle(element).left))).toBe(Number(await shell.getAttribute("data-left-pane-width")) + Number(await shell.getAttribute("data-frozen-pane-width")));
   await expect(page.locator(".split-transaction-pane")).toBeVisible();
   await expect(page.getByTestId("combined-split-divider")).toBeVisible();
   const combinedViewport = page.getByTestId("cycle-viewport");
