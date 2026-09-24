@@ -8,7 +8,7 @@ type ReviewSeverity = "all" | "error" | "warning" | "info";
 type ReviewScope = "all" | "selection" | "group";
 const checkCategoryLabels: Record<TimingDiagnosticCategory, string> = {
   "unknown-value": "Unknown / X",
-  protocol: "Handshake",
+  protocol: "Protocol",
   stability: "Stable while stalled",
 };
 
