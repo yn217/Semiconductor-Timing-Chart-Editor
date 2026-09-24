@@ -13,6 +13,8 @@ export const TIMING_DIAGNOSTIC_CODES = [
   "HANDSHAKE_CONSTRAINT_INVALID",
   "HANDSHAKE_NO_ACK",
   "HANDSHAKE_DATA_UNSTABLE",
+  "LATENCY_RANGE_CONSTRAINT_INVALID",
+  "LATENCY_RANGE_VIOLATION",
 ] as const;
 
 export type TimingDiagnosticCode = typeof TIMING_DIAGNOSTIC_CODES[number];
@@ -160,6 +162,59 @@ function asserted(change: SignalValueChange, polarity: "active-high" | "active-l
   return state === (polarity === "active-low" ? "low" : "high");
 }
 
+function risingEdges(signal: ValueSignal): readonly number[] {
+  const edges: number[] = [];
+  let previous: "high" | "low" | "unknown" = "unknown";
+  for (const change of signal.values) {
+    const current = level(change.value);
+    if (previous === "low" && current === "high") edges.push(change.start);
+    previous = current;
+  }
+  return edges;
+}
+
+function latencyRangeDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>): TimingDiagnostic[] {
+  if (!enabled.has("protocol")) return [];
+  const problems: TimingDiagnostic[] = [];
+  const signals = new Map(document.signals.map((signal) => [signal.id, signal]));
+  const add = (code: TimingDiagnosticCode, path: string, message: string, constraintId: string): void => {
+    problems.push({ code, category: "protocol", severity: "warning", path, message, entityId: constraintId, objectType: "constraint", objectId: constraintId, source: "validation", stage: "validate" });
+  };
+
+  document.constraints.forEach((constraint, index) => {
+    if (constraint.type.toLowerCase() !== "latency-range") return;
+    const data = constraintData(constraint.data);
+    const requestId = textFrom(data, ["requestSignalId"]) as SignalId | undefined;
+    const acknowledgeId = textFrom(data, ["acknowledgeSignalId"]) as SignalId | undefined;
+    const minCycles = data.minCycles;
+    const maxCycles = data.maxCycles;
+    const basePath = `$.constraints[${index}].data`;
+    if (!requestId || !acknowledgeId || typeof minCycles !== "number" || !Number.isInteger(minCycles) || minCycles < 0 || typeof maxCycles !== "number" || !Number.isInteger(maxCycles) || maxCycles < minCycles) {
+      add("LATENCY_RANGE_CONSTRAINT_INVALID", basePath, "Latency-range constraint requires requestSignalId, acknowledgeSignalId, and integer minCycles/maxCycles with 0 <= minCycles <= maxCycles.", constraint.id);
+      return;
+    }
+    const request = signals.get(requestId);
+    const acknowledge = signals.get(acknowledgeId);
+    if (!request || request.type === "clock" || request.type === "commentRow") {
+      add("LATENCY_RANGE_CONSTRAINT_INVALID", `${basePath}.requestSignalId`, `Request signal '${requestId}' does not reference a value signal.`, constraint.id);
+      return;
+    }
+    if (!acknowledge || acknowledge.type === "clock" || acknowledge.type === "commentRow") {
+      add("LATENCY_RANGE_CONSTRAINT_INVALID", `${basePath}.acknowledgeSignalId`, `Acknowledge signal '${acknowledgeId}' does not reference a value signal.`, constraint.id);
+      return;
+    }
+    const acknowledgeEdges = risingEdges(acknowledge);
+    for (const requestCycle of risingEdges(request)) {
+      const acknowledgeCycle = acknowledgeEdges.find((cycle) => cycle > requestCycle);
+      const latency = acknowledgeCycle === undefined ? undefined : acknowledgeCycle - requestCycle;
+      if (latency !== undefined && latency >= minCycles && latency <= maxCycles) continue;
+      const observed = latency === undefined ? "no later acknowledge rising edge" : `acknowledge latency ${latency} cycles`;
+      add("LATENCY_RANGE_VIOLATION", `${basePath}.acknowledgeSignalId`, `Request '${request.name}' rises at cycle ${requestCycle}; ${observed}, expected ${minCycles}..${maxCycles} cycles.`, constraint.id);
+    }
+  });
+  return problems;
+}
+
 function firstAssertedAtOrAfter(signal: Signal, cycle: number, polarity: "active-high" | "active-low"): SignalValueChange | undefined {
   if (signal.type === "clock" || signal.type === "commentRow") return undefined;
   return signal.values.find((change) => change.start >= cycle && asserted(change, polarity));
@@ -246,6 +301,7 @@ export interface TimingDiagnosticRule {
 export const TIMING_DIAGNOSTIC_RULES: readonly TimingDiagnosticRule[] = [
   { id: "timing.unknown-value", category: "unknown-value", evaluate: valueDiagnostics },
   { id: "timing.handshake", category: "protocol", evaluate: handshakeDiagnostics },
+  { id: "timing.latency-range", category: "protocol", evaluate: latencyRangeDiagnostics },
 ];
 
 /** Derive deterministic, non-persistent timing/protocol Problems from Canonical data. */
