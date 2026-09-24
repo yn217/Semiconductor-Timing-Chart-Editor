@@ -149,6 +149,8 @@ export interface EditorSecondarySurfacesInput {
     readonly setTransactionTreeFilterMode: (
       value: TransactionTreeFilterMode,
     ) => void;
+    readonly cyclesPerTc: number;
+    readonly setCyclesPerTc: (value: number) => void;
     readonly setRibbonTab: (tab: string) => void;
   };
   readonly dialog: {
@@ -181,7 +183,7 @@ export interface EditorSecondarySurfacesInput {
   readonly actions: EditorActions;
   readonly setRuntimeDiagnostics: EditorApplicationOwner["setRuntimeDiagnostics"];
   readonly navigateProblem: (path: string) => void;
-  readonly ai: { readonly getZoom: () => number; readonly fitAll: () => void };
+  readonly ai: { readonly getZoom: () => number; readonly fitAll: () => void; readonly fitSelection: () => void };
 }
 
 export interface EditorSecondarySurfacesOutput {
@@ -226,6 +228,7 @@ export function useEditorSecondarySurfaces(
     document: input.document,
     documentEpoch: input.documentEpoch,
     revision: input.revision,
+    mode: workspace.viewMode === "Split" ? "Combined" : workspace.viewMode,
     selectedSignalId: input.annotationTargetSignalId,
     selectedGroupId: selected.group?.id,
     selectedAnnotationId: selected.annotation?.id,
@@ -239,6 +242,8 @@ export function useEditorSecondarySurfaces(
       ),
     getZoom: input.ai.getZoom,
     onFitAll: input.ai.fitAll,
+    onFitSelection: input.ai.fitSelection,
+    onSetSelection: input.actions.selectAIEntity,
     onOpenTimeline: () => workspace.setRibbonTab("Timeline"),
     setRuntimeDiagnostics: input.setRuntimeDiagnostics,
   });
@@ -324,6 +329,7 @@ export function useEditorSecondarySurfaces(
       transaction={bottom.transaction}
       selectedTransactionIds={selected.transactionIds}
       document={input.document}
+      cyclesPerTc={workspace.cyclesPerTc}
       history={input.history}
       onSelect={input.actions.selectTransaction}
       onSelectTransactions={input.actions.selectTransactions}
@@ -396,9 +402,7 @@ export function useEditorSecondarySurfaces(
               // `document.transactionTimeScale` data this already read, just a
               // clearer two-part label (what TC means, then what it maps to in
               // real clock cycles) instead of the terser "1 TC = N Cycles".
-              const perTc =
-                input.document.transactionTimeScale
-                  ?.clockCyclesPerTransactionCycle ?? 1;
+              const perTc = workspace.cyclesPerTc;
               return `Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = ${perTc} ${cycleUnitWord(perTc)})`;
             })()
           : input.document.timeline.referenceClock
@@ -419,11 +423,8 @@ export function useEditorSecondarySurfaces(
               onShowAll: () => setAllTransactionVisibility(true),
               onHideAll: () => setAllTransactionVisibility(false),
               timeScale: {
-                cyclesPerTc: input.document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1,
-                onChange: (cyclesPerTc: number) => {
-                  const current = input.document.transactionTimeScale ?? { clockCyclesPerTransactionCycle: 1, majorInterval: 5, minorInterval: 1 };
-                  surfaceCommands.setTransactionTimeScale({ ...current, clockCyclesPerTransactionCycle: cyclesPerTc });
-                },
+                cyclesPerTc: workspace.cyclesPerTc,
+                onChange: workspace.setCyclesPerTc,
               },
             }
           : undefined
@@ -548,6 +549,37 @@ export function useEditorSecondarySurfaces(
       )}
     </div>
   );
+  const activeBottomContent = workspace.bottomTab === "Signal" ? (
+    signalEditor
+  ) : workspace.bottomTab === "Annotation" ? (
+    annotationEditor
+  ) : workspace.bottomTab === "Transaction" ? (
+    transactionEditor
+  ) : workspace.bottomTab === "Phases" ? (
+    <TransactionPhaseSummary transaction={selected.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={workspace.cyclesPerTc} />
+  ) : workspace.bottomTab === "Linked Signals" ? (
+    <TransactionLinkedSummary transaction={selected.transaction} document={input.document} />
+  ) : workspace.bottomTab === "Bookmarks" ? (
+    bookmarkEditor
+  ) : workspace.bottomTab === "Problems" ? (
+    <ProblemsPanel diagnostics={input.diagnostics} onNavigate={input.navigateProblem} />
+  ) : workspace.bottomTab === "JSON" ? (
+    <AdvancedJsonPanel
+      document={input.document}
+      selectedSignal={bottom.signal}
+      selectedGroup={bottom.group}
+      selectedAnnotation={bottom.annotation}
+      selectedTransaction={bottom.transaction}
+      onReplaceDocument={input.actions.replaceDocument}
+      onDiagnostic={(next) => {
+        const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next];
+        input.setRuntimeDiagnostics((current) => [
+          ...current.filter((item) => !item.detail?.startsWith("advanced-json:")),
+          ...nextDiagnostics,
+        ]);
+      }}
+    />
+  ) : null;
   const workspaceBottom = (
     <BottomEditorPanel
       tabs={workspace.bottomTabs}
@@ -560,48 +592,15 @@ export function useEditorSecondarySurfaces(
       onTogglePinned={workspace.toggleBottomPin}
       {...(workspace.bottomTab === "Annotation" ? { contentClassName: "bottom-content-annotation" } : {})}
       content={
-        workspace.bottomTab === "Signal" ? (
-          signalEditor
-        ) : workspace.bottomTab === "Annotation" ? (
-          annotationEditor
-        ) : workspace.bottomTab === "Transaction" ? (
-          transactionEditor
-        ) : workspace.bottomTab === "Phases" ? (
-          <TransactionPhaseSummary transaction={selected.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={input.document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1} />
-        ) : workspace.bottomTab === "Linked Signals" ? (
-          <TransactionLinkedSummary
-            transaction={selected.transaction}
-            document={input.document}
-          />
-        ) : workspace.bottomTab === "Bookmarks" ? (
-          bookmarkEditor
-        ) : workspace.bottomTab === "AI" ? (
-          <AIOperationPanel {...aiAssistantPanel} />
-        ) : workspace.bottomTab === "Problems" ? (
-          <ProblemsPanel
-            diagnostics={input.diagnostics}
-            onNavigate={input.navigateProblem}
-          />
-        ) : (
-          <AdvancedJsonPanel
-            document={input.document}
-            selectedSignal={bottom.signal}
-            selectedGroup={bottom.group}
-            selectedAnnotation={bottom.annotation}
-            selectedTransaction={bottom.transaction}
-            onReplaceDocument={input.actions.replaceDocument}
-            onDiagnostic={(next) => {
-              const nextDiagnostics =
-                next === undefined ? [] : Array.isArray(next) ? next : [next];
-              input.setRuntimeDiagnostics((current) => [
-                ...current.filter(
-                  (item) => !item.detail?.startsWith("advanced-json:"),
-                ),
-                ...nextDiagnostics,
-              ]);
-            }}
-          />
-        )
+        <>
+          {/* Keep the AI Bridge session and an external proposal alive while
+              another Bottom tab is active. The session belongs to this
+              Editor tab/document, not to the visibility of its panel. */}
+          <div className="bottom-ai-panel-host" hidden={workspace.bottomTab !== "AI"}>
+            <AIOperationPanel {...aiAssistantPanel} />
+          </div>
+          {activeBottomContent}
+        </>
       }
     />
   );
@@ -630,6 +629,7 @@ export function useEditorSecondarySurfaces(
       }
       registry={input.command.registry.current}
       document={input.document}
+      cyclesPerTc={workspace.cyclesPerTc}
       viewport={refs.viewport}
       commands={surfaceCommands}
       onReveal={input.actions.revealSelectedInHierarchy}

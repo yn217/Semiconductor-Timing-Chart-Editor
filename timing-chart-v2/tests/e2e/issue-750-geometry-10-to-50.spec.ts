@@ -7,7 +7,9 @@ const rulerLabelXs = (page: Page) => page.evaluate(() => [...document.querySelec
   .filter((tick) => (tick.textContent ?? "").trim() !== "").slice(0, 4).map((tick) => ({ label: (tick.textContent ?? "").trim(), source: Number(tick.dataset.sourceCycle), x: tick.getBoundingClientRect().x })));
 const barBox = (page: Page) => page.evaluate(() => { const bar = document.querySelector<HTMLElement>("[data-transaction-id='demo_txn_read']")!; const b = bar.getBoundingClientRect(); return { x: Math.round(b.x * 10) / 10, width: Math.round(b.width * 10) / 10 }; });
 
-for (const size of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+// The compression ratio, TC pitch, and canonical source-time invariants are width-independent.
+// Keep one compact viewport here; the separate clipping/scroll-extent contract below retains both widths.
+for (const size of [{ width: 1280, height: 720 }]) {
   test(`1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (${size.width}x${size.height})`, async ({ page }) => {
     await page.setViewportSize(size);
     await page.goto("/?transaction-demo");
@@ -45,12 +47,9 @@ for (const size of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }])
     expect(await cyclesOf()).toBe(durationBefore);
     // Displayed Start is the same canonical cycle re-expressed in the new unit.
     expect(await canonicalStart()).toBeCloseTo(startTcBefore * 10 / 50, 3);
-    // Undo restores the presentation exactly (bar width included).
-    await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
-    await expect(select).toHaveValue("10");
-    await expect.poll(async () => (await rulerLabelXs(page)).map((l) => l.source)).toEqual([0, 10, 20, 30]);
-    expect(await canonicalStart()).toBeCloseTo(startTcBefore, 3);
-    await expect.poll(async () => (await barBox(page)).width).toBeCloseTo(barWidthBefore, 0);
+    await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+    await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+    await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
   });
 }
 

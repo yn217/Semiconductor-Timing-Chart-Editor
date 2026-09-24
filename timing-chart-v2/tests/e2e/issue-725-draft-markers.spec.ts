@@ -8,11 +8,22 @@ test("edited Bottom row cells show a draft marker and double-click focuses the e
   const rows = bottom.locator(".transaction-list-row > button[data-selected]");
   await rows.first().click();
   const name = page.getByLabel("Bottom Transaction name");
-  await expect(name).toHaveAttribute("data-draft-dirty", "false");
   await rows.first().dblclick();
+  const committedStyle = await name.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { background: style.backgroundColor, border: style.borderColor };
+  });
   await name.fill("Draft Name");
-  await expect(name).toHaveAttribute("data-draft-dirty", "true");
-  await expect(page.getByLabel("Bottom Transaction description")).toHaveAttribute("data-draft-dirty", "false");
+  const dirtyStyle = await name.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { background: style.backgroundColor, border: style.borderColor };
+  });
+  expect(dirtyStyle).not.toEqual(committedStyle);
+  await expect(page.getByTestId("transaction-properties-unapplied")).toBeVisible();
   await name.press("Escape");
-  await expect(name).toHaveAttribute("data-draft-dirty", "false");
+  await expect.poll(() => name.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return { background: style.backgroundColor, border: style.borderColor };
+  })).not.toEqual(dirtyStyle);
+  await expect(page.getByTestId("transaction-properties-unapplied")).toHaveCount(0);
 });

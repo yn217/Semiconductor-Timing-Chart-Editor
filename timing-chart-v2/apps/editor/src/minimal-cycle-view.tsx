@@ -136,6 +136,7 @@ export function MinimalCycleView() {
     ribbonTab, setRibbonTab,
     bottomTab, setBottomTab,
     viewMode, setViewMode,
+    cyclesPerTc, setCyclesPerTc,
     activeContext,
     signalSplitEnabled, setSignalSplitEnabled,
     signalSplitRatio, setSignalSplitRatio, signalSplitResizeRef,
@@ -159,6 +160,8 @@ export function MinimalCycleView() {
     cursorA, cursorB, cursorDelta, setCursor, clearCursor, moveCursor, swapCursors,
     activePane, setActivePane,
   } = workspace;
+  const transactionCyclesPerTcRef = useRef(cyclesPerTc);
+  transactionCyclesPerTcRef.current = cyclesPerTc;
   // Keep standalone Cycle and Transaction presentation zoom independent while
   // Combined continues to use the shared time viewport zoom.
   const timelineNavigation = useTimelineNavigationOwner(viewMode);
@@ -432,13 +435,20 @@ export function MinimalCycleView() {
     commandRegistry,
     executeBatch,
     dom: { host, viewport, ruler, gridLayer, viewportLower, rulerLower, hostLower, gridLayerLower, signalSplitRuntimeRef },
-    presentation: { collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef },
+    presentation: { collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef },
     state: { setRuntimeDiagnostics, setProblem, setTreePresentationRevision, setTransactionPresentationRevision, setRangePresentationRevision, setPlayheadPresentationRevision, setTimelineRange, setRangeSelectionActive, setSelectedCycle, setBottomPinned, setPinnedBottomSelection, setTreeFilter, setTreeTypeFilter, setTreeAddMenuOpen, setTreeMoreMenuOpen, setContextMenu, setArrowPickStatus, setRenameDialogOpen, setCollapsedGroups, toggleCollapsedGroup, closeContextMenu },
     viewMetricsOwner,
     signalSplitEnabled,
     signalSplitRatio,
     viewMode,
   });
+  const previousCyclesPerTcRef = useRef(cyclesPerTc);
+  useEffect(() => {
+    if (previousCyclesPerTcRef.current === cyclesPerTc) return;
+    previousCyclesPerTcRef.current = cyclesPerTc;
+    timelineRuntimeRef.current?.refreshRuler();
+    timelineRuntimeRef.current?.refreshGrid();
+  }, [cyclesPerTc]);
   useViewModeTransition(viewMode, forceUpperReprojectRef, timelineRuntimeRef);
   useOverlayPresentationRefresh({
     refreshPlayhead, refreshRangeSelectionBand, host, selectedCycle, playheadPresentationRevision, rangePresentationRevision,
@@ -609,7 +619,7 @@ export function MinimalCycleView() {
     bottom: { signal: bottomSignal, group: bottomGroup, annotation: bottomAnnotation, transaction: bottomTransaction },
     timeline: { range: timelineRange, collapsedGroupIds, setCollapsedGroups, toggleCollapsedGroup },
     setBottomVisible,
-    workspace: { viewMode, activeContext, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionWithFreeze, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, setRibbonTab },
+    workspace: { viewMode, activeContext, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionWithFreeze, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, cyclesPerTc, setCyclesPerTc, setRibbonTab },
     dialog: { treeAddMenuOpen, setTreeAddMenuOpen, treeMoreMenuOpen, setTreeMoreMenuOpen, bulkRegistrationText, setBulkRegistrationText, bulkRegistrationGroupId, setBulkRegistrationGroupId, bulkRegistrationStatus, setBulkRegistrationStatus, setBulkRegistrationVisible, setHierarchyVisible, contextMenu, setContextMenu, closeTreeAddMenu, closeTreeMoreMenu, bottomResetToken, setBottomResetToken, inspectorResetToken, setInspectorResetToken, setInspectorVisible },
     annotationTargetSignalId,
     referenceClockName: referenceClockSignal?.display.name,
@@ -618,7 +628,7 @@ export function MinimalCycleView() {
     actions,
     setRuntimeDiagnostics,
     navigateProblem,
-    ai: { getZoom: timelineNavigation.getZoom, fitAll: timelineNavigation.fitAll },
+    ai: { getZoom: timelineNavigation.getZoom, fitAll: timelineNavigation.fitAll, fitSelection: timelineNavigation.fitSelection },
   });
   const capabilities = deriveSelectionCapabilities(snapshot.document, selection.state);
   const { hasSelectedSignal, hasSelectedEntity, hasSelectedClipboard, hasDeletableSelection, canMoveUp, canMoveDown } = capabilities;
@@ -635,6 +645,8 @@ export function MinimalCycleView() {
       range: timelineRange,
       history,
       zoom,
+      cyclesPerTc,
+      onCyclesPerTcChange: setCyclesPerTc,
       gridEnabled,
       snapEnabled,
       rulerEnabled,
@@ -706,7 +718,7 @@ export function MinimalCycleView() {
       onMoveDown: () => moveSelection(1),
       onVisibility: setSelectionVisibility,
       onRange: (range: { readonly start: number; readonly end: number }) => { setRangeSelectionActive(true); setTimelineRange(range); },
-      onViewIntent: (intent: "fit-all" | "open-timeline") => { if (intent === "fit-all") timelineNavigation.fitAll(); else setRibbonTab("Timeline"); },
+      onViewIntent: (intent: "fit-all" | "fit-selection" | "open-timeline") => { if (intent === "fit-all") timelineNavigation.fitAll(); else if (intent === "fit-selection") timelineNavigation.fitSelection(); else setRibbonTab("Timeline"); },
       onCreateAnnotation: createSelectedAnnotation,
       onArrowPick: (annotationType: Parameters<typeof armArrowPick.current>[0]) => armArrowPick.current(annotationType),
       onZoom: timelineNavigation.zoomBy,

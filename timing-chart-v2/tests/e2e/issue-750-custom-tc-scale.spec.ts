@@ -6,7 +6,10 @@ test("Custom TC scale accepts only a positive integer and never applies an inval
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   const select = page.getByTestId("transaction-tc-scale");
   await expect(select).toHaveValue("10");
-  const history = await page.getByTestId("history-status").innerText();
+  const history = page.getByTestId("history-status");
+  await expect(history).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
 
   await select.selectOption("__custom__");
   const input = page.getByTestId("transaction-tc-scale-custom-input");
@@ -19,14 +22,17 @@ test("Custom TC scale accepts only a positive integer and never applies an inval
     await expect(page.getByRole("alert")).toBeVisible();
   }
   // Invalid drafts never touched the mapping or the document.
-  await expect(page.getByTestId("history-status")).toHaveText(history);
+  await expect(history).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
 
   await input.fill("7");
   await expect(applyButton).toBeEnabled();
   await applyButton.click();
-  // The mapping is applied (cyclesPerTC is a canonical Time Scale setting, same as choosing a preset) and the readout switches back to
-  // the select, now showing 7 as a real (selected) option.
+  // The view preference is applied and the readout switches back to the select.
   await expect(select).toBeVisible();
   await expect(select).toHaveValue("7");
-  await expect.poll(() => page.getByTestId("history-status").innerText()).not.toBe(history);
+  await expect(history).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
 });

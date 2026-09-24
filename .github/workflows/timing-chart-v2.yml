@@ -70,7 +70,7 @@ jobs:
       - run: npm run check
       - run: npm audit --audit-level=high
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - run: npm run test:e2e:pr
       - name: Deliberate failure enforcement probe
         if: inputs.deliberate_failure == true
         run: |
@@ -83,7 +83,7 @@ jobs:
           path: timing-chart-v2/test-results
           retention-days: 2
 
-  nightly-performance:
+  nightly-validation:
     if: github.event_name == 'schedule' || inputs.performance_scale == 'nightly'
     runs-on: ubuntu-latest
     defaults:
@@ -102,6 +102,7 @@ jobs:
       - run: npm run check
       - run: npm audit --audit-level=high
       - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
       - run: npm run test:perf:nightly
       - uses: actions/upload-artifact@v4
         if: failure()

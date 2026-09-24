@@ -1,5 +1,5 @@
 import type { SemanticCommand } from "@timing-chart-v2/commands";
-import type { CanonicalDocument, GroupId, SignalId, ValueSignal } from "@timing-chart-v2/schema";
+import { valueSignalValueProblem, type AnnotationId, type AnnotationType, type CanonicalDocument, type GroupId, type SignalId, type SignalRole, type TimeGroup, type TimeGroupId, type TransactionGroupId, type TransactionId, type TransactionPhase, type ValueSignal } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { createAnnotation } from "./create-annotation.js";
@@ -7,7 +7,7 @@ import { createAnnotation } from "./create-annotation.js";
 /** Provider output is either an executable semantic command proposal or an
  * explicit view-only intent handled by the current surface. */
 export type AIProposalKind = "semantic-command" | "view-only" | "sva-spec";
-export type AIViewIntent = "fit-all" | "open-timeline";
+export type AIViewIntent = "fit-all" | "fit-selection" | "open-timeline";
 
 export type AIProposal = Readonly<{
   kind: AIProposalKind;
@@ -32,6 +32,350 @@ export type AIProposalResult = Readonly<
   | { ok: true; proposal: AIProposal }
   | { ok: false; message: string }
 >;
+
+/** Build a narrow typed proposal from stable semantic identifiers. The
+ * resulting command still enters the ordinary Preview/Validate/Apply path. */
+export function buildTypedSignalProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  if (tool === "propose_create_signal") {
+    const { name, type, role, groupId } = args;
+    if (typeof name !== "string" || !name.trim()) return { ok: false, message: "propose_create_signal requires a non-empty name." };
+    if (type !== "binary" && type !== "logic" && type !== "bus" && type !== "state" && type !== "event" && type !== "pulse") return { ok: false, message: "type must be binary, logic, bus, state, event, or pulse." };
+    if (role !== "input" && role !== "output" && role !== "internal") return { ok: false, message: "role must be input, output, or internal." };
+    if (typeof groupId !== "string" || !groupId) return { ok: false, message: "propose_create_signal requires a stable groupId." };
+    const group = document.signalGroups.find((item) => item.id === groupId);
+    if (!group) return { ok: false, message: `Signal Group '${groupId}' does not exist in the current document.` };
+    const width = args.width;
+    if (type === "bus" && width !== undefined && (!Number.isSafeInteger(width) || (width as number) < 1)) return { ok: false, message: "width must be a positive integer for a bus signal." };
+    if (type !== "bus" && width !== undefined) return { ok: false, message: "width is supported only for bus signals." };
+    const defaultValue: string | number = type === "bus" ? "00" : type === "state" ? "IDLE" : type === "event" ? "NONE" : 0;
+    const initialValue = args.initialValue ?? defaultValue;
+    if (typeof initialValue !== "string" && (typeof initialValue !== "number" || !Number.isFinite(initialValue))) return { ok: false, message: "initialValue must be a finite number or string." };
+    const valueProblem = valueSignalValueProblem(type, initialValue);
+    if (valueProblem) return { ok: false, message: `initialValue is invalid: ${valueProblem}` };
+    const normalizedName = name.trim();
+    const signal: ValueSignal = { id: nextEntityId("signal", document) as SignalId, name: normalizedName, type, role: role as SignalRole, source: { instancePath: [], signalName: normalizedName }, display: { name: normalizedName }, values: [{ start: 0, value: initialValue }], ...(type === "bus" ? { width: (width as number | undefined) ?? 8, displayFormat: "hex" as const } : {}) };
+    return { ok: true, proposal: proposal(revision, `Create ${type} signal ${normalizedName} in ${group.name}`, [command({ type: "signal.create", signal, targetGroupId: group.id, index: group.rows.length }, "typed_create_signal")]) };
+  }
+  const signalId = args.signalId;
+  if (tool !== "propose_rename_signal" && tool !== "propose_update_signal" && tool !== "propose_move_signal") return { ok: false, message: `Unsupported typed proposal '${tool}'.` };
+  const name = args.name;
+  if (typeof signalId !== "string" || signalId.length === 0) return { ok: false, message: `${tool} requires a stable signalId.` };
+  const signal = document.signals.find((item) => item.id === signalId && item.type !== "commentRow");
+  if (!signal) return { ok: false, message: `Signal '${signalId}' does not exist in the current document.` };
+  if (tool === "propose_move_signal") {
+    const targetGroupId = args.targetGroupId;
+    if (typeof targetGroupId !== "string" || targetGroupId.length === 0) return { ok: false, message: "propose_move_signal requires a stable targetGroupId." };
+    const targetGroup = document.signalGroups.find((group) => group.id === targetGroupId);
+    if (!targetGroup) return { ok: false, message: `Signal Group '${targetGroupId}' does not exist in the current document.` };
+    const index = args.index === undefined ? targetGroup.rows.length : args.index;
+    if (!Number.isInteger(index) || (index as number) < 0) return { ok: false, message: "index must be a non-negative integer." };
+    return { ok: true, proposal: proposal(revision, `Move ${signal.display.name} to ${targetGroup.name}`, [command({ type: "signal.move", signalId: signal.id, targetGroupId: targetGroup.id, index: index as number }, "typed_move_signal")]) };
+  }
+  if (tool === "propose_update_signal") {
+    const role = args.role;
+    const visible = args.visible;
+    if (role !== undefined && role !== "input" && role !== "output" && role !== "internal") return { ok: false, message: "role must be input, output, or internal." };
+    if (visible !== undefined && typeof visible !== "boolean") return { ok: false, message: "visible must be a boolean." };
+    if (role === undefined && visible === undefined) return { ok: false, message: "propose_update_signal requires role or visible." };
+    const nextRole = (role ?? signal.role) as typeof signal.role;
+    const commandFields = { type: "signal.updateProperties" as const, signalId: signal.id, name: signal.name, role: nextRole, ...(visible === undefined ? {} : { visible }) };
+    return { ok: true, proposal: proposal(revision, `Update ${signal.display.name}${role === undefined ? " visibility" : ` role to ${role}`}${visible === undefined ? "" : ` and visibility to ${visible ? "shown" : "hidden"}`}`, [command(commandFields, "typed_update_signal")]) };
+  }
+  if (typeof name !== "string" || name.trim().length === 0) return { ok: false, message: "propose_rename_signal requires a non-empty name." };
+  const normalizedName = name.trim();
+  return { ok: true, proposal: proposal(revision, `Rename ${signal.display.name} to ${normalizedName}`, [command({ type: "signal.rename", signalId: signal.id, name: normalizedName }, "typed_rename_signal")]) };
+}
+
+export function buildTypedTimelineProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  const integer = (key: string): number | undefined => Number.isSafeInteger(args[key]) ? args[key] as number : undefined;
+  const commandFor = (fields: object, summary: string, scope: string): AIProposalResult => ({ ok: true, proposal: proposal(revision, summary, [command(fields, scope)]) });
+  if (tool === "propose_insert_cycles") {
+    const at = integer("at"); const count = integer("count");
+    if (at === undefined || count === undefined || at < 0 || at > document.timeline.cycleCount || count <= 0) return { ok: false, message: "propose_insert_cycles requires integer at within the timeline and positive integer count." };
+    return commandFor({ type: "timeline.insert", at, count }, `Insert ${count} cycles at ${at}`, "typed_insert_cycles");
+  }
+  if (tool === "propose_delete_cycles") {
+    const start = integer("start"); const end = integer("end");
+    if (start === undefined || end === undefined || start < 0 || end <= start || end > document.timeline.cycleCount) return { ok: false, message: "propose_delete_cycles requires integer boundaries within the timeline and end > start." };
+    return commandFor({ type: "timeline.delete", start, end }, `Delete cycles ${start}–${end}`, "typed_delete_cycles");
+  }
+  if (tool === "propose_move_range") {
+    const start = integer("start"); const end = integer("end"); const to = integer("to");
+    if (start === undefined || end === undefined || to === undefined || start < 0 || end <= start || end > document.timeline.cycleCount || to < 0 || to > document.timeline.cycleCount) return { ok: false, message: "propose_move_range requires integer source/target boundaries within the timeline and end > start." };
+    return commandFor({ type: "timeline.moveRange", start, end, to }, `Move cycles ${start}–${end} to ${to}`, "typed_move_range");
+  }
+  if (tool === "propose_duplicate_range") {
+    const start = integer("start"); const end = integer("end"); const at = integer("at");
+    if (start === undefined || end === undefined || at === undefined || start < 0 || end <= start || end > document.timeline.cycleCount || at < 0 || at > document.timeline.cycleCount) return { ok: false, message: "propose_duplicate_range requires an integer source range and insertion boundary within the timeline." };
+    return commandFor({ type: "timeline.duplicateRange", start, end, at }, `Duplicate cycles ${start}–${end} at ${at}`, "typed_duplicate_range");
+  }
+  return { ok: false, message: `Unsupported typed timeline proposal '${tool}'.` };
+}
+
+export function buildTypedSignalGroupProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  if (tool === "propose_create_signal_group") {
+    const name = args.name;
+    if (typeof name !== "string" || name.trim().length === 0) return { ok: false, message: "propose_create_signal_group requires a non-empty name." };
+    const normalizedName = name.trim();
+    const id = nextEntityId("group", document) as GroupId;
+    const group = { id, name: normalizedName, rows: [] };
+    return { ok: true, proposal: proposal(revision, `Create Signal Group ${normalizedName}`, [command({ type: "group.create", group, index: document.signalGroups.length }, "typed_create_signal_group")]) };
+  }
+  if (tool === "propose_rename_signal_group") {
+    const groupId = args.groupId;
+    const name = args.name;
+    if (typeof groupId !== "string" || groupId.length === 0) return { ok: false, message: "propose_rename_signal_group requires a stable groupId." };
+    if (typeof name !== "string" || name.trim().length === 0) return { ok: false, message: "propose_rename_signal_group requires a non-empty name." };
+    const group = document.signalGroups.find((item) => item.id === groupId);
+    if (!group) return { ok: false, message: `Signal Group '${groupId}' does not exist in the current document.` };
+    const normalizedName = name.trim();
+    return { ok: true, proposal: proposal(revision, `Rename ${group.name} to ${normalizedName}`, [command({ type: "group.rename", groupId: group.id, name: normalizedName }, "typed_rename_signal_group")]) };
+  }
+  if (tool === "propose_move_signal_group" || tool === "propose_delete_signal_group") {
+    const groupId = args.groupId;
+    if (typeof groupId !== "string" || groupId.length === 0) return { ok: false, message: `${tool} requires a stable groupId.` };
+    const groupIndex = document.signalGroups.findIndex((item) => item.id === groupId);
+    const group = document.signalGroups[groupIndex];
+    if (!group) return { ok: false, message: `Signal Group '${groupId}' does not exist in the current document.` };
+    if (tool === "propose_move_signal_group") {
+      const index = args.index;
+      const maximumIndex = document.signalGroups.length - 1;
+      if (!Number.isSafeInteger(index) || (index as number) < 0 || (index as number) > maximumIndex) return { ok: false, message: `index must be an integer from 0 to ${maximumIndex} in the post-removal group list.` };
+      return { ok: true, proposal: proposal(revision, `Move Signal Group ${group.name} to position ${(index as number) + 1}`, [command({ type: "group.move", groupId: group.id, index: index as number }, "typed_move_signal_group")]) };
+    }
+    if (group.rows.length > 0 || (group.spacers?.length ?? 0) > 0) return { ok: false, message: `Signal Group '${group.name}' is not empty; only empty Signal Groups can be deleted.` };
+    return { ok: true, proposal: proposal(revision, `Delete empty Signal Group ${group.name}`, [command({ type: "group.delete", groupId: group.id }, "typed_delete_signal_group")]) };
+  }
+  return { ok: false, message: `Unsupported typed Signal Group proposal '${tool}'.` };
+}
+
+export function buildTypedTransactionGroupProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  const groups = document.transactionGroups ?? [];
+  if (tool === "propose_create_transaction_group") {
+    const name = args.name;
+    const color = args.color;
+    if (typeof name !== "string" || !name.trim()) return { ok: false, message: "propose_create_transaction_group requires a non-empty name." };
+    if (color !== undefined && (typeof color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(color))) return { ok: false, message: "color must be a six-digit hexadecimal color when supplied." };
+    const group = { id: nextEntityId("transactionGroup", document) as TransactionGroupId, name: name.trim(), order: groups.length, ...(typeof color === "string" ? { color } : {}) };
+    return { ok: true, proposal: proposal(revision, `Create Transaction Group ${group.name}`, [command({ type: "transactionGroup.create", group }, "typed_create_transaction_group")]) };
+  }
+  const groupId = args.groupId;
+  if (typeof groupId !== "string" || !groupId) return { ok: false, message: `${tool} requires a stable groupId.` };
+  const group = groups.find((item) => item.id === groupId);
+  if (!group) return { ok: false, message: `Transaction Group '${groupId}' does not exist in the current document.` };
+  if (tool === "propose_rename_transaction_group") {
+    const name = args.name;
+    if (typeof name !== "string" || !name.trim()) return { ok: false, message: "propose_rename_transaction_group requires a non-empty name." };
+    return { ok: true, proposal: proposal(revision, `Rename Transaction Group ${group.name} to ${name.trim()}`, [command({ type: "transactionGroup.rename", groupId: group.id, name: name.trim() }, "typed_rename_transaction_group")]) };
+  }
+  if (tool === "propose_delete_transaction_group") {
+    const affectedCount = document.transactions.filter((transaction) => transaction.groupId === group.id).length;
+    return { ok: true, proposal: proposal(revision, `Delete Transaction Group ${group.name} and ungroup ${affectedCount} Transaction${affectedCount === 1 ? "" : "s"}`, [command({ type: "transactionGroup.delete", groupId: group.id }, "typed_delete_transaction_group")]) };
+  }
+  return { ok: false, message: `Unsupported typed Transaction Group proposal '${tool}'.` };
+}
+
+export function buildTypedTimeGroupProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  const integer = (key: string): number | undefined => Number.isSafeInteger(args[key]) ? args[key] as number : undefined;
+  const validRange = (start: number | undefined, end: number | undefined) => start !== undefined && end !== undefined && start >= 0 && start < end && end <= document.timeline.cycleCount;
+  if (tool === "propose_create_time_group") {
+    const name = args.name;
+    const start = integer("startCycle"); const end = integer("endCycle");
+    if (typeof name !== "string" || !name.trim() || !validRange(start, end)) return { ok: false, message: "propose_create_time_group requires a non-empty name and integer source-cycle boundaries within the timeline with endCycle > startCycle." };
+    if (args.category !== undefined && typeof args.category !== "string") return { ok: false, message: "category must be a string when supplied." };
+    if (args.comment !== undefined && typeof args.comment !== "string") return { ok: false, message: "comment must be a string when supplied." };
+    const timeGroup: TimeGroup = { id: nextEntityId("time", document) as TimeGroupId, name: name.trim(), start: start!, end: end!, ...(typeof args.category === "string" ? { category: args.category } : {}), ...(typeof args.comment === "string" ? { comment: args.comment } : {}), presentation: { collapsed: false, foldStyle: "none" } };
+    return { ok: true, proposal: proposal(revision, `Create Time Group ${timeGroup.name} at source cycles ${start}–${end}`, [command({ type: "timeGroup.create", timeGroup }, "typed_create_time_group")]) };
+  }
+  const timeGroupId = args.timeGroupId;
+  if (typeof timeGroupId !== "string" || !timeGroupId) return { ok: false, message: `${tool} requires a stable timeGroupId.` };
+  const group = document.timeGroups.find((item) => item.id === timeGroupId);
+  if (!group) return { ok: false, message: `Time Group '${timeGroupId}' does not exist in the current document.` };
+  if (tool === "propose_delete_time_group") {
+    const promotedChildren = document.timeGroups.filter((item) => item.parentId === group.id).length;
+    const ownedAnchors = document.timeline.labelAnchors.filter((anchor) => anchor.id === group.presentation?.resumeLabelAnchorId || anchor.ownerTimeGroupId === group.id).length;
+    return { ok: true, proposal: proposal(revision, `Delete Time Group ${group.name}; promote ${promotedChildren} child group${promotedChildren === 1 ? "" : "s"} and remove ${ownedAnchors} owned Label Anchor${ownedAnchors === 1 ? "" : "s"}`, [command({ type: "timeGroup.delete", timeGroupId: group.id }, "typed_delete_time_group")]) };
+  }
+  if (tool === "propose_update_time_group") {
+    const name = args.name;
+    if (name !== undefined && (typeof name !== "string" || !name.trim())) return { ok: false, message: "name must be non-empty when supplied." };
+    const start = args.startCycle === undefined ? group.start : integer("startCycle");
+    const end = args.endCycle === undefined ? group.end : integer("endCycle");
+    if (!validRange(start, end)) return { ok: false, message: "startCycle/endCycle must be integer source-cycle boundaries within the timeline with endCycle > startCycle." };
+    if (args.category !== undefined && typeof args.category !== "string") return { ok: false, message: "category must be a string when supplied." };
+    if (args.comment !== undefined && typeof args.comment !== "string") return { ok: false, message: "comment must be a string when supplied." };
+    if (name === undefined && args.startCycle === undefined && args.endCycle === undefined && args.category === undefined && args.comment === undefined) return { ok: false, message: "propose_update_time_group requires at least one changed field." };
+    const nextName = typeof name === "string" ? name.trim() : group.name;
+    const category = args.category === undefined ? group.category : args.category as string;
+    const comment = args.comment === undefined ? group.comment : args.comment as string;
+    const presentation = group.presentation;
+    return { ok: true, proposal: proposal(revision, `Update Time Group ${group.name}`, [command({ type: "timeGroup.update", timeGroupId: group.id, name: nextName, start: start!, end: end!, ...(category === undefined ? {} : { category }), ...(comment === undefined ? {} : { comment }), ...(presentation === undefined ? {} : { presentation }) }, "typed_update_time_group")]) };
+  }
+  return { ok: false, message: `Unsupported typed Time Group proposal '${tool}'.` };
+}
+
+export function buildTypedTransactionProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  const transactionId = args.transactionId;
+  if (tool === "propose_create_transaction") {
+    const name = args.name; const start = args.start; const end = args.end;
+    if (typeof name !== "string" || !name.trim() || !Number.isSafeInteger(start) || !Number.isSafeInteger(end) || (start as number) < 0 || (end as number) <= (start as number) || (end as number) > document.timeline.cycleCount) return { ok: false, message: "propose_create_transaction requires a name and integer source-cycle boundaries within the timeline with end > start." };
+    const groupId = args.groupId;
+    if (groupId !== undefined && (typeof groupId !== "string" || !document.transactionGroups?.some((group) => group.id === groupId))) return { ok: false, message: `Transaction Group '${String(groupId)}' does not exist in the current document.` };
+    if (args.laneId !== undefined && (typeof args.laneId !== "string" || !args.laneId.trim())) return { ok: false, message: "laneId must be a non-empty string when supplied." };
+    if (args.color !== undefined && (typeof args.color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(args.color))) return { ok: false, message: "color must be a six-digit hexadecimal color." };
+    if (args.description !== undefined && typeof args.description !== "string") return { ok: false, message: "description must be a string when supplied." };
+    const phasesInput = args.phases;
+    if (phasesInput !== undefined && !Array.isArray(phasesInput)) return { ok: false, message: "phases must be an array of name/start/end source-cycle ranges." };
+    const phases: TransactionPhase[] = [];
+    for (const [index, item] of (phasesInput ?? []).entries()) {
+      if (typeof item !== "object" || item === null) return { ok: false, message: `phases[${index}] must contain a name, start, and end.` };
+      const phase = item as Record<string, unknown>;
+      if (typeof phase.name !== "string" || !phase.name.trim() || !Number.isSafeInteger(phase.start) || !Number.isSafeInteger(phase.end) || (phase.start as number) < (start as number) || (phase.end as number) > (end as number) || (phase.end as number) <= (phase.start as number)) return { ok: false, message: `phases[${index}] must be a named, non-empty source-cycle range inside the Transaction.` };
+      phases.push({ name: phase.name.trim(), start: phase.start as number, end: phase.end as number });
+    }
+    const orderedPhases = [...phases].sort((a, b) => a.start - b.start || a.end - b.end);
+    if (orderedPhases.some((phase, index) => index > 0 && phase.start < orderedPhases[index - 1]!.end)) return { ok: false, message: "Transaction Phases must not overlap." };
+    const linkedInput = args.linkedSignalIds;
+    if (linkedInput !== undefined && !Array.isArray(linkedInput)) return { ok: false, message: "linkedSignalIds must be an array of stable Signal IDs." };
+    const linkedSignalIds = (linkedInput ?? []) as unknown[];
+    if (linkedSignalIds.some((id) => typeof id !== "string" || !document.signals.some((signal) => signal.id === id && signal.type !== "commentRow"))) return { ok: false, message: "Every linkedSignalId must identify an existing timing Signal." };
+    if (new Set(linkedSignalIds).size !== linkedSignalIds.length) return { ok: false, message: "linkedSignalIds cannot contain duplicates." };
+    const createdId = nextEntityId("transaction", document) as TransactionId;
+    const created = { id: createdId, name: name.trim(), start: start as number, end: end as number, laneId: typeof args.laneId === "string" && args.laneId.trim() ? args.laneId.trim() : "lane_0", ...(typeof groupId === "string" ? { groupId: groupId as never } : {}), ...(typeof args.color === "string" ? { color: args.color } : {}), ...(typeof args.description === "string" ? { description: args.description } : {}) };
+    const commands: SemanticCommand[] = [command({ type: "transaction.create", transaction: created }, "typed_create_transaction")];
+    for (const phase of orderedPhases) commands.push(command({ type: "transaction.phaseAdd", transactionId: createdId, phase }, "typed_add_transaction_phase"));
+    for (const signalId of linkedSignalIds as SignalId[]) commands.push(command({ type: "transaction.linkSignal", transactionId: createdId, signalId }, "typed_link_transaction_signal"));
+    const detail = [phases.length ? `${phases.length} Phase${phases.length === 1 ? "" : "s"}` : undefined, linkedSignalIds.length ? `${linkedSignalIds.length} linked Signal${linkedSignalIds.length === 1 ? "" : "s"}` : undefined].filter(Boolean).join(" and ");
+    return { ok: true, proposal: proposal(revision, `Create Transaction ${created.name}${detail ? ` with ${detail}` : ""}`, commands) };
+  }
+  if (typeof transactionId !== "string" || !transactionId) return { ok: false, message: `${tool} requires a stable transactionId.` };
+  const transaction = document.transactions.find((item) => item.id === transactionId);
+  if (!transaction) return { ok: false, message: `Transaction '${transactionId}' does not exist in the current document.` };
+  if (tool === "propose_update_transaction") {
+    const name = args.name === undefined ? transaction.name : args.name;
+    const start = args.startCycle === undefined ? transaction.start : args.startCycle;
+    const end = args.endCycle === undefined ? transaction.end : args.endCycle;
+    const laneId = args.laneId;
+    const groupId = args.groupId;
+    const color = args.color;
+    const description = args.description;
+    if (typeof name !== "string" || !name.trim() || !Number.isSafeInteger(start) || !Number.isSafeInteger(end) || (start as number) < 0 || (end as number) <= (start as number) || (end as number) > document.timeline.cycleCount) return { ok: false, message: "propose_update_transaction requires a non-empty name and valid integer source-cycle boundaries." };
+    if (laneId !== undefined && (typeof laneId !== "string" || !laneId.trim())) return { ok: false, message: "laneId must be a non-empty string when supplied." };
+    if (groupId !== undefined && (typeof groupId !== "string" || !document.transactionGroups?.some((group) => group.id === groupId))) return { ok: false, message: `Transaction Group '${String(groupId)}' does not exist in the current document.` };
+    if (color !== undefined && (typeof color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(color))) return { ok: false, message: "color must be a six-digit hexadecimal color." };
+    if (description !== undefined && typeof description !== "string") return { ok: false, message: "description must be a string when supplied." };
+    if (name === transaction.name && start === transaction.start && end === transaction.end && laneId === undefined && groupId === undefined && color === undefined && description === undefined) return { ok: false, message: "propose_update_transaction requires at least one changed field." };
+    const fields = { type: "transaction.update" as const, transactionId: transaction.id, name: name.trim(), start: start as number, end: end as number, ...(laneId === undefined ? {} : { laneId: (laneId as string).trim() }), ...(groupId === undefined ? {} : { groupId: groupId as never }), ...(color === undefined ? {} : { color: color as string }), ...(description === undefined ? {} : { description: description as string }) };
+    return { ok: true, proposal: proposal(revision, `Update Transaction ${transaction.name}`, [command(fields, "typed_update_transaction")]) };
+  }
+  if (tool === "propose_add_phase" || tool === "propose_update_phase") {
+    const name = args.name;
+    const start = args.startCycle;
+    const end = args.endCycle;
+    if (typeof name !== "string" || !name.trim() || !Number.isSafeInteger(start) || !Number.isSafeInteger(end) || (start as number) < transaction.start || (end as number) > transaction.end || (end as number) <= (start as number)) return { ok: false, message: `${tool} requires a name and integer source-cycle boundaries inside the Transaction.` };
+    const phase = { name: name.trim(), start: start as number, end: end as number };
+    if (tool === "propose_add_phase") return { ok: true, proposal: proposal(revision, `Add Phase ${phase.name} to ${transaction.name}`, [command({ type: "transaction.phaseAdd", transactionId: transaction.id, phase }, "typed_add_phase")]) };
+    const phaseIndex = args.phaseIndex;
+    if (!Number.isSafeInteger(phaseIndex) || (phaseIndex as number) < 0 || (phaseIndex as number) >= (transaction.phases?.length ?? 0)) return { ok: false, message: "propose_update_phase requires a phaseIndex that exists in the Transaction." };
+    return { ok: true, proposal: proposal(revision, `Update Phase ${phase.name} in ${transaction.name}`, [command({ type: "transaction.phaseUpdate", transactionId: transaction.id, phaseIndex: phaseIndex as number, phase }, "typed_update_phase")]) };
+  }
+  if (tool === "propose_delete_phase") {
+    const phaseIndex = args.phaseIndex;
+    if (!Number.isSafeInteger(phaseIndex) || (phaseIndex as number) < 0 || (phaseIndex as number) >= (transaction.phases?.length ?? 0)) return { ok: false, message: "propose_delete_phase requires a phaseIndex that exists in the Transaction." };
+    const phase = transaction.phases![phaseIndex as number]!;
+    return { ok: true, proposal: proposal(revision, `Delete Phase ${phase.name} from ${transaction.name}`, [command({ type: "transaction.phaseDelete", transactionId: transaction.id, phaseIndex: phaseIndex as number }, "typed_delete_phase")]) };
+  }
+  if (tool === "propose_link_signal" || tool === "propose_unlink_signal") {
+    const signalId = args.signalId;
+    if (typeof signalId !== "string" || !document.signals.some((signal) => signal.id === signalId && signal.type !== "commentRow")) return { ok: false, message: `Signal '${String(signalId ?? "")}' does not exist in the current document.` };
+    const linked = (transaction.linkedSignals ?? []).includes(signalId as SignalId);
+    if (tool === "propose_link_signal" && linked) return { ok: false, message: `Signal '${signalId}' is already linked to this Transaction.` };
+    if (tool === "propose_unlink_signal" && !linked) return { ok: false, message: `Signal '${signalId}' is not linked to this Transaction.` };
+    const signal = document.signals.find((item) => item.id === signalId)!;
+    return { ok: true, proposal: proposal(revision, `${tool === "propose_link_signal" ? "Link" : "Unlink"} ${signal.display.name} ${tool === "propose_link_signal" ? "to" : "from"} ${transaction.name}`, [command({ type: tool === "propose_link_signal" ? "transaction.linkSignal" : "transaction.unlinkSignal", transactionId: transaction.id, signalId: signal.id }, tool === "propose_link_signal" ? "typed_link_signal" : "typed_unlink_signal")]) };
+  }
+  if (tool === "propose_move_transaction") {
+    const start = args.start;
+    if (!Number.isSafeInteger(start) || (start as number) < 0 || (start as number) + transaction.end - transaction.start > document.timeline.cycleCount) return { ok: false, message: "propose_move_transaction requires an integer source-cycle start that keeps the Transaction inside the timeline." };
+    return { ok: true, proposal: proposal(revision, `Move ${transaction.name} to cycle ${start}`, [command({ type: "transaction.move", transactionId: transaction.id, start: start as number }, "typed_move_transaction")]) };
+  }
+  if (tool === "propose_resize_transaction") {
+    const edge = args.edge; const value = args.value;
+    if ((edge !== "start" && edge !== "end") || !Number.isSafeInteger(value) || (value as number) < 0 || (value as number) > document.timeline.cycleCount) return { ok: false, message: "propose_resize_transaction requires edge start/end and an integer source-cycle boundary within the timeline." };
+    return { ok: true, proposal: proposal(revision, `Resize ${transaction.name} ${edge} to ${value}`, [command({ type: "transaction.resize", transactionId: transaction.id, edge, value: value as number }, "typed_resize_transaction")]) };
+  }
+  if (tool === "propose_delete_transaction") return { ok: true, proposal: proposal(revision, `Delete ${transaction.name}`, [command({ type: "transaction.delete", transactionId: transaction.id }, "typed_delete_transaction")]) };
+  return { ok: false, message: `Unsupported typed Transaction proposal '${tool}'.` };
+}
+
+export function buildTypedBookmarkProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  const cycle = args.cycle;
+  if (tool === "propose_create_bookmark") {
+    const name = args.name;
+    if (typeof name !== "string" || !name.trim() || !Number.isSafeInteger(cycle) || (cycle as number) < 0 || (cycle as number) >= document.timeline.cycleCount) return { ok: false, message: "propose_create_bookmark requires a name and integer source cycle within the timeline." };
+    const bookmark = { id: nextEntityId("bookmark", document), name: name.trim(), start: cycle as number, ...(typeof args.comment === "string" && args.comment.length > 0 ? { comment: args.comment } : {}) };
+    return { ok: true, proposal: proposal(revision, `Create Bookmark ${bookmark.name} at cycle ${bookmark.start}`, [command({ type: "bookmark.create", bookmark }, "typed_create_bookmark")]) };
+  }
+  const bookmarkId = args.bookmarkId;
+  if (typeof bookmarkId !== "string" || bookmarkId.length === 0) return { ok: false, message: `${tool} requires a stable bookmarkId.` };
+  const bookmark = document.bookmarks.find((item) => item.id === bookmarkId);
+  if (!bookmark) return { ok: false, message: `Bookmark '${bookmarkId}' does not exist in the current document.` };
+  if (tool === "propose_move_bookmark") {
+    if (!Number.isSafeInteger(cycle) || (cycle as number) < 0 || (cycle as number) >= document.timeline.cycleCount) return { ok: false, message: "propose_move_bookmark requires an integer source cycle within the timeline." };
+    return { ok: true, proposal: proposal(revision, `Move Bookmark ${bookmark.name} to cycle ${cycle}`, [command({ type: "bookmark.move", bookmarkId: bookmark.id, start: cycle as number }, "typed_move_bookmark")]) };
+  }
+  if (tool === "propose_update_bookmark") {
+    const name = args.name === undefined ? bookmark.name : args.name;
+    const nextCycle = args.cycle === undefined ? bookmark.start : args.cycle;
+    const comment = args.comment === undefined ? bookmark.comment : args.comment;
+    if (typeof name !== "string" || !name.trim()) return { ok: false, message: "name must be a non-empty string when supplied." };
+    if (!Number.isSafeInteger(nextCycle) || (nextCycle as number) < 0 || (nextCycle as number) >= document.timeline.cycleCount) return { ok: false, message: "cycle must be an integer source cycle within the timeline." };
+    if (comment !== undefined && typeof comment !== "string") return { ok: false, message: "comment must be a string when supplied." };
+    if (name === bookmark.name && nextCycle === bookmark.start && comment === bookmark.comment) return { ok: false, message: "propose_update_bookmark requires at least one changed field." };
+    return { ok: true, proposal: proposal(revision, `Update Bookmark ${bookmark.name}`, [command({ type: "bookmark.update", bookmarkId: bookmark.id, name: name.trim(), start: nextCycle as number, ...(comment === undefined ? {} : { comment }) }, "typed_update_bookmark")]) };
+  }
+  if (tool === "propose_delete_bookmark") return { ok: true, proposal: proposal(revision, `Delete Bookmark ${bookmark.name}`, [command({ type: "bookmark.delete", bookmarkId: bookmark.id }, "typed_delete_bookmark")]) };
+  return { ok: false, message: `Unsupported typed Bookmark proposal '${tool}'.` };
+}
+
+/** Annotation edits are expressed in stable semantic IDs and source cycles;
+ * they only create a Preview and still pass through the normal validator. */
+export function buildTypedAnnotationProposal(document: CanonicalDocument, revision: number, tool: string, args: Readonly<Record<string, unknown>>): AIProposalResult {
+  if (tool === "propose_create_annotation") {
+    const type = args.type;
+    const signalId = args.signalId;
+    const start = args.start;
+    const end = args.end;
+    const supportedTypes: readonly AnnotationType[] = ["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency", "timingRegion", "ghostTrace", "rectangle", "ellipse", "connector", "textbox"];
+    if (typeof type !== "string" || !supportedTypes.includes(type as AnnotationType)) return { ok: false, message: "propose_create_annotation requires a supported Annotation type." };
+    if (typeof signalId !== "string" || !document.signals.some((signal) => signal.id === signalId && signal.type !== "commentRow")) return { ok: false, message: `Signal '${String(signalId ?? "")}' does not exist in the current document.` };
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || (start as number) < 0 || (end as number) <= (start as number) || (end as number) > document.timeline.cycleCount) return { ok: false, message: "propose_create_annotation requires integer source-cycle boundaries within the timeline with end > start." };
+    const created = createAnnotation(type as AnnotationType, signalId as SignalId, { start: start as number, end: end as number }, document);
+    const label = args.label;
+    const annotation = typeof label === "string" && label.trim() ? { ...created, label: label.trim() } : created;
+    return { ok: true, proposal: proposal(revision, `Create ${annotation.type} Annotation ${annotation.label}`, [command({ type: "annotation.create", annotation }, "typed_create_annotation")]) };
+  }
+  const annotationId = args.annotationId;
+  if (typeof annotationId !== "string" || !annotationId) return { ok: false, message: `${tool} requires a stable annotationId.` };
+  const annotation = document.annotations.find((item) => item.id === annotationId);
+  if (!annotation) return { ok: false, message: `Annotation '${annotationId}' does not exist in the current document.` };
+  if (tool === "propose_delete_annotation") return { ok: true, proposal: proposal(revision, `Delete Annotation ${annotation.label}`, [command({ type: "annotation.delete", annotationId: annotation.id }, "typed_delete_annotation")]) };
+  if (tool === "propose_update_annotation") {
+    const label = args.label;
+    const visible = args.visible;
+    const color = args.color;
+    if (label !== undefined && (typeof label !== "string" || !label.trim())) return { ok: false, message: "label must be a non-empty string when supplied." };
+    if (visible !== undefined && typeof visible !== "boolean") return { ok: false, message: "visible must be a boolean." };
+    if (color !== undefined && (typeof color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(color))) return { ok: false, message: "color must be a six-digit hexadecimal color." };
+    if (label === undefined && visible === undefined && color === undefined) return { ok: false, message: "propose_update_annotation requires label, visible, or color." };
+    const updatedLabel = typeof label === "string" ? label.trim() : annotation.label;
+    const updatedVisible = typeof visible === "boolean" ? visible : annotation.visible;
+    const updatedColor = typeof color === "string" ? color : annotation.color;
+    const fields = { type: "annotation.updateProperties" as const, annotationId: annotation.id, label: updatedLabel, visible: updatedVisible, ...(updatedColor === undefined ? {} : { color: updatedColor }), ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }), ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.labelOffset === undefined ? {} : { labelOffset: annotation.labelOffset }), ...(annotation.style === undefined ? {} : { style: annotation.style }), ...(annotation.measurement === undefined ? {} : { measurement: annotation.measurement }) };
+    return { ok: true, proposal: proposal(revision, `Update Annotation ${annotation.label}`, [command(fields, "typed_update_annotation")]) };
+  }
+  return { ok: false, message: `Unsupported typed Annotation proposal '${tool}'.` };
+}
 
 /** Provider-neutral boundary. Implementations may be backed by a mock, local
  * model, or remote service, but they return proposals only; Canonical changes

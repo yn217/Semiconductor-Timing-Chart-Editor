@@ -61,7 +61,8 @@ for (const width of [1672, 1000]) {
     expect(await visibleRows().evaluateAll((elements, text) => elements.filter((element) => element.dataset.kind === "timing").every((element) => (element.dataset.name ?? "").toLocaleLowerCase().includes(text)), query)).toBe(true);
 
     const inputCount = await visibleRows().count();
-    await search.fill("");
+    await page.getByRole("button", { name: "Clear signal tree filter" }).click();
+    await expect(search).toHaveValue("");
     await expect(filter).toHaveValue("input");
     expect(await visibleRows().count()).toBeGreaterThanOrEqual(inputCount);
     await filter.selectOption("all");

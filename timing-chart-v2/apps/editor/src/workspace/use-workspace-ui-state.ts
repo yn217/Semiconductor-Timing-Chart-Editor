@@ -11,6 +11,22 @@ export type TransactionTreeFilterMode = "all" | "grouped" | "ungrouped" | "phase
 export type SemanticCursor = number | undefined;
 
 const VIEW_MODE_PREFERENCE_KEY = "timing-chart-v2.view-mode";
+const TRANSACTION_CYCLES_PER_TC_PREFERENCE_KEY = "timing-chart-v2.transaction-cycles-per-tc";
+export const DEFAULT_TRANSACTION_CYCLES_PER_TC = 10;
+
+export function readPreferredTransactionCyclesPerTc(): number {
+  try {
+    const value = Number(window.localStorage.getItem(TRANSACTION_CYCLES_PER_TC_PREFERENCE_KEY));
+    return Number.isInteger(value) && value >= 1 ? value : DEFAULT_TRANSACTION_CYCLES_PER_TC;
+  } catch {
+    return DEFAULT_TRANSACTION_CYCLES_PER_TC;
+  }
+}
+
+function savePreferredTransactionCyclesPerTc(value: number): void {
+  try { window.localStorage.setItem(TRANSACTION_CYCLES_PER_TC_PREFERENCE_KEY, String(value)); }
+  catch { /* Workspace preferences are best-effort and never block editing. */ }
+}
 
 export function readPreferredViewMode(fallback: ViewMode): ViewMode {
   try {
@@ -75,6 +91,12 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   const followSelectionByModeRef = useRef<{ Cycle: boolean; Transaction: boolean }>({ Cycle: true, Transaction: true });
   const bottomPinnedByModeRef = useRef<{ Cycle: boolean; Transaction: boolean }>({ Cycle: false, Transaction: false });
   const [viewMode, setViewModeRaw] = useState<ViewMode>(input.initialViewMode ?? "Cycle");
+  const [cyclesPerTc, setCyclesPerTcRaw] = useState(readPreferredTransactionCyclesPerTc);
+  const setCyclesPerTc = useCallback((value: number) => {
+    if (!Number.isInteger(value) || value < 1) return;
+    savePreferredTransactionCyclesPerTc(value);
+    setCyclesPerTcRaw(value);
+  }, []);
   const [activeContext, setActiveContext] = useState<ActiveContext>(normalizedActiveContextFor(input.initialViewMode ?? "Cycle", "Signal"));
   // #404: entering Cycle or Transaction normalizes ActiveContext to the one
   // meaningful value for that mode; entering Split preserves whatever
@@ -253,6 +275,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     ribbonTab, setRibbonTab,
     bottomTab, setBottomTab,
     viewMode, setViewMode,
+    cyclesPerTc, setCyclesPerTc,
     activeContext, setActiveContext,
     activePane, setActivePane,
     signalSplitEnabled, setSignalSplitEnabled,

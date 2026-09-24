@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { cyclesPerTc, cyclesToTc, tcFieldLabel, tcToCycles, tcUnitLabel } from "../../apps/editor/src/transaction-tc.js";
 
 describe("Transaction TC presentation mapping (#750)", () => {
-  it("reads cycles-per-TC from the document and defaults to 1", () => {
-    expect(cyclesPerTc({})).toBe(1);
+  it("uses the view default of 10 and validates legacy document values", () => {
+    expect(cyclesPerTc({})).toBe(10);
     expect(cyclesPerTc({ transactionTimeScale: { clockCyclesPerTransactionCycle: 10, majorInterval: 5, minorInterval: 1 } })).toBe(10);
-    expect(cyclesPerTc({ transactionTimeScale: { clockCyclesPerTransactionCycle: 0, majorInterval: 5, minorInterval: 1 } })).toBe(1);
+    expect(cyclesPerTc({ transactionTimeScale: { clockCyclesPerTransactionCycle: 0, majorInterval: 5, minorInterval: 1 } })).toBe(10);
+    expect(cyclesPerTc({ transactionTimeScale: { clockCyclesPerTransactionCycle: 1.5, majorInterval: 5, minorInterval: 1 } })).toBe(10);
   });
   it("shows canonical cycles as TC without rewriting them (1.5 TC for cycle 15 at 10/TC)", () => {
     expect(cyclesToTc(100, 10)).toBe(10);

@@ -21,13 +21,13 @@ import { buildRuler } from "./build-ruler.js";
 // surface reading the exact same coordinates everywhere, eliminating the
 // drift entirely; DPI/sub-pixel rounding this was meant to smooth over is
 // sub-1px and not worth reintroducing a source of unbounded drift for.
-export function rebuildRulerPresentation(ruler: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, previousScale: number | undefined, referenceSvg: SVGSVGElement | undefined, zoom: number, minimumWaveWidth = 0, viewportElement?: HTMLElement): { readonly timeAxis: TimeAxisGeometry; readonly scale: number; readonly waveWidthPxPerDisplayCycle: number | undefined; readonly waveOriginPx: number } {
+export function rebuildRulerPresentation(ruler: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, previousScale: number | undefined, referenceSvg: SVGSVGElement | undefined, zoom: number, minimumWaveWidth = 0, viewportElement?: HTMLElement, cyclesPerTc = 10): { readonly timeAxis: TimeAxisGeometry; readonly scale: number; readonly waveWidthPxPerDisplayCycle: number | undefined; readonly waveOriginPx: number } {
   void zoom;
   const timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
   const mapping = mappingCache.get(document.timeline, document.timeGroups);
   const referenceViewBoxWidth = referenceSvg?.viewBox.baseVal.width;
   // #750: Transaction presentation labels the ruler in TC; Cycle and Combined keep system cycles (Combined shares one ruler with the Cycle pane).
-  const tcScale = ruler.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? (document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1) : 1;
+  const tcScale = ruler.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? cyclesPerTc : 1;
   // #750: cyclesPerTC is a horizontal display-time COMPRESSION factor in standalone Transaction Mode (1 TC occupies what 1 cycle does in
   // Cycle Mode). The geometry scale is the single presentation authority, so ruler, grid, bars, Phases, Bookmarks, snap and scroll extent
   // all follow it; Cycle and Combined stay 1:1 with source cycles.
@@ -37,13 +37,13 @@ export function rebuildRulerPresentation(ruler: HTMLElement, document: Canonical
   return { timeAxis, scale, waveWidthPxPerDisplayCycle, waveOriginPx };
 }
 
-export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, enabled: boolean, totalHeight: number, viewportWidth: number, screenGeometryScale: number): void {
+export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, enabled: boolean, totalHeight: number, viewportWidth: number, screenGeometryScale: number, cyclesPerTc = 10): void {
   const timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
   // #765: standalone Transaction hides the Cycle signal rows, so their summed height must not size the grid (it made the scroll owner overflow
   // vertically); the grid spans the Transaction lanes instead.
   const standaloneTransaction = grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction";
   const gridHeight = standaloneTransaction ? (grid.parentElement?.querySelector<HTMLElement>(".transaction-lanes")?.offsetHeight ?? 0) : totalHeight;
-  renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, gridHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode, grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? Math.max(1, Math.round(document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1)) : 1);
+  renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, gridHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode, grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? cyclesPerTc : 1);
 }
 
 export function refreshPlayheadPresentation(ruler: HTMLElement, cycle: number, boundaryToLocalX: (cycle: number) => number | undefined): void {
@@ -74,6 +74,7 @@ export function refreshRangeBandPresentation(viewport: HTMLElement, ruler: HTMLE
 
 export function refreshTimelinePresentation(context: {
   readonly reason: string; readonly document: CanonicalDocument; readonly ruler: HTMLElement; readonly grid: HTMLElement; readonly viewport: HTMLElement; readonly host: HTMLElement; readonly rulerViewport: HTMLElement; readonly geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>; readonly geometrySvgs: ReadonlyMap<SignalId, SVGSVGElement>; readonly mappingCache: Pick<DisplayTimeMappingCache, "get">; readonly metricsOwner: Pick<ViewMetricsOwner, "update" | "snapshot">; readonly currentZoom: number; readonly previousScale: number; readonly rulerInitialized: boolean; readonly timeAxis: TimeAxisGeometry; readonly totalHeight: number; readonly gridEnabled: boolean; readonly markOpenPhase: (phase: string) => void; readonly onPlayhead: () => void; readonly onRange: () => void; readonly onResize: () => void;
+  readonly cyclesPerTc: number;
 }): { readonly timeAxis: TimeAxisGeometry; readonly screenGeometryScale: number; readonly rulerInitialized: boolean; readonly waveWidthPxPerDisplayCycle: number | undefined; readonly waveOriginPx: number | undefined } {
   let timeAxis = context.timeAxis; let screenGeometryScale = context.previousScale; let rulerInitialized = context.rulerInitialized;
   let waveWidthPxPerDisplayCycle: number | undefined;
@@ -85,10 +86,10 @@ export function refreshTimelinePresentation(context: {
     const inTransaction = context.ruler.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction";
     const minimumWaveWidth = Math.max(160, inTransaction ? metrics.viewportWidth : metrics.viewportWidth - metrics.leftPaneWidth - metrics.frozenPaneWidth);
     const currentTimeAxis = resolveTimeAxisGeometry(context.document, context.geometryMaps);
-    const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, currentTimeAxis.ownerSignalId ? context.geometrySvgs.get(currentTimeAxis.ownerSignalId) : undefined, metrics.zoom, minimumWaveWidth, context.viewport);
+    const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, currentTimeAxis.ownerSignalId ? context.geometrySvgs.get(currentTimeAxis.ownerSignalId) : undefined, metrics.zoom, minimumWaveWidth, context.viewport, context.cyclesPerTc);
     timeAxis = rebuilt.timeAxis; screenGeometryScale = rebuilt.scale; waveWidthPxPerDisplayCycle = rebuilt.waveWidthPxPerDisplayCycle; waveOriginPx = rebuilt.waveOriginPx; rulerInitialized = true; context.markOpenPhase("ruler-painted"); syncPresentationScale(context.viewport, context.host, context.rulerViewport, context.currentZoom, screenGeometryScale);
   }
-  if (context.reason !== "scroll") { context.metricsOwner.update({ viewportWidth: context.viewport.clientWidth }); const metrics = context.metricsOwner.snapshot(); refreshGridPresentation(context.grid, context.document, context.geometryMaps, context.mappingCache, context.gridEnabled, context.totalHeight, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, screenGeometryScale); }
+  if (context.reason !== "scroll") { context.metricsOwner.update({ viewportWidth: context.viewport.clientWidth }); const metrics = context.metricsOwner.snapshot(); refreshGridPresentation(context.grid, context.document, context.geometryMaps, context.mappingCache, context.gridEnabled, context.totalHeight, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, screenGeometryScale, context.cyclesPerTc); }
   if (context.reason === "playhead") context.onPlayhead();
   if (context.reason === "range") context.onRange();
   if (context.reason === "resize") context.onResize();

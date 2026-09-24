@@ -7,6 +7,7 @@ import type { TimelineNavigationOwner } from "../runtime/use-timeline-navigation
 import type { BottomTab } from "../workspace/use-workspace-ui-state.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
 import type { ClipboardActions } from "./clipboard-actions.js";
+import type { AISelectionEntityType } from "../ai-bridge-client.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { DocumentLifecycleOwner } from "./use-document-lifecycle.js";
 import { groupId, signalId, valueSignal } from "../minimal-cycle-view-fixture-helpers.js";
@@ -81,6 +82,7 @@ export interface EditorActions {
   readonly selectedBookmarkId: BookmarkId | undefined;
   readonly selectedBookmark: Bookmark | undefined;
   readonly selectBookmark: (id: BookmarkId) => void;
+  readonly selectAIEntity: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void;
   readonly addBookmarkAtCycle: (cycle: number) => void;
   readonly revealBookmark: (start: number) => void;
   readonly deleteBottomBookmark: () => void;
@@ -155,6 +157,13 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
   const viewport = input.viewportRef;
 
   const selectBookmark = (id: BookmarkId) => setSelectedBookmarkId(id);
+  const selectAIEntity = ({ entityType, entityId }: { readonly entityType: AISelectionEntityType; readonly entityId: string }) => {
+    if (entityType === "signal") selectHierarchySignal(entityId as SignalId);
+    else if (entityType === "group") input.selection.selectGroup(entityId as GroupId);
+    else if (entityType === "transaction") selectTransaction(entityId as TransactionId);
+    else if (entityType === "annotation") selectAnnotation(entityId as AnnotationId);
+    else selectBookmark(entityId as BookmarkId);
+  };
   const addBookmarkAtCycle = (cycle: number) => {
     const maxCycle = Math.max(0, input.document.timeline.cycleCount - 1);
     const start = Math.max(0, Math.min(maxCycle, Math.trunc(cycle)));
@@ -429,6 +438,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     selectedBookmarkId,
     selectedBookmark,
     selectBookmark,
+    selectAIEntity,
     addBookmarkAtCycle,
     revealBookmark,
     deleteBottomBookmark,
