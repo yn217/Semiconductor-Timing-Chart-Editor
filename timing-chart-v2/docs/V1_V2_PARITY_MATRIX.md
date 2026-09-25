@@ -107,9 +107,13 @@ with Inspector-owned Show/Used Roles/Orientation/X/Y drafts through the shared
 control and parity-inventory checks pass. Inspector-authored Save/Open and
 real-browser selection/Apply acceptance remain unverified because the app
 currently fails before render (`@babel/core` missing; shared package `dist`
-exports stale). Anchor+Offset versus Free Position remains unmodeled; the
-approved source does not define the canonical anchor/reference target, so that
-specific design point is tracked as a product decision rather than guessed.
+exports stale). PR #830 adds a focused production Save/Open assertion for
+Inspector-authored Legend orientation and position, but its browser run is
+currently blocked before app startup because the configured webServer cannot
+find the local `vite` executable; no browser PASS is claimed. Anchor+Offset
+versus Free Position remains unmodeled; the approved source does not define the
+canonical anchor/reference target, so that specific design point is tracked as
+a product decision rather than guessed.
 The complete V1 legend style/fit reference matrix remains open.
 
 The current-main Ribbon visual refresh is covered by
