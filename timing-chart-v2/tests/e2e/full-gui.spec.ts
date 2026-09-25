@@ -298,7 +298,10 @@ test("selecting Legend follows Inspector and edits through one canonical update"
   await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
   const properties = page.getByRole("dialog", { name: "Document Properties" });
   await properties.getByLabel("Legend show").check();
+  await properties.getByLabel("Legend position X").fill("200");
+  await properties.getByLabel("Legend position Y").fill("140");
   await properties.getByTestId("apply-document-properties").click();
+  await properties.getByRole("button", { name: "Close properties" }).click();
   const legend = page.getByTestId("editor-legend");
   const originalX = await legend.getAttribute("data-legend-position-x");
   const history = page.getByTestId("history-status");
@@ -315,6 +318,28 @@ test("selecting Legend follows Inspector and edits through one canonical update"
   await page.keyboard.press("Control+z");
   await expect(legend).toHaveAttribute("data-legend-position-x", originalX ?? "");
   await expect(history).toHaveText("History 1 / Redo 1");
+
+  // Exercise the actual Inspector-authored Legend presentation through the
+  // production Save/Open path, not only the Document Properties editor.
+  await page.getByLabel("Legend orientation").selectOption("vertical");
+  await page.getByLabel("Legend X").fill("44");
+  await page.getByLabel("Legend Y").fill("52");
+  await page.getByTestId("apply-legend-properties").click();
+  await expect(legend).toHaveAttribute("data-legend-position-x", "44");
+  await expect(legend).toHaveAttribute("data-legend-position-y", "52");
+  await expect(legend).toHaveClass(/vertical/);
+
+  const save = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await save).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+
+  const reopenedLegend = page.getByTestId("editor-legend");
+  await expect(reopenedLegend).toHaveAttribute("data-legend-position-x", "44");
+  await expect(reopenedLegend).toHaveAttribute("data-legend-position-y", "52");
+  await expect(reopenedLegend).toHaveClass(/vertical/);
+  await expect(history).toHaveText("History 0 / Redo 0");
 });
 
 test("Legend editor exposes stable-ID label, visibility and ordering controls", async ({ page }) => {
@@ -991,6 +1016,57 @@ test("Signal Inspector properties survive Undo/Redo and Save/Open", async ({ pag
   await expect(inspector.getByLabel("Inspector signal role")).toHaveValue("output");
   await expect(inspector.getByLabel("Inspector signal width")).toHaveValue("16");
   await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("binary");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});
+
+test("Bus Decimal/Signed/Unsigned formats stay consistent in Bottom and survive Save/Open", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
+  const inspector = page.getByTestId("inspector");
+  await waitForInspectorPanel(inspector, "Signal Properties");
+  const bottomTabs = page.getByTestId("bottom-tabs");
+  await bottomTabs.locator("[data-bottom-tab='Signal']").click();
+  const formattedA5 = page.getByTestId("event-row-value-3");
+
+  for (const [format, expectedValue, historyCount] of [
+    ["decimal", "165", 1],
+    ["signed", "-91", 2],
+    ["unsigned", "165", 3],
+  ] as const) {
+    await inspector.getByLabel("Inspector bus format").selectOption(format);
+    await inspector.getByTestId("apply-inspector-signal").click();
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await expect(inspector.getByLabel("Inspector bus format")).toHaveValue(format);
+    await expect(formattedA5).toHaveText(expectedValue);
+    await expect(host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: expectedValue })).toHaveCount(1);
+    await expect(page.getByTestId("history-status")).toHaveText(`History ${historyCount} / Redo 0`);
+  }
+
+  const ribbon = page.getByTestId("ribbon");
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 1");
+  await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("signed");
+  await expect(formattedA5).toHaveText("-91");
+  await expect(host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: "-91" })).toHaveCount(1);
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("unsigned");
+  await expect(formattedA5).toHaveText("165");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const savePromise = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await savePromise).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
+  await waitForInspectorPanel(inspector, "Signal Properties");
+  await bottomTabs.locator("[data-bottom-tab='Signal']").click();
+  await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("unsigned");
+  await expect(page.getByTestId("event-row-value-3")).toHaveText("165");
+  await expect(host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: "165" })).toHaveCount(1);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
