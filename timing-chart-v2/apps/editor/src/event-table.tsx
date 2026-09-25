@@ -9,6 +9,7 @@ import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./
 import { buildEventTableIndex } from "./runtime/event-table-index.js";
 import { reorderTransitionBlock, transitionIdentity } from "./runtime/transition-reorder.js";
 import { registerActiveGestureCancel } from "./runtime/active-gesture-cancellation.js";
+import { pruneExternalSelection } from "./runtime/external-draft-reconciliation.js";
 
 // Signal transitions have no separately persisted row ID; within the
 // canonical value list, the start boundary is the unique row identity.
@@ -44,12 +45,17 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   // used by the per-row inline Draft/Apply/Cancel and by the toolbar's
   // Duplicate/Delete) -- checking rows only ever feeds the table footer's
   // bulk actions below.
-  const [checkedKeys, setCheckedKeys] = useState<ReadonlySet<string>>(new Set());
+  const [storedCheckedKeys, setCheckedKeys] = useState<ReadonlySet<string>>(new Set());
   const [eventScrollTop, setEventScrollTop] = useState(0);
   const eventViewportRef = useRef<HTMLDivElement>(null);
   const [importStatus, setImportStatus] = useState("Import signal events");
   const fileInput = useRef<HTMLInputElement>(null);
   const indexed = useMemo(() => buildEventTableIndex(signal.values, cycleCount), [signal.values, cycleCount]);
+  const validKeys = useMemo(() => new Set(signal.values.map(transitionIdentity)), [signal.values]);
+  const checkedKeys = useMemo(() => pruneExternalSelection(storedCheckedKeys, validKeys), [storedCheckedKeys, validKeys]);
+  useEffect(() => {
+    setCheckedKeys((current) => pruneExternalSelection(current, validKeys));
+  }, [validKeys]);
   const selected = indexed.ordered.find((change) => transitionIdentity(change) === selectedKey);
   const selectTransition = (startValue: number) => {
     const change = indexed.ordered.find((item) => item.start === startValue);

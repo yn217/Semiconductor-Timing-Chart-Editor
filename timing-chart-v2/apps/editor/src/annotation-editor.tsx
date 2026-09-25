@@ -11,6 +11,7 @@ import { AnnotationLabelLayoutToolbar } from "./annotation-label-layout-toolbar.
 import { annotationCapabilityDisabledReason } from "./annotation-capability-matrix.js";
 import { annotationPropertiesBase } from "./annotation-style-command.js";
 import { DraftStatus } from "./draft-status.js";
+import { reconcileExternalDraft } from "./runtime/external-draft-reconciliation.js";
 
 type AnchorFieldName = "anchor" | "start" | "end" | "from" | "to";
 
@@ -29,8 +30,30 @@ function AnchorMiniEditor({ label, annotation, field, document, commands }: { re
   const current = (annotation as Partial<Record<AnchorFieldName, SemanticAnchor>>)[field];
   const [cycle, setCycle] = useState(current?.cycle ?? 0);
   const [signalId, setSignalId] = useState<SignalId | undefined>(current?.signalId);
+  const [externalConflict, setExternalConflict] = useState(false);
+  const baseRef = useRef({ cycle: current?.cycle ?? 0, signalId: current?.signalId });
+  useEffect(() => {
+    if (!current) return;
+    const resolution = reconcileExternalDraft(baseRef.current, { cycle, signalId }, { cycle: current.cycle, signalId: current.signalId }, true, (left, right) => left.cycle === right.cycle && left.signalId === right.signalId);
+    if (resolution.kind === "rebase") {
+      setCycle(resolution.value.cycle);
+      setSignalId(resolution.value.signalId);
+      baseRef.current = resolution.value;
+      setExternalConflict(false);
+    } else if (resolution.kind === "conflict") setExternalConflict(true);
+  }, [current?.cycle, current?.signalId, cycle, signalId]);
   if (!current) return null;
   const hasChanges = cycle !== current.cycle || signalId !== current.signalId;
+  const reloadLatest = () => {
+    setCycle(current.cycle);
+    setSignalId(current.signalId);
+    baseRef.current = { cycle: current.cycle, signalId: current.signalId };
+    setExternalConflict(false);
+  };
+  const keepDraft = () => {
+    baseRef.current = { cycle: current.cycle, signalId: current.signalId };
+    setExternalConflict(false);
+  };
   return <div className="annotation-anchor-mini">
     <span className="annotation-anchor-mini-label">{label}</span>
     <select aria-label={`Annotation ${label} signal`} value={signalId ?? ""} onChange={(event) => setSignalId((event.target.value || undefined) as SignalId | undefined)}>
@@ -38,7 +61,12 @@ function AnchorMiniEditor({ label, annotation, field, document, commands }: { re
       {document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}
     </select>
     <input aria-label={`Annotation ${label} cycle`} type="number" min="0" max={document.timeline.cycleCount - 1} step={annotation.type === "highlight" && annotation.positionMode === "free" ? "0.01" : "1"} value={cycle} onChange={(event) => setCycle(Number(event.target.value))} />
-    <button type="button" aria-label={`Apply ${label} anchor`} disabled={!hasChanges} onClick={() => commands.setAnnotationAnchor(annotation.id, field, { ...current, cycle, ...(signalId === undefined ? {} : { signalId }) })}>Apply</button>
+    {externalConflict && <span role="alert" data-testid={`annotation-${field}-draft-conflict`}>Anchor changed elsewhere. Reload latest or keep this draft before applying.</span>}
+    {externalConflict && <><button type="button" onClick={reloadLatest}>Reload latest</button><button type="button" onClick={keepDraft}>Keep my draft</button></>}
+    <button type="button" aria-label={`Apply ${label} anchor`} disabled={!hasChanges || externalConflict} onClick={() => {
+      const result = commands.setAnnotationAnchor(annotation.id, field, { ...current, cycle, ...(signalId === undefined ? {} : { signalId }) });
+      if (result.ok) { baseRef.current = { cycle, signalId }; setExternalConflict(false); }
+    }}>Apply</button>
   </div>;
 }
 
