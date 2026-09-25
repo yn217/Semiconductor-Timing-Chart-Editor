@@ -60,7 +60,11 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
   const [editName, setEditName] = useState(retained?.name ?? bookmark?.name ?? "");
   const [editStart, setEditStart] = useState(retained?.start ?? bookmark?.start ?? 0);
   const [editComment, setEditComment] = useState(retained?.comment ?? bookmark?.comment ?? "");
-  const wasRetained = retained !== undefined;
+  // Snapshot this at mount: after the first field edit, the shared draft store
+  // contains the just-created draft too, but that is not a draft restored from
+  // an earlier selection. Only a remount with an existing draft should use the
+  // "kept from earlier" announcement.
+  const [wasRetained] = useState(() => retained !== undefined);
   useSyncExternalStore(subscribeBookmarkDrafts, () => bookmarkDraftVersion, () => 0);
   const otherDrafts = retainedBookmarkDrafts(document.bookmarks, bookmark?.id);
   const updateDraft = (next: BookmarkDraftFields) => { if (bookmark) setBookmarkDraft(bookmark, next); };
