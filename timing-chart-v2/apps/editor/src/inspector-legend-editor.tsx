@@ -4,10 +4,13 @@ import type { EditorSurfaceCommandController } from "./application/editor-surfac
 import { InspectorFooter, PropertyToggle } from "./inspector-section.js";
 import { InspectorHeaderBar, InspectorSelectionHeader } from "./inspector-selection-header.js";
 import { reconcileExternalDraftFields } from "./runtime/external-draft-reconciliation.js";
+import type { RefObject } from "react";
+import { clampLegendToVisibleViewport, readLegendSurfaceGeometry } from "./legend-geometry.js";
 
 /** Draft/Apply editor for the document-wide Legend singleton. */
-export function InspectorLegendEditor({ document, commands, onCancel, onClose }: {
+export function InspectorLegendEditor({ document, viewport, commands, onCancel, onClose }: {
   readonly document: Readonly<CanonicalDocument>;
+  readonly viewport: RefObject<HTMLDivElement | null>;
   readonly commands: Pick<EditorSurfaceCommandController, "updateLegend">;
   readonly onCancel: () => void;
   readonly onClose: () => void;
@@ -38,6 +41,14 @@ export function InspectorLegendEditor({ document, commands, onCancel, onClose }:
   const positionY = Number(y);
   const valid = x.trim() !== "" && y.trim() !== "" && Number.isFinite(positionX) && Number.isFinite(positionY);
   const changed = valid && (positionX !== legend.position.x || positionY !== legend.position.y || show !== legend.show || orientation !== legend.orientation || usedRolesOnly !== legend.usedRolesOnly);
+  const appliedPosition = (() => {
+    const content = viewport.current?.querySelector<HTMLElement>(".split-signal-content");
+    const overlay = content?.querySelector<HTMLElement>(".editor-legend");
+    const geometry = content ? readLegendSurfaceGeometry(content) : undefined;
+    if (!show || !overlay || !geometry) return { x: positionX, y: positionY };
+    const bounds = overlay.getBoundingClientRect();
+    return clampLegendToVisibleViewport({ x: positionX, y: positionY }, { width: bounds.width, height: bounds.height }, geometry);
+  })();
   const reloadLatest = () => {
     setX(canonicalDraft.x); setY(canonicalDraft.y); setShow(canonicalDraft.show); setOrientation(canonicalDraft.orientation); setUsedRolesOnly(canonicalDraft.usedRolesOnly);
     baseRef.current = canonicalDraft;
@@ -49,10 +60,33 @@ export function InspectorLegendEditor({ document, commands, onCancel, onClose }:
   };
   const apply = () => {
     if (!changed || externalConflict) return;
-    const next: Legend = { ...legend, show, orientation, usedRolesOnly, position: { x: positionX, y: positionY } };
+    if (
+      appliedPosition.x === legend.position.x && appliedPosition.y === legend.position.y &&
+      show === legend.show && orientation === legend.orientation && usedRolesOnly === legend.usedRolesOnly
+    ) {
+      setX(String(appliedPosition.x));
+      setY(String(appliedPosition.y));
+      baseRef.current = { x: String(appliedPosition.x), y: String(appliedPosition.y), show, orientation, usedRolesOnly };
+      setExternalConflict(false);
+      return;
+    }
+    const next: Legend = { ...legend, show, orientation, usedRolesOnly, position: appliedPosition };
     const result = commands.updateLegend(next);
     if (result.ok) {
-      baseRef.current = { x, y, show, orientation, usedRolesOnly };
+      const appliedDraft = { x: String(appliedPosition.x), y: String(appliedPosition.y), show, orientation, usedRolesOnly };
+      setX(appliedDraft.x);
+      setY(appliedDraft.y);
+      baseRef.current = appliedDraft;
+      setExternalConflict(false);
+    }
+  };
+  const resetPosition = () => {
+    const next: Legend = { ...legend, position: { x: 0, y: 0 } };
+    const result = commands.updateLegend(next);
+    if (result.ok) {
+      setX("0");
+      setY("0");
+      baseRef.current = { ...baseRef.current, x: "0", y: "0" };
       setExternalConflict(false);
     }
   };
@@ -70,6 +104,7 @@ export function InspectorLegendEditor({ document, commands, onCancel, onClose }:
           <label>X<input aria-label="Legend X" type="number" value={x} onChange={(event) => setX(event.target.value)} /></label>
           <label>Y<input aria-label="Legend Y" type="number" value={y} onChange={(event) => setY(event.target.value)} /></label>
         </div>
+        <button type="button" data-testid="reset-legend-position" onClick={resetPosition}>Reset position</button>
         {externalConflict && <div role="alert" data-testid="legend-draft-conflict"><span>Legend changed elsewhere. Reload the latest values or keep your draft before applying.</span><div><button type="button" onClick={reloadLatest}>Reload latest</button><button type="button" onClick={keepDraft}>Keep my draft</button></div></div>}
         {!valid && <span role="alert" className="editor-problem">Legend position must be finite numbers.</span>}
         <small className="inspector-note">Position and presentation are saved through the canonical Legend command.</small>
