@@ -315,6 +315,28 @@ test("selecting Legend follows Inspector and edits through one canonical update"
   await page.keyboard.press("Control+z");
   await expect(legend).toHaveAttribute("data-legend-position-x", originalX ?? "");
   await expect(history).toHaveText("History 1 / Redo 1");
+
+  // Exercise the actual Inspector-authored Legend presentation through the
+  // production Save/Open path, not only the Document Properties editor.
+  await page.getByLabel("Legend orientation").selectOption("vertical");
+  await page.getByLabel("Legend X").fill("44");
+  await page.getByLabel("Legend Y").fill("52");
+  await page.getByTestId("apply-legend-properties").click();
+  await expect(legend).toHaveAttribute("data-legend-position-x", "44");
+  await expect(legend).toHaveAttribute("data-legend-position-y", "52");
+  await expect(legend).toHaveClass(/vertical/);
+
+  const save = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await save).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+
+  const reopenedLegend = page.getByTestId("editor-legend");
+  await expect(reopenedLegend).toHaveAttribute("data-legend-position-x", "44");
+  await expect(reopenedLegend).toHaveAttribute("data-legend-position-y", "52");
+  await expect(reopenedLegend).toHaveClass(/vertical/);
+  await expect(history).toHaveText("History 0 / Redo 0");
 });
 
 test("Legend editor exposes stable-ID label, visibility and ordering controls", async ({ page }) => {
