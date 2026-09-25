@@ -105,12 +105,11 @@ the shared ExportScene also produces valid PNG and PDF outputs. PR #826
 with Inspector-owned Show/Used Roles/Orientation/X/Y drafts through the shared
 `legend.update` Semantic Command. Current-main focused semantic, interactive
 control and parity-inventory checks pass. Inspector-authored Save/Open and
-real-browser selection/Apply acceptance remain unverified because the app
-currently fails before render (`@babel/core` missing; shared package `dist`
-exports stale). PR #830 adds a focused production Save/Open assertion for
-Inspector-authored Legend orientation and position, but its browser run is
-currently blocked before app startup because the configured webServer cannot
-find the local `vite` executable; no browser PASS is claimed. Anchor+Offset
+real-browser selection/Apply acceptance remain unverified. PR #830 adds a
+focused production Save/Open assertion for Inspector-authored Legend
+orientation and position, but its browser run is blocked before app startup
+because the configured webServer cannot find the local `vite` executable; no
+browser PASS is claimed. Anchor+Offset
 versus Free Position remains unmodeled; the approved source does not define the
 canonical anchor/reference target, so that specific design point is tracked as
 a product decision rather than guessed.
