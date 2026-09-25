@@ -1043,6 +1043,17 @@ test("Bus Decimal/Signed/Unsigned formats stay consistent in Bottom and survive 
     await expect(page.getByTestId("history-status")).toHaveText(`History ${historyCount} / Redo 0`);
   }
 
+  const ribbon = page.getByTestId("ribbon");
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 1");
+  await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("signed");
+  await expect(formattedA5).toHaveText("-91");
+  await expect(host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: "-91" })).toHaveCount(1);
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("unsigned");
+  await expect(formattedA5).toHaveText("165");
+
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   const savePromise = page.waitForEvent("download");
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
