@@ -34,6 +34,9 @@ test("keeps LabelAnchor source/display semantics on no-fold and folded ruler pat
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  // Transaction is the current startup mode; switch through the production
+  // mode selector before asserting Cycle ruler projection.
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const document = documentWithRebase();
   await openDocument(page, document);
   const ruler = page.getByTestId("cycle-ruler");
