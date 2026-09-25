@@ -282,6 +282,7 @@ export function useEditorSecondarySurfaces(
       signal={bottom.signal}
       cycleCount={input.document.timeline.cycleCount}
       bookmarks={input.document.bookmarks}
+      enumDefinitions={input.document.enumDefinitions}
       history={input.history}
       groups={input.document.signalGroups}
       problem={input.problem}

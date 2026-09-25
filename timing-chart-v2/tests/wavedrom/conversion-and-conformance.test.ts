@@ -172,6 +172,17 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(toWaveJson({ signal: bus, cycleCount: 4 })).toEqual({ wave: "=...", data: ["READY"] });
   });
 
+  it("projects State enum labels for full and bounded waves while preserving source values and unknown fallback", () => {
+    const state = { ...canonicalFixture().signals[1]!, type: "state", enumId: "enum.mode", values: [{ start: 0, value: 0 }, { start: 3, value: 7 }, { start: 6, value: 1 }] } as ValueSignal;
+    const enumDefinitions = [{ id: "enum.mode", name: "Mode", entries: [{ value: 0, label: "IDLE" }, { value: 1, label: "RUN" }] }] as const;
+    const full = toWaveJson({ signal: state, cycleCount: 8, enumDefinitions });
+    expect(full).toEqual({ wave: "=..=..=.", data: ["IDLE", "7", "RUN"] });
+    expect(state.values.map((change) => change.value)).toEqual([0, 7, 1]);
+    expect(toWaveJsonWindow({ signal: state, cycleCount: 8, enumDefinitions }, 2, 8).data).toEqual(["IDLE", "7", "RUN"]);
+    const override = { ...state, values: [{ start: 0, value: 1, displayLabel: "CUSTOM" }] } as ValueSignal;
+    expect(toWaveJson({ signal: override, cycleCount: 4, enumDefinitions }).data).toEqual(["CUSTOM"]);
+  });
+
   it("defines Auto document defaults and presentation-only SignalValueChange overrides", () => {
     expect(VALUE_LABEL_LAYOUT_POLICY).toMatchObject({ documentDefault: "auto", signalOverride: "displayLabel", semanticSource: "value", minimumFontPt: 8 });
   });

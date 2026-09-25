@@ -1,4 +1,4 @@
-import { formatBusValue, valueSignalAcceptedToken, valueSignalWaveDomain, waveDromLogicToken, type ClockSignal, type SignalValueChange, type ValueSignal } from "@timing-chart-v2/schema";
+import { formatBusValue, resolveEnumValue, valueSignalAcceptedToken, valueSignalWaveDomain, waveDromLogicToken, type ClockSignal, type EnumDefinition, type SignalValueChange, type ValueSignal } from "@timing-chart-v2/schema";
 import {
   WAVEDROM_CLOCK_TOKENS,
   WAVEDROM_DATA_TOKEN,
@@ -50,7 +50,7 @@ function applyGaps(wave: string[], gaps: readonly number[] | undefined): void {
   }
 }
 
-function valueSignalToWaveJson(signal: ValueSignal, cycleCount: number, gaps: readonly number[] | undefined): WaveJsonSignal {
+function valueSignalToWaveJson(signal: ValueSignal, cycleCount: number, gaps: readonly number[] | undefined, enumDefinitions: readonly EnumDefinition[] = []): WaveJsonSignal {
   assertChangePoints(signal.values, cycleCount);
   const wave = Array<string>(cycleCount).fill(".");
   const data: string[] = [];
@@ -63,7 +63,10 @@ function valueSignalToWaveJson(signal: ValueSignal, cycleCount: number, gaps: re
       data.push(String(change.value));
     } else if (isData) {
       wave[change.start] = WAVEDROM_DATA_TOKEN;
-      data.push(change.displayLabel ?? (signal.type === "bus" && signal.displayFormat !== undefined
+      const enumDefinition = signal.type === "state" && signal.enumId !== undefined ? enumDefinitions.find((definition) => definition.id === signal.enumId) : undefined;
+      data.push(change.displayLabel ?? (enumDefinition !== undefined
+        ? resolveEnumValue(enumDefinition, change.value)
+        : signal.type === "bus" && signal.displayFormat !== undefined
         ? formatBusValue(change.value, signal.displayFormat, signal.width)
         : String(change.value)));
     } else {
@@ -228,7 +231,7 @@ export function toWaveJson(source: CanonicalSignalSource): WaveJsonSignal {
   }
   return source.signal.type === "clock"
     ? clockToWaveJson(source.signal, source.cycleCount, source.gapCycles)
-    : valueSignalToWaveJson(source.signal, source.cycleCount, source.gapCycles);
+    : valueSignalToWaveJson(source.signal, source.cycleCount, source.gapCycles, source.enumDefinitions);
 }
 
 /** Convert a bounded source interval, reconstructing the value at its left edge. */
@@ -251,5 +254,5 @@ export function toWaveJsonWindow(source: CanonicalSignalSource, start: number, e
   }
   const localSignal = { ...source.signal, values: localChanges };
   const localGaps = (source.gapCycles ?? []).filter((cycle) => cycle > start && cycle < end).map((cycle) => cycle - start);
-  return { ...valueSignalToWaveJson(localSignal, end - start, localGaps), sourceWindow: semanticWindow, ...geometryMetadata, displayWindow: { start, end } };
+  return { ...valueSignalToWaveJson(localSignal, end - start, localGaps, source.enumDefinitions), sourceWindow: semanticWindow, ...geometryMetadata, displayWindow: { start, end } };
 }

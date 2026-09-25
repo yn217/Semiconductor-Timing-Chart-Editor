@@ -185,7 +185,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const displaySignal = signal.type === "clock"
       ? { ...signal, ...(signal.enable ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
       : { ...signal, values: displayValues! };
-    const waveJson = toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount });
+    const waveJson = toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions });
     const semanticValues = signal.type !== "clock" && valueSignalWaveDomain(signal.type) === "data" ? displayValues!.map((change) => String(change.value)) : undefined;
     const svgMarkup = renderWaveJsonMarkup(waveJson, index, semanticValues);
     return { signal, waveJson, svgMarkup, ...svgDimensions(svgMarkup) };
