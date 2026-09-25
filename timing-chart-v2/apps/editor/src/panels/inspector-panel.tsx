@@ -490,6 +490,10 @@ export function InspectorValueSignalEditor({ signal, document, viewport, command
           // than silently losing its own current value from this list.
           signal.type === "pulse" && <option value="pulse">Pulse (legacy)</option>
         }</select></label>
+        {signalType === "state" && <label>State enum<select aria-label="Inspector State enum" value={signal.type === "state" ? signal.enumId ?? "" : ""} onChange={(event) => {
+          const enumId = event.target.value;
+          commands.updateSignalProperties({ signalId: signal.id, name: signal.name, role: signal.role, signalType: "state", ...(enumId ? { enumId } : { clearEnumId: true }) });
+        }}><option value="">No enum</option>{document.enumDefinitions?.map((definition) => <option key={definition.id} value={definition.id}>{definition.name}</option>)}</select></label>}
         {signalType === "bus" && <><label>Width<input aria-label="Inspector signal width" type="number" min="1" step="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Bus format<select aria-label="Inspector bus format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="hex">Hex</option><option value="binary">Binary</option><option value="decimal">Decimal</option><option value="signed">Signed</option><option value="unsigned">Unsigned</option><option value="symbolic">Symbol</option></select></label></>}
         <PropertyToggle label="Visible" ariaLabel="Inspector signal visible" checked={visible} onChange={setVisible} />
         <label>Spacing Before<input aria-label="Inspector signal spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label>

@@ -103,7 +103,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           ? { ...signal, ...(signal.enable ? { enable: context.mappingCache.remapValueChanges(signal.enable, mapping) } : {}) }
           : (remappedValues = context.mappingCache.remapValueChanges(signal.values, mapping), { ...signal, values: remappedValues });
         const semanticValues = remappedValues !== undefined && signal.type !== "clock" && signal.type !== "commentRow" && valueSignalWaveDomain(signal.type) === "data" ? remappedValues.map((change: { readonly value: string | number }) => String(change.value)) : undefined;
-        const source = { signal: displaySignal, cycleCount: mapping.displayCycleCount };
+        const source = { signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions };
         const sourceWindow = request.sourceWindow;
         const displayWindow = sourceWindow === undefined ? undefined : displayWindowForSource(mapping, { sourceStart: sourceWindow.start, sourceEnd: sourceWindow.end }, document.timeline.cycleCount);
         const displayStart = displayWindow?.displayStart;

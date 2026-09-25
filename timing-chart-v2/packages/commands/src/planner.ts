@@ -16,8 +16,9 @@ import type {
   TransactionPhase,
   TransactionGroupId,
   ValueSignal,
+  EnumDefinition,
 } from "@timing-chart-v2/schema";
-import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -819,28 +820,38 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if ((command.spacingBefore !== undefined && (!Number.isFinite(command.spacingBefore) || command.spacingBefore < 0)) || (command.spacingAfter !== undefined && (!Number.isFinite(command.spacingAfter) || command.spacingAfter < 0))) return fail("invalid", "INVALID_SIGNAL_SPACING", "$.spacing", "Signal spacing must be finite and non-negative.");
       const currentFormat = signal.type === "bus" ? signal.displayFormat : undefined;
       const currentWidth = signal.type === "bus" ? signal.width : undefined;
+      const currentEnumId = signal.type === "clock" ? undefined : signal.enumId;
       const currentVisible = signal.display.visible !== false;
       const currentAlign = signal.display.align;
       const currentOverflow = signal.display.overflow;
       const currentStyle = signal.display.style;
       const nextFormat = nextType === "bus" ? command.displayFormat ?? currentFormat : undefined;
       const nextWidth = nextType === "bus" ? command.width ?? currentWidth : undefined;
+      if (command.clearEnumId && command.enumId !== undefined) return fail("invalid", "INVALID_ENUM_ASSIGNMENT", "$.enumId", "Enum assignment cannot be set and cleared in the same command.");
+      if ((command.enumId !== undefined || command.clearEnumId) && nextType !== "state") return fail("invalid", "INVALID_ENUM_ASSIGNMENT", "$.enumId", "Enum assignments apply only to State Signals.");
+      const nextEnumId = nextType === "state"
+        ? (command.clearEnumId ? undefined : command.enumId ?? (signal.type === "state" ? currentEnumId : undefined))
+        : signal.type === "state" ? undefined : currentEnumId;
+      if (command.enumId !== undefined) {
+        if (nextType !== "state") return fail("invalid", "INVALID_ENUM_ASSIGNMENT", "$.enumId", "Enum definitions can only be assigned to State Signals.");
+        if (!(document.enumDefinitions ?? []).some((definition) => definition.id === command.enumId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.enumId", `Enum '${command.enumId}' does not exist.`);
+      }
       const nextVisible = command.visible ?? currentVisible;
       const nextAlign = command.displayAlign ?? currentAlign;
       const nextOverflow = command.displayOverflow ?? currentOverflow;
       const nextStyle = command.displayStyle ?? currentStyle;
       const nextSpacingBefore = command.spacingBefore ?? signal.spacingBefore;
       const nextSpacingAfter = command.spacingAfter ?? signal.spacingAfter;
-      if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth && currentVisible === nextVisible && currentAlign === nextAlign && currentOverflow === nextOverflow && signal.spacingBefore === nextSpacingBefore && signal.spacingAfter === nextSpacingAfter && semanticEqual(currentStyle, nextStyle)) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
+      if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth && (signal.type === "clock" || signal.enumId === nextEnumId) && currentVisible === nextVisible && currentAlign === nextAlign && currentOverflow === nextOverflow && signal.spacingBefore === nextSpacingBefore && signal.spacingAfter === nextSpacingAfter && semanticEqual(currentStyle, nextStyle)) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
       const nextDisplay = { ...signal.display, name, visible: nextVisible, ...(nextAlign === undefined ? {} : { align: nextAlign }), ...(nextOverflow === undefined ? {} : { overflow: nextOverflow }), ...(nextStyle === undefined ? {} : { style: nextStyle }) };
       const next: Signal = signal.type === "clock"
         ? { ...signal, name, role: command.role, display: nextDisplay, ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) }
         : (() => {
-          const { type: _type, width: _width, displayFormat: _displayFormat, ...base } = signal;
+          const { type: _type, width: _width, displayFormat: _displayFormat, enumId: _enumId, ...base } = signal;
           const valueType = (command.signalType ?? signal.type) as ValueSignal["type"];
-          return { ...base, type: valueType, name, role: command.role, display: nextDisplay, ...(nextWidth === undefined ? {} : { width: nextWidth }), ...(nextFormat === undefined ? {} : { displayFormat: nextFormat }), ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) };
+          return { ...base, type: valueType, name, role: command.role, display: nextDisplay, ...(nextWidth === undefined ? {} : { width: nextWidth }), ...(nextFormat === undefined ? {} : { displayFormat: nextFormat }), ...(nextEnumId === undefined ? {} : { enumId: nextEnumId }), ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) };
         })();
-      const waveformChanged = signal.type !== nextType || currentFormat !== nextFormat || currentWidth !== nextWidth;
+      const waveformChanged = signal.type !== nextType || currentFormat !== nextFormat || currentWidth !== nextWidth || (signal.type !== "clock" && signal.enumId !== nextEnumId);
       const spacingChanged = signal.spacingBefore !== nextSpacingBefore || signal.spacingAfter !== nextSpacingAfter;
       // Visibility changes the derived row layout exactly like signal.setVisibility: the rows below compact, so their screen Y,
       // dependent annotations and the MiniMap must be invalidated too (otherwise wave owners stay one row off their labels).
@@ -972,6 +983,29 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (current.name === name) return fail("no-op", "NO_OP", "$", "Enum already has this name.");
       const definitions = [...document.enumDefinitions!]; definitions[index] = { ...current, name };
       return { ok: true, document: { ...document, enumDefinitions: definitions }, changeSet: { fullDocumentReplace: true }, inverseChangeSet: { fullDocumentReplace: true } };
+    }
+    case "enum.create": {
+      const definitions = document.enumDefinitions ?? [];
+      if (canonicalEntityIds(document).has(command.definition.id)) return fail("invalid", "DUPLICATE_ID", "$.definition.id", `Entity ID '${command.definition.id}' already exists.`);
+      const enumProblem = validateEnumDefinition(command.definition);
+      if (enumProblem) return fail("invalid", "INVALID_ENUM_DEFINITION", "$.definition", enumProblem);
+      return { ok: true, document: { ...document, enumDefinitions: [...definitions, command.definition] }, changeSet: { fullDocumentReplace: true }, inverseChangeSet: { fullDocumentReplace: true } };
+    }
+    case "enum.update": {
+      const definitions = document.enumDefinitions ?? [];
+      const index = definitions.findIndex((definition) => definition.id === command.enumId);
+      if (index < 0) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.enumId", `Enum '${command.enumId}' does not exist.`);
+      const name = command.name.trim();
+      const next: EnumDefinition = { id: command.enumId, name, entries: command.entries };
+      const enumProblem = validateEnumDefinition(next);
+      if (enumProblem) return fail("invalid", "INVALID_ENUM_DEFINITION", "$.definition", enumProblem);
+      const current = definitions[index]!;
+      if (semanticEqual(current, next)) return fail("no-op", "NO_OP", "$", "Enum definition is unchanged.");
+      const nextDefinitions = [...definitions]; nextDefinitions[index] = next;
+      const displayChanged = !semanticEqual(current.entries, next.entries);
+      const dependents = displayChanged ? document.signals.filter((signal) => signal.type === "state" && signal.enumId === command.enumId).map((signal) => signal.id) : [];
+      const changeSet: ChangeSet = { fullDocumentReplace: true, ...(dependents.length ? { waveSemantics: dependents, geometryLocal: dependents, geometryScreenX: true } : {}) };
+      return { ok: true, document: { ...document, enumDefinitions: nextDefinitions }, changeSet, inverseChangeSet: changeSet };
     }
     case "enum.delete": {
       const definitions = document.enumDefinitions ?? [];

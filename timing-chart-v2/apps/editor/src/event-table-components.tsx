@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { formatBusValue, quickValueLiteral, quickValueOptions, type SignalValueChange, type ValueSignal } from "@timing-chart-v2/schema";
+import { formatBusValue, quickValueLiteral, quickValueOptions, type EnumDefinition, type SignalValueChange, type ValueSignal } from "@timing-chart-v2/schema";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { resolveValueEditorPolicy } from "./runtime/value-editor-policy.js";
@@ -11,8 +11,9 @@ import { reconcileExternalDraft } from "./runtime/external-draft-reconciliation.
 // never their own separately-invented Value input. `resolveValueEditorPolicy`
 // (runtime/value-editor-policy.ts) is the one place Signal type resolves to
 // a control kind; this component only renders whatever it returns.
-export function ValueEditorControl({ signal, value, onChange, ariaLabel, listId }: {
+export function ValueEditorControl({ signal, enumDefinition, value, onChange, ariaLabel, listId }: {
   readonly signal: ValueSignal;
+  readonly enumDefinition?: EnumDefinition | undefined;
   readonly value: string;
   readonly onChange: (value: string) => void;
   readonly ariaLabel: string;
@@ -21,7 +22,7 @@ export function ValueEditorControl({ signal, value, onChange, ariaLabel, listId 
   // rows/forms render this component at once).
   readonly listId: string;
 }) {
-  const policy = resolveValueEditorPolicy(signal);
+  const policy = resolveValueEditorPolicy(signal, enumDefinition);
   if (policy.kind === "select") {
     return <select aria-label={ariaLabel} value={value} onChange={(event) => onChange(event.target.value)}>
       {policy.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -37,8 +38,9 @@ export function ValueEditorControl({ signal, value, onChange, ariaLabel, listId 
   </>;
 }
 
-export function EventRow({ signal, change, end, index, selected, checked, canDuplicate, onToggleChecked, onSelect, onDuplicate, commands, draggable, onDragStart, onDragOver, onDrop, onDragEnd }: {
+export function EventRow({ signal, enumDefinition, change, end, index, selected, checked, canDuplicate, onToggleChecked, onSelect, onDuplicate, commands, draggable, onDragStart, onDragOver, onDrop, onDragEnd }: {
   readonly signal: ValueSignal;
+  readonly enumDefinition?: EnumDefinition | undefined;
   readonly change: ValueSignal["values"][number];
   readonly end: number;
   // Bottom Panel Visual Reference pass: `#` display index (1-based, table
@@ -134,7 +136,7 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
       : <output data-testid={`event-row-start-${change.start}`}>{change.start}</output>}
     <output data-testid={`event-row-end-${change.start}`}>{end}</output><output data-testid={`event-row-duration-${change.start}`}>{end - change.start}</output>
     {isEditing
-      ? <ValueEditorControl signal={signal} value={value} onChange={setValue} ariaLabel={`Value ${change.start}`} listId={`event-row-value-options-${change.start}`} />
+      ? <ValueEditorControl signal={signal} enumDefinition={enumDefinition} value={value} onChange={setValue} ariaLabel={`Value ${change.start}`} listId={`event-row-value-options-${change.start}`} />
       : <output data-testid={`event-row-value-${change.start}`}>{formatEventRowValue(signal, change)}</output>}
     {isEditing
       ? <input aria-label={`Comment ${change.start}`} value={comment} onChange={(event) => setComment(event.target.value)} />
