@@ -165,7 +165,7 @@ export function MinimalCycleView() {
   transactionCyclesPerTcRef.current = cyclesPerTc;
   // Keep standalone Cycle and Transaction presentation zoom independent while
   // Combined continues to use the shared time viewport zoom.
-  const timelineNavigation = useTimelineNavigationOwner(viewMode);
+  const timelineNavigation = useTimelineNavigationOwner(viewMode, documentEpoch);
   const zoom = timelineNavigation.zoom;
   useEffect(() => {
     if (typeof window !== "undefined" && modeComposition.persistsAsDefault) window.localStorage.setItem("timing-chart-v2.view-mode", viewMode);
