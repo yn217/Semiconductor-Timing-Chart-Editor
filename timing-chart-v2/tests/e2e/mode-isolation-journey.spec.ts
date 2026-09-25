@@ -79,6 +79,10 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   await expect(page.getByTestId("zoom-status")).toHaveText("200%", { timeout: 5_000 });
   const transactionZoom = await page.getByTestId("zoom-status").textContent();
   expect(transactionZoom).not.toBe(cycleZoom);
+  await hoverTimelineArea(page);
+  await page.mouse.wheel(300, 0);
+  await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft), { timeout: 5_000, message: "Transaction horizontal wheel must change its standalone viewport" }).toBeGreaterThan(0);
+  const transactionScroll = await timelineOwner(page).evaluate((element) => element.scrollLeft);
   const transactionLeft = Number(await shell.getAttribute("data-left-pane-width"));
   // Transaction Mode uses a fixed-width tree (composeMode.fixedLeftWidth) and has no left-pane resizer.
   await expect(page.getByTestId("left-pane-resizer")).toHaveCount(0);
@@ -112,8 +116,9 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   await expect(page.locator(".split-transaction-pane")).toBeVisible();
   await expect(page.getByTestId("combined-split-divider")).toBeVisible();
   const combinedViewport = page.getByTestId("cycle-viewport");
-  // Drive the Combined viewport's own horizontal scroll (the shared owner in Combined) to prove its position is mode-local.
-  await combinedViewport.evaluate((element) => { element.scrollLeft = 300; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  // Drive the Combined viewport's own shared horizontal owner like a user.
+  await hoverTimelineArea(page);
+  await page.mouse.wheel(400, 0);
   await expect.poll(() => combinedViewport.evaluate((element) => element.scrollLeft), { timeout: 5_000, message: "Combined horizontal wheel must change the real viewport scroll position" }).toBeGreaterThan(0);
   const combinedScroll = await combinedViewport.evaluate((element) => element.scrollLeft);
   const combinedDividerBefore = Number(await page.getByTestId("combined-split-divider").getAttribute("aria-valuenow"));
@@ -136,12 +141,15 @@ for (const viewportSize of viewports) test(`Cycle/Transaction/Combined presentat
   await modes.getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction", { timeout: 5_000 });
   await expect(page.getByTestId("zoom-status")).toHaveText(transactionZoom!);
+  await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft), { timeout: 5_000, message: "Combined scrolling must not replace Transaction's standalone horizontal position" }).toBe(transactionScroll);
   await expect(shell).toHaveAttribute("data-left-pane-width", String(transactionLeftAfter));
   await expect(shell).toHaveAttribute("data-bottom-visible", "false");
   await assertViewOnly();
   await modes.getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Cycle", { timeout: 5_000 });
   await expect(page.getByTestId("zoom-status")).toHaveText(cycleZoom!);
+  await expect.poll(() => timelineOwner(page).evaluate((element) => element.scrollLeft), { timeout: 5_000, message: "Transaction scrolling must not replace Cycle's standalone horizontal position" }).toBe(cycleScroll);
+  await expect.poll(() => page.getByTestId("cycle-viewport").evaluate((element) => element.scrollLeft), { timeout: 5_000, message: "A stale Transaction/Combined offset must not shift Cycle's fixed label columns" }).toBe(0);
   await expect(shell).toHaveAttribute("data-left-pane-width", String(cycleLeftAfter));
   await expect(shell).toHaveAttribute("data-frozen-pane-width", String(cycleFrozenAfter));
   await expect(shell).toHaveAttribute("data-inspector-visible", "false");
