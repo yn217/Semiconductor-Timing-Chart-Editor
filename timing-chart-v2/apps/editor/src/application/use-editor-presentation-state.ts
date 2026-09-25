@@ -43,7 +43,7 @@ export function useEditorPresentationState(input: { readonly hostRef: MutableRef
     const legend = rendererHost.querySelector<HTMLElement>("[data-testid='editor-legend']");
     if (legend) {
       legend.dataset.selected = String(next.legendSelected);
-      legend.setAttribute("aria-pressed", String(next.legendSelected));
+      legend.setAttribute("aria-label", next.legendSelected ? "Legend, selected" : "Legend");
     }
     previousSelectionDecorationRef.current = next;
   };

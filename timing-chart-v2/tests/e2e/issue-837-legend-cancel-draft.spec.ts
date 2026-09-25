@@ -70,3 +70,15 @@ test("external Legend drag does not erase dirty Inspector fields or apply stale 
   await expect(legend).toHaveAttribute("data-legend-position-x", "300");
   await expect(legend).toHaveClass(/vertical/);
 });
+
+test("Legend selection is announced without implying a toggle state", async ({ page }) => {
+  const { legend } = await showLegend(page);
+  await expect(legend).toHaveAttribute("aria-label", "Legend");
+  await expect(legend).not.toHaveAttribute("aria-pressed");
+
+  await legend.click();
+
+  await expect(legend).toHaveAttribute("data-selected", "true");
+  await expect(legend).toHaveAttribute("aria-label", "Legend, selected");
+  await expect(legend).not.toHaveAttribute("aria-pressed");
+});
