@@ -131,7 +131,20 @@ describe("deterministic document export", () => {
     const document = { ...canonicalFixture(), legend: { ...canonicalFixture().legend, show: true, position: { x: 36, y: 48 } } };
     const scene = buildExportScene(document, { format: "svg", scope: "document" });
     expect(scene.legendPosition).toEqual({ x: 36, y: 48 });
-    expect(renderExportSvg(scene)).toContain('<g data-layer="legend" transform="translate(36 48)"');
+    const svg = renderExportSvg(scene);
+    expect(svg).toContain('<g data-layer="legend" data-orientation="horizontal" transform="translate(36 48)"');
+    expect(svg).toContain('<text x="12" y="12">');
+    expect(svg).not.toContain(`<text x="12" y="${scene.height - 12}">`);
+  });
+
+  it("preserves vertical Legend orientation in SVG export", () => {
+    const base = canonicalFixture();
+    const labels = ["Input", "Output"];
+    const document = { ...base, legend: { ...base.legend, show: true, orientation: "vertical" as const, usedRolesOnly: false, items: labels.map((label, order) => ({ id: `legend-${order}`, role: order === 0 ? "input" as const : "output" as const, label, visible: true, order })) } };
+    const svg = renderExportSvg(buildExportScene(document, { format: "svg", scope: "document" }));
+    expect(svg).toContain('<g data-layer="legend" data-orientation="vertical"');
+    expect(svg).toContain('<text x="12" y="12">Input</text>');
+    expect(svg).toContain('<text x="12" y="26">Output</text>');
   });
 
   it("exports Group Band presentation and derived per-object spacing", () => {

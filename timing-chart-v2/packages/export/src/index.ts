@@ -46,6 +46,7 @@ export interface ExportScene {
   readonly edgeCounters: readonly ExportEdgeCounter[];
   readonly legend: readonly string[];
   readonly legendPosition: Readonly<{ readonly x: number; readonly y: number }>;
+  readonly legendOrientation: "horizontal" | "vertical";
   readonly ruler: ExportRuler;
   readonly documentLayout: ExportDocumentLayout;
   readonly page?: ExportPageLayout;
@@ -332,7 +333,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   const ticks: ExportRulerTick[] = [];
   for (let cycle = range.start; cycle <= range.end; cycle += 1) ticks.push({ cycle, text: String(mapping.labelFor(cycle)) });
   const page = settings.page ? pageLayout(settings.page, contentWidth, contentHeight) : undefined;
-  return Object.freeze({ width: page?.width ?? contentWidth, height: page?.height ?? contentHeight, waveforms, labels, annotations, transactions, groupBands, axisBreaks, edgeCounters, legend, legendPosition: document.legend.position, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks }, documentLayout, ...(page === undefined ? {} : { page }) });
+  return Object.freeze({ width: page?.width ?? contentWidth, height: page?.height ?? contentHeight, waveforms, labels, annotations, transactions, groupBands, axisBreaks, edgeCounters, legend, legendPosition: document.legend.position, legendOrientation: document.legend.orientation, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks }, documentLayout, ...(page === undefined ? {} : { page }) });
 }
 
 const xml = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
@@ -570,7 +571,7 @@ export function renderExportSvg(scene: ExportScene): string {
   out.push(`</g><g data-layer="edge-counters" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#7c3aed" stroke="none">`);
   for (const edge of scene.edgeCounters) out.push(`<text data-edge-counter-id="${xml(edge.id)}" data-signal-id="${xml(edge.signalId)}" data-edge-kind="${edge.kind}" data-cycle="${edge.cycle}" x="${edge.x}" y="${edge.y}">${xml(edge.label)}</text>`);
   const footer = [layout.figureNumber, layout.revision, layout.footerText].filter((value) => value.length > 0).join(" · ");
-  out.push(`</g><g data-layer="legend" transform="translate(${scene.legendPosition.x} ${scene.legendPosition.y})" font-family="Segoe UI,Arial,sans-serif" font-size="10">${scene.legend.map((role, index) => `<text x="${12 + index * 80}" y="${scene.height - (footer ? 30 : 12)}">${xml(role)}</text>`).join("")}</g>`);
+  out.push(`</g><g data-layer="legend" data-orientation="${scene.legendOrientation}" transform="translate(${scene.legendPosition.x} ${scene.legendPosition.y})" font-family="Segoe UI,Arial,sans-serif" font-size="10">${scene.legend.map((role, index) => `<text x="${scene.legendOrientation === "vertical" ? 12 : 12 + index * 80}" y="${12 + (scene.legendOrientation === "vertical" ? index * 14 : 0)}">${xml(role)}</text>`).join("")}</g>`);
   if (footer) out.push(`<text data-layout="footer" x="12" y="${scene.height - 12}" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#52677d">${xml(footer)}</text>`);
   if (scene.page) out.push(`</g>`);
   out.push(`</svg>`);
