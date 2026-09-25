@@ -262,6 +262,7 @@ test("edits and displays the Legend through the canonical presentation command",
   await properties.getByTestId("apply-document-properties").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   const legend = page.getByTestId("editor-legend");
+  await expect(legend).toHaveAttribute("data-legend-id", "document-legend");
   await expect(legend).toBeVisible();
   await expect(legend).toHaveClass(/vertical/);
   await expect(legend.locator("[data-legend-role]")).toHaveCount(3);
@@ -289,6 +290,31 @@ test("Legend position supports drag and keyboard nudge through legend.update", a
   await page.keyboard.press("Shift+ArrowDown");
   await expect(legend).toHaveAttribute("data-legend-position-y", "60");
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+});
+
+test("selecting Legend follows Inspector and edits through one canonical update", async ({ page }) => {
+  await ready(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
+  const properties = page.getByRole("dialog", { name: "Document Properties" });
+  await properties.getByLabel("Legend show").check();
+  await properties.getByTestId("apply-document-properties").click();
+  const legend = page.getByTestId("editor-legend");
+  const originalX = await legend.getAttribute("data-legend-position-x");
+  const history = page.getByTestId("history-status");
+  const beforeSelect = await history.textContent();
+  await legend.click();
+  await expect(legend).toHaveAttribute("data-selected", "true");
+  await expect(page.getByTestId("inspector")).toHaveAttribute("data-inspector-entity", "legend");
+  await expect(page.getByTestId("inspector-selection-header")).toContainText("Legend");
+  await expect(history).toHaveText(beforeSelect ?? "");
+  await page.getByLabel("Legend X").fill("44");
+  await page.getByTestId("apply-legend-properties").click();
+  await expect(legend).toHaveAttribute("data-legend-position-x", "44");
+  await expect(history).toHaveText("History 2 / Redo 0");
+  await page.keyboard.press("Control+z");
+  await expect(legend).toHaveAttribute("data-legend-position-x", originalX ?? "");
+  await expect(history).toHaveText("History 1 / Redo 1");
 });
 
 test("Legend editor exposes stable-ID label, visibility and ordering controls", async ({ page }) => {
