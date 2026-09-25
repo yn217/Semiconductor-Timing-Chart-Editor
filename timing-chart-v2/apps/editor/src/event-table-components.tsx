@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatBusValue, quickValueLiteral, quickValueOptions, type SignalValueChange, type ValueSignal } from "@timing-chart-v2/schema";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { resolveValueEditorPolicy } from "./runtime/value-editor-policy.js";
+import { reconcileExternalDraft } from "./runtime/external-draft-reconciliation.js";
 
 // Value Editor Policy pass: the ONE control used everywhere a Signal's
 // `values` entries are edited -- Add/Edit Transition (event-table.tsx)
@@ -63,6 +64,8 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
   const [start, setStart] = useState(change.start);
   const [value, setValue] = useState(String(change.value));
   const [comment, setComment] = useState(change.comment ?? "");
+  const [externalConflict, setExternalConflict] = useState(false);
+  const baseRef = useRef({ start: change.start, value: String(change.value), comment: change.comment ?? "" });
   // Visual Quality Closure follow-up (#402/#426), Section 7: a row reads
   // as plain text at rest -- inline inputs only exist while `isEditing`.
   // This is presentation-only; the Draft/Apply contract underneath is
@@ -78,18 +81,41 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
   // disturb the selection/Preview surface). `end` is derived and read-only,
   // so it is intentionally excluded from both the Draft and this comparison.
   const hasChanges = start !== change.start || value !== String(change.value) || comment !== (change.comment ?? "");
-  const cancel = () => { setStart(change.start); setValue(String(change.value)); setComment(change.comment ?? ""); };
+  useEffect(() => {
+    const latest = { start: change.start, value: String(change.value), comment: change.comment ?? "" };
+    const resolution = reconcileExternalDraft(baseRef.current, { start, value, comment }, latest, isEditing, (left, right) => left.start === right.start && left.value === right.value && left.comment === right.comment);
+    if (resolution.kind === "rebase") {
+      setStart(resolution.value.start); setValue(resolution.value.value); setComment(resolution.value.comment);
+      baseRef.current = resolution.value;
+      setExternalConflict(false);
+    } else if (resolution.kind === "conflict") setExternalConflict(true);
+  }, [change.start, change.value, change.comment, start, value, comment, isEditing]);
+  const reloadLatest = () => {
+    const latest = { start: change.start, value: String(change.value), comment: change.comment ?? "" };
+    setStart(latest.start); setValue(latest.value); setComment(latest.comment);
+    baseRef.current = latest;
+    setExternalConflict(false);
+  };
+  const keepDraft = () => {
+    baseRef.current = { start: change.start, value: String(change.value), comment: change.comment ?? "" };
+    setExternalConflict(false);
+  };
+  const cancel = () => { reloadLatest(); };
   const startEditing = () => { onSelect(change.start); setIsEditing(true); };
   const stopEditing = () => { cancel(); setIsEditing(false); };
   return <form className={`event-row${selected ? " selected" : ""}${isEditing ? " editing" : ""}`} role="row" data-event-id={change.id ?? `start-${change.start}`} data-event-start={change.start} draggable={false} onDragEnter={onDragOver} onDragOver={onDragOver} onDropCapture={onDrop} onDrop={onDrop} onDragEnd={onDragEnd} onClick={() => onSelect(change.start)} onSubmit={(event) => {
     event.preventDefault();
-    if (!hasChanges) return;
+    if (!hasChanges || externalConflict) return;
     const result = commands.replaceValue(signal.id, change.start, start, value, comment);
     // Only leave edit mode on a command the planner actually accepted --
     // a rejected Draft (e.g. a duplicate change point) stays open and
     // editable so the Problems banner's guidance can be acted on directly,
     // instead of silently reverting to read-only with the edit lost.
-    if (result.ok) setIsEditing(false);
+    if (result.ok) {
+      baseRef.current = { start, value, comment };
+      setExternalConflict(false);
+      setIsEditing(false);
+    }
   }}>
     {/* Visual Quality Closure pass (#402/#426): "Select transition N" (not
         the bare cycle number) so the accessible name reads as a sentence,
@@ -126,11 +152,13 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
         announced to assistive tech and still visually present, just not
         ~110px of running text competing for the same narrow column. */}
     <span className="event-actions">
+      {isEditing && externalConflict && <span role="alert" data-testid={`event-row-draft-conflict-${change.start}`}>Transition changed elsewhere. Reload latest or keep this draft before saving.</span>}
+      {isEditing && externalConflict && <><button type="button" onClick={(event) => { event.stopPropagation(); reloadLatest(); }}>Reload latest</button><button type="button" onClick={(event) => { event.stopPropagation(); keepDraft(); }}>Keep my draft</button></>}
       {isEditing && hasChanges && <span className="event-row-dirty-dot" role="status" title="Unapplied changes" aria-label="Unapplied changes" data-testid={`event-row-unapplied-${change.start}`} />}
       {isEditing
         ? <>
           <button type="button" onClick={(event) => { event.stopPropagation(); stopEditing(); }} data-testid={`event-row-cancel-${change.start}`}>Cancel</button>
-          <button type="submit" disabled={!hasChanges}>Save</button>
+          <button type="submit" disabled={!hasChanges || externalConflict}>Save</button>
         </>
         : <>
           <button type="button" className="icon-button" title="Edit transition" aria-label={`Edit transition at cycle ${change.start}`} onClick={(event) => { event.stopPropagation(); startEditing(); }}><RibbonIcon name="i-edit" /></button>
