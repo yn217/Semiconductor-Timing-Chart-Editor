@@ -104,12 +104,11 @@ the shared ExportScene also produces valid PNG and PDF outputs. PR #826
 (`306d7d1`) additionally makes the Legend a selectable stable-identity overlay
 with Inspector-owned Show/Used Roles/Orientation/X/Y drafts through the shared
 `legend.update` Semantic Command. Current-main focused semantic, interactive
-control and parity-inventory checks pass. Inspector-authored Save/Open and
-real-browser selection/Apply acceptance remain unverified. PR #830 adds a
-focused production Save/Open assertion for Inspector-authored Legend
-orientation and position, but its browser run is blocked before app startup
-because the configured webServer cannot find the local `vite` executable; no
-browser PASS is claimed. Anchor+Offset
+control and parity-inventory checks pass. PR #830's focused production browser
+test now passes selection through the stable overlay ID, Inspector identity,
+one-command Apply, Undo, and Save/Open of Inspector-authored orientation and
+position. The local dependency links were restored without changing the lock
+file; the test ran in Chromium. Anchor+Offset
 versus Free Position remains unmodeled; the approved source does not define the
 canonical anchor/reference target, so that specific design point is tracked as
 a product decision rather than guessed.

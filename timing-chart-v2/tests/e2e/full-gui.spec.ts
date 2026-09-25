@@ -298,7 +298,10 @@ test("selecting Legend follows Inspector and edits through one canonical update"
   await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
   const properties = page.getByRole("dialog", { name: "Document Properties" });
   await properties.getByLabel("Legend show").check();
+  await properties.getByLabel("Legend position X").fill("200");
+  await properties.getByLabel("Legend position Y").fill("140");
   await properties.getByTestId("apply-document-properties").click();
+  await properties.getByRole("button", { name: "Close properties" }).click();
   const legend = page.getByTestId("editor-legend");
   const originalX = await legend.getAttribute("data-legend-position-x");
   const history = page.getByTestId("history-status");
