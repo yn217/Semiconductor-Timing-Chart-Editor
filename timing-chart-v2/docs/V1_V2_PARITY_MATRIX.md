@@ -137,6 +137,20 @@ The JSON inventory also covers the full product contract, including:
 - 20 Golden Samples and feature-coverage acceptance;
 - structural performance and incremental invalidation.
 
+### State Enum slice (DATA-03)
+
+The approved State/Enum editor and symbolic projection slice is implemented on
+current main by PR #850 (`33d96b6`): definitions and State assignment use the
+existing canonical/SemanticCommand owners; value choices retain source values;
+the WaveDrom adapter resolves known labels and falls back for unknown values.
+Current-main focused evidence is 30/30 tests plus typecheck PASS.
+
+This is not full visual parity evidence. Golden Feature 11 currently contains a
+generic State signal but no EnumDefinition or assignment, and the production
+file-dialog Save/Open UI journey has not been run for this feature. Those gaps
+remain explicit in DATA-03; do not mutate the immutable Golden fixture to make
+the matrix appear complete.
+
 The `legacyIssueCoverage` array retains every discovered pre-V2 issue number
 from the repository audit. Issues are grouped by contract where one V2 owner
 is appropriate; grouping does not remove the original traceability obligation.
