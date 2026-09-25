@@ -162,6 +162,30 @@
 # #633 AWAITING_CLEANUP_APPROVAL — inventory only; no deletion without explicit approval.
 #
 # ============================================================================
+# GITHUB ACTIONS / PR GATE POLICY — USER DECISION
+# ============================================================================
+# GitHub Actions must NOT be operated by Codex.
+# Codex must not:
+#   - rerun/retry failed or cancelled Actions jobs;
+#   - cancel in-progress Actions jobs;
+#   - manually dispatch workflows;
+#   - re-run only failed jobs;
+#   - edit workflow YAML merely to make PR checks pass;
+#   - modify branch protection / required checks / merge queue settings;
+#   - bypass, disable, weaken, or reinterpret PR gates;
+#   - wait/poll repeatedly for GitHub-hosted Actions as part of its local verification loop.
+#
+# If a PR check is red/pending/empty (including runner_id=0 / steps=0 / no logs):
+#   1. record the observed status once;
+#   2. do NOT operate GitHub Actions;
+#   3. run the required verification locally in the repository/worktree;
+#   4. leave the PR unmerged/awaiting external CI if repository policy requires it;
+#   5. continue to the next independent executable task when safe.
+#
+# Local commands/tests/gates are the Codex verification authority.
+# GitHub Actions status is read-only evidence for Codex unless the user explicitly revokes this rule.
+#
+# ============================================================================
 # ROOT-CAUSE / EXECUTION RULES
 # ============================================================================
 # - Read latest origin/main + Issue body/comments + relevant open PRs before editing.
