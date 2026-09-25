@@ -240,6 +240,28 @@ If a closed defect reappears in current main, reopen with new evidence rather th
 
 Do not repeatedly report these three unless their state materially changes.
 
+# GITHUB ACTIONS POLICY — EXPLICIT USER DECISION
+
+GitHub Actions is **read-only evidence** for Codex/Claude unless the user explicitly changes this policy.
+
+Neither agent may:
+- rerun/retry failed Actions jobs;
+- manually dispatch workflows;
+- cancel jobs;
+- edit workflow YAML only to make PR checks pass;
+- modify required-check / branch-protection / merge-queue settings;
+- bypass or weaken a PR gate;
+- repeatedly poll/wait on GitHub-hosted CI as an autonomous work loop.
+
+If GitHub Actions is red/pending/has zero steps:
+1. note the status once;
+2. do not operate the workflow;
+3. verify locally with the repository's required tests/gates;
+4. leave merge eligibility to the repository/user policy;
+5. continue other independent work rather than retrying CI.
+
+This specifically supersedes any generic instruction to "verify PR gates" if that would require operating GitHub Actions.
+
 # HANDOFF / COLLISION POLICY
 
 1. One Issue = one active implementation owner.
