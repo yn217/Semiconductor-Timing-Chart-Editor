@@ -24,6 +24,7 @@ test("switching Bookmark selection keeps an unapplied draft, announced, until Ap
   const nameField = panel.getByLabel("Bottom Bookmark name");
   await nameField.fill("DRAFT_A");
   await expect(panel.getByTestId("bottom-bookmark-unapplied")).toBeVisible();
+  await expect(panel.getByTestId("bottom-bookmark-unapplied")).not.toContainText("kept from earlier");
   await expect(panel.getByTestId("bookmark-retained-drafts")).toHaveCount(0);
 
   // Switch: the draft is kept and announced instead of vanishing silently.
