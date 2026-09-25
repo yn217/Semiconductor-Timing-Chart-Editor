@@ -238,15 +238,7 @@ export function useAIBridgeClient(enabled: boolean, host: string, port: number, 
     setStatus("connecting");
     const baseUrl = `http://${host}:${port}`;
     const authHeaders = { authorization: `Bearer ${token}` };
-    const getSession = (currentContext: AIBridgeContext, forceNew = false) => {
-      const documentKey = `${currentContext.documentEpoch}:${currentContext.document.document.id}`;
-      if (forceNew || !sessionRef.current || sessionRef.current.documentKey !== documentKey) {
-        sessionRef.current = { documentKey, editorSessionId: globalThis.crypto.randomUUID() };
-      }
-      return { tabId: tabIdRef.current!, ...sessionRef.current };
-    };
-    let activeSession = getSession(contextRef.current, true);
-    const closeSession = (session: ReturnType<typeof getSession>) => {
+    const closeSession = (session: { readonly tabId: string; readonly editorSessionId: string }) => {
       void fetch(`${baseUrl}/bridge/close`, {
         method: "POST",
         headers: { ...authHeaders, "content-type": "application/json" },
@@ -254,6 +246,19 @@ export function useAIBridgeClient(enabled: boolean, host: string, port: number, 
         keepalive: true,
       }).catch(() => { /* session expiry remains the fallback if the page is closing */ });
     };
+    const getSession = (currentContext: AIBridgeContext, forceNew = false) => {
+      const documentKey = `${currentContext.documentEpoch}:${currentContext.document.document.id}`;
+      if (forceNew || !sessionRef.current || sessionRef.current.documentKey !== documentKey) {
+        if (sessionRef.current && sessionRef.current.documentKey !== documentKey) {
+          // A New/Open document must retire its previous routing identity
+          // immediately, not leave it selectable until the stale-session TTL.
+          closeSession({ tabId: tabIdRef.current!, editorSessionId: sessionRef.current.editorSessionId });
+        }
+        sessionRef.current = { documentKey, editorSessionId: globalThis.crypto.randomUUID() };
+      }
+      return { tabId: tabIdRef.current!, ...sessionRef.current };
+    };
+    let activeSession = getSession(contextRef.current, true);
     const handlePageHide = () => closeSession(activeSession);
     window.addEventListener("pagehide", handlePageHide);
     const pollOnce = async (): Promise<boolean> => {

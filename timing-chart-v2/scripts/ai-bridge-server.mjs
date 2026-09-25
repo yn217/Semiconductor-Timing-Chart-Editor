@@ -10,16 +10,18 @@
 // Transport: a minimal HTTP JSON-RPC 2.0 surface (MCP's "Streamable
 // HTTP" transport, simplified to one request per call rather than a
 // persistent SSE session) for the MCP client side, plus a short-poll
-// HTTP pair (/bridge/poll, /bridge/respond) the browser tab uses to pick
-// up pending tool calls and post results back. Every request on every
-// endpoint must carry the same bearer token this process generates (or
-// is given) at startup; anything else is rejected with 401.
+// HTTP pair (/bridge/poll, /bridge/respond, /bridge/close) the browser tab
+// uses to pick up pending tool calls and post results back. MCP clients and
+// Editor tabs use separate bearer tokens so an MCP client cannot impersonate
+// or evict an Editor session.
 import { createServer } from "node:http";
 import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 
 const HOST = "127.0.0.1"; // never 0.0.0.0 -- localhost-only by construction.
 const PORT = Number(process.env.AI_BRIDGE_PORT ?? 4610);
 const TOKEN = process.env.AI_BRIDGE_TOKEN ?? randomBytes(24).toString("hex");
+const EDITOR_TOKEN = process.env.AI_BRIDGE_EDITOR_TOKEN ?? randomBytes(24).toString("hex");
+if (TOKEN === EDITOR_TOKEN) throw new Error("AI_BRIDGE_TOKEN and AI_BRIDGE_EDITOR_TOKEN must be different credentials.");
 const POLL_TIMEOUT_MS = 25_000;
 const EDITOR_SESSION_TIMEOUT_MS = 15_000;
 
@@ -100,18 +102,18 @@ const TOOL_CATALOG = [
   { name: "propose_delete_time_group", description: "Propose deleting the Time Group identified by stable timeGroupId. Existing SemanticCommand behavior promotes child groups and removes owned resume anchors; creates a Preview only.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, timeGroupId: { type: "string", minLength: 1 } }, required: ["editorSessionId", "timeGroupId"], additionalProperties: false } },
 ];
 
-function timingSafeTokenEquals(candidate) {
+function timingSafeTokenEquals(candidate, expected = TOKEN) {
   if (typeof candidate !== "string" || candidate.length === 0) return false;
   const a = Buffer.from(candidate);
-  const b = Buffer.from(TOKEN);
+  const b = Buffer.from(expected);
   if (a.length !== b.length) return false;
   return timingSafeEqual(a, b);
 }
 
-function bearerToken(req, url) {
+function bearerToken(req) {
   const header = req.headers.authorization;
   if (typeof header === "string" && header.startsWith("Bearer ")) return header.slice("Bearer ".length);
-  return url.searchParams.get("token") ?? undefined;
+  return undefined;
 }
 
 // Polling remains immediate, but calls are bound to an explicit Editor
@@ -186,12 +188,11 @@ function registerEditorSession(body) {
   }
   if (typeof documentTitle !== "string" || documentTitle.length > 256) throw new Error("Editor poll requires a documentTitle string up to 256 characters.");
   const previousSessionId = sessionByTab.get(tabId);
-  if (previousSessionId && previousSessionId !== editorSessionId) removeEditorSession(previousSessionId);
   const existing = editorSessions.get(editorSessionId);
   if (existing && (existing.tabId !== tabId || existing.documentId !== documentId)) {
-    removeEditorSession(editorSessionId);
     throw staleSessionError(editorSessionId);
   }
+  if (previousSessionId && previousSessionId !== editorSessionId) removeEditorSession(previousSessionId);
   const count = (value) => Number.isSafeInteger(value) && value >= 0 ? value : 0;
   const session = existing ?? { tabId, editorSessionId, documentId, createdAt: Date.now() };
   session.documentTitle = documentTitle;
@@ -292,7 +293,8 @@ const server = createServer(async (req, res) => {
   applyCors(res);
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
   const url = new URL(req.url ?? "/", `http://${HOST}:${PORT}`);
-  if (!timingSafeTokenEquals(bearerToken(req, url))) { sendJson(res, 401, { error: "Missing or invalid bridge token." }); return; }
+  const expectedToken = url.pathname === "/mcp" ? TOKEN : ["/bridge/poll", "/bridge/respond", "/bridge/close"].includes(url.pathname) ? EDITOR_TOKEN : undefined;
+  if (!expectedToken || !timingSafeTokenEquals(bearerToken(req), expectedToken)) { sendJson(res, 401, { error: "Missing or invalid bridge token for this endpoint." }); return; }
 
   if (req.method === "POST" && url.pathname === "/mcp") {
     let body;
@@ -354,8 +356,9 @@ server.listen(PORT, HOST, () => {
   const listeningPort = typeof address === "object" && address ? address.port : PORT;
   // eslint-disable-next-line no-console
   console.log(`[ai-bridge] listening on http://${HOST}:${listeningPort} (localhost-only)`);
-  console.log(`[ai-bridge] token: ${TOKEN}`);
-  console.log("[ai-bridge] paste this token into the Editor's AI Settings > Agent Connection to authorize a browser tab.");
+  console.log(`[ai-bridge] MCP client token: ${TOKEN}`);
+  console.log(`[ai-bridge] Editor transport token: ${EDITOR_TOKEN}`);
+  console.log("[ai-bridge] Use the MCP client token only in your MCP client; paste the Editor transport token into AI Settings.");
 });
 
-export { HOST, PORT, TOKEN, server };
+export { HOST, PORT, TOKEN, EDITOR_TOKEN, server };

@@ -33,6 +33,8 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
 
   it("generates a real random token by default and compares it in constant time", () => {
     expect(source).toMatch(/TOKEN\s*=\s*process\.env\.AI_BRIDGE_TOKEN\s*\?\?\s*randomBytes\(\d+\)\.toString\(["']hex["']\)/);
+    expect(source).toMatch(/EDITOR_TOKEN\s*=\s*process\.env\.AI_BRIDGE_EDITOR_TOKEN\s*\?\?\s*randomBytes\(\d+\)\.toString\(["']hex["']\)/);
+    expect(source).toContain("if (TOKEN === EDITOR_TOKEN) throw new Error(");
     expect(source).toContain("timingSafeEqual");
   });
 
@@ -66,18 +68,21 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
     expect(new Set(inventoryNames)).toEqual(new Set(catalogNames));
   });
 
-  it("requires the bearer token on every route, including the poll/respond pair, before any routing decision", () => {
-    // The token check must run once, ahead of the /mcp, /bridge/poll and
-    // /bridge/respond branches -- not duplicated (and possibly forgotten)
-    // per-route.
-    const tokenCheckIndex = source.indexOf("timingSafeTokenEquals(bearerToken(req, url))");
-    const mcpRouteIndex = source.indexOf('url.pathname === "/mcp"');
-    const pollRouteIndex = source.indexOf('url.pathname === "/bridge/poll"');
-    const respondRouteIndex = source.indexOf('url.pathname === "/bridge/respond"');
+  it("uses distinct bearer credentials for MCP and Editor transport routes", () => {
+    const routeCredentialIndex = source.indexOf("const expectedToken = url.pathname");
+    const tokenCheckIndex = source.indexOf("timingSafeTokenEquals(bearerToken(req), expectedToken)");
+    const mcpRouteIndex = source.indexOf('req.method === "POST" && url.pathname === "/mcp"');
+    const pollRouteIndex = source.indexOf('req.method === "POST" && url.pathname === "/bridge/poll"');
+    const respondRouteIndex = source.indexOf('req.method === "POST" && url.pathname === "/bridge/respond"');
+    expect(routeCredentialIndex).toBeGreaterThan(-1);
+    expect(routeCredentialIndex).toBeLessThan(tokenCheckIndex);
     expect(tokenCheckIndex).toBeGreaterThan(-1);
     expect(tokenCheckIndex).toBeLessThan(mcpRouteIndex);
     expect(tokenCheckIndex).toBeLessThan(pollRouteIndex);
     expect(tokenCheckIndex).toBeLessThan(respondRouteIndex);
+    expect(source).toContain('url.pathname === "/mcp" ? TOKEN');
+    expect(source).toContain('"/bridge/poll", "/bridge/respond", "/bridge/close"].includes(url.pathname) ? EDITOR_TOKEN');
+    expect(source).not.toContain('searchParams.get("token")');
   });
 
   it("binds every pending request and response to an explicit Editor session", () => {
@@ -85,6 +90,7 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
     expect(source).toContain("body.editorSessionId !== call.editorSessionId");
     expect(source).toContain("Tool '${name}' requires an explicit editorSessionId");
     expect(source).toContain("requests are never redirected to another tab");
+    expect(source).not.toContain("removeEditorSession(editorSessionId);\n    throw staleSessionError(editorSessionId);");
   });
 
   it("bounds request body size so the bridge cannot be used to exhaust memory", () => {
