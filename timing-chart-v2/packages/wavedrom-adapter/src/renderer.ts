@@ -84,20 +84,30 @@ export function assertSafeWaveDromMarkup(markup: string): string {
  */
 export function assertSafeWaveDromSvg(svg: Element): void {
   const unsafeElements = new Set(["script", "foreignObject", "iframe", "object", "embed", "img"]);
-  for (const element of [svg, ...Array.from(svg.querySelectorAll("*"))]) {
+  const validateElement = (element: Element): void => {
     if (unsafeElements.has(element.localName.toLowerCase())) {
       throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced an executable SVG element.");
     }
-    for (const attribute of Array.from(element.attributes)) {
+    for (let index = 0; index < element.attributes.length; index += 1) {
+      const attribute = element.attributes.item(index);
+      if (!attribute) continue;
       const name = attribute.name.toLowerCase();
-      const value = attribute.value.trim().toLowerCase();
       if (name.startsWith("on")) {
         throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced an SVG event-handler attribute.");
       }
-      if ((name === "href" || name === "xlink:href") && !value.startsWith("#")) {
+      // Only link values need normalization. SVG path data and style values can
+      // be much larger than the attribute name and are irrelevant to this URL
+      // policy; lowercasing them allocated/scanned every long `d` attribute.
+      if ((name === "href" || name === "xlink:href") && !attribute.value.trim().startsWith("#")) {
         throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced an unsafe SVG URL attribute.");
       }
     }
+  };
+  validateElement(svg);
+  const descendants = svg.querySelectorAll("*");
+  for (let index = 0; index < descendants.length; index += 1) {
+    const element = descendants.item(index);
+    if (element) validateElement(element);
   }
 }
 
