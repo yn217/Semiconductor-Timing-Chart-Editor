@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
+import { readFile } from "node:fs/promises";
 
 startInCycleSample(test);
 
@@ -23,6 +24,7 @@ test("Legend Escape and pointer cancellation restore the committed position with
   const original = { x: await legend.getAttribute("data-legend-position-x"), y: await legend.getAttribute("data-legend-position-y") };
   const revision = await surface.getAttribute("data-canonical-revision");
   const history = await page.getByTestId("history-status").textContent();
+  const dirty = await page.getByTestId("dirty-status").textContent();
   const box = (await legend.boundingBox())!;
 
   await page.mouse.move(box.x + 16, box.y + 12);
@@ -34,6 +36,7 @@ test("Legend Escape and pointer cancellation restore the committed position with
   await expect(legend).toHaveAttribute("data-legend-position-y", original.y!);
   await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
   await expect(page.getByTestId("history-status")).toHaveText(history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
 
   const resetBox = (await legend.boundingBox())!;
   await page.mouse.move(resetBox.x + 16, resetBox.y + 12);
@@ -45,6 +48,7 @@ test("Legend Escape and pointer cancellation restore the committed position with
   await expect(legend).toHaveAttribute("data-legend-position-y", original.y!);
   await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
   await expect(page.getByTestId("history-status")).toHaveText(history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
 });
 
 test("external Legend drag does not erase dirty Inspector fields or apply stale position", async ({ page }) => {
@@ -81,4 +85,57 @@ test("Legend selection is announced without implying a toggle state", async ({ p
   await expect(legend).toHaveAttribute("data-selected", "true");
   await expect(legend).toHaveAttribute("aria-label", "Legend, selected");
   await expect(legend).not.toHaveAttribute("aria-pressed");
+});
+
+test("Legend pointerup is one undo unit and Save/Open/export use the committed position", async ({ page }) => {
+  const { surface, legend } = await showLegend(page);
+  const original = {
+    x: Number(await legend.getAttribute("data-legend-position-x")),
+    y: Number(await legend.getAttribute("data-legend-position-y")),
+  };
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+
+  const box = (await legend.boundingBox())!;
+  await page.mouse.move(box.x + 20, box.y + 15);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 55, box.y + 35, { steps: 3 });
+  await page.mouse.up();
+  const committed = {
+    x: Number(await legend.getAttribute("data-legend-position-x")),
+    y: Number(await legend.getAttribute("data-legend-position-y")),
+  };
+  expect(committed).toEqual({ x: original.x + 35, y: original.y + 20 });
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(surface).toHaveAttribute("data-canonical-revision", "2");
+
+  const ribbon = page.getByTestId("ribbon");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(legend).toHaveAttribute("data-legend-position-x", String(original.x));
+  await expect(legend).toHaveAttribute("data-legend-position-y", String(original.y));
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 1");
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(legend).toHaveAttribute("data-legend-position-x", String(committed.x));
+  await expect(legend).toHaveAttribute("data-legend-position-y", String(committed.y));
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const save = page.waitForEvent("download");
+  await ribbon.getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await save).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(surface).toHaveAttribute("data-editor-idle", "true");
+  const reopenedLegend = page.getByTestId("editor-legend");
+  await expect(reopenedLegend).toHaveAttribute("data-legend-position-x", String(committed.x));
+  await expect(reopenedLegend).toHaveAttribute("data-legend-position-y", String(committed.y));
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await ribbon.getByRole("button", { name: "Export", exact: true }).click();
+  const exportDialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+  const pendingExport = page.waitForEvent("download");
+  await exportDialog.getByRole("button", { name: "Export SVG" }).click();
+  const svg = await readFile((await (await pendingExport).path())!);
+  expect(svg.toString("utf8")).toContain(`data-layer="legend" data-orientation="horizontal" transform="translate(${committed.x} ${committed.y})"`);
 });
