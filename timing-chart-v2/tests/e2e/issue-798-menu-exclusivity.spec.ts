@@ -12,6 +12,10 @@ test(`peer menus replace each other at ${viewport.width}x${viewport.height}`, as
   // The protocol fixture plus both mode-specific menu journeys takes over
   // the suite's 30s default on this CI-sized document; keep semantic waits.
   test.setTimeout(60000);
+  const pageErrors: string[] = [];
+  const consoleErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("console", (message) => { if (message.type() === "error") consoleErrors.push(message.text()); });
   await page.setViewportSize(viewport);
   await page.goto("/");
   const surface = page.getByTestId("cycle-surface");
@@ -42,6 +46,8 @@ test(`peer menus replace each other at ${viewport.width}x${viewport.height}`, as
   await row.locator("[data-role='frozen-signal-name']").click({ button: "right" });
   await expect(rowMenu).toBeVisible();
   await expect(headerMenu).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(rowMenu).toHaveCount(0);
 
   await expect(surface).toHaveAttribute("data-canonical-revision", "0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
@@ -55,6 +61,11 @@ test(`peer menus replace each other at ${viewport.width}x${viewport.height}`, as
   await expect(transactionMenu).toBeVisible();
   await transactionMenu.getByRole("menuitem", { name: "Move to Group" }).click();
   await expect(transactionMenu.getByRole("group", { name: "Move to Group" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(transactionMenu).toHaveCount(0);
+  await expect(transactionRow.locator("..").getByRole("button", { name: "More actions for APB write" })).toBeFocused();
+  await transactionRow.locator("..").getByRole("button", { name: "More actions for APB write" }).click();
+  await expect(transactionMenu).toBeVisible();
   await page.locator(".home-overflow-trigger").click();
   await expect(page.getByRole("menu", { name: "More Home Commands" })).toBeVisible();
   await expect(transactionMenu).toHaveCount(0);
@@ -73,5 +84,7 @@ test(`peer menus replace each other at ${viewport.width}x${viewport.height}`, as
   await expect(page.locator(".home-overflow-trigger")).toBeFocused();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  expect(pageErrors).toEqual([]);
+  expect(consoleErrors).toEqual([]);
 });
 }
