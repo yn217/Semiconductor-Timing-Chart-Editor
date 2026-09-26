@@ -106,6 +106,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
 
     const history = await page.getByTestId("history-status").innerText();
     const dirty = await page.getByTestId("dirty-status").innerText();
+    const canonicalRevision = await host.getAttribute("data-canonical-revision");
     const groupCollapse = page.locator("[data-role='left-group-header'] [data-role='tree-collapse']").first();
     await expect(groupCollapse).toBeVisible();
     const initialRows = await page.locator("[data-role='left-row']").count();
@@ -139,6 +140,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await assertGripStructure(page);
     await expect(page.getByTestId("history-status")).toHaveText(history);
     await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
+    await expect(host).toHaveAttribute("data-canonical-revision", canonicalRevision!);
   });
 }
 
