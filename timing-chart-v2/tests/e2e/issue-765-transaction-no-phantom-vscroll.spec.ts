@@ -61,7 +61,7 @@ test("a genuinely tall Transaction document keeps all lanes reachable through th
     ...source,
     transactions: source.transactions.map((transaction, index) => ({ ...transaction, laneId: `overflow_lane_${index}` })),
   };
-  // Load canonical data through production Open; do not fake overflow by styling rendered DOM.
+  // Load a real canonical document through the production Open path; do not fake overflow by styling the rendered DOM.
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "tall-transaction-layout.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(tallDocument)) });
   await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();

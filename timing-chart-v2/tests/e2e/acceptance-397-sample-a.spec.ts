@@ -33,10 +33,9 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await openSampleA(page);
     const lanes = page.getByTestId("transaction-lanes");
     await expect(lanes.locator("[data-transaction-id]")).toHaveCount(4);
-    await expect(lanes).toContainText("Read_0");
-    await expect(lanes).toContainText("Write_0");
-    await expect(lanes).toContainText("Read_1");
-    await expect(lanes).toContainText("Write_1");
+    for (const [id, name] of [["txn_read0", "Read_0"], ["txn_write0", "Write_0"], ["txn_read1", "Read_1"], ["txn_write1", "Write_1"]] as const) {
+      await expect(lanes.locator(`[data-transaction-id='${id}']`)).toHaveAttribute("aria-label", name);
+    }
 
     // Phase geometry: Read_0's 3 phases are 2/2/2 cycles (equal widths);
     // Read_1's 2 phases are 3/3 cycles (also equal, but a different bar

@@ -558,7 +558,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const isVisible = (top: number, height: number) => top < virtualBottom && top + height > virtualTop;
   const visibleGroupHeaders = groupHeaders.filter((header) => isVisible(header.labelTop, GROUP_HEADER_HEIGHT));
   const bandContainsSelected = (band: LaneBand) => selectedId !== undefined && (laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).some((transaction) => transaction.id === selectedId);
-  const visibleLaneBands = laneBands.filter((band) => isVisible(band.labelTop, band.labelHeight) || bandContainsSelected(band));
+  const visibleLaneBands = laneBands.filter((band) => isVisible(band.labelTop, band.labelHeight) || isVisible(band.trackTop, band.trackHeight) || bandContainsSelected(band));
   const isTreeTransactionVisible = (band: LaneBand, transaction: Transaction) => {
     if (isTransactionSelected(transaction.id)) return true;
     const row = band.treeRowOf.get(transaction.id) ?? 0;
@@ -579,9 +579,10 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     element.dataset.transactionFirstReadyAt = String(Date.now());
   });
 
-  // This absolute layer is inside the scrolling .cycle-viewport. Applying the
-  // virtual scroll offset here as well would subtract it twice and strand
-  // offscreen lanes above the viewport.
+  // In standalone Transaction mode this absolute layer is inside the same
+  // scrolling .cycle-viewport that drives virtualWindow. Keep its normal CSS
+  // top (34px); applying -virtualWindow.top here would subtract the scroll
+  // offset a second time and make offscreen lanes unreachable.
   return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-tree-row-builds={treeRowBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
       {visibleGroupHeaders.map((header) => {

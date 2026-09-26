@@ -27,6 +27,9 @@ async function createTransaction(page: Page, name = "DMA Read", start = 2, end =
   // the current production drag/export contract; Split View geometry has a
   // separate pane-relative coordinate surface.
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  // Test values are canonical source cycles. Use a 1:1 TC scale so Inspector
+  // input values do not get multiplied by the Transaction presentation scale.
+  await page.getByLabel("Cycles per TC").selectOption("1");
   const lane = page.getByTestId("transaction-lanes");
   await lane.locator("[data-transaction-id]").first().click();
   const editor = page.locator(".inspector-shell");
@@ -35,6 +38,8 @@ async function createTransaction(page: Page, name = "DMA Read", start = 2, end =
   await editor.getByLabel("Transaction start").fill(String(start));
   await editor.getByTestId("apply-inspector-transaction").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(editor).toContainText(`Cycle ${start}–${end}`);
+  return editor.locator("code").first().innerText();
 }
 
 test("moves a whole Transaction by dragging its body to a snapped cycle with one history entry", async ({ page }) => {
@@ -117,18 +122,20 @@ test("keeps canonical state unchanged during a dense Transaction preview drag", 
 test("resizes a Transaction's start/end edge with snap and keeps start < end", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
-  await createTransaction(page, "Resize target", 4, 8);
+  // Transaction view thins ruler labels; drag to a rendered semantic boundary.
+  const transactionId = await createTransaction(page, "Resize target", 14, 18);
   const lane = page.getByTestId("transaction-lanes");
-  const transaction = lane.locator("[data-transaction-id]");
+  const transaction = lane.locator(`[data-transaction-id="${transactionId}"]`);
   const before = (await transaction.boundingBox())!;
-  const cycle2 = (await page.getByTestId("cycle-ruler").locator("[data-cycle='2']").boundingBox())!;
+  // Select by source cycle, not a possibly scaled Transaction Cycle label.
+  const cycle10 = (await page.getByTestId("cycle-ruler").locator("[data-source-cycle='10']").boundingBox())!;
   const revisionBefore = await host.getAttribute("data-canonical-revision");
   const historyBefore = await page.getByTestId("history-status").textContent();
   const dirtyBefore = await page.getByTestId("dirty-status").textContent();
   const y = before.y + before.height / 2;
   await transaction.locator("[data-edge='start']").hover();
   await page.mouse.down();
-  await page.mouse.move(cycle2.x + cycle2.width / 2, y);
+  await page.mouse.move(cycle10.x, y);
   await expect(transaction).toHaveAttribute("data-drag-preview", "true");
   expect((await transaction.boundingBox())!.width).toBeGreaterThan(before.width);
   expect(await host.getAttribute("data-canonical-revision")).toBe(revisionBefore);
@@ -137,7 +144,7 @@ test("resizes a Transaction's start/end edge with snap and keeps start < end", a
   await page.mouse.up();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const resized = (await transaction.boundingBox())!;
-  expect(Math.abs(resized.x - cycle2.x)).toBeLessThanOrEqual(2);
+  expect(Math.abs(resized.x - cycle10.x)).toBeLessThanOrEqual(2);
   expect(resized.width).toBeGreaterThan(before.width);
 });
 

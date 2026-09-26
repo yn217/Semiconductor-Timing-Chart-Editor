@@ -24,7 +24,7 @@
     {"featureKey":"GUI-BOTTOM-PIN-FOLLOW","legacySources":["#11","#44"],"ownerIssues":["#172","#176"],"implementationStatus":"ACCEPTANCE_ONLY"},
     {"featureKey":"GUI-ADVANCED-JSON","legacySources":["#11","#78"],"ownerIssues":["#172","#176"],"implementationStatus":"ACCEPTANCE_ONLY"},
     {"featureKey":"GUI-HEADER-FOOTER","legacySources":["#12","#119","#120"],"ownerIssues":["#173","#177"],"implementationStatus":"ACCEPTANCE_ONLY"},
-    {"featureKey":"GUI-EDITABLE-LEGEND","legacySources":["#6","#31","#33"],"ownerIssues":["#162","#172","#176"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-EDITABLE-LEGEND","legacySources":["#6","#31","#33"],"ownerIssues":["#162","#172","#176"],"implementationStatus":"PARTIAL"},
     {"featureKey":"GUI-CLOCK-EDGE-COUNTER","legacySources":["#158","#159"],"ownerIssues":["#164","#172"],"implementationStatus":"ACCEPTANCE_ONLY"},
     {"featureKey":"GUI-AXIS-BREAK","legacySources":["#110","#122","#123"],"ownerIssues":["#170","#173","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
     {"featureKey":"GUI-BOOKMARK","legacySources":["#108"],"ownerIssues":["#165","#177","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
@@ -36,8 +36,8 @@
     {"featureKey":"GUI-GOLDEN-SAMPLES","legacySources":["#17","#16","#174"],"ownerIssues":["#174","#177","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
     {"featureKey":"GUI-EXPORT-COMPLETENESS","legacySources":["#13","#14","#17"],"ownerIssues":["#173","#177"],"implementationStatus":"ACCEPTANCE_ONLY"},
     {"featureKey":"GUI-TRANSITION-ARROW","legacySources":["#10","#68"],"ownerIssues":["#375"],"implementationStatus":"ACCEPTANCE_ONLY"},
-    {"featureKey":"GUI-RULER-LABEL-ANCHOR","legacySources":["#111"],"ownerIssues":["#376"],"implementationStatus":"PARTIAL"},
-    {"featureKey":"GUI-ANNOTATION-PRIMITIVES","legacySources":["#40","#69"],"ownerIssues":["#377"],"implementationStatus":"PARTIAL"},
-    {"featureKey":"GUI-ANNOTATION-PRESENTATION","legacySources":["#40","#69"],"ownerIssues":["#378"],"implementationStatus":"PARTIAL"}
+    {"featureKey":"GUI-RULER-LABEL-ANCHOR","legacySources":["#111"],"ownerIssues":["#376"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-ANNOTATION-PRIMITIVES","legacySources":["#40","#69"],"ownerIssues":["#377"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-ANNOTATION-PRESENTATION","legacySources":["#40","#69"],"ownerIssues":["#378"],"implementationStatus":"ACCEPTANCE_ONLY"}
   ]
 }

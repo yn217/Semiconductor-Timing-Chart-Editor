@@ -7,6 +7,7 @@ import type { TimelineNavigationOwner } from "../runtime/use-timeline-navigation
 import type { BottomTab } from "../workspace/use-workspace-ui-state.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
 import type { ClipboardActions } from "./clipboard-actions.js";
+import type { AISelectionEntityType } from "../ai-bridge-client.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { DocumentLifecycleOwner } from "./use-document-lifecycle.js";
 import { groupId, signalId, valueSignal } from "../minimal-cycle-view-fixture-helpers.js";
@@ -60,8 +61,8 @@ export interface EditorActionsInput {
   readonly bottomPinned: boolean;
   readonly setBottomPinned: (value: boolean) => void;
   readonly followSelection: boolean;
-  readonly pinnedBottomSelection: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId } | undefined;
-  readonly setPinnedBottomSelection: (value: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId } | undefined) => void;
+  readonly pinnedBottomSelection: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId; readonly bookmarkId?: BookmarkId } | undefined;
+  readonly setPinnedBottomSelection: (value: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId; readonly bookmarkId?: BookmarkId } | undefined) => void;
   readonly selectedSignalId: SignalId | undefined;
   readonly selectedGroupId: GroupId | undefined;
   readonly selectedAnnotationId: AnnotationId | undefined;
@@ -81,15 +82,17 @@ export interface EditorActions {
   readonly selectedBookmarkId: BookmarkId | undefined;
   readonly selectedBookmark: Bookmark | undefined;
   readonly selectBookmark: (id: BookmarkId) => void;
+  readonly selectAIEntity: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void;
   readonly addBookmarkAtCycle: (cycle: number) => void;
   readonly revealBookmark: (start: number) => void;
-  readonly deleteBottomBookmark: () => void;
+  readonly deleteBottomBookmark: (bookmarkId?: BookmarkId) => void;
   readonly navigateToBookmark: (cycle: number, bookmarkId?: BookmarkId) => void;
   readonly navigateProblem: (path: string) => void;
   readonly createSelectedAnnotation: (annotation: Annotation) => void;
   readonly createSelectedAnnotationForType: (type: AnnotationType) => void;
   readonly replaceDocument: (document: CanonicalDocument) => CommandResult;
   readonly selectAnnotation: (id: AnnotationId) => void;
+  readonly selectLegend: () => void;
   readonly deleteBottomSignal: () => void;
   readonly deleteBottomAnnotation: () => void;
   readonly deleteBottomTransaction: () => void;
@@ -155,6 +158,17 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
   const viewport = input.viewportRef;
 
   const selectBookmark = (id: BookmarkId) => setSelectedBookmarkId(id);
+  const selectLegend = () => {
+    setSelectedBookmarkId(undefined);
+    input.selection.selectLegend();
+  };
+  const selectAIEntity = ({ entityType, entityId }: { readonly entityType: AISelectionEntityType; readonly entityId: string }) => {
+    if (entityType === "signal") selectHierarchySignal(entityId as SignalId);
+    else if (entityType === "group") input.selection.selectGroup(entityId as GroupId);
+    else if (entityType === "transaction") selectTransaction(entityId as TransactionId);
+    else if (entityType === "annotation") selectAnnotation(entityId as AnnotationId);
+    else selectBookmark(entityId as BookmarkId);
+  };
   const addBookmarkAtCycle = (cycle: number) => {
     const maxCycle = Math.max(0, input.document.timeline.cycleCount - 1);
     const start = Math.max(0, Math.min(maxCycle, Math.trunc(cycle)));
@@ -171,14 +185,14 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     }
   };
   const revealBookmark = (start: number) => input.navigation.navigateToCycle(start);
-  const deleteBottomBookmark = () => {
-    if (!selectedBookmark) return;
+  const deleteBottomBookmark = (bookmarkId = selectedBookmarkId) => {
+    if (!bookmarkId || !input.document.bookmarks.some((item) => item.id === bookmarkId)) return;
     const result = input.commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", {
       id: input.nextCommandId("bookmark_delete"),
       type: "bookmark.delete",
-      bookmarkId: selectedBookmark.id,
+      bookmarkId,
     });
-    if (result.ok) setSelectedBookmarkId(undefined);
+    if (result.ok && selectedBookmarkId === bookmarkId) setSelectedBookmarkId(undefined);
   };
   const navigateToBookmark = (cycle: number, bookmarkId?: BookmarkId) => {
     input.navigation.navigateToCycle(cycle);
@@ -232,6 +246,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     selectedGroupId: input.selectedGroupId,
     selectedAnnotationId: input.selectedAnnotationId,
     selectedTransactionId: input.selectedTransactionId,
+    selectedBookmarkId,
   });
   const { deleteBottomSignal, deleteBottomAnnotation, deleteBottomTransaction, toggleTransactionSignal, toggleBottomPin } = bottomActions;
   const createTransaction = () => {
@@ -429,6 +444,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     selectedBookmarkId,
     selectedBookmark,
     selectBookmark,
+    selectAIEntity,
     addBookmarkAtCycle,
     revealBookmark,
     deleteBottomBookmark,
@@ -438,6 +454,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     createSelectedAnnotationForType,
     replaceDocument,
     selectAnnotation,
+    selectLegend,
     deleteBottomSignal,
     deleteBottomAnnotation,
     deleteBottomTransaction,

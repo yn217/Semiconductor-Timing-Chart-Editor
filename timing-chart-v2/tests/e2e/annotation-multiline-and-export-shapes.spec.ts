@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { startInCycleMode } from "./cycle-startup.js";
+import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
 startInCycleMode(test);
 
@@ -15,8 +16,10 @@ startInCycleMode(test);
 
 async function addAnnotation(page: import("@playwright/test").Page, type: string) {
   await page.getByLabel("Annotation type").selectOption(type);
+  const host = page.getByTestId("cycle-surface");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
-  return page.getByTestId("cycle-surface").locator(`[data-role='annotation-owner'][data-annotation-type='${type}']`).last();
+  return annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, type));
 }
 
 async function exportSvgText(page: import("@playwright/test").Page): Promise<string> {
@@ -47,7 +50,7 @@ test("Callout label holds real multi-line text in the live DOM and exported SVG"
   await editor.getByTestId("apply-annotation-properties").click();
 
   const label = callout.locator("[data-role='annotation-label']");
-  await expect(label).toHaveCSS("white-space", "pre-wrap");
+  await expect(label).toHaveCSS("white-space", "pre");
   await expect(label).toHaveText("Line one\nLine two\nLine three");
   const annotationId = await callout.getAttribute("data-annotation-id");
 
@@ -61,6 +64,74 @@ test("Callout label holds real multi-line text in the live DOM and exported SVG"
   expect(groupMatch![0]).toContain("Line one");
   expect(groupMatch![0]).toContain("Line two");
   expect(groupMatch![0]).toContain("Line three");
+});
+
+test("authored label wrap width is shared by live overlay and SVG export", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  const callout = await addAnnotation(page, "callout");
+  const editor = page.getByTestId("annotation-editor");
+  await editor.getByLabel("Annotation label", { exact: true }).fill("Address phase carries a detailed payload across the bus");
+  await editor.getByRole("button", { name: "Style", exact: true }).click();
+  const width = editor.getByTestId("inspector-annotation-label-layout-max-width");
+  await width.fill("48");
+  await width.press("Enter");
+  const lineHeight = editor.getByTestId("inspector-annotation-label-layout-line-height");
+  await lineHeight.fill("1.8");
+  await lineHeight.press("Enter");
+  await editor.getByLabel("Annotation label placement", { exact: true }).selectOption("below");
+  await editor.getByTestId("apply-annotation-properties").click();
+
+  const label = callout.locator("[data-role='annotation-label']");
+  await expect(label).toHaveCSS("line-height", "1.8");
+  const liveText = await label.textContent();
+  expect(liveText?.split("\n").length).toBeGreaterThan(2);
+  const annotationId = await callout.getAttribute("data-annotation-id");
+  const svgText = await exportSvgText(page);
+  const groupMatch = svgText.match(new RegExp(`<g data-annotation-id="${annotationId}"[\\s\\S]*?</g>`));
+  expect(groupMatch).not.toBeNull();
+  expect((groupMatch![0].match(/<tspan/g) ?? []).length).toBe(liveText!.split("\n").length);
+  expect(groupMatch![0]).toContain('dy="18"');
+  const livePosition = await label.evaluate((element) => (element as HTMLElement).style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/)?.slice(1));
+  expect(livePosition).not.toBeNull();
+  expect(groupMatch![0]).toContain(`<text x="${livePosition![0]}" y="${livePosition![1]}"`);
+});
+
+test("annotation label placement presets move the live label between its semantic endpoints and above/below", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+
+  const range = await addAnnotation(page, "range");
+  const editor = page.getByTestId("annotation-editor");
+  const placement = editor.getByLabel("Annotation label placement", { exact: true });
+  const position = async () => range.locator("[data-role='annotation-label']").evaluate((element) => {
+    const match = (element as HTMLElement).style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/);
+    return match ? { x: Number(match[1]), y: Number(match[2]) } : null;
+  });
+  const applyPlacement = async (value: string) => {
+    await placement.selectOption(value);
+    await editor.getByTestId("apply-annotation-properties").click();
+    await expect(range.locator("[data-role='annotation-label']")).toBeVisible();
+    return position();
+  };
+
+  const start = await applyPlacement("start");
+  const center = await applyPlacement("center");
+  const end = await applyPlacement("end");
+  const above = await applyPlacement("above");
+  const below = await applyPlacement("below");
+  expect(start).not.toBeNull(); expect(center).not.toBeNull(); expect(end).not.toBeNull();
+  expect(above).not.toBeNull(); expect(below).not.toBeNull();
+  expect(start!.x).toBeLessThan(center!.x);
+  expect(center!.x).toBeLessThan(end!.x);
+  expect(above!.y).toBeLessThan(center!.y);
+  expect(center!.y).toBeLessThan(below!.y);
 });
 
 test("Bracket's exported SVG carries its own cap marks, not a plain Range line", async ({ page }) => {
@@ -136,7 +207,7 @@ test("Callout's multi-line label survives a real Save/Open round trip, in both t
 
   const reopened = page.getByTestId("cycle-surface").locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}']`);
   const label = reopened.locator("[data-role='annotation-label']");
-  await expect(label).toHaveCSS("white-space", "pre-wrap");
+  await expect(label).toHaveCSS("white-space", "pre");
   await expect(label).toHaveText("Line one\nLine two\nLine three");
 
   const svgText = await exportSvgText(page);

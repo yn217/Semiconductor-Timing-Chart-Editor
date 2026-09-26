@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("developer diagnostics are collapsed by default and revealed deliberately", async ({ page }) => {
+test("status diagnostics stay opt-in and the left rail never covers status in compact modes", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
@@ -18,11 +18,6 @@ test("developer diagnostics are collapsed by default and revealed deliberately",
   expect((await box(revision)).width).toBeGreaterThan(40);
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", revisionBefore!);
   await expect(history).toHaveText("History 0 / Redo 0");
-});
-
-test("left rail never covers the status bar at 1280x720", async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto("/");
   for (const mode of ["Transaction", "Combined", "Cycle"]) {
     await page.locator(".view-mode").getByRole("button", { name: mode, exact: true }).click();
     const bounds = await page.evaluate(() => ({

@@ -4,8 +4,10 @@ import { isStableId } from "./stable-id.js";
 import { CANONICAL_PROBLEM_CODES, SCHEMA_RULE_KEYWORDS, type Annotation, type CanonicalDocument, type CanonicalDocumentProblem, type CanonicalProblemCode, type CanonicalRuleDescriptor, type DocumentProblem, type SchemaProblemCode, type SchemaRuleDescriptor, type SchemaRuleKeyword, type SemanticAnchor, type Signal, type SignalValueChange, type TimeGroup } from "./types.js";
 import { valueSignalValueProblem } from "./value-signal-compatibility.js";
 import { validateEnumDefinition } from "./enum-semantics.js";
+import { parseBusValue } from "./value-format.js";
 import { canonicalReferences } from "./reference-registry.js";
 import { validateTimeGroupHierarchy } from "./time-group-hierarchy.js";
+import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH } from "./annotation-label-layout.js";
 import { canonicalEntityInventory } from "./canonical-inventory.js";
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, strictRequired: false, allowUnionTypes: true });
@@ -65,6 +67,8 @@ const RULE_DESCRIPTORS: readonly CanonicalRuleDescriptor[] = [
   canonicalRule("INVALID_ANCHOR_THRESHOLD_POINT", "Threshold anchor requires a transition point", "$.annotations[*].anchor.point"),
   canonicalRule("INVALID_ANNOTATION_STYLE", "Annotation style values must be valid", "$.annotations[*].opacity | $.annotations[*].traceOffsetCycles"),
   canonicalRule("INVALID_BUS_LITERAL", "Bus value must use a supported literal", "$.signals[*].values[*].value"),
+  canonicalRule("INVALID_CLOCK_DUTY", "Clock duty must be finite and in range", "$.signals[*].generator.duty"),
+  canonicalRule("INVALID_CLOCK_PERIOD", "Clock period must be a positive integer", "$.signals[*].generator.period"),
   canonicalRule("INVALID_LEGEND_ENTRY", "Legend entries must have valid labels, order, and roles", "$.legend.items[*]"),
   canonicalRule("INVALID_REFERENCE_CLOCK", "Reference clock must target a clock signal", "$.timeline.referenceClock"),
   canonicalRule("INVALID_STABLE_ID", "Entity identifiers must be stable IDs", "$.signals[*].id | $.signalGroups[*].id | $.annotations[*].id"),
@@ -87,6 +91,10 @@ const RULE_DESCRIPTORS: readonly CanonicalRuleDescriptor[] = [
   canonicalRule("TIMELINE_END_MISMATCH", "Timeline end must equal cycle count", "$.timeline.end"),
   canonicalRule("TIMELINE_OUT_OF_RANGE", "Cycle coordinates must remain within the timeline", "$.signals[*] | $.annotations[*] | $.bookmarks[*] | $.transactions[*]"),
   canonicalRule("UNKNOWN_ROW", "Group rows must reference canonical renderable objects", "$.signalGroups[*].rows[*]"),
+  canonicalRule("UNALIGNED_CLOCK_ENABLE", "Clock enable changes must align to the generator period", "$.signals[*].enable[*].start"),
+  canonicalRule("UNALIGNED_CLOCK_START", "Clock start must align to the generator period", "$.signals[*].generator.start"),
+  canonicalRule("UNSUPPORTED_CLOCK_DUTY", "Clock duty must be representable on half-cycle boundaries", "$.signals[*].generator.duty"),
+  canonicalRule("UNSUPPORTED_CLOCK_PHASE", "Clock phase must align to a half cycle", "$.signals[*].generator.phase"),
   canonicalRule("UNSUPPORTED_SIGNAL_VALUE", "Signal value must match its type contract", "$.signals[*].values[*].value"),
 ];
 
@@ -142,40 +150,20 @@ function findForbiddenState(value: unknown, path: string, problems: DocumentProb
   }
 }
 
-function requiredBits(value: string | number, displayFormat: string | undefined): number | undefined {
+function requiredBits(value: string | number): number | undefined {
   if (typeof value === "number") {
     if (!Number.isSafeInteger(value) || value < 0) return undefined;
     return value === 0 ? 1 : value.toString(2).length;
   }
-  const literal = value.trim();
-  const compact = literal.replaceAll("_", "");
-  const validNumericSeparators = !literal.startsWith("_") && !literal.endsWith("_") && !literal.includes("__");
-  if (literal.length === 0) return undefined;
-  if (/^[XZ]$/i.test(literal)) return 1;
-  if (validNumericSeparators && /^0b[01xz]+$/i.test(compact)) {
-    const digits = compact.slice(2);
-    if (/[xz]/i.test(digits)) return digits.length;
-    const normalized = digits.replace(/^0+(?=.)/, "");
-    return normalized === "0" ? 1 : normalized.length;
-  }
-  if (validNumericSeparators && /^0x[0-9a-fxz]+$/i.test(compact)) {
-    const digits = compact.slice(2);
-    if (/[xz]/i.test(digits)) return digits.length * 4;
-    const numeric = BigInt(`0x${digits}`);
+  try {
+    const parsed = parseBusValue(value);
+    if (parsed.kind === "symbolic") return /^[A-Za-z_][A-Za-z0-9_]*$/.test(value.trim()) ? undefined : Number.NaN;
+    if (parsed.kind === "unknown") return parsed.width ?? 1;
+    const numeric = parsed.value!;
     return numeric === 0n ? 1 : numeric.toString(2).length;
+  } catch {
+    return Number.NaN;
   }
-  if (validNumericSeparators && displayFormat === "binary" && /^[01xz]+$/i.test(compact)) {
-    if (/[xz]/i.test(compact)) return compact.length;
-    const normalized = compact.replace(/^0+(?=.)/, "");
-    return normalized === "0" ? 1 : normalized.length;
-  }
-  if (validNumericSeparators && /^[0-9a-fxz]+$/i.test(compact)) {
-    if (/[xz]/i.test(compact)) return compact.length * 4;
-    const numeric = BigInt(`0x${compact}`);
-    return numeric === 0n ? 1 : numeric.toString(2).length;
-  }
-  if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(literal)) return undefined;
-  return Number.NaN;
 }
 
 function validateChanges(signal: Signal, changes: readonly SignalValueChange[], path: string, cycleCount: number, problems: DocumentProblem[]): void {
@@ -188,7 +176,7 @@ function validateChanges(signal: Signal, changes: readonly SignalValueChange[], 
     if (change.start <= previous) problems.push(problem("CHANGE_POINTS_NOT_STRICTLY_SORTED", `${changePath}.start`, "Change points must be strictly increasing with no duplicate start.", signal.id));
     previous = change.start;
     if (signal.type === "bus" && signal.width !== undefined) {
-      const bits = requiredBits(change.value, signal.displayFormat);
+      const bits = requiredBits(change.value);
       if (Number.isNaN(bits)) problems.push(problem("INVALID_BUS_LITERAL", `${changePath}.value`, "Bus value is neither a supported literal nor a symbolic identifier.", signal.id));
       else if (bits !== undefined && bits > signal.width) problems.push(problem("BUS_WIDTH_OVERFLOW", `${changePath}.value`, `Value requires ${bits} bits but signal width is ${signal.width}.`, signal.id));
     }
@@ -287,11 +275,37 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
 
   document.signals.forEach((signal, index) => {
     if (signal.type === "clock") {
+      const generator = signal.generator;
+      if (!Number.isInteger(generator.period) || generator.period < 1) {
+        problems.push(problem("INVALID_CLOCK_PERIOD", `$.signals[${index}].generator.period`, "Clock period must be a positive integer.", signal.id));
+      }
+      if (!Number.isFinite(generator.duty) || generator.duty <= 0 || generator.duty > 1) {
+        problems.push(problem("INVALID_CLOCK_DUTY", `$.signals[${index}].generator.duty`, "Clock duty must be finite and between 0 and 1.", signal.id));
+      }
+      if (!Number.isFinite(generator.phase) || generator.phase < 0 || !Number.isInteger(generator.phase * 2)) {
+        problems.push(problem("UNSUPPORTED_CLOCK_PHASE", `$.signals[${index}].generator.phase`, "Clock phase must be finite, non-negative, and aligned to a half cycle supported by timeline geometry.", signal.id));
+      }
+      if (generator.duty !== 0.5) {
+        const totalHalfCycles = generator.period * 2;
+        const activeHalfCycles = Math.round(totalHalfCycles * generator.duty);
+        const representable = generator.period >= 2 && activeHalfCycles > 0 && activeHalfCycles < totalHalfCycles
+          && Math.abs(activeHalfCycles / totalHalfCycles - generator.duty) <= 1e-9
+          && generator.initial === (generator.polarity === "positive" ? 0 : 1);
+        if (!representable) problems.push(problem("UNSUPPORTED_CLOCK_DUTY", `$.signals[${index}].generator.duty`, "Non-50% clock duty must align to half-cycle boundaries and use the inactive initial level.", signal.id));
+      }
       if (signal.edgeCounter.countFrom === "marker" && signal.edgeCounter.anchorId === undefined) {
         problems.push(problem("MISSING_CROSS_REFERENCE", `$.signals[${index}].edgeCounter.anchorId`, "Marker count-from requires an explicit Bookmark anchor.", signal.id));
       }
       if (!Number.isInteger(signal.generator.start) || signal.generator.start < 0 || signal.generator.start >= document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.signals[${index}].generator.start`, "Clock generator start must be an integer cycle inside the timeline.", signal.id));
-      if (signal.enable) validateChanges(signal, signal.enable, `$.signals[${index}].enable`, document.timeline.cycleCount, problems);
+      if (Number.isInteger(generator.period) && generator.period > 0 && Number.isInteger(generator.start) && generator.start % generator.period !== 0) {
+        problems.push(problem("UNALIGNED_CLOCK_START", `$.signals[${index}].generator.start`, "Clock generator start must align to its period.", signal.id));
+      }
+      if (signal.enable) {
+        validateChanges(signal, signal.enable, `$.signals[${index}].enable`, document.timeline.cycleCount, problems);
+        if (Number.isInteger(generator.period) && generator.period > 0 && signal.enable.some((change) => change.start % generator.period !== 0)) {
+          problems.push(problem("UNALIGNED_CLOCK_ENABLE", `$.signals[${index}].enable`, "Clock enable changes must align to the generator period.", signal.id));
+        }
+      }
     } else if (signal.type !== "commentRow") {
       validateChanges(signal, signal.values, `$.signals[${index}].values`, document.timeline.cycleCount, problems);
     }
@@ -307,6 +321,9 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
       if (anchor) validateAnchor(anchor, `$.annotations[${index}].${key}`, annotation, signals, document.timeline.cycleCount, problems);
     }
     if (annotation.measurement !== undefined && annotation.type !== "measurement") problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].measurement`, "Measurement semantics are only valid for Measurement annotations.", annotation.id));
+    if (annotation.style?.labelWrap !== undefined && typeof annotation.style.labelWrap !== "boolean") problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].style.labelWrap`, "Annotation labelWrap must be a boolean.", annotation.id));
+    if (annotation.style?.labelMaxWidth !== undefined && (typeof annotation.style.labelMaxWidth !== "number" || !Number.isFinite(annotation.style.labelMaxWidth) || annotation.style.labelMaxWidth < ANNOTATION_LABEL_MAX_WIDTH.min || annotation.style.labelMaxWidth > ANNOTATION_LABEL_MAX_WIDTH.max)) problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].style.labelMaxWidth`, `Annotation label maximum width must be between ${ANNOTATION_LABEL_MAX_WIDTH.min} and ${ANNOTATION_LABEL_MAX_WIDTH.max} px.`, annotation.id));
+    if (annotation.style?.lineHeight !== undefined && (typeof annotation.style.lineHeight !== "number" || !Number.isFinite(annotation.style.lineHeight) || annotation.style.lineHeight < ANNOTATION_LABEL_LINE_HEIGHT.min || annotation.style.lineHeight > ANNOTATION_LABEL_LINE_HEIGHT.max)) problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].style.lineHeight`, `Annotation line spacing must be between ${ANNOTATION_LABEL_LINE_HEIGHT.min} and ${ANNOTATION_LABEL_LINE_HEIGHT.max}.`, annotation.id));
     if (annotation.measurementLayout !== undefined && annotation.type !== "measurement") problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].measurementLayout`, "Measurement layout is only valid for Measurement annotations.", annotation.id));
     if (annotation.verticalSpan !== undefined) {
       if (annotation.type !== "marker") problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].verticalSpan`, "Vertical span is only valid for Marker annotations.", annotation.id));

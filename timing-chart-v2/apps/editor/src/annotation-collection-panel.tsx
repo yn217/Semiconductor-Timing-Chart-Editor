@@ -1,5 +1,4 @@
-import { useRef, useState } from "react";
-import type { CommandResult } from "@timing-chart-v2/commands";
+import { useEffect, useRef, useState } from "react";
 import { DOCUMENT_RESOURCE_BUDGET, parseJsonInput } from "@timing-chart-v2/schema";
 import type { Annotation, AnnotationId, AnnotationType, CanonicalDocument } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
@@ -19,28 +18,47 @@ const ANNOTATION_PRESETS: readonly { readonly label: string; readonly type: Anno
  * belongs to InspectorAnnotationEditor; this component owns list actions and
  * explicit create/import/export only, so row selection never changes its
  * layout or creates another property-draft owner. */
-export function AnnotationCollectionPanel({ annotations, selectedId, document, onSelect, onCreate, onDuplicate, onDelete, commands, onReplaceDocument }: {
+export function AnnotationCollectionPanel({ annotations, selectedId, document, documentEpoch, revision, onSelect, onCreate, onDuplicate, onDelete, commands, onImportDiagnostic }: {
   readonly annotations: readonly Annotation[];
   readonly selectedId: AnnotationId | undefined;
   readonly document: CanonicalDocument;
+  readonly documentEpoch: number;
+  readonly revision: number;
   readonly onSelect: (id: AnnotationId) => void;
   readonly onCreate: (type: AnnotationType) => void;
   readonly onDuplicate: (annotation: Annotation) => void;
   readonly onDelete: () => void;
-  readonly commands: Pick<EditorSurfaceCommandController, "updateAnnotationProperties">;
-  readonly onReplaceDocument: (document: CanonicalDocument) => CommandResult;
+  readonly commands: Pick<EditorSurfaceCommandController, "updateAnnotationProperties" | "replaceAnnotations">;
+  readonly onImportDiagnostic: (message: string) => void;
 }) {
   const [presetType, setPresetType] = useState<AnnotationType>("text");
   const [importStatus, setImportStatus] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
+  const requestId = useRef(0);
+  const mounted = useRef(false);
+  const latest = useRef({ documentEpoch, revision, annotations, commands, onSelect, onImportDiagnostic });
+  latest.current = { documentEpoch, revision, annotations, commands, onSelect, onImportDiagnostic };
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; requestId.current += 1; };
+  }, []);
   const selected = selectedId === undefined ? undefined : annotations.find((annotation) => annotation.id === selectedId);
   const importAnnotations = async (file: File) => {
+    const token = { documentEpoch, revision, target: "annotation-collection", requestId: ++requestId.current };
     try {
       if (file.size > DOCUMENT_RESOURCE_BUDGET.inputBytes) {
         setImportStatus(`Import rejected: file exceeds ${DOCUMENT_RESOURCE_BUDGET.inputBytes.toLocaleString()} bytes.`);
         return;
       }
-      const parsedResult = parseJsonInput(await file.text());
+      const text = await file.text();
+      const current = latest.current;
+      if (!mounted.current || requestId.current !== token.requestId || current.documentEpoch !== token.documentEpoch || current.revision !== token.revision || token.target !== "annotation-collection") {
+        const message = "Annotation import cancelled because the document changed while the file was being read. Retry the import on the current document.";
+        current.onImportDiagnostic(message);
+        if (mounted.current) setImportStatus(message);
+        return;
+      }
+      const parsedResult = parseJsonInput(text);
       if (!parsedResult.ok) {
         setImportStatus(parsedResult.problems[0]?.message ?? "Invalid annotations JSON");
         return;
@@ -51,16 +69,21 @@ export function AnnotationCollectionPanel({ annotations, selectedId, document, o
         setImportStatus("Expected an annotation array with stable IDs.");
         return;
       }
-      const result = onReplaceDocument({ ...document, annotations: items as Annotation[] });
+      const imported = items as Annotation[];
+      const result = current.commands.replaceAnnotations(current.annotations.map((annotation) => annotation.id), imported);
+      if (result === undefined) {
+        setImportStatus(`Imported ${imported.length} annotations (no changes).`);
+        return;
+      }
       if (!result.ok) {
         setImportStatus(result.problems[0]?.message ?? "Annotation import was rejected.");
         return;
       }
-      const firstId = (items[0] as { id?: unknown } | undefined)?.id;
-      if (typeof firstId === "string") onSelect(firstId as AnnotationId);
-      setImportStatus(`Imported ${items.length} annotation${items.length === 1 ? "" : "s"}`);
+      const firstId = imported[0]?.id;
+      if (firstId !== undefined) current.onSelect(firstId);
+      setImportStatus(`Imported ${imported.length} annotation${imported.length === 1 ? "" : "s"}`);
     } catch (error) {
-      setImportStatus(error instanceof Error ? error.message : "Invalid annotations JSON");
+      if (mounted.current) setImportStatus(error instanceof Error ? error.message : "Invalid annotations JSON");
     }
   };
 
@@ -74,11 +97,11 @@ export function AnnotationCollectionPanel({ annotations, selectedId, document, o
       <button type="button" onClick={() => downloadText(JSON.stringify(annotations, null, 2), "annotations.json")}>Export</button>
       <button type="button" onClick={() => fileInput.current?.click()}>Import...</button>
       <input ref={fileInput} hidden type="file" accept="application/json,.json" aria-label="Import annotations" onChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) void importAnnotations(file); event.currentTarget.value = ""; }} />
-      <output data-testid="annotation-collection-status">{importStatus}</output>
+    <output data-testid="annotation-collection-status" role="status">{importStatus}</output>
     </div>
     <div className="annotation-collection-heading">Annotations <span>({annotations.length})</span>{selected && <span className="annotation-collection-selection">Selected: {selected.label || selected.type}</span>}</div>
     {annotations.length === 0
       ? <div className="empty-editor">No annotations yet. Choose a preset and select Create to add one.</div>
-      : <AnnotationList annotations={annotations} selectedId={selectedId} onSelect={onSelect} commands={commands} />}
+      : <AnnotationList annotations={annotations} selectedId={selectedId} document={document} onSelect={onSelect} commands={commands} />}
   </section>;
 }

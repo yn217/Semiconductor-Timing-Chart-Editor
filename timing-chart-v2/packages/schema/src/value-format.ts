@@ -1,6 +1,11 @@
 export type BusValueFormat = "hex" | "binary" | "decimal" | "signed" | "unsigned" | "symbolic";
 export interface ParsedBusValue { readonly kind: "numeric" | "unknown" | "symbolic"; readonly value?: bigint; readonly width?: number }
 const UNKNOWN = /^[xz?]+$/i;
+// Literal radix is semantic input, independent of displayFormat: bare
+// digit-only strings are decimal; A-F-bearing strings are hex; binary/hex
+// strings can be explicit with 0b/0x or sized HDL syntax. Sized numeric values
+// are truncated to N bits before downstream formatting/validation. displayFormat
+// only controls output formatting. Keep validation and rendering on this policy.
 export function parseBusValue(input: string | number, width?: number): ParsedBusValue {
   if (typeof input === "number") { if (!Number.isSafeInteger(input) || input < 0) throw new Error("Bus numeric values must be non-negative safe integers."); return { kind: "numeric", value: BigInt(input), width: width ?? Math.max(1, input.toString(2).length) }; }
   const source = input.trim().replaceAll("_", "");
@@ -10,10 +15,18 @@ export function parseBusValue(input: string | number, width?: number): ParsedBus
   const prefixed = /^(0x|0b|0d)([0-9a-fxz?]+)$/i.exec(source);
   const base = sized ? ({ h: 16, d: 10, b: 2 }[sized[2]!.toLowerCase() as "h" | "d" | "b"]!) : prefixed ? ({ "0x": 16, "0d": 10, "0b": 2 }[prefixed[1]!.toLowerCase()]!) : /^[0-9]+$/.test(source) ? 10 : /^[01]+$/.test(source) ? 2 : /^[0-9a-f]+$/i.test(source) ? 16 : undefined;
   const digits = sized?.[3] ?? prefixed?.[2] ?? source;
-  if (base === undefined) return { kind: "symbolic" };
-  if (/[xz?]/i.test(digits)) return { kind: "unknown", width: width ?? (sized ? Number(sized[1]) : base === 16 ? digits.length * 4 : digits.length) };
-  const value = BigInt(base === 16 ? `0x${digits}` : base === 2 ? `0b${digits}` : digits);
-  const resolvedWidth = width ?? (sized ? Number(sized[1]) : undefined);
+  if (base === undefined) {
+    if (/^\d+'/.test(source)) throw new Error("Invalid sized bus literal.");
+    return { kind: "symbolic" };
+  }
+  const sizedWidth = sized ? Number(sized[1]) : undefined;
+  if (sizedWidth !== undefined && (!Number.isSafeInteger(sizedWidth) || sizedWidth <= 0)) throw new Error("Sized bus literal width must be a positive safe integer.");
+  if (/[xz?]/i.test(digits)) return { kind: "unknown", width: width ?? (sizedWidth ?? (base === 16 ? digits.length * 4 : digits.length)) };
+  let value = BigInt(base === 16 ? `0x${digits}` : base === 2 ? `0b${digits}` : digits);
+  if (sizedWidth !== undefined && value !== 0n && value.toString(2).length > sizedWidth) {
+    value &= (1n << BigInt(sizedWidth)) - 1n;
+  }
+  const resolvedWidth = width ?? sizedWidth;
   return resolvedWidth === undefined ? { kind: "numeric", value } : { kind: "numeric", value, width: resolvedWidth };
 }
 export function formatBusValue(input: string | number, format: BusValueFormat = "hex", width?: number): string {

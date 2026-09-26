@@ -2,11 +2,12 @@ import { expect, test } from "@playwright/test";
 
 // #748: the Transaction Tree menu carries the documented commands, Escape returns focus to its invoker, Expand/Collapse All drive the shared
 // disclosure owner (view-only), Show/Hide All is one History unit each, and the header controls match Cycle's control geometry.
-for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
-  test(`Transaction Tree menu behaviour and Cycle parity at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+test("Transaction Tree menu behaviour and Cycle parity at both supported viewports", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/?transaction-demo");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
     await page.setViewportSize(viewport);
-    await page.goto("/?transaction-demo");
-    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
     // Cycle reference geometry first.
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
     const cycle = await page.evaluate(() => {
@@ -59,5 +60,5 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     const hidden = await history();
     await more.click(); await menu.getByRole("menuitem", { name: "Show All", exact: true }).click();
     await expect.poll(history).not.toBe(hidden);
-  });
-}
+  }
+});

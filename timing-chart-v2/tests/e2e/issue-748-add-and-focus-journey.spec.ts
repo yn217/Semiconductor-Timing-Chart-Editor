@@ -2,14 +2,15 @@ import { expect, test } from "@playwright/test";
 
 // #748 Journeys B and D: left-pane + Add creates one Transaction (one History unit) that shows up with the same stable ID in Tree, Timeline
 // and Bottom; the More menu does not reflow the pane; Tab through the left header reaches only labelled controls (no hidden Signals stop).
-for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
-  test(`left-pane Add and keyboard journey at ${viewport.width}x${viewport.height}`, async ({ page }) => {
-    const errors: string[] = [];
-    page.on("pageerror", (error) => errors.push(error.message));
+test("left-pane Add and keyboard journey at both supported viewports", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/?transaction-demo");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
     await page.setViewportSize(viewport);
-    await page.goto("/?transaction-demo");
-    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
-    await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
     const historyDepth = async () => Number(((await page.getByTestId("history-status").innerText()).match(/History (\d+)/) ?? [])[1] ?? -1);
     const ids = () => page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>("[data-testid^='transaction-left-tree-row-']")).map((el) => el.getAttribute("data-testid")!.replace("transaction-left-tree-row-", "")));
     const before = await ids(); const depth0 = await historyDepth();
@@ -46,5 +47,5 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await page.getByTestId(`transaction-left-tree-row-demo_txn_read`).click();
     await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Linked Signals", exact: true })).toBeVisible();
     expect(errors).toEqual([]);
-  });
-}
+  }
+});

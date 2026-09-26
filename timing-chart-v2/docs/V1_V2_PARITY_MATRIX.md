@@ -66,8 +66,8 @@ and no visual baseline is changed to make the conflict disappear.
 | GUI-07 | Status Bar | KEEP | #172/#176 | Batch Status Bar: `Ready`, signal/annotation/problem counts, half-open Time Range, Cycle, Zoom, Snap, Mode, revision/history/dirty and WaveDrom state are derived in the production footer. `full-gui.spec.ts` verifies the view-only counter invariant; visual artifact `gui-batch-shell-dut-1672x941.png` confirms the dense 27px layout. Full V1 reference diff remains open. |
 | GUI-08 | Cycle/Transaction/Split selector | KEEP | #172 | Cycle exposes Signal/Annotation/Problems/JSON; Transaction exposes Transaction/Annotation/Problems/JSON; Split exposes both Signal and Transaction contexts. V1 Ribbon labels `Transaction` and `Check` are restored while retaining internal compatibility keys for existing command routing. Mode switching preserves Canonical/History/Dirty/render counters; `gui-v1-ribbon-labels.spec.ts` verifies the label and view-only invariant, and `gui-split-view-visual.spec.ts` captures the 1672x941 Split composition with zero mutation. Current-main `transaction-export.spec.ts` also verifies canonical Split content Save/Open plus the shared Split ExportScene producing valid SVG/PNG/PDF outputs containing both signal and transaction layers without editor mutation. |
 | GUI-09 | Grid/Snap/Ruler | KEEP | #165/#170/#175 | Batch 2C adds geometry-derived grid lines and gates annotation/transaction snapping on the real Snap ON/OFF state. Snap ON resolves rendered candidates; Snap OFF uses free geometry. The Axis Break mapping closure makes Ruler, Grid and Snap share source↔display geometry, skips hidden folded cycles, and preserves canonical source-cycle anchors. Current-main focused evidence includes mapping unit/export coverage, Chromium axis-break compression, exact Time Group Save/Open, multiple folds, folded export, and 100k-cycle/1k-fold scale checks. Ruler/MiniMap visibility toggles remain view-only with zero Canonical/History/Dirty/WaveDrom/LocalGeometry delta. The locked V1 visual run also applies reference-sized local ruler/waveform geometry without changing semantic coordinates; full pixel parity remains open. |
-| GUI-10 | Hardware hierarchy / Full Path / Scope | KEEP | #177/#178 | Batch 1D adds RowLayout path metadata, Scope breadcrumb, stable-ID Reveal and atomic bulk registration; current batch adds a derived high-density Hardware Hierarchy browser with stable-ID selection. Current-main Chromium `full-gui.spec.ts` passes the complete hierarchy scenario (all four display modes, scope filtering, stable-ID reveal, atomic two-row registration, Save/Open and History reset) and the independent tree filter scenario. Full hierarchy visual parity remains open. |
-| GUI-11 | Signal styling and editable Legend | KEEP | #162/#172/#176 | Signal display style, alignment and overflow now flow through Projection to derived row presentation; style-only Apply avoids WaveDrom/LocalGeometry rebuilds. Editable Legend now exposes stable-ID row controls for label, visibility and order, applies through `legend.update`, and is covered by real-browser plus visual evidence (`timing-chart-v2/.tmp_gui_reference/gui-batch-legend-editor-1280x720.png`). Full V1 visual/export parity remains open. |
+| GUI-10 | Hardware hierarchy / Full Path / Scope | KEEP | #177/#178 | Batch 1D adds RowLayout path metadata, Scope breadcrumb, stable-ID Reveal and atomic bulk registration; the derived high-density Hardware Hierarchy browser has stable-ID selection. Scope projection now accepts ancestor-path prefixes and Relative Path removes the selected prefix (e.g. `top.u_soc.u_dma` → `u_axi.arvalid`), covered by focused projection tests. Current-main Chromium `full-gui.spec.ts` covers all four display modes, scope filtering, stable-ID reveal, atomic two-row registration, Save/Open and History reset. Nested RTL visual/browser coverage and full hierarchy visual parity remain open. |
+| GUI-11 | Signal styling and editable Legend | KEEP | #162/#172/#176 | Signal display style, alignment and overflow now flow through Projection to derived row presentation; style-only Apply avoids WaveDrom/LocalGeometry rebuilds. PR #826 (`306d7d1`) makes the document-wide Legend a stable selectable overlay and routes Inspector Show/Used Roles/Orientation/X/Y drafts through `legend.update`; selection is transient and Apply is one semantic command. PR #828 (`62ce661`) also aligns deterministic SVG export with the editor's persisted top-left Legend position and horizontal/vertical orientation; focused export assertions were added, export package TypeScript check and parity gate pass. PR #830 adds focused Chromium evidence for Legend selection/Inspector/Apply/Undo/Save-Open and Bus Decimal/Signed/Unsigned consistency across waveform and Bottom values with Undo/Redo; Save/Open retains the authored presentation/format. Remaining approved V1 gaps: explicit persisted Anchor+Offset versus Free Position semantics (the canonical anchor/reference target is unspecified) and full V1 visual/export acceptance. |
 | GUI-12 | Clock editor and Edge Counter | KEEP | #164/#172 | Inspector and Bottom Clock editors expose editable Start, Period, Duty, Phase, Initial and Polarity plus independent Edge Counter settings (Rising/Falling/Both, Count From, explicit Bookmark anchor, interval and offsets) through separate SemanticCommands. `countFrom=marker` requires a persisted `edgeCounter.anchorId` that resolves to the selected Bookmark; no implicit earliest-Bookmark fallback is allowed. Real-browser coverage verifies one History entry, Undo, and no WaveDrom/local-geometry rebuild for counter-only edits. Full origin matrix and V1 visual parity remain open. |
 | GUI-13 | Problems/JSON/Annotation/Transaction tabs | KEEP | #163/#166/#172 | Batch 1C verifies Advanced JSON Selected Object/Whole Document validation and Apply. Selected Object now covers Signal, Group, Annotation and Transaction through stable-ID-preserving `document.replace`; Group selection plus Save/Open history reset is covered by `bottom-context.spec.ts`. Full tab parity remains open. |
 | GUI-14 | Follow Selection / Pin | KEEP | #172/#176 | Batch 1C verifies Pin freezes context independently while Follow Selection remains a separate tab-follow state. |
@@ -97,11 +97,22 @@ registration with Save/Open, non-mutating tree filters, and the shared Cycle-0
 waveform boundary all pass. Full V1 hierarchy and reference visual parity
 remains open.
 
-The editable Legend refresh is covered by the current-main `full-gui.spec.ts`
-browser flow: stable entry label, visibility and ordering changes survive
-Save/Open, the SVG contains the ordered visible labels, and the shared
-ExportScene also produces valid PNG and PDF outputs. The complete V1 legend
-style/fit reference matrix remains open.
+The editable Legend row-entry refresh is covered by the current-main
+`full-gui.spec.ts` browser flow: stable entry label, visibility and ordering
+changes survive Save/Open, the SVG contains the ordered visible labels, and
+the shared ExportScene also produces valid PNG and PDF outputs. PR #826
+(`306d7d1`) additionally makes the Legend a selectable stable-identity overlay
+with Inspector-owned Show/Used Roles/Orientation/X/Y drafts through the shared
+`legend.update` Semantic Command. Current-main focused semantic, interactive
+control and parity-inventory checks pass. PR #830's focused production browser
+test now passes selection through the stable overlay ID, Inspector identity,
+one-command Apply, Undo, and Save/Open of Inspector-authored orientation and
+position. The local dependency links were restored without changing the lock
+file; the test ran in Chromium. Anchor+Offset
+versus Free Position remains unmodeled; the approved source does not define the
+canonical anchor/reference target, so that specific design point is tracked as
+a product decision rather than guessed.
+The complete V1 legend style/fit reference matrix remains open.
 
 The current-main Ribbon visual refresh is covered by
 `timing-chart-v2/tests/e2e/ribbon-visual-scenario-matrix.spec.ts` (2/2 focused
@@ -125,6 +136,20 @@ The JSON inventory also covers the full product contract, including:
 - AI query/preview/apply boundaries;
 - 20 Golden Samples and feature-coverage acceptance;
 - structural performance and incremental invalidation.
+
+### State Enum slice (DATA-03)
+
+The approved State/Enum editor and symbolic projection slice is implemented on
+current main by PR #850 (`33d96b6`): definitions and State assignment use the
+existing canonical/SemanticCommand owners; value choices retain source values;
+the WaveDrom adapter resolves known labels and falls back for unknown values.
+Current-main focused evidence is 30/30 tests plus typecheck PASS.
+
+This is not full visual parity evidence. Golden Feature 11 currently contains a
+generic State signal but no EnumDefinition or assignment, and the production
+file-dialog Save/Open UI journey has not been run for this feature. Those gaps
+remain explicit in DATA-03; do not mutate the immutable Golden fixture to make
+the matrix appear complete.
 
 The `legacyIssueCoverage` array retains every discovered pre-V2 issue number
 from the repository audit. Issues are grouped by contract where one V2 owner
@@ -412,7 +437,7 @@ available.
 | `GUI-TRANSITION-ARROW` | #375 | `ANNOT-01` | #10, #68 | 15 | `timing-chart-v1/artifacts/issue10/dependency-arrows.png`; `timing-chart-v1/artifacts/issue68/issue68-1672x941.png` | partial production route/marker evidence; full lifecycle/export closure open |
 | `GUI-RULER-LABEL-ANCHOR` | #376 | `TIME-01` | #111 | 16 | `timing-chart-v1/artifacts/issue111/issue111-1672x941.png` | standalone create/edit/list/delete lifecycle landed; current-main `label-anchor-source-display.spec.ts` passes no-fold/folded source-display, Undo and Save/Open; complete coexistence, export and closure evidence remains open |
 | `GUI-ANNOTATION-PRIMITIVES` | #377 | `ANNOT-01` | #40, #69 | 14 | `timing-chart-v1/artifacts/issue40/annotation-1672x941.png`; `timing-chart-v1/artifacts/issue69/issue69-1672x941.png` | type-specific presentation lands, incl. Callout multiline label's real Save/Open round trip; full Golden Sample 14 visual/performance matrix remains open |
-| `GUI-ANNOTATION-PRESENTATION` | #378 | `ANNOT-01` | #40, #69 | 14 | `timing-chart-v1/artifacts/issue40/annotation-1672x941.png`; `timing-chart-v1/artifacts/issue69/issue69-1672x941.png` | capability matrix + Lock/Stroke/Fill/z-order/visibility landed, incl. Lock's real Save/Open round trip; full Golden Sample 14 visual/performance matrix remains open |
+| `GUI-ANNOTATION-PRESENTATION` | #378 | `ANNOT-01` | #40, #69 | 14 | `timing-chart-v1/artifacts/issue40/annotation-1672x941.png`; `timing-chart-v1/artifacts/issue69/issue69-1672x941.png` | capability matrix + Lock/Stroke/Fill/z-order/visibility, authored label wrap/max-width (#811/#812), line-height (#821), and semantic Start/Center/End/Above/Below label placement are implemented on the existing draft/Apply, canonical, live-overlay, and SVG-export paths; focused schema/command/export tests pass; placement browser test is authored but not run; full Golden Sample 14 visual/performance matrix remains open |
 
 The parity checker requires these four child rows, verifies their parent/V1
 source/Golden mappings, and keeps their status rows synchronized with

@@ -1,4 +1,4 @@
-import { quickValueOptions, type ValueSignal } from "@timing-chart-v2/schema";
+import { quickValueOptions, type EnumDefinition, type ValueSignal } from "@timing-chart-v2/schema";
 import { signalTypeDefinition } from "./signal-type-registry.js";
 
 // Value Editor Policy (VALUE type-awareness pass): the ONE place that
@@ -59,8 +59,12 @@ function suggestedOptions(type: ValueSignal["type"]): readonly ValueEditorOption
 // its `displayLabel` when the Signal chose to set one (canonical value
 // stays authoritative; the label is presentation only, per
 // `SignalValueChange.displayLabel`).
-function stateOptions(signal: ValueSignal): readonly ValueEditorOption[] {
+function stateOptions(signal: ValueSignal, enumDefinition?: EnumDefinition): readonly ValueEditorOption[] {
   const seen = new Map<string, ValueEditorOption>();
+  for (const entry of enumDefinition?.entries ?? []) {
+    const value = String(entry.value);
+    if (!seen.has(value)) seen.set(value, { value, label: entry.label });
+  }
   for (const change of signal.values) {
     const value = String(change.value);
     if (!seen.has(value)) seen.set(value, { value, label: change.displayLabel ?? value });
@@ -71,7 +75,7 @@ function stateOptions(signal: ValueSignal): readonly ValueEditorOption[] {
   return [...seen.values()];
 }
 
-export function resolveValueEditorPolicy(signal: ValueSignal): ValueEditorPolicy {
+export function resolveValueEditorPolicy(signal: ValueSignal, enumDefinition?: EnumDefinition): ValueEditorPolicy {
   if (signalTypeDefinition(signal.type).valueEditorKind === "select") {
     // Binary, Logic, and (legacy-only) Pulse are exactly this: a closed
     // set of WaveDrom logic tokens defined by `VALUE_SIGNAL_RENDER_POLICY`
@@ -80,7 +84,7 @@ export function resolveValueEditorPolicy(signal: ValueSignal): ValueEditorPolicy
     // type's domain rather than an unconditional Binary-dropdown reuse.
     return { kind: "select", options: logicDomainOptions(signal.type) };
   }
-  if (signal.type === "state") return { kind: "combo", options: stateOptions(signal) };
+  if (signal.type === "state") return { kind: "combo", options: stateOptions(signal, enumDefinition) };
   if (signal.type === "event") return { kind: "combo", options: suggestedOptions("event") };
   // Bus: genuinely arbitrary data (hex/binary/symbolic per its own
   // `displayFormat`) -- X/Z stay offered as one-click special values (note:

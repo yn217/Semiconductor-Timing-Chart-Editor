@@ -19,6 +19,7 @@ import { describe, expect, it } from "vitest";
 // of only being caught (if at all) by a slower, harder-to-notice e2e
 // regression.
 const source = readFileSync(resolve(import.meta.dirname, "../../scripts/ai-bridge-server.mjs"), "utf8");
+const capabilityMatrix = readFileSync(resolve(import.meta.dirname, "../../docs/AI_MCP_CAPABILITY_MATRIX.md"), "utf8");
 
 describe("Agent Bridge security boundaries (#395 item 11)", () => {
   it("binds to localhost only, never a wildcard/all-interfaces address", () => {
@@ -32,6 +33,8 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
 
   it("generates a real random token by default and compares it in constant time", () => {
     expect(source).toMatch(/TOKEN\s*=\s*process\.env\.AI_BRIDGE_TOKEN\s*\?\?\s*randomBytes\(\d+\)\.toString\(["']hex["']\)/);
+    expect(source).toMatch(/EDITOR_TOKEN\s*=\s*process\.env\.AI_BRIDGE_EDITOR_TOKEN\s*\?\?\s*randomBytes\(\d+\)\.toString\(["']hex["']\)/);
+    expect(source).toContain("if (TOKEN === EDITOR_TOKEN) throw new Error(");
     expect(source).toContain("timingSafeEqual");
   });
 
@@ -56,21 +59,38 @@ describe("Agent Bridge security boundaries (#395 item 11)", () => {
     // that forwards an arbitrary tool name.
     expect(source).toMatch(/READ_TOOLS\.has\(name\)\s*\|\|\s*VIEW_ONLY_TOOLS\.has\(name\)\s*\|\|\s*PROPOSAL_TOOLS\.has\(name\)/);
     const catalogNames = [...source.matchAll(/name:\s*"([a-z_]+)"/g)].map((match) => match[1]);
-    expect(new Set(catalogNames)).toEqual(new Set(["get_document_summary", "get_selection", "get_viewport_snapshot", "fit_all", "propose_edit"]));
+    const addedViewTools = ["fit_selection", "set_selection", "switch_mode", "open_panel", "set_visible_time_range", "propose_create_time_group", "propose_update_time_group", "propose_delete_time_group"];
+    const existingCatalogNames = catalogNames.filter((name) => !addedViewTools.includes(name));
+    expect(new Set(existingCatalogNames)).toEqual(new Set(["list_editor_sessions", "get_document_summary", "get_view_context", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_transaction", "get_transaction_groups", "get_transaction_phases", "get_linked_signals", "get_annotations", "get_bookmarks", "get_time_groups", "get_problems", "fit_all", "propose_edit", "propose_create_signal", "propose_rename_signal", "propose_update_signal", "propose_move_signal", "propose_insert_cycles", "propose_delete_cycles", "propose_move_range", "propose_duplicate_range", "propose_create_signal_group", "propose_rename_signal_group", "propose_move_signal_group", "propose_delete_signal_group", "propose_create_transaction_group", "propose_rename_transaction_group", "propose_delete_transaction_group", "propose_create_transaction", "propose_update_transaction", "propose_move_transaction", "propose_resize_transaction", "propose_delete_transaction", "propose_create_bookmark", "propose_move_bookmark", "propose_update_bookmark", "propose_delete_bookmark", "propose_create_annotation", "propose_update_annotation", "propose_delete_annotation", "propose_add_phase", "propose_update_phase", "propose_delete_phase", "propose_link_signal", "propose_unlink_signal"]));
+    const inventoryLines = capabilityMatrix.split("\n").filter((line) => line.startsWith("`list_editor_sessions") || line.startsWith("`propose_create_time_group") || line.startsWith("`fit_selection") || line.startsWith("`switch_mode`") || line.startsWith("| Set selection / reveal entity |"));
+    const inventoryNames = inventoryLines.flatMap((line) => [...line.matchAll(/`([a-z_]+)`/g)].map((match) => match[1]));
+    expect(inventoryNames.length, "matrix must contain the bridge tool inventory").toBeGreaterThan(0);
+    expect(new Set(inventoryNames)).toEqual(new Set(catalogNames));
   });
 
-  it("requires the bearer token on every route, including the poll/respond pair, before any routing decision", () => {
-    // The token check must run once, ahead of the /mcp, /bridge/poll and
-    // /bridge/respond branches -- not duplicated (and possibly forgotten)
-    // per-route.
-    const tokenCheckIndex = source.indexOf("timingSafeTokenEquals(bearerToken(req, url))");
-    const mcpRouteIndex = source.indexOf('url.pathname === "/mcp"');
-    const pollRouteIndex = source.indexOf('url.pathname === "/bridge/poll"');
-    const respondRouteIndex = source.indexOf('url.pathname === "/bridge/respond"');
+  it("uses distinct bearer credentials for MCP and Editor transport routes", () => {
+    const routeCredentialIndex = source.indexOf("const expectedToken = url.pathname");
+    const tokenCheckIndex = source.indexOf("timingSafeTokenEquals(bearerToken(req), expectedToken)");
+    const mcpRouteIndex = source.indexOf('req.method === "POST" && url.pathname === "/mcp"');
+    const pollRouteIndex = source.indexOf('req.method === "POST" && url.pathname === "/bridge/poll"');
+    const respondRouteIndex = source.indexOf('req.method === "POST" && url.pathname === "/bridge/respond"');
+    expect(routeCredentialIndex).toBeGreaterThan(-1);
+    expect(routeCredentialIndex).toBeLessThan(tokenCheckIndex);
     expect(tokenCheckIndex).toBeGreaterThan(-1);
     expect(tokenCheckIndex).toBeLessThan(mcpRouteIndex);
     expect(tokenCheckIndex).toBeLessThan(pollRouteIndex);
     expect(tokenCheckIndex).toBeLessThan(respondRouteIndex);
+    expect(source).toContain('url.pathname === "/mcp" ? TOKEN');
+    expect(source).toContain('"/bridge/poll", "/bridge/respond", "/bridge/close"].includes(url.pathname) ? EDITOR_TOKEN');
+    expect(source).not.toContain('searchParams.get("token")');
+  });
+
+  it("binds every pending request and response to an explicit Editor session", () => {
+    expect(source).toContain("call.editorSessionId === session.editorSessionId");
+    expect(source).toContain("body.editorSessionId !== call.editorSessionId");
+    expect(source).toContain("Tool '${name}' requires an explicit editorSessionId");
+    expect(source).toContain("requests are never redirected to another tab");
+    expect(source).not.toContain("removeEditorSession(editorSessionId);\n    throw staleSessionError(editorSessionId);");
   });
 
   it("bounds request body size so the bridge cannot be used to exhaust memory", () => {

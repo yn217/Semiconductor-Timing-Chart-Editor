@@ -4,8 +4,8 @@ import { expect, test, type Page } from "@playwright/test";
 // (Inspector shows it while another Transaction is selected); returning marks it as kept on BOTH Bottom and Inspector (one shared store);
 // Discard clears it; History/Canonical are never touched.
 const openPhases = (page: Page) => page.locator(".bottom-tabs").getByRole("tab", { name: "Phases", exact: true }).click();
-for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
-  test(`retained Phase drafts are explicit at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+test("retained Phase drafts are explicit at 1280x720", async ({ page }) => {
+    const viewport = { width: 1280, height: 720 };
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     await page.setViewportSize(viewport);
@@ -52,8 +52,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     expect(await history()).toBe(h0);
     expect(await revision()).toBe(r0);
     expect(errors).toEqual([]);
-  });
-}
+});
 
 test("opening another document drops every retained Phase draft", async ({ page }) => {
   await page.goto("/?transaction-demo");

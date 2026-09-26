@@ -9,10 +9,12 @@ export type SelectionState = Readonly<{
   annotationId: AnnotationId | undefined;
   annotationIds: ReadonlySet<AnnotationId>;
   transactionId: TransactionId | undefined;
+  /** The document-wide Legend is a selectable singleton, not a deletable entity. */
+  legendSelected: boolean;
   /** First-class bulk target set; transactionId remains the deterministic primary. */
   transactionIds: ReadonlySet<TransactionId>;
 }>;
-type SelectionKind = "signal" | "group" | "spacer" | "annotation" | "transaction" | "none";
+type SelectionKind = "signal" | "group" | "spacer" | "annotation" | "transaction" | "legend" | "none";
 export type SelectionCapabilities = Readonly<{
   hasSelectedSignal: boolean;
   hasSelectedEntity: boolean;
@@ -38,6 +40,7 @@ function initialState(signalId: SignalId | undefined): SelectionState {
     annotationId: undefined,
     annotationIds: new Set(),
     transactionId: undefined,
+    legendSelected: false,
     transactionIds: new Set(),
   };
 }
@@ -112,6 +115,7 @@ export function useSelectionOwner(initialSignalId?: SignalId) {
       annotationId: { get current() { return stateRef.current.annotationId; } },
       annotationIds: { get current() { return stateRef.current.annotationIds; } },
       transactionId: { get current() { return stateRef.current.transactionId; } },
+      legendSelected: { get current() { return stateRef.current.legendSelected; } },
       transactionIds: { get current() { return stateRef.current.transactionIds; } },
     },
     configure: (effects: SelectionEffects) => { effectsRef.current = effects; },
@@ -142,9 +146,10 @@ export function useSelectionOwner(initialSignalId?: SignalId) {
       const transactionId = primary && ids.has(primary) ? primary : [...ids][0];
       commit({ ...initialState(undefined), transactionId, transactionIds: ids }, transactionId === undefined ? "none" : "transaction");
     },
+    selectLegend: () => commit({ ...initialState(undefined), legendSelected: true }, "legend"),
     selectTarget: (target: Partial<Omit<SelectionState, "signalIds" | "annotationIds" | "transactionIds">> & { signalIds?: ReadonlySet<SignalId>; annotationIds?: ReadonlySet<AnnotationId>; transactionIds?: ReadonlySet<TransactionId> }) => {
       const next = { ...initialState(undefined), ...target, signalIds: new Set(target.signalIds ?? []), annotationIds: new Set(target.annotationIds ?? (target.annotationId ? [target.annotationId] : [])), transactionIds: new Set(target.transactionIds ?? (target.transactionId ? [target.transactionId] : [])) };
-      const kind: SelectionKind = next.signalId ? "signal" : next.groupId ? "group" : next.spacerId ? "spacer" : next.annotationId ? "annotation" : next.transactionId ? "transaction" : "none";
+      const kind: SelectionKind = next.signalId ? "signal" : next.groupId ? "group" : next.spacerId ? "spacer" : next.annotationId ? "annotation" : next.transactionId ? "transaction" : next.legendSelected ? "legend" : "none";
       commit(next, kind);
     },
     replace,

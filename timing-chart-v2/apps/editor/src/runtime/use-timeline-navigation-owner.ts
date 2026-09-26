@@ -3,6 +3,7 @@ import type { CanonicalDocument } from "@timing-chart-v2/schema";
 import type { ViewMetricsOwner } from "./view-metrics.js";
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import { createTimelineNavigationController, createTimelineZoomController } from "./viewport-controller.js";
+import { timelineScrollOwner } from "./timeline-scroll-owner.js";
 
 type TimelineRange = Readonly<{ start: number; end: number }>;
 
@@ -31,27 +32,38 @@ export type TimelineNavigationOwner = Readonly<{
   setZoom: (zoom: number) => void;
   zoomBy: (delta: number) => void;
   fitSelection: () => void;
+  fitSourceRange: (startCycle: number, endCycle: number) => boolean;
   fitAll: () => void;
   navigateToCycle: (cycle: number) => void;
   attach: (context: TimelineNavigationAttachment) => () => void;
 }>;
 
-export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "Split" = "Cycle"): TimelineNavigationOwner {
+export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "Split" = "Cycle", documentEpoch = 0): TimelineNavigationOwner {
   const [zoom, setZoomState] = useState(1);
   const zoomRef = useRef(1);
   const zoomByModeRef = useRef<Record<"Cycle" | "Transaction", number>>({ Cycle: 1, Transaction: 1 });
+  const scrollLeftByModeRef = useRef<Record<"Cycle" | "Transaction" | "Split", number>>({ Cycle: 0, Transaction: 0, Split: 0 });
+  const scrollRestorePendingRef = useRef(false);
+  const restoreScrollLeftRef = useRef<(scrollLeft: number) => void>(() => undefined);
   const previousModeRef = useRef<"Cycle" | "Transaction" | "Split">(viewMode);
   const activeModeRef = useRef(viewMode);
   activeModeRef.current = viewMode;
   const zoomStateFrameRef = useRef<number | undefined>(undefined);
+  const scrollRestoreFrameRef = useRef<number | undefined>(undefined);
   const applyZoomRef = useRef<(zoom: number) => void>(() => undefined);
   const fitSelectionRef = useRef<() => void>(() => undefined);
+  const fitSourceRangeRef = useRef<(startCycle: number, endCycle: number) => boolean>(() => false);
   const fitAllRef = useRef<() => void>(() => undefined);
   const navigateToCycleRef = useRef<(cycle: number) => void>(() => undefined);
 
   useEffect(() => () => {
     if (zoomStateFrameRef.current !== undefined) cancelAnimationFrame(zoomStateFrameRef.current);
+    if (scrollRestoreFrameRef.current !== undefined) cancelAnimationFrame(scrollRestoreFrameRef.current);
   }, []);
+
+  useEffect(() => {
+    scrollLeftByModeRef.current = { Cycle: 0, Transaction: 0, Split: 0 };
+  }, [documentEpoch]);
 
   useEffect(() => {
     const previous = previousModeRef.current;
@@ -63,6 +75,18 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
         setZoomState(next);
         applyZoomRef.current(next);
       }
+      if (scrollRestoreFrameRef.current !== undefined) cancelAnimationFrame(scrollRestoreFrameRef.current);
+      scrollRestorePendingRef.current = true;
+      const restore = () => {
+        scrollRestoreFrameRef.current = undefined;
+        if (activeModeRef.current === viewMode) restoreScrollLeftRef.current(scrollLeftByModeRef.current[viewMode]);
+        scrollRestorePendingRef.current = false;
+      };
+      // Apply after the mode's scroll extent and inner/outer owner are committed;
+      // Cycle uses its nested TimelineViewport while Transaction and Combined
+      // use the outer viewport.
+      if (typeof requestAnimationFrame === "function") scrollRestoreFrameRef.current = requestAnimationFrame(restore);
+      else restore();
       previousModeRef.current = viewMode;
     }
   }, [viewMode]);
@@ -73,9 +97,30 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
     setZoom: (next) => applyZoomRef.current(next),
     zoomBy: (delta) => applyZoomRef.current(zoomRef.current + delta),
     fitSelection: () => fitSelectionRef.current(),
+    fitSourceRange: (startCycle, endCycle) => fitSourceRangeRef.current(startCycle, endCycle),
     fitAll: () => fitAllRef.current(),
     navigateToCycle: (cycle) => navigateToCycleRef.current(cycle),
     attach: (context) => {
+      const activeScrollOwner = () => timelineScrollOwner(context.viewport);
+      const rememberScrollLeft = () => {
+        // A mode's zoom/layout restoration can emit intermediate scroll events.
+        // They are presentation artifacts, not the user's saved position.
+        if (scrollRestorePendingRef.current || activeModeRef.current !== previousModeRef.current) return;
+        scrollLeftByModeRef.current[activeModeRef.current] = activeScrollOwner().scrollLeft;
+      };
+      restoreScrollLeftRef.current = (scrollLeft) => {
+        const owner = activeScrollOwner();
+        // In Cycle, the shell viewport is only a clipping/layout wrapper. A
+        // stale standalone Transaction/Combined offset on it would shift the
+        // fixed Signal/Role columns even though Cycle's inner owner is restored.
+        if (owner !== context.viewport) context.viewport.scrollLeft = 0;
+        owner.scrollLeft = Math.max(0, scrollLeft);
+        scrollLeftByModeRef.current[activeModeRef.current] = owner.scrollLeft;
+      };
+      scrollLeftByModeRef.current[activeModeRef.current] = activeScrollOwner().scrollLeft;
+      // Scroll events from Cycle's nested owner are observed in capture phase;
+      // the active mode selects which presentation state receives the value.
+      context.viewport.addEventListener("scroll", rememberScrollLeft, { capture: true, passive: true });
       const applyZoom = createTimelineZoomController({
         rendererHost: context.rendererHost,
         timingSurface: context.timingSurface,
@@ -121,12 +166,17 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
         publishState: context.publishState,
       });
       fitSelectionRef.current = navigation.fitSelection;
+      fitSourceRangeRef.current = navigation.fitSourceRange;
       fitAllRef.current = navigation.fitAll;
       navigateToCycleRef.current = navigation.navigateToCycle;
 
       return () => {
+        context.viewport.removeEventListener("scroll", rememberScrollLeft, true);
+        scrollRestorePendingRef.current = false;
+        restoreScrollLeftRef.current = () => undefined;
         applyZoomRef.current = () => undefined;
         fitSelectionRef.current = () => undefined;
+        fitSourceRangeRef.current = () => false;
         fitAllRef.current = () => undefined;
         navigateToCycleRef.current = () => undefined;
       };

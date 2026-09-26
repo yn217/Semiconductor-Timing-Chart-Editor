@@ -47,7 +47,7 @@ test("surfaces an Open failure in the Problems panel", async ({ page }) => {
   await expect(page.getByTestId("problems-panel")).toContainText("$@");
 });
 
-test("surfaces a localized WaveDrom render failure with signal context and recovery guidance", async ({ page }) => {
+test("rejects an unsupported clock phase on Open before rendering and keeps the current rows intact", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -60,14 +60,16 @@ test("surfaces a localized WaveDrom render failure with signal context and recov
   };
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "localized-wave-error.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(host.locator(`[data-role='wave-owner'][data-signal-id='${clock.id}']`)).toHaveAttribute("data-wave-error", /phase/);
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+  await expect(host.locator(`[data-role='wave-owner'][data-signal-id='sig_cycle_clock'] > svg`)).toHaveCount(1);
+  await expect(host.locator(`[data-role='wave-owner'][data-signal-id='sig_cycle_clock'][data-wave-error]`)).toHaveCount(0);
+  await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_request'] > svg")).toHaveCount(1);
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
   const problems = page.getByTestId("problems-panel");
-  await expect(problems).toContainText("WAVE_RENDER_ERROR");
+  await expect(problems).toContainText("UNSUPPORTED_CLOCK_PHASE");
+  await problems.locator("summary").click();
+  await expect(problems.getByText("Entity ID", { exact: true })).toBeVisible();
   await expect(problems).toContainText(clock.id);
-  await expect(problems).toContainText("Render waveform");
-  await expect(problems).toContainText("Review the affected Signal values or type");
-  await expect(host).toHaveAttribute("data-canonical-revision", "0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 

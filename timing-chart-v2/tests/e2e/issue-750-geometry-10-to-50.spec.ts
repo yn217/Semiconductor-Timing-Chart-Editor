@@ -7,7 +7,9 @@ const rulerLabelXs = (page: Page) => page.evaluate(() => [...document.querySelec
   .filter((tick) => (tick.textContent ?? "").trim() !== "").slice(0, 4).map((tick) => ({ label: (tick.textContent ?? "").trim(), source: Number(tick.dataset.sourceCycle), x: tick.getBoundingClientRect().x })));
 const barBox = (page: Page) => page.evaluate(() => { const bar = document.querySelector<HTMLElement>("[data-transaction-id='demo_txn_read']")!; const b = bar.getBoundingClientRect(); return { x: Math.round(b.x * 10) / 10, width: Math.round(b.width * 10) / 10 }; });
 
-for (const size of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+// The compression ratio, TC pitch, and canonical source-time invariants are width-independent.
+// Keep one compact viewport here; the separate clipping/scroll-extent contract below retains both widths.
+for (const size of [{ width: 1280, height: 720 }]) {
   test(`1 TC = 10 cycles -> 50 cycles compresses bars 5x, keeps TC label pitch, never changes canonical cycles (${size.width}x${size.height})`, async ({ page }) => {
     await page.setViewportSize(size);
     await page.goto("/?transaction-demo");
@@ -54,13 +56,14 @@ for (const size of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }])
 // #750 presentation contract around the compressed geometry: narrow bars never show clipped text (full name stays in aria-label/title),
 // and the scroll extent is the presented content -- a document narrower than the viewport gets NO artificial horizontal scrolling and
 // no stretched TC geometry (blank space to the right is valid).
-for (const size of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
-  test(`compressed Transaction: no clipped labels and no artificial scroll extent at ${size.width}x${size.height}`, async ({ page }) => {
+test("compressed Transaction has no clipped labels or artificial scroll extent at both supported viewports", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/?transaction-demo");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByTestId("transaction-tc-scale").selectOption("50");
+  for (const size of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
     await page.setViewportSize(size);
-    await page.goto("/?transaction-demo");
-    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
-    await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
-    await page.getByTestId("transaction-tc-scale").selectOption("50");
     await expect.poll(async () => (await barBox(page)).width).toBeLessThan(60);
     const info = await page.evaluate(() => {
       const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!;
@@ -75,5 +78,5 @@ for (const size of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }])
     expect(info.narrowWithoutName).toEqual([]);
     // Presented content (~3 TC) is far narrower than the viewport: no artificial horizontal scrolling (<=1px rounding).
     expect(info.scrollWidth - info.clientWidth).toBeLessThanOrEqual(2);
-  });
-}
+  }
+});

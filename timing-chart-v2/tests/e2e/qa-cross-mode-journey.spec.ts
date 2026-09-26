@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
-  test(`Cycle, Transaction and Combined remain usable at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  test(`Cycle, Transaction and Combined remain usable at ${viewport.width}x${viewport.height}`, async ({ page }, testInfo) => {
     await page.setViewportSize(viewport);
     await page.goto("/");
     const host = page.getByTestId("cycle-surface");
@@ -28,9 +28,9 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(page.locator(".split-transaction-pane")).toBeVisible();
     await expect(page.locator(".split-signal-content")).toBeVisible();
     await expect(page.getByTestId("combined-split-divider")).toBeVisible();
-    await page.screenshot({
-      path: `artifacts/qa-cross-mode-${viewport.width}x${viewport.height}.png`,
-      fullPage: true,
+    await testInfo.attach(`qa-cross-mode-${viewport.width}x${viewport.height}.png`, {
+      body: await page.screenshot({ fullPage: true }),
+      contentType: "image/png",
     });
 
     await expect.poll(() => host.getAttribute("data-canonical-revision")).toBe(before.revision);

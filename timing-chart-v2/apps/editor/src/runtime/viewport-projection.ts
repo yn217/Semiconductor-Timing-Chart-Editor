@@ -9,6 +9,7 @@ import type { TimingChartRenderer } from "@timing-chart-v2/renderer";
 export function projectViewportWindow({
   viewport,
   referenceClock,
+  stickyRowIds = [],
   snapshot,
   previous,
   projectionCoordinator,
@@ -17,14 +18,23 @@ export function projectViewportWindow({
 }: {
   readonly viewport: HTMLElement;
   readonly referenceClock: SignalId | undefined;
+  readonly stickyRowIds?: readonly SignalId[];
   readonly snapshot: CanonicalSnapshot;
   readonly previous: Readonly<{ readonly window: VirtualizationWindow; readonly projection: RenderProjection }>;
   readonly projectionCoordinator: Pick<ProjectionCoordinator, "project">;
   readonly collapsedGroupIds: readonly GroupId[];
   readonly onProjection: (projection: RenderProjection, window: VirtualizationWindow, mountedSignalsChanged: boolean) => void;
 }): void {
-  const nextWindow = buildViewportWindow(viewport, referenceClock);
-  if (nextWindow.viewportStartY === previous.window.viewportStartY && nextWindow.viewportEndY === previous.window.viewportEndY) {
+  const nextWindow = buildViewportWindow(viewport, referenceClock, stickyRowIds);
+  const nextStickyRowIds = nextWindow.stickyRowIds ?? [];
+  const stickyRowsChanged = nextStickyRowIds.length !== (previous.window.stickyRowIds?.length ?? 0)
+    || nextStickyRowIds.some((rowId, index) => rowId !== previous.window.stickyRowIds?.[index]);
+  const pinnedRowsChanged = nextWindow.pinnedRowIds.length !== previous.window.pinnedRowIds.length
+    || nextWindow.pinnedRowIds.some((rowId, index) => rowId !== previous.window.pinnedRowIds[index]);
+  if (nextWindow.viewportStartY === previous.window.viewportStartY
+    && nextWindow.viewportEndY === previous.window.viewportEndY
+    && !stickyRowsChanged
+    && !pinnedRowsChanged) {
     // Vertical row virtualization is unchanged, but a horizontal-only scroll
     // still moves each wave-owner's bounded source window (see
     // `getSourceWindow`, keyed off `viewport.scrollLeft`). Re-publish the same
@@ -47,12 +57,13 @@ export function mountInitialTimelineProjection(context: {
   readonly host: HTMLElement;
   readonly viewport: HTMLElement;
   readonly referenceClock: SignalId | undefined;
+  readonly stickyRowIds?: readonly SignalId[];
   readonly projectionCoordinator: Pick<ProjectionCoordinator, "project">;
   readonly snapshot: CanonicalSnapshot;
   readonly collapsedGroupIds: readonly GroupId[];
 }): { readonly window: VirtualizationWindow; readonly projection: RenderProjection } {
   context.coordinator.mount(context.host);
-  const window = buildViewportWindow(context.viewport, context.referenceClock);
+  const window = buildViewportWindow(context.viewport, context.referenceClock, context.stickyRowIds);
   const projection = context.projectionCoordinator.project({ snapshot: context.snapshot, changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: context.collapsedGroupIds });
   context.renderer.update(projection);
   return { window, projection };

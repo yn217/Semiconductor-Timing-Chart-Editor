@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
 // #720: while a Transaction bar is being dragged the status bar explains the gesture ("... Esc cancels"); it disappears on release and on Escape,
 // and the hint never mutates Canonical/History.
@@ -45,11 +46,13 @@ test("Annotation drag shows a status hint that clears on Escape", async ({ page 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("text");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const history = await page.getByTestId("history-status").innerText();
   const tool = page.getByTestId("tool-status");
-  const label = host.locator("[data-role='annotation-owner'] [data-role='annotation-label']").last();
+  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "text"));
+  const label = owner.locator("[data-role='annotation-label']");
   const box = (await label.boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();

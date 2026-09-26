@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockSignal, CommentRow, DocumentProblem, GroupId, JsonObject, SignalId, SignalRole, SpacerId, TimeGroupId, TransactionGroup, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
 import type { AIBridgeStatus } from "./ai-bridge-client.js";
+import { TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-chart-v2/core";
 import { FontStyleToolbar } from "./font-style-toolbar.js";
 import { ArrangeGroup } from "./arrange-group.js";
 import { FindReplacePanel } from "./find-replace-panel.js";
@@ -317,7 +318,11 @@ function Ribbon({ tab, document, revision, range, history, zoom, cyclesPerTc, on
       </div>
     </>}
     {tab === "View" && viewGroups.map((group) => <RibbonGroup key={group.id} spec={group} available={density === "compact" ? "small" : "large"} />)}
-    {tab === "Review" && <div className="ribbon-group review-group"><ReviewWorkflow diagnostics={diagnostics} document={document} selectedSignalId={selectedSignalId} selectedGroupId={selectedGroupId} onNavigate={onNavigateProblem} onShowProblems={onShowProblems} onRefreshChecks={onRefreshChecks} /><output data-testid="review-problems-count">{problemsCount}</output><b>Review</b></div>}
+    {tab === "Review" && <div className="ribbon-group review-group"><ReviewWorkflow diagnostics={diagnostics} document={document} selectedSignalId={selectedSignalId} selectedGroupId={selectedGroupId} onNavigate={onNavigateProblem} onShowProblems={onShowProblems} onRefreshChecks={onRefreshChecks} onToggleCheckCategory={(category, enabled) => {
+      const currentlyEnabled = document.checkSettings.enabledCategories ?? TIMING_DIAGNOSTIC_CATEGORIES;
+      const next = enabled ? [...currentlyEnabled, category] : currentlyEnabled.filter((item) => item !== category);
+      commands.updateCheckSettings({ enabledCategories: TIMING_DIAGNOSTIC_CATEGORIES.filter((item) => next.includes(item)) });
+    }} /><output data-testid="review-problems-count">{problemsCount}</output><b>Review</b></div>}
     {tab === "AI" && <>
       {/* #395 PR1: the full query/preview/apply surface (AIOperationPanel)
           moved to the Bottom Panel's own "AI Assistant" tab -- same
@@ -335,7 +340,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, cyclesPerTc, on
       <div className="ribbon-major-group" data-major-group="Provider" aria-label="AI provider status">
         <DsRibbonGroup ariaLabel="Provider" className="ai-provider-group" label="Provider">
           {/* #778 Phase 1: "bridge running" must not be worded as "external agent connected" -- those are different facts. */}
-          <output className="ai-provider-status" data-testid="ai-provider-status">Local deterministic (offline) · {aiBridgeStatus === "connected-external-client" ? "external agent connected" : aiBridgeStatus === "connected" ? "bridge running, no external agent yet" : aiBridgeStatus === "connecting" ? "connecting to bridge…" : aiBridgeStatus === "error" ? "bridge connection failed" : "no external agent connected"}</output>
+          <output className="ai-provider-status" data-testid="ai-provider-status">Local deterministic (offline) · {aiBridgeStatus === "connected-external-client" ? "external agent connected" : aiBridgeStatus === "connected" ? "bridge running, no external agent yet" : aiBridgeStatus === "connecting" ? "connecting to bridge…" : aiBridgeStatus === "invalid-token" ? "bridge token rejected" : aiBridgeStatus === "unavailable" ? "bridge unavailable" : aiBridgeStatus === "token-required" ? "bridge token required" : aiBridgeStatus === "error" ? "bridge connection failed" : "no external agent connected"}</output>
         </DsRibbonGroup>
       </div>
     </>}

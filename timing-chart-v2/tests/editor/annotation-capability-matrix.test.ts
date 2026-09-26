@@ -24,9 +24,10 @@ describe("Annotation Capability Matrix (#378)", () => {
     expect(hasAnnotationCapability("verticalLine", "fill")).toBe(false);
   });
 
-  it("declares labelOffset/zOrder/lock/visible/text universally applicable, matching the shared #171 machinery", () => {
+  it("declares labelOffset/labelPlacement/zOrder/lock/visible/text universally applicable, matching the shared #171 machinery", () => {
     for (const type of ALL_TYPES) {
       expect(hasAnnotationCapability(type, "labelOffset")).toBe(true);
+      expect(hasAnnotationCapability(type, "labelPlacement")).toBe(true);
       expect(hasAnnotationCapability(type, "zOrder")).toBe(true);
       expect(hasAnnotationCapability(type, "lock")).toBe(true);
       expect(hasAnnotationCapability(type, "visible")).toBe(true);

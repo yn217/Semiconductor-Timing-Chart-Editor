@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
+import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
 startInCycleSample(test);
 
@@ -66,9 +67,13 @@ test("ChangeSet invalidation matrix keeps derived owners local", async ({ page }
   // Annotation style is an overlay-only update.
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("text");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await waitForIdle(page);
-  const owner = host.locator("[data-role='annotation-owner']").last();
+  const createdId = await waitForCreatedAnnotationId(host, previousIds, "text");
+  const annotationId = await page.getByTestId("inspector").getByTestId("annotation-editor").getAttribute("data-annotation-id");
+  expect(annotationId).toBe(createdId);
+  const owner = annotationOwnerById(host, createdId);
   await owner.locator("[data-role='annotation-label']").click();
   const annotationBefore = { session: await sessionCounters(page), render: await renderCounters(page) };
   const annotationInspector = page.getByTestId("inspector");

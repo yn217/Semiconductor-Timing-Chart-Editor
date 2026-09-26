@@ -1,5 +1,6 @@
 import { expect, test, type Locator } from "@playwright/test";
 import { startInCycleMode } from "./cycle-startup.js";
+import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
 startInCycleMode(test);
 
@@ -17,9 +18,9 @@ test("renders distinct connector paths and SVG arrowheads for every line type", 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("arrow");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
-
-  const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='arrow']").last();
+  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "arrow"));
   const editor = page.getByTestId("inspector");
   const path = owner.locator("[data-role='annotation-path']");
   const observed = new Map<string, { readonly d: string; readonly dash: string | null }>();
@@ -68,9 +69,9 @@ test("Dependency annotations expose and persist line presentation controls", asy
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("dependency");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
-
-  const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='dependency']").last();
+  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "dependency"));
   const editor = page.getByTestId("inspector");
   await expect((await styleSection(editor)).getByLabel("Annotation line type")).toBeVisible();
   await (await styleSection(editor)).getByLabel("Annotation line type").selectOption("curve");
@@ -92,9 +93,9 @@ test("SVG export preserves a Dependency's route shape, arrow markers and label",
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("dependency");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
-
-  const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='dependency']").last();
+  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "dependency"));
   const editor = page.getByTestId("inspector");
   await editor.getByLabel("Annotation label", { exact: true }).fill("Req to Ready");
   await (await styleSection(editor)).getByLabel("Annotation line type").selectOption("orthogonal");
@@ -146,9 +147,9 @@ test("SVG export preserves Diagonal's distinct elbow geometry, not Straight's si
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("dependency");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
-
-  const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='dependency']").last();
+  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "dependency"));
   const editor = page.getByTestId("inspector");
   await (await styleSection(editor)).getByLabel("Annotation line type").selectOption("diagonal");
   await editor.getByTestId("apply-annotation-properties").click();
