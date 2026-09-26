@@ -3,6 +3,8 @@ import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
 // Classic (non-overlay) scrollbars so the Timeline track exposes a real thumb.
 test.use({ launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] } });
+// Keep the inventory's collected timeout aligned with these large-document tests.
+test.describe.configure({ timeout: 240_000 });
 
 // #738 (2026-09-21 screenshot): after scrolling far right and back to scrollLeft === 0 the Cycle ruler's first visible cell must be cycle 0.
 async function open(page: Page, cycleCount: number) {
@@ -31,7 +33,6 @@ const rulerState = (page: Page) => page.evaluate(() => {
 
 for (const cycles of [160, 10_000, 100_000]) {
   test(`ruler shows cycle 0 first after scrolling far right and returning to scrollLeft 0 (${cycles} cycles)`, async ({ page }) => {
-    test.setTimeout(240_000);
     const surface = await open(page, cycles);
     const initial = await rulerState(page);
     expect(initial.firstVisibleCycle, "initial left edge").toBe(0);
@@ -62,8 +63,9 @@ for (const cycles of [160, 10_000, 100_000]) {
 // The screenshot came from a real scrollbar drag (many in-flight windows), not a programmatic jump: drag the native thumb far right and
 // straight back with no settling between moves, repeatedly, and require the ruler to land on cycle 0 each time.
 test.describe("real scrollbar drag", () => {
+  test.describe.configure({ timeout: 300_000 });
+
   test("native thumb drag away and back leaves the ruler on cycle 0", async ({ page }) => {
-    test.setTimeout(300_000);
     const surface = await open(page, 5_000);
     const bar = page.getByTestId("timeline-hscroll");
     const geo = await bar.evaluate((element) => { const b = element.getBoundingClientRect(); return { left: b.left, right: b.right, bottom: b.bottom, h: element.offsetHeight - element.clientHeight, cw: element.clientWidth, sw: element.scrollWidth }; });
@@ -84,10 +86,9 @@ test.describe("real scrollbar drag", () => {
   });
 });
 
-for (const zoom of ["50", "200", "800"]) {
-  test(`ruler returns to cycle 0 after scroll-away-and-return at zoom ${zoom}%`, async ({ page }) => {
-    test.setTimeout(240_000);
-    const surface = await open(page, 5_000);
+test("ruler returns to cycle 0 after scroll-away-and-return across zoom levels", async ({ page }) => {
+  const surface = await open(page, 5_000);
+  for (const zoom of ["50", "200", "800"]) {
     await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
     await page.getByLabel("Zoom preset").selectOption(zoom);
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
@@ -100,5 +101,5 @@ for (const zoom of ["50", "200", "800"]) {
       await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
       await expect.poll(async () => { const s = await rulerState(page); return s.scrollLeft === 0 ? s.firstVisibleCycle : `scrollLeft ${s.scrollLeft}`; }, { message: `zoom ${zoom} after return from ${far}` }).toBe(0);
     }
-  });
-}
+  }
+});

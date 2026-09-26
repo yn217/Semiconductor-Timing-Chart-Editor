@@ -14,12 +14,13 @@ async function geometry(page: Page) {
   });
 }
 
-for (const vp of viewports) {
-  test(`Cycle releases Bottom space when hidden at ${vp.width}x${vp.height}`, async ({ page }) => {
+test("Cycle releases Bottom space when hidden at both supported viewports", async ({ page }) => {
+  await page.setViewportSize(viewports[0]);
+  await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  for (const vp of viewports) {
     await page.setViewportSize(vp);
-    await page.goto("/");
-    await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
-    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
     const historyBefore = await page.getByTestId("history-status").innerText();
     const dirtyBefore = await page.getByTestId("dirty-status").innerText();
     const revisionBefore = await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision");
@@ -46,5 +47,5 @@ for (const vp of viewports) {
     await expect(page.getByTestId("history-status")).toHaveText(historyBefore);
     await expect(page.getByTestId("dirty-status")).toHaveText(dirtyBefore);
     expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).toBe(revisionBefore);
-  });
-}
+  }
+});

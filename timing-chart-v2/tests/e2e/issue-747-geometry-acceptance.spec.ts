@@ -3,15 +3,19 @@ import { openBottomSettings } from "./bottom-settings.js";
 
 // #747 geometry acceptance: settings popover / selection / sorting never move the table header; Phase child cells align with header columns (<=1px);
 // sorting (Start and End) is view-only and keeps Phase rows directly under their parent.
-for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
-  test(`Bottom table geometry is stable under settings, selection, sort and Phase expansion at ${viewport.width}x${viewport.height}`, async ({ page }) => {
-    const errors: string[] = [];
-    page.on("pageerror", (error) => errors.push(error.message));
+const viewports = [{ width: 1672, height: 941 }, { width: 1280, height: 720 }];
+
+test("Bottom table geometry is stable under settings, selection, sort and Phase expansion at both viewports", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.setViewportSize(viewports[0]!);
+  await page.goto("/?transaction-demo");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
+  const editor = page.getByTestId("bottom-editor");
+
+  for (const viewport of viewports) {
     await page.setViewportSize(viewport);
-    await page.goto("/?transaction-demo");
-    await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
-    await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
-    const editor = page.getByTestId("bottom-editor");
     const headerY = () => editor.locator(".transaction-list-header").first().evaluate((element) => element.getBoundingClientRect().y);
     const y0 = await headerY();
     await openBottomSettings(page);
@@ -23,8 +27,8 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     // Expand the first Transaction that has Phases.
     const disclosure = editor.locator(".transaction-disclosure-slot").first();
     await expect(disclosure).toBeVisible();
-    await disclosure.click();
     const phaseRows = editor.locator("[data-transaction-phase-row-id]");
+    if (await phaseRows.count() === 0) await disclosure.click();
     await expect(phaseRows.first()).toBeVisible();
     const alignment = await editor.evaluate((root) => {
       const headerCells = Array.from(root.querySelectorAll<HTMLElement>(".transaction-list-header-cells > span")).map((cell) => cell.getBoundingClientRect().x);
@@ -50,5 +54,5 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(page.getByTestId("history-status")).toHaveText(history);
     await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", revision!);
     expect(errors).toEqual([]);
-  });
-}
+  }
+});

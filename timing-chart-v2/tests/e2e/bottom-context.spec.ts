@@ -34,7 +34,7 @@ test("Follow Selection OFF freezes the Bottom target; Pin locks in whatever is c
   // longer see in the panel.
   await openBottomSettings(page);
   await bottom.getByTestId("bottom-pin").click();
-  await expect(bottom.getByTestId("bottom-pin")).toHaveText("Unpin");
+  await expect(bottom.getByTestId("bottom-pin")).toHaveAccessibleName("Unpin current content");
   await expect(bottom).toContainText("REQUEST · Signal");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid']").click();
   await expect(page.getByTestId("selection-status")).toHaveText("VALID");
@@ -45,7 +45,7 @@ test("Follow Selection OFF freezes the Bottom target; Pin locks in whatever is c
   // still means "don't move".
   await openBottomSettings(page);
   await bottom.getByTestId("bottom-pin").click();
-  await expect(bottom.getByTestId("bottom-pin")).toHaveText("Pin");
+  await expect(bottom.getByTestId("bottom-pin")).toHaveAccessibleName("Pin current content");
   await expect(bottom).toContainText("REQUEST · Signal");
 
   // Turning Follow Selection back on resumes live tracking.

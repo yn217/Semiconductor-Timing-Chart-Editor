@@ -157,35 +157,6 @@ test("opens all 20 immutable Golden Samples in the production browser path", asy
   await page.screenshot({ path: resolve(screenshotOutput, "golden-sample-20-browser-1280x720.png"), animations: "disabled" });
 });
 
-test("switches representative Golden Samples through production File Input without stale row ownership", async ({ page }, testInfo) => {
-  test.skip(Boolean(process.env.GOLDEN_SAMPLE_FILTER), "A→B switching requires the unfiltered representative sample pair.");
-  const samples = await samplesFromManifests();
-  const first = samples.find(({ meta }) => meta.file === "11_signal_types_roles_legend.tcd.json") ?? samples[0];
-  const second = samples.find(({ meta }) => meta.file === "12_group_bands_and_spacing.tcd.json") ?? samples[1];
-  if (!first || !second || first.meta.file === second.meta.file) throw new Error("Two distinct Golden Samples are required for the A→B switch audit.");
-  await page.goto("/");
-  const host = page.getByTestId("cycle-surface");
-  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  const load = async (sample: { readonly meta: GoldenSample; readonly path: string }) => {
-    const source = await readFile(sample.path);
-    const parsed = parseDocument(source.toString("utf8"));
-    if (!parsed.ok) throw new Error(`${sample.meta.file}: Golden source did not produce a validated Canonical document.`);
-    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: sample.meta.file, mimeType: "application/json", buffer: source });
-    await expect(page.locator(".app-titlebar h1")).toHaveText(sample.meta.title, { timeout: 60_000 });
-    await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
-    await assertRenderedRowOwnership(host, parsed.document, sample.meta.file);
-    return parsed.document;
-  };
-  const firstDocument = await load(first);
-  const firstIds = firstDocument.signalGroups.flatMap((group) => group.rows);
-  const secondDocument = await load(second);
-  const secondIds = secondDocument.signalGroups.flatMap((group) => group.rows);
-  const renderedAfterSwitch = await host.locator("[data-role='left-row'][data-row-id]").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-row-id")));
-  expect(renderedAfterSwitch.filter((id): id is string => id !== null && !secondIds.includes(id)), "A→B stale row IDs").toEqual([]);
-  expect(new Set(renderedAfterSwitch).size, "A→B duplicate visible row IDs").toBe(renderedAfterSwitch.length);
-  await testInfo.attach("golden-sample-switch-evidence.json", { body: Buffer.from(JSON.stringify({ from: first.meta.file, fromRows: firstIds, to: second.meta.file, toRows: secondIds, renderedAfterSwitch }, null, 2)), contentType: "application/json" });
-});
-
 test("exports SVG, PNG and PDF for all 20 immutable Golden Samples without mutating Canonical state", async ({ page }, testInfo) => {
   test.setTimeout(300_000);
   const samples = await samplesFromManifests();

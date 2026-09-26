@@ -1,5 +1,6 @@
 import { expect, test, type CDPSession, type Page, type TestInfo } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
+import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 import { generatePerformanceDocument, summarizePerformance, type BrowserPerformanceSample, type PerformanceFixtureSpec } from "@timing-chart-v2/testing";
 
 startInCycleSample(test);
@@ -59,9 +60,11 @@ test("SnapIndex cache survives a non-geometric Signal rename", async ({ page }) 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("arrow");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  const handle = host.locator("[data-role='annotation-owner']").last().locator("[data-role='annotation-handle'][data-annotation-field='from']");
+  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "arrow"));
+  const handle = owner.locator("[data-role='annotation-handle'][data-annotation-field='from']");
   const box = await handle.boundingBox();
   expect(box).not.toBeNull();
   await page.mouse.move(box!.x + 2, box!.y + 2);

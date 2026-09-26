@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
 // #332 item A: "Preview Update" must actually preview the draft
 // Label/Color, not just bump a status counter -- with zero Canonical/
@@ -13,10 +14,11 @@ test("Annotation Preview Update reflects draft Label/Color on the live overlay w
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("text");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
-  const owner = host.locator("[data-role='annotation-owner']").last();
+  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "text"));
   const label = owner.locator("[data-role='annotation-label']");
   await expect(label).toHaveText("text 2");
 
@@ -48,10 +50,11 @@ test("Annotation Preview Update reverts even without an explicit Cancel, when se
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("text");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
-  const owner = host.locator("[data-role='annotation-owner']").last();
+  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "text"));
   const label = owner.locator("[data-role='annotation-label']");
   const editor = page.getByTestId("annotation-editor");
   await editor.getByLabel("Annotation label", { exact: true }).fill("LEAK TEST");
@@ -72,10 +75,11 @@ test("Apply commits the previewed draft as one real SemanticCommand", async ({ p
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("text");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
-  const owner = host.locator("[data-role='annotation-owner']").last();
+  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "text"));
   const label = owner.locator("[data-role='annotation-label']");
   const editor = page.getByTestId("annotation-editor");
   await editor.getByLabel("Annotation label", { exact: true }).fill("COMMITTED LABEL");

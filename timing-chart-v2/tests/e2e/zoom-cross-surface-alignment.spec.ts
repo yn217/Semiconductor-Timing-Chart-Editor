@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
+import { snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
 startInCycleSample(test);
 
@@ -28,9 +29,10 @@ test("Annotation and Transaction X positions stay exactly aligned with the Ruler
   // Create a verticalLine Annotation anchored at the currently selected Timeline range.
   await tabs.getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("verticalLine");
+  const previousAnnotationIds = await snapshotAnnotationIds(host);
   await ribbon.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  const annotationId = await host.locator("[data-role='annotation-owner'][data-annotation-type='verticalLine']").last().getAttribute("data-annotation-id");
+  const annotationId = await waitForCreatedAnnotationId(host, previousAnnotationIds, "verticalLine");
   expect(annotationId).toBeTruthy();
   const annotationBody = host.locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}'] [data-role='annotation-body']`);
   const transaction = page.getByTestId("transaction-lanes").locator(`[data-transaction-id='${transactionId}']`);

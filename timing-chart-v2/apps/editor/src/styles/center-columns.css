@@ -348,7 +348,9 @@
 .transaction-left-tree-swatch, .transaction-left-tree-row i { flex: 0 0 14px; width: 14px; height: 14px; border-radius: 3px; }
 .transaction-left-tree-row { display: flex; align-items: center; width: 100%; min-height: var(--transaction-tree-row-height, 29px); height: var(--transaction-tree-row-height, 29px); gap: 7px; padding: 0 10px 0 31px; overflow: hidden; border: 0; background: transparent; color: #304b6a; font-size: 11px; text-align: left; white-space: nowrap; }
 .transaction-left-tree-row-wrap { position: relative; display: block; width: 100%; height: var(--transaction-tree-row-height, 29px); }
-.transaction-bookmark-markers { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+/* Bookmark markers are interactive time anchors and must sit above bars at
+   the same source time; only each narrow marker button opts into hit testing. */
+.transaction-bookmark-markers { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
 .transaction-bookmark-markers button { position: absolute; top: 0; bottom: 0; width: 6px; margin-left: -2px; padding: 0; border: 0; border-inline: 2px solid #d97706; background: transparent; box-shadow: 0 0 0 1px #fff8; pointer-events: auto; cursor: pointer; }
 .transaction-bookmark-markers button { border-inline: 1px solid rgb(217 119 6 / 45%); box-shadow: none; }
 .transaction-bookmark-markers button:hover, .transaction-bookmark-markers button:focus-visible, .transaction-bookmark-markers button[data-selected="true"], .transaction-bookmark-markers button[aria-pressed="true"] { border-inline: 2px solid #d97706; box-shadow: 0 0 0 1px #fff8; }

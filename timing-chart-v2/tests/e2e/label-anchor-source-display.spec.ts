@@ -39,6 +39,8 @@ test("keeps LabelAnchor source/display semantics on no-fold and folded ruler pat
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const document = documentWithRebase();
   await openDocument(page, document);
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
   const ruler = page.getByTestId("cycle-ruler");
 
   const noFold = ruler.locator("[data-display-cycle='5']");

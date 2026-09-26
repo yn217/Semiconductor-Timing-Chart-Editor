@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { timelineOwner } from "./timeline-scroll.js";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
+import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
 /**
  * #755 production acceptance for the viewport-bounded Canvas wave renderer (auto-selected for large documents, ?wave=svg|canvas forces).
@@ -100,9 +101,10 @@ test("annotation anchoring, snap and edge counter resolve on the Canvas path in 
   await surface.locator("[data-role='frozen-row']").nth(1).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("marker");
+  const previousIds = await snapshotAnnotationIds(surface);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
-  const owner = surface.locator("[data-role='annotation-owner'][data-annotation-type='marker']").last();
+  const owner = annotationOwnerById(surface, await waitForCreatedAnnotationId(surface, previousIds, "marker"));
   await expect(owner).toHaveCount(1);
   // The marker owner spans the whole overlay surface; its anchor handle is the element that sits on the anchored boundary.
   const annotationBox = (await owner.locator("[data-role='annotation-handle'][data-annotation-field='anchor']").first().boundingBox())!;

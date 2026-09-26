@@ -17,6 +17,10 @@ async function createTransaction(page: Page, name = "DMA Read", start = 2, end =
   await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Workspace preset").selectOption("transaction");
+  // The helpers' start/end arguments are source-cycle coordinates. Set the
+  // visible TC scale through the production control so entering those values
+  // keeps them in source cycles and inside the 24-cycle startup sample.
+  await page.getByTestId("transaction-tc-scale").selectOption("1");
   const editor = page.getByTestId("transaction-editor");
   const inspector = page.getByTestId("inspector");
   await inspector.getByLabel("Transaction name", { exact: true }).fill(name);
@@ -154,7 +158,7 @@ test("exports SVG, PNG and PDF from Split View through the shared ExportScene", 
   const svgText = svg.toString("utf8");
   expect(svgText).toContain('data-signal-id="sig_cycle_clock"');
   expect(svgText).toContain('data-transaction-id=');
-  expect(svgText).toContain("Split All Formats");
+  expect(svgText.includes("Split All Formats")).toBe(true);
   const png = await download("png");
   expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
   const pdf = await download("pdf");
@@ -164,29 +168,6 @@ test("exports SVG, PNG and PDF from Split View through the shared ExportScene", 
   expect(await surface.getAttribute("data-canonical-revision")).toBe(before.revision);
   expect(await surface.getAttribute("data-history-depth")).toBe(before.history);
   expect(await surface.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters")).toBe(before.counters);
-});
-
-test("preserves canonical Split View content through Save/Open", async ({ page }) => {
-  await ready(page);
-  await createTransaction(page, "Split Persisted", 2, 6);
-  await page.getByRole("button", { name: "Combined", exact: true }).click();
-  // #451: the same name now also appears in the Lane workspace's own Tree
-  // rows (transaction-lane-label-row) alongside the central bar -- scope to
-  // the bar specifically, since a plain getByText would ambiguously match
-  // both by design.
-  await expect(page.getByTestId("transaction-lanes").locator(".transaction-lane > button").getByText("Split Persisted")).toBeVisible();
-
-  const save = page.waitForEvent("download");
-  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
-  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
-  const savedPath = await (await save).path();
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
-  await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction" }).click();
-  await page.getByTestId("transaction-editor").getByRole("button", { name: /Split Persisted/ }).click();
-  await expect(page.getByTestId("inspector").getByLabel("Transaction name")).toHaveValue("Split Persisted");
-  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("2");
-  await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("6");
-  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
 test("keeps the Split View surface contract and view mode changes view-only", async ({ page }) => {
@@ -291,7 +272,11 @@ test("moves and resizes Transaction edges through the shared rendered-geometry S
   const body = bar.locator("span").first();
   const bodyBox = await body.boundingBox();
   const cycle4 = await page.getByTestId("cycle-ruler").locator("[data-cycle='4']").boundingBox();
-  await page.mouse.move(bodyBox!.x + bodyBox!.width / 2, bodyBox!.y + bodyBox!.height / 2); await page.mouse.down(); await page.mouse.move(cycle4!.x + 1, cycle4!.y + 10); await page.mouse.up();
+  // Start near the bar's leading edge (cycle 2), then end at cycle 4. The
+  // old midpoint start was already cycle 4, so its 1px movement never crossed
+  // the drag threshold and the test did not actually move the Transaction.
+  await page.mouse.move(bodyBox!.x + 2, bodyBox!.y + bodyBox!.height / 2); await page.mouse.down(); await page.mouse.move(cycle4!.x + 1, cycle4!.y + 10);
+  await page.mouse.up();
   await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("4");
   await expect(lanes).toHaveAttribute("data-mount-serial", mountSerial!);
   await expect.poll(async () => Number(await lanes.getAttribute("data-lane-index-builds"))).toBeGreaterThan(initialLaneIndexBuilds);
@@ -435,6 +420,7 @@ test("keeps long document layout metadata through page-fit SVG, PNG and PDF expo
   await dialog.getByLabel("Export margin").fill("32");
   const portraitSvg = (await download("svg")).toString("utf8");
   expect(portraitSvg).toContain('viewBox="0 0 794 1123"');
+  expect(portraitSvg).toContain('data-layer="page-content"');
   expect(portraitSvg).toContain("A long document description that must remain outside the waveform width during page fitting.");
   expect(portraitSvg).toContain("Precondition: Clock is stable");
   expect(portraitSvg).toContain("Constraint: Setup must hold");
@@ -488,21 +474,4 @@ test("copies deterministic SVG and PNG through browser Clipboard export", async 
   expect(await surface.getAttribute("data-canonical-revision")).toBe(before.revision);
   expect(await surface.getAttribute("data-history-depth")).toBe(before.history);
   expect(await surface.getAttribute("data-session-counters")).toBe(before.counters);
-});
-
-test("Export dialog applies page and fit settings to the exported scene", async ({ page }) => {
-  await ready(page);
-  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
-  await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Export Timing Chart" });
-  await dialog.getByLabel("Export page size").selectOption("A4");
-  await dialog.getByLabel("Export orientation").selectOption("portrait");
-  await dialog.getByLabel("Export fit").selectOption("page");
-  await dialog.getByLabel("Export margin").fill("32");
-  const pending = page.waitForEvent("download");
-  await dialog.getByRole("button", { name: "Export SVG" }).click();
-  const download = await pending;
-  const text = (await readFile((await download.path())!)).toString("utf8");
-  expect(text).toContain('viewBox="0 0 794 1123"');
-  expect(text).toContain('data-layer="page-content"');
 });
