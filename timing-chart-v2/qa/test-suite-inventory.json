@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-26T16:23:45.743Z",
+  "generatedAt": "2026-09-26T16:35:43.731Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -13,12 +13,12 @@
   },
   "specFileCount": 340,
   "caseCount": 993,
-  "reviewedCaseCount": 937,
+  "reviewedCaseCount": 950,
   "curatedProfileCounts": {
-    "integration": 477,
-    "nightly": 191,
+    "integration": 479,
+    "nightly": 193,
     "performance": 54,
-    "pr": 258,
+    "pr": 269,
     "visual": 174
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -9437,18 +9437,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bottom-event-row-draft-conflict",
+      "originIssue": 426,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "An external Event replacement that conflicts with a dirty Bottom transition draft preserves the local draft, exposes the conflict, disables stale Save, and offers an explicit reload-latest resolution.",
+      "duplicateGroup": "bottom-editor-draft-conflict",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The user-visible draft conflict crosses external canonical update and Bottom editor ownership; this journey verifies no silent data loss and explicit recovery through the production UI.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "bottom-event-row-draft-conflict"
     },
     {
       "file": "issue-426-external-bottom-draft-update.spec.ts",
@@ -9459,18 +9463,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "bottom-event-selection-pruning",
+      "originIssue": 426,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Removing a selected transition through an external Event replacement immediately removes its stale ID from Bottom bulk selection and disables bulk delete without changing unrelated canonical state.",
+      "duplicateGroup": "bottom-editor-stale-selection-pruning",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The case protects the visible selection count and command availability after stable transition IDs disappear; it is distinct from preserving dirty row drafts.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "bottom-event-selection-pruning"
     },
     {
       "file": "issue-426-external-bottom-draft-update.spec.ts",
@@ -9481,18 +9489,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "annotation-anchor-draft-conflict",
+      "originIssue": 426,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A Canvas Annotation anchor commit preserves a conflicting dirty Inspector anchor draft, makes stale Apply unavailable, and requires explicit user resolution before the draft can be applied.",
+      "duplicateGroup": "annotation-anchor-draft-conflict",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This cross-surface draft conflict is the Annotation Anchor residual named by #426 and verifies the visible conflict/recovery route plus resulting history behavior.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "annotation-anchor-draft-conflict"
     },
     {
       "file": "issue-441-ribbon-label-integrity.spec.ts",
@@ -14490,18 +14502,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "async-import-stale-publication",
+      "originIssue": 835,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A delayed Annotation import that becomes stale after a Signal edit must not replace that edit or change Canonical revision, History, or Dirty; the user receives a stale-import diagnostic.",
+      "duplicateGroup": "async-import-stale-publication",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The controlled delayed read exercises the production file-import journey and the stale completion boundary; unit validation cannot prove current UI/document ownership or visible recovery feedback.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "async-import-stale-publication"
     },
     {
       "file": "issue-835-async-annotation-import.spec.ts",
@@ -14512,18 +14528,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "async-import-stale-publication",
+      "originIssue": 835,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A delayed Event import remains bound to its original stable Signal target; changing the active Signal editor cancels the import without changing either Signal's events, Canonical revision, History, or Dirty.",
+      "duplicateGroup": "async-import-stale-publication",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the target-switch variant of the stale import contract and proves that the visible editor cannot retarget an in-flight file read to another Signal.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "async-import-stale-publication"
     },
     {
       "file": "issue-835-async-annotation-import.spec.ts",
@@ -14534,18 +14554,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "async-import-document-epoch",
+      "originIssue": 835,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Completing an Annotation import started in the prior document after File New leaves the new document, Canonical revision, History, Dirty, and Annotation collection unchanged and reports cancellation.",
+      "duplicateGroup": "async-import-document-replacement",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This specifically protects document replacement from stale asynchronous publication through the real New command and verifies the user-visible cancellation diagnostic.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "async-import-document-epoch"
     },
     {
       "file": "issue-835-async-annotation-import.spec.ts",
@@ -14556,18 +14580,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "async-import-base-revision",
+      "originIssue": 835,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "An import whose starting revision is invalidated by Undo/Redo must not publish stale data or alter the resulting Canonical revision, History, or Dirty state.",
+      "duplicateGroup": "async-import-stale-publication",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Undo/Redo is a distinct revision-changing interrupt to an in-flight import; this journey verifies that history navigation does not permit stale completion to overwrite the restored state.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "async-import-base-revision"
     },
     {
       "file": "issue-835-async-annotation-import.spec.ts",
@@ -14578,18 +14606,23 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "async-import-document-epoch",
+      "originIssue": 835,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A delayed Event import started for a Signal cannot mutate a newly opened document that reuses the same stable Signal ID; Save/Open leaves the replacement events, History, and Dirty state authoritative.",
+      "duplicateGroup": "async-import-document-replacement",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "The New/Open identity-reuse case crosses durable document replacement and stable-ID ownership; preserve it in the heavy integration tier rather than duplicating the full persistence cycle in routine PR runs.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ],
+      "contractId": "async-import-document-epoch"
     },
     {
       "file": "issue-835-async-annotation-import.spec.ts",
@@ -14600,18 +14633,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "async-import-editor-lifecycle",
+      "originIssue": 835,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Unmounting the Annotation collection editor while its import read is pending prevents the completion from changing Canonical, History, or Dirty and surfaces cancellation rather than publishing through a stale component owner.",
+      "duplicateGroup": "async-import-stale-publication",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "Unmount is a lifecycle interrupt distinct from target/document changes; the user journey checks that a disposed editor cannot publish an asynchronous result.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "async-import-editor-lifecycle"
     },
     {
       "file": "issue-836-hardware-hierarchy-performance.spec.ts",
@@ -14644,18 +14681,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "legend-interrupted-drag-lifecycle",
+      "originIssue": 837,
+      "type": "USER_JOURNEY",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Escape and pointercancel discard Legend drag preview and restore its committed position with zero Canonical revision, History, and Dirty delta.",
+      "duplicateGroup": "legend-interrupted-drag-lifecycle",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This production pointer journey protects both keyboard and pointer cancellation at the visible Legend boundary; pure state tests alone cannot prove the rendered position returns exactly to Canonical.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "legend-interrupted-drag-lifecycle"
     },
     {
       "file": "issue-837-legend-cancel-draft.spec.ts",
@@ -14666,18 +14707,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "legend-inspector-draft-conflict",
+      "originIssue": 837,
+      "type": "SEMANTIC_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A Canvas Legend position commit preserves unrelated dirty Inspector orientation/position fields, exposes a conflict, blocks stale Apply until the user resolves it, and then applies the chosen draft.",
+      "duplicateGroup": "legend-inspector-draft-conflict",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "The conflict policy is user-visible across Canvas and Inspector owners; this focused journey verifies preservation, explicit resolution, and final Canonical output rather than asserting private draft state.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "legend-inspector-draft-conflict"
     },
     {
       "file": "issue-837-legend-cancel-draft.spec.ts",
@@ -14688,18 +14733,22 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "legend-selection-accessibility-semantics",
+      "originIssue": 837,
+      "type": "ACCESSIBILITY_CONTRACT",
+      "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "Selecting the Legend announces its selected state to assistive technology without exposing toggle-button pressed semantics.",
+      "duplicateGroup": "object-selection-accessibility-semantics",
+      "executionTier": "TIER_2_FOCUSED_BROWSER",
+      "decision": "KEEP",
+      "reason": "This is the direct accessibility-tree contract for a selectable canvas object and guards against the distinct regression of representing selection as a toggle.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "pr"
+      ],
+      "contractId": "legend-selection-accessibility-semantics"
     },
     {
       "file": "issue-837-legend-cancel-draft.spec.ts",
@@ -14710,18 +14759,23 @@
       "timeoutMs": 30000,
       "tags": [],
       "annotations": [],
-      "domain": null,
-      "originIssue": null,
-      "type": null,
-      "costClass": null,
+      "domain": "legend-commit-history-persistence",
+      "originIssue": 837,
+      "type": "SAVE_OPEN_EXPORT",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": null,
-      "duplicateGroup": null,
-      "executionTier": null,
-      "decision": "UNREVIEWED",
-      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "primaryContract": "A completed Legend drag creates one history unit; Undo/Redo, Save/Open, and SVG export all use the committed position and preserve semantic geometry.",
+      "duplicateGroup": "legend-commit-history-persistence",
+      "executionTier": "TIER_4_NIGHTLY_INTEGRATION",
+      "decision": "KEEP",
+      "reason": "This single case intentionally crosses interaction commit, history, persistence, and export owners. Keep it automatically exercised in the integration/nightly tier rather than ordinary PR E2E.",
       "replacementTest": null,
-      "reviewStatus": "UNREVIEWED"
+      "reviewStatus": "REVIEWED",
+      "profiles": [
+        "integration",
+        "nightly"
+      ],
+      "contractId": "legend-commit-history-persistence"
     },
     {
       "file": "issue-838-visible-hierarchy-copy-selection.spec.ts",
@@ -26868,11 +26922,11 @@
     {
       "file": "issue-426-external-bottom-draft-update.spec.ts",
       "caseCount": 3,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 3,
       "originIssue": "426",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-441-ribbon-label-integrity.spec.ts",
@@ -27892,11 +27946,11 @@
     {
       "file": "issue-835-async-annotation-import.spec.ts",
       "caseCount": 6,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 6,
       "originIssue": "835",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-836-hardware-hierarchy-performance.spec.ts",
@@ -27910,11 +27964,11 @@
     {
       "file": "issue-837-legend-cancel-draft.spec.ts",
       "caseCount": 4,
-      "reviewedCaseCount": 0,
+      "reviewedCaseCount": 4,
       "originIssue": "837",
       "declaredTimeoutMs": null,
       "candidateSignals": [],
-      "semanticReviewStatus": "UNREVIEWED"
+      "semanticReviewStatus": "REVIEWED"
     },
     {
       "file": "issue-838-visible-hierarchy-copy-selection.spec.ts",

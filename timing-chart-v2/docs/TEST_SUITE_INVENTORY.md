@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 340 spec files and 993 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 937/993 cases reviewed.
+Semantic review progress: 950/993 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,10 +10,10 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 477 |
-| `nightly` | 191 |
+| `integration` | 479 |
+| `nightly` | 193 |
 | `performance` | 54 |
-| `pr` | 258 |
+| `pr` | 269 |
 | `visual` | 174 |
 
 ## Top recorded per-case runtimes
@@ -145,7 +145,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `inspector-selection-context.contract.spec.ts` | 3 | 3/3 reviewed |
 | `inspector-waveform-style.spec.ts` | 2 | 2/2 reviewed |
 | `interaction-visual-scenarios.spec.ts` | 11 | 11/11 reviewed |
-| `issue-426-external-bottom-draft-update.spec.ts` | 3 | 0/3 reviewed |
+| `issue-426-external-bottom-draft-update.spec.ts` | 3 | 3/3 reviewed |
 | `issue-441-ribbon-label-integrity.spec.ts` | 3 | 3/3 reviewed |
 | `issue-456-sized-bus-literal.spec.ts` | 1 | 0/1 reviewed |
 | `issue-554-transaction-journey.spec.ts` | 2 | 2/2 reviewed |
@@ -243,9 +243,9 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-776-signal-inspector-draft-sync.spec.ts` | 2 | 2/2 reviewed |
 | `issue-777-current-v2-samples-acceptance.spec.ts` | 10 | 10/10 reviewed |
 | `issue-799-orphan-divider.spec.ts` | 7 | 0/7 reviewed |
-| `issue-835-async-annotation-import.spec.ts` | 6 | 0/6 reviewed |
+| `issue-835-async-annotation-import.spec.ts` | 6 | 6/6 reviewed |
 | `issue-836-hardware-hierarchy-performance.spec.ts` | 1 | 0/1 reviewed |
-| `issue-837-legend-cancel-draft.spec.ts` | 4 | 0/4 reviewed |
+| `issue-837-legend-cancel-draft.spec.ts` | 4 | 4/4 reviewed |
 | `issue-838-visible-hierarchy-copy-selection.spec.ts` | 1 | 0/1 reviewed |
 | `issue-839-large-showcase-clock-phase.spec.ts` | 2 | 0/2 reviewed |
 | `issue-841-legend-bounds.spec.ts` | 7 | 0/7 reviewed |
