@@ -89,3 +89,56 @@ for (const mode of ["Cycle", "Transaction"] as const) {
     }
   });
 }
+
+test("Combined ruler accepts clicks across the full visible cell at both supported viewports", async ({ page }) => {
+  test.setTimeout(60_000);
+  const sizes = [{ width: 1280, height: 720 }, { width: 1672, height: 941 }];
+  for (const [sizeIndex, size] of sizes.entries()) {
+    await page.setViewportSize(size);
+    if (sizeIndex === 0) {
+      await page.goto("/?transaction-demo");
+      await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+      await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+      await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Combined");
+      await expect(page.locator(".split-transaction-pane")).toBeVisible();
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+    } else {
+      await expect(page.getByTestId("cycle-ruler")).toBeVisible();
+    }
+
+    const cells = await page.getByTestId("cycle-ruler").evaluate((ruler) => {
+      const bounds = ruler.getBoundingClientRect();
+      const ticks = Array.from(ruler.querySelectorAll<HTMLElement>(".cycle-tick[data-source-cycle]"))
+        .map((tick) => ({ cycle: Number(tick.dataset.sourceCycle), x: tick.getBoundingClientRect().left }))
+        .filter((tick) => tick.x >= bounds.left && tick.x < bounds.right)
+        .sort((a, b) => a.x - b.x);
+      const rect = { left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom };
+      return {
+        rect,
+        cells: ticks.flatMap((tick, index) => {
+          const next = ticks[index + 1];
+          return next && next.cycle === tick.cycle + 1 && next.x - tick.x > 2
+            ? [{ cycle: tick.cycle, x0: tick.x, x1: next.x }]
+            : [];
+        }).slice(0, 3),
+      };
+    });
+    expect(cells.cells.length, `visible complete ruler cells at ${size.width}x${size.height}: ${JSON.stringify(cells)}`).toBeGreaterThan(0);
+
+    const history = page.getByTestId("history-status");
+    const revision = await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision");
+    for (const cell of cells.cells) {
+      for (const [fraction, y] of [
+        [0.08, cells.rect.top + 2], [0.08, cells.rect.bottom - 2],
+        [0.5, cells.rect.top + 2], [0.5, cells.rect.bottom - 2],
+        [0.92, cells.rect.top + 2], [0.92, cells.rect.bottom - 2],
+      ] as const) {
+        await page.mouse.click(cell.x0 + (cell.x1 - cell.x0) * fraction, y);
+        await expect.poll(() => range(page), { message: `Combined ruler cell ${cell.cycle} at ${fraction} across ${size.width}x${size.height}` })
+          .toBe(`${cell.cycle}-${cell.cycle + 1}`);
+      }
+    }
+    await expect(history).toHaveText("History 0 / Redo 0");
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", revision!);
+  }
+});
