@@ -3,9 +3,14 @@ import { ImmutableLocalGeometryMap } from "@timing-chart-v2/geometry";
 import { DisplayTimeMappingCache, type RenderProjection } from "@timing-chart-v2/projection";
 import { cycleDocument } from "../../apps/editor/src/fixtures-cycle-reference-documents.js";
 import { signalId } from "../../apps/editor/src/minimal-cycle-view-fixture-helpers.js";
-import { TimelineGeometryOwner } from "../../apps/editor/src/runtime/timeline-geometry-owner.js";
+import { TimelineGeometryOwner, usesFullDocumentWaveformWindow } from "../../apps/editor/src/runtime/timeline-geometry-owner.js";
 
 describe("TimelineGeometryOwner", () => {
+  it("keeps the full-document waveform window through 4096 cycles and windows larger documents", () => {
+    expect(usesFullDocumentWaveformWindow(4_096)).toBe(true);
+    expect(usesFullDocumentWaveformWindow(4_097)).toBe(false);
+  });
+
   it.each([
     ["normal Cycle", cycleDocument],
     ["Combined Cycle pane with collapsed fold", {

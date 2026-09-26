@@ -4,6 +4,12 @@ import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { displayBoundaryForSource } from "./display-boundary.js";
 import { buildSnapIndex } from "./snap-index.js";
 
+export const FULL_DOCUMENT_WAVEFORM_CYCLE_LIMIT = 4_096;
+
+export function usesFullDocumentWaveformWindow(cycleCount: number): boolean {
+  return cycleCount <= FULL_DOCUMENT_WAVEFORM_CYCLE_LIMIT;
+}
+
 export type TimelineGeometryOwnerContext = Readonly<{
   mappingCache: DisplayTimeMappingCache;
   geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>;
@@ -134,7 +140,7 @@ export class TimelineGeometryOwner {
     // Keep their geometry stable while the viewport scrolls so a transient
     // window render cannot replace the currently visible waveform with an
     // offscreen range. Large documents still use bounded source windows below.
-    if (document.timeline.cycleCount <= 4_096) return { start: 0, end: document.timeline.cycleCount };
+    if (usesFullDocumentWaveformWindow(document.timeline.cycleCount)) return { start: 0, end: document.timeline.cycleCount };
     if (this.#requestedSourceCycle !== undefined) {
       const span = Math.min(512, document.timeline.cycleCount);
       const start = Math.max(0, Math.min(this.#requestedSourceCycle - Math.floor(span / 2), document.timeline.cycleCount - span));

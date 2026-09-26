@@ -13,7 +13,7 @@ import type { SelectedClockEdge } from "./edge-counter-projection.js";
 import { ViewMetricsOwner } from "./view-metrics.js";
 import { buildViewportWindow } from "./viewport-window.js";
 import { createEdgeCounterProjectionMetrics } from "./edge-counter-projection.js";
-import { TimelineGeometryOwner } from "./timeline-geometry-owner.js";
+import { TimelineGeometryOwner, usesFullDocumentWaveformWindow } from "./timeline-geometry-owner.js";
 import { deriveRenderInvalidation } from "./render-invalidation.js";
 import { createTimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import { resolveTransactionSnapCycle } from "./interaction-controller.js";
@@ -177,7 +177,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     // startup latency is observable without changing the render path.
     beginOpenMeasurement();
     let projection!: RenderProjection;
-    let referenceGeometryReprojected = false;
+    let referenceGeometryReconciled = false;
     let primaryPresentationOpening = true;
     let primaryPresentationGeneration = 0;
     let transactionExtentSource: CanonicalDocument["transactions"] | undefined;
@@ -215,13 +215,19 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         // StableTimingChartRenderer can observe the authoritative window and
         // queue the bounded semantic render instead of retaining the initial
         // presentation-thinned WaveDrom artifact.
-        if (active && projection !== undefined && !referenceGeometryReprojected) {
-          referenceGeometryReprojected = true;
+        if (active && projection !== undefined && !referenceGeometryReconciled) {
+          referenceGeometryReconciled = true;
           // TransactionLanes may have memoized an empty shared-boundary
           // projection before this document's Cycle geometry was published.
           // Invalidate once at the first geometry-ready boundary; later
           // virtualized owner remounts must not reproject bars during scroll.
           setTransactionPresentationRevision((value) => value + 1);
+          // Small/medium documents always render one full-document waveform
+          // window. Reference geometry therefore changes the ruler/Transaction
+          // projection state, but cannot change the WaveDrom request set; avoid
+          // invalidating that complete first batch and rendering it again.
+          const currentDocument = sessionController.snapshot().document;
+          if (usesFullDocumentWaveformWindow(currentDocument.timeline.cycleCount)) return;
           return new Promise<void>((resolve) => {
             const reproject = () => {
               try { if (active && projection !== undefined) renderCoordinator.renderer.update(projection); }
@@ -639,7 +645,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       treeFocusRowIdRef.current = undefined;
       geometryRegistry.clear();
       timelineGeometry.reset();
-      referenceGeometryReprojected = false;
+      referenceGeometryReconciled = false;
       primaryPresentationOpening = true;
       const openingGeneration = ++primaryPresentationGeneration;
       rulerInitialized = false;
