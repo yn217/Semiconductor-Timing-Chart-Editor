@@ -2,7 +2,7 @@
 
 Generated from Playwright collection (1.62.1); 340 spec files and 993 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 950/993 cases reviewed.
+Semantic review progress: 958/993 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,8 +10,8 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 479 |
-| `nightly` | 193 |
+| `integration` | 487 |
+| `nightly` | 194 |
 | `performance` | 54 |
 | `pr` | 269 |
 | `visual` | 174 |
@@ -53,7 +53,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `acceptance-429-transaction-colors.spec.ts` | 4 | 4/4 reviewed |
 | `acceptance-429-transaction-composition.spec.ts` | 32 | 32/32 reviewed |
 | `advanced-json-diagnostic.spec.ts` | 7 | 7/7 reviewed |
-| `ai-bridge.spec.ts` | 13 | 5/13 reviewed |
+| `ai-bridge.spec.ts` | 13 | 13/13 reviewed |
 | `ai-domain-coverage.spec.ts` | 1 | 1/1 reviewed |
 | `ai-proposal-workflow.spec.ts` | 10 | 10/10 reviewed |
 | `annotation-bottom-list.spec.ts` | 1 | 1/1 reviewed |
