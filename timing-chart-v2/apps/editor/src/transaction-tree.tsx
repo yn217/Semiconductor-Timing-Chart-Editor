@@ -12,6 +12,7 @@ import type {
 import { EditorIcon } from "./editor-icon.js";
 import { InlineNameInput } from "./inline-name-input.js";
 import { computeViewportSafePosition, currentViewportBounds } from "./viewport-safe-position.js";
+import { usePeerMenuSurface } from "./runtime/peer-menu-surface.js";
 
 type TransactionTreeMenu = Readonly<
   | { kind: "group"; id: string }
@@ -447,6 +448,7 @@ export function TransactionTree({
     setSubmenuOpen(false);
     if (restoreFocus) requestAnimationFrame(() => { if (trigger?.isConnected) trigger.focus(); });
   };
+  usePeerMenuSurface(openMenu !== undefined, () => closeMenu());
   const toggleMenu = (nextMenu: TransactionTreeMenu, trigger: HTMLButtonElement) => {
     if (openMenu?.kind === nextMenu.kind && openMenu.id === nextMenu.id) {
       closeMenu();

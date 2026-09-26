@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import type { HistoryState } from "@timing-chart-v2/history";
 import { DsIconBox } from "../design-system.js";
 import { RibbonIcon } from "../ribbon-icon.js";
+import { usePeerMenuSurface } from "../runtime/peer-menu-surface.js";
 
 export interface HomeOverflowProps {
   readonly history: HistoryState;
@@ -64,6 +65,7 @@ export function HomeOverflow(props: HomeOverflowProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const close = () => setOpen(false);
+  usePeerMenuSurface(open, close);
 
   useLayoutEffect(() => {
     if (!open) { setPosition(undefined); return; }

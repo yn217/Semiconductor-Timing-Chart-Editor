@@ -1,11 +1,13 @@
 import { createPortal } from "react-dom";
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { computeViewportSafePosition, currentViewportBounds } from "./viewport-safe-position.js";
+import { usePeerMenuSurface } from "./runtime/peer-menu-surface.js";
 
 type ContextMenuAnchor = Readonly<{ x: number; y: number }>;
 
-export function ContextMenuSurface({ anchor, children, label, target }: { readonly anchor: ContextMenuAnchor; readonly children: ReactNode; readonly label: string; readonly target: "ruler" | "signal" | "group" | "annotation" | "transaction" }) {
+export function ContextMenuSurface({ anchor, children, label, onDismiss, target }: { readonly anchor: ContextMenuAnchor; readonly children: ReactNode; readonly label: string; readonly onDismiss: () => void; readonly target: "ruler" | "signal" | "group" | "annotation" | "transaction" }) {
   const menuRef = useRef<HTMLDivElement>(null);
+  usePeerMenuSurface(true, onDismiss);
   const position = (reveal = true) => {
     const menu = menuRef.current;
     if (!menu) return;

@@ -7,6 +7,7 @@ import { ContextMenuSurface } from "./context-menu-surface.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 import { EditorIcon } from "./editor-icon.js";
 import { signalTypeLabel } from "./runtime/signal-type-registry.js";
+import { usePeerMenuSurface } from "./runtime/peer-menu-surface.js";
 import type { TransactionTreeFilterMode } from "./workspace/use-workspace-ui-state.js";
 
 
@@ -15,10 +16,10 @@ const spacerId = (value: string) => value as SpacerId;
 export function MinimalCycleViewPanels({ children, workspace, tail, bottom, inspector, overlays, fileInput, status }: MinimalCycleViewPanelsProps) { if (children !== undefined) return <>{children}</>; return <><div className="desktop-workspace">{workspace}{tail}{bottom}{inspector}</div>{overlays}{fileInput}{status}</>; }
 
 export function ContextMenuPanel({ contextMenu, hasSelectedClipboard, clipboardAvailable, hasSelectedEntity, hasSelectedSignal, hasDeletableSelection, canRenameSelection, canMoveUp, canMoveDown, canShowSelection, canHideSelection, signalPinned, togglePinnedSignals, copySelectedSignal, cutSelectedSignal, pasteSelectedEntity, duplicateSelectedEntity, moveSelection, setSelectionVisibility, renameSelection, closeContextMenu, deleteSelection, addBookmarkAtCycle, transactionGroups = [], selectedTransactionGroupId, moveSelectedTransactionToGroup }: any) {
-  if (contextMenu?.target === "ruler") return <ContextMenuSurface anchor={contextMenu} target="ruler" label="Ruler context menu">
+  if (contextMenu?.target === "ruler") return <ContextMenuSurface anchor={contextMenu} target="ruler" label="Ruler context menu" onDismiss={closeContextMenu}>
     <button type="button" role="menuitem" data-testid="ruler-add-bookmark" onClick={() => { addBookmarkAtCycle(contextMenu.cycle); closeContextMenu(); }}>ブックマークを追加</button>
   </ContextMenuSurface>;
-  return contextMenu ? <ContextMenuSurface anchor={contextMenu} target={contextMenu.target} label={contextMenu.target === "group" ? "Group context menu" : contextMenu.target === "annotation" ? "Annotation context menu" : contextMenu.target === "transaction" ? "Transaction context menu" : "Signal context menu"}>
+  return contextMenu ? <ContextMenuSurface anchor={contextMenu} target={contextMenu.target} label={contextMenu.target === "group" ? "Group context menu" : contextMenu.target === "annotation" ? "Annotation context menu" : contextMenu.target === "transaction" ? "Transaction context menu" : "Signal context menu"} onDismiss={closeContextMenu}>
     {contextMenu.target === "signal" && <button type="button" role="menuitemcheckbox" aria-checked={Boolean(signalPinned)} aria-label={`${signalPinned ? "Unpin" : "Pin"} selected Signals`} disabled={!hasSelectedSignal} onClick={() => { togglePinnedSignals?.(); closeContextMenu(); }}>{signalPinned ? "Unpin selected Signals" : "Pin selected Signals"}</button>}
     <button type="button" role="menuitem" onClick={() => { copySelectedSignal(); closeContextMenu(); }} disabled={!hasSelectedClipboard}>Copy</button>
     <button type="button" role="menuitem" onClick={() => { cutSelectedSignal(); closeContextMenu(); }} disabled={!hasSelectedClipboard}>Cut</button>
@@ -161,6 +162,9 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
   }, [addMenuOpen, moreMenuOpen]);
   const [transactionMoreOpen, setTransactionMoreOpen] = useState(false);
   const transactionMoreButton = useRef<HTMLButtonElement>(null);
+  usePeerMenuSurface(addMenuOpen, onCloseAddMenu);
+  usePeerMenuSurface(moreMenuOpen, onCloseMoreMenu);
+  usePeerMenuSurface(transactionMoreOpen, () => setTransactionMoreOpen(false));
   useEffect(() => {
     if (!transactionMoreOpen) return;
     const close = (event: Event) => {
