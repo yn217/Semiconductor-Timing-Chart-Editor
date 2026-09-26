@@ -41,23 +41,82 @@ export interface HardwareHierarchyEntry {
   readonly rowOrder: number;
 }
 
-export function buildHardwareHierarchyEntries(document: CanonicalDocument, view: HardwareHierarchyView = "group", scope?: string): readonly HardwareHierarchyEntry[] {
+export interface HardwareHierarchyRowLocation {
+  readonly groupId: string;
+  readonly groupName: string;
+  readonly groupOrder: number;
+  readonly rowOrder: number;
+}
+
+export interface HardwareHierarchyRowIndex {
+  readonly locations: ReadonlyMap<SignalId, HardwareHierarchyRowLocation>;
+  readonly metrics: Readonly<{ buildDurationMs: number; rowsVisited: number; indexEntries: number }>;
+}
+
+export interface HardwareHierarchyEntryDerivation {
+  readonly entries: readonly HardwareHierarchyEntry[];
+  readonly metrics: Readonly<{ buildDurationMs: number; signalsVisited: number; entriesCreated: number }>;
+}
+
+function now(): number {
+  const runtimePerformance = (globalThis as typeof globalThis & { performance?: { now?: () => number } }).performance;
+  return runtimePerformance?.now?.() ?? Date.now();
+}
+
+/** Builds the view-only row ownership index once for a canonical group collection. */
+export function buildHardwareHierarchyRowIndex(signalGroups: CanonicalDocument["signalGroups"]): HardwareHierarchyRowIndex {
+  const startedAt = now();
+  const locations = new Map<SignalId, HardwareHierarchyRowLocation>();
+  let rowsVisited = 0;
+  signalGroups.forEach((group, groupOrder) => group.rows.forEach((rowId, rowOrder) => {
+    rowsVisited += 1;
+    const signalId = rowId as SignalId;
+    // Preserve the historical first matching row behavior if malformed data repeats an ID.
+    if (!locations.has(signalId)) locations.set(signalId, Object.freeze({ groupId: group.id, groupName: group.name, groupOrder, rowOrder }));
+  }));
+  const immutableLocations = new Proxy(locations, {
+    get(target, property) {
+      if (property === "set" || property === "delete" || property === "clear") return () => { throw new TypeError("Hardware hierarchy row index is immutable."); };
+      const value: unknown = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as ReadonlyMap<SignalId, HardwareHierarchyRowLocation>;
+  return Object.freeze({
+    locations: immutableLocations,
+    metrics: Object.freeze({ buildDurationMs: Math.max(0, now() - startedAt), rowsVisited, indexEntries: locations.size }),
+  });
+}
+
+export function deriveHardwareHierarchyEntries(document: CanonicalDocument, view: HardwareHierarchyView = "group", scope?: string, rowIndex: HardwareHierarchyRowIndex = buildHardwareHierarchyRowIndex(document.signalGroups)): HardwareHierarchyEntryDerivation {
+  const startedAt = now();
   const scopeSegments = scope === undefined ? undefined : scope === "(root)" ? [] : scope.split(".");
-  const entries = document.signals.filter((signal) => signal.type !== "commentRow").flatMap((signal) => {
-    const location = document.signalGroups.flatMap((group, groupOrder) => group.rows.map((rowId, rowOrder) => ({ rowId, group, groupOrder, rowOrder }))).find((item) => item.rowId === signal.id);
-    if (!location) return [];
+  let signalsVisited = 0;
+  const entries: HardwareHierarchyEntry[] = [];
+  for (const signal of document.signals) {
+    signalsVisited += 1;
+    if (signal.type === "commentRow") continue;
+    const location = rowIndex.locations.get(signal.id);
+    if (!location) continue;
     const instancePathSegments = signal.source.instancePath;
     const instancePath = instancePathSegments.join(".");
-    if (scopeSegments !== undefined && (scopeSegments.length > instancePathSegments.length || !scopeSegments.every((segment, index) => instancePathSegments[index] === segment))) return [];
-    if (scope === "(root)" && instancePathSegments.length !== 0) return [];
+    if (scopeSegments !== undefined && (scopeSegments.length > instancePathSegments.length || !scopeSegments.every((segment, index) => instancePathSegments[index] === segment))) continue;
+    if (scope === "(root)" && instancePathSegments.length !== 0) continue;
     const fullPath = [...instancePathSegments, signal.source.signalName].join(".") || signal.source.signalName;
     const relativePath = [...instancePathSegments.slice(scopeSegments?.length ?? 0), signal.source.signalName].join(".");
     const width = signal.type === "bus" ? `[${signal.source.msb ?? (signal.width ?? 1) - 1}:${signal.source.lsb ?? 0}]` : "—";
-    return [{ signalId: signal.id, scope: instancePath || "(root)", instancePath: instancePath || "(root)", relativePath, signalName: signal.source.signalName, displayName: signal.display.name, fullPath, role: signal.role, type: signal.type, width, groupId: location.group.id, groupName: location.group.name, groupOrder: location.groupOrder, rowOrder: location.rowOrder } satisfies HardwareHierarchyEntry];
-  });
-  return Object.freeze([...entries].sort((left, right) => view === "group"
+    entries.push({ signalId: signal.id, scope: instancePath || "(root)", instancePath: instancePath || "(root)", relativePath, signalName: signal.source.signalName, displayName: signal.display.name, fullPath, role: signal.role, type: signal.type, width, groupId: location.groupId, groupName: location.groupName, groupOrder: location.groupOrder, rowOrder: location.rowOrder });
+  }
+  const sortedEntries = Object.freeze([...entries].sort((left, right) => view === "group"
     ? left.groupOrder - right.groupOrder || left.rowOrder - right.rowOrder || left.signalId.localeCompare(right.signalId)
     : left.fullPath.localeCompare(right.fullPath) || left.signalId.localeCompare(right.signalId)));
+  return Object.freeze({
+    entries: sortedEntries,
+    metrics: Object.freeze({ buildDurationMs: Math.max(0, now() - startedAt), signalsVisited, entriesCreated: sortedEntries.length }),
+  });
+}
+
+export function buildHardwareHierarchyEntries(document: CanonicalDocument, view: HardwareHierarchyView = "group", scope?: string): readonly HardwareHierarchyEntry[] {
+  return deriveHardwareHierarchyEntries(document, view, scope).entries;
 }
 
 export function filterHardwareHierarchyEntries(entries: readonly HardwareHierarchyEntry[], query: string): readonly HardwareHierarchyEntry[] {

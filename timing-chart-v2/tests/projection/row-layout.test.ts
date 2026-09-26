@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildHardwareHierarchyEntries, filterHardwareHierarchyEntries, hardwareHierarchyScopes, hardwareHierarchyScopeBreadcrumbs, DefaultProjectionService, calculateRowLayout } from "@timing-chart-v2/projection";
+import { buildHardwareHierarchyEntries, buildHardwareHierarchyRowIndex, deriveHardwareHierarchyEntries, filterHardwareHierarchyEntries, hardwareHierarchyScopes, hardwareHierarchyScopeBreadcrumbs, DefaultProjectionService, calculateRowLayout } from "@timing-chart-v2/projection";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { CanonicalDocument, GroupId, RowId, SignalId, SpacerId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -95,6 +95,64 @@ describe("RowLayout and projection invariants", () => {
     expect(filterHardwareHierarchyEntries(entries, "payload").map((entry) => entry.signalId)).toEqual(["sig_data"]);
     expect(filterHardwareHierarchyEntries(entries, "main").map((entry) => entry.signalId).sort()).toEqual(["sig_clk", "sig_data"]);
     expect(filterHardwareHierarchyEntries(entries, "missing")).toEqual([]);
+  });
+
+  it("visits canonical row ownership linearly while building hierarchy entries", () => {
+    const source = canonicalFixture();
+    const template = source.signals[0]!;
+    const signalCount = 128;
+    const signals = Array.from({ length: signalCount }, (_, index) => ({
+      ...template,
+      id: `sig_hierarchy_${index}` as SignalId,
+      name: `Signal ${index}`,
+      source: { ...template.source, signalName: `signal_${index}` },
+      display: { ...template.display, name: `Signal ${index}` },
+    }));
+    const rowIds = signals.map((signal) => signal.id as RowId);
+    let rowVisits = 0;
+    const observedRows = new Proxy(rowIds, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\d+$/.test(property)) rowVisits += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const document: CanonicalDocument = {
+      ...source,
+      signals,
+      signalGroups: [{ ...source.signalGroups[0]!, rows: observedRows }],
+    };
+
+    const entries = buildHardwareHierarchyEntries(document, "group");
+
+    expect(entries).toHaveLength(signalCount);
+    expect(rowVisits).toBeLessThanOrEqual(signalCount * 2);
+  });
+
+  it.each([1000, 5000, 10000])("measures linear hierarchy indexing and entry projection at %i Signals", (signalCount) => {
+    const document = generatePerformanceDocument({ signalCount, cycleCount: 100 });
+    const rowIndex = buildHardwareHierarchyRowIndex(document.signalGroups);
+    const derivation = deriveHardwareHierarchyEntries(document, "group", undefined, rowIndex);
+
+    expect(rowIndex.metrics).toMatchObject({ rowsVisited: signalCount, indexEntries: signalCount });
+    expect(derivation.metrics).toMatchObject({ signalsVisited: signalCount, entriesCreated: signalCount });
+    console.info("Hardware Hierarchy projection metrics", {
+      signalCount,
+      groupCount: document.signalGroups.length,
+      rowIndexBuildDurationMs: rowIndex.metrics.buildDurationMs,
+      entryBuildDurationMs: derivation.metrics.buildDurationMs,
+      rowsVisited: rowIndex.metrics.rowsVisited,
+      indexEntries: rowIndex.metrics.indexEntries,
+      entriesCreated: derivation.metrics.entriesCreated,
+    });
+  });
+
+  it("keeps the row ownership index immutable and preserves first-row ownership", () => {
+    const document = canonicalFixture();
+    const duplicate = { ...document.signalGroups[0]!, id: "grp_duplicate" as GroupId, name: "Duplicate", rows: ["sig_clk" as RowId] };
+    const rowIndex = buildHardwareHierarchyRowIndex([...document.signalGroups, duplicate]);
+
+    expect(rowIndex.locations.get("sig_clk" as SignalId)).toMatchObject({ groupId: "grp_main", groupName: "Main", groupOrder: 0, rowOrder: 0 });
+    expect(() => (rowIndex.locations as Map<SignalId, unknown>).set("new" as SignalId, {})).toThrow("immutable");
   });
 
   it.each([0, 1, 2])("retains hidden navigation rows and group placement at index %i", (hiddenIndex) => {

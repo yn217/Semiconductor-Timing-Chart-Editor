@@ -240,7 +240,11 @@
 .hierarchy-copy-actions input[type="checkbox"] { width: 14px; height: 14px; margin: 0; }
 .hierarchy-browser table { width: 100%; border-collapse: collapse; font-size: 11px; }
 .hierarchy-browser th, .hierarchy-browser td { padding: 6px 8px; border: 1px solid #d6dde6; text-align: left; white-space: nowrap; }
-.hierarchy-browser th { background: #f3f6fa; color: #52677d; }
+.hierarchy-table-viewport { max-height: min(52vh, 480px); min-height: 160px; overflow: auto; overscroll-behavior: contain; }
+.hierarchy-browser th { position: sticky; top: 0; z-index: 1; background: #f3f6fa; color: #52677d; }
+.hierarchy-browser tbody tr:not(.hierarchy-virtual-spacer) { height: 32px; }
+.hierarchy-browser tbody tr:not(.hierarchy-virtual-spacer) td { height: 32px; box-sizing: border-box; padding-top: 4px; padding-bottom: 4px; }
+.hierarchy-browser .hierarchy-virtual-spacer td { padding: 0; border: 0; }
 .hierarchy-browser tr[data-selected="true"] { background: #e4f1ff; }
 .hierarchy-browser td button { border: 0; padding: 0; background: transparent; color: #145e9f; text-decoration: underline; cursor: pointer; }
 
