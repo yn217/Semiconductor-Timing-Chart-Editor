@@ -93,6 +93,8 @@ export interface RibbonCommandActions {
   readonly duplicateTimeline: (start: number, end: number, at: number) => CommandResult;
   readonly moveTimeline: (start: number, end: number, to: number) => CommandResult;
   readonly createBookmark: (bookmark: Bookmark) => CommandResult;
+  /** Replace the Annotation collection as one undoable semantic batch. */
+  readonly replaceAnnotations: (existingIds: readonly AnnotationId[], annotations: readonly Annotation[]) => CommandResult | undefined;
   readonly createLabelAnchor: (labelAnchor: TimelineLabelAnchor) => CommandResult;
   readonly updateLabelAnchor: (labelAnchorId: LabelAnchorId, source: number, display: number) => CommandResult;
   readonly deleteLabelAnchor: (labelAnchorId: LabelAnchorId) => CommandResult;
@@ -211,6 +213,13 @@ export function createEditorSurfaceCommandController(input: {
     duplicateTimeline: (start, end, at) => dispatch<"timeline.duplicateRange">("timeline_duplicate", { type: "timeline.duplicateRange", start, end, at }),
     moveTimeline: (start, end, to) => dispatch<"timeline.moveRange">("timeline_move", { type: "timeline.moveRange", start, end, to }),
     createBookmark: (bookmark) => dispatch<"bookmark.create">("marker", { type: "bookmark.create", bookmark }),
+    replaceAnnotations: (existingIds, annotations) => {
+      const commands: SemanticCommand[] = [
+        ...existingIds.map((annotationId): SemanticCommand => ({ id: input.nextCommandId("annotation_import_delete"), type: "annotation.delete", annotationId })),
+        ...annotations.map((annotation): SemanticCommand => ({ id: input.nextCommandId("annotation_import_create"), type: "annotation.create", annotation })),
+      ];
+      return commands.length === 0 ? undefined : input.executeBatch(input.nextCommandId("annotation_import_replace"), commands);
+    },
     createLabelAnchor: (labelAnchor) => dispatch<"labelAnchor.create">("label_anchor_create", { type: "labelAnchor.create", labelAnchor }),
     updateLabelAnchor: (labelAnchorId, source, display) => dispatch<"labelAnchor.update">("label_anchor_update", { type: "labelAnchor.update", labelAnchorId, source, display }),
     deleteLabelAnchor: (labelAnchorId) => dispatch<"labelAnchor.delete">("label_anchor_delete", { type: "labelAnchor.delete", labelAnchorId }),

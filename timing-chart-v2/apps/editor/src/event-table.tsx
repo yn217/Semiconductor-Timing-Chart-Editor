@@ -35,7 +35,7 @@ function valueHelperCopy(signal: ValueSignal): { readonly label: string; readonl
   }
 }
 
-export function EventTable({ signal, cycleCount, enumDefinitions, commands, generatorSlot }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly enumDefinitions?: CanonicalDocument["enumDefinitions"]; readonly commands: Pick<SignalEditorCommandActions, "replaceValues" | "updateValue" | "replaceValue" | "removeValue">; readonly generatorSlot?: ReactNode }) {
+export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic, cycleCount, enumDefinitions, commands, generatorSlot }: { readonly signal: ValueSignal; readonly documentEpoch: number; readonly revision: number; readonly onImportDiagnostic: (message: string) => void; readonly cycleCount: number; readonly enumDefinitions?: CanonicalDocument["enumDefinitions"]; readonly commands: Pick<SignalEditorCommandActions, "replaceValues" | "updateValue" | "replaceValue" | "removeValue">; readonly generatorSlot?: ReactNode }) {
   const [start, setStart] = useState(0);
   const [value, setValue] = useState(defaultEventValue(signal));
   const [comment, setComment] = useState("");
@@ -50,6 +50,14 @@ export function EventTable({ signal, cycleCount, enumDefinitions, commands, gene
   const eventViewportRef = useRef<HTMLDivElement>(null);
   const [importStatus, setImportStatus] = useState("Import signal events");
   const fileInput = useRef<HTMLInputElement>(null);
+  const importRequestId = useRef(0);
+  const importMounted = useRef(false);
+  const latestImportContext = useRef({ documentEpoch, revision, signalId: signal.id, onImportDiagnostic });
+  latestImportContext.current = { documentEpoch, revision, signalId: signal.id, onImportDiagnostic };
+  useEffect(() => {
+    importMounted.current = true;
+    return () => { importMounted.current = false; importRequestId.current += 1; };
+  }, []);
   const indexed = useMemo(() => buildEventTableIndex(signal.values, cycleCount), [signal.values, cycleCount]);
   const enumDefinition: EnumDefinition | undefined = signal.type === "state" && signal.enumId !== undefined ? enumDefinitions?.find((definition) => definition.id === signal.enumId) : undefined;
   const validKeys = useMemo(() => new Set(signal.values.map(transitionIdentity)), [signal.values]);
@@ -87,12 +95,20 @@ export function EventTable({ signal, cycleCount, enumDefinitions, commands, gene
     URL.revokeObjectURL(url);
   };
   const importValues = (file: File) => {
+    const token = { documentEpoch, revision, targetSignalId: signal.id, requestId: ++importRequestId.current };
     if (file.size > DOCUMENT_RESOURCE_BUDGET.inputBytes) {
       setImportStatus(`Import rejected: file exceeds ${DOCUMENT_RESOURCE_BUDGET.inputBytes.toLocaleString()} bytes.`);
       return;
     }
     const reader = new FileReader();
     reader.onload = () => {
+      const current = latestImportContext.current;
+      if (!importMounted.current || importRequestId.current !== token.requestId || current.documentEpoch !== token.documentEpoch || current.revision !== token.revision || current.signalId !== token.targetSignalId) {
+        const message = "Event import cancelled because the document, revision, Signal target, or editor changed while the file was being read. Retry the import on the current Signal.";
+        current.onImportDiagnostic(message);
+        if (importMounted.current) setImportStatus(message);
+        return;
+      }
       try {
         const parsedResult = parseJsonInput(String(reader.result));
         if (!parsedResult.ok) {
@@ -112,7 +128,9 @@ export function EventTable({ signal, cycleCount, enumDefinitions, commands, gene
         setImportStatus("Import rejected: invalid JSON.");
       }
     };
-    reader.onerror = () => setImportStatus("Import rejected: file could not be read.");
+    reader.onerror = () => {
+      if (importMounted.current && importRequestId.current === token.requestId) setImportStatus("Import rejected: file could not be read.");
+    };
     reader.readAsText(file);
   };
   // #402: preview-only End/Duration for the Add/Edit Transition form's Draft

@@ -167,6 +167,8 @@ export function TimelineToolbar({ document, range, history, onUndo, onRedo, onRa
 }
 export interface SignalEditorProps {
   readonly signal: Signal | undefined;
+  readonly documentEpoch: number;
+  readonly revision: number;
   readonly cycleCount: number;
   readonly bookmarks: CanonicalDocument["bookmarks"];
   readonly enumDefinitions: CanonicalDocument["enumDefinitions"];
@@ -183,4 +185,5 @@ export interface SignalEditorProps {
   readonly onClockPreview: (draft: ClockGenerator | undefined) => void;
   readonly clockCommands: Pick<SignalEditorCommandActions, "updateClockGenerator" | "updateEdgeCounter">;
   readonly signalCommands: SignalEditorCommandActions;
+  readonly onImportDiagnostic: (message: string) => void;
 }

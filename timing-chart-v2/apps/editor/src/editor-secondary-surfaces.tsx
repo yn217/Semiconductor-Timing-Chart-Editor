@@ -208,6 +208,21 @@ export function useEditorSecondarySurfaces(
 ): EditorSecondarySurfacesOutput {
   const execute = input.command.execute;
   const surfaceCommands = createEditorSurfaceCommandController(input.command);
+  const reportStaleImport = (domain: "annotation" | "event", message: string) => {
+    const detail = `stale-import:${domain}`;
+    input.setRuntimeDiagnostics((current) => [...current.filter((item) => item.detail !== detail), {
+      code: domain === "annotation" ? "ANNOTATION_IMPORT_STALE" : "EVENT_IMPORT_STALE",
+      path: "$.import",
+      message,
+      severity: "warning",
+      operation: `${domain}.import`,
+      operationLabel: domain === "annotation" ? "Import annotations" : "Import Signal events",
+      source: "parser",
+      stage: "commit",
+      recommendation: "Retry the import after the current document and target are stable.",
+      detail,
+    }]);
+  };
   const undo = input.command.undo;
   const redo = input.command.redo;
   const { selected, bottom, workspace, dialog, refs } = input;
@@ -280,6 +295,9 @@ export function useEditorSecondarySurfaces(
     <SignalEditor
       key={`${input.documentEpoch}:${bottom.signal?.id ?? "none"}:${dialog.bottomResetToken}`}
       signal={bottom.signal}
+      documentEpoch={input.documentEpoch}
+      revision={input.revision}
+      onImportDiagnostic={(message) => reportStaleImport("event", message)}
       cycleCount={input.document.timeline.cycleCount}
       bookmarks={input.document.bookmarks}
       enumDefinitions={input.document.enumDefinitions}
@@ -333,12 +351,14 @@ export function useEditorSecondarySurfaces(
     annotations={input.document.annotations}
     selectedId={bottom.annotation?.id}
     document={input.document}
+    documentEpoch={input.documentEpoch}
+    revision={input.revision}
     onSelect={input.actions.selectAnnotation}
     onCreate={input.actions.createSelectedAnnotationForType}
     onDuplicate={input.actions.duplicateAnnotation}
     onDelete={input.actions.deleteBottomAnnotation}
     commands={surfaceCommands}
-    onReplaceDocument={input.actions.replaceDocument}
+    onImportDiagnostic={(message) => reportStaleImport("annotation", message)}
   />;
   const transactionEditor = (
     <TransactionEditor
