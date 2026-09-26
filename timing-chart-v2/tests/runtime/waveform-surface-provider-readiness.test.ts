@@ -50,11 +50,14 @@ describe("waveform provider primary geometry readiness", () => {
       getViewMode: () => "Cycle",
     };
     const provider = createWaveformSurfaceProvider(context);
-    const request = { signalId: source.timeline.referenceClock!, owner: { style: { removeProperty: vi.fn() }, dataset: {} } as unknown as HTMLElement, documentEpoch: 1 };
+    const owner = { style: { removeProperty: vi.fn() }, dataset: {} } as unknown as HTMLElement & { requestCycleBoundaryPositions?: (cycles: readonly number[]) => Readonly<Record<number, number>> };
+    const request = { signalId: source.timeline.referenceClock!, owner, documentEpoch: 1 };
 
     await provider.mountWaveBatch!([request]);
     expect(signalCollectionTraversals).toBe(1);
     expect(signalCollectionSearches).toBe(0);
+    expect(owner.dataset.cycleBoundaryGeometry).toBeUndefined();
+    expect(owner.requestCycleBoundaryPositions?.([0, 1])).toMatchObject({ 0: expect.any(Number), 1: expect.any(Number) });
     snapshot = { document: { ...snapshot.document, bookmarks: [...snapshot.document.bookmarks, { id: "bookmark_index_reuse" as BookmarkId, name: "Review", start: 1 }] }, revision: 1 };
     await provider.mountWaveBatch!([request]);
 

@@ -49,7 +49,11 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   // The wave window is viewport-bounded (#757), so bring cycle 1000 into view first; the window then rebases around it.
   await timelineOwner(page).evaluate((element) => { element.scrollLeft = 1000 * 40 - 806; element.dispatchEvent(new Event("scroll", { bubbles: true })); }); // cycle 1000 lands inside the Timeline viewport, left of the Inspector
-  await expect.poll(async () => page.locator("[data-role='wave-owner'][data-signal-id]").first().getAttribute("data-cycle-boundary-geometry"), { timeout: 120_000 }).toContain("\"1000\"");
+  const clockOwner = page.locator("[data-role='wave-owner'][data-signal-id]").first();
+  await expect.poll(async () => clockOwner.evaluate((owner) => {
+    const requestPositions = (owner as HTMLElement & { requestCycleBoundaryPositions?: (cycles: readonly number[]) => Readonly<Record<number, number>> }).requestCycleBoundaryPositions;
+    return requestPositions?.([1000])?.[1000];
+  }), { timeout: 120_000 }).toBeGreaterThan(0);
   await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
 
   const before = await host.evaluate((element) => ({
@@ -62,8 +66,8 @@ test("selects an unsampled 100k-cycle boundary through shared geometry", async (
     const wave = document.querySelector<HTMLElement>("[data-role='wave-owner'][data-signal-id]");
     const svg = wave?.querySelector("svg");
     const marks = svg ? [...svg.querySelectorAll<SVGLineElement>("[id^='gmark_']")] : [];
-    const boundaryGeometry = wave?.getAttribute("data-cycle-boundary-geometry");
-    const boundaries = boundaryGeometry ? JSON.parse(boundaryGeometry) as Record<string, number> : {};
+    const requestPositions = (wave as (HTMLElement & { requestCycleBoundaryPositions?: (cycles: readonly number[]) => Readonly<Record<number, number>> }) | null)?.requestCycleBoundaryPositions;
+    const boundaries = requestPositions?.([980, 1000]) ?? {};
     const viewportBox = viewport?.getBoundingClientRect();
     const waveBox = wave?.getBoundingClientRect();
     const ruler = document.querySelector<HTMLElement>("[data-testid='cycle-ruler']");
@@ -123,8 +127,13 @@ test("reveals offscreen 50k and 99k cycles through the production bookmark path"
   const clockOwner = host.locator("[data-role='wave-owner'][data-signal-id='sig_range_clock']");
   await expect(clockOwner).not.toHaveAttribute("data-wave-error", /.+/, { timeout: 30_000 });
   await expect.poll(async () => {
-    const raw = await clockOwner.getAttribute("data-cycle-boundary-geometry");
-    return raw ? Object.keys(JSON.parse(raw)).length : 0;
+    return clockOwner.evaluate((owner) => {
+      const requestPositions = (owner as HTMLElement & { requestCycleBoundaryPositions?: (cycles: readonly number[]) => Readonly<Record<number, number>> }).requestCycleBoundaryPositions;
+      const start = Number(owner.getAttribute("data-rendered-source-window-start"));
+      const end = Number(owner.getAttribute("data-rendered-source-window-end"));
+      const cycles = Number.isFinite(start) && Number.isFinite(end) ? [start, end] : [];
+      return Object.keys(requestPositions?.(cycles) ?? {}).length;
+    });
   }, { timeout: 30_000 }).toBeGreaterThan(0);
   await host.locator("[data-role='left-row'][data-row-id='sig_range_scale']").click();
   await expect(page.getByRole("table", { name: "Signal events" })).toBeVisible({ timeout: 30_000 });

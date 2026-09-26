@@ -161,6 +161,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const referenceItem = prepared.find((item) => item.request.signalId === referenceClockId);
       let referenceGeometrySeeded = false;
       let seededReferenceGeometry: LocalGeometryMap | undefined;
+      let seededReferenceOwnerGeometry: LocalGeometryMap | undefined;
       let referenceGeometryNotified = false;
       if (referenceItem?.waveJson && !referenceItem.deferred && !referenceItem.error && !useDomGeometrySource() && isCurrent(referenceItem.request)) {
         const geometry = analyticLocalGeometry(referenceItem.request.signalId, referenceItem.waveJson);
@@ -171,7 +172,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             || (latest.document.timeline.referenceClock === undefined && latestSignalIndex.firstClockSignalId === referenceClockId);
           const stillPresent = referenceClockId !== undefined && latestSignalIndex.byId.has(referenceClockId);
           if (stillReference && stillPresent) {
-            setBoundaryDebugAttribute(referenceItem.request.owner, geometry);
+            seededReferenceOwnerGeometry = geometry;
+            publishCycleBoundarySnapshotAccessor(referenceItem.request.owner, seededReferenceOwnerGeometry);
             seededReferenceGeometry = absoluteWindowGeometry(geometry, referenceItem.rendererStart);
             context.geometryRegistry.maps.set(referenceItem.request.signalId, seededReferenceGeometry);
             context.markOpenPhase("reference-geometry-ready");
@@ -236,7 +238,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             paintWaveCanvas(item.request.owner, item.waveJson);
             const sourceCycles = item.waveJson.geometrySourceCycles ?? Array.from({ length: item.waveJson.wave.length + 1 }, (_, index) => (item.waveJson?.sourceWindow?.start ?? 0) + index);
             const canvasGeometry = new LazyAnalyticGeometryMap(item.request.signalId, item.waveJson, sourceCycles);
-            setBoundaryDebugAttribute(item.request.owner, canvasGeometry);
+            publishCycleBoundarySnapshotAccessor(item.request.owner, canvasGeometry);
             context.geometryRegistry.maps.set(item.request.signalId, absoluteWindowGeometry(canvasGeometry, item.rendererStart));
             context.invalidateSnapIndex();
             context.markOpenPhase("first-visible-wave-painted");
@@ -287,12 +289,10 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             context.geometryRegistry.maps.set(item.request.signalId, absoluteWindowGeometry(geometry, item.rendererStart));
           }
           context.geometryRegistry.svgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
-          const boundaryGeometry = geometry.cycleBoundaryEntries?.();
-          if (boundaryGeometry && boundaryGeometry.length > 0) {
-            item.request.owner.dataset.cycleBoundaryGeometry = JSON.stringify(Object.fromEntries(boundaryGeometry.map((entry) => [entry.cycle, entry.position.x])));
-          } else {
-            delete item.request.owner.dataset.cycleBoundaryGeometry;
-          }
+          const ownerGeometry = referenceGeometrySeeded && item.request.signalId === referenceClockId && !useDomGeometrySource()
+            ? seededReferenceOwnerGeometry
+            : geometry;
+          publishCycleBoundarySnapshotAccessor(item.request.owner, ownerGeometry);
           if (item.request.signalId === currentReferenceClock) { context.markOpenPhase("reference-geometry-ready"); referenceGeometryReady = true; }
           context.markOpenPhase("first-visible-wave-painted");
           context.invalidateSnapIndex();
@@ -331,9 +331,33 @@ function absoluteWindowGeometry(geometry: LocalGeometryMap, displayStart: number
   return displayStart === undefined || displayStart <= 0 ? geometry : new OffsetLocalGeometryMap(geometry, displayStart * WAVEDROM_CYCLE_WIDTH);
 }
 
-/** The owner-relative boundary map stays published on the owner as a debug/test hook (screen X = owner box X + value). */
-function setBoundaryDebugAttribute(owner: HTMLElement, geometry: LocalGeometryMap): void {
-  const boundaries = geometry.cycleBoundaryEntries?.();
-  if (boundaries && boundaries.length > 0) owner.dataset.cycleBoundaryGeometry = JSON.stringify(Object.fromEntries(boundaries.map((entry) => [entry.cycle, entry.position.x])));
-  else delete owner.dataset.cycleBoundaryGeometry;
+/**
+ * Exposes owner-relative boundary positions only when a diagnostic consumer
+ * asks for specific cycles. Publishing every boundary into a DOM attribute
+ * serialized the whole window on each render and made the hot path scale with
+ * retained geometry size. The pull accessor keeps screen X = owner box X +
+ * returned local X without eagerly enumerating the boundary map.
+ */
+function publishCycleBoundarySnapshotAccessor(owner: HTMLElement, geometry: LocalGeometryMap | undefined): void {
+  type CycleBoundarySnapshotOwner = HTMLElement & {
+    requestCycleBoundaryPositions?: (cycles: readonly number[]) => Readonly<Record<number, number>>;
+  };
+  const snapshotOwner = owner as CycleBoundarySnapshotOwner;
+  const isDevelopmentBuild = (import.meta as ImportMeta & { readonly env?: { readonly DEV?: boolean } }).env?.DEV === true;
+  if (!geometry || !isDevelopmentBuild) {
+    delete snapshotOwner.requestCycleBoundaryPositions;
+    return;
+  }
+  Object.defineProperty(snapshotOwner, "requestCycleBoundaryPositions", {
+    configurable: true,
+    enumerable: false,
+    value: (cycles: readonly number[]) => {
+      const positions: Record<number, number> = {};
+      for (const cycle of cycles) {
+        const boundary = geometry.find({ signalId: geometry.signalId, cycle, point: "cycle-start" });
+        if (boundary) positions[cycle] = boundary.point.x;
+      }
+      return Object.freeze(positions);
+    },
+  });
 }
