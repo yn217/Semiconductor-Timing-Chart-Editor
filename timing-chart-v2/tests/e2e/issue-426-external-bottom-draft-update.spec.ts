@@ -48,7 +48,7 @@ test("external transition removal prunes Bottom bulk selection immediately", asy
   await expect(editor.getByTestId("event-delete-selected")).toBeDisabled();
 });
 
-test("Canvas anchor commit conflicts with a dirty Bottom Annotation anchor draft", async ({ page }) => {
+test("Canvas anchor commit cannot be overwritten by a dirty Inspector anchor draft", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -66,9 +66,10 @@ test("Canvas anchor commit conflicts with a dirty Bottom Annotation anchor draft
   }).toBe(true);
   const newId = (await list.locator("[data-annotation-list-id]").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-annotation-list-id")).filter((id): id is string => Boolean(id)))).find((id) => !beforeIds.includes(id))!;
   await page.getByRole("tablist", { name: "Bottom context panels" }).getByRole("tab", { name: "Annotation" }).click();
-  const bottom = page.getByTestId("annotation-editor");
-  const cycleDraft = bottom.getByLabel("Annotation Anchor cycle");
-  await cycleDraft.fill("3");
+  const inspector = page.getByTestId("inspector");
+  const anchorEditor = inspector.getByLabel("Inspector Annotation Anchor");
+  const cycleDraft = anchorEditor.getByLabel("Inspector annotation anchor cycle");
+  await cycleDraft.fill("0");
   const owner = host.locator(`[data-role='annotation-owner'][data-annotation-id="${newId}"]`);
   const handle = owner.locator("[data-role='annotation-handle'][data-annotation-field='anchor']");
   await expect(handle).toBeVisible();
@@ -78,9 +79,13 @@ test("Canvas anchor commit conflicts with a dirty Bottom Annotation anchor draft
   await page.mouse.move(box.x + box.width / 2 + 80, box.y + box.height / 2, { steps: 5 });
   await page.mouse.up();
 
-  await expect(bottom.getByTestId("annotation-anchor-draft-conflict")).toBeVisible();
-  await expect(cycleDraft).toHaveValue("3");
-  await expect(bottom.getByRole("button", { name: "Apply Anchor anchor" })).toBeDisabled();
+  await expect(cycleDraft).toHaveValue("0");
+  await expect(anchorEditor.getByTestId("inspector-annotation-anchor-draft-conflict")).toBeVisible();
+  await expect(anchorEditor.getByRole("button", { name: "Apply Anchor" })).toBeDisabled();
+  await anchorEditor.getByRole("button", { name: "Keep my draft" }).click();
+  await expect(anchorEditor.getByTestId("inspector-annotation-anchor-draft-conflict")).toHaveCount(0);
+  await expect(anchorEditor.getByRole("button", { name: "Apply Anchor" })).toBeEnabled();
+  await anchorEditor.getByRole("button", { name: "Apply Anchor" }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
   await expect(owner).toHaveAttribute("data-annotation-id", newId);
-  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 });
