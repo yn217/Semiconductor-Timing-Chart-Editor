@@ -126,6 +126,51 @@ describe("waveform provider primary geometry readiness", () => {
     expect(ready).toHaveBeenCalledTimes(1);
   });
 
+  it("skips WaveJSON preparation for viewport requests invalidated by reference reprojection", async () => {
+    const document = generatePerformanceDocument({ signalCount: 50, cycleCount: 100 });
+    const referenceSignalId = document.timeline.referenceClock!;
+    const nonReference = document.signals.find((signal) => signal.id !== referenceSignalId);
+    if (!nonReference || nonReference.type === "clock" || nonReference.type === "commentRow") throw new Error("fixture needs a value signal beside its reference clock");
+    const nonReferenceSignalId = nonReference.id;
+    let nonReferenceFresh = true;
+    const toWaveJsonSpy = vi.fn(toWaveJson);
+    const mappingCache = new DisplayTimeMappingCache();
+    const remapValueChanges = vi.spyOn(mappingCache, "remapValueChanges");
+    const adapter: WaveDromAdapter = {
+      toWaveJson: toWaveJsonSpy,
+      renderWave: vi.fn(async (signalId, waveJson) => ({ signalId, ownerKey: signalId, svg: {} as SVGSVGElement, renderIndex: 0, waveJson })),
+      extractLocalGeometry: vi.fn(() => { throw new Error("SVG extraction is not used in analytic mode."); }),
+      geometryMetrics: () => ({ last: undefined, totalDurationMs: 0, totalUsesVisited: 0, totalGeometryEntriesEmitted: 0, totalDuplicateKeyChecks: 0, totalDuplicateKeyCollisions: 0, totalTransitionBrickLookups: 0, totalSkinPathParses: 0, totalMatrixReads: 0 }),
+      dispose: vi.fn(),
+      metrics: () => ({ renderCalls: 0, waveJsonDurationMs: 0, renderDurationMs: 0, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 }),
+    };
+    const context: WaveformProviderContext = {
+      sessionController: { snapshot: () => ({ document, revision: 0 }) },
+      getDocumentEpoch: () => 1,
+      mappingCache,
+      adapter,
+      geometryRegistry: new GeometryRegistry(),
+      markOpenPhase: vi.fn(),
+      onReferenceGeometryReady: async () => { nonReferenceFresh = false; },
+      invalidateSnapIndex: vi.fn(),
+      getViewMode: () => "Cycle",
+    };
+    const provider = createWaveformSurfaceProvider(context);
+    const owner = () => ({ style: { removeProperty: vi.fn() }, dataset: {} }) as unknown as HTMLElement;
+
+    const results = await provider.mountWaveBatch!([
+      { signalId: nonReferenceSignalId, owner: owner(), documentEpoch: 1, sourceWindow: { start: 0, end: 100 }, isFresh: () => nonReferenceFresh },
+      { signalId: referenceSignalId, owner: owner(), documentEpoch: 1 },
+    ]);
+
+    expect(toWaveJsonSpy).toHaveBeenCalledTimes(1);
+    expect(remapValueChanges).not.toHaveBeenCalledWith(nonReference.values, expect.anything());
+    expect(adapter.renderWave).toHaveBeenCalledTimes(1);
+    expect(adapter.renderWave.mock.calls[0]?.[0]).toBe(referenceSignalId);
+    expect(results.find((item) => item.signalId === nonReferenceSignalId)).toMatchObject({ stale: true });
+    expect(results.find((item) => item.signalId === referenceSignalId)?.result).toBeDefined();
+  });
+
   it("isolates a clock projection failure to that signal while rendering valid siblings", async () => {
     const source = canonicalFixture();
     const clock = source.signals.find((signal) => signal.type === "clock");

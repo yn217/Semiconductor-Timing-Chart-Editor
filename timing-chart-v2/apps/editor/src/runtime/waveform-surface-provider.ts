@@ -25,7 +25,7 @@ export type WaveformProviderContext = Readonly<{
   adapter: WaveDromAdapter;
   geometryRegistry: GeometryRegistry;
   markOpenPhase: (phase: string, phaseTimestamp?: number) => void;
-  onReferenceGeometryReady?: () => void;
+  onReferenceGeometryReady?: () => void | Promise<void>;
   /** True only while initial Open/New artifacts are being materialized.
    * Viewport re-windowing after readiness stays a coherent batch. */
   isPrimaryPresentationOpening?: () => boolean;
@@ -100,7 +100,16 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       // clock encoding.
       const referenceClockSignal = document.timeline.referenceClock === undefined ? undefined : signalIndex.byId.get(document.timeline.referenceClock);
       const referenceClockPeriod = referenceClockSignal?.type === "clock" ? referenceClockSignal.generator.period : undefined;
-      const prepared = requests.map((request) => {
+      type PreparedItem = {
+        readonly request: (typeof requests)[number];
+        readonly waveJson: WaveJsonSignal | undefined;
+        readonly semanticValues: readonly string[] | undefined;
+        readonly error: Error | undefined;
+        readonly deferred: boolean;
+        readonly rendererStart: number | undefined;
+        readonly rendererEnd: number | undefined;
+      };
+      const prepare = (request: (typeof requests)[number]): PreparedItem => {
         try {
           // Transaction mode owns the shared time geometry and Transaction
           // projection, but does not display Cycle waveforms. Keep the
@@ -152,7 +161,10 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           // the whole mount batch and blank otherwise valid waveforms.
           return { request, waveJson: undefined, semanticValues: undefined, error: error instanceof Error ? error : new Error(String(error)), deferred: false, rendererStart: undefined, rendererEnd: undefined };
         }
-      });
+      };
+      const prepared: PreparedItem[] = [];
+      const referenceRequest = requests.find((request) => request.signalId === referenceClockId);
+      if (referenceRequest) prepared.push(prepare(referenceRequest));
       // Primary ruler/grid geometry is analytic and does not depend on the
       // SVG artifact. Publish the reference map before awaiting any WaveDrom
       // render in this batch, so a slow non-reference owner cannot hold the
@@ -178,11 +190,24 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             context.geometryRegistry.maps.set(referenceItem.request.signalId, seededReferenceGeometry);
             context.markOpenPhase("reference-geometry-ready");
             context.invalidateSnapIndex();
-            context.onReferenceGeometryReady?.();
+            await context.onReferenceGeometryReady?.();
             referenceGeometrySeeded = true;
             referenceGeometryNotified = true;
           }
         }
+      }
+      // The reference-ready callback may reproject the just-created document
+      // on the next frame, invalidating the original viewport requests. Do
+      // not pay WaveJSON/remap/window preparation for those requests before
+      // checking freshness; the replacement projection will request the
+      // current owners itself.
+      for (const request of requests) {
+        if (request === referenceRequest) continue;
+        if (!isCurrent(request)) {
+          prepared.push({ request, waveJson: undefined, semanticValues: undefined, error: undefined, deferred: false, rendererStart: undefined, rendererEnd: undefined });
+          continue;
+        }
+        prepared.push(prepare(request));
       }
       const orderedPrepared = referenceItem === undefined
         ? prepared

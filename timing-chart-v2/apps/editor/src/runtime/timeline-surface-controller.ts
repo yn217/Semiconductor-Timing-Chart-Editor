@@ -222,9 +222,14 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
           // Invalidate once at the first geometry-ready boundary; later
           // virtualized owner remounts must not reproject bars during scroll.
           setTransactionPresentationRevision((value) => value + 1);
-          const reproject = () => { if (active && projection !== undefined) renderCoordinator.renderer.update(projection); };
-          if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(reproject);
-          else globalThis.setTimeout(reproject, 0);
+          return new Promise<void>((resolve) => {
+            const reproject = () => {
+              try { if (active && projection !== undefined) renderCoordinator.renderer.update(projection); }
+              finally { resolve(); }
+            };
+            if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(reproject);
+            else globalThis.setTimeout(reproject, 0);
+          });
         }
       },
       invalidateSnapIndex: () => timelineGeometry.invalidateSnapIndex(),
