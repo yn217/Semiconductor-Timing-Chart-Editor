@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildHardwareHierarchyEntries, buildHardwareHierarchyRowIndex, deriveHardwareHierarchyEntries, filterHardwareHierarchyEntries, hardwareHierarchyScopes, hardwareHierarchyScopeBreadcrumbs, DefaultProjectionService, calculateRowLayout } from "@timing-chart-v2/projection";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
-import type { CanonicalDocument, GroupId, RowId, SignalId, SpacerId } from "@timing-chart-v2/schema";
+import type { BookmarkId, CanonicalDocument, GroupId, RowId, SignalId, SpacerId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
@@ -29,6 +29,18 @@ function linearMountedRowIds(layout: ReturnType<typeof calculateRowLayout>, view
 }
 
 describe("RowLayout and projection invariants", () => {
+  it("reuses canonical Signal IDs when an unrelated document collection changes", () => {
+    const document = canonicalFixture();
+    const service = new DefaultProjectionService();
+    const viewport = { viewportStartY: 0, viewportEndY: 200, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] } as const;
+    const before = service.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: { fullDocumentReplace: true }, viewport });
+    const bookmarkId = "bookmark_projection_cache" as BookmarkId;
+    const afterDocument = { ...document, bookmarks: [...document.bookmarks, { id: bookmarkId, name: "Review", start: 1 }] };
+    const after = service.project({ snapshot: { revision: 1, document: afterDocument } as CanonicalSnapshot, changeSet: { bookmarkPosition: [bookmarkId] }, viewport, previous: before });
+
+    expect(after.canonicalSignalIds).toBe(before.canonicalSignalIds);
+  });
+
   it("derives stable hierarchy entries without changing group placement semantics", () => {
     const document = canonicalFixture();
     const entries = buildHardwareHierarchyEntries(document, "hierarchy");
