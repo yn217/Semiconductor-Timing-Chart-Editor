@@ -1,7 +1,10 @@
 import { expect, test, type CDPSession, type Page, type TestInfo } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { startInCycleSample } from "./cycle-startup.js";
 import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 import { generatePerformanceDocument, summarizePerformance, type BrowserPerformanceSample, type PerformanceFixtureSpec } from "@timing-chart-v2/testing";
+import { evaluateOpenPerformanceGate, summarizeOpenPresentation, type OpenPerformanceBaseline } from "../performance/open-performance-gate.js";
 
 startInCycleSample(test);
 
@@ -362,30 +365,78 @@ test("repeated Open A/B/A releases old owners and does not stack handlers", asyn
   await testInfo.attach("phase13-open-leak.json", { body: Buffer.from(JSON.stringify(evidence, null, 2)), contentType: "application/json" });
 });
 
-test("Open first-correct-paint has median and p95 evidence across scale fixtures", async ({ page }, testInfo) => {
+test("PR Open gate: browser presentation-ready stays under 1s and within approved-main regression budget", async ({ page }, testInfo) => {
   await start(page);
+  // Keep app-startup waveform work outside this File/Open benchmark so every
+  // fixture starts from the same settled production editor state.
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  const baseline = JSON.parse(readFileSync(resolve(process.cwd(), "tests/performance/open-presentation-baseline.json"), "utf8")) as OpenPerformanceBaseline;
+  const showcasePath = resolve(process.cwd(), "samples/showcase/21_large_feature_showcase.tcd.json");
+  const showcaseBytes = readFileSync(showcasePath);
+  const showcase = JSON.parse(showcaseBytes.toString("utf8")) as { document?: { title?: string }; signals?: unknown[]; timeline?: { cycleCount?: number } };
+  expect(showcase.signals).toHaveLength(48);
+  expect(showcase.timeline?.cycleCount).toBe(128);
   const fixtures = [
-    { name: "perf_50x100", spec: { signalCount: 50, cycleCount: 100 } },
-    { name: "perf_100x500", spec: { signalCount: 100, cycleCount: 500, profile: "mixed" as const } },
-    { name: "long-cycle", spec: { signalCount: 100, cycleCount: 1000, profile: "transaction-heavy" as const } },
+    { name: "showcase-48x128", fileName: "21_large_feature_showcase.tcd", title: showcase.document?.title ?? "", bytes: showcaseBytes },
+    { name: "perf-50x100", fileName: "perf_50x100.tcd", spec: { signalCount: 50, cycleCount: 100 } as const },
   ];
-  const summaries = [];
+  const summaries: Array<Record<string, unknown>> = [];
+  const gateFailures: string[] = [];
   for (const fixture of fixtures) {
-    const samples = [];
-    for (let trial = 0; trial < 3; trial += 1) {
-      const started = await page.evaluate(() => performance.now());
-      await openFixture(page, fixture.spec);
-      samples.push(await page.evaluate((value) => performance.now() - value, started));
+    const samples: number[] = [];
+    const evidence: Array<Record<string, unknown>> = [];
+    for (let trial = 0; trial < 5; trial += 1) {
+      const document = "spec" in fixture ? generatePerformanceDocument(fixture.spec) : undefined;
+      const title = "spec" in fixture ? document!.document.title : fixture.title;
+      const bytes = "spec" in fixture ? Buffer.from(JSON.stringify(document)) : fixture.bytes;
+      const host = page.getByTestId("cycle-surface");
+      const openStartedAt = await page.evaluate(() => performance.now());
+      await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: fixture.fileName, mimeType: "application/json", buffer: bytes });
+      // Reopening the same fixture leaves the title unchanged. Wait for this
+      // operation's fresh production marks instead of accepting stale ready
+      // attributes from the previous document.
+      await expect.poll(async () => host.evaluate((surface) => {
+        const marks = JSON.parse(surface.getAttribute("data-open-phase-marks") ?? "{}") as Record<string, number>;
+        return marks["open-command-start"] ?? 0;
+      }), { timeout: 60_000 }).toBeGreaterThanOrEqual(openStartedAt);
+      await expect.poll(async () => host.evaluate((surface) => {
+        const marks = JSON.parse(surface.getAttribute("data-open-phase-marks") ?? "{}") as Record<string, number>;
+        return marks["presentation-ready"] ?? 0;
+      }), { timeout: 60_000 }).toBeGreaterThan(0);
+      await expect(page.locator(".app-titlebar h1")).toHaveText(title, { timeout: 60_000 });
+      await expect(host).toHaveAttribute("data-open-readiness", /^(presentation-ready|visible-waveforms-ready|idle)$/);
+      const primary = await host.evaluate((surface, startedAt) => {
+        const marks = JSON.parse(surface.getAttribute("data-open-phase-marks") ?? "{}") as Record<string, number>;
+        const durations = JSON.parse(surface.getAttribute("data-open-phase-durations") ?? "{}") as Record<string, number>;
+        const capturedAt = performance.now();
+        const longTasks = performance.getEntriesByType("longtask").filter((entry) => entry.startTime >= startedAt && entry.startTime < capturedAt);
+        return {
+          readinessAtCapture: surface.getAttribute("data-open-readiness"),
+          presentationReadyMs: durations["presentation-ready"],
+          documentReadyMs: durations["document-ready"],
+          visibleWaveformsReadyMs: durations["visible-waveforms-ready"],
+          idleMs: durations.idle,
+          longTasksBeforePresentation: longTasks.length,
+          maxLongTaskBeforePresentationMs: Math.max(0, ...longTasks.map((entry) => entry.duration)),
+          marks,
+          durations,
+        };
+      }, openStartedAt);
+      expect(Number.isFinite(primary.presentationReadyMs), `${fixture.name} trial ${trial + 1} did not publish a browser-internal presentation-ready duration`).toBe(true);
+      expect(primary.presentationReadyMs).toBeGreaterThanOrEqual(primary.documentReadyMs);
+      samples.push(primary.presentationReadyMs);
+      await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+      const settled = await host.evaluate((surface) => JSON.parse(surface.getAttribute("data-open-phase-durations") ?? "{}") as Record<string, number>);
+      evidence.push({ trial: trial + 1, ...primary, visibleWaveformsReadyMs: settled["visible-waveforms-ready"], idleMs: settled.idle });
     }
-    const ordered = [...samples].sort((a, b) => a - b);
-    const percentile = (rank: number) => ordered[Math.min(ordered.length - 1, Math.ceil(ordered.length * rank) - 1)];
-    const summary = { fixture: fixture.name, trials: samples.length, samples, medianMs: percentile(0.5), p95Ms: percentile(0.95) };
-    expect(summary.medianMs).toBeGreaterThan(0);
-    expect(summary.p95Ms).toBeGreaterThanOrEqual(summary.medianMs);
-    summaries.push(summary);
+    const summary = summarizeOpenPresentation(fixture.name, samples);
+    const failures = evaluateOpenPerformanceGate(summary, baseline);
+    gateFailures.push(...failures);
+    summaries.push({ ...summary, baseline: baseline.fixtures[fixture.name], baselineSourceCommit: baseline.sourceCommit, absoluteP95BudgetMsExclusive: baseline.absoluteP95BudgetMsExclusive, relativeMedianLimit: baseline.fixtures[fixture.name]!.medianMs * baseline.maxMedianRegressionRatio, relativeP95Limit: baseline.fixtures[fixture.name]!.p95Ms * baseline.maxP95RegressionRatio, evidence });
+    console.log(`[open-presentation-gate] ${JSON.stringify(summaries.at(-1))}`);
   }
-  await testInfo.attach("open-first-correct-paint.json", { body: Buffer.from(JSON.stringify(summaries, null, 2)), contentType: "application/json" });
-  console.log(`[open-first-correct-paint] ${JSON.stringify(summaries)}`);
+  await testInfo.attach("open-presentation-gate.json", { body: Buffer.from(JSON.stringify({ baseline, summaries }, null, 2)), contentType: "application/json" });
+  expect(gateFailures, JSON.stringify({ baseline, summaries }, null, 2)).toEqual([]);
 });
 
 test("nightly/manual 500/1000 heavy profiles", async ({ page }, testInfo) => {

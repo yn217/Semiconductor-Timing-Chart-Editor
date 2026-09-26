@@ -8180,21 +8180,22 @@
     },
     {
       "file": "performance-closure.spec.ts",
-      "title": "Open first-correct-paint has median and p95 evidence across scale fixtures",
-      "domain": "open-first-correct-paint-scale",
-      "originIssue": 174,
+      "title": "PR Open gate: browser presentation-ready stays under 1s and within approved-main regression budget",
+      "domain": "open-presentation-ready-regression-gate",
+      "originIssue": 854,
       "type": "PERFORMANCE",
-      "costClass": "VERY_HEAVY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": "First correct render after Open has reported median/p95 measurements across small, representative, and long-cycle documents.",
-      "duplicateGroup": "large-document-open-lifecycle",
-      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "primaryContract": "Production File Open publishes browser-internal presentation-ready marks for the checked-in Large Feature Showcase (48×128) and generated 50×100 fixtures; five-run nearest-rank p50/p95 must satisfy the absolute <1000ms SLO and approved-main relative regression budgets.",
+      "duplicateGroup": "open-presentation-latency-gate",
+      "executionTier": "TIER_3_PR_PERFORMANCE_GATE",
       "profiles": [
+        "pr",
         "performance",
         "nightly"
       ],
       "decision": "KEEP",
-      "reason": "Runs repeated Opens across multiple fixtures to produce scale-specific timing distributions; this is a benchmark, not a correctness smoke.",
+      "reason": "This is the merge-blocking Open presentation-latency gate required by #854. It measures the production browser phase mark (not Playwright RPC time), waits for each Open to settle before the next sample, and is restricted to two representative fixtures to keep ordinary PR cost bounded.",
       "replacementTest": null
     },
     {
