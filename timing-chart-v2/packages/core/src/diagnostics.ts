@@ -220,9 +220,30 @@ function latencyRangeDiagnostics(document: CanonicalDocument, enabled: ReadonlyS
   return problems;
 }
 
-function firstAssertedAtOrAfter(signal: Signal, cycle: number, polarity: "active-high" | "active-low"): SignalValueChange | undefined {
-  if (signal.type === "clock" || signal.type === "commentRow") return undefined;
-  return signal.values.find((change) => change.start >= cycle && asserted(change, polarity));
+function firstChangeAtOrAfter(changes: readonly SignalValueChange[], cycle: number): number {
+  let low = 0;
+  let high = changes.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (changes[middle]!.start < cycle) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
+function firstChangeAfter(changes: readonly SignalValueChange[], cycle: number): number {
+  let low = 0;
+  let high = changes.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (changes[middle]!.start <= cycle) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
+function assertedChanges(signal: Signal, polarity: "active-high" | "active-low"): readonly SignalValueChange[] {
+  return signal.type === "clock" || signal.type === "commentRow" ? [] : signal.values.filter((change) => asserted(change, polarity));
 }
 
 function numberFrom(data: ConstraintData, key: string): number | undefined {
@@ -254,6 +275,7 @@ function handshakeDiagnostics(
 ): TimingDiagnostic[] {
   const problems: TimingDiagnostic[] = [];
   const signals = new Map(document.signals.map((signal) => [signal.id, signal]));
+  const signalIndexById = new Map(document.signals.map((signal, index) => [signal.id, index]));
   const addConstraintProblem = (code: TimingDiagnosticCode, path: string, message: string, constraintId: string): void => {
     problems.push({ code, category: "protocol", severity: "warning", path, message, entityId: constraintId, objectType: "constraint", objectId: constraintId, source: "validation", stage: "validate" });
   };
@@ -287,9 +309,11 @@ function handshakeDiagnostics(
     const requestPolarity = polarityFrom(data, ["requestPolarity", "requestActiveLevel"]);
     const acknowledgePolarity = polarityFrom(data, ["acknowledgePolarity", "ackPolarity", "ackActiveLevel"]);
     const requestChanges = request.values;
+    const acknowledgeChanges = assertedChanges(acknowledge, acknowledgePolarity);
     requestChanges.forEach((requestChange) => {
       if (!asserted(requestChange, requestPolarity)) return;
-      const ackChange = firstAssertedAtOrAfter(acknowledge, requestChange.start, acknowledgePolarity);
+      const ackIndex = firstChangeAtOrAfter(acknowledgeChanges, requestChange.start);
+      const ackChange = acknowledgeChanges[ackIndex];
       if (!ackChange) {
         if (enabled.has("protocol")) addConstraintProblem("HANDSHAKE_NO_ACK", `${basePath}.acknowledgeSignalId`, `Handshake request '${request.name}' at cycle ${requestChange.start} has no acknowledge assertion before the timeline ends.`, constraint.id);
         return;
@@ -297,9 +321,12 @@ function handshakeDiagnostics(
       if (!enabled.has("stability")) return;
       stableSignals.forEach((stableSignal) => {
         if (!stableSignal || stableSignal.type === "clock" || stableSignal.type === "commentRow") return;
-        stableSignal.values.forEach((change, changeIndex) => {
-          if (change.start <= requestChange.start || change.start >= ackChange.start) return;
-          const index = document.signals.indexOf(stableSignal);
+        const firstRelevant = firstChangeAfter(stableSignal.values, requestChange.start);
+        const endExclusive = firstChangeAtOrAfter(stableSignal.values, ackChange.start);
+        const index = signalIndexById.get(stableSignal.id);
+        if (index === undefined) return;
+        for (let changeIndex = firstRelevant; changeIndex < endExclusive; changeIndex += 1) {
+          const change = stableSignal.values[changeIndex]!;
           problems.push(signalProblem(
             "HANDSHAKE_DATA_UNSTABLE",
             "stability",
@@ -308,7 +335,7 @@ function handshakeDiagnostics(
             stableSignal,
             change.value,
           ));
-        });
+        }
       });
     });
   });
