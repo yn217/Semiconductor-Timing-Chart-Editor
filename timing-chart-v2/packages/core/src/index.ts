@@ -11,7 +11,7 @@ import {
   type ParseDocumentResult,
 } from "@timing-chart-v2/schema";
 
-export { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_CATEGORIES, TIMING_DIAGNOSTIC_CODES, TIMING_DIAGNOSTIC_RULES, type TimingDiagnostic, type TimingDiagnosticCategory, type TimingDiagnosticCode, type TimingDiagnosticOptions, type TimingDiagnosticRule } from "./diagnostics.js";
+export { deriveTimingDiagnostics, deriveTimingDiagnosticsIfInputsChanged, TIMING_DIAGNOSTIC_CATEGORIES, TIMING_DIAGNOSTIC_CODES, TIMING_DIAGNOSTIC_RULES, type TimingDiagnostic, type TimingDiagnosticCategory, type TimingDiagnosticCode, type TimingDiagnosticOptions, type TimingDiagnosticRule } from "./diagnostics.js";
 
 export interface CanonicalSnapshot {
   readonly revision: number;

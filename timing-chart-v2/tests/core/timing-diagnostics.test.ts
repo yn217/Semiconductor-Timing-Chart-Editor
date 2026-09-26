@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_RULES } from "@timing-chart-v2/core";
+import { deriveTimingDiagnostics, deriveTimingDiagnosticsIfInputsChanged, TIMING_DIAGNOSTIC_RULES } from "@timing-chart-v2/core";
 import { parseDocument, serializeValidatedCanonicalDocument, type CanonicalDocument, type Constraint, type SignalId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -14,6 +14,22 @@ function withSignals(document: CanonicalDocument, signals: CanonicalDocument["si
 }
 
 describe("derived timing diagnostics", () => {
+  it("reuses derived Problems for unrelated immutable edits and invalidates every diagnostic input", () => {
+    const source = canonicalFixture();
+    const current = withSignals(source, [source.signals[0]!, { ...source.signals[1]!, values: [{ start: 1, value: "X" }] }]);
+    const currentDiagnostics = deriveTimingDiagnostics(current);
+    const unrelatedEdit = { ...current, transactions: [...current.transactions] };
+    const reused = deriveTimingDiagnosticsIfInputsChanged(current, unrelatedEdit, currentDiagnostics);
+    expect(reused).toEqual({ diagnostics: currentDiagnostics, recomputed: false });
+
+    const changedSignalName = { ...current, signals: current.signals.map((signal) => signal.id === current.signals[1]!.id ? { ...signal, name: "RENAMED" } : signal) };
+    expect(deriveTimingDiagnosticsIfInputsChanged(current, changedSignalName, currentDiagnostics).recomputed).toBe(true);
+    const changedConstraints = { ...current, constraints: [...current.constraints] };
+    expect(deriveTimingDiagnosticsIfInputsChanged(current, changedConstraints, currentDiagnostics).recomputed).toBe(true);
+    const changedSettings = { ...current, checkSettings: { enabledCategories: ["protocol"] as const } };
+    expect(deriveTimingDiagnosticsIfInputsChanged(current, changedSettings, currentDiagnostics).recomputed).toBe(true);
+  });
+
   it("evaluates through a shared rule registry with stable semantic keys", () => {
     expect(TIMING_DIAGNOSTIC_RULES.map((rule) => rule.id)).toEqual(["timing.unknown-value", "timing.handshake", "timing.latency-range", "timing.latency"]);
     const source = canonicalFixture();

@@ -389,3 +389,24 @@ export function deriveTimingDiagnostics(document: CanonicalDocument, options: Ti
     .map((diagnostic) => ({ ...diagnostic, ruleId: rule.id, stableKey: `${rule.id}:${diagnostic.code}:${diagnostic.objectId ?? diagnostic.entityId ?? ""}:${diagnostic.path}${diagnostic.sourceCycle === undefined ? "" : `:cycle:${diagnostic.sourceCycle}`}` })))
     .sort(diagnosticOrder);
 }
+
+/**
+ * Reuse a previous timing-diagnostic result when all of its canonical inputs
+ * are structurally shared. These are the complete document dependencies of
+ * the registered rules; unrelated immutable edits (for example Annotation,
+ * Bookmark, or Transaction presentation changes) therefore do no rule work.
+ * Collection identity is deliberately the correctness guard rather than a
+ * command-name allowlist, so newly added commands remain safe by default.
+ */
+export function deriveTimingDiagnosticsIfInputsChanged(
+  previousDocument: CanonicalDocument,
+  nextDocument: CanonicalDocument,
+  previousDiagnostics: readonly TimingDiagnostic[],
+): Readonly<{ diagnostics: readonly TimingDiagnostic[]; recomputed: boolean }> {
+  if (previousDocument.signals === nextDocument.signals
+    && previousDocument.constraints === nextDocument.constraints
+    && previousDocument.checkSettings === nextDocument.checkSettings) {
+    return { diagnostics: previousDiagnostics, recomputed: false };
+  }
+  return { diagnostics: deriveTimingDiagnostics(nextDocument), recomputed: true };
+}

@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import { deriveTimingDiagnostics, type CanonicalSnapshot } from "@timing-chart-v2/core";
+import { deriveTimingDiagnostics, deriveTimingDiagnosticsIfInputsChanged, type CanonicalSnapshot, type TimingDiagnostic } from "@timing-chart-v2/core";
 import type { HistoryState } from "@timing-chart-v2/history";
 import { validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import { buildCommandRejectionDiagnostics } from "../command-diagnostics.js";
@@ -43,6 +43,8 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   const [history, setHistory] = useState<HistoryState>(() => runtime.session.current().historyState());
   const [problem, setProblem] = useState("");
   const [validationPending, setValidationPending] = useState(false);
+  const timingDiagnosticsDocumentRef = useRef(initialDocument);
+  const timingDiagnosticsRef = useRef<readonly TimingDiagnostic[]>([]);
   // #175: proves "View-only React rerender never runs a full Canonical
   // validation pass" mechanically rather than by inspection -- this counts
   // actual `validateCanonicalDocument` calls (the expensive whole-document
@@ -53,7 +55,12 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   // `publishRendererState` call) so an e2e test can assert the delta is 0
   // across Selection/Ribbon-tab/Zoom/Scroll/panel-resize.
   const validatorInvocationsRef = useRef(0);
-  const [validationDiagnostics, setValidationDiagnostics] = useState<readonly DocumentProblem[]>(() => { validatorInvocationsRef.current += 1; return [...validateCanonicalDocument(initialDocument), ...deriveTimingDiagnostics(initialDocument)]; });
+  const [validationDiagnostics, setValidationDiagnostics] = useState<readonly DocumentProblem[]>(() => {
+    validatorInvocationsRef.current += 1;
+    const timingDiagnostics = deriveTimingDiagnostics(initialDocument);
+    timingDiagnosticsRef.current = timingDiagnostics;
+    return [...validateCanonicalDocument(initialDocument), ...timingDiagnostics];
+  });
   const [runtimeDiagnostics, setRuntimeDiagnostics] = useState<readonly DocumentProblem[]>([]);
   const acceptedHandlerRef = useRef<AcceptedHandler | undefined>(undefined);
   const openDiagnosticsGenerationRef = useRef(0);
@@ -75,6 +82,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     }
     setSnapshot(result.snapshot);
     setHistory(runtime.session.current().historyState());
+    const interruptedOpenDiagnostics = pendingOpenDiagnosticsRef.current !== undefined;
     openDiagnosticsGenerationRef.current += 1;
     pendingOpenDiagnosticsRef.current = undefined;
     const completePendingOpenDiagnostics = pendingOpenDiagnosticsCompletionRef.current;
@@ -87,7 +95,15 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     // #744: the DocumentSession already ran the ONE authoritative canonical validation for this commit (execute / batch / Undo / Redo)
     // and rejects any candidate with a problem, so an accepted snapshot has no canonical problems by construction. Do not rescan the
     // structure here (validatorInvocations stays put); only the timing diagnostics are derived again.
-    setValidationDiagnostics(deriveTimingDiagnostics(result.snapshot.document));
+    const nextDocument = result.snapshot.document;
+    const diagnosticsUpdate = interruptedOpenDiagnostics
+      ? { diagnostics: deriveTimingDiagnostics(nextDocument), recomputed: true }
+      : deriveTimingDiagnosticsIfInputsChanged(timingDiagnosticsDocumentRef.current, nextDocument, timingDiagnosticsRef.current);
+    if (diagnosticsUpdate.recomputed) {
+      timingDiagnosticsDocumentRef.current = nextDocument;
+      timingDiagnosticsRef.current = diagnosticsUpdate.diagnostics;
+    }
+    setValidationDiagnostics(diagnosticsUpdate.diagnostics);
     setValidationPending(false);
     completePendingOpenDiagnostics?.();
     setProblem("");
@@ -133,6 +149,8 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
       if (pendingOpenDiagnosticsRef.current?.generation !== pending.generation || latest.revision !== pending.revision || latest.document !== pending.document) return;
       pendingOpenDiagnosticsRef.current = undefined;
       pendingOpenDiagnosticsCompletionRef.current = undefined;
+      timingDiagnosticsDocumentRef.current = pending.document;
+      timingDiagnosticsRef.current = diagnostics;
       setValidationDiagnostics(diagnostics);
       setValidationPending(false);
       onComplete?.();
@@ -144,7 +162,10 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   // update above only clears/resets the array.
   const validateDocument = useCallback((document: CanonicalDocument) => {
     validatorInvocationsRef.current += 1;
-    const problems = [...validateCanonicalDocument(document), ...deriveTimingDiagnostics(document)];
+    const timingDiagnostics = deriveTimingDiagnostics(document);
+    const problems = [...validateCanonicalDocument(document), ...timingDiagnostics];
+    timingDiagnosticsDocumentRef.current = document;
+    timingDiagnosticsRef.current = timingDiagnostics;
     openDiagnosticsGenerationRef.current += 1;
     pendingOpenDiagnosticsRef.current = undefined;
     const completePendingOpenDiagnostics = pendingOpenDiagnosticsCompletionRef.current;
