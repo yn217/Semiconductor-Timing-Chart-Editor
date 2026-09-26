@@ -49,6 +49,14 @@ export function HardwareHierarchyBrowser({ document, selectedSignalId, onSelect,
     return { visibleEntries, durationMs: Math.max(0, endedAt - startedAt) };
   }, [entries, query]);
   const visibleEntries = filterResult.visibleEntries;
+  useLayoutEffect(() => {
+    const eligibleIds = new Set(visibleEntries.map((entry) => entry.signalId));
+    const next = new Set([...copySelection].filter((id) => eligibleIds.has(id)));
+    if (next.size === copySelection.size) return;
+    setCopySelection(next);
+    const count = next.size;
+    setCopyStatus(`Selection updated: ${count} selected ${count === 1 ? "path is" : "paths are"} available in current results.`);
+  }, [copySelection, visibleEntries]);
   const firstVisibleIndex = Math.max(0, Math.floor(tableScrollTop / HIERARCHY_ROW_HEIGHT) - HIERARCHY_OVERSCAN_ROWS);
   const lastVisibleIndex = Math.min(visibleEntries.length, Math.ceil((tableScrollTop + (tableViewportHeight || 360)) / HIERARCHY_ROW_HEIGHT) + HIERARCHY_OVERSCAN_ROWS);
   const mountedEntries = visibleEntries.slice(firstVisibleIndex, lastVisibleIndex);
@@ -90,7 +98,7 @@ export function HardwareHierarchyBrowser({ document, selectedSignalId, onSelect,
       <label>Display mode<select aria-label="Hierarchy display mode" value={displayMode} onChange={(event) => setDisplayMode(event.target.value as HardwareHierarchyDisplayMode)}><option value="signal">Signal only</option><option value="relative">Relative Path</option><option value="full">Full Path</option><option value="split">Split columns</option></select></label>
       <label>Scope<select aria-label="Hierarchy scope" value={scope} onChange={(event) => { resetTableScroll(); setScope(event.target.value); }}><option value="all">All scopes</option>{scopes.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
       <label>Search paths<input type="search" aria-label="Search hierarchy paths" data-testid="hierarchy-path-search" value={query} onChange={(event) => { resetTableScroll(); setQuery(event.target.value); }} placeholder="Path, signal, display name, group…" /></label>
-      <button type="button" data-testid="copy-selected-hierarchy-paths" disabled={copySelection.size === 0} onClick={() => { const selected = entries.filter((entry) => copySelection.has(entry.signalId)); void copyPaths(selected.map((entry) => entry.fullPath)); }}>Copy Selected Paths ({copySelection.size})</button>
+      <button type="button" data-testid="copy-selected-hierarchy-paths" disabled={copySelection.size === 0} onClick={() => { const selected = visibleEntries.filter((entry) => copySelection.has(entry.signalId)); void copyPaths(selected.map((entry) => entry.fullPath)); }}>Copy Selected Paths ({copySelection.size})</button>
       <output aria-live="polite" data-testid="hierarchy-copy-status">{copyStatus}</output>
     </div>
     <nav className="hierarchy-scope-breadcrumb" aria-label="Hierarchy scope breadcrumb" data-testid="hierarchy-scope-breadcrumb">
