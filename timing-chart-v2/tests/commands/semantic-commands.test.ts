@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-chart-v2/core";
-import { parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId } from "@timing-chart-v2/schema";
+import { parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (id: string) => id as CommandId;
@@ -469,6 +469,43 @@ describe("pure Semantic Command planning", () => {
     const finalValues = (recreated.document.signals.find((signal) => signal.id === "sig_data") as ValueSignal).values;
     expect(finalValues.find((change) => change.start === 5)?.id).toBe(createdId);
     expect(finalValues.find((change) => change.start === 2)?.id).not.toBe(createdId);
+  });
+
+  it("allocates a value-change ID without scanning unrelated Signals", () => {
+    const source = canonicalFixture();
+    const target = source.signals.find((signal) => signal.id === "sig_data");
+    if (!target || target.type === "clock" || target.type === "commentRow") throw new Error("Expected a target value Signal in the fixture.");
+    const unrelated = { ...target, id: "sig_other" as SignalId, display: { ...target.display, name: "Other" } };
+    const values = new Proxy(unrelated.values, {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator) throw new Error("Unrelated Signal values were scanned during ID allocation.");
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const document = {
+      ...source,
+      signals: [...source.signals, { ...unrelated, values }],
+    } as CanonicalDocument;
+
+    const planned = planCommand(document, { id: commandId("cmd_value_id_scope"), type: "signal.updateValue", signalId: "sig_data" as SignalId, start: 2, value: "1F" });
+
+    expect(planned.ok).toBe(true);
+    if (planned.ok) {
+      const data = planned.document.signals.find((signal) => signal.id === "sig_data");
+      expect(data && "values" in data ? data.values.find((change) => change.start === 2)?.id : undefined).toMatch(/^value_sig_data_/);
+    }
+
+    const session = new CommandHistorySession(canonicalFixture());
+    expect(session.execute({ id: commandId("cmd_value_id_roundtrip"), type: "signal.updateValue", signalId: "sig_data" as SignalId, start: 2, value: "1F" }).ok).toBe(true);
+    const generatedId = (session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data") as ValueSignal).values.find((change) => change.start === 2)?.id;
+    expect(generatedId).toMatch(/^value_sig_data_/);
+    expect(session.undo().ok).toBe(true);
+    expect(session.redo().ok).toBe(true);
+    const redoneId = (session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data") as ValueSignal).values.find((change) => change.start === 2)?.id;
+    expect(redoneId).toBe(generatedId);
+    const reopened = parseDocument(serializeValidatedCanonicalDocument(session.getSnapshot().document));
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect((reopened.document.signals.find((signal) => signal.id === "sig_data") as ValueSignal).values.find((change) => change.start === 2)?.id).toBe(generatedId);
   });
 
   it("keeps reorder and visibility out of WaveDrom and Local Geometry domains", () => {

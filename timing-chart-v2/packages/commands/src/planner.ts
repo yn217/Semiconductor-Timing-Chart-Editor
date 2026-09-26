@@ -32,14 +32,12 @@ const fail = (reason: "invalid" | "no-op", code: CommandPolicyCode, path: string
 const timingSignalIds = (document: CanonicalDocument) => document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
 const annotationIds = (document: CanonicalDocument) => document.annotations.map((annotation) => annotation.id);
 
-function freshValueChangeId(document: CanonicalDocument, signalId: SignalId): string {
+function freshValueChangeId(signal: ValueSignal): string {
   const used = new Set<string>();
-  for (const signal of document.signals) {
-    if ("values" in signal) for (const change of signal.values) if (change.id) used.add(change.id);
-  }
+  for (const change of signal.values) if (change.id) used.add(change.id);
   let sequence = 0;
-  let id = `value_${signalId}_${sequence}`;
-  while (used.has(id)) id = `value_${signalId}_${++sequence}`;
+  let id = `value_${signal.id}_${sequence}`;
+  while (used.has(id)) id = `value_${signal.id}_${++sequence}`;
   return id;
 }
 
@@ -739,7 +737,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (valueProblem) return fail("invalid", "UNSUPPORTED_SIGNAL_VALUE", "$.value", valueProblem);
       const existing = signal.values.find((change) => change.start === command.start);
       if (existing?.value === command.value && existing.comment === command.comment) return fail("no-op", "NO_OP", "$", "Signal value is unchanged.");
-      const change = { id: existing?.id ?? freshValueChangeId(document, command.signalId), start: command.start, value: command.value, ...(command.comment === undefined ? {} : { comment: command.comment }) };
+      const change = { id: existing?.id ?? freshValueChangeId(signal), start: command.start, value: command.value, ...(command.comment === undefined ? {} : { comment: command.comment }) };
       const values = [...signal.values.filter((item) => item.start !== command.start), change].sort((left, right) => left.start - right.start);
       const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
       const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
@@ -771,7 +769,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const valueProblem = valueSignalValueProblem(signal.type, command.value);
       if (valueProblem) return fail("invalid", "UNSUPPORTED_SIGNAL_VALUE", "$.value", valueProblem);
       if (source.start === command.start && source.value === command.value && source.comment === command.comment) return fail("no-op", "NO_OP", "$", "Value change is unchanged.");
-      const replacement = { id: source.id ?? freshValueChangeId(document, command.signalId), start: command.start, value: command.value, ...(command.comment === undefined ? {} : { comment: command.comment }) };
+      const replacement = { id: source.id ?? freshValueChangeId(signal), start: command.start, value: command.value, ...(command.comment === undefined ? {} : { comment: command.comment }) };
       const values = signal.values.map((change) => change === source ? replacement : change).sort((left, right) => left.start - right.start);
       const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
       const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
