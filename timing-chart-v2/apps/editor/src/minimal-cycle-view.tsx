@@ -607,6 +607,7 @@ export function MinimalCycleView() {
   });
   const secondarySurfaces = useEditorSecondarySurfaces({
     document: snapshot.document,
+    validationDiagnostics,
     documentEpoch,
     revision: snapshot.revision,
     transactionPresentationRevision,

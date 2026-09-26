@@ -74,6 +74,7 @@ type Ref<T> = RefObject<T | null>;
 export interface EditorSecondarySurfacesInput {
   readonly setBottomVisible: (visible: boolean) => void;
   readonly document: CanonicalDocument;
+  readonly validationDiagnostics: readonly DocumentProblem[];
   readonly documentEpoch: number;
   readonly revision: number;
   readonly transactionPresentationRevision: number;
@@ -246,6 +247,7 @@ export function useEditorSecondarySurfaces(
     : inspectorLegendSelected ? "legend" : inspectorSignal?.id ?? inspectorGroup?.id ?? inspectorAnnotation?.id ?? inspectorTransaction?.id ?? inspectorBookmark?.id ?? "none";
   const { aiBridgeStatus, ...aiAssistantPanel } = useEditorAiAssistantModel({
     document: input.document,
+    validationDiagnostics: input.validationDiagnostics,
     documentEpoch: input.documentEpoch,
     revision: input.revision,
     mode: workspace.viewMode === "Split" ? "Combined" : workspace.viewMode,

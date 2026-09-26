@@ -7,7 +7,7 @@ import type { DocumentProblem } from "@timing-chart-v2/schema";
 
 type PanelProps = ComponentProps<typeof AIOperationPanel>;
 
-export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "documentEpoch" | "revision" | "mode" | "selectedSignalId" | "selectedGroupId" | "selectedAnnotationId" | "selectedTransactionId" | "range" | "onCommand"> & {
+export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "validationDiagnostics" | "documentEpoch" | "revision" | "mode" | "selectedSignalId" | "selectedGroupId" | "selectedAnnotationId" | "selectedTransactionId" | "range" | "onCommand"> & {
   readonly onCommandBatch: NonNullable<PanelProps["onCommandBatch"]>;
   readonly getZoom: NonNullable<PanelProps["getZoom"]>;
   readonly onFitAll: () => void;
@@ -27,6 +27,7 @@ export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "
   };
   const panelProps = {
     document: input.document,
+    validationDiagnostics: input.validationDiagnostics,
     documentEpoch: input.documentEpoch,
     revision: input.revision,
     mode: input.mode,
