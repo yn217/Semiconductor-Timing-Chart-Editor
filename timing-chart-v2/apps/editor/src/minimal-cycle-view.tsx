@@ -810,11 +810,11 @@ export function MinimalCycleView() {
     },
   };
   const shellStatus = {
-    toolStatus: arrowPickStatus === "idle" ? (rangeSelectionActive ? "Range select active" : "Ready · Tool: Select") : `Arrow pick · ${arrowPickStatus}`,
+    toolStatus: arrowPickStatus === "idle" ? (rangeSelectionActive ? (viewMode === "Cycle" ? "Range select active" : "Source range select active") : "Ready · Tool: Select") : `Arrow pick · ${arrowPickStatus}`,
     selectionStatus: selectedSignalIds.size > 1 ? `${selectedSignalIds.size} signals` : selectedTransactionIds.size > 1 ? `${selectedTransactionIds.size} transactions` : selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None",
     signalCount: snapshot.document.signals.length,
     annotationCount: snapshot.document.annotations.length,
-    rangeStatus: visualReference ? `Time Range: ${snapshot.document.timeline.start} – ${snapshot.document.timeline.end} cycles` : `Range: [${timelineRange.start}, ${timelineRange.end})`,
+    rangeStatus: visualReference ? `Time Range: ${snapshot.document.timeline.start} – ${snapshot.document.timeline.end} cycles` : `${viewMode === "Cycle" ? "Range" : "Source range"}: [${timelineRange.start}, ${timelineRange.end})`,
     selectedCycle,
     zoom,
     snapEnabled,
