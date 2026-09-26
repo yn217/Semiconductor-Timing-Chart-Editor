@@ -54,6 +54,20 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
   let signalIndexSignals: CanonicalDocument["signals"] | undefined;
   let signalById = new Map<SignalId, Signal>();
   let firstClockSignalId: SignalId | undefined;
+  const signalIndexFor = (signals: CanonicalDocument["signals"]) => {
+    if (signalIndexSignals !== signals) {
+      const nextSignalById = new Map<SignalId, Signal>();
+      let nextFirstClockSignalId: SignalId | undefined;
+      for (const signal of signals) {
+        nextSignalById.set(signal.id, signal);
+        if (nextFirstClockSignalId === undefined && signal.type === "clock") nextFirstClockSignalId = signal.id;
+      }
+      signalById = nextSignalById;
+      firstClockSignalId = nextFirstClockSignalId;
+      signalIndexSignals = signals;
+    }
+    return { byId: signalById, firstClockSignalId } as const;
+  };
   return {
     ...(context.getSourceWindow ? { getSourceWindow: context.getSourceWindow } : {}),
     async mountWaveBatch(requests) {
@@ -62,6 +76,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       if (requestEpoch !== undefined && (requestEpoch !== context.getDocumentEpoch() || requests.some((request) => request.documentEpoch !== requestEpoch))) return requests.map(({ signalId }) => ({ signalId, stale: true }));
       const currentSnapshot = context.sessionController.snapshot();
       const document = currentSnapshot.document;
+      const signalIndex = signalIndexFor(document.signals);
       const viewMode = context.getViewMode?.();
       // Transaction mode still needs one rendered timing signal to own the
       // shared semantic geometry when a document has no explicit reference
@@ -71,18 +86,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const mapping = context.mappingCache.get(document.timeline, document.timeGroups);
       let referenceGeometryReady = false;
       let waveSliceStartedAt = globalThis.performance.now();
-      if (signalIndexSignals !== document.signals) {
-        const nextSignalById = new Map<SignalId, Signal>();
-        let nextFirstClockSignalId: SignalId | undefined;
-        for (const signal of document.signals) {
-          nextSignalById.set(signal.id, signal);
-          if (nextFirstClockSignalId === undefined && signal.type === "clock") nextFirstClockSignalId = signal.id;
-        }
-        signalById = nextSignalById;
-        firstClockSignalId = nextFirstClockSignalId;
-        signalIndexSignals = document.signals;
-      }
-      const referenceClockId = document.timeline.referenceClock ?? firstClockSignalId;
+      const referenceClockId = document.timeline.referenceClock ?? signalIndex.firstClockSignalId;
       // #614: every windowed signal's renderer window must span the exact
       // same display-cycle range so their WaveDrom SVGs share one
       // units-per-cycle ratio -- every wave-owner is stretched to a shared
@@ -94,7 +98,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       // rendered was itself a clock) keeps that shared ratio intact
       // regardless of which signal happens to need period-aligned WaveDrom
       // clock encoding.
-      const referenceClockSignal = document.timeline.referenceClock === undefined ? undefined : signalById.get(document.timeline.referenceClock);
+      const referenceClockSignal = document.timeline.referenceClock === undefined ? undefined : signalIndex.byId.get(document.timeline.referenceClock);
       const referenceClockPeriod = referenceClockSignal?.type === "clock" ? referenceClockSignal.generator.period : undefined;
       const prepared = requests.map((request) => {
         try {
@@ -105,7 +109,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           if (viewMode === "Transaction" && request.signalId !== referenceClockId) {
             return { request, waveJson: undefined, semanticValues: undefined, error: undefined, deferred: true, rendererStart: undefined, rendererEnd: undefined };
           }
-          const signal = signalById.get(request.signalId);
+          const signal = signalIndex.byId.get(request.signalId);
           if (!signal) return { request, waveJson: undefined, semanticValues: undefined, error: new Error(`Signal '${request.signalId}' is missing.`), deferred: false, rendererStart: undefined, rendererEnd: undefined };
           let remappedValues: readonly SignalValueChange[] | undefined;
           const displaySignal = signal.type === "commentRow" ? signal : signal.type === "clock"
@@ -162,9 +166,10 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         const geometry = analyticLocalGeometry(referenceItem.request.signalId, referenceItem.waveJson);
         if (isCurrent(referenceItem.request)) {
           const latest = context.sessionController.snapshot();
+          const latestSignalIndex = signalIndexFor(latest.document.signals);
           const stillReference = latest.document.timeline.referenceClock === referenceClockId
-            || (latest.document.timeline.referenceClock === undefined && latest.document.signals.find((signal) => signal.type === "clock")?.id === referenceClockId);
-          const stillPresent = latest.document.signals.some((signal) => signal.id === referenceClockId);
+            || (latest.document.timeline.referenceClock === undefined && latestSignalIndex.firstClockSignalId === referenceClockId);
+          const stillPresent = referenceClockId !== undefined && latestSignalIndex.byId.has(referenceClockId);
           if (stillReference && stillPresent) {
             setBoundaryDebugAttribute(referenceItem.request.owner, geometry);
             seededReferenceGeometry = absoluteWindowGeometry(geometry, referenceItem.rendererStart);
@@ -262,7 +267,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           // not let an in-flight render for the removed signal repopulate the
           // geometry registry after the canonical identity disappeared.
           const latestSnapshot = context.sessionController.snapshot();
-          const currentSignal = latestSnapshot.document.signals.find((signal) => signal.id === item.request.signalId);
+          const currentSignal = signalIndexFor(latestSnapshot.document.signals).byId.get(item.request.signalId);
           if (!currentSignal) return { signalId: item.request.signalId, stale: true };
           // Reference-clock readiness belongs to the current stable SignalId,
           // not to the document snapshot captured when this async render began.
