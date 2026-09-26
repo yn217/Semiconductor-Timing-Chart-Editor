@@ -268,13 +268,13 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     markOpenPhase("canonical-replaced");
     markOpenPhase("renderer-updated");
     requestAnimationFrame(() => { if (active) markOpenPhase("row-shell-painted"); });
-    // The Cycle surface is mounted and has a valid initial projection. Keep
-    // this readiness contract distinct from editorIdle, which waits for the
-    // asynchronous waveform batch and is intentionally later.
-    rendererHost.dataset.cycleViewReady = "true";
     const initialPresentationGeneration = primaryPresentationGeneration;
     void renderer.whenIdle().then(() => {
-      if (active && primaryPresentationGeneration === initialPresentationGeneration) primaryPresentationOpening = false;
+      if (active && primaryPresentationGeneration === initialPresentationGeneration) {
+        markOpenPhase("visible-waveforms-ready");
+        markOpenPhase("all-visible-idle");
+        primaryPresentationOpening = false;
+      }
     });
     // Signal Split View (#200): lets the signalSplitEnabled effect force
     // Upper to reproject/re-render immediately after flipping
@@ -566,6 +566,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       publishState();
       void renderer.whenIdle().then(() => {
         if (!active || !rendererHost.isConnected) return;
+        markOpenPhase("visible-waveforms-ready");
         // Accepted timeline-semantic changes must rebuild the ruler even after
         // its first paint.  The previous guard only refreshed during the
         // initialisation window, leaving Time Group collapse/expand controls
@@ -581,6 +582,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         collectWaveErrors();
         publishState();
         rendererHost.dataset.editorIdle = "true";
+        markOpenPhase("all-visible-idle");
         if (openingGenerationForCompletion !== undefined && primaryPresentationGeneration === openingGenerationForCompletion) primaryPresentationOpening = false;
       });
     });

@@ -47,6 +47,9 @@ export type OpenPhaseTracker = Readonly<{
   begin: (commandStartedAt?: number, fileReadStartedAt?: number) => void;
 }>;
 
+type OpenReadiness = "opening" | "document-ready" | "presentation-ready" | "visible-waveforms-ready" | "idle";
+const OPEN_READINESS_ORDER: readonly OpenReadiness[] = ["opening", "document-ready", "presentation-ready", "visible-waveforms-ready", "idle"];
+
 /** Owns open/first-paint instrumentation for the editor runtime bridge. */
 export function createOpenPhaseTracker(rendererHost: HTMLElement): OpenPhaseTracker {
   const marks: Record<string, number> = {};
@@ -54,37 +57,72 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement): OpenPhaseTrac
   let rowShellPainted = false;
   let referenceGeometryReady = false;
   let rulerPainted = false;
+  let readiness: OpenReadiness = "opening";
+  let readinessIndex = 0;
+  let visibleWaveformsCompletedAt: number | undefined;
+  let idleCompletedAt: number | undefined;
+  const advanceReadiness = (next: OpenReadiness, timestamp: number): void => {
+    const nextIndex = OPEN_READINESS_ORDER.indexOf(next);
+    // Readiness is an ordered contract even when independent async work
+    // finishes out of order. Defer later milestones until their prerequisites
+    // have been published instead of skipping a stage permanently.
+    if (nextIndex !== readinessIndex + 1) return;
+    readiness = next;
+    readinessIndex = nextIndex;
+    marks[next] = timestamp;
+    globalThis.performance.mark(`timing-chart-v2:${next}`);
+    rendererHost.dataset.openReadiness = readiness;
+    if (next === "presentation-ready") rendererHost.dataset.cycleViewReady = "true";
+  };
   const mark = (phase: string, phaseTimestamp = globalThis.performance.now()): void => {
     if (!active || marks[phase] !== undefined) return;
     marks[phase] = phaseTimestamp;
     globalThis.performance.mark(`timing-chart-v2:${phase}`);
+    if (phase === "canonical-replaced") advanceReadiness("document-ready", phaseTimestamp);
+    if (phase === "row-shell-painted") rowShellPainted = true;
+    if (phase === "reference-geometry-ready") referenceGeometryReady = true;
+    if (phase === "ruler-painted") rulerPainted = true;
+    if (rowShellPainted && referenceGeometryReady && rulerPainted) {
+      if (marks["first-correct-paint"] === undefined) {
+        marks["first-correct-paint"] = phaseTimestamp;
+        globalThis.performance.mark("timing-chart-v2:first-correct-paint");
+      }
+      advanceReadiness("presentation-ready", phaseTimestamp);
+      if (visibleWaveformsCompletedAt !== undefined) {
+        advanceReadiness("visible-waveforms-ready", visibleWaveformsCompletedAt);
+      }
+      if (idleCompletedAt !== undefined) advanceReadiness("idle", idleCompletedAt);
+    }
+    if (phase === "visible-waveforms-ready") {
+      visibleWaveformsCompletedAt = phaseTimestamp;
+      advanceReadiness("visible-waveforms-ready", phaseTimestamp);
+    }
+    if (phase === "all-visible-idle") {
+      idleCompletedAt = phaseTimestamp;
+      advanceReadiness("idle", phaseTimestamp);
+    }
     rendererHost.dataset.openPhaseMarks = JSON.stringify(marks);
     const fileReadDurationMs = marks["file-read-start"] !== undefined && marks["file-read-complete"] !== undefined
       ? Math.max(0, marks["file-read-complete"] - marks["file-read-start"]) : undefined;
     const phaseOrigin = marks["open-command-start"];
     const phaseDurationsMs = phaseOrigin === undefined ? {} : Object.fromEntries(Object.entries(marks).map(([name, timestamp]) => [name, Math.max(0, timestamp - phaseOrigin)]));
     rendererHost.dataset.openPhaseDurations = JSON.stringify({ ...phaseDurationsMs, ...(fileReadDurationMs === undefined ? {} : { fileReadDurationMs }) });
-    if (phase === "row-shell-painted") rowShellPainted = true;
-    if (phase === "reference-geometry-ready") referenceGeometryReady = true;
-    if (phase === "ruler-painted") rulerPainted = true;
-    if (rowShellPainted && referenceGeometryReady && rulerPainted) {
-      mark("first-correct-paint");
-      // Preserve the existing browser readiness contract used by the focused
-      // acceptance suites. This is set only after the first correct paint,
-      // never merely after a React mount or partial waveform render.
-      rendererHost.dataset.cycleViewReady = "true";
-    }
   };
   return {
     mark,
     begin(commandStartedAt = globalThis.performance.now(), fileReadStartedAt) {
       active = true;
+      readiness = "opening";
+      readinessIndex = OPEN_READINESS_ORDER.indexOf(readiness);
+      visibleWaveformsCompletedAt = undefined;
+      idleCompletedAt = undefined;
       rowShellPainted = false;
       referenceGeometryReady = false;
       rulerPainted = false;
       for (const key of Object.keys(marks)) delete marks[key];
       delete rendererHost.dataset.openPhaseMarks;
       delete rendererHost.dataset.openPhaseDurations;
+      rendererHost.dataset.openReadiness = readiness;
       delete rendererHost.dataset.cycleViewReady;
       mark("open-command-start", commandStartedAt);
       mark("open-start", commandStartedAt);
