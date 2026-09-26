@@ -5,13 +5,23 @@ import { startInCycleMode } from "./cycle-startup.js";
 startInCycleMode(test);
 
 for (const viewportSize of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) {
-  test(`rapid vertical scroll keeps visible showcase rows paired with rendered waveform owners at ${viewportSize.width}x${viewportSize.height}`, async ({ page }) => {
+  for (const bottomVisible of [true, false]) test(`rapid vertical scroll keeps visible showcase rows paired with rendered waveform owners at ${viewportSize.width}x${viewportSize.height}, Bottom ${bottomVisible ? "open" : "closed"}`, async ({ page }) => {
     await page.setViewportSize(viewportSize);
     await page.goto("/");
     const host = page.getByTestId("cycle-surface");
     await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
     await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/showcase/21_large_feature_showcase.tcd.json"));
     await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await page.getByRole("tab", { name: "Annotation", exact: true }).click();
+    const selectedAnnotationRow = page.locator("[data-annotation-row='a.text']");
+    await expect(selectedAnnotationRow).toBeVisible();
+    await selectedAnnotationRow.click();
+    await expect(selectedAnnotationRow).toHaveAttribute("data-selected", "true");
+    if (!bottomVisible) {
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+      await page.getByTestId("ribbon").getByRole("button", { name: "Bottom Editor", exact: true }).click();
+      await expect(page.locator(".editor-shell")).toHaveAttribute("data-bottom-visible", "false");
+    }
     const viewport = page.getByTestId("cycle-viewport");
     await expect.poll(() => viewport.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
     await expect.poll(() => viewport.evaluate((viewportElement) => {
@@ -59,9 +69,9 @@ for (const viewportSize of [{ width: 1280, height: 720 }, { width: 1672, height:
     const beforeDirty = await page.getByTestId("dirty-status").textContent();
     const scrollExtent = await viewport.evaluate((element) => ({ max: element.scrollHeight - element.clientHeight, scrollHeight: element.scrollHeight, clientHeight: element.clientHeight }));
     expect(scrollExtent.max).toBeGreaterThan(0);
-    // Drive the production scroll owner directly. This avoids the Bottom
-    // resize-track overlay intercepting mouse-wheel coordinates at 1280x720,
-    // while still exercising the real scroll event -> viewport projection path.
+    // Drive the production vertical scroll owner directly. The Bottom resize
+    // track can intercept wheel coordinates at 1280x720; scrollTop still
+    // emits the real owner event that refreshes row/wave virtualization.
     const scrollPositions = [0, 520, 1040, scrollExtent.max, Math.max(0, scrollExtent.max - 520), 514, 0].map((top) => Math.min(scrollExtent.max, top));
     for (const top of scrollPositions) {
       await viewport.evaluate((element, nextTop) => element.scrollTo({ top: nextTop, behavior: "instant" }), top);
@@ -98,5 +108,12 @@ for (const viewportSize of [{ width: 1280, height: 720 }, { width: 1672, height:
     await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
     await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
     await expect(page.getByTestId("dirty-status")).toHaveText(beforeDirty!);
+    if (!bottomVisible) {
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+      await page.getByTestId("ribbon").getByRole("button", { name: "Bottom Editor", exact: true }).click();
+      await expect(page.locator(".editor-shell")).toHaveAttribute("data-bottom-visible", "true");
+      await page.getByRole("tab", { name: "Annotation", exact: true }).click();
+    }
+    await expect(selectedAnnotationRow).toHaveAttribute("data-selected", "true");
   });
 }
