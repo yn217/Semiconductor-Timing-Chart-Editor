@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { validateCanonicalDocument, type CanonicalDocument, type GroupId, type SignalId } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, DocumentProblem, GroupId, SignalId, SignalGroup } from "@timing-chart-v2/schema";
 import type { AIViewIntent } from "./ai-proposal-provider.js";
 
 // #395 PR3: the browser-side half of the local Agent Bridge
@@ -22,6 +22,7 @@ export type AIBridgeViewOperation = "switch_mode" | "open_panel" | "set_visible_
 
 export type AIBridgeContext = {
   readonly document: CanonicalDocument;
+  readonly validationDiagnostics: readonly DocumentProblem[];
   readonly documentEpoch: number;
   readonly revision: number;
   readonly mode: "Cycle" | "Transaction" | "Combined";
@@ -46,6 +47,49 @@ export type AIBridgeContext = {
   readonly onGetViewContext: (() => unknown) | undefined;
 };
 
+type Identified = Readonly<{ id: string }>;
+const idIndexes = new WeakMap<readonly Identified[], ReadonlyMap<string, Identified>>();
+function indexById<T extends Identified>(items: readonly T[]): ReadonlyMap<string, T> {
+  const key = items as readonly Identified[];
+  const cached = idIndexes.get(key);
+  if (cached) return cached as ReadonlyMap<string, T>;
+  const index = new Map<string, T>();
+  for (const item of items) if (!index.has(item.id)) index.set(item.id, item);
+  idIndexes.set(key, index);
+  return index;
+}
+
+type SignalGroupIndexes = Readonly<{
+  byId: ReadonlyMap<string, SignalGroup>;
+  firstGroupByRowId: ReadonlyMap<string, string>;
+  rowIdsByGroupId: ReadonlyMap<string, ReadonlySet<string>>;
+}>;
+const signalGroupIndexes = new WeakMap<CanonicalDocument["signalGroups"], SignalGroupIndexes>();
+function getSignalGroupIndexes(groups: CanonicalDocument["signalGroups"]): SignalGroupIndexes {
+  const cached = signalGroupIndexes.get(groups);
+  if (cached) return cached;
+  const byId = new Map<string, SignalGroup>();
+  const firstGroupByRowId = new Map<string, string>();
+  const rowIdsByGroupId = new Map<string, ReadonlySet<string>>();
+  for (const group of groups) {
+    if (!byId.has(group.id)) byId.set(group.id, group);
+    const rowIds = new Set(group.rows);
+    rowIdsByGroupId.set(group.id, rowIds);
+    for (const rowId of group.rows) if (!firstGroupByRowId.has(rowId)) firstGroupByRowId.set(rowId, group.id);
+  }
+  const indexes = { byId, firstGroupByRowId, rowIdsByGroupId };
+  signalGroupIndexes.set(groups, indexes);
+  return indexes;
+}
+
+function recordAIBridgeToolMetric(tool: string, start: number, end: number): void {
+  if (typeof performance === "undefined") return;
+  const name = `timing-chart-v2:ai-bridge:${tool}`;
+  // Keep a bounded last-sample-per-tool metric in the browser Performance API.
+  performance.clearMeasures(name);
+  performance.measure(name, { start, end });
+}
+
 function documentSummary(document: CanonicalDocument) {
   return {
     title: document.document.title,
@@ -56,7 +100,7 @@ function documentSummary(document: CanonicalDocument) {
   };
 }
 
-export function executeAIBridgeTool(tool: string, args: Record<string, unknown>, context: AIBridgeContext): unknown {
+function executeAIBridgeToolCore(tool: string, args: Record<string, unknown>, context: AIBridgeContext): unknown {
   if (tool === "get_document_summary") return documentSummary(context.document);
   if (tool === "get_view_context") {
     if (!context.onGetViewContext) throw new Error("get_view_context is not available in the current surface.");
@@ -67,11 +111,11 @@ export function executeAIBridgeTool(tool: string, args: Record<string, unknown>,
     const { entityType, entityId } = args;
     if (typeof entityType !== "string" || !["signal", "group", "transaction", "annotation", "bookmark"].includes(entityType) || typeof entityId !== "string" || !entityId) throw new Error("set_selection requires entityType and a stable entityId.");
     let entityName: string | undefined;
-    if (entityType === "signal") { const signal = context.document.signals.find((item) => item.id === entityId && item.type !== "commentRow"); entityName = signal?.display.name || signal?.name; }
-    else if (entityType === "group") entityName = context.document.signalGroups.find((item) => item.id === entityId)?.name;
-    else if (entityType === "transaction") entityName = context.document.transactions.find((item) => item.id === entityId)?.name;
-    else if (entityType === "annotation") entityName = context.document.annotations.find((item) => item.id === entityId)?.label || context.document.annotations.find((item) => item.id === entityId)?.type;
-    else entityName = context.document.bookmarks.find((item) => item.id === entityId)?.name;
+    if (entityType === "signal") { const signal = indexById(context.document.signals).get(entityId); entityName = signal?.type === "commentRow" ? undefined : signal?.display.name || signal?.name; }
+    else if (entityType === "group") entityName = getSignalGroupIndexes(context.document.signalGroups).byId.get(entityId)?.name;
+    else if (entityType === "transaction") entityName = indexById(context.document.transactions).get(entityId)?.name;
+    else if (entityType === "annotation") { const annotation = indexById(context.document.annotations).get(entityId); entityName = annotation?.label || annotation?.type; }
+    else entityName = indexById(context.document.bookmarks).get(entityId)?.name;
     if (entityName === undefined) throw new Error(`${entityType} '${entityId}' does not exist in the current document.`);
     if (!context.onSetSelection) throw new Error("set_selection is not available in the current surface.");
     context.onSetSelection({ entityType: entityType as AISelectionEntityType, entityId });
@@ -107,16 +151,18 @@ export function executeAIBridgeTool(tool: string, args: Record<string, unknown>,
     if (groupId !== undefined && typeof groupId !== "string") throw new Error("groupId must be a string.");
     if (visible !== undefined && typeof visible !== "boolean") throw new Error("visible must be a boolean.");
     if (type !== undefined && typeof type !== "string") throw new Error("type must be a string.");
-    const groupRows = groupId === undefined ? undefined : context.document.signalGroups.find((group) => group.id === groupId)?.rows;
+    const groups = getSignalGroupIndexes(context.document.signalGroups);
+    const groupRows = groupId === undefined ? undefined : groups.rowIdsByGroupId.get(groupId);
     if (groupId !== undefined && !groupRows) return { signals: [] };
-    return { signals: context.document.signals.filter((signal) => signal.type !== "commentRow" && (groupRows === undefined || groupRows.includes(signal.id)) && (visible === undefined || (signal.display.visible !== false) === visible) && (type === undefined || signal.type === type)).map((signal) => ({ id: signal.id, name: signal.display.name, role: signal.role, type: signal.type, groupId: context.document.signalGroups.find((group) => group.rows.includes(signal.id))?.id, visible: signal.display.visible !== false })) };
+    return { signals: context.document.signals.filter((signal) => signal.type !== "commentRow" && (groupRows === undefined || groupRows.has(signal.id)) && (visible === undefined || (signal.display.visible !== false) === visible) && (type === undefined || signal.type === type)).map((signal) => ({ id: signal.id, name: signal.display.name, role: signal.role, type: signal.type, groupId: groups.firstGroupByRowId.get(signal.id), visible: signal.display.visible !== false })) };
   }
   if (tool === "get_signal") {
     const signalId = args.signalId;
     if (typeof signalId !== "string" || !signalId) throw new Error("get_signal requires a stable signalId.");
-    const signal = context.document.signals.find((item) => item.id === signalId && item.type !== "commentRow");
+    const signal = indexById(context.document.signals).get(signalId);
     if (!signal) return { signal: null };
-    return { signal: { ...signal, groupId: context.document.signalGroups.find((group) => group.rows.includes(signal.id))?.id, visible: signal.display.visible !== false } };
+    if (signal.type === "commentRow") return { signal: null };
+    return { signal: { ...signal, groupId: getSignalGroupIndexes(context.document.signalGroups).firstGroupByRowId.get(signal.id), visible: signal.display.visible !== false } };
   }
   if (tool === "get_signal_groups") {
     return { groups: context.document.signalGroups.map((group) => ({ id: group.id, name: group.name, rows: [...group.rows] })) };
@@ -124,7 +170,7 @@ export function executeAIBridgeTool(tool: string, args: Record<string, unknown>,
   if (tool === "get_transaction") {
     const transactionId = args.transactionId;
     if (typeof transactionId !== "string" || !transactionId) throw new Error("get_transaction requires a stable transactionId.");
-    return { transaction: context.document.transactions.find((item) => item.id === transactionId) ?? null };
+    return { transaction: indexById(context.document.transactions).get(transactionId) ?? null };
   }
   if (tool === "get_transaction_groups") {
     return { groups: (context.document.transactionGroups ?? []).map((group) => ({ id: group.id, name: group.name, color: group.color })) };
@@ -132,17 +178,18 @@ export function executeAIBridgeTool(tool: string, args: Record<string, unknown>,
   if (tool === "get_transaction_phases") {
     const transactionId = args.transactionId;
     if (typeof transactionId !== "string" || !transactionId) throw new Error("get_transaction_phases requires a stable transactionId.");
-    const transaction = context.document.transactions.find((item) => item.id === transactionId);
+    const transaction = indexById(context.document.transactions).get(transactionId);
     return { transactionId, phases: transaction?.phases?.map((phase) => ({ name: phase.name, start: phase.start, end: phase.end })) ?? null };
   }
   if (tool === "get_linked_signals") {
     const transactionId = args.transactionId;
     if (typeof transactionId !== "string" || !transactionId) throw new Error("get_linked_signals requires a stable transactionId.");
-    const transaction = context.document.transactions.find((item) => item.id === transactionId);
+    const transaction = indexById(context.document.transactions).get(transactionId);
     if (!transaction) return { transactionId, signals: null };
     const linkedIds = transaction.linkedSignals ?? [];
-    const signals = linkedIds.map((id) => context.document.signals.find((signal) => signal.id === id && signal.type !== "commentRow")).filter((signal) => signal !== undefined).map((signal) => ({ id: signal.id, name: signal.display.name, role: signal.role, type: signal.type }));
-    return { transactionId, signals, unresolvedSignalIds: linkedIds.filter((id) => !context.document.signals.some((signal) => signal.id === id)) };
+    const signalIndex = indexById(context.document.signals);
+    const signals = linkedIds.map((id) => signalIndex.get(id)).filter((signal) => signal !== undefined && signal.type !== "commentRow").map((signal) => ({ id: signal.id, name: signal.display.name, role: signal.role, type: signal.type }));
+    return { transactionId, signals, unresolvedSignalIds: linkedIds.filter((id) => !signalIndex.has(id)) };
   }
   if (tool === "get_transactions") {
     return {
@@ -174,7 +221,7 @@ export function executeAIBridgeTool(tool: string, args: Record<string, unknown>,
     return { timeGroups: context.document.timeGroups.map((group) => ({ id: group.id, name: group.name, start: group.start, end: group.end, category: group.category })) };
   }
   if (tool === "get_problems") {
-    return { problems: validateCanonicalDocument(context.document).map((problem) => ({ code: problem.code, path: problem.path, message: problem.message })) };
+    return { problems: context.validationDiagnostics.map((problem) => ({ code: problem.code, path: problem.path, message: problem.message })) };
   }
   if (tool === "propose_edit") {
     if (!context.onProposeEdit) throw new Error("propose_edit is not available in the current surface.");
@@ -187,6 +234,15 @@ export function executeAIBridgeTool(tool: string, args: Record<string, unknown>,
     return context.onProposeTypedEdit(tool, args);
   }
   throw new Error(`Unknown tool '${tool}'.`);
+}
+
+export function executeAIBridgeTool(tool: string, args: Record<string, unknown>, context: AIBridgeContext): unknown {
+  const startedAt = performance.now();
+  try {
+    return executeAIBridgeToolCore(tool, args, context);
+  } finally {
+    recordAIBridgeToolMetric(tool, startedAt, performance.now());
+  }
 }
 
 const LOOPBACK_BRIDGE_HOSTS: ReadonlySet<string> = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
