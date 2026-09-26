@@ -1,8 +1,8 @@
 import type { GroupId, SignalId } from "@timing-chart-v2/schema";
-import { calculateRowLayout } from "./row-layout.js";
+import { buildRowLayoutSourceIndex, calculateRowLayout } from "./row-layout.js";
 import { projectPinnedRows } from "./pinned-rows.js";
 import type { ProjectionRequest, ProjectionService, RenderProjection, RowLayoutEntry, VirtualizationWindow } from "./types.js";
-import type { RowLayoutResult } from "./row-layout.js";
+import type { RowLayoutResult, RowLayoutSourceIndex } from "./row-layout.js";
 
 const defaultTransform = { scrollX: 0, scrollY: 0, zoom: 1 } as const;
 
@@ -27,6 +27,8 @@ export class DefaultProjectionService implements ProjectionService {
   #viewportBinarySearchSteps = 0;
   #groupHeadersVisited = 0;
   #rowLayoutBuilds = 0;
+  #rowLayoutSourceIndexBuilds = 0;
+  #rowLayoutSourceIndex: RowLayoutSourceIndex | undefined;
   #lastMountedRange: readonly [number, number] = [0, 0];
   #rowIndexById = new Map<RowLayoutEntry["rowId"], number>();
   #navigationRowIndexById = new Map<RowLayoutEntry["rowId"], number>();
@@ -59,6 +61,11 @@ export class DefaultProjectionService implements ProjectionService {
     const collapsedGroupKey = collapsedGroupIds.join("\u0000");
     const invalidatesLayout = request.changeSet.fullDocumentReplace || request.changeSet.rowOrder !== undefined || request.changeSet.rowPresentation !== undefined || request.changeSet.geometryScreenY !== undefined || request.changeSet.addedSignals !== undefined || request.changeSet.removedSignals !== undefined || request.changeSet.addedGroups !== undefined || request.changeSet.removedGroups !== undefined;
     if (!this.#layout || !this.#navigationLayout || invalidatesLayout || this.#collapsedGroupKey !== collapsedGroupKey) {
+      const cachedSourceIndex = this.#rowLayoutSourceIndex;
+      if (!cachedSourceIndex || cachedSourceIndex.signals !== document.signals || cachedSourceIndex.signalGroups !== document.signalGroups) {
+        this.#rowLayoutSourceIndex = buildRowLayoutSourceIndex(document);
+        this.#rowLayoutSourceIndexBuilds += 1;
+      }
       // Keep hidden rows present (by rowId) so a previously-mounted, now-
       // hidden row can still be looked up during retention, but their Y
       // reserves no space here (reserveHiddenSpace: false) -- this
@@ -67,8 +74,9 @@ export class DefaultProjectionService implements ProjectionService {
       // used to render. The separate #navigationLayout below (Left Tree)
       // keeps the default reserveHiddenSpace so every row -- hidden ones
       // included -- gets its own real slot there.
-      const rawLayout = calculateRowLayout(document, new Set(), { includeHidden: true, reserveHiddenSpace: false, ...(this.#pane === undefined ? {} : { pane: this.#pane }) });
-      const rawNavigationLayout = calculateRowLayout(document, new Set(collapsedGroupIds), this.#pane === undefined ? {} : { pane: this.#pane });
+      const sourceIndex = this.#rowLayoutSourceIndex!;
+      const rawLayout = calculateRowLayout(document, new Set(), { includeHidden: true, reserveHiddenSpace: false, sourceIndex, ...(this.#pane === undefined ? {} : { pane: this.#pane }) });
+      const rawNavigationLayout = calculateRowLayout(document, new Set(collapsedGroupIds), { sourceIndex, ...(this.#pane === undefined ? {} : { pane: this.#pane }) });
       // Signal Split View (#200): `calculateRowLayout` keeps a pane-mismatched
       // row in `navigationRows` purely for Y-sequence bookkeeping (see its own
       // `paneExcludedRowIds` doc) -- a pane-fixed instance (this one, when
@@ -143,7 +151,7 @@ export class DefaultProjectionService implements ProjectionService {
   }
 
   diagnostics() {
-    return Object.freeze({ projectionBuilds: this.#projectionBuilds, viewportOnlyBuilds: this.#viewportOnlyBuilds, fullVisibleRowScans: this.#fullVisibleRowScans, viewportRowsVisited: this.#viewportRowsVisited, viewportBinarySearchSteps: this.#viewportBinarySearchSteps, groupHeadersVisited: this.#groupHeadersVisited, rowLayoutBuilds: this.#rowLayoutBuilds, lastMountedRange: this.#lastMountedRange });
+    return Object.freeze({ projectionBuilds: this.#projectionBuilds, viewportOnlyBuilds: this.#viewportOnlyBuilds, fullVisibleRowScans: this.#fullVisibleRowScans, viewportRowsVisited: this.#viewportRowsVisited, viewportBinarySearchSteps: this.#viewportBinarySearchSteps, groupHeadersVisited: this.#groupHeadersVisited, rowLayoutBuilds: this.#rowLayoutBuilds, rowLayoutSourceIndexBuilds: this.#rowLayoutSourceIndexBuilds, lastMountedRange: this.#lastMountedRange });
   }
 
   #canonicalSignalIdsFor(document: ProjectionRequest["snapshot"]["document"]): readonly SignalId[] {

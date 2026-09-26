@@ -41,6 +41,36 @@ describe("RowLayout and projection invariants", () => {
     expect(after.canonicalSignalIds).toBe(before.canonicalSignalIds);
   });
 
+  it("builds shared canonical row indexes once for visible and navigation layouts", () => {
+    const source = canonicalFixture();
+    let signalMapBuilds = 0;
+    let canonicalRowEnumerations = 0;
+    const signals = new Proxy(source.signals, {
+      get(target, property, receiver) {
+        if (property === "map") signalMapBuilds += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const signalGroups = new Proxy(source.signalGroups, {
+      get(target, property, receiver) {
+        if (property === "flatMap") canonicalRowEnumerations += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const document = { ...source, signals, signalGroups };
+    const service = new DefaultProjectionService();
+
+    service.project({
+      snapshot: { revision: 0, document } as CanonicalSnapshot,
+      changeSet: { fullDocumentReplace: true },
+      viewport: { viewportStartY: 0, viewportEndY: 200, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] },
+    });
+
+    expect(signalMapBuilds).toBe(1);
+    expect(canonicalRowEnumerations).toBe(1);
+    expect(service.diagnostics().rowLayoutSourceIndexBuilds).toBe(1);
+  });
+
   it("derives stable hierarchy entries without changing group placement semantics", () => {
     const document = canonicalFixture();
     const entries = buildHardwareHierarchyEntries(document, "hierarchy");
