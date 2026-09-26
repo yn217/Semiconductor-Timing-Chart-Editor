@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { DisplayTimeMappingCache } from "@timing-chart-v2/projection";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 import { toWaveJson } from "@timing-chart-v2/wavedrom-adapter";
+import { canonicalFixture } from "../fixtures/canonical.js";
 import { GeometryRegistry } from "../../apps/editor/src/runtime/geometry-registry.js";
 import { createWaveformSurfaceProvider, type WaveformProviderContext } from "../../apps/editor/src/runtime/waveform-surface-provider.js";
 import type { RenderedWave, WaveDromAdapter, WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
@@ -64,5 +65,49 @@ describe("waveform provider primary geometry readiness", () => {
     const results = await batch;
     expect(results.map((item) => item.signalId)).toEqual([nonReferenceSignalId, referenceSignalId]);
     expect(ready).toHaveBeenCalledTimes(1);
+  });
+
+  it("isolates a clock projection failure to that signal while rendering valid siblings", async () => {
+    const source = canonicalFixture();
+    const clock = source.signals.find((signal) => signal.type === "clock");
+    const validSignal = source.signals.find((signal) => signal.type === "bus");
+    if (!clock || clock.type !== "clock" || !validSignal || validSignal.type !== "bus") throw new Error("fixture needs a clock and bus");
+    const document = {
+      ...source,
+      signals: source.signals.map((signal) => signal.id === clock.id
+        ? { ...clock, generator: { ...clock.generator, phase: 0.25 } }
+        : signal),
+    };
+    const snapshot = { document, revision: 0 };
+    const adapter: WaveDromAdapter = {
+      toWaveJson: (input) => toWaveJson(input),
+      renderWave: vi.fn(async (signalId, waveJson) => ({ signalId, ownerKey: signalId, svg: {} as SVGSVGElement, renderIndex: 0, waveJson })),
+      extractLocalGeometry: vi.fn(() => { throw new Error("SVG extraction is not used in analytic mode."); }),
+      geometryMetrics: () => ({ last: undefined, totalDurationMs: 0, totalUsesVisited: 0, totalGeometryEntriesEmitted: 0, totalDuplicateKeyChecks: 0, totalDuplicateKeyCollisions: 0, totalTransitionBrickLookups: 0, totalSkinPathParses: 0, totalMatrixReads: 0 }),
+      dispose: vi.fn(),
+      metrics: () => ({ renderCalls: 0, waveJsonDurationMs: 0, renderDurationMs: 0, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 }),
+    };
+    const context: WaveformProviderContext = {
+      sessionController: { snapshot: () => snapshot },
+      getDocumentEpoch: () => 1,
+      mappingCache: new DisplayTimeMappingCache(),
+      adapter,
+      geometryRegistry: new GeometryRegistry(),
+      markOpenPhase: vi.fn(),
+      invalidateSnapIndex: vi.fn(),
+      getViewMode: () => "Cycle",
+    };
+    const provider = createWaveformSurfaceProvider(context);
+    const owner = () => ({ style: { removeProperty: vi.fn() }, dataset: {} }) as unknown as HTMLElement;
+
+    const result = await provider.mountWaveBatch!([
+      { signalId: clock.id, owner: owner(), documentEpoch: 1 },
+      { signalId: validSignal.id, owner: owner(), documentEpoch: 1 },
+    ]);
+
+    expect(result.find((item) => item.signalId === clock.id)?.error).toMatchObject({ name: "WaveDromAdapterError", code: "UNSUPPORTED_CLOCK_PHASE" });
+    expect(result.find((item) => item.signalId === validSignal.id)?.result).toBeDefined();
+    expect(adapter.renderWave).toHaveBeenCalledTimes(1);
+    expect(adapter.renderWave.mock.calls[0]?.[0]).toBe(validSignal.id);
   });
 });

@@ -67,6 +67,8 @@ const RULE_DESCRIPTORS: readonly CanonicalRuleDescriptor[] = [
   canonicalRule("INVALID_ANCHOR_THRESHOLD_POINT", "Threshold anchor requires a transition point", "$.annotations[*].anchor.point"),
   canonicalRule("INVALID_ANNOTATION_STYLE", "Annotation style values must be valid", "$.annotations[*].opacity | $.annotations[*].traceOffsetCycles"),
   canonicalRule("INVALID_BUS_LITERAL", "Bus value must use a supported literal", "$.signals[*].values[*].value"),
+  canonicalRule("INVALID_CLOCK_DUTY", "Clock duty must be finite and in range", "$.signals[*].generator.duty"),
+  canonicalRule("INVALID_CLOCK_PERIOD", "Clock period must be a positive integer", "$.signals[*].generator.period"),
   canonicalRule("INVALID_LEGEND_ENTRY", "Legend entries must have valid labels, order, and roles", "$.legend.items[*]"),
   canonicalRule("INVALID_REFERENCE_CLOCK", "Reference clock must target a clock signal", "$.timeline.referenceClock"),
   canonicalRule("INVALID_STABLE_ID", "Entity identifiers must be stable IDs", "$.signals[*].id | $.signalGroups[*].id | $.annotations[*].id"),
@@ -89,6 +91,10 @@ const RULE_DESCRIPTORS: readonly CanonicalRuleDescriptor[] = [
   canonicalRule("TIMELINE_END_MISMATCH", "Timeline end must equal cycle count", "$.timeline.end"),
   canonicalRule("TIMELINE_OUT_OF_RANGE", "Cycle coordinates must remain within the timeline", "$.signals[*] | $.annotations[*] | $.bookmarks[*] | $.transactions[*]"),
   canonicalRule("UNKNOWN_ROW", "Group rows must reference canonical renderable objects", "$.signalGroups[*].rows[*]"),
+  canonicalRule("UNALIGNED_CLOCK_ENABLE", "Clock enable changes must align to the generator period", "$.signals[*].enable[*].start"),
+  canonicalRule("UNALIGNED_CLOCK_START", "Clock start must align to the generator period", "$.signals[*].generator.start"),
+  canonicalRule("UNSUPPORTED_CLOCK_DUTY", "Clock duty must be representable on half-cycle boundaries", "$.signals[*].generator.duty"),
+  canonicalRule("UNSUPPORTED_CLOCK_PHASE", "Clock phase must align to a half cycle", "$.signals[*].generator.phase"),
   canonicalRule("UNSUPPORTED_SIGNAL_VALUE", "Signal value must match its type contract", "$.signals[*].values[*].value"),
 ];
 
@@ -269,11 +275,37 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
 
   document.signals.forEach((signal, index) => {
     if (signal.type === "clock") {
+      const generator = signal.generator;
+      if (!Number.isInteger(generator.period) || generator.period < 1) {
+        problems.push(problem("INVALID_CLOCK_PERIOD", `$.signals[${index}].generator.period`, "Clock period must be a positive integer.", signal.id));
+      }
+      if (!Number.isFinite(generator.duty) || generator.duty <= 0 || generator.duty > 1) {
+        problems.push(problem("INVALID_CLOCK_DUTY", `$.signals[${index}].generator.duty`, "Clock duty must be finite and between 0 and 1.", signal.id));
+      }
+      if (!Number.isFinite(generator.phase) || generator.phase < 0 || !Number.isInteger(generator.phase * 2)) {
+        problems.push(problem("UNSUPPORTED_CLOCK_PHASE", `$.signals[${index}].generator.phase`, "Clock phase must be finite, non-negative, and aligned to a half cycle supported by timeline geometry.", signal.id));
+      }
+      if (generator.duty !== 0.5) {
+        const totalHalfCycles = generator.period * 2;
+        const activeHalfCycles = Math.round(totalHalfCycles * generator.duty);
+        const representable = generator.period >= 2 && activeHalfCycles > 0 && activeHalfCycles < totalHalfCycles
+          && Math.abs(activeHalfCycles / totalHalfCycles - generator.duty) <= 1e-9
+          && generator.initial === (generator.polarity === "positive" ? 0 : 1);
+        if (!representable) problems.push(problem("UNSUPPORTED_CLOCK_DUTY", `$.signals[${index}].generator.duty`, "Non-50% clock duty must align to half-cycle boundaries and use the inactive initial level.", signal.id));
+      }
       if (signal.edgeCounter.countFrom === "marker" && signal.edgeCounter.anchorId === undefined) {
         problems.push(problem("MISSING_CROSS_REFERENCE", `$.signals[${index}].edgeCounter.anchorId`, "Marker count-from requires an explicit Bookmark anchor.", signal.id));
       }
       if (!Number.isInteger(signal.generator.start) || signal.generator.start < 0 || signal.generator.start >= document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.signals[${index}].generator.start`, "Clock generator start must be an integer cycle inside the timeline.", signal.id));
-      if (signal.enable) validateChanges(signal, signal.enable, `$.signals[${index}].enable`, document.timeline.cycleCount, problems);
+      if (Number.isInteger(generator.period) && generator.period > 0 && Number.isInteger(generator.start) && generator.start % generator.period !== 0) {
+        problems.push(problem("UNALIGNED_CLOCK_START", `$.signals[${index}].generator.start`, "Clock generator start must align to its period.", signal.id));
+      }
+      if (signal.enable) {
+        validateChanges(signal, signal.enable, `$.signals[${index}].enable`, document.timeline.cycleCount, problems);
+        if (Number.isInteger(generator.period) && generator.period > 0 && signal.enable.some((change) => change.start % generator.period !== 0)) {
+          problems.push(problem("UNALIGNED_CLOCK_ENABLE", `$.signals[${index}].enable`, "Clock enable changes must align to the generator period.", signal.id));
+        }
+      }
     } else if (signal.type !== "commentRow") {
       validateChanges(signal, signal.values, `$.signals[${index}].values`, document.timeline.cycleCount, problems);
     }

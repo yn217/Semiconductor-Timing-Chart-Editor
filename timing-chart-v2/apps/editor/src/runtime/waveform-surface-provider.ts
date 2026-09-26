@@ -92,50 +92,57 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const referenceClockSignal = document.timeline.referenceClock === undefined ? undefined : signalById.get(document.timeline.referenceClock);
       const referenceClockPeriod = referenceClockSignal?.type === "clock" ? referenceClockSignal.generator.period : undefined;
       const prepared = requests.map((request) => {
-        // Transaction mode owns the shared time geometry and Transaction
-        // projection, but does not display Cycle waveforms. Keep the
-        // reference clock available for geometry extraction; defer hidden
-        // signal paint until Cycle/Combined becomes active.
-        if (viewMode === "Transaction" && request.signalId !== referenceClockId) {
-          return { request, waveJson: undefined, semanticValues: undefined, error: undefined, deferred: true, rendererStart: undefined, rendererEnd: undefined };
+        try {
+          // Transaction mode owns the shared time geometry and Transaction
+          // projection, but does not display Cycle waveforms. Keep the
+          // reference clock available for geometry extraction; defer hidden
+          // signal paint until Cycle/Combined becomes active.
+          if (viewMode === "Transaction" && request.signalId !== referenceClockId) {
+            return { request, waveJson: undefined, semanticValues: undefined, error: undefined, deferred: true, rendererStart: undefined, rendererEnd: undefined };
+          }
+          const signal = signalById.get(request.signalId);
+          if (!signal) return { request, waveJson: undefined, semanticValues: undefined, error: new Error(`Signal '${request.signalId}' is missing.`), deferred: false, rendererStart: undefined, rendererEnd: undefined };
+          let remappedValues: readonly SignalValueChange[] | undefined;
+          const displaySignal = signal.type === "commentRow" ? signal : signal.type === "clock"
+            ? { ...signal, ...(signal.enable ? { enable: context.mappingCache.remapValueChanges(signal.enable, mapping) } : {}) }
+            : (remappedValues = context.mappingCache.remapValueChanges(signal.values, mapping), { ...signal, values: remappedValues });
+          const semanticValues = remappedValues !== undefined && signal.type !== "clock" && signal.type !== "commentRow" && valueSignalWaveDomain(signal.type) === "data" ? remappedValues.map((change: { readonly value: string | number }) => String(change.value)) : undefined;
+          const source = { signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions };
+          const sourceWindow = request.sourceWindow;
+          const displayWindow = sourceWindow === undefined ? undefined : displayWindowForSource(mapping, { sourceStart: sourceWindow.start, sourceEnd: sourceWindow.end }, document.timeline.cycleCount);
+          const displayStart = displayWindow?.displayStart;
+          const displayEnd = displayWindow?.displayEnd;
+          const clockPeriod = referenceClockPeriod ?? (displaySignal.type === "clock" ? displaySignal.generator.period : undefined);
+          // WaveDrom's clock encoder requires its local window to start/end on
+          // period boundaries. DisplayTimeMapping can place a semantic window
+          // edge between those boundaries (for example around a fold), so align
+          // only the renderer window; keep `sourceWindow` as the canonical
+          // semantic range used for rebasing and geometry.
+          const rendererStart = displayStart === undefined || clockPeriod === undefined
+            ? displayStart
+            : Math.max(0, Math.floor(displayStart / clockPeriod) * clockPeriod);
+          const rendererEnd = displayEnd === undefined || clockPeriod === undefined
+            ? displayEnd
+            : Math.min(mapping.displayCycleCount, Math.ceil(displayEnd / clockPeriod) * clockPeriod);
+          const waveJson = sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
+            ? context.adapter.toWaveJson(source)
+            : toWaveJsonWindow(source, rendererStart, rendererEnd, sourceWindow, {
+              start: rendererStart === 0 ? 0 : (mapping.displayToSource[rendererStart] ?? sourceWindow.start),
+              end: rendererEnd === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[rendererEnd] ?? sourceWindow.end),
+            });
+          const mappedWaveJson = sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
+            ? waveJson
+            : { ...waveJson, geometrySourceCycles: Array.from({ length: rendererEnd - rendererStart + 1 }, (_, index) => {
+              const displayCycle = rendererStart + index;
+              return displayCycle === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[displayCycle] ?? sourceWindow.end);
+            }) };
+          return { request, waveJson: mappedWaveJson, semanticValues, error: undefined, deferred: false, rendererStart, rendererEnd };
+        } catch (error: unknown) {
+          // Projection/conversion failures belong to one Signal only. Keep
+          // them as request-local errors so one malformed row cannot reject
+          // the whole mount batch and blank otherwise valid waveforms.
+          return { request, waveJson: undefined, semanticValues: undefined, error: error instanceof Error ? error : new Error(String(error)), deferred: false, rendererStart: undefined, rendererEnd: undefined };
         }
-        const signal = signalById.get(request.signalId);
-        if (!signal) return { request, waveJson: undefined, semanticValues: undefined, error: new Error(`Signal '${request.signalId}' is missing.`), deferred: false, rendererStart: undefined, rendererEnd: undefined };
-        let remappedValues: readonly SignalValueChange[] | undefined;
-        const displaySignal = signal.type === "commentRow" ? signal : signal.type === "clock"
-          ? { ...signal, ...(signal.enable ? { enable: context.mappingCache.remapValueChanges(signal.enable, mapping) } : {}) }
-          : (remappedValues = context.mappingCache.remapValueChanges(signal.values, mapping), { ...signal, values: remappedValues });
-        const semanticValues = remappedValues !== undefined && signal.type !== "clock" && signal.type !== "commentRow" && valueSignalWaveDomain(signal.type) === "data" ? remappedValues.map((change: { readonly value: string | number }) => String(change.value)) : undefined;
-        const source = { signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions };
-        const sourceWindow = request.sourceWindow;
-        const displayWindow = sourceWindow === undefined ? undefined : displayWindowForSource(mapping, { sourceStart: sourceWindow.start, sourceEnd: sourceWindow.end }, document.timeline.cycleCount);
-        const displayStart = displayWindow?.displayStart;
-        const displayEnd = displayWindow?.displayEnd;
-        const clockPeriod = referenceClockPeriod ?? (displaySignal.type === "clock" ? displaySignal.generator.period : undefined);
-        // WaveDrom's clock encoder requires its local window to start/end on
-        // period boundaries.  DisplayTimeMapping can place a semantic window
-        // edge between those boundaries (for example around a fold), so align
-        // only the renderer window; keep `sourceWindow` as the canonical
-        // semantic range used for rebasing and geometry.
-        const rendererStart = displayStart === undefined || clockPeriod === undefined
-          ? displayStart
-          : Math.max(0, Math.floor(displayStart / clockPeriod) * clockPeriod);
-        const rendererEnd = displayEnd === undefined || clockPeriod === undefined
-          ? displayEnd
-          : Math.min(mapping.displayCycleCount, Math.ceil(displayEnd / clockPeriod) * clockPeriod);
-        const waveJson = sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
-          ? context.adapter.toWaveJson(source)
-          : toWaveJsonWindow(source, rendererStart, rendererEnd, sourceWindow, {
-            start: rendererStart === 0 ? 0 : (mapping.displayToSource[rendererStart] ?? sourceWindow.start),
-            end: rendererEnd === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[rendererEnd] ?? sourceWindow.end),
-          });
-        const mappedWaveJson = sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
-          ? waveJson
-          : { ...waveJson, geometrySourceCycles: Array.from({ length: rendererEnd - rendererStart + 1 }, (_, index) => {
-            const displayCycle = rendererStart + index;
-            return displayCycle === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[displayCycle] ?? sourceWindow.end);
-          }) };
-        return { request, waveJson: mappedWaveJson, semanticValues, error: undefined, deferred: false, rendererStart, rendererEnd };
       });
       // Primary ruler/grid geometry is analytic and does not depend on the
       // SVG artifact. Publish the reference map before awaiting any WaveDrom
