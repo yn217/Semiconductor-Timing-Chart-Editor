@@ -1,11 +1,12 @@
 import { useRef, useState } from "react";
 import type { RefObject } from "react";
-import type { CanonicalDocument, EnumDefinition, LegendEntry } from "@timing-chart-v2/schema";
+import { effectiveLegendEntries, type CanonicalDocument, type EnumDefinition, type LegendEntry } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { useDialogFocusLoop } from "./dialog-focus-loop.js";
 import { EditorIconButton } from "./editor-icon.js";
+import { clampLegendToVisibleSurface, measureLegendSize, readLegendSurfaceGeometry } from "./legend-geometry.js";
 
-export function DocumentProperties({ document, commands, restoreFocusRef, onClose }: { readonly document: CanonicalDocument; readonly commands: Pick<EditorSurfaceCommandController, "updateDocumentProperties">; readonly restoreFocusRef?: RefObject<HTMLElement | null>; readonly onClose: () => void }) {
+export function DocumentProperties({ document, viewport, commands, restoreFocusRef, onClose }: { readonly document: CanonicalDocument; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: Pick<EditorSurfaceCommandController, "updateDocumentProperties">; readonly restoreFocusRef?: RefObject<HTMLElement | null>; readonly onClose: () => void }) {
   const dialogRef = useRef<HTMLFormElement>(null);
   useDialogFocusLoop(dialogRef, restoreFocusRef);
   const [title, setTitle] = useState(document.document.title);
@@ -50,7 +51,18 @@ export function DocumentProperties({ document, commands, restoreFocusRef, onClos
     }
     const header = { subtitle, description, notes, preconditions: lines(preconditions), constraints: lines(constraints), exceptions: lines(exceptions) };
     const footer = { figureNumber, revision, text: footerText };
-    const nextLegend = { ...document.legend, show: legendShow, orientation: legendOrientation, usedRolesOnly: legendUsedRolesOnly, position: { x: legendPositionX, y: legendPositionY }, items: parsed as NonNullable<typeof document.legend.items> };
+    const draftLegend = { ...document.legend, show: legendShow, orientation: legendOrientation, usedRolesOnly: legendUsedRolesOnly, position: { x: legendPositionX, y: legendPositionY }, items: parsed as NonNullable<typeof document.legend.items> };
+    const content = viewport.current?.querySelector<HTMLElement>(".split-signal-content");
+    const geometry = content ? readLegendSurfaceGeometry(content) : undefined;
+    const overlay = content?.querySelector<HTMLElement>(".editor-legend");
+    const size = overlay
+      ? { width: overlay.getBoundingClientRect().width, height: overlay.getBoundingClientRect().height }
+      : content ? measureLegendSize(content, legendOrientation, effectiveLegendEntries({ ...document, legend: draftLegend })) : { width: 0, height: 0 };
+    const nextLegend = legendShow && geometry
+      ? { ...draftLegend, position: clampLegendToVisibleSurface(draftLegend.position, size, geometry) }
+      : draftLegend;
+    setLegendPositionX(nextLegend.position.x);
+    setLegendPositionY(nextLegend.position.y);
     const result = commands.updateDocumentProperties(document, { title, header, footer, legend: nextLegend, enumDefinitions });
     if (result === undefined) { setLegendStatus("No document properties changed"); return; }
     setLegendStatus(result.ok ? "Properties applied" : result.problems[0]?.message ?? "Properties could not be applied");

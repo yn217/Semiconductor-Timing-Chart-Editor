@@ -1,0 +1,152 @@
+import { expect, test } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
+
+async function expectLegendInVisibleArea(page: Page, legend: Locator) {
+  const metrics = await page.evaluate(() => {
+    const legendElement = document.querySelector<HTMLElement>(".editor-legend")!;
+    const content = legendElement.parentElement!;
+    const viewport = content.closest<HTMLElement>(".cycle-viewport")!;
+    const ruler = content.querySelector<HTMLElement>(".cycle-ruler")!;
+    const rail = document.querySelector<HTMLElement>(".left-workspace-rail")!;
+    const panel = viewport.closest<HTMLElement>(".cycle-panel")!;
+    const scrollbar = panel.querySelector<HTMLElement>(":scope > .timeline-hscroll");
+    const scrollbarTop = scrollbar && !scrollbar.hidden ? scrollbar.getBoundingClientRect().top : Number.POSITIVE_INFINITY;
+    const bottomTrack = document.querySelector<HTMLElement>(".bottom-resize-track");
+    const bottomTrackBox = bottomTrack?.getBoundingClientRect();
+    const bottomTrackTop = bottomTrack && bottomTrackBox && bottomTrackBox.width > 0 && bottomTrackBox.height > 0 ? bottomTrackBox.top : Number.POSITIVE_INFINITY;
+    const box = legendElement.getBoundingClientRect();
+    const viewportBox = viewport.getBoundingClientRect();
+    const contentBox = content.getBoundingClientRect();
+    const rulerBox = ruler.getBoundingClientRect();
+    return {
+      legend: { left: box.left, top: box.top, right: box.right, bottom: box.bottom },
+      canonical: { x: legendElement.dataset.legendPositionX, y: legendElement.dataset.legendPositionY, left: legendElement.style.left, top: legendElement.style.top },
+      geometry: { viewportTop: viewportBox.top, viewportBottom: viewportBox.bottom, contentTop: contentBox.top, contentBottom: contentBox.bottom, rulerTop: rulerBox.top, scrollTop: viewport.scrollTop, scrollbarTop, bottomTrackTop },
+      minimumLeft: Math.max(viewportBox.left, rail.getBoundingClientRect().right),
+      maximumRight: viewportBox.right,
+      minimumTop: ruler.getBoundingClientRect().top,
+      maximumBottom: Math.min(viewportBox.bottom, contentBox.bottom, scrollbarTop, bottomTrackTop),
+    };
+  });
+  expect(metrics.legend.left, JSON.stringify(metrics)).toBeGreaterThanOrEqual(metrics.minimumLeft - 1);
+  expect(metrics.legend.right, JSON.stringify(metrics)).toBeLessThanOrEqual(metrics.maximumRight + 1);
+  expect(metrics.legend.top, JSON.stringify(metrics)).toBeGreaterThanOrEqual(metrics.minimumTop - 1);
+  expect(metrics.legend.bottom, JSON.stringify(metrics)).toBeLessThanOrEqual(metrics.maximumBottom + 1);
+  await expect(legend).toHaveAttribute("data-legend-position-x", /\d+/);
+  await expect(legend).toHaveAttribute("data-legend-position-y", /\d+/);
+}
+
+async function exerciseLegendBounds(page: Page) {
+  await page.goto("/");
+  const surface = page.getByTestId("cycle-surface");
+  await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+  const cycleViewport = page.getByTestId("cycle-viewport");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
+  const properties = page.getByRole("dialog", { name: "Document Properties" });
+  await properties.getByLabel("Legend show").check();
+  await properties.getByLabel("Legend position X").fill("500");
+  await properties.getByLabel("Legend position Y").fill("80");
+  await properties.getByTestId("apply-document-properties").click();
+  await properties.getByRole("button", { name: "Close properties" }).click();
+
+  const legend = page.getByTestId("editor-legend");
+  await expect(legend).toBeVisible();
+  const before = (await legend.boundingBox())!;
+  const viewport = (await cycleViewport.boundingBox())!;
+  const rail = (await page.getByTestId("left-workspace-rail").boundingBox())!;
+  expect(before.x).toBeGreaterThanOrEqual(rail.x + rail.width - 1);
+  expect(before.y).toBeGreaterThanOrEqual(viewport.y);
+
+  await page.mouse.move(before.x + Math.min(12, before.width / 2), before.y + Math.min(10, before.height / 2));
+  await page.mouse.down();
+  await page.mouse.move(viewport.x + viewport.width - 2, viewport.y + viewport.height - 2, { steps: 5 });
+  await page.mouse.up();
+  await expectLegendInVisibleArea(page, legend);
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+
+  await legend.click();
+  await expect(page.getByTestId("inspector")).toHaveAttribute("data-inspector-entity", "legend");
+  await page.getByLabel("Legend X").fill("100000");
+  await page.getByLabel("Legend Y").fill("100000");
+  await page.getByTestId("apply-legend-properties").click();
+  await expectLegendInVisibleArea(page, legend);
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(page.getByLabel("Legend X")).toHaveValue(await legend.getAttribute("data-legend-position-x"));
+  await expect(page.getByLabel("Legend Y")).toHaveValue(await legend.getAttribute("data-legend-position-y"));
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
+  const propertiesAgain = page.getByRole("dialog", { name: "Document Properties" });
+  await propertiesAgain.getByLabel("Legend position X").fill("100000");
+  await propertiesAgain.getByLabel("Legend position Y").fill("100000");
+  await propertiesAgain.getByTestId("apply-document-properties").click();
+  await expect(propertiesAgain.getByLabel("Legend position X")).toHaveValue(await legend.getAttribute("data-legend-position-x"));
+  await expect(propertiesAgain.getByLabel("Legend position Y")).toHaveValue(await legend.getAttribute("data-legend-position-y"));
+  await propertiesAgain.getByRole("button", { name: "Close properties" }).click();
+  await expectLegendInVisibleArea(page, legend);
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+}
+
+for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) {
+  test.describe(`at ${viewport.width}x${viewport.height}`, () => {
+    test.use({ viewport });
+    test("drag and Inspector positioning keep the Legend inside its document surface", async ({ page }) => {
+      await exerciseLegendBounds(page);
+    });
+  });
+}
+
+test.describe("Legend projection across modes", () => {
+  test.use({ viewport: { width: 1280, height: 720 } });
+  test("Cycle and Combined retain the bounded Legend; Transaction explicitly hides it without mutation", async ({ page }) => {
+    await page.goto("/");
+    const surface = page.getByTestId("cycle-surface");
+    await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+    await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
+    const properties = page.getByRole("dialog", { name: "Document Properties" });
+    await properties.getByLabel("Legend show").check();
+    await properties.getByLabel("Legend position X").fill("500");
+    await properties.getByLabel("Legend position Y").fill("80");
+    await properties.getByTestId("apply-document-properties").click();
+    await properties.getByRole("button", { name: "Close properties" }).click();
+
+    const legend = page.getByTestId("editor-legend");
+    await expect(legend).toBeVisible();
+    await legend.click();
+    await expect(page.getByTestId("inspector")).toHaveAttribute("data-inspector-entity", "legend");
+    const canonicalX = await page.getByLabel("Legend X").inputValue();
+    const canonicalY = await page.getByLabel("Legend Y").inputValue();
+    const revision = await surface.getAttribute("data-canonical-revision");
+    const history = await page.getByTestId("history-status").textContent();
+    const dirty = await page.getByTestId("dirty-status").textContent();
+
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+    await page.getByLabel("Zoom preset").selectOption("200");
+    await expect(surface).toHaveAttribute("data-editor-idle", "true");
+    await expectLegendInVisibleArea(page, legend);
+
+    const modes = page.locator(".view-mode");
+    await modes.getByRole("button", { name: "Combined", exact: true }).click();
+    await expect(legend).toBeVisible();
+    await expectLegendInVisibleArea(page, legend);
+    await expect(page.getByLabel("Legend X")).toHaveValue(canonicalX);
+    await expect(page.getByLabel("Legend Y")).toHaveValue(canonicalY);
+
+    await modes.getByRole("button", { name: "Transaction", exact: true }).click();
+    await expect(legend).not.toBeVisible();
+    await modes.getByRole("button", { name: "Cycle", exact: true }).click();
+    await expect(legend).toBeVisible();
+    await expectLegendInVisibleArea(page, legend);
+    await expect(page.getByLabel("Legend X")).toHaveValue(canonicalX);
+    await expect(page.getByLabel("Legend Y")).toHaveValue(canonicalY);
+    await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
+    await expect(page.getByTestId("history-status")).toHaveText(history!);
+    await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+  });
+});

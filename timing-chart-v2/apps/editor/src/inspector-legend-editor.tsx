@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 import type { CanonicalDocument, Legend } from "@timing-chart-v2/schema";
+import { effectiveLegendEntries } from "@timing-chart-v2/schema";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { InspectorFooter, PropertyToggle } from "./inspector-section.js";
 import { InspectorHeaderBar, InspectorSelectionHeader } from "./inspector-selection-header.js";
+import { clampLegendToVisibleSurface, measureLegendSize, readLegendSurfaceGeometry } from "./legend-geometry.js";
 import { reconcileExternalDraftFields } from "./runtime/external-draft-reconciliation.js";
 
 /** Draft/Apply editor for the document-wide Legend singleton. */
-export function InspectorLegendEditor({ document, commands, onCancel, onClose }: {
+export function InspectorLegendEditor({ document, viewport, commands, onCancel, onClose }: {
   readonly document: Readonly<CanonicalDocument>;
+  readonly viewport: RefObject<HTMLDivElement | null>;
   readonly commands: Pick<EditorSurfaceCommandController, "updateLegend">;
   readonly onCancel: () => void;
   readonly onClose: () => void;
@@ -49,10 +53,32 @@ export function InspectorLegendEditor({ document, commands, onCancel, onClose }:
   };
   const apply = () => {
     if (!changed || externalConflict) return;
-    const next: Legend = { ...legend, show, orientation, usedRolesOnly, position: { x: positionX, y: positionY } };
+    const content = viewport.current?.querySelector<HTMLElement>(".split-signal-content");
+    const geometry = content ? readLegendSurfaceGeometry(content) : undefined;
+    const overlay = content?.querySelector<HTMLElement>(".editor-legend");
+    const size = overlay
+      ? { width: overlay.getBoundingClientRect().width, height: overlay.getBoundingClientRect().height }
+      : content ? measureLegendSize(content, orientation, effectiveLegendEntries(document)) : { width: 0, height: 0 };
+    const position = show && geometry
+      ? clampLegendToVisibleSurface({ x: positionX, y: positionY }, size, geometry)
+      : { x: positionX, y: positionY };
+    if (
+      position.x === legend.position.x && position.y === legend.position.y &&
+      show === legend.show && orientation === legend.orientation && usedRolesOnly === legend.usedRolesOnly
+    ) {
+      setX(String(position.x));
+      setY(String(position.y));
+      baseRef.current = { x: String(position.x), y: String(position.y), show, orientation, usedRolesOnly };
+      setExternalConflict(false);
+      return;
+    }
+    const next: Legend = { ...legend, show, orientation, usedRolesOnly, position };
     const result = commands.updateLegend(next);
     if (result.ok) {
-      baseRef.current = { x, y, show, orientation, usedRolesOnly };
+      const applied = { x: String(position.x), y: String(position.y), show, orientation, usedRolesOnly };
+      setX(applied.x);
+      setY(applied.y);
+      baseRef.current = applied;
       setExternalConflict(false);
     }
   };
