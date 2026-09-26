@@ -7,7 +7,6 @@ export function isWaveMountRequestFresh(request: Pick<WaveMountRequest, "documen
   return (request.documentEpoch === undefined || request.documentEpoch === currentDocumentEpoch) && (request.isFresh?.() ?? true);
 }
 
-const WAVE_BATCH_LIMIT = 8;
 const diagnosticEncoder = new TextEncoder();
 
 function signalTypeLabel(type: string | undefined): string {
@@ -105,6 +104,12 @@ interface Layers {
   readonly interactive: HTMLElement;
 }
 
+interface PendingWaveRequest {
+  readonly owner: HTMLElement;
+  readonly version: number;
+  readonly documentEpoch: number;
+}
+
 export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #provider: WaveformSurfaceProvider;
   readonly #leftRows = new Map<string, HTMLElement>();
@@ -119,9 +124,10 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #edgeCounterOwners = new Map<string, HTMLElement>();
   readonly #dirtyWaves = new Set<WaveSignalId>();
   readonly #waveVersions = new Map<WaveSignalId, number>();
-  readonly #wavePending = new Map<WaveSignalId, number>();
-  readonly #waveQueue = new Map<WaveSignalId, { readonly owner: HTMLElement; readonly version: number; readonly documentEpoch: number }>();
+  readonly #wavePending = new Map<WaveSignalId, PendingWaveRequest>();
+  readonly #waveQueue = new Map<WaveSignalId, PendingWaveRequest>();
   readonly #waveWindowRetryKeys = new Set<string>();
+  readonly #waveStaleRetryKeys = new Set<string>();
   readonly #waveRendersBySignal = new Map<WaveSignalId, number>();
   readonly #localGeometryBuildsBySignal = new Map<WaveSignalId, number>();
   #waveBatchScheduled = false;
@@ -233,6 +239,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#waveQueue.clear();
       this.#wavePending.clear();
       this.#waveWindowRetryKeys.clear();
+      this.#waveStaleRetryKeys.clear();
       this.#diagnostics = { ...this.#diagnostics, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, diagnosticMapPrunePasses: this.#diagnosticMapPrunePasses };
       for (const [signalId, owner] of this.#waveOwners) {
         owner.remove();
@@ -264,6 +271,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#dirtyWaves.delete(signalId);
       this.#waveVersions.delete(signalId);
       this.#wavePending.delete(signalId);
+      const retryPrefix = `${this.#documentEpoch}:${signalId}:`;
+      for (const key of this.#waveStaleRetryKeys) if (key.startsWith(retryPrefix)) this.#waveStaleRetryKeys.delete(key);
       this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
     }
     const mounted = new Set(projection.mountedSignalIds);
@@ -480,6 +489,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#wavePending.clear();
     this.#waveQueue.clear();
     this.#waveWindowRetryKeys.clear();
+    this.#waveStaleRetryKeys.clear();
     this.#waveRendersBySignal.clear();
     this.#localGeometryBuildsBySignal.clear();
     this.#waveBatchScheduled = false;
@@ -506,11 +516,24 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
 
   #queueWave(signalId: WaveSignalId, owner: HTMLElement): void {
     const documentEpoch = this.#documentEpoch;
-    if (this.#wavePending.get(signalId) === documentEpoch) return;
-    this.#wavePending.set(signalId, documentEpoch);
+    // Signals first mounted after a document replacement were not part of
+    // that replacement's initial version seeding. Store their implicit
+    // version before creating the freshness closure; otherwise the request
+    // captures 0 while the map still returns undefined, so every offscreen
+    // row's first render is discarded as stale when it enters the viewport.
     const version = this.#waveVersions.get(signalId) ?? 0;
-    this.#waveQueue.set(signalId, { owner, version, documentEpoch });
+    if (!this.#waveVersions.has(signalId)) this.#waveVersions.set(signalId, version);
+    const pending = this.#wavePending.get(signalId);
+    if (pending?.owner === owner && pending.version === version && pending.documentEpoch === documentEpoch) return;
+    const request = { owner, version, documentEpoch };
+    this.#wavePending.set(signalId, request);
+    this.#waveQueue.set(signalId, request);
     this.#scheduleWaveBatch();
+  }
+
+  #isWavePending(signalId: WaveSignalId, request: PendingWaveRequest): boolean {
+    const pending = this.#wavePending.get(signalId);
+    return pending?.owner === request.owner && pending.version === request.version && pending.documentEpoch === request.documentEpoch;
   }
 
   #indexedRows(source: readonly RowLayoutEntry[], navigation: boolean): ReadonlyMap<string, RowLayoutEntry> {
@@ -546,7 +569,12 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   }
 
   async #flushWaveBatch(): Promise<void> {
-    const queued = [...this.#waveQueue.entries()].slice(0, WAVE_BATCH_LIMIT).map(([signalId, item]) => {
+    // The queue is populated only from viewport-mounted owners. Drain the
+    // complete current viewport batch together so rows do not remain blank
+    // for extra paint frames merely because the visible set exceeds an
+    // arbitrary per-frame count. Detached owners are still filtered below,
+    // and large-document providers retain their own cooperative frame yields.
+    const queued = [...this.#waveQueue.entries()].map(([signalId, item]) => {
       const configured = this.#provider.getSourceWindow?.(item.owner);
       const start = configured?.start ?? Number(item.owner.dataset.sourceWindowStart);
       const end = configured?.end ?? Number(item.owner.dataset.sourceWindowEnd);
@@ -561,7 +589,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       // Virtualized owners can leave the viewport after they were queued but
       // before their frame runs. Keep the signal dirty so a later remount can
       // render it, but never spend WaveDrom/geometry work on a detached owner.
-      if (this.#wavePending.get(request.signalId) === request.documentEpoch) this.#wavePending.delete(request.signalId);
+      if (this.#isWavePending(request.signalId, request)) this.#wavePending.delete(request.signalId);
+      if (request.documentEpoch === this.#documentEpoch && this.#canonicalSignalIdSet.has(request.signalId)) this.#dirtyWaves.add(request.signalId);
       return false;
     });
     if (requests.length === 0) return;
@@ -596,7 +625,16 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       const stale = !isWaveMountRequestFresh(request, this.#documentEpoch) || item?.stale === true;
       if (stale) {
         this.#diagnostics = { ...this.#diagnostics, staleWaveResultsDropped: this.#diagnostics.staleWaveResultsDropped + 1 };
-        if (this.#wavePending.get(request.signalId) === request.documentEpoch) this.#wavePending.delete(request.signalId);
+        if (this.#isWavePending(request.signalId, request)) this.#wavePending.delete(request.signalId);
+        if (request.documentEpoch === this.#documentEpoch && this.#canonicalSignalIdSet.has(request.signalId)) {
+          this.#dirtyWaves.add(request.signalId);
+          const currentOwner = this.#waveOwners.get(request.signalId);
+          const retryKey = `${request.documentEpoch}:${request.signalId}:${this.#waveVersions.get(request.signalId) ?? 0}`;
+          if (currentOwner?.isConnected && !this.#waveStaleRetryKeys.has(retryKey)) {
+            this.#waveStaleRetryKeys.add(retryKey);
+            this.#queueWave(request.signalId, currentOwner);
+          }
+        }
         continue;
       }
       if (item?.result) {
@@ -628,7 +666,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         request.owner.replaceChildren();
         request.owner.dataset.waveError = item?.error instanceof Error ? item.error.message : "Unknown waveform render failure";
       }
-      if (this.#wavePending.get(request.signalId) === request.documentEpoch) this.#wavePending.delete(request.signalId);
+      if (this.#isWavePending(request.signalId, request)) this.#wavePending.delete(request.signalId);
+      this.#waveStaleRetryKeys.delete(`${request.documentEpoch}:${request.signalId}:${request.version}`);
       const currentWindow = request.owner.isConnected ? this.#provider.getSourceWindow?.(request.owner) : undefined;
       const windowStillStale = currentWindow !== undefined &&
         (request.owner.dataset.renderedSourceWindowStart !== String(currentWindow.start) ||
