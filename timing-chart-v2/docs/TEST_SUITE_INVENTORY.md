@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 336 spec files and 976 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 340 spec files and 993 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 937/976 cases reviewed.
+Semantic review progress: 937/993 cases reviewed.
 
 ## Curated profile membership
 
@@ -195,10 +195,12 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-727-minimap-affordance.spec.ts` | 1 | 1/1 reviewed |
 | `issue-728-group-double-click.spec.ts` | 1 | 1/1 reviewed |
 | `issue-729-dirty-title.spec.ts` | 1 | 1/1 reviewed |
-| `issue-738-ruler-hit-area.spec.ts` | 2 | 2/2 reviewed |
+| `issue-738-hit-mapping-after-scale-scroll.spec.ts` | 2 | 0/2 reviewed |
+| `issue-738-ruler-hit-area.spec.ts` | 3 | 2/3 reviewed |
 | `issue-738-ruler-origin-after-scroll-return.spec.ts` | 5 | 5/5 reviewed |
 | `issue-738-stress-real-input.spec.ts` | 2 | 2/2 reviewed |
 | `issue-738-stress-rebase.spec.ts` | 4 | 4/4 reviewed |
+| `issue-738-zoom-window-coordinate.spec.ts` | 1 | 0/1 reviewed |
 | `issue-740-741-756-cycle-layout.spec.ts` | 2 | 2/2 reviewed |
 | `issue-740-cycle-bottom-hidden.spec.ts` | 1 | 1/1 reviewed |
 | `issue-744-diagnostics-freshness.spec.ts` | 2 | 2/2 reviewed |
@@ -240,13 +242,15 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-775-annotation-draft-isolation.spec.ts` | 1 | 1/1 reviewed |
 | `issue-776-signal-inspector-draft-sync.spec.ts` | 2 | 2/2 reviewed |
 | `issue-777-current-v2-samples-acceptance.spec.ts` | 10 | 10/10 reviewed |
+| `issue-799-orphan-divider.spec.ts` | 7 | 0/7 reviewed |
 | `issue-835-async-annotation-import.spec.ts` | 6 | 0/6 reviewed |
 | `issue-836-hardware-hierarchy-performance.spec.ts` | 1 | 0/1 reviewed |
 | `issue-837-legend-cancel-draft.spec.ts` | 4 | 0/4 reviewed |
 | `issue-838-visible-hierarchy-copy-selection.spec.ts` | 1 | 0/1 reviewed |
 | `issue-839-large-showcase-clock-phase.spec.ts` | 2 | 0/2 reviewed |
-| `issue-841-legend-bounds.spec.ts` | 3 | 0/3 reviewed |
+| `issue-841-legend-bounds.spec.ts` | 7 | 0/7 reviewed |
 | `issue-842-clean-event-row-rebase.spec.ts` | 1 | 0/1 reviewed |
+| `issue-847-vertical-scroll-user-input.spec.ts` | 2 | 0/2 reviewed |
 | `issue-847-vertical-scroll-wave-ownership.spec.ts` | 4 | 0/4 reviewed |
 | `keyboard-shortcut-router.spec.ts` | 4 | 4/4 reviewed |
 | `keyboard-tabs-resizers.spec.ts` | 2 | 2/2 reviewed |
@@ -443,9 +447,12 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-725-keyboard-journey.spec.ts` | geometryRead |
 | `issue-726-lane-hover.spec.ts` | getComputedStyle |
 | `issue-726-marker-hierarchy.spec.ts` | getComputedStyle |
+| `issue-738-hit-mapping-after-scale-scroll.spec.ts` | dataset, geometryRead |
+| `issue-738-ruler-hit-area.spec.ts` | dataset, geometryRead |
 | `issue-738-ruler-origin-after-scroll-return.spec.ts` | dataset, geometryRead |
 | `issue-738-stress-real-input.spec.ts` | dataset, geometryRead |
 | `issue-738-stress-rebase.spec.ts` | dataset, geometryRead |
+| `issue-738-zoom-window-coordinate.spec.ts` | dataset, geometryRead |
 | `issue-740-741-756-cycle-layout.spec.ts` | querySelector, getComputedStyle, geometryRead |
 | `issue-740-cycle-bottom-hidden.spec.ts` | querySelector, geometryRead |
 | `issue-746-visible-group-create.spec.ts` | querySelector, geometryRead |
@@ -468,8 +475,10 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-768-mode-switch-budget.spec.ts` | querySelector |
 | `issue-770-filtered-selection-scope.spec.ts` | querySelector |
 | `issue-771-many-small-groups-virtualized.spec.ts` | querySelector |
+| `issue-799-orphan-divider.spec.ts` | getComputedStyle, dataset, geometryRead |
 | `issue-839-large-showcase-clock-phase.spec.ts` | querySelector |
 | `issue-841-legend-bounds.spec.ts` | dataset, geometryRead |
+| `issue-847-vertical-scroll-user-input.spec.ts` | querySelector, dataset, geometryRead |
 | `issue-847-vertical-scroll-wave-ownership.spec.ts` | querySelector, dataset, geometryRead |
 | `keyboard-shortcut-router.spec.ts` | dataset |
 | `layout-inspector.spec.ts` | geometryRead |

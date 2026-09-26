@@ -3557,20 +3557,20 @@
     },
     {
       "file": "diagnostic-aggregator.spec.ts",
-      "title": "surfaces a localized WaveDrom render failure with signal context and recovery guidance",
-      "domain": "structured-diagnostics-wave-render-failure",
+      "title": "rejects an unsupported clock phase on Open before rendering and keeps the current rows intact",
+      "domain": "structured-diagnostics-unsupported-clock-phase-open",
       "originIssue": 269,
-      "type": "USER_JOURNEY",
+      "type": "SAVE_OPEN_EXPORT",
       "costClass": "MEDIUM",
       "measuredRuntimeMs": null,
-      "primaryContract": "A render failure identifies the affected stable Signal and provides actionable recovery guidance without changing Canonical or History.",
+      "primaryContract": "Opening a document with an unsupported clock phase is rejected before rendering, identifies the affected stable Signal in Problems, and preserves the current rows, Canonical revision, waveform, and History.",
       "duplicateGroup": "diagnostic-source-recovery-visibility",
       "executionTier": "TIER_2_FOCUSED_BROWSER",
       "profiles": [
         "integration"
       ],
       "decision": "KEEP",
-      "reason": "Localization by stable Signal ID and actionable recovery text are distinct from parser/command errors and must be verified through the visible production Problems surface.",
+      "reason": "This Open-boundary journey verifies unsupported clock-phase validation before renderer entry, actionable stable-ID diagnostics, preservation of the current waveform/rows, and unchanged Canonical/History state.",
       "replacementTest": null
     },
     {
