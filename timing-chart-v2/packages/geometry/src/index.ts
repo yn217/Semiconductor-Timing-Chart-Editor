@@ -24,23 +24,98 @@ export interface MeasurementLaneSpan {
   readonly explicitLane?: number;
 }
 
+export interface MeasurementLaneAllocationMetrics {
+  spansVisited: number;
+  indexOperations: number;
+  laneComparisons: number;
+  allocatedLanes: number;
+  explicitLanes: number;
+  durationMs: number;
+}
+
 /**
  * Allocate dimension-measurement lanes from resolved screen-independent X
  * spans.  Both the live overlay and export use this same derived policy so
  * overlapping measurements receive a new lane instead of collapsing onto lane
  * zero when all existing lanes are occupied.
  */
-export function allocateMeasurementLanes(spans: readonly MeasurementLaneSpan[]): ReadonlyMap<string, number> {
+export function allocateMeasurementLanes(spans: readonly MeasurementLaneSpan[], metrics?: MeasurementLaneAllocationMetrics): ReadonlyMap<string, number> {
+  const startedAt = metrics ? Date.now() : 0;
   const laneById = new Map<string, number>();
   const laneEnds: number[] = [];
+  const allocatedLaneIds = metrics ? new Set<number>() : undefined;
+  // Preserve the old array-index lane domain without allocating one entry per
+  // possible lane: explicit lane values can be sparse and very large.
+  const maxArrayIndex = 0xffff_fffe;
+  const explicitArrayLanes = spans.flatMap((span) => span.explicitLane !== undefined
+    && Number.isInteger(span.explicitLane)
+    && span.explicitLane >= 0
+    && span.explicitLane <= maxArrayIndex
+    ? [span.explicitLane]
+    : []);
+  const maxExplicitArrayLane = explicitArrayLanes.reduce((max, lane) => Math.max(max, lane), -1);
+  const laneIds = new Set<number>(explicitArrayLanes);
+  for (let lane = 0; lane <= spans.length; lane += 1) laneIds.add(lane);
+  if (maxExplicitArrayLane >= 0) {
+    for (let offset = 1; offset <= spans.length + 1; offset += 1) laneIds.add(maxExplicitArrayLane + offset);
+  }
+  const candidateLaneIds = [...laneIds].sort((left, right) => left - right);
+  const candidateIndexByLane = new Map(candidateLaneIds.map((lane, index) => [lane, index]));
+  let leafCount = 1;
+  const maxLaneCount = candidateLaneIds.length;
+  while (leafCount < maxLaneCount) leafCount *= 2;
+  const minLaneEndTree = new Float64Array(leafCount * 2);
+  minLaneEndTree.fill(Number.POSITIVE_INFINITY);
+  let laneComparisons = 0;
+  let indexOperations = 0;
+  let explicitLanes = 0;
+  const findFirstFreeLane = (startX: number): number => {
+    let node = 1;
+    let firstLane = 0;
+    let lastLane = leafCount;
+    while (node < leafCount) {
+      if (metrics) indexOperations += 1;
+      const left = node * 2;
+      if (metrics) laneComparisons += 1;
+      if (minLaneEndTree[left]! <= startX) {
+        node = left;
+        lastLane = Math.floor((firstLane + lastLane) / 2);
+      } else {
+        node = left + 1;
+        firstLane = Math.floor((firstLane + lastLane) / 2);
+      }
+    }
+    if (metrics) indexOperations += 1;
+    return firstLane < candidateLaneIds.length && minLaneEndTree[node]! <= startX ? candidateLaneIds[firstLane]! : -1;
+  };
+  const updateLaneEnd = (lane: number, endX: number): void => {
+    const candidateIndex = candidateIndexByLane.get(lane);
+    if (candidateIndex === undefined) return;
+    let node = leafCount + candidateIndex;
+    minLaneEndTree[node] = endX;
+    while (node > 1) {
+      node = Math.floor(node / 2);
+      if (metrics) indexOperations += 1;
+      minLaneEndTree[node] = Math.min(minLaneEndTree[node * 2]!, minLaneEndTree[node * 2 + 1]!);
+    }
+  };
+
   for (const span of spans) {
     const startX = Math.min(span.firstX, span.secondX);
     const endX = Math.max(span.firstX, span.secondX);
-    const firstFreeLane = laneEnds.findIndex((end) => end <= startX);
-    const lane = span.explicitLane ?? (firstFreeLane >= 0 ? firstFreeLane : laneEnds.length);
+    let lane = span.explicitLane;
+    if (lane !== undefined) {
+      if (metrics) explicitLanes += 1;
+    } else {
+      const firstFreeLane = findFirstFreeLane(startX);
+      lane = firstFreeLane >= 0 ? firstFreeLane : laneEnds.length;
+    }
     laneById.set(span.id, lane);
+    allocatedLaneIds?.add(lane);
     laneEnds[lane] = Math.max(laneEnds[lane] ?? Number.NEGATIVE_INFINITY, endX);
+    updateLaneEnd(lane, laneEnds[lane]!);
   }
+  if (metrics) Object.assign(metrics, { spansVisited: spans.length, indexOperations, laneComparisons, allocatedLanes: allocatedLaneIds!.size, explicitLanes, durationMs: Date.now() - startedAt });
   return laneById;
 }
 
