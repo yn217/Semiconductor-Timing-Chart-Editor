@@ -175,6 +175,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     beginOpenMeasurement();
     let projection!: RenderProjection;
     let referenceGeometryReprojected = false;
+    let primaryPresentationOpening = true;
+    let primaryPresentationGeneration = 0;
     let transactionExtentSource: CanonicalDocument["transactions"] | undefined;
     let transactionExtent: Readonly<{ start: number; end: number }> | undefined;
     let publishState: () => void = () => undefined;
@@ -196,6 +198,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       adapter,
       geometryRegistry,
       markOpenPhase,
+      isPrimaryPresentationOpening: () => primaryPresentationOpening,
       getWaveWidthPxPerDisplayCycle: () => timelineGeometry.waveWidthPxPerDisplayCycle,
       getWaveOriginPx: () => timelineGeometry.waveOriginPx,
       getPresentationScale: () => timelineGeometry.presentationScale,
@@ -268,6 +271,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     // this readiness contract distinct from editorIdle, which waits for the
     // asynchronous waveform batch and is intentionally later.
     rendererHost.dataset.cycleViewReady = "true";
+    const initialPresentationGeneration = primaryPresentationGeneration;
+    void renderer.whenIdle().then(() => {
+      if (active && primaryPresentationGeneration === initialPresentationGeneration) primaryPresentationOpening = false;
+    });
     // Signal Split View (#200): lets the signalSplitEnabled effect force
     // Upper to reproject/re-render immediately after flipping
     // `projectionCoordinator.setPane()`, using the CURRENT document (not a
@@ -504,6 +511,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     const detachApplicationHandler = application.attachAcceptedHandler((result) => {
       delete rendererHost.dataset.editorIdle;
       delete rendererHost.dataset.cycleViewReady;
+      let openingGenerationForCompletion: number | undefined;
       projection = projectionCoordinator.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       const changed = result.changeSet;
       const transactionOnlyChange = changed.transactionSemantics !== undefined
@@ -515,6 +523,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         setTransactionPresentationRevision((value) => value + 1);
       }
       if (changed.fullDocumentReplace === true) {
+        primaryPresentationOpening = true;
+        openingGenerationForCompletion = ++primaryPresentationGeneration;
         timelineRuntime.onDocumentEpochChanged(documentEpoch.advance());
         interactionHandle?.cancel();
       }
@@ -570,6 +580,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         collectWaveErrors();
         publishState();
         rendererHost.dataset.editorIdle = "true";
+        if (openingGenerationForCompletion !== undefined && primaryPresentationGeneration === openingGenerationForCompletion) primaryPresentationOpening = false;
       });
     });
     applyCollapsedGroupsRef.current = (ids) => {
@@ -619,6 +630,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       geometryRegistry.clear();
       timelineGeometry.reset();
       referenceGeometryReprojected = false;
+      primaryPresentationOpening = true;
+      const openingGeneration = ++primaryPresentationGeneration;
       rulerInitialized = false;
       // Open/New owns a deterministic viewport policy. Apply it before the
       // first projection so the previous document cannot seed stale rows.
@@ -645,6 +658,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         publishState();
         markOpenPhase("all-visible-idle");
         rendererHost.dataset.editorIdle = "true";
+        if (primaryPresentationGeneration === openingGeneration) primaryPresentationOpening = false;
       });
       },
     });

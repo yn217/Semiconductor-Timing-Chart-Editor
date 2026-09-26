@@ -11,8 +11,6 @@ import type { GeometryRegistry } from "./geometry-registry.js";
 import { displayWindowForSource } from "./display-boundary.js";
 import { waveOwnerPlacement } from "./wave-owner-placement.js";
 
-const WAVE_MAIN_THREAD_BUDGET_MS = 6;
-
 function nextBrowserFrame(): Promise<void> {
   return new Promise((resolve) => {
     if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(() => resolve());
@@ -28,6 +26,9 @@ export type WaveformProviderContext = Readonly<{
   geometryRegistry: GeometryRegistry;
   markOpenPhase: (phase: string, phaseTimestamp?: number) => void;
   onReferenceGeometryReady?: () => void;
+  /** True only while initial Open/New artifacts are being materialized.
+   * Viewport re-windowing after readiness stays a coherent batch. */
+  isPrimaryPresentationOpening?: () => boolean;
   invalidateSnapIndex: () => void;
   getSourceWindow?: (owner: HTMLElement) => Readonly<{ start: number; end: number }> | undefined;
   /** Document-wide pixels-per-display-cycle, owned by the ruler's authoritative
@@ -70,8 +71,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const referenceClockId = document.timeline.referenceClock
         ?? document.signals.find((signal) => signal.type === "clock")?.id;
       const mapping = context.mappingCache.get(document.timeline, document.timeGroups);
-      let waveSliceStartedAt = globalThis.performance.now();
       let referenceGeometryReady = false;
+      let waveSliceStartedAt = globalThis.performance.now();
       if (signalIndexDocument !== document || signalIndexRevision !== currentSnapshot.revision) {
         signalById = new Map(document.signals.map((signal) => [signal.id, signal]));
         signalIndexDocument = document;
@@ -228,7 +229,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             catch (error: unknown) { renderResults.push({ ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) }); }
           }
         }
-        if (globalThis.performance.now() - waveSliceStartedAt >= WAVE_MAIN_THREAD_BUDGET_MS) {
+        if (context.isPrimaryPresentationOpening?.() === true && globalThis.performance.now() - waveSliceStartedAt >= 6) {
           await nextBrowserFrame();
           waveSliceStartedAt = globalThis.performance.now();
         }
