@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clampLegendToVisibleSurface, legendLocalPointFromClient } from "../../apps/editor/src/legend-geometry.js";
+import { clampLegendToVisibleSurface, legendContainingBlockOffset, legendLocalPointFromClient } from "../../apps/editor/src/legend-geometry.js";
 
 describe("Legend document-overlay geometry", () => {
   it("converts pointer coordinates through the visible document origin and scroll", () => {
@@ -7,6 +7,17 @@ describe("Legend document-overlay geometry", () => {
       { x: 420, y: 310 },
       { left: 265, top: 90, scrollLeft: 120, scrollTop: 40 },
     )).toEqual({ x: 275, y: 260 });
+  });
+
+  it("projects canonical overlay coordinates into the scrolled absolute-position containing block", () => {
+    const offset = legendContainingBlockOffset(
+      { x: 265, y: 224 },
+      { x: 265, y: 224 },
+      { x: 0, y: 148 },
+    );
+    expect(offset).toEqual({ x: 0, y: -148 });
+    const renderedTop = 224 + offset.y + 148;
+    expect(renderedTop).toBe(224);
   });
 
   it("clamps the whole Legend into the visible document area, excluding fixed panes", () => {

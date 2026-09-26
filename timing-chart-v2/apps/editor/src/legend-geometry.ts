@@ -11,11 +11,23 @@ export type LegendSurfaceGeometry = {
   readonly contentTop: number;
 };
 
+export function legendContainingBlockOffset(
+  surfaceOrigin: LegendPoint,
+  containingBlockOrigin: LegendPoint,
+  scroll: LegendPoint,
+): LegendPoint {
+  return {
+    x: surfaceOrigin.x - containingBlockOrigin.x - scroll.x,
+    y: surfaceOrigin.y - containingBlockOrigin.y - scroll.y,
+  };
+}
+
 /**
  * Canonical Legend coordinates use document-overlay space: X starts after the
- * fixed left rail and Y starts at the visible ruler. Browser chrome and pane
- * origins are translated here; the same canonical coordinates are used by SVG
- * export, which has no editor chrome.
+ * fixed left rail and Y starts at the visible ruler. `contentLeft`/`contentTop`
+ * project that stable origin into the Legend's actual containing block, which
+ * may itself move as the viewport scrolls. SVG export uses the same canonical
+ * coordinates and has no editor chrome.
  */
 export function readLegendSurfaceGeometry(content: HTMLElement): LegendSurfaceGeometry | undefined {
   const viewport = content.closest<HTMLElement>(".cycle-viewport");
@@ -47,6 +59,11 @@ export function readLegendSurfaceGeometry(content: HTMLElement): LegendSurfaceGe
     ? bottomTrackRect.top
     : Number.POSITIVE_INFINITY;
   const visibleBottom = Math.min(viewportRect.bottom, contentRect.bottom, scrollbarTop, bottomTrackTop);
+  const containingBlockOffset = legendContainingBlockOffset(
+    { x: documentLeft, y: rulerRect.top },
+    { x: contentRect.left, y: contentRect.top },
+    { x: scrollLeft, y: scrollTop },
+  );
   return {
     left: documentLeft,
     // Pointer Y is measured from the ruler's visible/document origin, then
@@ -58,8 +75,11 @@ export function readLegendSurfaceGeometry(content: HTMLElement): LegendSurfaceGe
     scrollTop,
     clientWidth: Math.max(0, viewportRect.right - documentLeft),
     clientHeight: Math.max(0, visibleBottom - rulerRect.top),
-    contentLeft: documentLeft - viewportRect.left,
-    contentTop: 0,
+    // The Legend is absolutely positioned inside `content`, not the viewport.
+    // Translate its stable screen origin into that containing block and remove
+    // the scroll compensation already included in canonical overlay coords.
+    contentLeft: containingBlockOffset.x,
+    contentTop: containingBlockOffset.y,
   };
 }
 

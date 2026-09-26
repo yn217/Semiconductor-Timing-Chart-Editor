@@ -237,3 +237,97 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     });
   });
 }
+
+for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) {
+  test.describe(`Large Feature Showcase Legend ownership at ${viewport.width}x${viewport.height}`, () => {
+    test.use({ viewport });
+    test("keeps the visible Legend reachable through real vertical/horizontal scroll, mode changes, Save/Open, and export", async ({ page }) => {
+      // The 48-signal fixture's SVG export is intentionally part of this acceptance path.
+      test.setTimeout(60_000);
+      await page.goto("/");
+      const surface = page.getByTestId("cycle-surface");
+      await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+
+      const fixture = await readFile(new URL("../../samples/showcase/21_large_feature_showcase.tcd.json", import.meta.url));
+      await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
+        name: "21_large_feature_showcase.tcd.json",
+        mimeType: "application/json",
+        buffer: fixture,
+      });
+      await expect(page.getByRole("heading", { name: "Large Feature Showcase — 128 cycles / 48 signals" })).toBeVisible();
+      await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", "48");
+
+      const legend = page.getByTestId("editor-legend");
+      await expect(legend).toBeVisible();
+      await legend.click();
+      const inspectorX = page.getByLabel("Legend X");
+      const inspectorY = page.getByLabel("Legend Y");
+      await expect(inspectorX).toHaveValue("18");
+      await expect(inspectorY).toHaveValue("18");
+
+      const revision = await surface.getAttribute("data-canonical-revision");
+      const history = await page.getByTestId("history-status").textContent();
+      const dirty = await page.getByTestId("dirty-status").textContent();
+      const cycleViewport = page.getByTestId("cycle-viewport");
+      expect(await cycleViewport.evaluate((element) => element.scrollHeight)).toBeGreaterThan(
+        await cycleViewport.evaluate((element) => element.clientHeight),
+      );
+      await hoverTimelineArea(page);
+      await page.mouse.wheel(0, 500);
+      await expect.poll(() => cycleViewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+      await expectLegendInVisibleArea(page, legend);
+      await expect(inspectorX).toHaveValue("18");
+      await expect(inspectorY).toHaveValue("18");
+
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+      await page.getByLabel("Zoom preset").selectOption("200");
+      await expect(surface).toHaveAttribute("data-editor-idle", "true");
+      const owner = timelineOwner(page);
+      const overflow = await owner.evaluate((element) => element.scrollWidth > element.clientWidth);
+      expect(overflow).toBe(true);
+      await hoverTimelineArea(page);
+      await page.mouse.wheel(360, 0);
+      await expect.poll(() => owner.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+      await expectLegendInVisibleArea(page, legend);
+      await expect(inspectorX).toHaveValue("18");
+      await expect(inspectorY).toHaveValue("18");
+
+      const modes = page.locator(".view-mode");
+      await modes.getByRole("button", { name: "Combined", exact: true }).click();
+      await expect(legend).toBeVisible();
+      await expectLegendInVisibleArea(page, legend);
+      await modes.getByRole("button", { name: "Transaction", exact: true }).click();
+      await expect(legend).not.toBeVisible();
+      await modes.getByRole("button", { name: "Cycle", exact: true }).click();
+      await expect(legend).toBeVisible();
+      await expectLegendInVisibleArea(page, legend);
+      await expect(inspectorX).toHaveValue("18");
+      await expect(inspectorY).toHaveValue("18");
+      await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
+      await expect(page.getByTestId("history-status")).toHaveText(history!);
+      await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+
+      const ribbon = page.getByTestId("ribbon");
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+      const pendingSave = page.waitForEvent("download");
+      await ribbon.getByRole("button", { name: "Save", exact: true }).click();
+      const savedPath = await (await pendingSave).path();
+      expect(savedPath).toBeTruthy();
+      await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+      await expect(page.getByRole("heading", { name: "Large Feature Showcase — 128 cycles / 48 signals" })).toBeVisible();
+      const reopenedLegend = page.getByTestId("editor-legend");
+      await expect(reopenedLegend).toBeVisible();
+      await expect(reopenedLegend).toHaveAttribute("data-legend-position-x", "18");
+      await expect(reopenedLegend).toHaveAttribute("data-legend-position-y", "18");
+      await expectLegendInVisibleArea(page, reopenedLegend);
+
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+      await ribbon.getByRole("button", { name: "Export", exact: true }).click();
+      const exportDialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+      const pendingExport = page.waitForEvent("download");
+      await exportDialog.getByRole("button", { name: "Export SVG" }).click();
+      const svg = await readFile((await (await pendingExport).path())!);
+      expect(svg.toString("utf8")).toContain('data-layer="legend" data-orientation="vertical" transform="translate(18 18)"');
+    });
+  });
+}
