@@ -277,6 +277,7 @@ export type BottomEditorPanelProps<Tab extends string> = {
 export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelectTab, onTabKeyDown, followSelection, onFollowSelectionChange, pinned, onTogglePinned, summary, content, contentClassName }: BottomEditorPanelProps<Tab>) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLSpanElement>(null);
+  usePeerMenuSurface(settingsOpen, () => setSettingsOpen(false));
   useEffect(() => {
     if (!settingsOpen) return;
     const close = (event: PointerEvent) => { if (!(event.target instanceof Node) || !settingsRef.current?.contains(event.target)) setSettingsOpen(false); };
