@@ -32,7 +32,7 @@ export class DefaultProjectionService implements ProjectionService {
   #navigationRowIndexById = new Map<RowLayoutEntry["rowId"], number>();
   #collapsedGroupKey = "";
   #documentEpoch = 0;
-  #canonicalSignalDocument: ProjectionRequest["snapshot"]["document"] | undefined;
+  #canonicalSignals: ProjectionRequest["snapshot"]["document"]["signals"] | undefined;
   #canonicalSignalIds: readonly SignalId[] = [];
   #visibleRowIds: readonly RowLayoutEntry["rowId"][] = [];
 
@@ -147,8 +147,8 @@ export class DefaultProjectionService implements ProjectionService {
   }
 
   #canonicalSignalIdsFor(document: ProjectionRequest["snapshot"]["document"]): readonly SignalId[] {
-    if (this.#canonicalSignalDocument !== document) {
-      this.#canonicalSignalDocument = document;
+    if (this.#canonicalSignals !== document.signals) {
+      this.#canonicalSignals = document.signals;
       this.#canonicalSignalIds = document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
     }
     return this.#canonicalSignalIds;
