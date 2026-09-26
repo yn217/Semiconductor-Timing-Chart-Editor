@@ -18,17 +18,22 @@ describe("waveform provider primary geometry readiness", () => {
   it("reuses the Signal index across unrelated document revisions with the same Signal collection", async () => {
     const source = generatePerformanceDocument({ signalCount: 10_000, cycleCount: 100 });
     let signalCollectionTraversals = 0;
+    let signalCollectionSearches = 0;
     const signalCollection = source.signals;
     const signals = new Proxy(signalCollection, {
       get(target, property, receiver) {
         if (property === "map" || property === Symbol.iterator) signalCollectionTraversals += 1;
+        if (property === "find" || property === "some") signalCollectionSearches += 1;
         return Reflect.get(target, property, receiver);
       },
     });
     let snapshot = { document: { ...source, signals }, revision: 0 };
     const adapter: WaveDromAdapter = {
       toWaveJson: (input) => toWaveJson(input),
-      renderWave: vi.fn(async (signalId, waveJson) => ({ signalId, ownerKey: signalId, svg: {} as SVGSVGElement, renderIndex: 0, waveJson })),
+      renderWave: vi.fn(async (signalId, waveJson) => {
+        signalCollectionSearches = 0;
+        return { signalId, ownerKey: signalId, svg: {} as SVGSVGElement, renderIndex: 0, waveJson };
+      }),
       extractLocalGeometry: vi.fn(() => { throw new Error("SVG extraction is not used in analytic mode."); }),
       geometryMetrics: () => ({ last: undefined, totalDurationMs: 0, totalUsesVisited: 0, totalGeometryEntriesEmitted: 0, totalDuplicateKeyChecks: 0, totalDuplicateKeyCollisions: 0, totalTransitionBrickLookups: 0, totalSkinPathParses: 0, totalMatrixReads: 0 }),
       dispose: vi.fn(),
@@ -45,10 +50,11 @@ describe("waveform provider primary geometry readiness", () => {
       getViewMode: () => "Cycle",
     };
     const provider = createWaveformSurfaceProvider(context);
-    const request = { signalId: source.signals[1]!.id, owner: { style: { removeProperty: vi.fn() }, dataset: {} } as unknown as HTMLElement, documentEpoch: 1 };
+    const request = { signalId: source.timeline.referenceClock!, owner: { style: { removeProperty: vi.fn() }, dataset: {} } as unknown as HTMLElement, documentEpoch: 1 };
 
     await provider.mountWaveBatch!([request]);
     expect(signalCollectionTraversals).toBe(1);
+    expect(signalCollectionSearches).toBe(0);
     snapshot = { document: { ...snapshot.document, bookmarks: [...snapshot.document.bookmarks, { id: "bookmark_index_reuse" as BookmarkId, name: "Review", start: 1 }] }, revision: 1 };
     await provider.mountWaveBatch!([request]);
 
