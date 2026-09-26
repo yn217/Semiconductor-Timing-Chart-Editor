@@ -32,6 +32,7 @@ function RibbonSchemaOverflow({ items }: { readonly items: readonly RibbonItemSp
         setOpen(false);
       });
     } else {
+      if (detailsRef.current) detailsRef.current.open = false;
       peerMenuSurfaceCoordinator.release(ownerRef.current);
     }
   };
