@@ -2,6 +2,7 @@ import { useLayoutEffect, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { computeViewportSafePosition, currentViewportBounds } from "./viewport-safe-position.js";
+import { usePeerMenuSurface } from "./runtime/peer-menu-surface.js";
 
 /** PowerPoint-style "Arrange" group for the Annotation ribbon tab: the 3
  * most common operations (Bring to Front / Send to Back / Group) as a
@@ -43,6 +44,7 @@ export function ArrangeGroup({ onBringToFront, onSendToBack, onGroup, onUngroup,
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  usePeerMenuSurface(open, () => setOpen(false));
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {

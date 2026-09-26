@@ -1,6 +1,8 @@
+import { useRef, useState } from "react";
 import { partitionRibbonItems, resolveRibbonPresentation, type RibbonGroupSpec, type RibbonItemSpec, type RibbonPresentationSize } from "./ribbon-schema.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSplitButton, DsRibbonToggle } from "./design-system.js";
 import { RibbonIcon } from "./ribbon-icon.js";
+import { peerMenuSurfaceCoordinator } from "./runtime/peer-menu-surface.js";
 
 /** Renders one ribbon-schema group as a major-group + Ds* group, the same
  * shape every already-migrated tab (Insert/View) uses. Every button in the
@@ -18,6 +20,21 @@ export function RibbonGroup({ spec, available = "large" }: { readonly spec: Ribb
 }
 
 function RibbonSchemaOverflow({ items }: { readonly items: readonly RibbonItemSpec[] }) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const ownerRef = useRef<object>({});
+  const [open, setOpen] = useState(false);
+  const updateOpen = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (nextOpen) {
+      const owner = ownerRef.current;
+      peerMenuSurfaceCoordinator.activate(owner, () => {
+        if (detailsRef.current) detailsRef.current.open = false;
+        setOpen(false);
+      });
+    } else {
+      peerMenuSurfaceCoordinator.release(ownerRef.current);
+    }
+  };
   const onMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     const controls = [...event.currentTarget.querySelectorAll<HTMLButtonElement>("[role='menuitem']:not(:disabled)")];
     if (controls.length === 0) return;
@@ -27,7 +44,7 @@ function RibbonSchemaOverflow({ items }: { readonly items: readonly RibbonItemSp
     event.preventDefault();
     controls[next]?.focus();
   };
-  return <details className="ribbon-schema-overflow"><summary aria-label="More ribbon commands">More</summary><div role="menu" aria-label="More ribbon commands" onKeyDown={onMenuKeyDown} onClick={(event) => { if (event.target instanceof HTMLElement && event.target.closest("button")) event.currentTarget.parentElement?.removeAttribute("open"); }}>{items.map((item) => item.kind === "custom" ? item.render() : <button key={item.id} type="button" role="menuitem" data-ribbon-command-id={item.id} disabled={item.kind !== "toggle" && item.disabled} onClick={item.kind === "toggle" ? item.onChange : item.onClick}>{item.label}</button>)}</div></details>;
+  return <details ref={detailsRef} className="ribbon-schema-overflow" onToggle={(event) => updateOpen(event.currentTarget.open)}><summary aria-label="More ribbon commands">More</summary><div role="menu" aria-label="More ribbon commands" onKeyDown={onMenuKeyDown} onClick={(event) => { if (event.target instanceof HTMLElement && event.target.closest("button")) updateOpen(false); }}>{items.map((item) => item.kind === "custom" ? item.render() : <button key={item.id} type="button" role="menuitem" data-ribbon-command-id={item.id} disabled={item.kind !== "toggle" && item.disabled} onClick={item.kind === "toggle" ? item.onChange : item.onClick}>{item.label}</button>)}</div></details>;
 }
 
 function RibbonSchemaItem({ item, available }: { readonly item: RibbonItemSpec; readonly available: RibbonPresentationSize }) {
