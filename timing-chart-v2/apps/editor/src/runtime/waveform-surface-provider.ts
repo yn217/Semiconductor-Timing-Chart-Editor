@@ -51,9 +51,9 @@ export type WaveformProviderContext = Readonly<{
 }>;
 
 export function createWaveformSurfaceProvider(context: WaveformProviderContext): WaveformSurfaceProvider {
-  let signalIndexDocument: CanonicalDocument | undefined;
-  let signalIndexRevision = -1;
+  let signalIndexSignals: CanonicalDocument["signals"] | undefined;
   let signalById = new Map<SignalId, Signal>();
+  let firstClockSignalId: SignalId | undefined;
   return {
     ...(context.getSourceWindow ? { getSourceWindow: context.getSourceWindow } : {}),
     async mountWaveBatch(requests) {
@@ -68,16 +68,21 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       // clock. This mirrors resolveTimeAxisGeometry's clockless fallback:
       // prefer the first canonical clock rather than deferring every signal
       // and leaving Transaction bars without boundary X positions.
-      const referenceClockId = document.timeline.referenceClock
-        ?? document.signals.find((signal) => signal.type === "clock")?.id;
       const mapping = context.mappingCache.get(document.timeline, document.timeGroups);
       let referenceGeometryReady = false;
       let waveSliceStartedAt = globalThis.performance.now();
-      if (signalIndexDocument !== document || signalIndexRevision !== currentSnapshot.revision) {
-        signalById = new Map(document.signals.map((signal) => [signal.id, signal]));
-        signalIndexDocument = document;
-        signalIndexRevision = currentSnapshot.revision;
+      if (signalIndexSignals !== document.signals) {
+        const nextSignalById = new Map<SignalId, Signal>();
+        let nextFirstClockSignalId: SignalId | undefined;
+        for (const signal of document.signals) {
+          nextSignalById.set(signal.id, signal);
+          if (nextFirstClockSignalId === undefined && signal.type === "clock") nextFirstClockSignalId = signal.id;
+        }
+        signalById = nextSignalById;
+        firstClockSignalId = nextFirstClockSignalId;
+        signalIndexSignals = document.signals;
       }
+      const referenceClockId = document.timeline.referenceClock ?? firstClockSignalId;
       // #614: every windowed signal's renderer window must span the exact
       // same display-cycle range so their WaveDrom SVGs share one
       // units-per-cycle ratio -- every wave-owner is stretched to a shared
