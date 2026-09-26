@@ -30,7 +30,12 @@ test("Open then Annotation drag uses the current document geometry", async ({ pa
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
-  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "arrow"));
+  const createdId = await waitForCreatedAnnotationId(host, previousIds, "arrow");
+  const inspectorAnnotation = page.getByTestId("inspector").getByTestId("annotation-editor");
+  await expect(inspectorAnnotation).toBeVisible();
+  const annotationId = await inspectorAnnotation.getAttribute("data-annotation-id");
+  expect(annotationId).toBe(createdId);
+  const owner = annotationOwnerById(host, createdId);
   const handle = owner.locator("[data-role='annotation-handle'][data-annotation-field='from']");
   const handleBox = await handle.boundingBox();
   const x2 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='2']").evaluate((element) => (element as HTMLElement).style.left));

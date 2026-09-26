@@ -8,6 +8,7 @@
    horizontal scrollbar despite `.transaction-lanes` being far wider than the
    viewport. Mirrors the `.transaction-signal-tree` override two lines up. */
 .editor-shell .cycle-panel.mode-transaction .cycle-viewport { height: 100%; }
+.cycle-panel.mode-transaction { --time-domain-left: 0px; }
 .cycle-panel.mode-transaction .surface-host { visibility: hidden; }
 .cycle-panel.mode-transaction .transaction-left-tree {
   position: absolute;
@@ -43,12 +44,9 @@
   width: var(--wave-width, 640px);
 }
 .editor-shell .cycle-panel.mode-transaction .cycle-ruler {
-  --time-domain-left: 0px;
-  left: 0;
   width: 100%;
 }
 .editor-shell .cycle-panel.mode-transaction .geometry-grid {
-  left: 0;
   width: var(--wave-width, 640px);
 }
 .editor-shell .cycle-panel.mode-transaction .transaction-track {

@@ -1,4 +1,4 @@
-import type { ValidationProblem } from "@timing-chart-v2/core";
+import { TIMING_DIAGNOSTIC_CATEGORIES, type ValidationProblem } from "@timing-chart-v2/core";
 import type {
   Annotation,
   CanonicalDocument,
@@ -16,8 +16,9 @@ import type {
   TransactionPhase,
   TransactionGroupId,
   ValueSignal,
+  EnumDefinition,
 } from "@timing-chart-v2/schema";
-import { canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -612,6 +613,24 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { geometryScreenY: timingRows, annotationPosition: annotationsForSignals(document, timingRows), minimapOverview: true };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
+    case "document.updateCheckSettings": {
+      const rawSettings: unknown = command.checkSettings;
+      if (!rawSettings || typeof rawSettings !== "object" || Array.isArray(rawSettings)
+        || Object.keys(rawSettings).some((key) => key !== "enabledCategories")) {
+        return fail("invalid", "INVALID_CHECK_SETTINGS", "$.checkSettings", "Check settings must contain only supported settings.");
+      }
+      const requested = (rawSettings as { readonly enabledCategories?: unknown }).enabledCategories;
+      if (requested !== undefined && (!Array.isArray(requested)
+        || requested.some((category) => !TIMING_DIAGNOSTIC_CATEGORIES.includes(category as typeof TIMING_DIAGNOSTIC_CATEGORIES[number]))
+        || new Set(requested).size !== requested.length)) {
+        return fail("invalid", "INVALID_CHECK_SETTINGS", "$.checkSettings.enabledCategories", "Enabled check categories must be unique supported categories.");
+      }
+      const requestedCategories = requested as readonly string[] | undefined;
+      const enabled = requestedCategories === undefined ? [] : TIMING_DIAGNOSTIC_CATEGORIES.filter((category) => requestedCategories.includes(category));
+      const checkSettings = enabled.length === TIMING_DIAGNOSTIC_CATEGORIES.length ? {} : { enabledCategories: enabled };
+      if (semanticEqual(document.checkSettings, checkSettings)) return fail("no-op", "NO_OP", "$.checkSettings", "Check settings are unchanged.");
+      return { ok: true, document: { ...document, checkSettings }, changeSet: {}, inverseChangeSet: {} };
+    }
     case "legend.update": {
       if (semanticEqual(document.legend, command.legend)) return fail("no-op", "NO_OP", "$.legend", "Legend is unchanged.");
       return { ok: true, document: { ...document, legend: command.legend }, changeSet: {}, inverseChangeSet: {} };
@@ -801,28 +820,38 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if ((command.spacingBefore !== undefined && (!Number.isFinite(command.spacingBefore) || command.spacingBefore < 0)) || (command.spacingAfter !== undefined && (!Number.isFinite(command.spacingAfter) || command.spacingAfter < 0))) return fail("invalid", "INVALID_SIGNAL_SPACING", "$.spacing", "Signal spacing must be finite and non-negative.");
       const currentFormat = signal.type === "bus" ? signal.displayFormat : undefined;
       const currentWidth = signal.type === "bus" ? signal.width : undefined;
+      const currentEnumId = signal.type === "clock" ? undefined : signal.enumId;
       const currentVisible = signal.display.visible !== false;
       const currentAlign = signal.display.align;
       const currentOverflow = signal.display.overflow;
       const currentStyle = signal.display.style;
       const nextFormat = nextType === "bus" ? command.displayFormat ?? currentFormat : undefined;
       const nextWidth = nextType === "bus" ? command.width ?? currentWidth : undefined;
+      if (command.clearEnumId && command.enumId !== undefined) return fail("invalid", "INVALID_ENUM_ASSIGNMENT", "$.enumId", "Enum assignment cannot be set and cleared in the same command.");
+      if ((command.enumId !== undefined || command.clearEnumId) && nextType !== "state") return fail("invalid", "INVALID_ENUM_ASSIGNMENT", "$.enumId", "Enum assignments apply only to State Signals.");
+      const nextEnumId = nextType === "state"
+        ? (command.clearEnumId ? undefined : command.enumId ?? (signal.type === "state" ? currentEnumId : undefined))
+        : signal.type === "state" ? undefined : currentEnumId;
+      if (command.enumId !== undefined) {
+        if (nextType !== "state") return fail("invalid", "INVALID_ENUM_ASSIGNMENT", "$.enumId", "Enum definitions can only be assigned to State Signals.");
+        if (!(document.enumDefinitions ?? []).some((definition) => definition.id === command.enumId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.enumId", `Enum '${command.enumId}' does not exist.`);
+      }
       const nextVisible = command.visible ?? currentVisible;
       const nextAlign = command.displayAlign ?? currentAlign;
       const nextOverflow = command.displayOverflow ?? currentOverflow;
       const nextStyle = command.displayStyle ?? currentStyle;
       const nextSpacingBefore = command.spacingBefore ?? signal.spacingBefore;
       const nextSpacingAfter = command.spacingAfter ?? signal.spacingAfter;
-      if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth && currentVisible === nextVisible && currentAlign === nextAlign && currentOverflow === nextOverflow && signal.spacingBefore === nextSpacingBefore && signal.spacingAfter === nextSpacingAfter && semanticEqual(currentStyle, nextStyle)) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
+      if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth && (signal.type === "clock" || signal.enumId === nextEnumId) && currentVisible === nextVisible && currentAlign === nextAlign && currentOverflow === nextOverflow && signal.spacingBefore === nextSpacingBefore && signal.spacingAfter === nextSpacingAfter && semanticEqual(currentStyle, nextStyle)) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
       const nextDisplay = { ...signal.display, name, visible: nextVisible, ...(nextAlign === undefined ? {} : { align: nextAlign }), ...(nextOverflow === undefined ? {} : { overflow: nextOverflow }), ...(nextStyle === undefined ? {} : { style: nextStyle }) };
       const next: Signal = signal.type === "clock"
         ? { ...signal, name, role: command.role, display: nextDisplay, ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) }
         : (() => {
-          const { type: _type, width: _width, displayFormat: _displayFormat, ...base } = signal;
+          const { type: _type, width: _width, displayFormat: _displayFormat, enumId: _enumId, ...base } = signal;
           const valueType = (command.signalType ?? signal.type) as ValueSignal["type"];
-          return { ...base, type: valueType, name, role: command.role, display: nextDisplay, ...(nextWidth === undefined ? {} : { width: nextWidth }), ...(nextFormat === undefined ? {} : { displayFormat: nextFormat }), ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) };
+          return { ...base, type: valueType, name, role: command.role, display: nextDisplay, ...(nextWidth === undefined ? {} : { width: nextWidth }), ...(nextFormat === undefined ? {} : { displayFormat: nextFormat }), ...(nextEnumId === undefined ? {} : { enumId: nextEnumId }), ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) };
         })();
-      const waveformChanged = signal.type !== nextType || currentFormat !== nextFormat || currentWidth !== nextWidth;
+      const waveformChanged = signal.type !== nextType || currentFormat !== nextFormat || currentWidth !== nextWidth || (signal.type !== "clock" && signal.enumId !== nextEnumId);
       const spacingChanged = signal.spacingBefore !== nextSpacingBefore || signal.spacingAfter !== nextSpacingAfter;
       // Visibility changes the derived row layout exactly like signal.setVisibility: the rows below compact, so their screen Y,
       // dependent annotations and the MiniMap must be invalidated too (otherwise wave owners stay one row off their labels).
@@ -954,6 +983,29 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (current.name === name) return fail("no-op", "NO_OP", "$", "Enum already has this name.");
       const definitions = [...document.enumDefinitions!]; definitions[index] = { ...current, name };
       return { ok: true, document: { ...document, enumDefinitions: definitions }, changeSet: { fullDocumentReplace: true }, inverseChangeSet: { fullDocumentReplace: true } };
+    }
+    case "enum.create": {
+      const definitions = document.enumDefinitions ?? [];
+      if (canonicalEntityIds(document).has(command.definition.id)) return fail("invalid", "DUPLICATE_ID", "$.definition.id", `Entity ID '${command.definition.id}' already exists.`);
+      const enumProblem = validateEnumDefinition(command.definition);
+      if (enumProblem) return fail("invalid", "INVALID_ENUM_DEFINITION", "$.definition", enumProblem);
+      return { ok: true, document: { ...document, enumDefinitions: [...definitions, command.definition] }, changeSet: { fullDocumentReplace: true }, inverseChangeSet: { fullDocumentReplace: true } };
+    }
+    case "enum.update": {
+      const definitions = document.enumDefinitions ?? [];
+      const index = definitions.findIndex((definition) => definition.id === command.enumId);
+      if (index < 0) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.enumId", `Enum '${command.enumId}' does not exist.`);
+      const name = command.name.trim();
+      const next: EnumDefinition = { id: command.enumId, name, entries: command.entries };
+      const enumProblem = validateEnumDefinition(next);
+      if (enumProblem) return fail("invalid", "INVALID_ENUM_DEFINITION", "$.definition", enumProblem);
+      const current = definitions[index]!;
+      if (semanticEqual(current, next)) return fail("no-op", "NO_OP", "$", "Enum definition is unchanged.");
+      const nextDefinitions = [...definitions]; nextDefinitions[index] = next;
+      const displayChanged = !semanticEqual(current.entries, next.entries);
+      const dependents = displayChanged ? document.signals.filter((signal) => signal.type === "state" && signal.enumId === command.enumId).map((signal) => signal.id) : [];
+      const changeSet: ChangeSet = { fullDocumentReplace: true, ...(dependents.length ? { waveSemantics: dependents, geometryLocal: dependents, geometryScreenX: true } : {}) };
+      return { ok: true, document: { ...document, enumDefinitions: nextDefinitions }, changeSet, inverseChangeSet: changeSet };
     }
     case "enum.delete": {
       const definitions = document.enumDefinitions ?? [];
@@ -1336,6 +1388,9 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const label = command.label.trim();
       if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
       if (!label) return fail("invalid", "INVALID_LABEL", "$.label", "Annotation label cannot be empty.");
+      if (command.labelPlacement !== undefined && !ANNOTATION_LABEL_PLACEMENTS.includes(command.labelPlacement)) return fail("invalid", "INVALID_ANNOTATION_STYLE", "$.labelPlacement", "Annotation label placement is invalid.");
+      if (command.style?.labelWrap !== undefined && typeof command.style.labelWrap !== "boolean") return fail("invalid", "INVALID_ANNOTATION_STYLE", "$.style.labelWrap", "Annotation labelWrap must be a boolean.");
+      if (command.style?.labelMaxWidth !== undefined && (typeof command.style.labelMaxWidth !== "number" || !Number.isFinite(command.style.labelMaxWidth) || command.style.labelMaxWidth < ANNOTATION_LABEL_MAX_WIDTH.min || command.style.labelMaxWidth > ANNOTATION_LABEL_MAX_WIDTH.max)) return fail("invalid", "INVALID_ANNOTATION_STYLE", "$.style.labelMaxWidth", `Annotation label maximum width must be between ${ANNOTATION_LABEL_MAX_WIDTH.min} and ${ANNOTATION_LABEL_MAX_WIDTH.max} px.`);
       // Optional style fields are patch semantics.  Do not turn an omitted
       // field into an implicit clear (for example, changing an annotation's
       // color must not erase its independently-authored labelOffset).
@@ -1350,6 +1405,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
         ...(command.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: command.traceOffsetCycles }),
         ...(command.opacity === undefined ? {} : { opacity: command.opacity }),
         ...(command.labelOffset === undefined ? {} : { labelOffset: command.labelOffset }),
+        ...(command.labelPlacement === undefined ? {} : { labelPlacement: command.labelPlacement }),
         ...(command.style === undefined ? {} : { style: command.style }),
         ...(command.measurement === undefined ? {} : { measurement: command.measurement }),
         ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout }),

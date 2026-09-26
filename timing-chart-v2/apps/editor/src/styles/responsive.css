@@ -55,7 +55,5 @@
   .column-headings { grid-template-columns: var(--gui-left-width) var(--gui-frozen-width, 170px) minmax(420px, 1fr); }
   .surface-host [data-role="timing-chart-surface"] { grid-template-columns: var(--gui-left-width) var(--gui-frozen-width, 170px) var(--wave-width, 640px); }
   .surface-host [data-role="frozen-label-rows"] { left: var(--gui-left-width) !important; }
-  .cycle-ruler { --time-domain-left: calc(var(--gui-left-width) + var(--gui-frozen-width, 170px)); }
-  .geometry-grid { left: calc(var(--gui-left-width) + var(--gui-frozen-width, 170px)); }
 }
 @media (prefers-color-scheme: dark) { :root { color-scheme: dark; } }

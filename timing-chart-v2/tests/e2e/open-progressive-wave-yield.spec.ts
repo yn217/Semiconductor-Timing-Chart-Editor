@@ -104,14 +104,16 @@ test("makes the reference ruler usable before all visible waves finish", async (
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.evaluate((element) => {
-    const samples: Array<{ readonly pending: number; readonly rulerTicks: number; readonly batches: number }> = [];
+    const samples: Array<{ readonly pending: number; readonly rulerTicks: number; readonly batches: number; readonly owners: number; readonly renderedOwners: number }> = [];
     const observer = new MutationObserver(() => {
       const marks = JSON.parse((element as HTMLElement).dataset.openPhaseMarks ?? "{}") as Record<string, number>;
       if (marks["first-correct-paint"] === undefined || (element as HTMLElement).dataset.editorIdle !== undefined) return;
       const surface = element.querySelector<HTMLElement>('[data-role="timing-chart-surface"]');
       const counters = JSON.parse(surface?.dataset.performanceCounters ?? "{}") as { waveBatchPending?: number; waveBatchCount?: number };
       const viewport = element.closest<HTMLElement>("[data-testid='cycle-viewport']");
-      samples.push({ pending: counters.waveBatchPending ?? 0, rulerTicks: viewport?.querySelectorAll("[data-testid='cycle-ruler'] [data-cycle]").length ?? 0, batches: counters.waveBatchCount ?? 0 });
+      const owners = surface?.querySelectorAll<HTMLElement>("[data-role='wave-owner']") ?? [];
+      const renderedOwners = [...owners].filter((owner) => owner.querySelector("svg")).length;
+      samples.push({ pending: counters.waveBatchPending ?? 0, rulerTicks: viewport?.querySelectorAll("[data-testid='cycle-ruler'] [data-cycle]").length ?? 0, batches: counters.waveBatchCount ?? 0, owners: owners.length, renderedOwners });
     });
     observer.observe(element, { attributes: true, attributeFilter: ["data-open-phase-marks", "data-editor-idle"] });
     (globalThis as unknown as { __earlyRulerSamples: typeof samples; __earlyRulerObserver: MutationObserver }).__earlyRulerSamples = samples;
@@ -122,10 +124,10 @@ test("makes the reference ruler usable before all visible waves finish", async (
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "early-ruler-open.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
   const evidence = await page.evaluate(() => {
-    const state = globalThis as unknown as { __earlyRulerSamples: Array<{ pending: number; rulerTicks: number; batches: number }>; __earlyRulerObserver: MutationObserver };
+    const state = globalThis as unknown as { __earlyRulerSamples: Array<{ pending: number; rulerTicks: number; batches: number; owners: number; renderedOwners: number }>; __earlyRulerObserver: MutationObserver };
     state.__earlyRulerObserver.disconnect();
     return state.__earlyRulerSamples;
   });
   console.log(`[early-ruler] ${JSON.stringify(evidence)}`);
-  expect(evidence.some((sample) => sample.pending > 0 && sample.rulerTicks > 0)).toBe(true);
+  expect(evidence.some((sample) => sample.rulerTicks > 0 && sample.owners > sample.renderedOwners)).toBe(true);
 });

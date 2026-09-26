@@ -70,7 +70,10 @@ test("ChangeSet invalidation matrix keeps derived owners local", async ({ page }
   const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await waitForIdle(page);
-  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "text"));
+  const createdId = await waitForCreatedAnnotationId(host, previousIds, "text");
+  const annotationId = await page.getByTestId("inspector").getByTestId("annotation-editor").getAttribute("data-annotation-id");
+  expect(annotationId).toBe(createdId);
+  const owner = annotationOwnerById(host, createdId);
   await owner.locator("[data-role='annotation-label']").click();
   const annotationBefore = { session: await sessionCounters(page), render: await renderCounters(page) };
   const annotationInspector = page.getByTestId("inspector");

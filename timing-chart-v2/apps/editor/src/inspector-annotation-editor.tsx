@@ -4,15 +4,31 @@ import { DEFAULT_MEASUREMENT_LAYOUT, MEASUREMENT_PROFILES, anchorTransitionFract
 import type { Annotation, AnnotationId, CanonicalDocument, MeasurementLayout, MeasurementProfile, SemanticAnchor, SignalId, TransitionAnchorKind } from "@timing-chart-v2/schema";
 import { MiniMap } from "./minimap.js";
 import { StrokeFillToolbar } from "./stroke-fill-toolbar.js";
+import { AnnotationLabelLayoutToolbar } from "./annotation-label-layout-toolbar.js";
 import { annotationCapabilityDisabledReason } from "./annotation-capability-matrix.js";
 import { annotationPropertiesBase } from "./annotation-style-command.js";
 import { InspectorSection, InspectorFooter, PropertyToggle } from "./inspector-section.js";
 import { useInspectorAccordion } from "./inspector-accordion.js";
 import { InspectorHeaderBar, InspectorSelectionHeader } from "./inspector-selection-header.js";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
+import { formatAnnotationAnchor } from "./annotation-anchor-format.js";
+
+type InspectorAnchorField = "anchor" | "start" | "end" | "from" | "to";
+type InspectorAnchorDraftValue = { readonly cycle: number; readonly signalId: SignalId | undefined; readonly point: SemanticAnchor["point"]; readonly x: number; readonly y: number };
+
+function inspectorAnchorDraftValue(anchor: SemanticAnchor): InspectorAnchorDraftValue {
+  return { cycle: anchor.cycle, signalId: anchor.signalId, point: anchor.point, x: anchor.offset?.x ?? 0, y: anchor.offset?.y ?? 0 };
+}
+
+function inspectorAnchorSnapshot(annotation: Annotation): Partial<Record<InspectorAnchorField, SemanticAnchor>> {
+  return Object.fromEntries(((["anchor", "start", "end", "from", "to"] as const).flatMap((field) => {
+    const anchor = (annotation as Partial<Record<InspectorAnchorField, SemanticAnchor>>)[field];
+    return anchor === undefined ? [] : [[field, anchor]];
+  }))) as Partial<Record<InspectorAnchorField, SemanticAnchor>>;
+}
 
 export function InspectorAnnotationEditor({ annotation, document, viewport, commands, onDelete, onCancel, onClose, onPreview }: { readonly annotation: Annotation; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onDelete: () => void; readonly onCancel: () => void; readonly onClose: () => void; readonly onPreview?: (annotationId: AnnotationId, draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => void }) {
-  type AnchorField = "anchor" | "start" | "end" | "from" | "to";
+  type AnchorField = InspectorAnchorField;
   const anchorFields: readonly AnchorField[] = (["anchor", "start", "end", "from", "to"] as const).filter((field) => (annotation as Partial<Record<AnchorField, SemanticAnchor>>)[field] !== undefined);
   const firstAnchorField = anchorFields[0] ?? "anchor";
   const { state: sections, toggle } = useInspectorAccordion("annotation", { general: true, geometry: true, style: false });
@@ -21,9 +37,10 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
   // has start/end, an arrow/dependency has from/to, a marker/text/callout
   // has just anchor) rather than a fixed pair of fields every type shares.
   const rangeAnchors = anchorFields.map((field) => (annotation as Partial<Record<AnchorField, SemanticAnchor>>)[field]).filter((value): value is SemanticAnchor => value !== undefined);
+  const signalNames = new Map(document.signals.map((signal) => [signal.id, signal.display.name]));
   const rangeDetail = rangeAnchors.length >= 2
-    ? `Cycle ${rangeAnchors[0]!.cycle}–${rangeAnchors[rangeAnchors.length - 1]!.cycle}`
-    : rangeAnchors.length === 1 ? `Cycle ${rangeAnchors[0]!.cycle}` : undefined;
+    ? `${formatAnnotationAnchor(rangeAnchors[0], signalNames)} – ${formatAnnotationAnchor(rangeAnchors[rangeAnchors.length - 1], signalNames)}`
+    : rangeAnchors.length === 1 ? formatAnnotationAnchor(rangeAnchors[0], signalNames) : undefined;
   const typeLabel = annotation.type.charAt(0).toUpperCase() + annotation.type.slice(1);
   const [label, setLabel] = useState(annotation.label);
   const [color, setColor] = useState(annotation.color ?? "#d04a36");
@@ -55,6 +72,8 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
   const [anchorCycle, setAnchorCycle] = useState(initialAnchor?.cycle ?? 0);
   const [anchorSignalId, setAnchorSignalId] = useState<SignalId | undefined>(initialAnchor?.signalId);
   const [anchorPoint, setAnchorPoint] = useState<SemanticAnchor["point"]>(initialAnchor?.point ?? "cycle-start");
+  const [anchorConflictField, setAnchorConflictField] = useState<AnchorField | undefined>(undefined);
+  const canonicalAnchorsRef = useRef(inspectorAnchorSnapshot(annotation));
   const lineControlsEnabled = annotation.type === "arrow" || annotation.type === "dependency";
   const isOpacityType = annotation.type === "timingRegion" || annotation.type === "ghostTrace";
   const defaultOpacity = annotation.type === "ghostTrace" ? 0.55 : 0.16;
@@ -159,11 +178,31 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
     merge("anchorCycle", anchorCycle, setAnchorCycle);
     merge("anchorSignalId", anchorSignalId, setAnchorSignalId);
     merge("anchorPoint", anchorPoint, setAnchorPoint);
+    const previousAnchor = canonicalAnchorsRef.current[anchorField];
+    const latestAnchor = (annotation as Partial<Record<AnchorField, SemanticAnchor>>)[anchorField];
+    if (previousAnchor !== undefined && latestAnchor !== undefined) {
+      const previousValue = inspectorAnchorDraftValue(previousAnchor);
+      const latestValue = inspectorAnchorDraftValue(latestAnchor);
+      const draftValue: InspectorAnchorDraftValue = { cycle: anchorCycle, signalId: anchorSignalId, point: anchorPoint, x: anchorX, y: anchorY };
+      let conflict = false;
+      for (const key of ["cycle", "signalId", "point", "x", "y"] as const) {
+        if (previousValue[key] === latestValue[key]) continue;
+        if (draftValue[key] === previousValue[key]) {
+          if (key === "cycle") setAnchorCycle(latestValue.cycle);
+          else if (key === "signalId") setAnchorSignalId(latestValue.signalId);
+          else if (key === "point") setAnchorPoint(latestValue.point);
+          else if (key === "x") setAnchorX(latestValue.x);
+          else setAnchorY(latestValue.y);
+        } else if (draftValue[key] !== latestValue[key]) conflict = true;
+      }
+      setAnchorConflictField(conflict ? anchorField : undefined);
+    } else if (previousAnchor !== latestAnchor) setAnchorConflictField(undefined);
+    canonicalAnchorsRef.current = inspectorAnchorSnapshot(annotation);
     baseRef.current = next;
     if (!sameEntity) { setPositionModeStatus(""); setPreviewRevision(0); }
     onPreview?.(annotation.id, undefined);
     return () => onPreview?.(annotation.id, undefined);
-  }, [annotation.id, canonicalDraftKey, firstAnchorField, onPreview]);
+  }, [annotation.id, canonicalDraftKey, firstAnchorField, anchorField, onPreview]);
   return <aside className="inspector" data-testid="inspector" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
       <InspectorHeaderBar onClose={onClose} />
     <InspectorSelectionHeader kind="Annotation" title={label || typeLabel} detail={rangeDetail ? `${typeLabel} · ${rangeDetail}` : typeLabel} />
@@ -179,9 +218,10 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
         {annotation.type === "highlight" && <section className="annotation-position-mode-editor" aria-label="Highlight position mode section"><strong>Position Mode</strong><label>Mode<select aria-label="Highlight position mode" value={annotation.positionMode ?? "cycle-snap"} onChange={(event) => setPositionMode(event.target.value as "cycle-snap" | "free")}><option value="cycle-snap">Cycle Snap</option><option value="free">Free</option></select></label>{positionModeStatus && <p role="alert">{positionModeStatus}</p>}</section>}
         {annotation.type === "marker" && <section className="annotation-vertical-span-editor" aria-label="Marker vertical span"><strong>Vertical span</strong><label>Mode<select aria-label="Marker vertical span mode" value={verticalSpanMode} onChange={(event) => setVerticalSpanMode(event.target.value as typeof verticalSpanMode)}><option value="auto">Auto (full height)</option><option value="rows">Rows</option><option value="custom">Custom offsets</option></select></label>{verticalSpanMode === "rows" && <><label>Start Row<select aria-label="Marker vertical span start row" value={verticalSpanStartRowId ?? ""} onChange={(event) => setVerticalSpanStartRowId((event.target.value || undefined) as SignalId | undefined)}><option value="">Select a Signal…</option>{document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}</select></label><label>End Row<select aria-label="Marker vertical span end row" value={verticalSpanEndRowId ?? ""} onChange={(event) => setVerticalSpanEndRowId((event.target.value || undefined) as SignalId | undefined)}><option value="">Select a Signal…</option>{document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}</select></label></>}{verticalSpanMode === "custom" && <><label>Start Offset<input aria-label="Marker vertical span start offset" type="number" value={verticalSpanStartOffset} onChange={(event) => setVerticalSpanStartOffset(Number(event.target.value))} /></label><label>End Offset<input aria-label="Marker vertical span end offset" type="number" value={verticalSpanEndOffset} onChange={(event) => setVerticalSpanEndOffset(Number(event.target.value))} /></label></>}<button type="button" data-testid="apply-marker-vertical-span" disabled={!verticalSpanHasChanges || !verticalSpanValid} onClick={() => commands.updateAnnotationVerticalSpan({ annotationId: annotation.id, verticalSpan: verticalSpanDraft as NonNullable<Annotation["verticalSpan"]> })}>Apply vertical span</button></section>}
       </InspectorSection>
-      <InspectorSection sectionId="geometry" title="Geometry / Anchor" open={sections.geometry ?? true} onToggle={() => toggle("geometry")}><div className="property-row"><span>Anchor</span><span>{selectedAnchor?.point ?? "—"}</span></div><div className="annotation-anchor-editor" aria-label="Inspector Annotation Anchor"><label>Endpoint<select aria-label="Inspector annotation endpoint" value={anchorField} onChange={(event) => { const nextField = event.target.value as AnchorField; const nextAnchor = (annotation as Partial<Record<AnchorField, SemanticAnchor>>)[nextField]; setAnchorField(nextField); setAnchorX(nextAnchor?.offset?.x ?? 0); setAnchorY(nextAnchor?.offset?.y ?? 0); setAnchorCycle(nextAnchor?.cycle ?? 0); setAnchorSignalId(nextAnchor?.signalId); setAnchorPoint(nextAnchor?.point ?? "cycle-start"); }}>{anchorFields.map((field) => <option key={field} value={field}>{field}</option>)}</select></label><label>Signal<select aria-label="Inspector annotation anchor signal" value={anchorSignalId ?? ""} onChange={(event) => setAnchorSignalId((event.target.value || undefined) as SignalId | undefined)}><option value="">(none)</option>{document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}</select></label><label>Cycle<input aria-label="Inspector annotation anchor cycle" type="number" min="0" max={document.timeline.cycleCount - 1} step={annotation.type === "highlight" && annotation.positionMode === "free" ? "0.01" : "1"} value={anchorCycle} onChange={(event) => setAnchorCycle(Number(event.target.value))} /></label><label>Point<select aria-label="Inspector annotation anchor point" value={anchorPoint} onChange={(event) => setAnchorPoint(event.target.value as SemanticAnchor["point"])}>{(["cycle-start", "cycle-center", "cycle-end", "transition-start", "transition-center", "transition-end", "rising-edge", "falling-edge", "value-start", "value-center", "row-center"] as const).map((point) => <option key={point} value={point}>{point}</option>)}</select></label><label>X offset<input aria-label="Inspector annotation anchor X" type="number" value={anchorX} onChange={(event) => setAnchorX(Number(event.target.value))} /></label><label>Y offset<input aria-label="Inspector annotation anchor Y" type="number" value={anchorY} onChange={(event) => setAnchorY(Number(event.target.value))} /></label><button type="button" data-testid="apply-inspector-annotation-anchor" disabled={!selectedAnchor} onClick={() => { if (selectedAnchor) commands.setAnnotationAnchor(annotation.id, anchorField, { ...selectedAnchor, ...(anchorSignalId === undefined ? {} : { signalId: anchorSignalId }), cycle: anchorCycle, point: anchorPoint, offset: { x: anchorX, y: anchorY } }); }}>Apply Anchor</button></div></InspectorSection>
+      <InspectorSection sectionId="geometry" title="Geometry / Anchor" open={sections.geometry ?? true} onToggle={() => toggle("geometry")}><div className="property-row"><span>Anchor</span><span>{selectedAnchor?.point ?? "—"}</span></div><div className="annotation-anchor-editor" aria-label="Inspector Annotation Anchor"><label>Endpoint<select aria-label="Inspector annotation endpoint" value={anchorField} onChange={(event) => { const nextField = event.target.value as AnchorField; const nextAnchor = (annotation as Partial<Record<AnchorField, SemanticAnchor>>)[nextField]; setAnchorField(nextField); setAnchorConflictField(undefined); setAnchorX(nextAnchor?.offset?.x ?? 0); setAnchorY(nextAnchor?.offset?.y ?? 0); setAnchorCycle(nextAnchor?.cycle ?? 0); setAnchorSignalId(nextAnchor?.signalId); setAnchorPoint(nextAnchor?.point ?? "cycle-start"); }}>{anchorFields.map((field) => <option key={field} value={field}>{field}</option>)}</select></label><label>Signal<select aria-label="Inspector annotation anchor signal" value={anchorSignalId ?? ""} onChange={(event) => setAnchorSignalId((event.target.value || undefined) as SignalId | undefined)}><option value="">(none)</option>{document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}</select></label><label>Cycle<input aria-label="Inspector annotation anchor cycle" type="number" min="0" max={document.timeline.cycleCount - 1} step={annotation.type === "highlight" && annotation.positionMode === "free" ? "0.01" : "1"} value={anchorCycle} onChange={(event) => setAnchorCycle(Number(event.target.value))} /></label><label>Point<select aria-label="Inspector annotation anchor point" value={anchorPoint} onChange={(event) => setAnchorPoint(event.target.value as SemanticAnchor["point"])}>{(["cycle-start", "cycle-center", "cycle-end", "transition-start", "transition-center", "transition-end", "rising-edge", "falling-edge", "value-start", "value-center", "row-center"] as const).map((point) => <option key={point} value={point}>{point}</option>)}</select></label><label>X offset<input aria-label="Inspector annotation anchor X" type="number" value={anchorX} onChange={(event) => setAnchorX(Number(event.target.value))} /></label><label>Y offset<input aria-label="Inspector annotation anchor Y" type="number" value={anchorY} onChange={(event) => setAnchorY(Number(event.target.value))} /></label>{anchorConflictField === anchorField && <><span role="alert" data-testid="inspector-annotation-anchor-draft-conflict">Anchor changed elsewhere. Reload the latest value or explicitly keep this draft before applying.</span><button type="button" onClick={() => { if (!selectedAnchor) return; setAnchorCycle(selectedAnchor.cycle); setAnchorSignalId(selectedAnchor.signalId); setAnchorPoint(selectedAnchor.point); setAnchorX(selectedAnchor.offset?.x ?? 0); setAnchorY(selectedAnchor.offset?.y ?? 0); setAnchorConflictField(undefined); }}>Reload latest</button><button type="button" onClick={() => setAnchorConflictField(undefined)}>Keep my draft</button></>}<button type="button" data-testid="apply-inspector-annotation-anchor" disabled={!selectedAnchor || anchorConflictField === anchorField} onClick={() => { if (selectedAnchor && anchorConflictField !== anchorField) commands.setAnnotationAnchor(annotation.id, anchorField, { ...selectedAnchor, ...(anchorSignalId === undefined ? {} : { signalId: anchorSignalId }), cycle: anchorCycle, point: anchorPoint, offset: { x: anchorX, y: anchorY } }); }}>Apply Anchor</button></div></InspectorSection>
       <InspectorSection sectionId="style" title="Style" open={sections.style ?? false} onToggle={() => toggle("style")}>
         <StrokeFillToolbar idPrefix="inspector-stroke-fill" style={styleDraft} onChange={setStyleDraft} strokeDisabled={!!annotationCapabilityDisabledReason(annotation.type, "stroke")} strokeReason={annotationCapabilityDisabledReason(annotation.type, "stroke")} fillDisabled={!!annotationCapabilityDisabledReason(annotation.type, "fill")} fillReason={annotationCapabilityDisabledReason(annotation.type, "fill")} />
+        <AnnotationLabelLayoutToolbar idPrefix="inspector-annotation-label-layout" style={styleDraft} onChange={setStyleDraft} />
         {lineControlsEnabled && <><label>Line<select aria-label="Annotation line type" value={lineType} onChange={(event) => setLineType(event.target.value as typeof lineType)}><option value="straight">Straight</option><option value="orthogonal">Orthogonal</option><option value="curve">Curve</option><option value="diagonal">Diagonal</option></select></label><label>Arrow<select aria-label="Annotation arrowhead" value={arrowhead} onChange={(event) => setArrowhead(event.target.value as typeof arrowhead)}><option value="end">End</option><option value="start">Start</option><option value="bidirectional">Both</option><option value="none">None</option></select></label></>}</InspectorSection>
       <section className="inspector-annotation-preview"><button type="button" data-testid="annotation-preview-action" onClick={() => { setPreviewRevision((value) => value + 1); onPreview?.(annotation.id, { label, color, ...(isOpacityType ? { opacity } : {}) }); }}>Preview draft only</button><output data-testid="annotation-preview-status">{previewRevision === 0 ? "Preview ready" : `Previewing draft (updated ${previewRevision}) · canonical data unchanged`}</output></section>
       <section><button type="button" className="danger" onClick={onDelete}>Delete Annotation</button></section>

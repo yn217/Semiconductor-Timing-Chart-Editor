@@ -50,7 +50,7 @@ export function retainedBookmarkDrafts(bookmarks: readonly Bookmark[], exceptId:
  * TransactionEditor already uses. Reuses the canonical `bookmark.create/
  * update/delete` SemanticCommands as its only mutation path -- no second
  * Bookmark list/store. */
-export function BookmarkEditor({ bookmark, document, history, range, onSelect, onReveal, onNavigateBookmark, commands, onUndo, onRedo, onDelete, onCancel }: { readonly bookmark: Bookmark | undefined; readonly document: CanonicalDocument; readonly history: HistoryState; readonly range: { readonly start: number; readonly end: number }; readonly onSelect: (id: BookmarkId) => void; readonly onReveal: (start: number) => void; readonly onNavigateBookmark: (cycle: number, bookmarkId?: BookmarkId) => void; readonly commands: Pick<EditorSurfaceCommandController, "createBookmark" | "updateBookmark" | "updateTimeGroupPresentation">; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
+export function BookmarkEditor({ bookmark, document, history, range, onSelect, onReveal, onNavigateBookmark, commands, onUndo, onRedo, onDelete, onCancel }: { readonly bookmark: Bookmark | undefined; readonly document: CanonicalDocument; readonly history: HistoryState; readonly range: { readonly start: number; readonly end: number }; readonly onSelect: (id: BookmarkId) => void; readonly onReveal: (start: number) => void; readonly onNavigateBookmark: (cycle: number, bookmarkId?: BookmarkId) => void; readonly commands: Pick<EditorSurfaceCommandController, "createBookmark" | "updateBookmark" | "updateTimeGroupPresentation">; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: (id: BookmarkId) => void; readonly onCancel: () => void }) {
   const [name, setName] = useState("Bookmark");
   const [start, setStart] = useState(0);
   const [comment, setComment] = useState("");
@@ -60,7 +60,11 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
   const [editName, setEditName] = useState(retained?.name ?? bookmark?.name ?? "");
   const [editStart, setEditStart] = useState(retained?.start ?? bookmark?.start ?? 0);
   const [editComment, setEditComment] = useState(retained?.comment ?? bookmark?.comment ?? "");
-  const wasRetained = retained !== undefined;
+  // Snapshot this at mount: after the first field edit, the shared draft store
+  // contains the just-created draft too, but that is not a draft restored from
+  // an earlier selection. Only a remount with an existing draft should use the
+  // "kept from earlier" announcement.
+  const [wasRetained] = useState(() => retained !== undefined);
   useSyncExternalStore(subscribeBookmarkDrafts, () => bookmarkDraftVersion, () => 0);
   const otherDrafts = retainedBookmarkDrafts(document.bookmarks, bookmark?.id);
   const updateDraft = (next: BookmarkDraftFields) => { if (bookmark) setBookmarkDraft(bookmark, next); };
@@ -107,7 +111,7 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
     <header>
       <button type="button" aria-label="Previous bookmark" disabled={document.bookmarks.length === 0} onClick={() => navigate(-1)}>Previous</button>
       <button type="button" aria-label="Next bookmark" disabled={document.bookmarks.length === 0} onClick={() => navigate(1)}>Next</button>
-      <strong>{bookmark ? `Editing: ${bookmark.name}` : "Bookmark Editor"}</strong>{containingGroups.length > 0 && <small data-testid="bookmark-inside-collapsed">inside collapsed: {containingGroups.map((group) => group.name).join(", ")}</small>}<button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{bookmark && <><button type="button" onClick={() => onReveal(bookmark.start)}>Reveal</button>{containingGroups.length > 0 && <button type="button" data-testid="bookmark-expand-and-jump" onClick={expandAndJump}>Expand and Jump</button>}<button type="button" onClick={duplicate}>Duplicate</button><button type="button" className="danger" data-testid="delete-bottom-bookmark" onClick={onDelete}>Delete Bookmark</button></>}</header>
+      <strong>{bookmark ? `Editing: ${bookmark.name}` : "Bookmark Editor"}</strong>{containingGroups.length > 0 && <small data-testid="bookmark-inside-collapsed">inside collapsed: {containingGroups.map((group) => group.name).join(", ")}</small>}<button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{bookmark && <><button type="button" onClick={() => onReveal(bookmark.start)}>Reveal</button>{containingGroups.length > 0 && <button type="button" data-testid="bookmark-expand-and-jump" onClick={expandAndJump}>Expand and Jump</button>}<button type="button" onClick={duplicate}>Duplicate</button><button type="button" className="danger" data-testid="delete-bottom-bookmark" onClick={() => onDelete(bookmark.id)}>Delete Bookmark</button></>}</header>
     {bookmark
       ? <>
           {otherDrafts.length > 0 && <p className="transaction-retained-drafts" role="status" data-testid="bookmark-retained-drafts">Unapplied Bookmark drafts are kept for: {otherDrafts.map((item) => <span key={item.id} className="transaction-retained-draft" data-bookmark-id={item.id}><button type="button" aria-label={`Discard the unapplied draft for ${item.name}`} onClick={() => clearBookmarkDraft(item.id)}>{item.name} Discard</button></span>)}</p>}

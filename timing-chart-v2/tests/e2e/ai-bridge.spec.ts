@@ -12,6 +12,7 @@ import { expect, test } from "@playwright/test";
 
 const PORT = 4610;
 const TOKEN = "e2e-test-bridge-token";
+const EDITOR_TOKEN = "e2e-test-editor-transport-token";
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 async function waitForBridgeReady(): Promise<void> {
@@ -27,7 +28,16 @@ async function waitForBridgeReady(): Promise<void> {
 }
 
 async function callTool(name: string, token = TOKEN, args?: Record<string, unknown>) {
-  const response = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }) });
+  let editorSessionId = args?.editorSessionId;
+  if (name !== "list_editor_sessions" && typeof editorSessionId !== "string") {
+    const sessionsResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/call", params: { name: "list_editor_sessions", arguments: {} } }) });
+    if (!sessionsResponse.ok) return { status: sessionsResponse.status, body: await sessionsResponse.json() as { result?: { content: readonly { text: string }[] }; error?: { code: number; message: string } } };
+    const sessionResult = (await sessionsResponse.json() as { result: { content: readonly { text: string }[] } }).result;
+    const sessions = JSON.parse(sessionResult.content[0]!.text) as { editorSessionId: string }[];
+    editorSessionId = sessions[0]?.editorSessionId;
+  }
+  const arguments_ = name === "list_editor_sessions" ? args ?? {} : { ...args, editorSessionId };
+  const response = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: arguments_ } }) });
   return { status: response.status, body: (await response.json()) as { result?: { content: readonly { text: string }[] }; error?: { code: number; message: string } } };
 }
 
@@ -40,13 +50,58 @@ test.describe.configure({ mode: "serial" });
 let bridge: ChildProcess | undefined;
 
 test.beforeEach(async () => {
-  bridge = spawn(process.execPath, ["scripts/ai-bridge-server.mjs"], { env: { ...process.env, AI_BRIDGE_PORT: String(PORT), AI_BRIDGE_TOKEN: TOKEN }, stdio: "ignore" });
+  bridge = spawn(process.execPath, ["scripts/ai-bridge-server.mjs"], { env: { ...process.env, AI_BRIDGE_PORT: String(PORT), AI_BRIDGE_TOKEN: TOKEN, AI_BRIDGE_EDITOR_TOKEN: EDITOR_TOKEN }, stdio: "ignore" });
   await waitForBridgeReady();
 });
 
 test.afterEach(() => {
   bridge?.kill();
   bridge = undefined;
+});
+
+test("external AI setup guide exposes client configs without copying a bearer secret", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-connect-external").click();
+  const guide = ai.getByTestId("ai-connection-guide");
+  await expect(guide).toBeVisible();
+  await expect(guide).toContainText("npm run ai-bridge");
+  await expect(guide).toContainText("get_document_summary");
+  await expect(guide.getByTestId("ai-first-read-prompt")).toContainText("Do not edit the document");
+  await expect(guide.getByTestId("ai-first-edit-prompt")).toContainText("Do not Validate or Apply it");
+  await expect(guide.getByTestId("ai-bridge-probe")).toContainText(`Bridge found at 127.0.0.1:${PORT}`);
+  await expect(guide.getByTestId("ai-client-config")).toContainText("bearer_token_env_var");
+  await guide.getByLabel("MCP client setup").selectOption("claude-code");
+  await expect(guide.getByTestId("ai-client-config")).toContainText('"type": "http"');
+  await expect(guide.getByTestId("ai-client-config")).toContainText("${TIMING_CHART_MCP_TOKEN}");
+  await expect(guide.getByLabel("Editor transport token")).toHaveAttribute("type", "password");
+  await expect(guide).not.toContainText(TOKEN);
+});
+
+test("New retires the previous Editor session immediately instead of waiting for stale-session expiry", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected", { timeout: 10_000 });
+
+  const before = await callTool("list_editor_sessions");
+  const oldId = (JSON.parse(before.body.result!.content[0]!.text) as { editorSessionId: string }[])[0]!.editorSessionId;
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
+  const discard = page.getByTestId("unsaved-discard");
+  if (await discard.isVisible().catch(() => false)) await discard.click();
+  await expect.poll(async () => {
+    const listed = await callTool("list_editor_sessions");
+    return (JSON.parse(listed.body.result!.content[0]!.text) as { editorSessionId: string }[]).some((session) => session.editorSessionId === oldId);
+  }, { timeout: 5_000 }).toBe(false);
 });
 
 test("a test MCP client can connect, read the live document/selection, and request a view-only operation with zero Canonical/History/Dirty delta", async ({ page }) => {
@@ -61,7 +116,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
   await expect(page.getByTestId("ai-provider-status")).toContainText("external agent connected");
@@ -71,17 +126,28 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  expect(tools).toEqual(["get_document_summary", "get_selection", "get_viewport_snapshot", "fit_all", "propose_edit"]);
+  const addedTools = ["set_selection", "propose_move_signal_group", "propose_delete_signal_group", "fit_selection", "propose_create_time_group", "propose_update_time_group", "propose_delete_time_group", "switch_mode", "open_panel", "set_visible_time_range"];
+  expect(tools.filter((tool) => addedTools.includes(tool))).toEqual(addedTools);
+  const existingTools = tools.filter((tool) => !addedTools.includes(tool));
+  expect(existingTools).toEqual(["list_editor_sessions", "get_document_summary", "get_view_context", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_transaction", "get_transaction_groups", "get_transaction_phases", "get_linked_signals", "get_annotations", "get_bookmarks", "get_time_groups", "get_problems", "fit_all", "propose_edit", "propose_create_signal", "propose_rename_signal", "propose_update_signal", "propose_move_signal", "propose_insert_cycles", "propose_delete_cycles", "propose_move_range", "propose_duplicate_range", "propose_create_signal_group", "propose_rename_signal_group", "propose_create_transaction_group", "propose_rename_transaction_group", "propose_delete_transaction_group", "propose_create_transaction", "propose_update_transaction", "propose_move_transaction", "propose_resize_transaction", "propose_delete_transaction", "propose_add_phase", "propose_update_phase", "propose_delete_phase", "propose_link_signal", "propose_unlink_signal", "propose_create_bookmark", "propose_move_bookmark", "propose_update_bookmark", "propose_delete_bookmark", "propose_create_annotation", "propose_update_annotation", "propose_delete_annotation"]);
 
   // Read-only: reflects the real, live document -- never a canned/fake value.
   const summary = await callTool("get_document_summary");
   const parsedSummary = JSON.parse(summary.body.result!.content[0]!.text) as { title: string; signalCount: number };
   expect(parsedSummary.title).toBe("Sample -- Transaction Mode");
   expect(parsedSummary.signalCount).toBe(8);
+  const viewContext = await callTool("get_view_context");
+  expect(JSON.parse(viewContext.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ mode: "Cycle", zoom: expect.any(Number), selection: expect.objectContaining({ selectedSignalId: "sig_cycle_request" }) }));
 
   const selection = await callTool("get_selection");
   const parsedSelection = JSON.parse(selection.body.result!.content[0]!.text) as { selectedSignalId: string };
   expect(parsedSelection.selectedSignalId).toBe("sig_cycle_request");
+
+  const setSelection = await callTool("set_selection", TOKEN, { entityType: "signal", entityId: "sig_cycle_ready" });
+  expect(setSelection.body.result!.isError).toBe(false);
+  expect(JSON.parse(setSelection.body.result!.content[0]!.text)).toEqual({ selected: { entityType: "signal", entityId: "sig_cycle_ready", name: "READY" }, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 });
+  await expect(page.getByTestId("selection-status")).toHaveText("READY");
+  expect(JSON.parse((await callTool("get_selection")).body.result!.content[0]!.text)).toEqual(expect.objectContaining({ selectedSignalId: "sig_cycle_ready" }));
 
   // #395 PR5: get_viewport_snapshot is read-only too -- a structured
   // Element Map (real stable ids, not pixel coordinates) plus zoom/cycle
@@ -104,6 +170,138 @@ test("a test MCP client can connect, read the live document/selection, and reque
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+
+  const fitSelection = await callTool("fit_selection");
+  expect(fitSelection.body.result!.isError).toBe(false);
+  expect(JSON.parse(fitSelection.body.result!.content[0]!.text)).toEqual({ applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 });
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+
+  const visibleRange = await callTool("set_visible_time_range", TOKEN, { startCycle: 40, endCycle: 80 });
+  expect(JSON.parse(visibleRange.body.result!.content[0]!.text)).toEqual({ applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 });
+  const showInspector = await callTool("open_panel", TOKEN, { panel: "inspector" });
+  expect(JSON.parse(showInspector.body.result!.content[0]!.text)).toEqual({ applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 });
+  await expect(page.getByTestId("inspector")).toBeVisible();
+  const switchMode = await callTool("switch_mode", TOKEN, { mode: "Transaction" });
+  expect(JSON.parse(switchMode.body.result!.content[0]!.text)).toEqual({ applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 });
+  const transactionView = await callTool("get_view_context");
+  expect(JSON.parse(transactionView.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ mode: "Transaction" }));
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+});
+
+test("get_transactions, get_annotations, get_bookmarks and get_problems are read-only semantic projections", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
+
+  const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+  const signals = await callTool("get_signals", TOKEN, { groupId: "grp_control" });
+  expect(signals.body.result!.isError).toBe(false);
+  const signalData = JSON.parse(signals.body.result!.content[0]!.text) as { signals: readonly { id: string; name: string; groupId?: string }[] };
+  expect(signalData.signals).toContainEqual(expect.objectContaining({ id: "sig_cycle_request", name: "REQUEST", groupId: "grp_control" }));
+  const signal = await callTool("get_signal", TOKEN, { signalId: "sig_cycle_request" });
+  expect(JSON.parse(signal.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ signal: expect.objectContaining({ id: "sig_cycle_request", name: "REQUEST" }) }));
+  const groups = await callTool("get_signal_groups");
+  expect(JSON.parse(groups.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ groups: expect.arrayContaining([expect.objectContaining({ id: "grp_control", rows: expect.arrayContaining(["sig_cycle_request"]) })]) }));
+  const transactions = await callTool("get_transactions");
+  expect(transactions.body.result!.isError).toBe(false);
+  const transactionData = JSON.parse(transactions.body.result!.content[0]!.text) as { transactionGroups: readonly { id: string; name: string }[]; transactions: readonly { id: string; name: string; start: number; end: number }[] };
+  expect(transactionData.transactions.length).toBeGreaterThan(0);
+  expect(transactionData.transactions[0]).toEqual(expect.objectContaining({ id: expect.any(String), name: expect.any(String), start: expect.any(Number), end: expect.any(Number) }));
+  const transactionId = transactionData.transactions[0]!.id;
+  const transaction = await callTool("get_transaction", TOKEN, { transactionId });
+  expect(JSON.parse(transaction.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ transaction: expect.objectContaining({ id: transactionId }) }));
+  const transactionGroups = await callTool("get_transaction_groups");
+  expect(JSON.parse(transactionGroups.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ groups: expect.any(Array) }));
+  const phases = await callTool("get_transaction_phases", TOKEN, { transactionId });
+  expect(JSON.parse(phases.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ transactionId, phases: expect.any(Array) }));
+  const linkedSignals = await callTool("get_linked_signals", TOKEN, { transactionId });
+  expect(JSON.parse(linkedSignals.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ transactionId, signals: expect.any(Array) }));
+
+  const annotations = await callTool("get_annotations");
+  expect(annotations.body.result!.isError).toBe(false);
+  const annotationData = JSON.parse(annotations.body.result!.content[0]!.text) as { annotations: readonly { id: string; type: string; visible: boolean; locked: boolean }[] };
+  expect(Array.isArray(annotationData.annotations)).toBe(true);
+  for (const annotation of annotationData.annotations) expect(annotation).toEqual(expect.objectContaining({ id: expect.any(String), type: expect.any(String), visible: expect.any(Boolean), locked: expect.any(Boolean) }));
+
+  const annotationProposal = await callTool("propose_create_annotation", TOKEN, { type: "text", signalId: "sig_cycle_request", start: 4, end: 5, label: "External note" });
+  expect(annotationProposal.body.result!.isError).toBe(false);
+  expect(JSON.parse(annotationProposal.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ summary: expect.stringContaining("External note"), requiresApproval: true }));
+  await expect(ai.getByText(/External note/)).toBeVisible();
+
+  const bookmarks = await callTool("get_bookmarks");
+  expect(bookmarks.body.result!.isError).toBe(false);
+  const bookmarkData = JSON.parse(bookmarks.body.result!.content[0]!.text) as { bookmarks: readonly { id: string; name: string; cycle: number }[] };
+  expect(Array.isArray(bookmarkData.bookmarks)).toBe(true);
+  const timeGroups = await callTool("get_time_groups");
+  expect(JSON.parse(timeGroups.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ timeGroups: expect.any(Array) }));
+
+  const problems = await callTool("get_problems");
+  expect(problems.body.result!.isError).toBe(false);
+  const problemData = JSON.parse(problems.body.result!.content[0]!.text) as { problems: readonly { code: string; path: string; message: string }[] };
+  expect(problemData.problems).toEqual([]);
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+});
+
+test("external Transaction+Phases+Signals proposal validates and applies as one atomic History entry", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeDirty = await page.getByTestId("dirty-status").textContent();
+
+  const response = await callTool("propose_create_transaction", TOKEN, {
+    name: "MCP_READ", start: 10, end: 40,
+    phases: [{ name: "Address", start: 10, end: 16 }, { name: "Data", start: 16, end: 32 }, { name: "Response", start: 32, end: 40 }],
+    linkedSignalIds: ["sig_cycle_request", "sig_cycle_ready"],
+  });
+  expect(response.body.result!.isError).toBe(false);
+  expect(JSON.parse(response.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ summary: "Create Transaction MCP_READ with 3 Phases and 2 linked Signals", requiresApproval: true }));
+  await expect(ai.getByTestId("ai-preview")).toContainText("3 Phases and 2 linked Signals");
+  const proposalCommands = ai.getByTestId("ai-preview-commands");
+  await expect(proposalCommands.locator("li")).toHaveCount(6);
+  await expect(proposalCommands).toContainText("Create Transaction MCP_READ");
+  await expect(proposalCommands).toContainText("Add Phase Address to MCP_READ");
+  await expect(proposalCommands).toContainText("10–16 source cycles");
+  await expect(proposalCommands).toContainText("Link Signal REQUEST to MCP_READ");
+  await expect(proposalCommands).toContainText("Signal ID sig_cycle_request");
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText(beforeDirty!);
+
+  await ai.getByTestId("ai-validate").click();
+  await ai.getByTestId("ai-apply").click();
+  await expect(ai.getByTestId("ai-status")).toHaveText("Applied · one atomic SemanticCommand transaction");
+  await expect(host).toHaveAttribute("data-canonical-revision", "1");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  const lanes = page.getByTestId("transaction-lanes");
+  await expect(lanes.locator('[data-transaction-id][title="MCP_READ"]')).toBeVisible();
+
+  await page.locator(".ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect(lanes.locator('[data-transaction-id][title="MCP_READ"]')).toHaveCount(0);
 });
 
 test("propose_edit builds a Preview only -- it never auto-validates or auto-applies, and a human must still Validate + Apply it themselves", async ({ page }) => {
@@ -118,7 +316,7 @@ test("propose_edit builds a Preview only -- it never auto-validates or auto-appl
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
@@ -146,6 +344,175 @@ test("propose_edit builds a Preview only -- it never auto-validates or auto-appl
   await expect(host).toHaveAttribute("data-canonical-revision", String(Number(before.revision) + 1));
 });
 
+test("propose_rename_signal targets a stable Signal ID and still requires human Validate and Apply", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
+
+  const snapshot = await callTool("get_viewport_snapshot");
+  const elementMap = JSON.parse(snapshot.body.result!.content[0]!.text) as { elementMap: readonly { id: string; name: string }[] };
+  const target = elementMap.elementMap.find((signal) => signal.id === "sig_cycle_request");
+  expect(target?.name).toBe("REQUEST");
+  const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+
+  const proposal = await callTool("propose_rename_signal", TOKEN, { signalId: target!.id, name: "REQ" });
+  expect(proposal.body.result!.isError).toBe(false);
+  expect(JSON.parse(proposal.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ summary: "Rename REQUEST to REQ", baseRevision: 0, requiresApproval: true }));
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+  await expect(ai).toContainText("Rename REQUEST to REQ");
+
+  await ai.getByTestId("ai-validate").click();
+  await ai.getByTestId("ai-apply").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(before.revision) + 1));
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("REQ");
+
+  const beforeCancelledUpdate = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+  const update = await callTool("propose_update_signal", TOKEN, { signalId: target!.id, role: "output" });
+  expect(update.body.result!.isError).toBe(false);
+  expect(JSON.parse(update.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ summary: expect.stringContaining("role to output"), requiresApproval: true }));
+  await ai.getByRole("button", { name: "Cancel" }).click();
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeCancelledUpdate.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeCancelledUpdate.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(beforeCancelledUpdate.dirty!);
+});
+
+test("the Editor session and pending AI proposal survive Bottom tab switches, then reject stale revision", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
+
+  const sessionsBefore = JSON.parse((await callTool("list_editor_sessions")).body.result!.content[0]!.text) as { editorSessionId: string }[];
+  expect(sessionsBefore).toHaveLength(1);
+  const editorSessionId = sessionsBefore[0]!.editorSessionId;
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const proposal = await callTool("propose_rename_signal", TOKEN, { editorSessionId, signalId: "sig_cycle_request", name: "REQ_STALE" });
+  expect(proposal.body.result!.isError).toBe(false);
+  await expect(ai).toContainText("Rename REQUEST to REQ_STALE");
+
+  // The bridge session is owned by this Editor tab, not by the currently
+  // visible Bottom child. Switching tabs must preserve both identity and draft.
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
+  const sessionsAfterSwitch = JSON.parse((await callTool("list_editor_sessions")).body.result!.content[0]!.text) as { editorSessionId: string }[];
+  expect(sessionsAfterSwitch.map((session) => session.editorSessionId)).toEqual([editorSessionId]);
+
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByLabel("New Transaction name").fill("Stale proposal revision bump");
+  await page.getByRole("button", { name: "Create Transaction", exact: true }).click();
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 1));
+  const sessionsAfterEdit = JSON.parse((await callTool("list_editor_sessions")).body.result!.content[0]!.text) as { editorSessionId: string }[];
+  expect(sessionsAfterEdit.map((session) => session.editorSessionId)).toEqual([editorSessionId]);
+
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "AI", exact: true }).click();
+  await expect(ai).toContainText("Rename REQUEST to REQ_STALE");
+  await ai.getByTestId("ai-validate").click();
+  await expect(ai.getByTestId("ai-status")).toContainText("Preview is out of date");
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("REQUEST");
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 1));
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+
+  await page.locator(".ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("REQUEST");
+});
+
+test("propose_create_signal uses a stable Group ID and remains a Preview until explicit Apply", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
+  const groupsResponse = await callTool("get_signal_groups");
+  const groups = JSON.parse(groupsResponse.body.result!.content![0]!.text) as { groups: readonly { id: string }[] };
+  const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+  const proposal = await callTool("propose_create_signal", TOKEN, { name: "READY", type: "event", role: "output", groupId: groups.groups[0]!.id, initialValue: "rise" });
+  expect(proposal.body.result!.isError).toBe(false);
+  expect(JSON.parse(proposal.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ summary: expect.stringContaining("Create event signal READY"), requiresApproval: true }));
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+  await expect(ai).toContainText("Create event signal READY");
+  await ai.getByTestId("ai-validate").click();
+  await ai.getByTestId("ai-apply").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(before.revision) + 1));
+  await expect(host.locator("[data-role='frozen-row']").filter({ hasText: "READY" })).toBeVisible();
+});
+
+test("Signal Group move and delete tools target stable IDs and apply only after approval", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
+
+  const groupsResponse = await callTool("get_signal_groups");
+  const groups = JSON.parse(groupsResponse.body.result!.content[0]!.text) as { groups: readonly { id: string; name: string; rows: readonly string[] }[] };
+  expect(groups.groups.length).toBeGreaterThan(1);
+  const beforeMove = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+  const movedGroup = groups.groups.at(-1)!;
+  const move = await callTool("propose_move_signal_group", TOKEN, { groupId: movedGroup.id, index: 0 });
+  expect(move.body.result!.isError).toBe(false);
+  expect(JSON.parse(move.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ summary: expect.stringContaining(`Move Signal Group ${movedGroup.name}`), requiresApproval: true }));
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeMove.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeMove.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(beforeMove.dirty!);
+  await ai.getByRole("button", { name: "Cancel" }).click();
+
+  const create = await callTool("propose_create_signal_group", TOKEN, { name: "MCP Empty Group" });
+  expect(create.body.result!.isError).toBe(false);
+  await ai.getByTestId("ai-validate").click();
+  await ai.getByTestId("ai-apply").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeMove.revision) + 1));
+  const afterCreate = JSON.parse((await callTool("get_signal_groups")).body.result!.content[0]!.text) as { groups: readonly { id: string; name: string; rows: readonly string[] }[] };
+  const emptyGroup = afterCreate.groups.find((group) => group.name === "MCP Empty Group");
+  expect(emptyGroup).toEqual(expect.objectContaining({ id: expect.any(String), rows: [] }));
+
+  const beforeDelete = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+  const deletion = await callTool("propose_delete_signal_group", TOKEN, { groupId: emptyGroup!.id });
+  expect(deletion.body.result!.isError).toBe(false);
+  expect(JSON.parse(deletion.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ summary: "Delete empty Signal Group MCP Empty Group", requiresApproval: true }));
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeDelete.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeDelete.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(beforeDelete.dirty!);
+  await ai.getByTestId("ai-validate").click();
+  await ai.getByTestId("ai-apply").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeDelete.revision) + 1));
+  const afterDelete = JSON.parse((await callTool("get_signal_groups")).body.result!.content[0]!.text) as { groups: readonly { id: string }[] };
+  expect(afterDelete.groups.some((group) => group.id === emptyGroup!.id)).toBe(false);
+});
+
 test("an unauthorized propose_edit call (bad token) never reaches the document, and an empty query is rejected before building any proposal", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
@@ -154,7 +521,7 @@ test("an unauthorized propose_edit call (bad token) never reaches the document, 
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
@@ -174,7 +541,7 @@ test("rejects a request with an invalid token, and rejects any tool outside the 
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
@@ -189,7 +556,7 @@ test("rejects a request with an invalid token, and rejects any tool outside the 
   // client can't even reach the endpoints above being reachable at all
   // says nothing about *this specific page's* honesty, so also confirm
   // the Settings status itself never shows Connected for a bad token.
-  await settings.getByLabel("Bridge connection token").fill("wrong-token");
+  await settings.getByLabel("Editor transport token").fill("wrong-token");
   await settings.getByLabel("Enable external agents").uncheck();
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveText(/Disconnected/, { timeout: 10_000 });
@@ -211,7 +578,7 @@ test("bridge disconnect is surfaced truthfully, and the same tab recovers on its
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
@@ -219,7 +586,7 @@ test("bridge disconnect is surfaced truthfully, and the same tab recovers on its
   bridge = undefined;
   await expect(ai.getByTestId("ai-bridge-status")).not.toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
-  bridge = spawn(process.execPath, ["scripts/ai-bridge-server.mjs"], { env: { ...process.env, AI_BRIDGE_PORT: String(PORT), AI_BRIDGE_TOKEN: TOKEN }, stdio: "ignore" });
+  bridge = spawn(process.execPath, ["scripts/ai-bridge-server.mjs"], { env: { ...process.env, AI_BRIDGE_PORT: String(PORT), AI_BRIDGE_TOKEN: TOKEN, AI_BRIDGE_EDITOR_TOKEN: EDITOR_TOKEN }, stdio: "ignore" });
   await waitForBridgeReady();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 

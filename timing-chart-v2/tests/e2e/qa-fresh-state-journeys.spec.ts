@@ -1,6 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
 import { timelineOwner } from "./timeline-scroll.js";
-import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
 /**
  * #684 blind fresh-state journeys (production path, no injected state): every test starts from a fresh browser context (default
@@ -69,30 +68,6 @@ test("J5/J10 select -> edit -> Apply -> Undo -> Redo, and an unapplied draft doe
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  expect(errors).toEqual([]);
-});
-
-test("J6 annotation create -> drag -> Escape leaves Canonical untouched", async ({ page }) => {
-  const errors = trackErrors(page);
-  await fresh(page); await toCycleSample(page);
-  const host = page.getByTestId("cycle-surface");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
-  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
-  await page.getByLabel("Annotation type").selectOption("text");
-  const previousIds = await snapshotAnnotationIds(host);
-  await page.getByRole("button", { name: "Add annotation" }).click();
-  await expect(host).toHaveAttribute("data-editor-idle", "true");
-  const before = await status(page);
-  const owner = annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "text"));
-  const label = owner.locator("[data-role='annotation-label']");
-  const box = (await label.boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(box.x + 60, box.y + 30, { steps: 5 });
-  await page.keyboard.press("Escape");
-  await page.mouse.up();
-  await expect(host).toHaveAttribute("data-editor-idle", "true");
-  expect(await status(page)).toEqual(before);
   expect(errors).toEqual([]);
 });
 

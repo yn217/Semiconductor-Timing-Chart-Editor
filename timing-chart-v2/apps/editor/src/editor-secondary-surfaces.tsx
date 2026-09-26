@@ -1,5 +1,5 @@
 import { useTransactionDisclosure } from "./workspace/use-transaction-disclosure.js";
-import type { AIBridgeStatus } from "./ai-bridge-client.js";
+import type { AIBridgeStatus, AIBridgeViewOperation } from "./ai-bridge-client.js";
 import { useCallback, useEffect } from "react";
 import type {
   Dispatch,
@@ -111,12 +111,14 @@ export interface EditorSecondarySurfacesInput {
     readonly transactionIds: ReadonlySet<TransactionId>;
     readonly bookmark: Bookmark | undefined;
     readonly transactionId: TransactionId | undefined;
+    readonly legendSelected: boolean;
   };
   readonly bottom: {
     readonly signal: Signal | undefined;
     readonly group: SignalGroup | undefined;
     readonly annotation: Annotation | undefined;
     readonly transaction: Transaction | undefined;
+    readonly bookmark: Bookmark | undefined;
   };
   readonly timeline: {
     readonly range: Readonly<{ start: number; end: number }>;
@@ -126,6 +128,7 @@ export interface EditorSecondarySurfacesInput {
   };
   readonly workspace: {
     readonly viewMode: ViewMode;
+    readonly setViewMode: (mode: ViewMode) => void;
     readonly activeContext: ActiveContext;
     readonly bottomTabs: readonly BottomTab[];
     readonly bottomTab: BottomTab;
@@ -183,7 +186,7 @@ export interface EditorSecondarySurfacesInput {
   readonly actions: EditorActions;
   readonly setRuntimeDiagnostics: EditorApplicationOwner["setRuntimeDiagnostics"];
   readonly navigateProblem: (path: string) => void;
-  readonly ai: { readonly getZoom: () => number; readonly fitAll: () => void };
+  readonly ai: { readonly getZoom: () => number; readonly fitAll: () => void; readonly fitSelection: () => void; readonly fitSourceRange: (startCycle: number, endCycle: number) => boolean };
 }
 
 export interface EditorSecondarySurfacesOutput {
@@ -205,6 +208,21 @@ export function useEditorSecondarySurfaces(
 ): EditorSecondarySurfacesOutput {
   const execute = input.command.execute;
   const surfaceCommands = createEditorSurfaceCommandController(input.command);
+  const reportStaleImport = (domain: "annotation" | "event", message: string) => {
+    const detail = `stale-import:${domain}`;
+    input.setRuntimeDiagnostics((current) => [...current.filter((item) => item.detail !== detail), {
+      code: domain === "annotation" ? "ANNOTATION_IMPORT_STALE" : "EVENT_IMPORT_STALE",
+      path: "$.import",
+      message,
+      severity: "warning",
+      operation: `${domain}.import`,
+      operationLabel: domain === "annotation" ? "Import annotations" : "Import Signal events",
+      source: "parser",
+      stage: "commit",
+      recommendation: "Retry the import after the current document and target are stable.",
+      detail,
+    }]);
+  };
   const undo = input.command.undo;
   const redo = input.command.redo;
   const { selected, bottom, workspace, dialog, refs } = input;
@@ -216,18 +234,21 @@ export function useEditorSecondarySurfaces(
     : workspace.viewMode === "Transaction"
       ? "Transaction"
       : "Signal";
-  const inspectorSignal = inspectorContext === "Signal" ? selected.signal : undefined;
-  const inspectorSignalIds = inspectorContext === "Signal" ? selected.signalIds : new Set<SignalId>();
-  const inspectorGroup = inspectorContext === "Signal" ? selected.group : undefined;
-  const inspectorAnnotation = inspectorContext === "Signal" ? selected.annotation : undefined;
-  const inspectorTransaction = inspectorContext === "Transaction" ? selected.transaction : undefined;
+  const inspectorLegendSelected = workspace.viewMode !== "Transaction" && selected.legendSelected;
+  const inspectorSignal = !inspectorLegendSelected && inspectorContext === "Signal" ? selected.signal : undefined;
+  const inspectorSignalIds = !inspectorLegendSelected && inspectorContext === "Signal" ? selected.signalIds : new Set<SignalId>();
+  const inspectorGroup = !inspectorLegendSelected && inspectorContext === "Signal" ? selected.group : undefined;
+  const inspectorAnnotation = !inspectorLegendSelected && inspectorContext === "Signal" ? selected.annotation : undefined;
+  const inspectorTransaction = !inspectorLegendSelected && inspectorContext === "Transaction" ? selected.transaction : undefined;
+  const inspectorBookmark = inspectorLegendSelected ? undefined : selected.bookmark;
   const inspectorSelectionKey = inspectorSignalIds.size > 1
     ? `multi:${inspectorSignalIds.size}`
-    : inspectorSignal?.id ?? inspectorGroup?.id ?? inspectorAnnotation?.id ?? inspectorTransaction?.id ?? selected.bookmark?.id ?? "none";
+    : inspectorLegendSelected ? "legend" : inspectorSignal?.id ?? inspectorGroup?.id ?? inspectorAnnotation?.id ?? inspectorTransaction?.id ?? inspectorBookmark?.id ?? "none";
   const { aiBridgeStatus, ...aiAssistantPanel } = useEditorAiAssistantModel({
     document: input.document,
     documentEpoch: input.documentEpoch,
     revision: input.revision,
+    mode: workspace.viewMode === "Split" ? "Combined" : workspace.viewMode,
     selectedSignalId: input.annotationTargetSignalId,
     selectedGroupId: selected.group?.id,
     selectedAnnotationId: selected.annotation?.id,
@@ -241,7 +262,20 @@ export function useEditorSecondarySurfaces(
       ),
     getZoom: input.ai.getZoom,
     onFitAll: input.ai.fitAll,
+    onFitSelection: input.ai.fitSelection,
+    onSetSelection: input.actions.selectAIEntity,
     onOpenTimeline: () => workspace.setRibbonTab("Timeline"),
+    onViewOperation: (operation: AIBridgeViewOperation, args: Readonly<Record<string, unknown>>) => {
+      if (operation === "switch_mode") {
+        const mode = args.mode === "Combined" ? "Split" : args.mode;
+        workspace.setViewMode(mode as ViewMode);
+      } else if (operation === "open_panel") {
+        if (args.panel === "inspector") dialog.setInspectorVisible(true);
+        else input.setBottomVisible(true);
+      } else {
+        if (!input.ai.fitSourceRange(args.startCycle as number, args.endCycle as number)) throw new Error("The requested source-cycle range could not be resolved by the shared timeline geometry owner.");
+      }
+    },
     setRuntimeDiagnostics: input.setRuntimeDiagnostics,
   });
   const openTransactionContextMenu = (
@@ -261,8 +295,12 @@ export function useEditorSecondarySurfaces(
     <SignalEditor
       key={`${input.documentEpoch}:${bottom.signal?.id ?? "none"}:${dialog.bottomResetToken}`}
       signal={bottom.signal}
+      documentEpoch={input.documentEpoch}
+      revision={input.revision}
+      onImportDiagnostic={(message) => reportStaleImport("event", message)}
       cycleCount={input.document.timeline.cycleCount}
       bookmarks={input.document.bookmarks}
+      enumDefinitions={input.document.enumDefinitions}
       history={input.history}
       groups={input.document.signalGroups}
       problem={input.problem}
@@ -313,12 +351,14 @@ export function useEditorSecondarySurfaces(
     annotations={input.document.annotations}
     selectedId={bottom.annotation?.id}
     document={input.document}
+    documentEpoch={input.documentEpoch}
+    revision={input.revision}
     onSelect={input.actions.selectAnnotation}
     onCreate={input.actions.createSelectedAnnotationForType}
     onDuplicate={input.actions.duplicateAnnotation}
     onDelete={input.actions.deleteBottomAnnotation}
     commands={surfaceCommands}
-    onReplaceDocument={input.actions.replaceDocument}
+    onImportDiagnostic={(message) => reportStaleImport("annotation", message)}
   />;
   const transactionEditor = (
     <TransactionEditor
@@ -340,8 +380,8 @@ export function useEditorSecondarySurfaces(
   );
   const bookmarkEditor = (
     <BookmarkEditor
-      key={`${input.documentEpoch}:${selected.bookmark?.id ?? "none"}:${dialog.bottomResetToken}`}
-      bookmark={selected.bookmark}
+      key={`${input.documentEpoch}:${bottom.bookmark?.id ?? "none"}:${dialog.bottomResetToken}`}
+      bookmark={bottom.bookmark}
       document={input.document}
       history={input.history}
       range={input.timeline.range}
@@ -471,7 +511,7 @@ export function useEditorSecondarySurfaces(
       />
   ) : null;
   const workspaceViewportLegend = (
-    <LegendView document={input.document} commands={surfaceCommands} />
+    <LegendView document={input.document} commands={surfaceCommands} selected={selected.legendSelected} onSelect={input.actions.selectLegend} />
   );
   const workspaceTransactionTree =
     // Combined ("Split") reuses the exact same production Transaction Tree
@@ -546,6 +586,37 @@ export function useEditorSecondarySurfaces(
       )}
     </div>
   );
+  const activeBottomContent = workspace.bottomTab === "Signal" ? (
+    signalEditor
+  ) : workspace.bottomTab === "Annotation" ? (
+    annotationEditor
+  ) : workspace.bottomTab === "Transaction" ? (
+    transactionEditor
+  ) : workspace.bottomTab === "Phases" ? (
+    <TransactionPhaseSummary transaction={selected.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={workspace.cyclesPerTc} />
+  ) : workspace.bottomTab === "Linked Signals" ? (
+    <TransactionLinkedSummary transaction={selected.transaction} document={input.document} />
+  ) : workspace.bottomTab === "Bookmarks" ? (
+    bookmarkEditor
+  ) : workspace.bottomTab === "Problems" ? (
+    <ProblemsPanel diagnostics={input.diagnostics} onNavigate={input.navigateProblem} />
+  ) : workspace.bottomTab === "JSON" ? (
+    <AdvancedJsonPanel
+      document={input.document}
+      selectedSignal={bottom.signal}
+      selectedGroup={bottom.group}
+      selectedAnnotation={bottom.annotation}
+      selectedTransaction={bottom.transaction}
+      onReplaceDocument={input.actions.replaceDocument}
+      onDiagnostic={(next) => {
+        const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next];
+        input.setRuntimeDiagnostics((current) => [
+          ...current.filter((item) => !item.detail?.startsWith("advanced-json:")),
+          ...nextDiagnostics,
+        ]);
+      }}
+    />
+  ) : null;
   const workspaceBottom = (
     <BottomEditorPanel
       tabs={workspace.bottomTabs}
@@ -558,48 +629,15 @@ export function useEditorSecondarySurfaces(
       onTogglePinned={workspace.toggleBottomPin}
       {...(workspace.bottomTab === "Annotation" ? { contentClassName: "bottom-content-annotation" } : {})}
       content={
-        workspace.bottomTab === "Signal" ? (
-          signalEditor
-        ) : workspace.bottomTab === "Annotation" ? (
-          annotationEditor
-        ) : workspace.bottomTab === "Transaction" ? (
-          transactionEditor
-        ) : workspace.bottomTab === "Phases" ? (
-          <TransactionPhaseSummary transaction={selected.transaction} transactions={input.document.transactions ?? []} commands={surfaceCommands} cyclesPerTc={workspace.cyclesPerTc} />
-        ) : workspace.bottomTab === "Linked Signals" ? (
-          <TransactionLinkedSummary
-            transaction={selected.transaction}
-            document={input.document}
-          />
-        ) : workspace.bottomTab === "Bookmarks" ? (
-          bookmarkEditor
-        ) : workspace.bottomTab === "AI" ? (
-          <AIOperationPanel {...aiAssistantPanel} />
-        ) : workspace.bottomTab === "Problems" ? (
-          <ProblemsPanel
-            diagnostics={input.diagnostics}
-            onNavigate={input.navigateProblem}
-          />
-        ) : (
-          <AdvancedJsonPanel
-            document={input.document}
-            selectedSignal={bottom.signal}
-            selectedGroup={bottom.group}
-            selectedAnnotation={bottom.annotation}
-            selectedTransaction={bottom.transaction}
-            onReplaceDocument={input.actions.replaceDocument}
-            onDiagnostic={(next) => {
-              const nextDiagnostics =
-                next === undefined ? [] : Array.isArray(next) ? next : [next];
-              input.setRuntimeDiagnostics((current) => [
-                ...current.filter(
-                  (item) => !item.detail?.startsWith("advanced-json:"),
-                ),
-                ...nextDiagnostics,
-              ]);
-            }}
-          />
-        )
+        <>
+          {/* Keep the AI Bridge session and an external proposal alive while
+              another Bottom tab is active. The session belongs to this
+              Editor tab/document, not to the visibility of its panel. */}
+          <div className="bottom-ai-panel-host" hidden={workspace.bottomTab !== "AI"}>
+            <AIOperationPanel {...aiAssistantPanel} />
+          </div>
+          {activeBottomContent}
+        </>
       }
     />
   );
@@ -616,7 +654,8 @@ export function useEditorSecondarySurfaces(
       group={inspectorGroup}
       annotation={inspectorAnnotation}
       transaction={inspectorTransaction}
-      bookmark={selected.bookmark}
+      legendSelected={inspectorLegendSelected}
+      bookmark={inspectorBookmark}
       collapsedGroup={
         inspectorGroup !== undefined &&
         input.timeline.collapsedGroupIds.has(inspectorGroup.id)

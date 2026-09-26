@@ -37,16 +37,26 @@ for (const mode of ["Cycle", "Transaction"] as const) {
         await page.setViewportSize(size);
         await expect(page.getByTestId("cycle-ruler")).toBeVisible();
       }
-      const rulerBox = (await page.getByTestId("cycle-ruler").boundingBox())!;
-      const lowerY = rulerBox.y + rulerBox.height - 6;
-      const upperY = rulerBox.y + 4;
+      const firstTick = await rawTick(page, 0);
+      const lowerY = firstTick.y + firstTick.height - 2;
+      const upperY = firstTick.y + 2;
       const history = page.getByTestId("history-status");
 
       // Whitespace at the left, middle, right and near the boundary of a cell, lower and upper part of the row.
       for (const [cycle, dx, y] of [[5, 2, lowerY], [6, 12, lowerY], [7, 25, lowerY], [8, 37, lowerY], [9, 20, upperY]] as const) {
         const cell = await cellGeometry(page, mode, cycle);
-        await page.mouse.click(cell.x + dx * cell.pitch / 40, y);
+        const x = cell.x + dx * cell.pitch / 40;
+        await page.mouse.click(x, y);
         await expect.poll(() => range(page), { message: `click ${dx}px into cell ${cycle} at ${size.width}x${size.height}` }).toBe(`${cycle}-${cycle + 1}`);
+      }
+
+      // Preserve the current-main low-cycle hit coverage and report the event target on failure.
+      for (const [cycle, dx, y] of [[0, 2, lowerY], [1, 12, lowerY], [2, 25, lowerY], [3, 37, lowerY], [4, 20, upperY]] as const) {
+        const cell = await cellGeometry(page, mode, cycle);
+        const x = cell.x + dx * cell.pitch / 40;
+        const hit = await page.evaluate(({ x: screenX, y: screenY }) => document.elementFromPoint(screenX, screenY)?.outerHTML.slice(0, 180), { x, y });
+        await page.mouse.click(x, y);
+        await expect.poll(() => range(page), { message: `click cell ${cycle} at ${size.width}x${size.height}; target=${hit}` }).toBe(`${cycle}-${cycle + 1}`);
       }
 
       // Drags span the boundaries nearest the pointer at both ends (same rule), so both directions give the same range.
@@ -62,6 +72,19 @@ for (const mode of ["Cycle", "Transaction"] as const) {
       await page.mouse.move(a.x + 25 * a.pitch / 40, lowerY, { steps: 8 });
       await page.mouse.up();
       await expect.poll(() => range(page), { message: `drag 9 -> 3 at ${size.width}x${size.height}` }).toBe("4-10");
+
+      const shortA = await cellGeometry(page, mode, 1);
+      const shortB = await cellGeometry(page, mode, 4);
+      await page.mouse.move(shortA.x + 25 * shortA.pitch / 40, lowerY);
+      await page.mouse.down();
+      await page.mouse.move(shortB.x + 25 * shortB.pitch / 40, lowerY, { steps: 8 });
+      await page.mouse.up();
+      await expect.poll(() => range(page), { message: `drag 1 -> 4 at ${size.width}x${size.height}` }).toBe("2-5");
+      await page.mouse.move(shortB.x + 25 * shortB.pitch / 40, lowerY);
+      await page.mouse.down();
+      await page.mouse.move(shortA.x + 25 * shortA.pitch / 40, lowerY, { steps: 8 });
+      await page.mouse.up();
+      await expect.poll(() => range(page), { message: `drag 4 -> 1 at ${size.width}x${size.height}` }).toBe("2-5");
       await expect(history).toHaveText("History 0 / Redo 0"); // view-only
     }
   });

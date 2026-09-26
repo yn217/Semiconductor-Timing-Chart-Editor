@@ -7,9 +7,11 @@ import { downloadText } from "./download-text.js";
 import { AnnotationList } from "./annotation-list.js";
 import { FontStyleToolbar } from "./font-style-toolbar.js";
 import { StrokeFillToolbar } from "./stroke-fill-toolbar.js";
+import { AnnotationLabelLayoutToolbar } from "./annotation-label-layout-toolbar.js";
 import { annotationCapabilityDisabledReason } from "./annotation-capability-matrix.js";
 import { annotationPropertiesBase } from "./annotation-style-command.js";
 import { DraftStatus } from "./draft-status.js";
+import { reconcileExternalDraft } from "./runtime/external-draft-reconciliation.js";
 
 type AnchorFieldName = "anchor" | "start" | "end" | "from" | "to";
 
@@ -28,8 +30,30 @@ function AnchorMiniEditor({ label, annotation, field, document, commands }: { re
   const current = (annotation as Partial<Record<AnchorFieldName, SemanticAnchor>>)[field];
   const [cycle, setCycle] = useState(current?.cycle ?? 0);
   const [signalId, setSignalId] = useState<SignalId | undefined>(current?.signalId);
+  const [externalConflict, setExternalConflict] = useState(false);
+  const baseRef = useRef({ cycle: current?.cycle ?? 0, signalId: current?.signalId });
+  useEffect(() => {
+    if (!current) return;
+    const resolution = reconcileExternalDraft(baseRef.current, { cycle, signalId }, { cycle: current.cycle, signalId: current.signalId }, true, (left, right) => left.cycle === right.cycle && left.signalId === right.signalId);
+    if (resolution.kind === "rebase") {
+      setCycle(resolution.value.cycle);
+      setSignalId(resolution.value.signalId);
+      baseRef.current = resolution.value;
+      setExternalConflict(false);
+    } else if (resolution.kind === "conflict") setExternalConflict(true);
+  }, [current?.cycle, current?.signalId, cycle, signalId]);
   if (!current) return null;
   const hasChanges = cycle !== current.cycle || signalId !== current.signalId;
+  const reloadLatest = () => {
+    setCycle(current.cycle);
+    setSignalId(current.signalId);
+    baseRef.current = { cycle: current.cycle, signalId: current.signalId };
+    setExternalConflict(false);
+  };
+  const keepDraft = () => {
+    baseRef.current = { cycle: current.cycle, signalId: current.signalId };
+    setExternalConflict(false);
+  };
   return <div className="annotation-anchor-mini">
     <span className="annotation-anchor-mini-label">{label}</span>
     <select aria-label={`Annotation ${label} signal`} value={signalId ?? ""} onChange={(event) => setSignalId((event.target.value || undefined) as SignalId | undefined)}>
@@ -37,7 +61,12 @@ function AnchorMiniEditor({ label, annotation, field, document, commands }: { re
       {document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => <option key={signal.id} value={signal.id}>{signal.display.name}</option>)}
     </select>
     <input aria-label={`Annotation ${label} cycle`} type="number" min="0" max={document.timeline.cycleCount - 1} step={annotation.type === "highlight" && annotation.positionMode === "free" ? "0.01" : "1"} value={cycle} onChange={(event) => setCycle(Number(event.target.value))} />
-    <button type="button" aria-label={`Apply ${label} anchor`} disabled={!hasChanges} onClick={() => commands.setAnnotationAnchor(annotation.id, field, { ...current, cycle, ...(signalId === undefined ? {} : { signalId }) })}>Apply</button>
+    {externalConflict && <span role="alert" data-testid={`annotation-${field}-draft-conflict`}>Anchor changed elsewhere. Reload latest or keep this draft before applying.</span>}
+    {externalConflict && <><button type="button" onClick={reloadLatest}>Reload latest</button><button type="button" onClick={keepDraft}>Keep my draft</button></>}
+    <button type="button" aria-label={`Apply ${label} anchor`} disabled={!hasChanges || externalConflict} onClick={() => {
+      const result = commands.setAnnotationAnchor(annotation.id, field, { ...current, cycle, ...(signalId === undefined ? {} : { signalId }) });
+      if (result.ok) { baseRef.current = { cycle, signalId }; setExternalConflict(false); }
+    }}>Apply</button>
   </div>;
 }
 
@@ -49,6 +78,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
   const [arrowhead, setArrowhead] = useState<NonNullable<Annotation["arrowhead"]>>(annotation.arrowhead ?? "end");
   const [labelX, setLabelX] = useState(annotation.labelOffset?.x ?? 0);
   const [labelY, setLabelY] = useState(annotation.labelOffset?.y ?? -14);
+  const [labelPlacement, setLabelPlacement] = useState<NonNullable<Annotation["labelPlacement"]>>(annotation.labelPlacement ?? "center");
   const [opacity, setOpacity] = useState(annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16));
   const [traceOffsetCycles, setTraceOffsetCycles] = useState(annotation.traceOffsetCycles ?? 0);
   const [measurementProfile, setMeasurementProfile] = useState<MeasurementProfile>(annotation.measurement?.profile ?? "cycle");
@@ -72,6 +102,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
     setLabel(annotation.label); setColor(annotation.color ?? "#d04a36"); setVisible(annotation.visible);
     setLineType(annotation.lineType ?? "straight"); setArrowhead(annotation.arrowhead ?? "end");
     setLabelX(annotation.labelOffset?.x ?? 0); setLabelY(annotation.labelOffset?.y ?? -14);
+    setLabelPlacement(annotation.labelPlacement ?? "center");
     setOpacity(annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16));
     setTraceOffsetCycles(annotation.traceOffsetCycles ?? 0); setStyleDraft(annotation.style ?? {});
     setMeasurementProfile(annotation.measurement?.profile ?? "cycle");
@@ -177,9 +208,10 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
     || (annotation.type === "ghostTrace" && traceOffsetCycles !== (annotation.traceOffsetCycles ?? 0))
     || labelX !== (annotation.labelOffset?.x ?? 0)
     || labelY !== (annotation.labelOffset?.y ?? -14)
+    || labelPlacement !== (annotation.labelPlacement ?? "center")
     || JSON.stringify(styleDraft) !== JSON.stringify(annotation.style ?? {});
   const applyAnnotationProperties = () => {
-    commands.updateAnnotationProperties({ annotationId: annotation.id, ...annotationPropertiesBase(annotation), label, visible, color, ...(lineControlsEnabled ? { lineType, arrowhead } : {}), ...(isOpacityType ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}), labelOffset: { x: labelX, y: labelY }, style: styleDraft });
+    commands.updateAnnotationProperties({ annotationId: annotation.id, ...annotationPropertiesBase(annotation), label, visible, color, ...(lineControlsEnabled ? { lineType, arrowhead } : {}), ...(isOpacityType ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}), labelOffset: { x: labelX, y: labelY }, ...(annotation.labelPlacement === undefined && labelPlacement === "center" ? {} : { labelPlacement }), style: styleDraft });
   };
   // Quick Presets (Section 10): draft-only field shortcuts, never a second
   // Canonical owner -- clicking one only calls the same setLabel/setColor/
@@ -240,7 +272,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
           <button type="button" onClick={() => onDuplicate(annotation)}>Duplicate</button>
           <button type="button" className="danger" onClick={onDelete}>Delete</button>
         </div>
-        <AnnotationList annotations={annotations} selectedId={annotation.id} onSelect={onSelect} commands={commands} />
+        <AnnotationList annotations={annotations} selectedId={annotation.id} document={document} onSelect={onSelect} commands={commands} />
       </section>
       <section className="annotation-edit-panel" aria-label="Edit Annotation">
         <h2>Edit Annotation</h2>
@@ -254,6 +286,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
               (packages/export/src/index.ts) both split on "\n" into separate
               visual lines to match. */}
           <label>Label<textarea aria-label="Annotation label" rows={label.includes("\n") ? Math.min(6, label.split("\n").length + 1) : 2} value={label} onChange={(event) => setLabel(event.target.value)} /></label>
+          <label>Label placement<select aria-label="Annotation label placement" value={labelPlacement} onChange={(event) => setLabelPlacement(event.target.value as NonNullable<Annotation["labelPlacement"]>)}><option value="start">Start</option><option value="center">Center</option><option value="end">End</option><option value="above">Above</option><option value="below">Below</option></select></label>
           {/* Section 3: a real, compact Start/End (or single Anchor) editor
               -- Signal + Cycle, the same `annotation.setAnchor` command a
               Canvas endpoint drag or Inspector's fuller Endpoint/Point/
@@ -288,6 +321,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
             <summary>Style (Font, Stroke, Fill)</summary>
             <FontStyleToolbar idPrefix="annotation-font" style={styleDraft} onChange={applyFontStyle} />
             <StrokeFillToolbar idPrefix="annotation-stroke-fill" style={styleDraft} onChange={applyFontStyle} strokeDisabled={!!annotationCapabilityDisabledReason(annotation.type, "stroke")} strokeReason={annotationCapabilityDisabledReason(annotation.type, "stroke")} fillDisabled={!!annotationCapabilityDisabledReason(annotation.type, "fill")} fillReason={annotationCapabilityDisabledReason(annotation.type, "fill")} />
+            <AnnotationLabelLayoutToolbar idPrefix="annotation-label-layout" style={styleDraft} onChange={applyFontStyle} />
           </details>
           {/* Section 1: Visible last -- a state toggle, not the Annotation's
               identity or geometry. */}

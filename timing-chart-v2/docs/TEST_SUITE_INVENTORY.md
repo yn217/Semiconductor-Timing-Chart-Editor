@@ -1,8 +1,8 @@
 # Playwright test inventory
 
-Generated from Playwright collection (1.62.1); 326 spec files and 942 test cases. Collection does not execute tests.
+Generated from Playwright collection (1.62.1); 336 spec files and 976 test cases. Collection does not execute tests.
 Baseline 965ceccfe8fdc09a431f0d1f7aa08b02b41c0b3a: 337 spec files / 988 cases. Full-profile wall time and aggregate percentiles: not measured.
-Semantic review progress: 942/942 cases reviewed.
+Semantic review progress: 937/976 cases reviewed.
 
 ## Curated profile membership
 
@@ -10,11 +10,11 @@ These counts include only explicitly reviewed cases; unreviewed cases are not si
 
 | Profile | Reviewed cases |
 | --- | ---: |
-| `integration` | 478 |
+| `integration` | 477 |
 | `nightly` | 191 |
 | `performance` | 54 |
-| `pr` | 253 |
-| `visual` | 177 |
+| `pr` | 258 |
+| `visual` | 174 |
 
 ## Top recorded per-case runtimes
 
@@ -53,7 +53,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `acceptance-429-transaction-colors.spec.ts` | 4 | 4/4 reviewed |
 | `acceptance-429-transaction-composition.spec.ts` | 32 | 32/32 reviewed |
 | `advanced-json-diagnostic.spec.ts` | 7 | 7/7 reviewed |
-| `ai-bridge.spec.ts` | 5 | 5/5 reviewed |
+| `ai-bridge.spec.ts` | 13 | 5/13 reviewed |
 | `ai-domain-coverage.spec.ts` | 1 | 1/1 reviewed |
 | `ai-proposal-workflow.spec.ts` | 10 | 10/10 reviewed |
 | `annotation-bottom-list.spec.ts` | 1 | 1/1 reviewed |
@@ -62,7 +62,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `annotation-line-rendering.spec.ts` | 4 | 4/4 reviewed |
 | `annotation-marker-vertical-span.spec.ts` | 1 | 1/1 reviewed |
 | `annotation-multi-select-font.spec.ts` | 1 | 1/1 reviewed |
-| `annotation-multiline-and-export-shapes.spec.ts` | 4 | 4/4 reviewed |
+| `annotation-multiline-and-export-shapes.spec.ts` | 6 | 4/6 reviewed |
 | `annotation-presentation-controls.spec.ts` | 6 | 6/6 reviewed |
 | `annotation-presentation.spec.ts` | 1 | 1/1 reviewed |
 | `annotation-preview-update.spec.ts` | 3 | 3/3 reviewed |
@@ -114,7 +114,7 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `file-beforeunload-dirty-guard.spec.ts` | 1 | 1/1 reviewed |
 | `file-ribbon-blank-controls.spec.ts` | 1 | 1/1 reviewed |
 | `font-style-commit-contract.spec.ts` | 1 | 1/1 reviewed |
-| `full-gui.spec.ts` | 45 | 45/45 reviewed |
+| `full-gui.spec.ts` | 42 | 40/42 reviewed |
 | `ghost-trace-delete.spec.ts` | 1 | 1/1 reviewed |
 | `golden-samples.spec.ts` | 2 | 2/2 reviewed |
 | `grid-zoom-alignment.spec.ts` | 1 | 1/1 reviewed |
@@ -145,7 +145,9 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `inspector-selection-context.contract.spec.ts` | 3 | 3/3 reviewed |
 | `inspector-waveform-style.spec.ts` | 2 | 2/2 reviewed |
 | `interaction-visual-scenarios.spec.ts` | 11 | 11/11 reviewed |
+| `issue-426-external-bottom-draft-update.spec.ts` | 3 | 0/3 reviewed |
 | `issue-441-ribbon-label-integrity.spec.ts` | 3 | 3/3 reviewed |
+| `issue-456-sized-bus-literal.spec.ts` | 1 | 0/1 reviewed |
 | `issue-554-transaction-journey.spec.ts` | 2 | 2/2 reviewed |
 | `issue-573-combined-divider-pinned.spec.ts` | 1 | 1/1 reviewed |
 | `issue-573-combined-shared-time-axis.spec.ts` | 3 | 3/3 reviewed |
@@ -232,12 +234,20 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `issue-769-tree-virtualization-keyboard.spec.ts` | 5 | 5/5 reviewed |
 | `issue-770-filtered-selection-scope.spec.ts` | 2 | 2/2 reviewed |
 | `issue-771-many-small-groups-virtualized.spec.ts` | 1 | 1/1 reviewed |
-| `issue-772-retained-bookmark-drafts.spec.ts` | 1 | 1/1 reviewed |
+| `issue-772-retained-bookmark-drafts.spec.ts` | 2 | 2/2 reviewed |
 | `issue-773-bottom-tab-round-trip.spec.ts` | 1 | 1/1 reviewed |
 | `issue-774-visibility-preserves-selection.spec.ts` | 2 | 2/2 reviewed |
 | `issue-775-annotation-draft-isolation.spec.ts` | 1 | 1/1 reviewed |
 | `issue-776-signal-inspector-draft-sync.spec.ts` | 2 | 2/2 reviewed |
 | `issue-777-current-v2-samples-acceptance.spec.ts` | 10 | 10/10 reviewed |
+| `issue-835-async-annotation-import.spec.ts` | 6 | 0/6 reviewed |
+| `issue-836-hardware-hierarchy-performance.spec.ts` | 1 | 0/1 reviewed |
+| `issue-837-legend-cancel-draft.spec.ts` | 4 | 0/4 reviewed |
+| `issue-838-visible-hierarchy-copy-selection.spec.ts` | 1 | 0/1 reviewed |
+| `issue-839-large-showcase-clock-phase.spec.ts` | 2 | 0/2 reviewed |
+| `issue-841-legend-bounds.spec.ts` | 3 | 0/3 reviewed |
+| `issue-842-clean-event-row-rebase.spec.ts` | 1 | 0/1 reviewed |
+| `issue-847-vertical-scroll-wave-ownership.spec.ts` | 4 | 0/4 reviewed |
 | `keyboard-shortcut-router.spec.ts` | 4 | 4/4 reviewed |
 | `keyboard-tabs-resizers.spec.ts` | 2 | 2/2 reviewed |
 | `label-anchor-source-display.spec.ts` | 1 | 1/1 reviewed |
@@ -273,14 +283,14 @@ These are the highest non-null `measuredRuntimeMs` values already recorded in th
 | `pinned-bottom-target.spec.ts` | 4 | 4/4 reviewed |
 | `production-presentation-equivalence.spec.ts` | 1 | 1/1 reviewed |
 | `qa-cross-mode-journey.spec.ts` | 2 | 2/2 reviewed |
-| `qa-fresh-state-journeys.spec.ts` | 10 | 10/10 reviewed |
+| `qa-fresh-state-journeys.spec.ts` | 9 | 9/9 reviewed |
 | `reference-clock-conversion.spec.ts` | 4 | 4/4 reviewed |
 | `reorder-visibility.spec.ts` | 8 | 8/8 reviewed |
 | `reset-semantics-inspector.spec.ts` | 2 | 2/2 reviewed |
 | `resource-budget-ui-routes.spec.ts` | 7 | 7/7 reviewed |
 | `result-aware-create-effects.spec.ts` | 2 | 2/2 reviewed |
 | `review-checks-refresh.spec.ts` | 2 | 2/2 reviewed |
-| `review-workflow.spec.ts` | 2 | 2/2 reviewed |
+| `review-workflow.spec.ts` | 3 | 2/3 reviewed |
 | `ribbon-caption-layout.spec.ts` | 2 | 2/2 reviewed |
 | `ribbon-cursor-ab.spec.ts` | 2 | 2/2 reviewed |
 | `ribbon-layout.spec.ts` | 2 | 2/2 reviewed |
@@ -402,7 +412,6 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `empty-group-tree-projection.spec.ts` | dataset, explicitWait |
 | `feature-showcase-startup.spec.ts` | geometryRead |
 | `file-ribbon-blank-controls.spec.ts` | getComputedStyle, geometryRead |
-| `full-gui.spec.ts` | geometryRead |
 | `gui-density-tokens.spec.ts` | getComputedStyle |
 | `gui-left-pane-resize.spec.ts` | getComputedStyle, geometryRead |
 | `gui-reference-v8.spec.ts` | getComputedStyle, dataset, geometryRead |
@@ -459,6 +468,9 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `issue-768-mode-switch-budget.spec.ts` | querySelector |
 | `issue-770-filtered-selection-scope.spec.ts` | querySelector |
 | `issue-771-many-small-groups-virtualized.spec.ts` | querySelector |
+| `issue-839-large-showcase-clock-phase.spec.ts` | querySelector |
+| `issue-841-legend-bounds.spec.ts` | dataset, geometryRead |
+| `issue-847-vertical-scroll-wave-ownership.spec.ts` | querySelector, dataset, geometryRead |
 | `keyboard-shortcut-router.spec.ts` | dataset |
 | `layout-inspector.spec.ts` | geometryRead |
 | `left-header-action-alignment.spec.ts` | querySelector, geometryRead |
@@ -477,6 +489,7 @@ The following source-pattern signals are triage hints only; they do not prove th
 | `minimal-cycle-view.spec.ts` | dataset, geometryRead |
 | `minimap-overview-performance.spec.ts` | querySelector, dataset, explicitWait |
 | `minimap-viewport-closure.spec.ts` | dataset, geometryRead |
+| `mode-isolation-journey.spec.ts` | getComputedStyle |
 | `open-progressive-wave-yield.spec.ts` | querySelector, dataset, explicitWait |
 | `perf-755-far-jump-longtask.spec.ts` | querySelector |
 | `performance-closure.spec.ts` | querySelector, dataset, geometryRead, explicitWait |
@@ -539,6 +552,12 @@ Title similarity is only a discovery heuristic. It does not establish duplicate 
 
 ## Consolidation/replacement map
 
+- `full-gui.spec.ts` “matches the locked desktop pane geometry at the Golden viewport” → `gui-reference-v8.spec.ts` “matches the v8 shell contract without mutating canonical state”. **Invariant:** At the desktop reference viewport, ribbon/workspace/bottom/inspector geometry stays aligned to the approved shell dimensions. **Reason:** The v8 shell contract already measures the same reference viewport and was strengthened to assert workspace top, Bottom X/height, and Inspector X/width alongside shell geometry; the separate test only repeated those fixed coordinates.
+- `full-gui.spec.ts` “keeps the V1 Home Ribbon dense without horizontal scrolling” → `gui-reference-v8.spec.ts` “matches the v8 shell contract without mutating canonical state”. **Invariant:** The desktop Home Ribbon retains its intended height/group structure and does not introduce horizontal scrolling. **Reason:** The target already verifies the desktop Ribbon height, non-overflow, major-group count, title/tabs/status dimensions, and group visibility in the same production presentation contract.
+- `full-gui.spec.ts` “Left Signal/Group filter is positioned in the V1 pane header and remains DOM-only” → `left-tree-type-filter.spec.ts` “combines the Left Tree type and text filters without mutation at 1672px”. **Invariant:** Text filtering changes only Left Tree presentation, leaves Canonical/History untouched, and clearing the query restores rows while preserving type filter state. **Reason:** The retained type+text filter journey already verifies view-only state across both widths; it now uses the visible Clear signal tree filter control rather than only filling an empty string. Header placement remains checked by the v8 reference contract.
+- `full-gui.spec.ts` “Group header chevron collapses derived rows without mutating Canonical or History” → `left-tree-interaction.spec.ts` “collapses only Left Tree descendants and restores stable rows without a canonical mutation”. **Invariant:** Group disclosure changes navigation descendants only, preserves frozen/timing/wave rows and stable order, and causes no document/history/render mutation. **Reason:** The retained test exercises all three groups and stable row restoration while checking derived surfaces and render counters; the removed test repeated the same projection lifecycle for one group and added icon-path implementation detail.
+- `full-gui.spec.ts` “Inspector keeps the V1 sectioned editor geometry for a selected clock” → `gui-reference-v8.spec.ts` “matches the v8 shell contract without mutating canonical state”. **Invariant:** The reference Clock Inspector exposes its Clock Generator and Edge Counter controls within the established shell width without mutating the document. **Reason:** The v8 reference contract already opens with Clock selected and checks Inspector/minimap geometry, section headings, and no-mutation render state. The replacement now also requires the Clock period and Edge Counter mode controls to be visible; raw section count was implementation-specific.
+- `qa-fresh-state-journeys.spec.ts` “J6 annotation create -> drag -> Escape leaves Canonical untouched” → `keyboard-shortcut-router.spec.ts` “Escape cancels an in-progress Annotation drag, closes the context menu, and resets dependency-arrow pick”. **Invariant:** Escape cancels a real Annotation drag without changing Canonical revision, History, or Dirty state and without runtime errors. **Reason:** The keyboard lifecycle test already creates an Annotation through production UI, resolves its stable ID, performs a real pointer drag, and asserts revision and History preservation; it now also checks Dirty and runtime errors. Keeping the stronger test removes a duplicate fresh journey without weakening the cancellation contract.
 - `full-gui.spec.ts` “keeps view-only selection, tabs, zoom and panel state out of History and WaveDrom” → `performance-view-only-validation.spec.ts` “view-only GUI operations do not validate or semantically rerender the document”. **Invariant:** Composed view-only selection, tabs, zoom and panel operations do not mutate History or trigger semantic validation/rendering. **Reason:** The focused replacement exercises the same operations and additionally protects Dirty, validation, RowLayout, and pane resizer/scroll-owner counters.
 - `golden-samples.spec.ts` “switches representative Golden Samples through production File Input without stale row ownership” → `golden-samples.spec.ts` “opens all 20 immutable Golden Samples in the production browser path”. **Invariant:** Sequential production File Input replacement leaves only current canonical row identities, without stale or duplicate rows. **Reason:** The all-20 production Open journey verifies exact canonical Left/Frozen row identity after each replacement, covering the representative A-to-B switch subset.
 - `transaction-export.spec.ts` “preserves canonical Split View content through Save/Open” → `transaction-export.spec.ts` “creates, edits, links, saves and reopens one canonical Transaction”. **Invariant:** Canonical Transaction identity and timing survive production Save/Open with clean History after reopening. **Reason:** The replacement verifies more persisted Transaction fields, stable linked Signal identity, Undo/Redo and History reset; separate Combined projection cases retain mode coverage.
