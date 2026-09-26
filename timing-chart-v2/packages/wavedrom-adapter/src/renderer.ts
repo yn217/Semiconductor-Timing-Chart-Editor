@@ -19,6 +19,40 @@ if (WaveDrom.version !== WAVEDROM_VERSION) {
   throw new WaveDromAdapterError("WAVEDROM_VERSION_MISMATCH", `Expected WaveDrom ${WAVEDROM_VERSION}, received ${WaveDrom.version}.`);
 }
 
+export type WaveMarkupStageMetrics = Readonly<{
+  waveDromRenderAnyMs: number;
+  onmlStringifyMs: number;
+  valueLabelLayoutMs: number;
+  markupSafetyMs: number;
+  svgMarkupBytes: number;
+}>;
+
+function now(): number {
+  return globalThis.performance?.now() ?? Date.now();
+}
+
+export function renderWaveJsonMarkupWithMetrics(waveJson: WaveJsonSignal, renderIndex = 0, semanticValues: readonly string[] = []): Readonly<{ markup: string; metrics: WaveMarkupStageMetrics }> {
+  try {
+    let startedAt = now();
+    const tree = WaveDrom.renderAny(renderIndex, { signal: [waveJson] }, WaveDrom.waveSkin);
+    const waveDromRenderAnyMs = now() - startedAt;
+    startedAt = now();
+    const serialized = WaveDrom.onml.stringify(tree);
+    const onmlStringifyMs = now() - startedAt;
+    startedAt = now();
+    const laidOut = applyValueLabelLayout(serialized, waveJson, semanticValues);
+    const valueLabelLayoutMs = now() - startedAt;
+    startedAt = now();
+    const markup = assertSafeWaveDromMarkup(laidOut);
+    const markupSafetyMs = now() - startedAt;
+    const svgMarkupBytes = new TextEncoder().encode(markup).byteLength;
+    return { markup, metrics: { waveDromRenderAnyMs, onmlStringifyMs, valueLabelLayoutMs, markupSafetyMs, svgMarkupBytes } };
+  } catch (error) {
+    if (error instanceof WaveDromAdapterError) throw error;
+    throw new WaveDromAdapterError("WAVEDROM_RENDER_FAILED", "Pinned WaveDrom failed to render the generated WaveJSON.", { cause: error });
+  }
+}
+
 export function renderWaveJsonMarkup(waveJson: WaveJsonSignal, renderIndex = 0, semanticValues: readonly string[] = []): string {
   try {
     const tree = WaveDrom.renderAny(renderIndex, { signal: [waveJson] }, WaveDrom.waveSkin);
@@ -86,6 +120,23 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   #renderCalls = 0;
   #waveJsonDurationMs = 0;
   #renderDurationMs = 0;
+  #renderStageTotals = {
+    sourcePreparationMs: 0,
+    metricCollectionOverheadMs: 0,
+    cacheKeySerializeMs: 0,
+    waveDromRenderAnyMs: 0,
+    onmlStringifyMs: 0,
+    valueLabelLayoutMs: 0,
+    markupSafetyMs: 0,
+    templateParseMs: 0,
+    svgSafetyDomWalkMs: 0,
+    domInstallMs: 0,
+    totalSignalWallMs: 0,
+    waveJsonBytes: 0,
+    semanticValuesBytes: 0,
+    svgMarkupBytes: 0,
+  };
+  #lastRenderStages: Readonly<Record<string, number>> | undefined;
   #cacheHits = 0;
   #cacheMisses = 0;
   #mounts = 0;
@@ -103,14 +154,17 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   #matrixReads = 0;
 
   toWaveJson(source: CanonicalSignalSource): WaveJsonSignal {
-    const startedAt = globalThis.performance?.now() ?? Date.now();
+    const startedAt = now();
     const result = toWaveJson(source);
-    this.#waveJsonDurationMs += (globalThis.performance?.now() ?? Date.now()) - startedAt;
+    const durationMs = now() - startedAt;
+    this.#waveJsonDurationMs += durationMs;
+    this.#renderStageTotals.sourcePreparationMs += durationMs;
     return result;
   }
 
   async renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues: readonly string[] = []): Promise<RenderedWave> {
-    const startedAt = globalThis.performance?.now() ?? Date.now();
+    const startedAt = now();
+    const stages = Object.fromEntries(Object.keys(this.#renderStageTotals).map((key) => [key, 0])) as Record<string, number>;
     const existing = this.#active.get(signalId);
     if (existing && existing.mount !== mount) this.#clearOwner(existing);
     let renderIndex = this.#renderIndices.get(signalId);
@@ -119,26 +173,46 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       this.#nextRenderIndex += 1;
       this.#renderIndices.set(signalId, renderIndex);
     }
+    let stageStartedAt = now();
     this.#renderCalls += 1;
     this.#renderCallsBySignal.set(signalId, (this.#renderCallsBySignal.get(signalId) ?? 0) + 1);
     const cacheKey = `${WAVEDROM_VERSION}\u0000${JSON.stringify(waveJson)}\u0000${JSON.stringify(semanticValues)}`;
+    stages.cacheKeySerializeMs = now() - stageStartedAt;
+    stageStartedAt = now();
+    stages.waveJsonBytes = new TextEncoder().encode(JSON.stringify(waveJson)).byteLength;
+    stages.semanticValuesBytes = new TextEncoder().encode(JSON.stringify(semanticValues)).byteLength;
+    stages.metricCollectionOverheadMs = (stages.metricCollectionOverheadMs ?? 0) + now() - stageStartedAt;
     const cached = this.#markupCache.get(signalId);
     let markup: string;
     if (cached?.key === cacheKey) {
       markup = cached.markup;
       this.#cacheHits += 1;
+      stageStartedAt = now();
+      stages.svgMarkupBytes = new TextEncoder().encode(markup).byteLength;
+      stages.metricCollectionOverheadMs = (stages.metricCollectionOverheadMs ?? 0) + now() - stageStartedAt;
     } else {
-      markup = renderWaveJsonMarkup(waveJson, renderIndex, semanticValues);
+      const generated = renderWaveJsonMarkupWithMetrics(waveJson, renderIndex, semanticValues);
+      markup = generated.markup;
+      stages.waveDromRenderAnyMs = generated.metrics.waveDromRenderAnyMs;
+      stages.onmlStringifyMs = generated.metrics.onmlStringifyMs;
+      stages.valueLabelLayoutMs = generated.metrics.valueLabelLayoutMs;
+      stages.markupSafetyMs = generated.metrics.markupSafetyMs;
+      stages.svgMarkupBytes = generated.metrics.svgMarkupBytes;
       this.#markupCache.set(signalId, { key: cacheKey, markup });
       this.#cacheMisses += 1;
     }
     const template = mount.ownerDocument.createElement("template");
+    stageStartedAt = now();
     template.innerHTML = markup.trim();
     const svg = template.content.firstElementChild;
+    stages.templateParseMs = now() - stageStartedAt;
     if (!svg || svg.namespaceURI !== "http://www.w3.org/2000/svg" || svg.localName !== "svg") {
       throw new WaveDromAdapterError("INVALID_WAVEDROM_SVG", "WaveDrom did not return an SVG root.");
     }
+    stageStartedAt = now();
     assertSafeWaveDromSvg(svg);
+    stages.svgSafetyDomWalkMs = now() - stageStartedAt;
+    stageStartedAt = now();
     svg.setAttribute("data-wave-owner", signalId);
     svg.setAttribute("data-wave-render-index", String(renderIndex));
     // WaveDrom's default SVG is sized from the row height. The browser's default
@@ -150,7 +224,12 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     mount.replaceChildren(svg);
     const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson };
     this.#active.set(signalId, { mount, rendered });
-    this.#renderDurationMs += (globalThis.performance?.now() ?? Date.now()) - startedAt;
+    stages.domInstallMs = now() - stageStartedAt;
+    stages.totalSignalWallMs = now() - startedAt;
+    this.#lastRenderStages = Object.freeze({ ...stages });
+    const stageTotals = this.#renderStageTotals as Record<string, number>;
+    for (const [key, value] of Object.entries(stages)) stageTotals[key] = (stageTotals[key] ?? 0) + value;
+    this.#renderDurationMs += stages.totalSignalWallMs;
     this.#mounts += 1;
     return rendered;
   }
@@ -186,7 +265,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   }
 
   metrics(): WaveDromAdapterMetrics {
-    return { renderCalls: this.#renderCalls, waveJsonDurationMs: this.#waveJsonDurationMs, renderDurationMs: this.#renderDurationMs, renderCallsBySignal: Object.fromEntries(this.#renderCallsBySignal), cacheHits: this.#cacheHits, cacheMisses: this.#cacheMisses, mounts: this.#mounts, disposals: this.#disposals, geometryBuilds: this.#geometryBuilds, geometryMatrixReads: this.#geometryMatrixReads, activeOwners: this.#active.size, allocatedRenderIndices: this.#renderIndices.size };
+    return { renderCalls: this.#renderCalls, waveJsonDurationMs: this.#waveJsonDurationMs, renderDurationMs: this.#renderDurationMs, renderStages: Object.freeze({ last: this.#lastRenderStages, totals: Object.freeze({ ...this.#renderStageTotals }) }), renderCallsBySignal: Object.fromEntries(this.#renderCallsBySignal), cacheHits: this.#cacheHits, cacheMisses: this.#cacheMisses, mounts: this.#mounts, disposals: this.#disposals, geometryBuilds: this.#geometryBuilds, geometryMatrixReads: this.#geometryMatrixReads, activeOwners: this.#active.size, allocatedRenderIndices: this.#renderIndices.size };
   }
 
   #clearOwner(owner: ActiveOwner): void {

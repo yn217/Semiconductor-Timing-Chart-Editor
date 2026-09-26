@@ -7,6 +7,7 @@ import {
   WAVEDROM_VERSION,
   assertSafeWaveDromMarkup,
   renderWaveJsonMarkup,
+  renderWaveJsonMarkupWithMetrics,
   toWaveJson,
   toWaveJsonWindow,
   VALUE_LABEL_LAYOUT_POLICY,
@@ -119,7 +120,23 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
 
   it("pins the production and test renderer to one WaveDrom version", () => {
     expect(WaveDrom.version).toBe(WAVEDROM_VERSION);
-    expect(new ProductionWaveDromAdapter().metrics()).toEqual({ renderCalls: 0, waveJsonDurationMs: 0, renderDurationMs: 0, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 });
+    expect(new ProductionWaveDromAdapter().metrics()).toMatchObject({ renderCalls: 0, waveJsonDurationMs: 0, renderDurationMs: 0, renderStages: { last: undefined, totals: { sourcePreparationMs: 0, metricCollectionOverheadMs: 0, cacheKeySerializeMs: 0, waveDromRenderAnyMs: 0, onmlStringifyMs: 0, valueLabelLayoutMs: 0, markupSafetyMs: 0, templateParseMs: 0, svgSafetyDomWalkMs: 0, domInstallMs: 0, totalSignalWallMs: 0, waveJsonBytes: 0, semanticValuesBytes: 0, svgMarkupBytes: 0 } }, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 });
+  });
+
+  it("reports WaveDrom markup stage timings without changing serialized output", () => {
+    const waveJson = { wave: "=.=.", data: ["LONG_VALUE", "NEXT"] };
+    const measured = renderWaveJsonMarkupWithMetrics(waveJson, 0, ["LONG_VALUE", "NEXT"]);
+    expect(measured.markup).toBe(renderWaveJsonMarkup(waveJson, 0, ["LONG_VALUE", "NEXT"]));
+    expect(measured.metrics.svgMarkupBytes).toBeGreaterThan(0);
+    expect(Object.values(measured.metrics).every((value) => Number.isFinite(value) && value >= 0)).toBe(true);
+  });
+
+  it("reports WaveDrom markup stage timings without changing the serialized output", () => {
+    const waveJson = { wave: "=.=.", data: ["LONG_VALUE", "NEXT"] };
+    const measured = renderWaveJsonMarkupWithMetrics(waveJson, 0, ["LONG_VALUE", "NEXT"]);
+    expect(measured.markup).toBe(renderWaveJsonMarkup(waveJson, 0, ["LONG_VALUE", "NEXT"]));
+    expect(measured.metrics.svgMarkupBytes).toBeGreaterThan(0);
+    expect(Object.values(measured.metrics).every((value) => Number.isFinite(value) && value >= 0)).toBe(true);
   });
 
   it("preserves the left-edge value when converting a bounded source window", () => {

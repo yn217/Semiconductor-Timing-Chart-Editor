@@ -66,6 +66,10 @@ export interface WaveDromAdapterMetrics {
   readonly renderCalls: number;
   readonly waveJsonDurationMs: number;
   readonly renderDurationMs: number;
+  readonly renderStages: Readonly<{
+    readonly last: Readonly<Record<string, number>> | undefined;
+    readonly totals: Readonly<Record<string, number>>;
+  }>;
   readonly renderCallsBySignal: Readonly<Record<string, number>>;
   readonly cacheHits: number;
   readonly cacheMisses: number;
