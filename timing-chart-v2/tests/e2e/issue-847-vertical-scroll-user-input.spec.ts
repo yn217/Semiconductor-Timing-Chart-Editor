@@ -84,6 +84,26 @@ for (const viewportSize of [{ width: 1280, height: 720 }, { width: 1672, height:
         await expect(rangeEnd).toHaveValue(selectedRange.end);
       }
 
+      const maximumScroll = await viewport.evaluate((element) => element.scrollHeight - element.clientHeight);
+      for (let step = 0; step < 5; step += 1) await page.mouse.wheel(0, 900);
+      await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBe(maximumScroll);
+      await expect.poll(() => surface.evaluate((root) => {
+        const viewportRect = root.closest(".cycle-viewport")!.getBoundingClientRect();
+        return [...root.querySelectorAll<HTMLElement>("[data-role='timing-row'][data-kind='timing']")]
+          .filter((row) => { const rect = row.getBoundingClientRect(); return rect.bottom > viewportRect.top && rect.top < viewportRect.bottom; })
+          .every((row) => {
+            const id = row.dataset.rowId;
+            const owner = id ? root.querySelector<HTMLElement>(`[data-role='wave-owner'][data-signal-id='${CSS.escape(id)}']`) : null;
+            return owner !== null && (owner.querySelector("svg, canvas[data-wave-canvas]") !== null || owner.hasAttribute("data-wave-error"))
+              && Math.abs(owner.getBoundingClientRect().top - row.getBoundingClientRect().top) <= 1;
+          });
+      })).toBe(true);
+      for (let step = 0; step < 5; step += 1) await page.mouse.wheel(0, -900);
+      await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBe(0);
+      await expect(annotation).toHaveAttribute("data-selected", "true");
+      await expect(rangeStart).toHaveValue(selectedRange.start);
+      await expect(rangeEnd).toHaveValue(selectedRange.end);
+
       await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
       await expect(page.getByTestId("history-status")).toHaveText(history!);
       await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
