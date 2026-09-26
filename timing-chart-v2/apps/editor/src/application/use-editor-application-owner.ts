@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { deriveTimingDiagnostics, type CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { HistoryState } from "@timing-chart-v2/history";
-import { isTrustedParsedCanonicalDocument, validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
+import { validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import { buildCommandRejectionDiagnostics } from "../command-diagnostics.js";
 import { EditorApplicationRuntime } from "../runtime/editor-application-runtime.js";
 
@@ -42,6 +42,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   const [snapshot, setSnapshot] = useState<CanonicalSnapshot>(() => runtime.session.snapshot());
   const [history, setHistory] = useState<HistoryState>(() => runtime.session.current().historyState());
   const [problem, setProblem] = useState("");
+  const [validationPending, setValidationPending] = useState(false);
   // #175: proves "View-only React rerender never runs a full Canonical
   // validation pass" mechanically rather than by inspection -- this counts
   // actual `validateCanonicalDocument` calls (the expensive whole-document
@@ -55,6 +56,9 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   const [validationDiagnostics, setValidationDiagnostics] = useState<readonly DocumentProblem[]>(() => { validatorInvocationsRef.current += 1; return [...validateCanonicalDocument(initialDocument), ...deriveTimingDiagnostics(initialDocument)]; });
   const [runtimeDiagnostics, setRuntimeDiagnostics] = useState<readonly DocumentProblem[]>([]);
   const acceptedHandlerRef = useRef<AcceptedHandler | undefined>(undefined);
+  const openDiagnosticsGenerationRef = useRef(0);
+  const pendingOpenDiagnosticsRef = useRef<Readonly<{ generation: number; document: CanonicalDocument; revision: number }> | undefined>(undefined);
+  const pendingOpenDiagnosticsCompletionRef = useRef<(() => void) | undefined>(undefined);
 
   const dispatchResult = useCallback((result: CommandResult, context: AcceptedContext): CommandResult => {
     if (!result.ok) {
@@ -71,6 +75,10 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     }
     setSnapshot(result.snapshot);
     setHistory(runtime.session.current().historyState());
+    openDiagnosticsGenerationRef.current += 1;
+    pendingOpenDiagnosticsRef.current = undefined;
+    const completePendingOpenDiagnostics = pendingOpenDiagnosticsCompletionRef.current;
+    pendingOpenDiagnosticsCompletionRef.current = undefined;
     // Keep Problems derived from the committed Canonical snapshot. Clearing
     // the previous list after every successful command made an unchanged or
     // newly introduced timing warning disappear until the user manually ran
@@ -80,6 +88,8 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     // and rejects any candidate with a problem, so an accepted snapshot has no canonical problems by construction. Do not rescan the
     // structure here (validatorInvocations stays put); only the timing diagnostics are derived again.
     setValidationDiagnostics(deriveTimingDiagnostics(result.snapshot.document));
+    setValidationPending(false);
+    completePendingOpenDiagnostics?.();
     setProblem("");
     setRuntimeDiagnostics(withoutCommandRejectionDiagnostics);
     acceptedHandlerRef.current?.(result, context);
@@ -98,11 +108,35 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     const session = runtime.session.replace(document);
     setSnapshot(session.getSnapshot());
     setHistory(session.historyState());
-    const canonical = isTrustedParsedCanonicalDocument(document) ? document.document : document;
-    setValidationDiagnostics(deriveTimingDiagnostics(canonical));
+    const canonical = session.getSnapshot().document;
+    const generation = ++openDiagnosticsGenerationRef.current;
+    pendingOpenDiagnosticsCompletionRef.current = undefined;
+    pendingOpenDiagnosticsRef.current = { generation, document: canonical, revision: session.getSnapshot().revision };
+    setValidationDiagnostics([]);
+    setValidationPending(true);
     setProblem("");
     setRuntimeDiagnostics(diagnostics);
     return session;
+  }, [runtime]);
+  const runPendingTimingDiagnostics = useCallback((onComplete?: () => void) => {
+    const pending = pendingOpenDiagnosticsRef.current;
+    if (!pending) { onComplete?.(); return; }
+    pendingOpenDiagnosticsCompletionRef.current = onComplete;
+    // Run in a later task so the browser can paint the already-published
+    // primary presentation before the full-document Problems derivation.
+    globalThis.setTimeout(() => {
+      if (pendingOpenDiagnosticsRef.current?.generation !== pending.generation || openDiagnosticsGenerationRef.current !== pending.generation) return;
+      const current = runtime.session.snapshot();
+      if (current.revision !== pending.revision || current.document !== pending.document) return;
+      const diagnostics = deriveTimingDiagnostics(pending.document);
+      const latest = runtime.session.snapshot();
+      if (pendingOpenDiagnosticsRef.current?.generation !== pending.generation || latest.revision !== pending.revision || latest.document !== pending.document) return;
+      pendingOpenDiagnosticsRef.current = undefined;
+      pendingOpenDiagnosticsCompletionRef.current = undefined;
+      setValidationDiagnostics(diagnostics);
+      setValidationPending(false);
+      onComplete?.();
+    }, 0);
   }, [runtime]);
   const publishHistory = useCallback(() => setHistory(runtime.session.current().historyState()), [runtime]);
   // The one production entry point that actually re-runs the validator on
@@ -111,7 +145,13 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   const validateDocument = useCallback((document: CanonicalDocument) => {
     validatorInvocationsRef.current += 1;
     const problems = [...validateCanonicalDocument(document), ...deriveTimingDiagnostics(document)];
+    openDiagnosticsGenerationRef.current += 1;
+    pendingOpenDiagnosticsRef.current = undefined;
+    const completePendingOpenDiagnostics = pendingOpenDiagnosticsCompletionRef.current;
+    pendingOpenDiagnosticsCompletionRef.current = undefined;
     setValidationDiagnostics(problems);
+    setValidationPending(false);
+    completePendingOpenDiagnostics?.();
     return problems;
   }, []);
 
@@ -121,6 +161,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     history,
     problem,
     validationDiagnostics,
+    validationPending,
     runtimeDiagnostics,
     diagnostics: [...validationDiagnostics, ...runtimeDiagnostics] as readonly DocumentProblem[],
     execute,
@@ -129,6 +170,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     redo,
     attachAcceptedHandler,
     replaceSession,
+    runPendingTimingDiagnostics,
     publishHistory,
     setProblem,
     setValidationDiagnostics,

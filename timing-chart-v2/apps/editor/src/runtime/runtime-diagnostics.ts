@@ -51,7 +51,7 @@ type OpenReadiness = "opening" | "document-ready" | "presentation-ready" | "visi
 const OPEN_READINESS_ORDER: readonly OpenReadiness[] = ["opening", "document-ready", "presentation-ready", "visible-waveforms-ready", "idle"];
 
 /** Owns open/first-paint instrumentation for the editor runtime bridge. */
-export function createOpenPhaseTracker(rendererHost: HTMLElement): OpenPhaseTracker {
+export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentationReady?: () => void): OpenPhaseTracker {
   const marks: Record<string, number> = {};
   let active = false;
   let rowShellPainted = false;
@@ -59,8 +59,10 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement): OpenPhaseTrac
   let rulerPainted = false;
   let readiness: OpenReadiness = "opening";
   let readinessIndex = 0;
+  let presentationReadyNotified = false;
   let visibleWaveformsCompletedAt: number | undefined;
   let idleCompletedAt: number | undefined;
+  let diagnosticsCompletedAt: number | undefined;
   const advanceReadiness = (next: OpenReadiness, timestamp: number): void => {
     const nextIndex = OPEN_READINESS_ORDER.indexOf(next);
     // Readiness is an ordered contract even when independent async work
@@ -73,6 +75,7 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement): OpenPhaseTrac
     globalThis.performance.mark(`timing-chart-v2:${next}`);
     rendererHost.dataset.openReadiness = readiness;
     if (next === "presentation-ready") rendererHost.dataset.cycleViewReady = "true";
+    if (next === "idle") rendererHost.dataset.editorIdle = "true";
   };
   const mark = (phase: string, phaseTimestamp = globalThis.performance.now()): void => {
     if (!active || marks[phase] !== undefined) return;
@@ -91,7 +94,11 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement): OpenPhaseTrac
       if (visibleWaveformsCompletedAt !== undefined) {
         advanceReadiness("visible-waveforms-ready", visibleWaveformsCompletedAt);
       }
-      if (idleCompletedAt !== undefined) advanceReadiness("idle", idleCompletedAt);
+      if (idleCompletedAt !== undefined && diagnosticsCompletedAt !== undefined) advanceReadiness("idle", Math.max(idleCompletedAt, diagnosticsCompletedAt));
+      if (!presentationReadyNotified) {
+        presentationReadyNotified = true;
+        onPresentationReady?.();
+      }
     }
     if (phase === "visible-waveforms-ready") {
       visibleWaveformsCompletedAt = phaseTimestamp;
@@ -99,7 +106,11 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement): OpenPhaseTrac
     }
     if (phase === "all-visible-idle") {
       idleCompletedAt = phaseTimestamp;
-      advanceReadiness("idle", phaseTimestamp);
+      if (diagnosticsCompletedAt !== undefined && readinessIndex >= 3) advanceReadiness("idle", Math.max(phaseTimestamp, diagnosticsCompletedAt));
+    }
+    if (phase === "diagnostics-ready") {
+      diagnosticsCompletedAt = phaseTimestamp;
+      if (idleCompletedAt !== undefined && readinessIndex >= 3) advanceReadiness("idle", Math.max(phaseTimestamp, idleCompletedAt));
     }
     rendererHost.dataset.openPhaseMarks = JSON.stringify(marks);
     const fileReadDurationMs = marks["file-read-start"] !== undefined && marks["file-read-complete"] !== undefined
@@ -114,8 +125,10 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement): OpenPhaseTrac
       active = true;
       readiness = "opening";
       readinessIndex = OPEN_READINESS_ORDER.indexOf(readiness);
+      presentationReadyNotified = false;
       visibleWaveformsCompletedAt = undefined;
       idleCompletedAt = undefined;
+      diagnosticsCompletedAt = undefined;
       rowShellPainted = false;
       referenceGeometryReady = false;
       rulerPainted = false;

@@ -58,7 +58,7 @@ export function MinimalCycleView() {
   const application = useEditorApplicationOwner(initialDocument);
   const documentLifecycle = useDocumentLifecycle({ application, productTemplate: cycleDocument, persistText: downloadText });
   const exportController = useMemo(() => createEditorExportController(), []);
-  const { snapshot, history, problem, validationDiagnostics, runtimeDiagnostics, setProblem, setRuntimeDiagnostics } = application;
+  const { snapshot, history, problem, validationDiagnostics, validationPending, runtimeDiagnostics, setProblem, setRuntimeDiagnostics } = application;
   const host = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const ruler = useRef<HTMLDivElement>(null);
@@ -608,6 +608,7 @@ export function MinimalCycleView() {
   const secondarySurfaces = useEditorSecondarySurfaces({
     document: snapshot.document,
     validationDiagnostics,
+    validationPending,
     documentEpoch,
     revision: snapshot.revision,
     transactionPresentationRevision,
@@ -702,6 +703,7 @@ export function MinimalCycleView() {
       onSpacerCreated: selection.selectSpacer,
       onTransactionCreated: selection.selectTransaction,
       problemsCount: diagnostics.length,
+      problemsPending: validationPending,
       diagnostics,
       onNavigateProblem: navigateProblem,
       onRefreshChecks: () => { application.validateDocument(snapshot.document); publishStateRef.current(); },
@@ -827,6 +829,7 @@ export function MinimalCycleView() {
     timeAxisStatus: `Time Axis: ${snapshot.document.timeline.referenceClock ? `Clock · ${referenceClockSignal?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time · No Clock Reference"}`,
     dirty: history.dirty,
     problemsCount: diagnostics.length,
+    problemsPending: validationPending,
     waveDromHasError,
     // #431/#459: `cursorA`/`cursorB` are source-time cycle numbers; empty
     // string formatting stays out of EditorStatusBar per its own "pure

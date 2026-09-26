@@ -23,7 +23,6 @@ export function scheduleInitialTimelineRefresh(renderer: { whenIdle: () => Promi
       refresh.transactionPresentation?.();
       refresh.collectErrors();
       refresh.publish();
-      host.dataset.editorIdle = "true";
       host.dataset.cycleViewReady = "true";
     });
   });

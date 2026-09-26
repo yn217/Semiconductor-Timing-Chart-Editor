@@ -19,9 +19,11 @@ describe("open phase readiness contract", () => {
     tracker.mark("visible-waveforms-ready", 4);
     expect(host.dataset.openReadiness).toBe("visible-waveforms-ready");
     tracker.mark("all-visible-idle", 5);
+    expect(host.dataset.openReadiness).toBe("visible-waveforms-ready");
+    tracker.mark("diagnostics-ready", 6);
     expect(host.dataset.openReadiness).toBe("idle");
 
-    tracker.begin(6);
+    tracker.begin(7);
     expect(host.dataset.openReadiness).toBe("opening");
     expect(host.dataset.cycleViewReady).toBeUndefined();
   });
@@ -34,6 +36,7 @@ describe("open phase readiness contract", () => {
     tracker.mark("canonical-replaced", 1);
     tracker.mark("visible-waveforms-ready", 2);
     tracker.mark("all-visible-idle", 3);
+    tracker.mark("diagnostics-ready", 3.5);
     expect(host.dataset.openReadiness).toBe("document-ready");
     expect(host.dataset.cycleViewReady).toBeUndefined();
 
@@ -42,5 +45,20 @@ describe("open phase readiness contract", () => {
     tracker.mark("ruler-painted", 6);
     expect(host.dataset.openReadiness).toBe("idle");
     expect(host.dataset.cycleViewReady).toBe("true");
+  });
+
+  it("notifies the diagnostics owner once at presentation readiness", () => {
+    const host = { dataset: {} } as unknown as HTMLElement;
+    let presentationNotifications = 0;
+    const tracker = createOpenPhaseTracker(host, () => { presentationNotifications += 1; });
+
+    tracker.begin(0);
+    tracker.mark("canonical-replaced", 1);
+    tracker.mark("row-shell-painted", 2);
+    tracker.mark("reference-geometry-ready", 3);
+    tracker.mark("ruler-painted", 4);
+    tracker.mark("first-visible-wave-painted", 5);
+    tracker.mark("all-visible-idle", 6);
+    expect(presentationNotifications).toBe(1);
   });
 });

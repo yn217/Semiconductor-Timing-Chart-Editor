@@ -166,8 +166,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     const geometryRegistry = runtime.geometry;
     const geometrySvgs = geometryRegistry.svgs;
     const geometryMaps = geometryRegistry.maps;
-    const openPhaseTracker = createOpenPhaseTracker(rendererHost);
-    const markOpenPhase = openPhaseTracker.mark;
+    let markOpenPhase: (phase: string, timestamp?: number) => void = () => undefined;
+    const openPhaseTracker = createOpenPhaseTracker(rendererHost, () => {
+      input.application.runPendingTimingDiagnostics(() => markOpenPhase("diagnostics-ready"));
+    });
+    markOpenPhase = openPhaseTracker.mark;
     const beginOpenMeasurement = openPhaseTracker.begin;
     // Direct reload/startup has no File Open command to begin the phase
     // tracker. Start the same measurement contract for the initial mount so
@@ -581,7 +584,6 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         if (refreshOverlaysNow) timelineRuntime.refreshOverlays();
         collectWaveErrors();
         publishState();
-        rendererHost.dataset.editorIdle = "true";
         markOpenPhase("all-visible-idle");
         if (openingGenerationForCompletion !== undefined && primaryPresentationGeneration === openingGenerationForCompletion) primaryPresentationOpening = false;
       });
@@ -659,8 +661,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         timelineRuntime.refreshOverlays();
         collectWaveErrors();
         publishState();
+        markOpenPhase("visible-waveforms-ready");
         markOpenPhase("all-visible-idle");
-        rendererHost.dataset.editorIdle = "true";
         if (primaryPresentationGeneration === openingGeneration) primaryPresentationOpening = false;
       });
       },

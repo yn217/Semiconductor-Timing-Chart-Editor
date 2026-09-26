@@ -334,6 +334,7 @@ export type EditorStatusBarProps = {
   readonly timeAxisStatus: string;
   readonly dirty: boolean;
   readonly problemsCount: number;
+  readonly problemsPending: boolean;
   readonly waveDromHasError: boolean;
   // #431/#459: Cursor A/B (source-time workspace state, never Canonical --
   // see use-workspace-ui-state.ts) had a fully-built state API with zero
@@ -353,7 +354,7 @@ export type EditorStatusBarProps = {
 /** The editor's bottom status bar. Purely a display of values already
  * computed by their owners (Application/History, Selection, Timeline
  * Geometry/Navigation, Workspace UI State) -- no state or logic of its own. */
-export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, annotationCount, rangeStatus, selectedCycle, zoom, snapEnabled, viewMode, statusContext, hideRevisionDetail, revision, undoDepth, redoDepth, timeAxisStatus, dirty, problemsCount, waveDromHasError, cursorStatus, activePaneStatus }: EditorStatusBarProps) {
+export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, annotationCount, rangeStatus, selectedCycle, zoom, snapEnabled, viewMode, statusContext, hideRevisionDetail, revision, undoDepth, redoDepth, timeAxisStatus, dirty, problemsCount, problemsPending, waveDromHasError, cursorStatus, activePaneStatus }: EditorStatusBarProps) {
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const gestureHint = useSyncExternalStore(subscribeGestureHint, getGestureHint);
   const diagnosticClass = hideRevisionDetail ? "status-detail-hidden" : diagnosticsOpen ? undefined : "visually-hidden";
@@ -367,7 +368,7 @@ export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, anno
     <span className="status-context" data-testid="status-context">{statusContext}</span>
     <span className={diagnosticClass} data-testid="revision-status">Canonical revision {revision}</span>
     <span className={diagnosticClass} data-testid="history-status">History {undoDepth} / Redo {redoDepth}</span>
-    <span data-testid="time-axis-status">{timeAxisStatus}</span><span data-testid="dirty-status">{dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">Problems: {problemsCount}</span><span className={waveDromHasError ? undefined : diagnosticClass} data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
+    <span data-testid="time-axis-status">{timeAxisStatus}</span><span data-testid="dirty-status">{dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">{problemsPending ? "Problems: Checking…" : `Problems: ${problemsCount}`}</span><span className={waveDromHasError ? undefined : diagnosticClass} data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
   </footer>;
 }
 

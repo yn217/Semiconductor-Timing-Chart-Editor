@@ -75,6 +75,7 @@ export interface EditorSecondarySurfacesInput {
   readonly setBottomVisible: (visible: boolean) => void;
   readonly document: CanonicalDocument;
   readonly validationDiagnostics: readonly DocumentProblem[];
+  readonly validationPending: boolean;
   readonly documentEpoch: number;
   readonly revision: number;
   readonly transactionPresentationRevision: number;
@@ -601,7 +602,7 @@ export function useEditorSecondarySurfaces(
   ) : workspace.bottomTab === "Bookmarks" ? (
     bookmarkEditor
   ) : workspace.bottomTab === "Problems" ? (
-    <ProblemsPanel diagnostics={input.diagnostics} onNavigate={input.navigateProblem} />
+    <ProblemsPanel diagnostics={input.diagnostics} pending={input.validationPending} onNavigate={input.navigateProblem} />
   ) : workspace.bottomTab === "JSON" ? (
     <AdvancedJsonPanel
       document={input.document}
