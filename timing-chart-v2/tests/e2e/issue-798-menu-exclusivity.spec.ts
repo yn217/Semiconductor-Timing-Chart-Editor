@@ -9,6 +9,9 @@ const fixture = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../.
 
 for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) {
 test(`peer menus replace each other at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+  // The protocol fixture plus both mode-specific menu journeys takes over
+  // the suite's 30s default on this CI-sized document; keep semantic waits.
+  test.setTimeout(60000);
   await page.setViewportSize(viewport);
   await page.goto("/");
   const surface = page.getByTestId("cycle-surface");
@@ -50,8 +53,25 @@ test(`peer menus replace each other at ${viewport.width}x${viewport.height}`, as
   await transactionRow.locator("..").getByRole("button", { name: "More actions for APB write" }).click();
   const transactionMenu = page.getByTestId("transaction-tree-action-menu");
   await expect(transactionMenu).toBeVisible();
+  await transactionMenu.getByRole("menuitem", { name: "Move to Group" }).click();
+  await expect(transactionMenu.getByRole("group", { name: "Move to Group" })).toBeVisible();
   await page.locator(".home-overflow-trigger").click();
   await expect(page.getByRole("menu", { name: "More Home Commands" })).toBeVisible();
   await expect(transactionMenu).toHaveCount(0);
+
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu", { name: "More Home Commands" })).toHaveCount(0);
+  await expect(page.locator(".home-overflow-trigger")).toBeFocused();
+  await page.getByTestId("bottom-settings").click();
+  const settingsPopover = page.getByTestId("bottom-settings-popover");
+  await expect(settingsPopover).toBeVisible();
+  await page.locator(".home-overflow-trigger").click();
+  await expect(page.getByRole("menu", { name: "More Home Commands" })).toBeVisible();
+  await expect(settingsPopover).toBeHidden();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu", { name: "More Home Commands" })).toHaveCount(0);
+  await expect(page.locator(".home-overflow-trigger")).toBeFocused();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
 });
 }
