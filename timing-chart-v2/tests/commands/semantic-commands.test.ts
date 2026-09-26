@@ -592,6 +592,23 @@ describe("command execution and atomic history", () => {
     expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 1, dirty: false });
   });
 
+  it("atomically rejects sized bus literals that exceed the Signal width", () => {
+    const source = canonicalFixture();
+    const bus = source.signals.find((signal) => signal.id === "sig_data");
+    if (!bus || bus.type !== "bus") throw new Error("Canonical fixture must contain its Bus Signal.");
+    const narrowBus = { ...bus, width: 4, values: [{ start: 0, value: "0" }, { start: 2, value: "F" }] };
+    const document = { ...source, signals: source.signals.map((signal) => signal.id === bus.id ? narrowBus : signal) };
+    const session = new CommandHistorySession(document);
+    const before = session.getSnapshot();
+    const historyBefore = session.historyState();
+
+    const rejected = session.execute({ id: commandId("cmd_sized_bus_overflow"), type: "signal.updateValue", signalId: bus.id, start: 0, value: "8'hFF" });
+
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "BUS_WIDTH_OVERFLOW" }] });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState()).toEqual(historyBefore);
+  });
+
   it("keeps Event data values and Pulse logic values type-safe on atomic edits", () => {
     const source = canonicalFixture();
     const event: Signal = { id: "sig_event" as SignalId, name: "EVENT", type: "event", role: "internal", source: { instancePath: [], signalName: "EVENT" }, display: { name: "EVENT" }, values: [{ start: 0, value: "NONE" }] };

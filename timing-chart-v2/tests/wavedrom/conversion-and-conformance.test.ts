@@ -36,6 +36,16 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(toWaveJson({ signal: bus, cycleCount: 10 })).toEqual({ wave: "=..=...=..", data: ["IDLE", "0x1000", "IDLE"] });
   });
 
+  it("projects sized HDL bus literals using their declared width", () => {
+    const bus = {
+      ...canonicalFixture().signals[1]!,
+      width: 4,
+      displayFormat: "hex",
+      values: [{ start: 0, value: "4'hFF" }, { start: 3, value: "8'h1FF" }],
+    } as ValueSignal;
+    expect(toWaveJson({ signal: bus, cycleCount: 6 })).toEqual({ wave: "=..=..", data: ["0xF", "0xFF"] });
+  });
+
   it("covers every ordered transition in the supported non-clock token manifest", () => {
     let covered = 0;
     for (const from of WAVEDROM_STATE_TOKENS) {

@@ -29,6 +29,14 @@ describe("canonical bus width validation uses shared literal radix semantics", (
     const smallBus = { ...signal, width: 4, values: [{ start: 0, value: "8'h0F" }] };
     document.signals = document.signals.map((entry, index) => index === signalIndex ? smallBus : entry);
     expect(validateCanonicalDocument(document).some((problem) => problem.code === "INVALID_BUS_LITERAL" || problem.code === "BUS_WIDTH_OVERFLOW")).toBe(false);
+
+    const truncatedSizedValue = { ...smallBus, values: [{ start: 0, value: "4'hFF" }] };
+    document.signals = document.signals.map((entry, index) => index === signalIndex ? truncatedSizedValue : entry);
+    expect(validateCanonicalDocument(document).some((problem) => problem.code === "INVALID_BUS_LITERAL" || problem.code === "BUS_WIDTH_OVERFLOW")).toBe(false);
+
+    const valueTooWideForSignal = { ...smallBus, values: [{ start: 0, value: "8'hFF" }] };
+    document.signals = document.signals.map((entry, index) => index === signalIndex ? valueTooWideForSignal : entry);
+    expect(validateCanonicalDocument(document).some((problem) => problem.code === "BUS_WIDTH_OVERFLOW")).toBe(true);
   });
 
   it("still rejects malformed numeric-like values instead of treating them as symbols", () => {
@@ -38,6 +46,10 @@ describe("canonical bus width validation uses shared literal radix semantics", (
     if (!signal || signal.type !== "bus") throw new Error("fixture must contain its Bus signal");
     const invalidBus = { ...signal, values: [{ start: 0, value: "12G" }] };
     document.signals = document.signals.map((entry, index) => index === signalIndex ? invalidBus : entry);
+    expect(validateCanonicalDocument(document).some((problem) => problem.code === "INVALID_BUS_LITERAL")).toBe(true);
+
+    const invalidSizedBus = { ...signal, values: [{ start: 0, value: "4'hG" }] };
+    document.signals = document.signals.map((entry, index) => index === signalIndex ? invalidSizedBus : entry);
     expect(validateCanonicalDocument(document).some((problem) => problem.code === "INVALID_BUS_LITERAL")).toBe(true);
   });
 });
