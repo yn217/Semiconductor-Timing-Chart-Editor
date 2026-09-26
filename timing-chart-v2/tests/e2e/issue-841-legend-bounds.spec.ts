@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 import { startInCycleSample } from "./cycle-startup.js";
+import { hoverTimelineArea, timelineOwner } from "./timeline-scroll.js";
 
 startInCycleSample(test);
 
@@ -150,3 +152,88 @@ test.describe("Legend projection across modes", () => {
     await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
   });
 });
+
+for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) {
+  test.describe(`Legend scroll ownership at ${viewport.width}x${viewport.height}`, () => {
+    test.use({ viewport });
+    test("horizontal scroll keeps the document position canonical and the visible Legend reachable", async ({ page }) => {
+      await page.goto("/");
+      const surface = page.getByTestId("cycle-surface");
+      await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+      await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
+      const properties = page.getByRole("dialog", { name: "Document Properties" });
+      await properties.getByLabel("Legend show").check();
+      await properties.getByLabel("Legend position X").fill("500");
+      await properties.getByLabel("Legend position Y").fill("80");
+      await properties.getByTestId("apply-document-properties").click();
+      await properties.getByRole("button", { name: "Close properties" }).click();
+
+      const legend = page.getByTestId("editor-legend");
+      await legend.click();
+      const inspectorX = page.getByLabel("Legend X");
+      const inspectorY = page.getByLabel("Legend Y");
+      await expect(inspectorX).toHaveValue("500");
+      await expect(inspectorY).toHaveValue("80");
+      const revision = await surface.getAttribute("data-canonical-revision");
+      const history = await page.getByTestId("history-status").textContent();
+      const dirty = await page.getByTestId("dirty-status").textContent();
+
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+      await page.getByLabel("Zoom preset").selectOption("800");
+      await expect(surface).toHaveAttribute("data-editor-idle", "true");
+      const viewportElement = timelineOwner(page);
+      const viewportMetrics = await viewportElement.evaluate((element) => ({
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+        scrollLeft: element.scrollLeft,
+      }));
+      expect(viewportMetrics.scrollWidth).toBeGreaterThan(viewportMetrics.clientWidth);
+
+      await hoverTimelineArea(page);
+      for (let step = 0; step < 4; step += 1) {
+        const before = await viewportElement.evaluate((element) => element.scrollLeft);
+        await page.mouse.wheel(240, 0);
+        await expect.poll(() => viewportElement.evaluate((element) => element.scrollLeft)).toBeGreaterThan(before);
+      }
+      await expect.poll(() => viewportElement.evaluate((element) => element.scrollLeft)).toBeGreaterThan(500);
+      await expect(surface).toHaveAttribute("data-editor-idle", "true");
+      await expectLegendInVisibleArea(page, legend);
+      await expect(inspectorX).toHaveValue("500");
+      await expect(inspectorY).toHaveValue("80");
+
+      await page.mouse.wheel(-4000, 0);
+      await expect.poll(() => viewportElement.evaluate((element) => element.scrollLeft)).toBe(0);
+      await expect(surface).toHaveAttribute("data-editor-idle", "true");
+      await expectLegendInVisibleArea(page, legend);
+      await expect(inspectorX).toHaveValue("500");
+      await expect(inspectorY).toHaveValue("80");
+      await expect(surface).toHaveAttribute("data-canonical-revision", revision!);
+      await expect(page.getByTestId("history-status")).toHaveText(history!);
+      await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+
+      const ribbon = page.getByTestId("ribbon");
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+      const pendingSave = page.waitForEvent("download");
+      await ribbon.getByRole("button", { name: "Save", exact: true }).click();
+      const savedPath = await (await pendingSave).path();
+      expect(savedPath).toBeTruthy();
+      await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+      await expect(surface).toHaveAttribute("data-editor-idle", "true");
+
+      const reopenedLegend = page.getByTestId("editor-legend");
+      await expect(reopenedLegend).toBeVisible();
+      await expect(reopenedLegend).toHaveAttribute("data-legend-position-x", "500");
+      await expect(reopenedLegend).toHaveAttribute("data-legend-position-y", "80");
+      await expectLegendInVisibleArea(page, reopenedLegend);
+
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+      await ribbon.getByRole("button", { name: "Export", exact: true }).click();
+      const exportDialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+      const pendingExport = page.waitForEvent("download");
+      await exportDialog.getByRole("button", { name: "Export SVG" }).click();
+      const svg = await readFile((await (await pendingExport).path())!);
+      expect(svg.toString("utf8")).toContain('data-layer="legend" data-orientation="horizontal" transform="translate(500 80)"');
+    });
+  });
+}
