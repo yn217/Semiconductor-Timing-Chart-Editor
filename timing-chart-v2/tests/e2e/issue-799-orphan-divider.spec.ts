@@ -2,6 +2,7 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const protocolSample = path.resolve(dirname, "../../samples/showcase/24_protocol_transaction_showcase.tcd.json");
@@ -81,6 +82,90 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
       expect(marker.top + Number.parseFloat(marker.height)).toBeLessThanOrEqual(boundaries.header.bottom);
     }
   });
+}
+
+for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+  test(`fixed-column grips stay structurally aligned through signal-count and layout interactions at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    const host = page.getByTestId("cycle-surface");
+    await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+    await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+
+    for (const signalCount of [3, 8, 50]) {
+      const document = generatePerformanceDocument({ signalCount, cycleCount: signalCount === 50 ? 5_000 : 100 });
+      await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
+        name: `orphan-divider-${signalCount}.tcd`,
+        mimeType: "application/json",
+        buffer: Buffer.from(JSON.stringify(document)),
+      });
+      await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+      await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", String(signalCount));
+      await assertGripStructure(page);
+    }
+
+    const history = await page.getByTestId("history-status").innerText();
+    const dirty = await page.getByTestId("dirty-status").innerText();
+    const groupCollapse = page.locator("[data-role='left-group-header'] [data-role='tree-collapse']").first();
+    await expect(groupCollapse).toBeVisible();
+    const initialRows = await page.locator("[data-role='left-row']").count();
+    await groupCollapse.click();
+    await expect.poll(() => page.locator("[data-role='left-row']").count()).toBeLessThan(initialRows);
+    await assertGripStructure(page);
+    await page.locator("[data-role='left-group-header'] [data-role='tree-collapse']").first().click();
+    await expect.poll(() => page.locator("[data-role='left-row']").count()).toBe(initialRows);
+
+    const viewportElement = page.getByTestId("cycle-viewport");
+    await expect(page.getByTestId("timeline-hscroll")).toBeVisible();
+    const horizontal = page.getByTestId("timeline-hscroll");
+    const horizontalMetrics = await horizontal.evaluate((element) => ({ left: element.scrollLeft, max: element.scrollWidth - element.clientWidth }));
+    expect(horizontalMetrics.max).toBeGreaterThan(0);
+    await horizontal.evaluate((element) => { element.scrollLeft = element.scrollWidth; });
+    await expect.poll(() => horizontal.evaluate((element) => element.scrollLeft)).toBeGreaterThan(horizontalMetrics.left);
+    const verticalMetrics = await viewportElement.evaluate((element) => ({ top: element.scrollTop, max: element.scrollHeight - element.clientHeight }));
+    expect(verticalMetrics.max).toBeGreaterThan(0);
+    await viewportElement.evaluate((element) => { element.scrollTop = element.scrollHeight; });
+    await expect.poll(() => viewportElement.evaluate((element) => element.scrollTop)).toBeGreaterThan(verticalMetrics.top);
+    await assertGripStructure(page);
+
+    const bottomResizer = page.getByTestId("bottom-resizer");
+    const initialBottom = Number(await bottomResizer.getAttribute("aria-valuenow"));
+    const resizeBox = (await bottomResizer.boundingBox())!;
+    await page.mouse.move(resizeBox.x + resizeBox.width / 2, resizeBox.y + resizeBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(resizeBox.x + resizeBox.width / 2, resizeBox.y + resizeBox.height / 2 - 40, { steps: 3 });
+    await page.mouse.up();
+    await expect.poll(() => bottomResizer.getAttribute("aria-valuenow")).not.toBe(String(initialBottom));
+    await assertGripStructure(page);
+    await expect(page.getByTestId("history-status")).toHaveText(history);
+    await expect(page.getByTestId("dirty-status")).toHaveText(dirty);
+  });
+}
+
+async function assertGripStructure(page: import("@playwright/test").Page): Promise<void> {
+  const structure = await page.evaluate(() => {
+    const marker = (selector: string) => {
+      const element = document.querySelector<HTMLElement>(selector);
+      if (!element) throw new Error(`Missing ${selector}`);
+      const style = getComputedStyle(element, "::after");
+      const bounds = element.getBoundingClientRect();
+      return { top: bounds.top + Number.parseFloat(style.top), height: Number.parseFloat(style.height) };
+    };
+    const header = document.querySelector<HTMLElement>(".column-headings")!.getBoundingClientRect();
+    return {
+      header: { top: header.top, bottom: header.bottom },
+      markers: [marker(".left-pane-resize-handle"), marker(".frozen-pane-resize-handle")],
+      treeBorder: getComputedStyle(document.querySelector<HTMLElement>(".surface-host [data-role='left-tree-rows']")!).borderRightWidth,
+      frozenBorder: getComputedStyle(document.querySelector<HTMLElement>(".surface-host [data-role='frozen-label-rows']")!).borderRightWidth,
+    };
+  });
+  expect(structure.treeBorder).toBe("1px");
+  expect(structure.frozenBorder).toBe("1px");
+  for (const marker of structure.markers) {
+    expect(marker.height).toBe(24);
+    expect(marker.top).toBeGreaterThanOrEqual(structure.header.top);
+    expect(marker.top + marker.height).toBeLessThanOrEqual(structure.header.bottom);
+  }
 }
 
 test("Cycle resize handles remain pointer-operable at their structural header boundaries", async ({ page }) => {
