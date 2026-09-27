@@ -210,6 +210,7 @@ describe("waveform provider primary geometry readiness", () => {
       adapter,
       geometryRegistry: new GeometryRegistry(),
       markOpenPhase,
+      isPrimaryPresentationOpening: () => true,
       invalidateSnapIndex: vi.fn(),
       getViewMode: () => "Cycle",
     };
@@ -222,6 +223,9 @@ describe("waveform provider primary geometry readiness", () => {
 
     await vi.waitFor(() => expect(adapter.renderWave).toHaveBeenCalledTimes(2));
     expect(markOpenPhase).toHaveBeenCalledWith("first-visible-wave-painted");
+    // The reference owner is installed before the delayed non-reference job,
+    // so its paint milestone must not be deferred until the whole batch ends.
+    expect(markOpenPhase).toHaveBeenCalledWith("reference-clock-painted");
     laterRender.resolve({ signalId: nonReferenceSignalId, ownerKey: nonReferenceSignalId, svg: {} as SVGSVGElement, renderIndex: 1, waveJson: { wave: "01" } });
     await batch;
   });

@@ -135,6 +135,13 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       let referenceGeometryReady = false;
       let waveSliceStartedAt = globalThis.performance.now();
       const referenceClockId = document.timeline.referenceClock ?? signalIndex.firstClockSignalId;
+      const markReferenceClockPaintedIfCurrent = (signalId: SignalId): void => {
+        if (!primaryOpenBatch || signalId !== referenceClockId) return;
+        const latest = context.sessionController.snapshot();
+        const latestSignalIndex = signalIndexFor(latest.document.signals);
+        const currentReferenceClock = latest.document.timeline.referenceClock ?? latestSignalIndex.firstClockSignalId;
+        if (currentReferenceClock === signalId) context.markOpenPhase("reference-clock-painted");
+      };
       // #614: every windowed signal's renderer window must span the exact
       // same display-cycle range so their WaveDrom SVGs share one
       // units-per-cycle ratio -- every wave-owner is stretched to a shared
@@ -323,6 +330,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             context.geometryRegistry.maps.set(item.request.signalId, absoluteWindowGeometry(canvasGeometry, item.rendererStart));
             context.invalidateSnapIndex();
             context.markOpenPhase("first-visible-wave-painted");
+            markReferenceClockPaintedIfCurrent(item.request.signalId);
             return { ...item, rendered: undefined, canvasPainted: true };
           }
           try {
@@ -337,7 +345,10 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             // renderWave installs the SVG into this owner before resolving.
             // Publish the first-artifact milestone here rather than after
             // every later owner in the batch has also completed.
-            if (isCurrent(item.request) && item.request.owner.isConnected) context.markOpenPhase("first-visible-wave-painted");
+            if (isCurrent(item.request) && item.request.owner.isConnected) {
+              context.markOpenPhase("first-visible-wave-painted");
+              markReferenceClockPaintedIfCurrent(item.request.signalId);
+            }
             return { ...item, rendered };
           } catch (error: unknown) {
             return { ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) };
@@ -398,8 +409,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           // not to the document snapshot captured when this async render began.
           // A same-epoch reference-clock switch must not let the old owner
           // satisfy the readiness gate or trigger a stale refresh.
-          const currentReferenceClock = latestSnapshot.document.timeline.referenceClock;
-          if (item.request.signalId === currentReferenceClock) context.markOpenPhase("reference-clock-painted");
+          const latestSignalIndex = signalIndexFor(latestSnapshot.document.signals);
+          const currentReferenceClock = latestSnapshot.document.timeline.referenceClock ?? latestSignalIndex.firstClockSignalId;
           // Renderer-independent Local Geometry (#755): computed from the WaveJson + pinned WaveDrom layout, not by reading
           // the rendered SVG DOM (getScreenCTM / <use> walk). `?geometrySource=svg` restores DOM extraction for comparison.
           const geometry = useDomGeometrySource()
