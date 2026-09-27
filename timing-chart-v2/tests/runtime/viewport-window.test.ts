@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SignalId } from "@timing-chart-v2/schema";
 import { buildViewportWindow } from "../../apps/editor/src/runtime/viewport-window.js";
-import { projectViewportWindow } from "../../apps/editor/src/runtime/viewport-projection.js";
+import { mountInitialTimelineProjection, projectViewportWindow } from "../../apps/editor/src/runtime/viewport-projection.js";
 import { pinnedSignalIdsForEpoch, signalPinStateForEpoch } from "../../apps/editor/src/workspace/signal-pin-state.js";
 
 describe("Signal pin viewport ownership", () => {
@@ -40,5 +40,26 @@ describe("Signal pin viewport ownership", () => {
     expect(projected).toBe(1);
     expect(receivedWindow?.stickyRowIds).toEqual([signalA]);
     expect(receivedWindow?.pinnedRowIds).toEqual([signalA]);
+  });
+
+  it("queues only the reference waveform during a large-document bootstrap, retaining the full projection", () => {
+    const clock = "clock-id" as SignalId;
+    const data = "signal-a" as SignalId;
+    const projection = { mountedSignalIds: [clock, data], waveSignalIds: [clock, data] } as never;
+    let updateArgument: { mountedSignalIds: readonly SignalId[] } | undefined;
+    const result = mountInitialTimelineProjection({
+      coordinator: { mount: () => undefined },
+      renderer: { update: (value) => { updateArgument = value; } },
+      host: {} as HTMLElement,
+      viewport: { scrollTop: 0, clientHeight: 600 } as HTMLElement,
+      referenceClock: clock,
+      projectionCoordinator: { project: () => projection },
+      snapshot: {} as never,
+      collapsedGroupIds: [],
+      initialWaveSignalIds: [clock],
+    });
+
+    expect(updateArgument?.mountedSignalIds).toEqual([clock]);
+    expect(result.projection.mountedSignalIds).toEqual([clock, data]);
   });
 });

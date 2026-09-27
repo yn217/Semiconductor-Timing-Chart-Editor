@@ -61,10 +61,26 @@ export function mountInitialTimelineProjection(context: {
   readonly projectionCoordinator: Pick<ProjectionCoordinator, "project">;
   readonly snapshot: CanonicalSnapshot;
   readonly collapsedGroupIds: readonly GroupId[];
+  /**
+   * For large/windowed documents, mount the geometry-owner waveform first.
+   * The reference-geometry-ready callback will reproject and mount the full
+   * viewport set with authoritative source windows.
+   */
+  readonly initialWaveSignalIds?: readonly SignalId[];
 }): { readonly window: VirtualizationWindow; readonly projection: RenderProjection } {
   context.coordinator.mount(context.host);
   const window = buildViewportWindow(context.viewport, context.referenceClock, context.stickyRowIds);
   const projection = context.projectionCoordinator.project({ snapshot: context.snapshot, changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: context.collapsedGroupIds });
-  context.renderer.update(projection);
+  const initialWaveSignalIds = context.initialWaveSignalIds;
+  const referenceWaveIsMounted = initialWaveSignalIds?.some((signalId) => projection.mountedSignalIds.includes(signalId)) === true;
+  // New mounted owners are normally queued automatically by the renderer.
+  // Restrict only this initial bootstrap update so a provisional/thinned
+  // projection does not enqueue every visible WaveDrom owner before reference
+  // geometry triggers the authoritative reproject. Keep the full projection
+  // as the returned/shared value; the follow-up renderer update mounts every
+  // visible owner normally.
+  context.renderer.update(referenceWaveIsMounted
+    ? { ...projection, mountedSignalIds: projection.mountedSignalIds.filter((signalId) => initialWaveSignalIds!.includes(signalId)) }
+    : projection);
   return { window, projection };
 }

@@ -267,16 +267,24 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     });
     const renderCoordinator = runtime.createRenderer(provider);
     const renderer = renderCoordinator.renderer;
+    const initialDocument = sessionController.snapshot().document;
+    const bootstrapReferenceClock = initialDocument.timeline.referenceClock
+      ?? initialDocument.signals.find((signal) => signal.type === "clock")?.id;
+    const initialWaveSignalIds = !usesFullDocumentWaveformWindow(initialDocument.timeline.cycleCount, initialDocument.signals.length)
+      && bootstrapReferenceClock !== undefined
+      ? [bootstrapReferenceClock]
+      : undefined;
     const initialProjection = mountInitialTimelineProjection({
       coordinator: renderCoordinator,
       renderer,
       host: rendererHost,
       viewport: viewportElement,
-      referenceClock: sessionController.snapshot().document.timeline.referenceClock,
+      referenceClock: bootstrapReferenceClock,
       stickyRowIds: input.presentation.getPinnedSignalIds(),
       projectionCoordinator,
       snapshot: sessionController.snapshot(),
       collapsedGroupIds: [...collapsedGroupIdsRef.current],
+      ...(initialWaveSignalIds === undefined ? {} : { initialWaveSignalIds }),
     });
     let window: VirtualizationWindow = initialProjection.window;
     projection = initialProjection.projection;
