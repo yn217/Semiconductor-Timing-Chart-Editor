@@ -337,6 +337,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       });
       const itemByRequest = new Map(runnableItems.map((item) => [item.request, item] as const));
       const supportsDetachedWaveInstall = context.adapter.prepareWave !== undefined && context.adapter.installWave !== undefined;
+      const progressiveSignalId = referenceClockId ?? runnableItems[0]?.request.signalId;
       const scheduled = await waveRenderScheduler.runBatch(runnableItems.map((item) => ({
         key: item.request,
         priority: item.request.signalId === referenceClockId ? 1 : 0,
@@ -364,7 +365,9 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
                 if (!isCurrent(item.request)) {
                   return { ...item, rendered: undefined, stale: true };
                 }
-                rendered = context.adapter.installWave!(rendered, item.request.owner);
+                if (!primaryOpenBatch || item.request.signalId === progressiveSignalId) {
+                  rendered = context.adapter.installWave!(rendered, item.request.owner);
+                }
               } else {
                 rendered = await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues);
               }
@@ -413,8 +416,30 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           renderResults.push({ ...item, rendered: undefined, error: result.error instanceof Error ? result.error : new Error(String(result.error)) });
         }
         else {
+          const value = result.value;
+          if (value.rendered && primaryOpenBatch && supportsDetachedWaveInstall && value.request.signalId !== progressiveSignalId) {
+            if (!isCurrent(value.request)) {
+              requiredNowCount += 1;
+              staleAfterRunCount += 1;
+              renderResults.push({ ...value, rendered: undefined, stale: true });
+              continue;
+            }
+            try {
+              const installStartedAt = globalThis.performance.now();
+              const installed = context.adapter.installWave!(value.rendered, value.request.owner);
+              renderAwaitMs += Math.max(0, globalThis.performance.now() - installStartedAt);
+              renderResults.push({ ...value, rendered: installed, installed: true });
+              if (isCurrent(value.request) && value.request.owner.isConnected) {
+                context.markOpenPhase("first-visible-wave-painted");
+                markReferenceClockPaintedIfCurrent(value.request.signalId);
+              }
+            } catch (error: unknown) {
+              renderResults.push({ ...value, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) });
+            }
+          } else {
+            renderResults.push(value);
+          }
           requiredNowCount += 1;
-          renderResults.push(result.value);
         }
       }
       const renderedByRequest = new Map(renderResults.map((item) => [item.request, item] as const));

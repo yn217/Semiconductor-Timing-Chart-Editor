@@ -80,7 +80,7 @@ describe("waveform provider primary geometry readiness", () => {
     expect(invalidateSnapIndex).toHaveBeenCalledTimes(priorSnapInvalidations + 1);
   });
 
-  it("installs the reference wave first, then installs each owner as soon as it is prepared", async () => {
+  it("installs the reference wave first and commits the other prepared owners after the batch", async () => {
     const document = generatePerformanceDocument({ signalCount: 3, cycleCount: 10 });
     const referenceSignalId = document.timeline.referenceClock!;
     const nonReferenceSignalIds = document.signals.filter((signal) => signal.id !== referenceSignalId).map((signal) => signal.id);
@@ -130,8 +130,8 @@ describe("waveform provider primary geometry readiness", () => {
       `prepare:${referenceSignalId}`,
       `install:${referenceSignalId}`,
       `prepare:${nonReferenceSignalIds[0]}`,
-      `install:${nonReferenceSignalIds[0]}`,
       `prepare:${nonReferenceSignalIds[1]}`,
+      `install:${nonReferenceSignalIds[0]}`,
       `install:${nonReferenceSignalIds[1]}`,
     ]);
     expect(adapter.renderWave).not.toHaveBeenCalled();
