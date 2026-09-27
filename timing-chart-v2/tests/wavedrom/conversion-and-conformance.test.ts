@@ -163,6 +163,36 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     }
   });
 
+  it("keeps prepared SVG detached until the owner is explicitly installed", async () => {
+    const adapter = new ProductionWaveDromAdapter();
+    const id = signalId("sig_detached_prepare");
+    const waveJson: WaveJsonSignal = { wave: "01.." };
+    const svg = {
+      localName: "svg",
+      namespaceURI: "http://www.w3.org/2000/svg",
+      attributes: { length: 0, item: () => null },
+      querySelectorAll: () => [],
+      setAttribute: vi.fn(),
+      cloneNode: () => ({ ...svg, setAttribute: vi.fn() }),
+    };
+    const template = { content: { firstElementChild: svg }, set innerHTML(_markup: string) {} };
+    const ownerDocument = { createElement: () => template } as unknown as Document;
+    const replaceChildren = vi.fn();
+    const mount = { ownerDocument, setAttribute: vi.fn(), replaceChildren } as unknown as Element;
+
+    const prepared = await adapter.prepareWave(id, waveJson, ownerDocument);
+
+    expect(replaceChildren).not.toHaveBeenCalled();
+    expect(adapter.metrics()).toMatchObject({ mounts: 0, activeOwners: 0 });
+    expect(prepared.svg).toBe(svg);
+
+    const installed = adapter.installWave(prepared, mount);
+
+    expect(replaceChildren).toHaveBeenCalledWith(svg);
+    expect(adapter.metrics()).toMatchObject({ mounts: 1, activeOwners: 1 });
+    expect(installed.renderStages?.domInstallMs).toEqual(expect.any(Number));
+  });
+
   it("reuses identical markup across document release without changing WaveDrom IDs", async () => {
     const adapter = new ProductionWaveDromAdapter();
     const id = signalId("sig_reopen_cache");

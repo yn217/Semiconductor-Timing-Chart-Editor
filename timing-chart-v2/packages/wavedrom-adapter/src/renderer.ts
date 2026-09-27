@@ -134,6 +134,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   readonly #markupCache = new Map<SignalId, MarkupCacheEntry>();
   readonly #retainedMarkupCache = new Map<SignalId, MarkupCacheEntry>();
   readonly #renderCallsBySignal = new Map<SignalId, number>();
+  readonly #preparedDurationMs = new WeakMap<RenderedWave, number>();
   #nextRenderIndex = 0;
   #renderCalls = 0;
   #waveJsonDurationMs = 0;
@@ -181,10 +182,13 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   }
 
   async renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues: readonly string[] = []): Promise<RenderedWave> {
+    const prepared = await this.prepareWave(signalId, waveJson, mount.ownerDocument, semanticValues);
+    return this.installWave(prepared, mount);
+  }
+
+  async prepareWave(signalId: SignalId, waveJson: WaveJsonSignal, ownerDocument: Document, semanticValues: readonly string[] = []): Promise<RenderedWave> {
     const startedAt = now();
     const stages = Object.fromEntries(Object.keys(this.#renderStageTotals).map((key) => [key, 0])) as Record<string, number>;
-    const existing = this.#active.get(signalId);
-    if (existing && existing.mount !== mount) this.#clearOwner(existing);
     let stageStartedAt = now();
     this.#renderCalls += 1;
     this.#renderCallsBySignal.set(signalId, (this.#renderCallsBySignal.get(signalId) ?? 0) + 1);
@@ -232,7 +236,6 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       ? cached
       : { key: cacheKey, markup, renderIndex };
     this.#markupCache.set(signalId, cacheEntry);
-    const ownerDocument = mount.ownerDocument;
     const cachedSvg = markupCacheHit ? cacheEntry.parsedSvgByDocument?.get(ownerDocument) : undefined;
     let svg: Element | null;
     if (cachedSvg) {
@@ -262,25 +265,36 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       const parsedSvgByDocument = safetyCacheEntry.parsedSvgByDocument ??= new WeakMap<Document, SVGElement>();
       parsedSvgByDocument.set(ownerDocument, svg.cloneNode(true) as SVGElement);
     }
-    stageStartedAt = now();
-    svg.setAttribute("data-wave-owner", signalId);
-    svg.setAttribute("data-wave-render-index", String(renderIndex));
+    const renderStages = Object.freeze({ ...stages });
+    const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson, markupCacheHit, svgSafetyCacheHit, renderStages };
+    this.#preparedDurationMs.set(rendered, now() - startedAt);
+    return rendered;
+  }
+
+  installWave(prepared: RenderedWave, mount: Element): RenderedWave {
+    const preparedDurationMs = this.#preparedDurationMs.get(prepared);
+    if (preparedDurationMs === undefined) throw new WaveDromAdapterError("INVALID_PREPARED_WAVE", "WaveDrom SVG must be prepared by this adapter before installation.");
+    this.#preparedDurationMs.delete(prepared);
+    const existing = this.#active.get(prepared.signalId);
+    if (existing && existing.mount !== mount) this.#clearOwner(existing);
+    const stageStartedAt = now();
+    prepared.svg.setAttribute("data-wave-owner", prepared.signalId);
+    prepared.svg.setAttribute("data-wave-render-index", String(prepared.renderIndex));
     // WaveDrom's default SVG is sized from the row height. The browser's default
     // preserveAspectRatio=meet therefore leaves the waveform at its intrinsic
     // brick width when the editor provides a wider screen column. Stretch only
     // the rendered SVG viewport; Local Geometry removes this root screen matrix.
-    svg.setAttribute("preserveAspectRatio", "none");
-    mount.setAttribute("data-wave-owner", signalId);
-    mount.replaceChildren(svg);
-    stages.domInstallMs = now() - stageStartedAt;
-    stages.totalSignalWallMs = now() - startedAt;
-    const renderStages = Object.freeze({ ...stages });
-    const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson, markupCacheHit, svgSafetyCacheHit, renderStages };
-    this.#active.set(signalId, { mount, rendered });
+    prepared.svg.setAttribute("preserveAspectRatio", "none");
+    mount.setAttribute("data-wave-owner", prepared.signalId);
+    mount.replaceChildren(prepared.svg);
+    const domInstallMs = now() - stageStartedAt;
+    const renderStages = Object.freeze({ ...prepared.renderStages, domInstallMs, totalSignalWallMs: preparedDurationMs + domInstallMs });
+    const rendered: RenderedWave = { ...prepared, renderStages };
+    this.#active.set(prepared.signalId, { mount, rendered });
     this.#lastRenderStages = renderStages;
     const stageTotals = this.#renderStageTotals as Record<string, number>;
-    for (const [key, value] of Object.entries(stages)) stageTotals[key] = (stageTotals[key] ?? 0) + value;
-    this.#renderDurationMs += stages.totalSignalWallMs;
+    for (const [key, value] of Object.entries(renderStages)) stageTotals[key] = (stageTotals[key] ?? 0) + value;
+    this.#renderDurationMs += renderStages.totalSignalWallMs;
     this.#mounts += 1;
     return rendered;
   }

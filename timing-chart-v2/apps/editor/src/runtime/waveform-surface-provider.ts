@@ -312,7 +312,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         }
       }
       const canvasPrototype = isCanvasWaveRendererSelected(document);
-      const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean; readonly canvasPainted?: boolean; readonly rendererStart?: number | undefined }> = [];
+      const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean; readonly canvasPainted?: boolean; readonly installed?: boolean; readonly rendererStart?: number | undefined }> = [];
       for (const item of orderedPrepared) if (item.deferred) { deferredCount += 1; renderResults.push({ ...item, rendered: undefined }); }
       const runnableItems = orderedPrepared.filter((item) => {
         if (item.deferred) return false;
@@ -327,6 +327,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         return true;
       });
       const itemByRequest = new Map(runnableItems.map((item) => [item.request, item] as const));
+      const supportsDetachedWaveInstall = context.adapter.prepareWave !== undefined && context.adapter.installWave !== undefined;
       const scheduled = await waveRenderScheduler.runBatch(runnableItems.map((item) => ({
         key: item.request,
         priority: item.request.signalId === referenceClockId ? 1 : 0,
@@ -349,6 +350,18 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             renderCount += 1;
             let rendered: RenderedWave;
             try {
+              if (supportsDetachedWaveInstall) {
+                rendered = await context.adapter.prepareWave!(item.request.signalId, item.waveJson, item.request.owner.ownerDocument, item.semanticValues);
+                if (item.request.signalId === referenceClockId && isCurrent(item.request)) {
+                  rendered = context.adapter.installWave!(rendered, item.request.owner);
+                  if (item.request.owner.isConnected) {
+                    context.markOpenPhase("first-visible-wave-painted");
+                    markReferenceClockPaintedIfCurrent(item.request.signalId);
+                  }
+                  return { ...item, rendered, installed: true };
+                }
+                return { ...item, rendered, installed: false };
+              }
               rendered = await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues);
             } finally {
               renderAwaitMs += Math.max(0, globalThis.performance.now() - renderStartedAt);
@@ -360,7 +373,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
               context.markOpenPhase("first-visible-wave-painted");
               markReferenceClockPaintedIfCurrent(item.request.signalId);
             }
-            return { ...item, rendered };
+            return { ...item, rendered, installed: true };
           } catch (error: unknown) {
             return { ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) };
           }
@@ -397,6 +410,41 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         else {
           requiredNowCount += 1;
           renderResults.push(result.value);
+        }
+      }
+      if (supportsDetachedWaveInstall) {
+        const pendingInstalls = renderResults.filter((item) => item.rendered !== undefined && item.installed !== true && item.stale !== true && isCurrent(item.request));
+        const installIndexByRequest = new Map(pendingInstalls.map((item, index) => [item.request, index] as const));
+        const installed = await waveRenderScheduler.runBatch(pendingInstalls.map((item) => ({
+          key: item.request,
+          priority: item.request.signalId === referenceClockId ? 1 : 0,
+          isCurrent: () => isCurrent(item.request),
+          run: () => {
+            const rendered = context.adapter.installWave!(item.rendered!, item.request.owner);
+            renderAwaitMs += rendered.renderStages?.domInstallMs ?? 0;
+            if (item.request.owner.isConnected) {
+              context.markOpenPhase("first-visible-wave-painted");
+              markReferenceClockPaintedIfCurrent(item.request.signalId);
+            }
+            return { ...item, rendered, installed: true };
+          },
+        })), {
+          budgetMs: 24,
+          now: () => globalThis.performance.now(),
+          shouldYield: () => context.isPrimaryPresentationOpening?.() === true,
+          yieldToNextTask: yieldToBrowserTask,
+          onYield: (waitMs) => { cooperativeYieldCount += 1; cooperativeYieldWaitMs += waitMs; },
+        });
+        for (const result of installed) {
+          const index = installIndexByRequest.get(result.key);
+          if (index === undefined) continue;
+          const original = pendingInstalls[index]!;
+          const renderResultIndex = renderResults.indexOf(original);
+          if (renderResultIndex < 0) continue;
+          if (result.status === "completed") renderResults[renderResultIndex] = result.value;
+          else if (result.status === "stale-after-run") renderResults[renderResultIndex] = { ...original, rendered: undefined, stale: true };
+          else if (result.status === "stale-before-run") renderResults[renderResultIndex] = { ...original, rendered: undefined, stale: true };
+          else renderResults[renderResultIndex] = { ...original, rendered: undefined, error: result.error instanceof Error ? result.error : new Error(String(result.error)) };
         }
       }
       const renderedByRequest = new Map(renderResults.map((item) => [item.request, item] as const));
@@ -455,11 +503,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       if (referenceGeometryReady && !referenceGeometryNotified) context.onReferenceGeometryReady?.();
       if (primaryOpenBatch) {
         const openStageTotals = stageTotals!;
-        for (const result of scheduled) {
-          const value = result.status === "completed"
-            ? result.value
-            : result.status === "stale-after-run" ? result.value : undefined;
-          const rendered = value && "rendered" in value ? value.rendered : undefined;
+        for (const result of renderResults) {
+          const rendered = result.rendered;
           if (!rendered) continue;
           if (rendered.markupCacheHit === true) reusedMarkupCount += 1;
           else if (rendered.markupCacheHit === false) markupCacheMissCount += 1;

@@ -90,6 +90,10 @@ export interface WaveDromAdapterMetrics {
 export interface WaveDromAdapter {
   toWaveJson(source: CanonicalSignalSource): WaveJsonSignal;
   renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues?: readonly string[]): Promise<RenderedWave>;
+  /** Prepare and safety-check an SVG without mutating the live surface. */
+  prepareWave?(signalId: SignalId, waveJson: WaveJsonSignal, ownerDocument: Document, semanticValues?: readonly string[]): Promise<RenderedWave>;
+  /** Install a previously prepared SVG into its current owner. */
+  installWave?(rendered: RenderedWave, mount: Element): RenderedWave;
   extractLocalGeometry(rendered: RenderedWave): LocalGeometryMap;
   geometryMetrics(): Readonly<{
     readonly last: GeometryExtractionMetrics | undefined;
