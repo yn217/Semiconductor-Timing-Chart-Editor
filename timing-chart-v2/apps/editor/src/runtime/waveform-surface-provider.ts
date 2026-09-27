@@ -361,17 +361,13 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             try {
               if (supportsDetachedWaveInstall) {
                 rendered = await context.adapter.prepareWave!(item.request.signalId, item.waveJson, item.request.owner.ownerDocument, item.semanticValues);
-                if (item.request.signalId === referenceClockId && isCurrent(item.request)) {
-                  rendered = context.adapter.installWave!(rendered, item.request.owner);
-                  if (item.request.owner.isConnected) {
-                    context.markOpenPhase("first-visible-wave-painted");
-                    markReferenceClockPaintedIfCurrent(item.request.signalId);
-                  }
-                  return { ...item, rendered, installed: true };
+                if (!isCurrent(item.request)) {
+                  return { ...item, rendered: undefined, stale: true };
                 }
-                return { ...item, rendered, installed: false };
+                rendered = context.adapter.installWave!(rendered, item.request.owner);
+              } else {
+                rendered = await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues);
               }
-              rendered = await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues);
             } finally {
               renderAwaitMs += Math.max(0, globalThis.performance.now() - renderStartedAt);
             }
@@ -419,41 +415,6 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         else {
           requiredNowCount += 1;
           renderResults.push(result.value);
-        }
-      }
-      if (supportsDetachedWaveInstall) {
-        const pendingInstalls = renderResults.filter((item) => item.rendered !== undefined && item.installed !== true && item.stale !== true && isCurrent(item.request));
-        const installIndexByRequest = new Map(pendingInstalls.map((item, index) => [item.request, index] as const));
-        const installed = await waveRenderScheduler.runBatch(pendingInstalls.map((item) => ({
-          key: item.request,
-          priority: item.request.signalId === referenceClockId ? 1 : 0,
-          isCurrent: () => isCurrent(item.request),
-          run: () => {
-            const rendered = context.adapter.installWave!(item.rendered!, item.request.owner);
-            renderAwaitMs += rendered.renderStages?.domInstallMs ?? 0;
-            if (item.request.owner.isConnected) {
-              context.markOpenPhase("first-visible-wave-painted");
-              markReferenceClockPaintedIfCurrent(item.request.signalId);
-            }
-            return { ...item, rendered, installed: true };
-          },
-        })), {
-          budgetMs: 24,
-          now: () => globalThis.performance.now(),
-          shouldYield: () => context.isPrimaryPresentationOpening?.() === true,
-          yieldToNextTask: yieldToBrowserTask,
-          onYield: (waitMs) => { cooperativeYieldCount += 1; cooperativeYieldWaitMs += waitMs; },
-        });
-        for (const result of installed) {
-          const index = installIndexByRequest.get(result.key);
-          if (index === undefined) continue;
-          const original = pendingInstalls[index]!;
-          const renderResultIndex = renderResults.indexOf(original);
-          if (renderResultIndex < 0) continue;
-          if (result.status === "completed") renderResults[renderResultIndex] = result.value;
-          else if (result.status === "stale-after-run") renderResults[renderResultIndex] = { ...original, rendered: undefined, stale: true };
-          else if (result.status === "stale-before-run") renderResults[renderResultIndex] = { ...original, rendered: undefined, stale: true };
-          else renderResults[renderResultIndex] = { ...original, rendered: undefined, error: result.error instanceof Error ? result.error : new Error(String(result.error)) };
         }
       }
       const renderedByRequest = new Map(renderResults.map((item) => [item.request, item] as const));
