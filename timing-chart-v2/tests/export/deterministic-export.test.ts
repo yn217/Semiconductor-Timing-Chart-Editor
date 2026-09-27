@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildExportScene, DeterministicExportService, renderExportSvg } from "@timing-chart-v2/export";
-import type { AnnotationId, BookmarkId, CanonicalDocument, ClockSignal, CommentRow, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
+import { MAX_MEASUREMENT_LANE, type AnnotationId, type BookmarkId, type CanonicalDocument, type ClockSignal, type CommentRow, type GroupId, type SignalId, type TimeGroupId, type TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 function scaleFixture(signalCount: number): CanonicalDocument {
@@ -272,6 +272,17 @@ describe("deterministic document export", () => {
     expect(first).toContain('data-role="measurement-marker" data-marker-side="start" data-marker-kind="arrow"');
     expect(first).toContain('data-role="measurement-extension" data-extension-side="start"');
     expect(first).toContain('data-measurement-profile="custom"');
+  });
+
+  it("keeps maximum authored Measurement lane coordinates finite and rejects hostile values", () => {
+    const base = canonicalFixture();
+    const signal = base.signals[1]!;
+    const measurement = { id: "ann_max_lane" as AnnotationId, type: "measurement" as const, label: "maximum lane", visible: true, measurement: { profile: "cycle" as const, anchorKind: "threshold" as const }, measurementLayout: { startMarker: "bar" as const, endMarker: "bar" as const, arrowLayout: "auto" as const, extensionLines: "both" as const, lane: MAX_MEASUREMENT_LANE }, start: { signalId: signal.id, cycle: 1, point: "cycle-start" as const }, end: { signalId: signal.id, cycle: 3, point: "cycle-end" as const } };
+    const scene = buildExportScene({ ...base, annotations: [measurement] }, { format: "svg", scope: "document" });
+    expect(scene.annotations[0]?.measurementLane).toBe(MAX_MEASUREMENT_LANE);
+    expect(renderExportSvg(scene)).toContain(`data-measurement-lane="${MAX_MEASUREMENT_LANE}"`);
+    const hostile = { ...measurement, measurementLayout: { ...measurement.measurementLayout, lane: MAX_MEASUREMENT_LANE + 1 } };
+    expect(() => buildExportScene({ ...base, annotations: [hostile] }, { format: "svg", scope: "document" })).toThrow(RangeError);
   });
 
   it("uses the same non-overlapping automatic Measurement lanes as the live overlay", () => {

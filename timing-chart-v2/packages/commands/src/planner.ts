@@ -19,7 +19,7 @@ import type {
   ValueSignal,
   EnumDefinition,
 } from "@timing-chart-v2/schema";
-import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -1395,6 +1395,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!["cycle", "30-70", "10-90", "20-80", "50%", "custom"].includes(command.profile)) return fail("invalid", "INVALID_MEASUREMENT_PROFILE", "$.profile", "Measurement profile is not supported.");
       if (!["threshold", "ratio"].includes(command.anchorKind)) return fail("invalid", "INVALID_MEASUREMENT_PROFILE", "$.anchorKind", "Measurement anchor kind is not supported.");
       if (![command.start, command.end].every((value) => Number.isFinite(value) && value >= 0 && value <= 1) || command.start > command.end) return fail("invalid", "INVALID_MEASUREMENT_ENDPOINT", "$.start", "Measurement endpoints must be finite fractions in ascending order.");
+      if (command.layout?.lane !== undefined && (!Number.isInteger(command.layout.lane) || command.layout.lane < 0 || command.layout.lane > MAX_MEASUREMENT_LANE)) return fail("invalid", "INVALID_LANE", "$.layout.lane", `Measurement lane must be an integer from 0 to ${MAX_MEASUREMENT_LANE}.`);
       const toCycleAnchor = (anchor: NonNullable<Annotation["start"]>, value: number): NonNullable<Annotation["start"]> => {
         const { threshold: _legacyThreshold, transition: _previousTransition, ...semantic } = anchor;
         return command.profile === "cycle" ? semantic : { ...semantic, point: "transition-center", transition: { kind: command.anchorKind, value } };

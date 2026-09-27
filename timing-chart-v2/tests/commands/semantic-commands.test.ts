@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-chart-v2/core";
-import { parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
+import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (id: string) => id as CommandId;
@@ -1052,5 +1052,23 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document).toEqual(before);
     expect(session.redo().ok).toBe(true);
     expect(session.getSnapshot().document.annotations[0]?.measurement).toEqual({ profile: "custom", anchorKind: "ratio" });
+  });
+
+  it("rejects out-of-range Measurement lanes without changing document or History", () => {
+    const source = canonicalFixture();
+    const annotation: Annotation = { id: "ann_measurement_lane" as AnnotationId, type: "measurement", label: "Measurement", visible: true, start: { signalId: "sig_data" as SignalId, cycle: 1, point: "cycle-start" }, end: { signalId: "sig_data" as SignalId, cycle: 4, point: "cycle-end" } };
+    const session = new CommandHistorySession({ ...source, annotations: [annotation] });
+    const before = session.getSnapshot().document;
+    const accepted = session.execute({ id: commandId("cmd_measurement_lane_max"), type: "annotation.updateMeasurement", annotationId: annotation.id, profile: "cycle", anchorKind: "threshold", start: 0, end: 1, layout: { ...DEFAULT_MEASUREMENT_LAYOUT, lane: MAX_MEASUREMENT_LANE } });
+    expect(accepted.ok).toBe(true);
+    expect(session.getSnapshot().document.annotations[0]?.measurementLayout?.lane).toBe(MAX_MEASUREMENT_LANE);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(before);
+
+    const historyBeforeReject = session.historyState();
+    const rejected = session.execute({ id: commandId("cmd_measurement_lane_too_large"), type: "annotation.updateMeasurement", annotationId: annotation.id, profile: "cycle", anchorKind: "threshold", start: 0, end: 1, layout: { ...DEFAULT_MEASUREMENT_LAYOUT, lane: MAX_MEASUREMENT_LANE + 1 } });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_LANE", path: "$.layout.lane" }] });
+    expect(session.getSnapshot().document).toEqual(before);
+    expect(session.historyState()).toEqual(historyBeforeReject);
   });
 });

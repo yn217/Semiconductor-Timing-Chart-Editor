@@ -21,6 +21,9 @@ export const DOCUMENT_RESOURCE_BUDGET = Object.freeze({
   maxJsonNodes: 250_000,
 });
 
+/** Explicit Measurement lanes are bounded by the maximum number of Annotations a document can contain. */
+export const MAX_MEASUREMENT_LANE = DOCUMENT_RESOURCE_BUDGET.annotationCount - 1;
+
 export function validateDocumentInputComplexity(value: unknown): readonly DocumentProblem[] {
   const stack: Array<{ value: unknown; depth: number }> = [{ value, depth: 0 }];
   let nodes = 0;
