@@ -366,11 +366,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           }
         },
       })), {
-        // Keep the initial Open scheduler near a frame-sized slice. The
-        // previous 6ms budget forced a task hop between small owner renders;
-        // the larger slice reduces yield wait without disabling cooperative
-        // yielding or changing which waveform owners are rendered.
-        budgetMs: 16,
+        // Keep owner work in a short cooperative slice while opening.
+        budgetMs: 24,
         initialSliceStartedAt: waveSliceStartedAt,
         now: () => globalThis.performance.now(),
         shouldYield: () => context.isPrimaryPresentationOpening?.() === true,

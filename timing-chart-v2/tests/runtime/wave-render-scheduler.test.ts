@@ -49,13 +49,13 @@ describe("WaveRenderScheduler", () => {
     const yieldToNextTask = vi.fn(async () => { now += 3; });
     const onYield = vi.fn();
     let now = 0;
-    const results = await scheduler.runBatch([0, 1, 2].map((key) => ({
+    const results = await scheduler.runBatch([0, 1, 2, 3].map((key) => ({
       key,
       priority: 0,
       isCurrent: () => true,
       run: () => { now += 10; return key; },
     })), {
-      budgetMs: 16,
+      budgetMs: 24,
       initialSliceStartedAt: 0,
       now: () => now,
       shouldYield: () => true,
@@ -63,7 +63,7 @@ describe("WaveRenderScheduler", () => {
       onYield,
     });
 
-    expect(results.map((result) => result.status)).toEqual(["completed", "completed", "completed"]);
+    expect(results.map((result) => result.status)).toEqual(["completed", "completed", "completed", "completed"]);
     expect(yieldToNextTask).toHaveBeenCalledTimes(1);
     expect(onYield).toHaveBeenCalledTimes(1);
   });
