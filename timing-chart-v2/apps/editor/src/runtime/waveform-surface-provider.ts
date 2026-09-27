@@ -10,6 +10,7 @@ import type { DisplayTimeMappingCache } from "@timing-chart-v2/projection";
 import type { GeometryRegistry } from "./geometry-registry.js";
 import { displayWindowForSource } from "./display-boundary.js";
 import { waveOwnerPlacement } from "./wave-owner-placement.js";
+import { WaveRenderScheduler } from "./wave-render-scheduler.js";
 
 function yieldToBrowserTask(): Promise<void> {
   const browserScheduler = (globalThis as typeof globalThis & { scheduler?: { yield?: () => Promise<void> } }).scheduler;
@@ -68,6 +69,7 @@ export type WaveformProviderContext = Readonly<{
 }>;
 
 export function createWaveformSurfaceProvider(context: WaveformProviderContext): WaveformSurfaceProvider {
+  const waveRenderScheduler = new WaveRenderScheduler();
   let signalIndexSignals: CanonicalDocument["signals"] | undefined;
   let signalById = new Map<SignalId, Signal>();
   let firstClockSignalId: SignalId | undefined;
@@ -274,15 +276,15 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       }
       const canvasPrototype = isCanvasWaveRendererSelected(document);
       const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean; readonly canvasPainted?: boolean; readonly rendererStart?: number | undefined }> = [];
-      for (let itemIndex = 0; itemIndex < orderedPrepared.length; itemIndex += 1) {
-        const item = orderedPrepared[itemIndex]!;
-        if (item.deferred) {
-          renderResults.push({ ...item, rendered: undefined });
-          continue;
-        }
-        if (!isCurrent(item.request)) renderResults.push({ ...item, rendered: undefined, stale: true });
-        else if (item.error || !item.waveJson) renderResults.push({ ...item, rendered: undefined });
-        else {
+      for (const item of orderedPrepared) if (item.deferred) renderResults.push({ ...item, rendered: undefined });
+      const runnableItems = orderedPrepared.filter((item) => !item.deferred);
+      const itemByRequest = new Map(runnableItems.map((item) => [item.request, item] as const));
+      const scheduled = await waveRenderScheduler.runBatch(runnableItems.map((item) => ({
+        key: item.request,
+        priority: item.request.signalId === referenceClockId ? 1 : 0,
+        isCurrent: () => isCurrent(item.request),
+        run: async () => {
+          if (item.error || !item.waveJson) return { ...item, rendered: undefined };
           if (canvasPrototype) {
             paintWaveCanvas(item.request.owner, item.waveJson);
             const sourceCycles = item.waveJson.geometrySourceCycles ?? Array.from({ length: item.waveJson.wave.length + 1 }, (_, index) => (item.waveJson?.sourceWindow?.start ?? 0) + index);
@@ -291,29 +293,40 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             context.geometryRegistry.maps.set(item.request.signalId, absoluteWindowGeometry(canvasGeometry, item.rendererStart));
             context.invalidateSnapIndex();
             context.markOpenPhase("first-visible-wave-painted");
-            renderResults.push({ ...item, rendered: undefined, canvasPainted: true });
-          } else {
-            try {
-              const renderStartedAt = globalThis.performance.now();
-              renderCount += 1;
-              const rendered = await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues);
-              renderAwaitMs += Math.max(0, globalThis.performance.now() - renderStartedAt);
-              // renderWave installs the SVG into this owner before resolving.
-              // Publish the first-artifact milestone here rather than after
-              // every later owner in the batch has also completed.
-              if (isCurrent(item.request) && item.request.owner.isConnected) context.markOpenPhase("first-visible-wave-painted");
-              renderResults.push({ ...item, rendered });
-            }
-            catch (error: unknown) { renderResults.push({ ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) }); }
+            return { ...item, rendered: undefined, canvasPainted: true };
           }
+          try {
+            const renderStartedAt = globalThis.performance.now();
+            renderCount += 1;
+            const rendered = await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues);
+            renderAwaitMs += Math.max(0, globalThis.performance.now() - renderStartedAt);
+            // renderWave installs the SVG into this owner before resolving.
+            // Publish the first-artifact milestone here rather than after
+            // every later owner in the batch has also completed.
+            if (isCurrent(item.request) && item.request.owner.isConnected) context.markOpenPhase("first-visible-wave-painted");
+            return { ...item, rendered };
+          } catch (error: unknown) {
+            return { ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) };
+          }
+        },
+      })), {
+        budgetMs: 6,
+        initialSliceStartedAt: waveSliceStartedAt,
+        now: () => globalThis.performance.now(),
+        shouldYield: () => context.isPrimaryPresentationOpening?.() === true,
+        yieldToNextTask: yieldToBrowserTask,
+        onYield: (waitMs) => { cooperativeYieldCount += 1; cooperativeYieldWaitMs += waitMs; },
+      });
+      for (const result of scheduled) {
+        const item = itemByRequest.get(result.key)!;
+        if (result.status === "stale") renderResults.push({ ...item, rendered: undefined, stale: true });
+        else if (result.status === "error") {
+          // Canvas rendering failures historically abort the whole batch; keep
+          // that policy while WaveDrom adapter failures remain row-scoped.
+          if (canvasPrototype) throw result.error;
+          renderResults.push({ ...item, rendered: undefined, error: result.error instanceof Error ? result.error : new Error(String(result.error)) });
         }
-        if (itemIndex < orderedPrepared.length - 1 && context.isPrimaryPresentationOpening?.() === true && globalThis.performance.now() - waveSliceStartedAt >= 6) {
-          const yieldStartedAt = globalThis.performance.now();
-          await yieldToBrowserTask();
-          cooperativeYieldCount += 1;
-          cooperativeYieldWaitMs += Math.max(0, globalThis.performance.now() - yieldStartedAt);
-          waveSliceStartedAt = globalThis.performance.now();
-        }
+        else renderResults.push(result.value);
       }
       const renderedByRequest = new Map(renderResults.map((item) => [item.request, item] as const));
       const preparedByRequest = new Map(prepared.map((item) => [item.request, item] as const));
