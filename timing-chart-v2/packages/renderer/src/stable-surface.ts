@@ -2,6 +2,7 @@ import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@
 import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, wrapAnnotationLabel } from "@timing-chart-v2/schema";
 import { LEFT_TREE_ICON_DOTS, LEFT_TREE_ICON_PATHS, LEFT_TREE_ICON_PUPIL, type LeftTreeIconPathName } from "./left-tree-icon-spec.js";
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
+import { groupBackgroundColor } from "./group-background.js";
 
 export function isWaveMountRequestFresh(request: Pick<WaveMountRequest, "documentEpoch" | "isFresh">, currentDocumentEpoch: number): boolean {
   return (request.documentEpoch === undefined || request.documentEpoch === currentDocumentEpoch) && (request.isFresh?.() ?? true);
@@ -1089,9 +1090,12 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
       shell.setAttribute("aria-level", "2");
     }
     const groupStyleApplies = groupStyleAppliesToSurface(row.groupStyle?.extend, surface);
-    if (groupStyleApplies && row.groupStyle?.showBackground && row.groupStyle.background) shell.style.setProperty("--group-background", row.groupStyle.background);
+    const rowBackground = groupStyleApplies && row.groupStyle?.showBackground
+      ? groupBackgroundColor(row.groupStyle.background, row.groupStyle.opacity)
+      : undefined;
+    if (rowBackground) shell.style.setProperty("--group-background", rowBackground);
     else shell.style.removeProperty("--group-background");
-    if (groupStyleApplies && row.groupStyle?.opacity !== undefined) shell.style.opacity = String(row.groupStyle.opacity); else shell.style.removeProperty("opacity");
+    shell.style.removeProperty("opacity");
     if (groupStyleApplies && row.groupStyle?.border) shell.style.setProperty("--group-border", row.groupStyle.border); else shell.style.removeProperty("--group-border");
     shell.dataset.groupStart = String(row.groupId !== previousGroupId);
     shell.dataset.instancePath = row.instancePath?.join(".") ?? "";
@@ -1212,7 +1216,10 @@ function syncGroupHeaderLayer(layer: HTMLElement, cache: Map<string, HTMLElement
       shell.setAttribute("aria-selected", "false");
     }
     const groupStyleApplies = groupStyleAppliesToSurface(header.groupStyle?.extend, surface);
-    if (groupStyleApplies && header.groupStyle?.showBackground && header.groupStyle.background) shell.style.setProperty("--group-background", header.groupStyle.background);
+    const headerBackground = groupStyleApplies && header.groupStyle?.showBackground
+      ? groupBackgroundColor(header.groupStyle.background, header.groupStyle.opacity)
+      : undefined;
+    if (headerBackground) shell.style.setProperty("--group-background", headerBackground);
     else shell.style.removeProperty("--group-background");
     if (groupStyleApplies && header.groupStyle?.border) shell.style.setProperty("--group-border", header.groupStyle.border);
     else shell.style.removeProperty("--group-border");

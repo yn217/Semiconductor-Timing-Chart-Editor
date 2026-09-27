@@ -31,7 +31,7 @@
 
 .surface-host [data-role="frozen-group-header"] { z-index: 15; padding: 0 10px; }
 
-.surface-host [data-role="timing-group-header"] { z-index: 11; background: #f7f9fc; }
+.surface-host [data-role="timing-group-header"] { z-index: 11; background: var(--group-background, #f7f9fc); }
 
 .surface-host [data-role="frozen-row"] { grid-template-columns: 58px minmax(0, 1fr); }
 
