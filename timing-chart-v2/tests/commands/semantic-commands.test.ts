@@ -57,6 +57,7 @@ describe("pure Semantic Command planning", () => {
     const document = { ...source, timeline: { ...source.timeline, end: 10, cycleCount: 10 }, signals: [{ ...clock, generator: { ...clock.generator, start: 4, period: 2, suppressedPeriods: [1] } }, ...source.signals.slice(1)] };
     const valid = planCommand(document, { id: commandId("cmd_delayed_suppression_valid"), type: "signal.updateClockGenerator", signalId: clock.id, generator: { ...clock.generator, start: 4, period: 2, suppressedPeriods: [0, 2] } });
     expect(valid.ok).toBe(true);
+    if (valid.ok) expect(valid.changeSet.timingDiagnosticsUnchanged).toBe(true);
     const invalid = planCommand(document, { id: commandId("cmd_delayed_suppression_invalid"), type: "signal.updateClockGenerator", signalId: clock.id, generator: { ...clock.generator, start: 4, period: 2, suppressedPeriods: [3] } });
     expect(invalid).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_SUPPRESSED_PERIODS" }] });
   });
@@ -575,12 +576,14 @@ describe("pure Semantic Command planning", () => {
     if (formatted.ok) {
       expect(formatted.document.signals[1]).toMatchObject({ name: "DATA_OUT", role: "output", displayFormat: "binary", display: { name: "DATA_OUT" } });
       expect(formatted.changeSet).toMatchObject({ rowPresentation: ["sig_data"], waveSemantics: ["sig_data"] });
+      expect(formatted.changeSet.timingDiagnosticsUnchanged).toBeUndefined();
     }
     const inspectorProperties = planCommand(source, { id: commandId("cmd_inspector_properties"), type: "signal.updateProperties", signalId: "sig_data" as SignalId, name: "DATA_INSPECTED", role: "output", signalType: "bus", width: 16, displayFormat: "binary", visible: false, displayAlign: "center", displayOverflow: "wrap", displayStyle: { color: "#114477" } });
     expect(inspectorProperties.ok).toBe(true);
     if (inspectorProperties.ok) {
       expect(inspectorProperties.document.signals[1]).toMatchObject({ name: "DATA_INSPECTED", role: "output", type: "bus", width: 16, displayFormat: "binary", display: { name: "DATA_INSPECTED", visible: false, align: "center", overflow: "wrap", style: { color: "#114477" } } });
       expect(inspectorProperties.changeSet).toMatchObject({ rowPresentation: ["sig_data"], waveSemantics: ["sig_data"], geometryLocal: ["sig_data"] });
+      expect(inspectorProperties.changeSet.timingDiagnosticsUnchanged).toBeUndefined();
     }
     const spacing = planCommand(source, { id: commandId("cmd_signal_spacing"), type: "signal.updateProperties", signalId: "sig_data" as SignalId, name: "DATA", role: "output", spacingBefore: 3, spacingAfter: 5 });
     expect(spacing.ok).toBe(true);
@@ -589,6 +592,7 @@ describe("pure Semantic Command planning", () => {
       expect(spacing.changeSet).toMatchObject({ rowPresentation: ["sig_data"], geometryScreenY: ["sig_data"] });
       expect(spacing.changeSet.waveSemantics).toBeUndefined();
       expect(spacing.changeSet.geometryLocal).toBeUndefined();
+      expect(spacing.changeSet.timingDiagnosticsUnchanged).toBe(true);
     }
     const retyped = planCommand(source, { id: commandId("cmd_retype"), type: "signal.updateProperties", signalId: "sig_data" as SignalId, name: "DATA", role: "internal", signalType: "binary" });
     expect(retyped.ok).toBe(false);
@@ -869,11 +873,17 @@ describe("command execution and atomic history", () => {
     const result = session.execute({ id: commandId("cmd_edge_numbers"), type: "signal.updateEdgeCounter", signalId: "sig_clk" as SignalId, edgeCounter: { show: true, mode: "rising", startNumber: 4, countFrom: "signal-start", labelEvery: 2, position: "above", offset: { x: 1, y: -8 } } });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.changeSet).toEqual({ rowPresentation: ["sig_clk"], edgeCounter: ["sig_clk"] });
+      expect(result.changeSet).toEqual({ rowPresentation: ["sig_clk"], edgeCounter: ["sig_clk"], timingDiagnosticsUnchanged: true });
       expect(result.changeSet.waveSemantics).toBeUndefined();
       expect(result.changeSet.geometryLocal).toBeUndefined();
     }
     expect(session.getSnapshot().document.signals[0]).toMatchObject({ edgeCounter: { show: true, mode: "rising", labelEvery: 2 } });
+  });
+
+  it("marks reset-semantics edits as unrelated to derived timing diagnostics", () => {
+    const planned = planCommand(canonicalFixture(), { id: commandId("reset_semantics_diagnostics_reuse"), type: "signal.updateResetSemantics", signalId: "sig_data" as SignalId, resetSemantics: { polarity: "active-low", synchronization: "synchronous", assertCycle: 0, deassertCycle: 1 } });
+    expect(planned.ok).toBe(true);
+    if (planned.ok) expect(planned.changeSet.timingDiagnosticsUnchanged).toBe(true);
   });
 
   it("atomically rejects invalid Edge Counter enums and booleans", () => {

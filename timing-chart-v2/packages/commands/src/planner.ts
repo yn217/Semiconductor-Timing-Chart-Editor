@@ -861,6 +861,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
         rowPresentation: [signal.id],
         ...(visibilityChanged ? { geometryScreenY: [...new Set([...(spacingChanged ? geometryRowsFrom(document, signal.id) : []), ...visibilityRows])], annotationPosition: annotationsForSignals(document, [...new Set([signal.id, ...visibilityRows])]), minimapOverview: true } : spacingChanged ? { geometryScreenY: geometryRowsFrom(document, signal.id) } : {}),
         ...(waveformChanged ? { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: dependentAnnotations(document, signal.id).map((annotation) => annotation.id) } : {}),
+        ...(signal.name === name && signal.type === nextType ? { timingDiagnosticsUnchanged: true } : {}),
       };
       return { ok: true, document: replaceSignal(document, index, next), changeSet, inverseChangeSet: changeSet };
     }
@@ -901,7 +902,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       }
       if (semanticEqual(signal.generator, generator)) return fail("no-op", "NO_OP", "$", "Clock Generator is unchanged.");
       const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
-      const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
+      const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true, timingDiagnosticsUnchanged: true };
       return { ok: true, document: replaceSignal(document, index, { ...signal, generator }), changeSet, inverseChangeSet: changeSet };
     }
     case "signal.updateEdgeCounter": {
@@ -917,7 +918,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (settings.countFrom === "marker" && settings.anchorId === undefined) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.edgeCounter.anchorId", "Marker count-from requires an explicit Bookmark anchor.");
       if (settings.anchorId !== undefined && !document.bookmarks.some((bookmark) => bookmark.id === settings.anchorId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.edgeCounter.anchorId", `Bookmark '${settings.anchorId}' does not exist.`);
       if (semanticEqual(signal.edgeCounter, settings)) return fail("no-op", "NO_OP", "$", "Edge Number settings are unchanged.");
-      const changeSet: ChangeSet = { rowPresentation: [signal.id], edgeCounter: [signal.id] };
+      const changeSet: ChangeSet = { rowPresentation: [signal.id], edgeCounter: [signal.id], timingDiagnosticsUnchanged: true };
       return { ok: true, document: replaceSignal(document, index, { ...signal, edgeCounter: settings }), changeSet, inverseChangeSet: changeSet };
     }
     case "signal.updateResetSemantics": {
@@ -927,7 +928,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const reset = command.resetSemantics;
       if (reset && (!["active-high", "active-low"].includes(reset.polarity) || !["synchronous", "asynchronous"].includes(reset.synchronization) || (reset.assertCycle !== undefined && (!Number.isInteger(reset.assertCycle) || reset.assertCycle < 0 || reset.assertCycle >= document.timeline.cycleCount)) || (reset.deassertCycle !== undefined && (!Number.isInteger(reset.deassertCycle) || reset.deassertCycle < 0 || reset.deassertCycle >= document.timeline.cycleCount)) || (reset.assertCycle !== undefined && reset.deassertCycle !== undefined && reset.assertCycle > reset.deassertCycle))) return fail("invalid", "INVALID_RESET_SEMANTICS", "$.resetSemantics", "Reset semantics must use in-range ordered source-time cycles.");
       if (semanticEqual(signal.resetSemantics, reset)) return fail("no-op", "NO_OP", "$", "Reset semantics are unchanged.");
-      return { ok: true, document: replaceSignal(document, index, reset === undefined ? (() => { const { resetSemantics: _reset, ...rest } = signal; return rest; })() : { ...signal, resetSemantics: reset }), changeSet: { waveSemantics: [signal.id] }, inverseChangeSet: { waveSemantics: [signal.id] } };
+      const changeSet: ChangeSet = { waveSemantics: [signal.id], timingDiagnosticsUnchanged: true };
+      return { ok: true, document: replaceSignal(document, index, reset === undefined ? (() => { const { resetSemantics: _reset, ...rest } = signal; return rest; })() : { ...signal, resetSemantics: reset }), changeSet, inverseChangeSet: changeSet };
     }
     case "spacer.create": {
       const groupIndex = document.signalGroups.findIndex((group) => group.id === command.targetGroupId);
