@@ -5,9 +5,18 @@ import { displayBoundaryForSource } from "./display-boundary.js";
 import { buildSnapIndex } from "./snap-index.js";
 
 export const FULL_DOCUMENT_WAVEFORM_CYCLE_LIMIT = 4_096;
+/** Avoid a single full-document artifact when cycle × signal work is high. */
+export const FULL_DOCUMENT_WAVEFORM_SIGNAL_CYCLE_LIMIT = 32_768;
+/** Target work bound for each mounted signal's WaveDrom source window. */
+export const WAVEFORM_WINDOW_SIGNAL_CYCLE_BUDGET = 16_384;
 
-export function usesFullDocumentWaveformWindow(cycleCount: number): boolean {
-  return cycleCount <= FULL_DOCUMENT_WAVEFORM_CYCLE_LIMIT;
+export function usesFullDocumentWaveformWindow(cycleCount: number, signalCount = 1): boolean {
+  return cycleCount <= FULL_DOCUMENT_WAVEFORM_CYCLE_LIMIT
+    && cycleCount * Math.max(1, signalCount) <= FULL_DOCUMENT_WAVEFORM_SIGNAL_CYCLE_LIMIT;
+}
+
+function waveformWindowCycleBudget(signalCount: number): number {
+  return Math.max(64, Math.min(512, Math.floor(WAVEFORM_WINDOW_SIGNAL_CYCLE_BUDGET / Math.max(1, signalCount))));
 }
 
 export type TimelineGeometryOwnerContext = Readonly<{
@@ -136,13 +145,14 @@ export class TimelineGeometryOwner {
   #lastBoundedWindow: { start: number; end: number; cycleCount: number } | undefined;
   /** Resolve a local time viewport to canonical source cycles using semantic geometry. */
   sourceWindowForLocalRange(document: CanonicalDocument, localStart: number, localEnd: number, overscan = 2): Readonly<{ start: number; end: number }> {
-    // Small/medium documents already fit comfortably in one WaveDrom artifact.
-    // Keep their geometry stable while the viewport scrolls so a transient
-    // window render cannot replace the currently visible waveform with an
-    // offscreen range. Large documents still use bounded source windows below.
-    if (usesFullDocumentWaveformWindow(document.timeline.cycleCount)) return { start: 0, end: document.timeline.cycleCount };
+    // Keep low-work documents in one WaveDrom artifact so their geometry stays
+    // stable while scrolling. High cycle×signal work uses the same shared
+    // viewport geometry path as large documents, even when cycleCount is modest.
+    const signalCount = document.signals.length;
+    const fullDocumentWindow = usesFullDocumentWaveformWindow(document.timeline.cycleCount, signalCount);
+    if (fullDocumentWindow) return { start: 0, end: document.timeline.cycleCount };
     if (this.#requestedSourceCycle !== undefined) {
-      const span = Math.min(512, document.timeline.cycleCount);
+      const span = Math.min(waveformWindowCycleBudget(signalCount), document.timeline.cycleCount);
       const start = Math.max(0, Math.min(this.#requestedSourceCycle - Math.floor(span / 2), document.timeline.cycleCount - span));
       return { start, end: Math.min(document.timeline.cycleCount, start + span) };
     }
@@ -155,7 +165,7 @@ export class TimelineGeometryOwner {
       // render a bounded prefix so large documents can reach the viewport. This
       // is presentation bootstrap, never semantic time/X truth; the first SVG
       // geometry replaces it and is rebased through sourceWindow.start.
-      const bootstrapEnd = Math.min(document.timeline.cycleCount, 2048);
+      const bootstrapEnd = Math.min(document.timeline.cycleCount, Math.max(64, waveformWindowCycleBudget(signalCount)));
       return { start: 0, end: bootstrapEnd };
     }
     const entries = this.viewportBoundaryEntries(owner, signalId, mapping, document.timeline.cycleCount);
@@ -198,22 +208,22 @@ export class TimelineGeometryOwner {
     }
     const boundedStart = Math.max(0, start - overscan);
     const boundedEnd = Math.min(document.timeline.cycleCount, end + overscan);
-    // Keep a useful semantic window for large documents.  The visible
-    // viewport may contain only ~28 cycles, but allowing that presentation
-    // subset to replace the bounded geometry window would discard offscreen
-    // navigation boundaries on the next render.  DOM remains virtualized;
-    // this minimum applies only to the source-time geometry artifact.
-    if (document.timeline.cycleCount > 4096) {
+    // Keep a useful semantic window: the visible viewport may contain only ~28
+    // cycles, but allowing that presentation subset to replace the bounded
+    // geometry window would discard offscreen navigation boundaries. DOM stays
+    // virtualized; this budget applies only to the source-time geometry artifact.
+    if (!fullDocumentWindow) {
       // Quantize the window to a grid: a window that starts exactly at the viewport start changes on every
       // scroll step, so a sustained drag re-rendered every mounted WaveDrom owner continuously (#621/#637).
-      // With a 256-cycle grid the source window only changes when the viewport crosses a grid line.
+      // Use a signal-count-scaled grid so dense documents keep each waveform artifact bounded.
       // Tile-style reuse (#621): while the visible range (with overscan) still lies inside the
-    // window handed out last, return that same window so unchanged owners are not re-rendered.
-    const last = this.#lastBoundedWindow;
-    if (last && last.cycleCount === document.timeline.cycleCount && boundedStart >= last.start && boundedEnd <= last.end) return { start: last.start, end: last.end };
-    const grid = 256;
+      // window handed out last, return that same window so unchanged owners are not re-rendered.
+      const last = this.#lastBoundedWindow;
+      if (last && last.cycleCount === document.timeline.cycleCount && boundedStart >= last.start && boundedEnd <= last.end) return { start: last.start, end: last.end };
+      const maxWindowCycles = waveformWindowCycleBudget(signalCount);
+      const grid = Math.min(256, 2 ** Math.floor(Math.log2(Math.max(32, Math.floor(maxWindowCycles / 2)))));
       const start = Math.max(0, Math.floor(boundedStart / grid) * grid);
-      const span = Math.min(document.timeline.cycleCount, Math.max(512, Math.ceil((boundedEnd - start) / grid) * grid));
+      const span = Math.min(document.timeline.cycleCount, Math.max(grid * 2, Math.ceil((boundedEnd - start) / grid) * grid));
       const clampedStart = Math.max(0, Math.min(start, document.timeline.cycleCount - span));
       this.#lastBoundedWindow = { start: clampedStart, end: clampedStart + span, cycleCount: document.timeline.cycleCount };
     return { start: clampedStart, end: clampedStart + span };

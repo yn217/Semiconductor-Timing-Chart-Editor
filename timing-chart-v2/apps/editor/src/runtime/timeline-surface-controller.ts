@@ -228,7 +228,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
           // projection state, but cannot change the WaveDrom request set; avoid
           // invalidating that complete first batch and rendering it again.
           const currentDocument = sessionController.snapshot().document;
-          if (usesFullDocumentWaveformWindow(currentDocument.timeline.cycleCount)) return;
+          if (usesFullDocumentWaveformWindow(currentDocument.timeline.cycleCount, currentDocument.signals.length)) return;
           return new Promise<void>((resolve) => {
             const reproject = () => {
               try { if (active && projection !== undefined) renderCoordinator.renderer.update(projection); }

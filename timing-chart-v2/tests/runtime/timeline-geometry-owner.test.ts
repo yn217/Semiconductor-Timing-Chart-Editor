@@ -9,6 +9,8 @@ describe("TimelineGeometryOwner", () => {
   it("keeps the full-document waveform window through 4096 cycles and windows larger documents", () => {
     expect(usesFullDocumentWaveformWindow(4_096)).toBe(true);
     expect(usesFullDocumentWaveformWindow(4_097)).toBe(false);
+    expect(usesFullDocumentWaveformWindow(500, 16)).toBe(true);
+    expect(usesFullDocumentWaveformWindow(500, 100)).toBe(false);
   });
 
   it.each([
@@ -106,6 +108,32 @@ describe("TimelineGeometryOwner", () => {
     expect(owner.sourceWindowForLocalRange(document, cycleCount - 30, cycleCount)).toEqual({ start: 0, end: cycleCount });
     owner.requestSourceCycle(Math.floor(cycleCount * 0.8));
     expect(owner.sourceWindowForLocalRange(document, cycleCount * 0.8, cycleCount)).toEqual({ start: 0, end: cycleCount });
+  });
+
+  it("bounds a high-signal-count mid-size document using shared viewport geometry", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 31 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle * 40, y: 0 } })));
+    const signals = Array.from({ length: 100 }, (_, index) => ({
+      ...cycleDocument.signals[0]!,
+      id: signalId(index === 0 ? "sig_cycle_clock" : `sig_perf_${index}`),
+    }));
+    const document = {
+      ...cycleDocument,
+      timeline: { ...cycleDocument.timeline, cycleCount: 500, end: 500 },
+      signals,
+    };
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => document,
+      getProjection: () => ({ rowLayout: [{ rowId: clockId, kind: "timing", visible: true, y: 0 }] } as never),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
+
+    expect(owner.sourceWindowForLocalRange(document, 0, 1_120)).toEqual({ start: 0, end: 128 });
+    owner.requestSourceCycle(400);
+    expect(owner.sourceWindowForLocalRange(document, 0, 1_120)).toEqual({ start: 319, end: 482 });
   });
 
   it("uses shared display mapping to window beyond retained geometry", () => {
