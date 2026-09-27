@@ -71,6 +71,41 @@ describe("RowLayout and projection invariants", () => {
     expect(service.diagnostics().rowLayoutSourceIndexBuilds).toBe(1);
   });
 
+  it("reuses the immutable row-domain index across projection services sharing canonical collections", () => {
+    const source = canonicalFixture();
+    let signalMapBuilds = 0;
+    let canonicalRowEnumerations = 0;
+    const signals = new Proxy(source.signals, {
+      get(target, property, receiver) {
+        if (property === "map") signalMapBuilds += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const signalGroups = new Proxy(source.signalGroups, {
+      get(target, property, receiver) {
+        if (property === "flatMap") canonicalRowEnumerations += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const document = { ...source, signals, signalGroups };
+    const request = {
+      snapshot: { revision: 0, document } as CanonicalSnapshot,
+      changeSet: { fullDocumentReplace: true },
+      viewport: { viewportStartY: 0, viewportEndY: 200, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] },
+    } as const;
+
+    const upperProjection = new DefaultProjectionService({ pane: "upper" });
+    const lowerProjection = new DefaultProjectionService({ pane: "lower" });
+    const upper = upperProjection.project(request);
+    const lower = lowerProjection.project(request);
+
+    expect(upper.canonicalRowIds).toBe(lower.canonicalRowIds);
+    expect(signalMapBuilds).toBe(1);
+    expect(canonicalRowEnumerations).toBe(1);
+    expect(upperProjection.diagnostics().rowLayoutSourceIndexBuilds).toBe(1);
+    expect(lowerProjection.diagnostics().rowLayoutSourceIndexBuilds).toBe(0);
+  });
+
   it("derives stable hierarchy entries without changing group placement semantics", () => {
     const document = canonicalFixture();
     const entries = buildHardwareHierarchyEntries(document, "hierarchy");

@@ -1,5 +1,5 @@
 import type { GroupId, SignalId } from "@timing-chart-v2/schema";
-import { buildRowLayoutSourceIndex, calculateRowLayout } from "./row-layout.js";
+import { calculateRowLayout, getRowLayoutSourceIndex } from "./row-layout.js";
 import { projectPinnedRows } from "./pinned-rows.js";
 import type { ProjectionRequest, ProjectionService, RenderProjection, RowLayoutEntry, VirtualizationWindow } from "./types.js";
 import type { RowLayoutResult, RowLayoutSourceIndex } from "./row-layout.js";
@@ -63,8 +63,9 @@ export class DefaultProjectionService implements ProjectionService {
     if (!this.#layout || !this.#navigationLayout || invalidatesLayout || this.#collapsedGroupKey !== collapsedGroupKey) {
       const cachedSourceIndex = this.#rowLayoutSourceIndex;
       if (!cachedSourceIndex || cachedSourceIndex.signals !== document.signals || cachedSourceIndex.signalGroups !== document.signalGroups) {
-        this.#rowLayoutSourceIndex = buildRowLayoutSourceIndex(document);
-        this.#rowLayoutSourceIndexBuilds += 1;
+        const sourceIndex = getRowLayoutSourceIndex(document);
+        this.#rowLayoutSourceIndex = sourceIndex.index;
+        if (sourceIndex.built) this.#rowLayoutSourceIndexBuilds += 1;
       }
       // Keep hidden rows present (by rowId) so a previously-mounted, now-
       // hidden row can still be looked up during retention, but their Y

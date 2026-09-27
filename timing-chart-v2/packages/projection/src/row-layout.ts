@@ -29,12 +29,28 @@ export interface RowLayoutSourceIndex {
   readonly canonicalRowIds: readonly RowId[];
 }
 
-export function buildRowLayoutSourceIndex(document: CanonicalDocument): RowLayoutSourceIndex {
+const rowLayoutSourceIndexes = new WeakMap<CanonicalDocument["signals"], WeakMap<CanonicalDocument["signalGroups"], RowLayoutSourceIndex>>();
+
+export function getRowLayoutSourceIndex(document: CanonicalDocument): Readonly<{ index: RowLayoutSourceIndex; built: boolean }> {
+  let byGroups = rowLayoutSourceIndexes.get(document.signals);
+  const cached = byGroups?.get(document.signalGroups);
+  if (cached) return { index: cached, built: false };
+
   const signalsById = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
   const spacersById = new Map<string, SpacerRow>();
   for (const group of document.signalGroups) for (const spacer of group.spacers ?? []) spacersById.set(spacer.id, spacer);
   const canonicalRowIds = document.signalGroups.flatMap((group) => group.rows);
-  return Object.freeze({ signals: document.signals, signalGroups: document.signalGroups, signalsById, spacersById, canonicalRowIds });
+  const index = Object.freeze({ signals: document.signals, signalGroups: document.signalGroups, signalsById, spacersById, canonicalRowIds });
+  if (!byGroups) {
+    byGroups = new WeakMap();
+    rowLayoutSourceIndexes.set(document.signals, byGroups);
+  }
+  byGroups.set(document.signalGroups, index);
+  return { index, built: true };
+}
+
+export function buildRowLayoutSourceIndex(document: CanonicalDocument): RowLayoutSourceIndex {
+  return getRowLayoutSourceIndex(document).index;
 }
 
 export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean; readonly reserveHiddenSpace?: boolean; readonly pane?: "upper" | "lower"; readonly sourceIndex?: RowLayoutSourceIndex } = {}): RowLayoutResult {
