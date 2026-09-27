@@ -208,12 +208,15 @@ describe("waveform provider primary geometry readiness", () => {
       };
       const provider = createWaveformSurfaceProvider(context);
       const owner = { style: { removeProperty: vi.fn() }, dataset: {} } as unknown as HTMLElement;
-      await provider.mountWaveBatch!([{ signalId: referenceSignalId, owner, documentEpoch: 1 }]);
+      await provider.mountWaveBatch!([
+        { signalId: referenceSignalId, owner, documentEpoch: 1 },
+        { signalId: document.signals[1]!.id, owner: { style: { removeProperty: vi.fn() }, dataset: {} } as unknown as HTMLElement, documentEpoch: 1 },
+      ]);
 
       expect(messageChannelCount).toBe(1);
       expect(requestAnimationFrame).not.toHaveBeenCalled();
       expect(recordOpenWaveBatch).toHaveBeenCalledWith(expect.objectContaining({
-        renderCount: 1,
+        renderCount: 2,
         cooperativeYieldCount: 1,
       }));
     } finally {

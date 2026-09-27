@@ -274,7 +274,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       }
       const canvasPrototype = isCanvasWaveRendererSelected(document);
       const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean; readonly canvasPainted?: boolean; readonly rendererStart?: number | undefined }> = [];
-      for (const item of orderedPrepared) {
+      for (let itemIndex = 0; itemIndex < orderedPrepared.length; itemIndex += 1) {
+        const item = orderedPrepared[itemIndex]!;
         if (item.deferred) {
           renderResults.push({ ...item, rendered: undefined });
           continue;
@@ -306,7 +307,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             catch (error: unknown) { renderResults.push({ ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) }); }
           }
         }
-        if (context.isPrimaryPresentationOpening?.() === true && globalThis.performance.now() - waveSliceStartedAt >= 6) {
+        if (itemIndex < orderedPrepared.length - 1 && context.isPrimaryPresentationOpening?.() === true && globalThis.performance.now() - waveSliceStartedAt >= 6) {
           const yieldStartedAt = globalThis.performance.now();
           await yieldToBrowserTask();
           cooperativeYieldCount += 1;
