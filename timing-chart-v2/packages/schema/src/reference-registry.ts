@@ -24,6 +24,17 @@ export interface CanonicalReference {
   readonly path: string;
 }
 
+type CanonicalReferenceIndex = ReadonlyMap<
+  CanonicalReferenceTarget,
+  ReadonlyMap<string, readonly CanonicalReference[]>
+>;
+
+// Canonical documents are immutable snapshots. Keep one lazily-built lookup
+// per snapshot so planner queries for several affected Signals do not each
+// enumerate every reference in the document. Weak keys let old snapshots and
+// their derived indexes be collected together.
+const referenceIndexes = new WeakMap<CanonicalDocument, CanonicalReferenceIndex>();
+
 /**
  * Enumerates the currently supported canonical stable-ID relationships.
  * Consumers use this registry instead of rediscovering cross-references from
@@ -129,9 +140,35 @@ export function canonicalReferences(document: CanonicalDocument): readonly Canon
   return references;
 }
 
-export function referencesTo(document: CanonicalDocument, targetType: CanonicalReferenceTarget, targetId: string): readonly CanonicalReference[] {
-  return canonicalReferences(document).filter((reference) => reference.targetType === targetType && reference.targetId === targetId);
+function canonicalReferenceIndex(document: CanonicalDocument): CanonicalReferenceIndex {
+  const cached = referenceIndexes.get(document);
+  if (cached !== undefined) return cached;
+
+  const mutable = new Map<CanonicalReferenceTarget, Map<string, CanonicalReference[]>>();
+  for (const reference of canonicalReferences(document)) {
+    let byId = mutable.get(reference.targetType);
+    if (byId === undefined) {
+      byId = new Map();
+      mutable.set(reference.targetType, byId);
+    }
+    const bucket = byId.get(reference.targetId);
+    if (bucket === undefined) byId.set(reference.targetId, [reference]);
+    else bucket.push(reference);
+  }
+
+  for (const byId of mutable.values()) {
+    for (const bucket of byId.values()) Object.freeze(bucket);
+  }
+  const index: CanonicalReferenceIndex = mutable;
+  referenceIndexes.set(document, index);
+  return index;
 }
+
+export function referencesTo(document: CanonicalDocument, targetType: CanonicalReferenceTarget, targetId: string): readonly CanonicalReference[] {
+  return canonicalReferenceIndex(document).get(targetType)?.get(targetId) ?? EMPTY_REFERENCES;
+}
+
+const EMPTY_REFERENCES: readonly CanonicalReference[] = Object.freeze([]);
 
 export function referencesToSignal(document: CanonicalDocument, signalId: string): readonly CanonicalReference[] {
   return referencesTo(document, "signal", signalId);
