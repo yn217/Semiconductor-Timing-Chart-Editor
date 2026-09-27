@@ -523,7 +523,9 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       if (failed.length > 0) setProblem(failed[0]!.message);
     };
 
-    const detachApplicationHandler = application.attachAcceptedHandler((result) => {
+    let acceptedCommandGeneration = 0;
+    const detachApplicationHandler = application.attachAcceptedHandler((result, context) => {
+      const commandGeneration = ++acceptedCommandGeneration;
       delete rendererHost.dataset.editorIdle;
       delete rendererHost.dataset.cycleViewReady;
       let openingGenerationForCompletion: number | undefined;
@@ -597,6 +599,18 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         publishState();
         markOpenPhase("all-visible-idle");
         if (openingGenerationForCompletion !== undefined && primaryPresentationGeneration === openingGenerationForCompletion) primaryPresentationOpening = false;
+        requestAnimationFrame(() => {
+          if (!active || !rendererHost.isConnected || commandGeneration !== acceptedCommandGeneration) return;
+          const idleAt = globalThis.performance.now();
+          rendererHost.dataset.editorIdle = "true";
+          rendererHost.dataset.acceptedCommandCount = String(Number(rendererHost.dataset.acceptedCommandCount ?? "0") + 1);
+          rendererHost.dataset.lastApplyToIdleMs = String(Math.max(0, idleAt - context.commandStartedAt));
+          rendererHost.dataset.lastDiagnosticsDurationMs = String(context.diagnosticsDurationMs ?? 0);
+          const diagnosticPasses = Number(rendererHost.dataset.timingDiagnosticsFullPasses ?? "0") + (context.diagnosticsRecomputed ? 1 : 0);
+          const diagnosticReuses = Number(rendererHost.dataset.timingDiagnosticsReuses ?? "0") + (context.diagnosticsRecomputed ? 0 : 1);
+          rendererHost.dataset.timingDiagnosticsFullPasses = String(diagnosticPasses);
+          rendererHost.dataset.timingDiagnosticsReuses = String(diagnosticReuses);
+        });
       });
     });
     applyCollapsedGroupsRef.current = (ids) => {

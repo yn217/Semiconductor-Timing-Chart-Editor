@@ -240,14 +240,27 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_perf_1']").click();
   const editBefore = await counters(page); const event = page.getByTestId("signal-editor").locator("form.event-row").first();
+  const acceptedCommandsBeforeSignalEdit = Number(await host.getAttribute("data-accepted-command-count") ?? "0");
+  const diagnosticsPassesBeforeSignalEdit = Number(await host.getAttribute("data-timing-diagnostics-full-passes") ?? "0");
   await event.getByRole("button", { name: /Edit transition/ }).click();
   const valueEditor = event.getByLabel("Value 0");
   if (await valueEditor.evaluate((element) => element.tagName === "SELECT")) await valueEditor.selectOption("1"); else await valueEditor.fill("1");
   await event.getByRole("button", { name: "Save" }).click(); await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect.poll(async () => Number(await host.getAttribute("data-accepted-command-count") ?? "0")).toBeGreaterThan(acceptedCommandsBeforeSignalEdit);
+  const signalEditLatency = await host.evaluate((element) => ({
+    applyToIdleMs: Number((element as HTMLElement).dataset.lastApplyToIdleMs),
+    diagnosticsMs: Number((element as HTMLElement).dataset.lastDiagnosticsDurationMs),
+    fullPasses: Number((element as HTMLElement).dataset.timingDiagnosticsFullPasses),
+  }));
+  expect(Number.isFinite(signalEditLatency.applyToIdleMs)).toBe(true);
+  expect(Number.isFinite(signalEditLatency.diagnosticsMs)).toBe(true);
+  expect(signalEditLatency.fullPasses).toBeGreaterThan(diagnosticsPassesBeforeSignalEdit);
   const editAfter = await counters(page); expect(editAfter.waveDromRenders).toBe(editBefore.waveDromRenders + 1); expect(editAfter.localGeometryBuilds).toBe(editBefore.localGeometryBuilds + 1);
 
   const annotation = host.locator("[data-role='annotation-owner']").first(); await annotation.locator("[data-role='annotation-label']").click({ force: true });
-  const annotationBefore = await counters(page); await page.getByTestId("annotation-editor").getByLabel("Annotation color").fill("#2255aa"); await page.getByTestId("apply-annotation-properties").click();
+  const annotationBefore = await counters(page); const acceptedCommandsBeforeAnnotation = Number(await host.getAttribute("data-accepted-command-count") ?? "0"); const diagnosticsReusesBeforeAnnotation = Number(await host.getAttribute("data-timing-diagnostics-reuses") ?? "0"); await page.getByTestId("annotation-editor").getByLabel("Annotation color").fill("#2255aa"); await page.getByTestId("apply-annotation-properties").click();
+  await expect.poll(async () => Number(await host.getAttribute("data-accepted-command-count") ?? "0")).toBeGreaterThan(acceptedCommandsBeforeAnnotation);
+  await expect.poll(async () => Number(await host.getAttribute("data-timing-diagnostics-reuses") ?? "0")).toBeGreaterThan(diagnosticsReusesBeforeAnnotation);
   const annotationAfter = await counters(page); expect(annotationAfter.waveDromRenders).toBe(annotationBefore.waveDromRenders); expect(annotationAfter.localGeometryBuilds).toBe(annotationBefore.localGeometryBuilds);
   const handle = annotation.locator("[data-role='annotation-handle']").first(); const handleBox = await handle.boundingBox();
   await page.mouse.move(handleBox!.x + 2, handleBox!.y + 2); await page.mouse.down(); const snapAfterDown = await sessionCounters(page);

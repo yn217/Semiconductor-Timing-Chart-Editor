@@ -7,7 +7,7 @@ import { buildCommandRejectionDiagnostics } from "../command-diagnostics.js";
 import { EditorApplicationRuntime } from "../runtime/editor-application-runtime.js";
 
 type AcceptedCommandResult = Extract<CommandResult, { readonly ok: true }>;
-type AcceptedContext = Readonly<{ operation: string; command?: SemanticCommand; batchId?: CommandId }>;
+type AcceptedContext = Readonly<{ operation: string; command?: SemanticCommand; batchId?: CommandId; commandStartedAt: number; diagnosticsDurationMs?: number; diagnosticsRecomputed?: boolean }>;
 type AcceptedHandler = (result: AcceptedCommandResult, context: AcceptedContext) => void;
 
 function withoutCommandRejectionDiagnostics(current: readonly DocumentProblem[]): readonly DocumentProblem[] {
@@ -96,9 +96,11 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     // and rejects any candidate with a problem, so an accepted snapshot has no canonical problems by construction. Do not rescan the
     // structure here (validatorInvocations stays put); only the timing diagnostics are derived again.
     const nextDocument = result.snapshot.document;
+    const diagnosticsStartedAt = globalThis.performance.now();
     const diagnosticsUpdate = interruptedOpenDiagnostics
       ? { diagnostics: deriveTimingDiagnostics(nextDocument), recomputed: true }
       : deriveTimingDiagnosticsIfInputsChanged(timingDiagnosticsDocumentRef.current, nextDocument, timingDiagnosticsRef.current);
+    const diagnosticsDurationMs = Math.max(0, globalThis.performance.now() - diagnosticsStartedAt);
     if (diagnosticsUpdate.recomputed) {
       timingDiagnosticsDocumentRef.current = nextDocument;
       timingDiagnosticsRef.current = diagnosticsUpdate.diagnostics;
@@ -108,14 +110,14 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     completePendingOpenDiagnostics?.();
     setProblem("");
     setRuntimeDiagnostics(withoutCommandRejectionDiagnostics);
-    acceptedHandlerRef.current?.(result, context);
+    acceptedHandlerRef.current?.(result, { ...context, diagnosticsDurationMs, diagnosticsRecomputed: diagnosticsUpdate.recomputed });
     return result;
   }, [runtime]);
 
-  const execute = useCallback((command: SemanticCommand) => dispatchResult(runtime.session.execute(command), { operation: command.type, command }), [dispatchResult, runtime]);
-  const executeBatch = useCallback((id: CommandId, commands: readonly SemanticCommand[]) => dispatchResult(runtime.session.executeBatch(id, commands), { operation: `batch:${id}`, batchId: id }), [dispatchResult, runtime]);
-  const undo = useCallback(() => dispatchResult(runtime.session.undo(), { operation: "history.undo" }), [dispatchResult, runtime]);
-  const redo = useCallback(() => dispatchResult(runtime.session.redo(), { operation: "history.redo" }), [dispatchResult, runtime]);
+  const execute = useCallback((command: SemanticCommand) => dispatchResult(runtime.session.execute(command), { operation: command.type, command, commandStartedAt: globalThis.performance.now() }), [dispatchResult, runtime]);
+  const executeBatch = useCallback((id: CommandId, commands: readonly SemanticCommand[]) => dispatchResult(runtime.session.executeBatch(id, commands), { operation: `batch:${id}`, batchId: id, commandStartedAt: globalThis.performance.now() }), [dispatchResult, runtime]);
+  const undo = useCallback(() => dispatchResult(runtime.session.undo(), { operation: "history.undo", commandStartedAt: globalThis.performance.now() }), [dispatchResult, runtime]);
+  const redo = useCallback(() => dispatchResult(runtime.session.redo(), { operation: "history.redo", commandStartedAt: globalThis.performance.now() }), [dispatchResult, runtime]);
   const attachAcceptedHandler = useCallback((handler: AcceptedHandler) => {
     acceptedHandlerRef.current = handler;
     return () => { if (acceptedHandlerRef.current === handler) acceptedHandlerRef.current = undefined; };
