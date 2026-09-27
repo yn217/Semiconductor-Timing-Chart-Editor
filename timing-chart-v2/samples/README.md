@@ -61,3 +61,8 @@ These are intentionally outside the immutable 20-sample Golden set so they can e
 - `samples/showcase/25_long_timeline_stress_showcase.tcd.json` — **512 cycles / 32 signals**. Long horizontal timeline for scroll/zoom/MiniMap/ruler performance, collapsed 128-cycle idle range, repeated Input/Internal/Output rows, buses/states, bookmarks and long-range transaction inspection.
 
 The showcase suite is not part of the immutable Golden count. It is intended for manual inspection, focused E2E fixtures, implementation-time smoke checks and the later Final Integration / Regression Batch.
+
+
+## Archived current-product sample snapshots
+
+- `samples/old/current-v2-2026-09-27/` — exact pre-refresh snapshot of the four mutable current-v2 references before the 2026-09-27 current-schema coverage update. Keep for comparison only; it is **not** the current product specification.
