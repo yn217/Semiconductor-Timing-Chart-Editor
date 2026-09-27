@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-chart-v2/core";
 import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
+import { valueChangeIdAllocator } from "../../packages/commands/src/value-change-id-allocator.js";
 
 const commandId = (id: string) => id as CommandId;
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -506,6 +507,36 @@ describe("pure Semantic Command planning", () => {
     const reopened = parseDocument(serializeValidatedCanonicalDocument(session.getSnapshot().document));
     expect(reopened.ok).toBe(true);
     if (reopened.ok) expect((reopened.document.signals.find((signal) => signal.id === "sig_data") as ValueSignal).values.find((change) => change.start === 2)?.id).toBe(generatedId);
+  });
+
+  it("keeps generated value-change IDs unique across repeated edits to one Signal", () => {
+    const source = canonicalFixture();
+    const session = new CommandHistorySession({ ...source, timeline: { ...source.timeline, cycleCount: 128, end: 128 } });
+    const initialSignal = source.signals.find((item) => item.id === "sig_data");
+    const initialValueCount = initialSignal && "values" in initialSignal ? initialSignal.values.length : 0;
+    const allocationSpy = vi.spyOn(valueChangeIdAllocator, "allocate");
+    const ids: string[] = [];
+    try {
+      for (let cycle = 10; cycle < 110; cycle += 1) {
+        const result = session.execute({ id: commandId(`cmd_repeated_value_${cycle}`), type: "signal.updateValue", signalId: "sig_data" as SignalId, start: cycle, value: cycle % 2 ? "1F" : "0F" });
+        expect(result.ok).toBe(true);
+        const signal = session.getSnapshot().document.signals.find((item) => item.id === "sig_data");
+        if (!signal || signal.type === "clock" || signal.type === "commentRow") throw new Error("Expected the edited Value Signal.");
+        ids.push(signal.values.find((change) => change.start === cycle)?.id ?? "");
+      }
+      expect(allocationSpy.mock.results.map((result) => result.value.valuesVisited)).toEqual([initialValueCount, ...new Array(99).fill(0)]);
+    } finally {
+      allocationSpy.mockRestore();
+    }
+    expect(new Set(ids).size).toBe(100);
+    expect(ids.every((id) => /^value_sig_data_\d+$/.test(id))).toBe(true);
+    const saved = serializeValidatedCanonicalDocument(session.getSnapshot().document);
+    expect(parseDocument(saved)).toMatchObject({ ok: true });
+    for (let index = 0; index < ids.length; index += 1) expect(session.undo().ok).toBe(true);
+    for (let index = 0; index < ids.length; index += 1) expect(session.redo().ok).toBe(true);
+    const reopened = parseDocument(saved);
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect(reopened.document.signals.find((item) => item.id === "sig_data")).toEqual(session.getSnapshot().document.signals.find((item) => item.id === "sig_data"));
   });
 
   it("keeps reorder and visibility out of WaveDrom and Local Geometry domains", () => {
