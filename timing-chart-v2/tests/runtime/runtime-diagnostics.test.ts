@@ -61,4 +61,26 @@ describe("open phase readiness contract", () => {
     tracker.mark("all-visible-idle", 6);
     expect(presentationNotifications).toBe(1);
   });
+
+  it("aggregates Open waveform batch scheduling metrics and resets them for the next Open", () => {
+    const host = { dataset: {} } as unknown as HTMLElement;
+    const tracker = createOpenPhaseTracker(host);
+
+    tracker.begin(0);
+    tracker.recordWaveBatch({ batchWallMs: 120, renderAwaitMs: 80, renderCount: 4, cooperativeYieldCount: 3, cooperativeYieldWaitMs: 45 });
+    tracker.recordWaveBatch({ batchWallMs: 30, renderAwaitMs: 20, renderCount: 1, cooperativeYieldCount: 1, cooperativeYieldWaitMs: 16 });
+    expect(JSON.parse(host.dataset.openWaveBatchMetrics!)).toEqual({
+      batchCount: 2,
+      batchWallMs: 150,
+      renderAwaitMs: 100,
+      renderCount: 5,
+      cooperativeYieldCount: 4,
+      cooperativeYieldWaitMs: 61,
+    });
+
+    tracker.begin(200);
+    expect(host.dataset.openWaveBatchMetrics).toBeUndefined();
+    tracker.recordWaveBatch({ batchWallMs: 10, renderAwaitMs: 7, renderCount: 1, cooperativeYieldCount: 0, cooperativeYieldWaitMs: 0 });
+    expect(JSON.parse(host.dataset.openWaveBatchMetrics!)).toMatchObject({ batchCount: 1, renderCount: 1, cooperativeYieldCount: 0 });
+  });
 });

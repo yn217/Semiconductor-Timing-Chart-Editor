@@ -201,6 +201,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       adapter,
       geometryRegistry,
       markOpenPhase,
+      recordOpenWaveBatch: openPhaseTracker.recordWaveBatch,
       isPrimaryPresentationOpening: () => primaryPresentationOpening,
       getWaveWidthPxPerDisplayCycle: () => timelineGeometry.waveWidthPxPerDisplayCycle,
       getWaveOriginPx: () => timelineGeometry.waveOriginPx,

@@ -44,6 +44,13 @@ export function publishRendererState(host: HTMLElement, session: Pick<CommandHis
 }
 export type OpenPhaseTracker = Readonly<{
   mark: (phase: string, phaseTimestamp?: number) => void;
+  recordWaveBatch: (metrics: Readonly<{
+    batchWallMs: number;
+    renderAwaitMs: number;
+    renderCount: number;
+    cooperativeYieldCount: number;
+    cooperativeYieldWaitMs: number;
+  }>) => void;
   begin: (commandStartedAt?: number, fileReadStartedAt?: number) => void;
 }>;
 
@@ -63,6 +70,17 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentation
   let visibleWaveformsCompletedAt: number | undefined;
   let idleCompletedAt: number | undefined;
   let diagnosticsCompletedAt: number | undefined;
+  const waveBatchMetrics = {
+    batchCount: 0,
+    batchWallMs: 0,
+    renderAwaitMs: 0,
+    renderCount: 0,
+    cooperativeYieldCount: 0,
+    cooperativeYieldWaitMs: 0,
+  };
+  const publishWaveBatchMetrics = (): void => {
+    rendererHost.dataset.openWaveBatchMetrics = JSON.stringify(waveBatchMetrics);
+  };
   const advanceReadiness = (next: OpenReadiness, timestamp: number): void => {
     const nextIndex = OPEN_READINESS_ORDER.indexOf(next);
     // Readiness is an ordered contract even when independent async work
@@ -121,6 +139,16 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentation
   };
   return {
     mark,
+    recordWaveBatch(metrics) {
+      if (!active) return;
+      waveBatchMetrics.batchCount += 1;
+      waveBatchMetrics.batchWallMs += metrics.batchWallMs;
+      waveBatchMetrics.renderAwaitMs += metrics.renderAwaitMs;
+      waveBatchMetrics.renderCount += metrics.renderCount;
+      waveBatchMetrics.cooperativeYieldCount += metrics.cooperativeYieldCount;
+      waveBatchMetrics.cooperativeYieldWaitMs += metrics.cooperativeYieldWaitMs;
+      publishWaveBatchMetrics();
+    },
     begin(commandStartedAt = globalThis.performance.now(), fileReadStartedAt) {
       active = true;
       readiness = "opening";
@@ -129,12 +157,19 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentation
       visibleWaveformsCompletedAt = undefined;
       idleCompletedAt = undefined;
       diagnosticsCompletedAt = undefined;
+      waveBatchMetrics.batchCount = 0;
+      waveBatchMetrics.batchWallMs = 0;
+      waveBatchMetrics.renderAwaitMs = 0;
+      waveBatchMetrics.renderCount = 0;
+      waveBatchMetrics.cooperativeYieldCount = 0;
+      waveBatchMetrics.cooperativeYieldWaitMs = 0;
       rowShellPainted = false;
       referenceGeometryReady = false;
       rulerPainted = false;
       for (const key of Object.keys(marks)) delete marks[key];
       delete rendererHost.dataset.openPhaseMarks;
       delete rendererHost.dataset.openPhaseDurations;
+      delete rendererHost.dataset.openWaveBatchMetrics;
       rendererHost.dataset.openReadiness = readiness;
       delete rendererHost.dataset.cycleViewReady;
       mark("open-command-start", commandStartedAt);

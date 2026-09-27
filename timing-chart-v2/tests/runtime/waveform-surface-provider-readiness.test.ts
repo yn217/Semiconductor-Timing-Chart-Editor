@@ -126,6 +126,62 @@ describe("waveform provider primary geometry readiness", () => {
     expect(ready).toHaveBeenCalledTimes(1);
   });
 
+  it("yields opening render slices through the browser task queue instead of waiting for an animation frame", async () => {
+    const document = generatePerformanceDocument({ signalCount: 2, cycleCount: 10 });
+    const referenceSignalId = document.timeline.referenceClock!;
+    const requestAnimationFrame = vi.fn(() => 1);
+    const recordOpenWaveBatch = vi.fn();
+    let messageChannelCount = 0;
+    class TestMessageChannel {
+      readonly port1 = { onmessage: null as ((event: MessageEvent) => void) | null, close: vi.fn() };
+      readonly port2 = {
+        postMessage: vi.fn(() => queueMicrotask(() => this.port1.onmessage?.(new MessageEvent("message")))),
+        close: vi.fn(),
+      };
+      constructor() { messageChannelCount += 1; }
+    }
+    let now = 0;
+    const performanceNow = vi.spyOn(globalThis.performance, "now").mockImplementation(() => { now += 10; return now; });
+    vi.stubGlobal("scheduler", undefined);
+    vi.stubGlobal("MessageChannel", TestMessageChannel);
+    vi.stubGlobal("requestAnimationFrame", requestAnimationFrame);
+    try {
+      const adapter: WaveDromAdapter = {
+        toWaveJson: (source) => toWaveJson(source),
+        renderWave: vi.fn(async (signalId, waveJson) => ({ signalId, ownerKey: signalId, svg: {} as SVGSVGElement, renderIndex: 0, waveJson })),
+        extractLocalGeometry: vi.fn(() => { throw new Error("SVG extraction is not used in analytic mode."); }),
+        geometryMetrics: () => ({ last: undefined, totalDurationMs: 0, totalUsesVisited: 0, totalGeometryEntriesEmitted: 0, totalDuplicateKeyChecks: 0, totalDuplicateKeyCollisions: 0, totalTransitionBrickLookups: 0, totalSkinPathParses: 0, totalMatrixReads: 0 }),
+        dispose: vi.fn(),
+        metrics: () => ({ renderCalls: 0, waveJsonDurationMs: 0, renderDurationMs: 0, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 }),
+      };
+      const context: WaveformProviderContext = {
+        sessionController: { snapshot: () => ({ document, revision: 0 }) },
+        getDocumentEpoch: () => 1,
+        mappingCache: new DisplayTimeMappingCache(),
+        adapter,
+        geometryRegistry: new GeometryRegistry(),
+        markOpenPhase: vi.fn(),
+        recordOpenWaveBatch,
+        isPrimaryPresentationOpening: () => true,
+        invalidateSnapIndex: vi.fn(),
+        getViewMode: () => "Cycle",
+      };
+      const provider = createWaveformSurfaceProvider(context);
+      const owner = { style: { removeProperty: vi.fn() }, dataset: {} } as unknown as HTMLElement;
+      await provider.mountWaveBatch!([{ signalId: referenceSignalId, owner, documentEpoch: 1 }]);
+
+      expect(messageChannelCount).toBe(1);
+      expect(requestAnimationFrame).not.toHaveBeenCalled();
+      expect(recordOpenWaveBatch).toHaveBeenCalledWith(expect.objectContaining({
+        renderCount: 1,
+        cooperativeYieldCount: 1,
+      }));
+    } finally {
+      performanceNow.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("skips WaveJSON preparation for viewport requests invalidated by reference reprojection", async () => {
     const document = generatePerformanceDocument({ signalCount: 50, cycleCount: 100 });
     const referenceSignalId = document.timeline.referenceClock!;

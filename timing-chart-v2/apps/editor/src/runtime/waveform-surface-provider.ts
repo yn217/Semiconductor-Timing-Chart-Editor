@@ -11,11 +11,21 @@ import type { GeometryRegistry } from "./geometry-registry.js";
 import { displayWindowForSource } from "./display-boundary.js";
 import { waveOwnerPlacement } from "./wave-owner-placement.js";
 
-function nextBrowserFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(() => resolve());
-    else globalThis.setTimeout(resolve, 0);
-  });
+function yieldToBrowserTask(): Promise<void> {
+  const browserScheduler = (globalThis as typeof globalThis & { scheduler?: { yield?: () => Promise<void> } }).scheduler;
+  if (typeof browserScheduler?.yield === "function") return browserScheduler.yield();
+  if (typeof globalThis.MessageChannel === "function") {
+    return new Promise((resolve) => {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = () => {
+        channel.port1.close();
+        channel.port2.close();
+        resolve();
+      };
+      channel.port2.postMessage(undefined);
+    });
+  }
+  return new Promise((resolve) => globalThis.setTimeout(resolve, 0));
 }
 
 export type WaveformProviderContext = Readonly<{
@@ -25,6 +35,13 @@ export type WaveformProviderContext = Readonly<{
   adapter: WaveDromAdapter;
   geometryRegistry: GeometryRegistry;
   markOpenPhase: (phase: string, phaseTimestamp?: number) => void;
+  recordOpenWaveBatch?: (metrics: Readonly<{
+    batchWallMs: number;
+    renderAwaitMs: number;
+    renderCount: number;
+    cooperativeYieldCount: number;
+    cooperativeYieldWaitMs: number;
+  }>) => void;
   onReferenceGeometryReady?: () => void | Promise<void>;
   /** True only while initial Open/New artifacts are being materialized.
    * Viewport re-windowing after readiness stays a coherent batch. */
@@ -71,6 +88,12 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
   return {
     ...(context.getSourceWindow ? { getSourceWindow: context.getSourceWindow } : {}),
     async mountWaveBatch(requests) {
+      const batchStartedAt = globalThis.performance.now();
+      const primaryOpenBatch = context.isPrimaryPresentationOpening?.() === true;
+      let renderAwaitMs = 0;
+      let renderCount = 0;
+      let cooperativeYieldCount = 0;
+      let cooperativeYieldWaitMs = 0;
       const requestEpoch = requests[0]?.documentEpoch;
       const isCurrent = (request: { readonly documentEpoch?: number; readonly isFresh?: () => boolean }): boolean => (request.documentEpoch === undefined || context.getDocumentEpoch() === request.documentEpoch) && (request.isFresh?.() ?? true);
       if (requestEpoch !== undefined && (requestEpoch !== context.getDocumentEpoch() || requests.some((request) => request.documentEpoch !== requestEpoch))) return requests.map(({ signalId }) => ({ signalId, stale: true }));
@@ -269,12 +292,21 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             context.markOpenPhase("first-visible-wave-painted");
             renderResults.push({ ...item, rendered: undefined, canvasPainted: true });
           } else {
-            try { renderResults.push({ ...item, rendered: await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues) }); }
+            try {
+              const renderStartedAt = globalThis.performance.now();
+              renderCount += 1;
+              const rendered = await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues);
+              renderAwaitMs += Math.max(0, globalThis.performance.now() - renderStartedAt);
+              renderResults.push({ ...item, rendered });
+            }
             catch (error: unknown) { renderResults.push({ ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) }); }
           }
         }
         if (context.isPrimaryPresentationOpening?.() === true && globalThis.performance.now() - waveSliceStartedAt >= 6) {
-          await nextBrowserFrame();
+          const yieldStartedAt = globalThis.performance.now();
+          await yieldToBrowserTask();
+          cooperativeYieldCount += 1;
+          cooperativeYieldWaitMs += Math.max(0, globalThis.performance.now() - yieldStartedAt);
           waveSliceStartedAt = globalThis.performance.now();
         }
       }
@@ -332,6 +364,15 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         }
       });
       if (referenceGeometryReady && !referenceGeometryNotified) context.onReferenceGeometryReady?.();
+      if (primaryOpenBatch) {
+        context.recordOpenWaveBatch?.({
+          batchWallMs: Math.max(0, globalThis.performance.now() - batchStartedAt),
+          renderAwaitMs,
+          renderCount,
+          cooperativeYieldCount,
+          cooperativeYieldWaitMs,
+        });
+      }
       return results;
     },
     async mountWave(id, owner) {
