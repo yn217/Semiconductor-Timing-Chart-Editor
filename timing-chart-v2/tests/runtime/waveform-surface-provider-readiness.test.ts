@@ -126,6 +126,46 @@ describe("waveform provider primary geometry readiness", () => {
     expect(ready).toHaveBeenCalledTimes(1);
   });
 
+  it("marks the first visible WaveDrom artifact when it mounts, without waiting for later owners", async () => {
+    const document = generatePerformanceDocument({ signalCount: 2, cycleCount: 10 });
+    const referenceSignalId = document.timeline.referenceClock!;
+    const nonReferenceSignalId = document.signals[1]!.id;
+    const laterRender = deferred<RenderedWave>();
+    const markOpenPhase = vi.fn();
+    const adapter: WaveDromAdapter = {
+      toWaveJson: (source) => toWaveJson(source),
+      renderWave: vi.fn(async (signalId, waveJson) => {
+        if (signalId === nonReferenceSignalId) return laterRender.promise;
+        return { signalId, ownerKey: signalId, svg: {} as SVGSVGElement, renderIndex: 0, waveJson };
+      }),
+      extractLocalGeometry: vi.fn(() => { throw new Error("SVG extraction is not used in analytic mode."); }),
+      geometryMetrics: () => ({ last: undefined, totalDurationMs: 0, totalUsesVisited: 0, totalGeometryEntriesEmitted: 0, totalDuplicateKeyChecks: 0, totalDuplicateKeyCollisions: 0, totalTransitionBrickLookups: 0, totalSkinPathParses: 0, totalMatrixReads: 0 }),
+      dispose: vi.fn(),
+      metrics: () => ({ renderCalls: 0, waveJsonDurationMs: 0, renderDurationMs: 0, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 }),
+    };
+    const context: WaveformProviderContext = {
+      sessionController: { snapshot: () => ({ document, revision: 0 }) },
+      getDocumentEpoch: () => 1,
+      mappingCache: new DisplayTimeMappingCache(),
+      adapter,
+      geometryRegistry: new GeometryRegistry(),
+      markOpenPhase,
+      invalidateSnapIndex: vi.fn(),
+      getViewMode: () => "Cycle",
+    };
+    const provider = createWaveformSurfaceProvider(context);
+    const owner = () => ({ isConnected: true, style: { removeProperty: vi.fn() }, dataset: {} }) as unknown as HTMLElement;
+    const batch = provider.mountWaveBatch!([
+      { signalId: nonReferenceSignalId, owner: owner(), documentEpoch: 1 },
+      { signalId: referenceSignalId, owner: owner(), documentEpoch: 1 },
+    ]);
+
+    await vi.waitFor(() => expect(adapter.renderWave).toHaveBeenCalledTimes(2));
+    expect(markOpenPhase).toHaveBeenCalledWith("first-visible-wave-painted");
+    laterRender.resolve({ signalId: nonReferenceSignalId, ownerKey: nonReferenceSignalId, svg: {} as SVGSVGElement, renderIndex: 1, waveJson: { wave: "01" } });
+    await batch;
+  });
+
   it("yields opening render slices through the browser task queue instead of waiting for an animation frame", async () => {
     const document = generatePerformanceDocument({ signalCount: 2, cycleCount: 10 });
     const referenceSignalId = document.timeline.referenceClock!;

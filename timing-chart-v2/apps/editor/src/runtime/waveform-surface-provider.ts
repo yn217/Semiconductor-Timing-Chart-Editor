@@ -297,6 +297,10 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
               renderCount += 1;
               const rendered = await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues);
               renderAwaitMs += Math.max(0, globalThis.performance.now() - renderStartedAt);
+              // renderWave installs the SVG into this owner before resolving.
+              // Publish the first-artifact milestone here rather than after
+              // every later owner in the batch has also completed.
+              if (isCurrent(item.request) && item.request.owner.isConnected) context.markOpenPhase("first-visible-wave-painted");
               renderResults.push({ ...item, rendered });
             }
             catch (error: unknown) { renderResults.push({ ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) }); }
