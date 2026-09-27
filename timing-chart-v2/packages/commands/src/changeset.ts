@@ -16,5 +16,8 @@ export function mergeChangeSets(changeSets: readonly ChangeSet[]): ChangeSet {
   for (const key of ["fullDocumentReplace", "timelineSemantics", "transactionTimeScale", "geometryScreenX", "minimapOverview"] as const) {
     if (changeSets.some((changeSet) => changeSet[key] === true)) result[key] = true;
   }
+  if (changeSets.length > 0 && changeSets.every((changeSet) => changeSet.timingDiagnosticsUnchanged === true)) {
+    result.timingDiagnosticsUnchanged = true;
+  }
   return result as ChangeSet;
 }

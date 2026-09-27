@@ -458,10 +458,12 @@ export function deriveTimingDiagnosticsIfInputsChanged(
   previousDocument: CanonicalDocument,
   nextDocument: CanonicalDocument,
   previousDiagnostics: readonly TimingDiagnostic[],
+  options: Readonly<{ timingDiagnosticsUnchanged?: boolean }> = {},
 ): Readonly<{ diagnostics: readonly TimingDiagnostic[]; recomputed: boolean }> {
-  if (previousDocument.signals === nextDocument.signals
-    && previousDocument.constraints === nextDocument.constraints
-    && previousDocument.checkSettings === nextDocument.checkSettings) {
+  const sharedRuleInputs = previousDocument.constraints === nextDocument.constraints
+    && previousDocument.checkSettings === nextDocument.checkSettings;
+  if (sharedRuleInputs && (previousDocument.signals === nextDocument.signals
+    || (options.timingDiagnosticsUnchanged === true && previousDocument.signals.length === nextDocument.signals.length))) {
     return { diagnostics: previousDiagnostics, recomputed: false };
   }
   return { diagnostics: deriveTimingDiagnostics(nextDocument), recomputed: true };

@@ -555,6 +555,7 @@ describe("pure Semantic Command planning", () => {
       expect(visibility.changeSet.waveSemantics).toBeUndefined();
       expect(visibility.changeSet.geometryLocal).toBeUndefined();
       expect(visibility.changeSet.rowPresentation).toEqual(["sig_data"]);
+      expect(visibility.changeSet.timingDiagnosticsUnchanged).toBe(true);
     }
   });
 

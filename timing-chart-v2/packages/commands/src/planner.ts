@@ -718,7 +718,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const nextDocument = replaceSignal(document, index, { ...signal, display: { ...signal.display, visible: command.visible } });
       const changedTimingRows = changedPositions(orderedVisibleTimingRows(document), orderedVisibleTimingRows(nextDocument));
       const affectedForAnnotations = [...new Set([signal.id, ...changedTimingRows])];
-      const changeSet: ChangeSet = { rowPresentation: [signal.id], geometryScreenY: changedTimingRows, annotationPosition: annotationsForSignals(document, affectedForAnnotations), minimapOverview: true };
+      const changeSet: ChangeSet = { rowPresentation: [signal.id], geometryScreenY: changedTimingRows, annotationPosition: annotationsForSignals(document, affectedForAnnotations), minimapOverview: true, timingDiagnosticsUnchanged: true };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
     case "signal.updateValue": {

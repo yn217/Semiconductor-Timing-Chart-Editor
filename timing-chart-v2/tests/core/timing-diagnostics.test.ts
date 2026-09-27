@@ -24,6 +24,19 @@ describe("derived timing diagnostics", () => {
 
     const changedSignalName = { ...current, signals: current.signals.map((signal) => signal.id === current.signals[1]!.id ? { ...signal, name: "RENAMED" } : signal) };
     expect(deriveTimingDiagnosticsIfInputsChanged(current, changedSignalName, currentDiagnostics).recomputed).toBe(true);
+    const displayOnlySignalEdit = { ...current, signals: current.signals.map((signal) => signal.id === current.signals[1]!.id ? { ...signal, display: { ...signal.display, visible: false } } : signal) };
+    const displayOnly = deriveTimingDiagnosticsIfInputsChanged(current, displayOnlySignalEdit, currentDiagnostics, { timingDiagnosticsUnchanged: true });
+    expect(displayOnly).toEqual({ diagnostics: currentDiagnostics, recomputed: false });
+
+    const nonIterableSignals = new Proxy(displayOnlySignalEdit.signals, {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator || ["forEach", "map", "find", "findIndex", "filter", "some", "indexOf"].includes(String(property))) {
+          throw new Error(`unexpected full Signal scan through ${String(property)}`);
+        }
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    expect(deriveTimingDiagnosticsIfInputsChanged(current, { ...displayOnlySignalEdit, signals: nonIterableSignals }, currentDiagnostics, { timingDiagnosticsUnchanged: true }).recomputed).toBe(false);
     const changedConstraints = { ...current, constraints: [...current.constraints] };
     expect(deriveTimingDiagnosticsIfInputsChanged(current, changedConstraints, currentDiagnostics).recomputed).toBe(true);
     const changedSettings = { ...current, checkSettings: { enabledCategories: ["protocol"] as const } };

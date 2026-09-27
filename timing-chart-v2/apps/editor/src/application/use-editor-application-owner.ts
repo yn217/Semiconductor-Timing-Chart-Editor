@@ -99,12 +99,13 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     const diagnosticsStartedAt = globalThis.performance.now();
     const diagnosticsUpdate = interruptedOpenDiagnostics
       ? { diagnostics: deriveTimingDiagnostics(nextDocument), recomputed: true }
-      : deriveTimingDiagnosticsIfInputsChanged(timingDiagnosticsDocumentRef.current, nextDocument, timingDiagnosticsRef.current);
+      : deriveTimingDiagnosticsIfInputsChanged(timingDiagnosticsDocumentRef.current, nextDocument, timingDiagnosticsRef.current, { timingDiagnosticsUnchanged: result.changeSet.timingDiagnosticsUnchanged === true });
     const diagnosticsDurationMs = Math.max(0, globalThis.performance.now() - diagnosticsStartedAt);
-    if (diagnosticsUpdate.recomputed) {
-      timingDiagnosticsDocumentRef.current = nextDocument;
-      timingDiagnosticsRef.current = diagnosticsUpdate.diagnostics;
-    }
+    // The reused diagnostic value is now valid for this accepted snapshot too;
+    // advance both owners so the next ChangeSet is compared with the actual
+    // previous document (including repeated presentation-only commands).
+    timingDiagnosticsDocumentRef.current = nextDocument;
+    if (diagnosticsUpdate.recomputed) timingDiagnosticsRef.current = diagnosticsUpdate.diagnostics;
     setValidationDiagnostics(diagnosticsUpdate.diagnostics);
     setValidationPending(false);
     completePendingOpenDiagnostics?.();

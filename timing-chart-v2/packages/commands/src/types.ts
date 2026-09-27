@@ -147,6 +147,8 @@ export type SemanticCommand =
 
 export interface ChangeSet {
   readonly fullDocumentReplace?: boolean;
+  /** The command changes presentation only and leaves derived timing Problems unchanged. */
+  readonly timingDiagnosticsUnchanged?: true;
   readonly rowOrder?: readonly RowId[];
   readonly rowPresentation?: readonly RowId[];
   readonly edgeCounter?: readonly SignalId[];
