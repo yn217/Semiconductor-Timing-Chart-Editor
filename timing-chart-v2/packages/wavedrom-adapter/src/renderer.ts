@@ -122,6 +122,9 @@ interface MarkupCacheEntry {
   readonly key: string;
   readonly markup: string;
   readonly renderIndex: number;
+  readonly waveJsonBytes: number;
+  readonly semanticValuesBytes: number;
+  readonly svgMarkupBytes: number;
   safetyDocument?: Document;
   parsedSvgByDocument?: WeakMap<Document, SVGElement>;
 }
@@ -210,19 +213,21 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       if (renderIndex === undefined) renderIndex = this.#nextRenderIndex++;
       this.#renderIndices.set(signalId, renderIndex);
     }
-    stageStartedAt = now();
-    stages.waveJsonBytes = utf8Encoder.encode(serializedWaveJson).byteLength;
-    stages.semanticValuesBytes = utf8Encoder.encode(serializedSemanticValues).byteLength;
-    stages.metricCollectionOverheadMs = (stages.metricCollectionOverheadMs ?? 0) + now() - stageStartedAt;
     const markupCacheHit = cached?.key === cacheKey && cached.renderIndex === renderIndex;
     let markup: string;
+    let cacheEntry: MarkupCacheEntry;
     if (markupCacheHit && cached) {
       markup = cached.markup;
+      cacheEntry = cached;
+      stages.waveJsonBytes = cached.waveJsonBytes;
+      stages.semanticValuesBytes = cached.semanticValuesBytes;
+      stages.svgMarkupBytes = cached.svgMarkupBytes;
       this.#cacheHits += 1;
-      stageStartedAt = now();
-      stages.svgMarkupBytes = new TextEncoder().encode(markup).byteLength;
-      stages.metricCollectionOverheadMs = (stages.metricCollectionOverheadMs ?? 0) + now() - stageStartedAt;
     } else {
+      stageStartedAt = now();
+      stages.waveJsonBytes = utf8Encoder.encode(serializedWaveJson).byteLength;
+      stages.semanticValuesBytes = utf8Encoder.encode(serializedSemanticValues).byteLength;
+      stages.metricCollectionOverheadMs = (stages.metricCollectionOverheadMs ?? 0) + now() - stageStartedAt;
       const generated = renderWaveJsonMarkupWithMetrics(waveJson, renderIndex, semanticValues);
       markup = generated.markup;
       stages.waveDromRenderAnyMs = generated.metrics.waveDromRenderAnyMs;
@@ -231,10 +236,15 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       stages.markupSafetyMs = generated.metrics.markupSafetyMs;
       stages.svgMarkupBytes = generated.metrics.svgMarkupBytes;
       this.#cacheMisses += 1;
+      cacheEntry = {
+        key: cacheKey,
+        markup,
+        renderIndex,
+        waveJsonBytes: stages.waveJsonBytes,
+        semanticValuesBytes: stages.semanticValuesBytes,
+        svgMarkupBytes: stages.svgMarkupBytes,
+      };
     }
-    const cacheEntry = markupCacheHit && cached
-      ? cached
-      : { key: cacheKey, markup, renderIndex };
     this.#markupCache.set(signalId, cacheEntry);
     const cachedSvg = markupCacheHit ? cacheEntry.parsedSvgByDocument?.get(ownerDocument) : undefined;
     let svg: Element | null;

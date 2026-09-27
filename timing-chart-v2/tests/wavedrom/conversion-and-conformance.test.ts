@@ -245,9 +245,16 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(adapter.metrics().activeOwners).toBe(0);
 
     const reopenedMount = createMount();
+    const encode = vi.spyOn(TextEncoder.prototype, "encode");
     const reopened = await adapter.renderWave(id, waveJson, reopenedMount);
     expect(reopened.markupCacheHit).toBe(true);
     expect(reopened.svgSafetyCacheHit).toBe(true);
+    expect(encode).not.toHaveBeenCalled();
+    expect(reopened.renderStages).toMatchObject({
+      waveJsonBytes: first.renderStages?.waveJsonBytes,
+      semanticValuesBytes: first.renderStages?.semanticValuesBytes,
+      svgMarkupBytes: first.renderStages?.svgMarkupBytes,
+    });
     expect(templatesCreated).toBe(1);
     expect(reopened.renderIndex).toBe(first.renderIndex);
     expect([...reopened.svg.querySelectorAll("[id]")].map((element) => element.id)).toEqual(firstIds);
