@@ -20,11 +20,15 @@ describe("canonical stable-ID reference registry", () => {
     expect(referencesTo(nextSnapshot, "signal", document.signals[0]!.id)).not.toBe(referencesTo(document, "signal", document.signals[0]!.id));
   });
 
-  it("reuses the reference index when only non-reference document metadata changes", () => {
+  it("reuses the reference index when only document metadata changes", () => {
     const document = canonicalFixture();
     const signalId = document.signals[0]!.id;
     const originalBucket = referencesToSignal(document, signalId);
-    const nextSnapshot: CanonicalDocument = { ...document, layout: { ...document.layout } };
+    const nextSnapshot: CanonicalDocument = {
+      ...document,
+      layout: { ...document.layout },
+      document: { ...document.document, title: "Renamed document" },
+    };
 
     expect(referencesToSignal(nextSnapshot, signalId)).toBe(originalBucket);
   });

@@ -29,11 +29,12 @@ type CanonicalReferenceIndex = ReadonlyMap<
   ReadonlyMap<string, readonly CanonicalReference[]>
 >;
 
-// Reference results are owned by these immutable collections/objects, not by
-// the root document wrapper. A metadata-only snapshot can therefore reuse the
-// same index; replacing any reference-owning collection naturally selects a
-// different trie leaf. Weak keys let obsolete owners and indexes be collected.
-type ReferenceIndexCacheNode = WeakMap<object, ReferenceIndexCacheNode | CanonicalReferenceIndex>;
+// Reference results are owned by these immutable collections, not by the root
+// document wrapper. The document ID is stored at the leaf because it supplies
+// the owner ID of the timeline.referenceClock record; other document metadata
+// does not invalidate the index. Weak keys bound cache lifetime to its owners.
+type ReferenceIndexCacheEntry = Readonly<{ documentId: string; index: CanonicalReferenceIndex }>;
+type ReferenceIndexCacheNode = WeakMap<object, ReferenceIndexCacheNode | ReferenceIndexCacheEntry>;
 const referenceIndexes: ReferenceIndexCacheNode = new WeakMap();
 
 /**
@@ -143,7 +144,6 @@ export function canonicalReferences(document: CanonicalDocument): readonly Canon
 
 function canonicalReferenceIndex(document: CanonicalDocument): CanonicalReferenceIndex {
   const owners: readonly object[] = [
-    document.document,
     document.signals,
     document.timeGroups,
     document.annotations,
@@ -163,7 +163,7 @@ function canonicalReferenceIndex(document: CanonicalDocument): CanonicalReferenc
   }
   const leafOwner = owners[owners.length - 1]!;
   const cached = node.get(leafOwner);
-  if (cached !== undefined && !(cached instanceof WeakMap)) return cached;
+  if (cached !== undefined && !(cached instanceof WeakMap) && cached.documentId === document.document.id) return cached.index;
 
   const mutable = new Map<CanonicalReferenceTarget, Map<string, CanonicalReference[]>>();
   for (const reference of canonicalReferences(document)) {
@@ -181,7 +181,7 @@ function canonicalReferenceIndex(document: CanonicalDocument): CanonicalReferenc
     for (const bucket of byId.values()) Object.freeze(bucket);
   }
   const index: CanonicalReferenceIndex = mutable;
-  node.set(leafOwner, index);
+  node.set(leafOwner, { documentId: document.document.id, index });
   return index;
 }
 
