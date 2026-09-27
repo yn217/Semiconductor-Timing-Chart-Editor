@@ -346,7 +346,12 @@ function handshakeDiagnostics(
 function latencyDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>): TimingDiagnostic[] {
   if (!enabled.has("protocol")) return [];
   const problems: TimingDiagnostic[] = [];
-  const signals = new Map(document.signals.map((signal) => [signal.id, signal]));
+  const signals = new Map<SignalId, Signal>();
+  const signalIndexById = new Map<SignalId, number>();
+  document.signals.forEach((signal, index) => {
+    signals.set(signal.id, signal);
+    signalIndexById.set(signal.id, index);
+  });
   document.constraints.forEach((constraint, constraintIndex) => {
     if (constraint.type.toLowerCase() !== "latency") return;
     const data = constraintData(constraint.data);
@@ -371,7 +376,7 @@ function latencyDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<Ti
     const triggerCycles = edgeCycles(trigger, triggerEdge);
     const responseCycles = edgeCycles(response, responseEdge);
     let responseIndex = 0;
-    const responseIndexInDocument = document.signals.indexOf(response);
+    const responseIndexInDocument = signalIndexById.get(response.id) ?? -1;
     triggerCycles.forEach((triggerCycle) => {
       while (responseIndex < responseCycles.length && responseCycles[responseIndex]! < triggerCycle) responseIndex += 1;
       const responseCycle = responseCycles[responseIndex];

@@ -161,6 +161,21 @@ describe("derived timing diagnostics", () => {
     ]);
   });
 
+  it("resolves latency diagnostic Signal paths from the shared ID index", () => {
+    const source = canonicalFixture();
+    const template = source.signals[1]!;
+    const request = { ...template, id: "sig_latency_index_req" as SignalId, name: "REQ", values: [{ start: 0, value: "0" }, { start: 2, value: "1" }] };
+    const acknowledge = { ...template, id: "sig_latency_index_ack" as SignalId, name: "ACK", values: [{ start: 0, value: "0" }] };
+    const constraint: Constraint = { id: "constraint_latency_index" as never, type: "latency", data: { triggerSignalId: request.id, triggerEdge: "rising", responseSignalId: acknowledge.id, responseEdge: "rising", minCycles: 1, maxCycles: 3 } };
+    const signals = [source.signals[0]!, request, acknowledge] as CanonicalDocument["signals"] & { indexOf: never };
+    Object.defineProperty(signals, "indexOf", { value: () => { throw new Error("latency diagnostics must not linearly search Signals"); } });
+
+    const diagnostics = deriveTimingDiagnostics(withSignals(source, signals, [constraint]), { enabledCategories: ["protocol"] });
+    expect(diagnostics).toMatchObject([
+      { code: "LATENCY_RESPONSE_MISSING", path: "$.signals[2]", entityId: acknowledge.id, objectId: constraint.id },
+    ]);
+  });
+
   it("is deterministic and honors category selection", () => {
     const source = canonicalFixture();
     const signal = { ...source.signals[1]!, values: [{ start: 1, value: "X" }] };
