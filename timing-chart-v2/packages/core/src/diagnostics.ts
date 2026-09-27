@@ -200,10 +200,10 @@ function firstCycleAtLatency(cycles: readonly number[], requestCycle: number, mi
   return low;
 }
 
-function latencyRangeDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>): TimingDiagnostic[] {
+function latencyRangeDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>, providedIndexes?: TimingDiagnosticIndexes): TimingDiagnostic[] {
   if (!enabled.has("protocol")) return [];
+  const indexes = providedIndexes ?? buildTimingDiagnosticIndexes(document, enabled);
   const problems: TimingDiagnostic[] = [];
-  const signals = new Map(document.signals.map((signal) => [signal.id, signal]));
   const add = (code: TimingDiagnosticCode, path: string, message: string, constraintId: string, sourceCycle?: number): void => {
     problems.push({ code, category: "protocol", severity: "warning", path, message, entityId: constraintId, objectType: "constraint", objectId: constraintId, source: "validation", stage: "validate", ...(sourceCycle === undefined ? {} : { sourceCycle }) });
   };
@@ -220,8 +220,8 @@ function latencyRangeDiagnostics(document: CanonicalDocument, enabled: ReadonlyS
       add("LATENCY_RANGE_CONSTRAINT_INVALID", basePath, "Latency-range constraint requires requestSignalId, acknowledgeSignalId, and integer minCycles/maxCycles with 0 <= minCycles <= maxCycles.", constraint.id);
       return;
     }
-    const request = signals.get(requestId);
-    const acknowledge = signals.get(acknowledgeId);
+    const request = indexes.signalsById.get(requestId);
+    const acknowledge = indexes.signalsById.get(acknowledgeId);
     if (!request || (request.type !== "binary" && request.type !== "logic" && request.type !== "pulse")) {
       add("LATENCY_RANGE_CONSTRAINT_INVALID", `${basePath}.requestSignalId`, `Request signal '${requestId}' does not reference a binary, logic, or pulse signal.`, constraint.id);
       return;
@@ -296,10 +296,10 @@ function isEdgeValueSignal(signal: Signal | undefined): signal is ValueSignal {
 function handshakeDiagnostics(
   document: CanonicalDocument,
   enabled: ReadonlySet<TimingDiagnosticCategory>,
+  providedIndexes?: TimingDiagnosticIndexes,
 ): TimingDiagnostic[] {
   const problems: TimingDiagnostic[] = [];
-  const signals = new Map(document.signals.map((signal) => [signal.id, signal]));
-  const signalIndexById = new Map(document.signals.map((signal, index) => [signal.id, index]));
+  const indexes = providedIndexes ?? buildTimingDiagnosticIndexes(document, enabled);
   const addConstraintProblem = (code: TimingDiagnosticCode, path: string, message: string, constraintId: string): void => {
     problems.push({ code, category: "protocol", severity: "warning", path, message, entityId: constraintId, objectType: "constraint", objectId: constraintId, source: "validation", stage: "validate" });
   };
@@ -315,8 +315,8 @@ function handshakeDiagnostics(
       addConstraintProblem("HANDSHAKE_CONSTRAINT_INVALID", basePath, "Handshake constraint requires requestSignalId and acknowledgeSignalId.", constraint.id);
       return;
     }
-    const request = signals.get(requestId);
-    const acknowledge = signals.get(acknowledgeId);
+    const request = indexes.signalsById.get(requestId);
+    const acknowledge = indexes.signalsById.get(acknowledgeId);
     if (!request || request.type === "clock" || request.type === "commentRow") {
       addConstraintProblem("HANDSHAKE_CONSTRAINT_INVALID", `${basePath}.requestSignalId`, `Request signal '${requestId}' does not reference a value signal.`, constraint.id);
       return;
@@ -325,7 +325,7 @@ function handshakeDiagnostics(
       addConstraintProblem("HANDSHAKE_CONSTRAINT_INVALID", `${basePath}.acknowledgeSignalId`, `Acknowledge signal '${acknowledgeId}' does not reference a value signal.`, constraint.id);
       return;
     }
-    const stableSignals = stableIds.map((id) => signals.get(id));
+    const stableSignals = stableIds.map((id) => indexes.signalsById.get(id));
     if (stableSignals.some((signal) => signal === undefined || signal.type === "clock" || signal.type === "commentRow")) {
       addConstraintProblem("HANDSHAKE_CONSTRAINT_INVALID", `${basePath}.stableSignalIds`, "Every stable signal must reference a value signal.", constraint.id);
       return;
@@ -347,7 +347,7 @@ function handshakeDiagnostics(
         if (!stableSignal || stableSignal.type === "clock" || stableSignal.type === "commentRow") return;
         const firstRelevant = firstChangeAfter(stableSignal.values, requestChange.start);
         const endExclusive = firstChangeAtOrAfter(stableSignal.values, ackChange.start);
-        const index = signalIndexById.get(stableSignal.id);
+        const index = indexes.signalIndexById.get(stableSignal.id);
         if (index === undefined) return;
         for (let changeIndex = firstRelevant; changeIndex < endExclusive; changeIndex += 1) {
           const change = stableSignal.values[changeIndex]!;
@@ -367,15 +367,10 @@ function handshakeDiagnostics(
 }
 
 /** Evaluate JSON constraints of the form REQ edge -> ACK edge within N..M cycles. */
-function latencyDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>): TimingDiagnostic[] {
+function latencyDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>, providedIndexes?: TimingDiagnosticIndexes): TimingDiagnostic[] {
   if (!enabled.has("protocol")) return [];
   const problems: TimingDiagnostic[] = [];
-  const signals = new Map<SignalId, Signal>();
-  const signalIndexById = new Map<SignalId, number>();
-  document.signals.forEach((signal, index) => {
-    signals.set(signal.id, signal);
-    signalIndexById.set(signal.id, index);
-  });
+  const indexes = providedIndexes ?? buildTimingDiagnosticIndexes(document, enabled);
   document.constraints.forEach((constraint, constraintIndex) => {
     if (constraint.type.toLowerCase() !== "latency") return;
     const data = constraintData(constraint.data);
@@ -385,8 +380,8 @@ function latencyDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<Ti
     const responseEdge = textFrom(data, ["responseEdge"]);
     const minCycles = numberFrom(data, "minCycles");
     const maxCycles = numberFrom(data, "maxCycles");
-    const trigger = triggerId ? signals.get(triggerId) : undefined;
-    const response = responseId ? signals.get(responseId) : undefined;
+    const trigger = triggerId ? indexes.signalsById.get(triggerId) : undefined;
+    const response = responseId ? indexes.signalsById.get(responseId) : undefined;
     const basePath = `$.constraints[${constraintIndex}].data`;
     const invalid = !triggerId || !responseId || !isEdgeValueSignal(trigger) || !isEdgeValueSignal(response)
       || (triggerEdge !== "rising" && triggerEdge !== "falling")
@@ -400,7 +395,7 @@ function latencyDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<Ti
     const triggerCycles = edgeCycles(trigger, triggerEdge);
     const responseCycles = edgeCycles(response, responseEdge);
     let responseIndex = 0;
-    const responseIndexInDocument = signalIndexById.get(response.id) ?? -1;
+    const responseIndexInDocument = indexes.signalIndexById.get(response.id) ?? -1;
     triggerCycles.forEach((triggerCycle) => {
       while (responseIndex < responseCycles.length && responseCycles[responseIndex]! < triggerCycle) responseIndex += 1;
       const responseCycle = responseCycles[responseIndex];
@@ -425,7 +420,25 @@ function diagnosticOrder(left: TimingDiagnostic, right: TimingDiagnostic): numbe
 export interface TimingDiagnosticRule {
   readonly id: string;
   readonly category: TimingDiagnosticCategory;
-  readonly evaluate: (document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>) => readonly TimingDiagnostic[];
+  /** `indexes` is optional to preserve direct rule evaluation compatibility. */
+  readonly evaluate: (document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>, indexes?: TimingDiagnosticIndexes) => readonly TimingDiagnostic[];
+}
+
+type TimingDiagnosticIndexes = Readonly<{
+  signalsById: ReadonlyMap<SignalId, Signal>;
+  signalIndexById: ReadonlyMap<SignalId, number>;
+}>;
+
+function buildTimingDiagnosticIndexes(document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>): TimingDiagnosticIndexes {
+  const signalsById = new Map<SignalId, Signal>();
+  const signalIndexById = new Map<SignalId, number>();
+  if (enabled.has("protocol") || enabled.has("stability")) {
+    document.signals.forEach((signal, index) => {
+      signalsById.set(signal.id, signal);
+      signalIndexById.set(signal.id, index);
+    });
+  }
+  return { signalsById, signalIndexById };
 }
 
 /** Shared derived-rule registry. Results remain outside CanonicalDocument. */
@@ -440,7 +453,8 @@ export const TIMING_DIAGNOSTIC_RULES: readonly TimingDiagnosticRule[] = [
 export function deriveTimingDiagnostics(document: CanonicalDocument, options: TimingDiagnosticOptions = {}): readonly TimingDiagnostic[] {
   const configured = options.enabledCategories ?? document.checkSettings.enabledCategories;
   const enabled = new Set<TimingDiagnosticCategory>(configured === undefined ? TIMING_DIAGNOSTIC_CATEGORIES : configured.filter((category): category is TimingDiagnosticCategory => TIMING_DIAGNOSTIC_CATEGORIES.some((known) => known === category)));
-  return TIMING_DIAGNOSTIC_RULES.flatMap((rule) => rule.evaluate(document, enabled)
+  const indexes = buildTimingDiagnosticIndexes(document, enabled);
+  return TIMING_DIAGNOSTIC_RULES.flatMap((rule) => rule.evaluate(document, enabled, indexes)
     .filter(() => enabled.has(rule.category))
     .map((diagnostic) => ({ ...diagnostic, ruleId: rule.id, stableKey: `${rule.id}:${diagnostic.code}:${diagnostic.objectId ?? diagnostic.entityId ?? ""}:${diagnostic.path}${diagnostic.sourceCycle === undefined ? "" : `:cycle:${diagnostic.sourceCycle}`}` })))
     .sort(diagnosticOrder);

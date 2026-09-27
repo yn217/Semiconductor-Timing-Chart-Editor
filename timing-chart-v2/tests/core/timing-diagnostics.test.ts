@@ -51,6 +51,29 @@ describe("derived timing diagnostics", () => {
     expect(diagnostic.ruleId).toBe("timing.unknown-value");
     expect(diagnostic.stableKey).toContain(diagnostic.path);
   });
+
+  it("builds one reusable Signal ID/index context per full diagnostic pass", () => {
+    const document = canonicalFixture();
+    const expected = deriveTimingDiagnostics(document);
+    let signalCollectionPasses = 0;
+    const signals = new Proxy(document.signals, {
+      get(target, property, receiver) {
+        const value = Reflect.get(target, property, receiver);
+        if (property !== "forEach" && property !== "map") return value;
+        return (...args: unknown[]) => {
+          signalCollectionPasses += 1;
+          return Reflect.apply(value as (...items: unknown[]) => unknown, target, args);
+        };
+      },
+    });
+
+    expect(deriveTimingDiagnostics({ ...document, signals })).toEqual(expected);
+    // One pass builds O(1) lookup indexes shared by protocol rules; one pass
+    // evaluates per-Signal unknown-value diagnostics. Rules must not rebuild
+    // their own copies of the same whole-document indexes.
+    expect(signalCollectionPasses).toBe(2);
+  });
+
   it("reports explicit and implicit unknown values without changing the canonical validator contract", () => {
     const source = canonicalFixture();
     const data = source.signals[1]!;
