@@ -20,6 +20,30 @@ describe("canonical stable-ID reference registry", () => {
     expect(referencesTo(nextSnapshot, "signal", document.signals[0]!.id)).not.toBe(referencesTo(document, "signal", document.signals[0]!.id));
   });
 
+  it("reuses the reference index when only non-reference document metadata changes", () => {
+    const document = canonicalFixture();
+    const signalId = document.signals[0]!.id;
+    const originalBucket = referencesToSignal(document, signalId);
+    const nextSnapshot: CanonicalDocument = { ...document, layout: { ...document.layout } };
+
+    expect(referencesToSignal(nextSnapshot, signalId)).toBe(originalBucket);
+  });
+
+  it("rebuilds document-owned references when the stable document identity changes", () => {
+    const document = canonicalFixture();
+    const signalId = document.signals[0]!.id;
+    const originalBucket = referencesToSignal(document, signalId);
+    const nextDocumentId = "fixture_reidentified" as typeof document.document.id;
+    const nextSnapshot: CanonicalDocument = { ...document, document: { ...document.document, id: nextDocumentId } };
+
+    expect(referencesToSignal(nextSnapshot, signalId)).not.toBe(originalBucket);
+    expect(referencesToSignal(nextSnapshot, signalId)).toContainEqual(expect.objectContaining({
+      kind: "timeline.referenceClock",
+      ownerId: nextDocumentId,
+      targetId: signalId,
+    }));
+  });
+
   it("enumerates the supported signal and time-group relationships from one owner", () => {
     const base = canonicalFixture();
     const signal = base.signals[1]!;
