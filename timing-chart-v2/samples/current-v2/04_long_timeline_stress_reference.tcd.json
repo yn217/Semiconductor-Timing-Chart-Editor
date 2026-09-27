@@ -219,19 +219,23 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_reset_n.change.0"
         },
         {
           "start": 8,
-          "value": 1
+          "value": 1,
+          "id": "long_reset_n.change.1"
         },
         {
           "start": 400,
-          "value": 0
+          "value": 0,
+          "id": "long_reset_n.change.2"
         },
         {
           "start": 408,
-          "value": 1
+          "value": 1,
+          "id": "long_reset_n.change.3"
         }
       ],
       "resetSemantics": {
@@ -280,23 +284,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_in_0.change.0"
         },
         {
           "start": 64,
-          "value": 1
+          "value": 1,
+          "id": "long_in_0.change.1"
         },
         {
           "start": 96,
-          "value": 0
+          "value": 0,
+          "id": "long_in_0.change.2"
         },
         {
           "start": 320,
-          "value": 1
+          "value": 1,
+          "id": "long_in_0.change.3"
         },
         {
           "start": 352,
-          "value": 0
+          "value": 0,
+          "id": "long_in_0.change.4"
         }
       ]
     },
@@ -320,23 +329,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_in_1.change.0"
         },
         {
           "start": 65,
-          "value": 1
+          "value": 1,
+          "id": "long_in_1.change.1"
         },
         {
           "start": 97,
-          "value": 0
+          "value": 0,
+          "id": "long_in_1.change.2"
         },
         {
           "start": 321,
-          "value": 1
+          "value": 1,
+          "id": "long_in_1.change.3"
         },
         {
           "start": 353,
-          "value": 0
+          "value": 0,
+          "id": "long_in_1.change.4"
         }
       ]
     },
@@ -360,23 +374,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_in_2.change.0"
         },
         {
           "start": 66,
-          "value": 1
+          "value": 1,
+          "id": "long_in_2.change.1"
         },
         {
           "start": 98,
-          "value": 0
+          "value": 0,
+          "id": "long_in_2.change.2"
         },
         {
           "start": 322,
-          "value": 1
+          "value": 1,
+          "id": "long_in_2.change.3"
         },
         {
           "start": 354,
-          "value": 0
+          "value": 0,
+          "id": "long_in_2.change.4"
         }
       ]
     },
@@ -400,23 +419,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_in_3.change.0"
         },
         {
           "start": 67,
-          "value": 1
+          "value": 1,
+          "id": "long_in_3.change.1"
         },
         {
           "start": 99,
-          "value": 0
+          "value": 0,
+          "id": "long_in_3.change.2"
         },
         {
           "start": 323,
-          "value": 1
+          "value": 1,
+          "id": "long_in_3.change.3"
         },
         {
           "start": 355,
-          "value": 0
+          "value": 0,
+          "id": "long_in_3.change.4"
         }
       ]
     },
@@ -440,23 +464,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_in_4.change.0"
         },
         {
           "start": 68,
-          "value": 1
+          "value": 1,
+          "id": "long_in_4.change.1"
         },
         {
           "start": 100,
-          "value": 0
+          "value": 0,
+          "id": "long_in_4.change.2"
         },
         {
           "start": 324,
-          "value": 1
+          "value": 1,
+          "id": "long_in_4.change.3"
         },
         {
           "start": 356,
-          "value": 0
+          "value": 0,
+          "id": "long_in_4.change.4"
         }
       ]
     },
@@ -480,23 +509,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_in_5.change.0"
         },
         {
           "start": 69,
-          "value": 1
+          "value": 1,
+          "id": "long_in_5.change.1"
         },
         {
           "start": 101,
-          "value": 0
+          "value": 0,
+          "id": "long_in_5.change.2"
         },
         {
           "start": 325,
-          "value": 1
+          "value": 1,
+          "id": "long_in_5.change.3"
         },
         {
           "start": 357,
-          "value": 0
+          "value": 0,
+          "id": "long_in_5.change.4"
         }
       ]
     },
@@ -520,23 +554,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_in_6.change.0"
         },
         {
           "start": 70,
-          "value": 1
+          "value": 1,
+          "id": "long_in_6.change.1"
         },
         {
           "start": 102,
-          "value": 0
+          "value": 0,
+          "id": "long_in_6.change.2"
         },
         {
           "start": 326,
-          "value": 1
+          "value": 1,
+          "id": "long_in_6.change.3"
         },
         {
           "start": 358,
-          "value": 0
+          "value": 0,
+          "id": "long_in_6.change.4"
         }
       ]
     },
@@ -560,23 +599,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_in_7.change.0"
         },
         {
           "start": 71,
-          "value": 1
+          "value": 1,
+          "id": "long_in_7.change.1"
         },
         {
           "start": 103,
-          "value": 0
+          "value": 0,
+          "id": "long_in_7.change.2"
         },
         {
           "start": 327,
-          "value": 1
+          "value": 1,
+          "id": "long_in_7.change.3"
         },
         {
           "start": 359,
-          "value": 0
+          "value": 0,
+          "id": "long_in_7.change.4"
         }
       ]
     },
@@ -600,23 +644,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_int_0.change.0"
         },
         {
           "start": 80,
-          "value": 1
+          "value": 1,
+          "id": "long_int_0.change.1"
         },
         {
           "start": 112,
-          "value": 0
+          "value": 0,
+          "id": "long_int_0.change.2"
         },
         {
           "start": 336,
-          "value": 1
+          "value": 1,
+          "id": "long_int_0.change.3"
         },
         {
           "start": 368,
-          "value": 0
+          "value": 0,
+          "id": "long_int_0.change.4"
         }
       ]
     },
@@ -640,23 +689,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_int_1.change.0"
         },
         {
           "start": 81,
-          "value": 1
+          "value": 1,
+          "id": "long_int_1.change.1"
         },
         {
           "start": 113,
-          "value": 0
+          "value": 0,
+          "id": "long_int_1.change.2"
         },
         {
           "start": 337,
-          "value": 1
+          "value": 1,
+          "id": "long_int_1.change.3"
         },
         {
           "start": 369,
-          "value": 0
+          "value": 0,
+          "id": "long_int_1.change.4"
         }
       ]
     },
@@ -680,23 +734,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_int_2.change.0"
         },
         {
           "start": 82,
-          "value": 1
+          "value": 1,
+          "id": "long_int_2.change.1"
         },
         {
           "start": 114,
-          "value": 0
+          "value": 0,
+          "id": "long_int_2.change.2"
         },
         {
           "start": 338,
-          "value": 1
+          "value": 1,
+          "id": "long_int_2.change.3"
         },
         {
           "start": 370,
-          "value": 0
+          "value": 0,
+          "id": "long_int_2.change.4"
         }
       ]
     },
@@ -720,23 +779,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_int_3.change.0"
         },
         {
           "start": 83,
-          "value": 1
+          "value": 1,
+          "id": "long_int_3.change.1"
         },
         {
           "start": 115,
-          "value": 0
+          "value": 0,
+          "id": "long_int_3.change.2"
         },
         {
           "start": 339,
-          "value": 1
+          "value": 1,
+          "id": "long_int_3.change.3"
         },
         {
           "start": 371,
-          "value": 0
+          "value": 0,
+          "id": "long_int_3.change.4"
         }
       ]
     },
@@ -760,23 +824,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_int_4.change.0"
         },
         {
           "start": 84,
-          "value": 1
+          "value": 1,
+          "id": "long_int_4.change.1"
         },
         {
           "start": 116,
-          "value": 0
+          "value": 0,
+          "id": "long_int_4.change.2"
         },
         {
           "start": 340,
-          "value": 1
+          "value": 1,
+          "id": "long_int_4.change.3"
         },
         {
           "start": 372,
-          "value": 0
+          "value": 0,
+          "id": "long_int_4.change.4"
         }
       ]
     },
@@ -800,23 +869,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_int_5.change.0"
         },
         {
           "start": 85,
-          "value": 1
+          "value": 1,
+          "id": "long_int_5.change.1"
         },
         {
           "start": 117,
-          "value": 0
+          "value": 0,
+          "id": "long_int_5.change.2"
         },
         {
           "start": 341,
-          "value": 1
+          "value": 1,
+          "id": "long_int_5.change.3"
         },
         {
           "start": 373,
-          "value": 0
+          "value": 0,
+          "id": "long_int_5.change.4"
         }
       ]
     },
@@ -837,20 +911,30 @@
       },
       "display": {
         "name": "pipe_data_0[31:0]",
-        "visible": true
+        "visible": true,
+        "align": "left",
+        "overflow": "ellipsis",
+        "style": {
+          "fontFamily": "monospace"
+        }
       },
       "values": [
         {
           "start": 0,
-          "value": "X"
+          "value": "X",
+          "id": "long_bus_0.change.0"
         },
         {
           "start": 80,
-          "value": "0x00001000"
+          "value": "0x00001000",
+          "id": "long_bus_0.change.1",
+          "displayLabel": "Sample 0x00001000",
+          "comment": "Current-V2 04 value-change metadata example"
         },
         {
           "start": 336,
-          "value": "0x00002000"
+          "value": "0x00002000",
+          "id": "long_bus_0.change.2"
         }
       ],
       "width": 32,
@@ -878,15 +962,18 @@
       "values": [
         {
           "start": 0,
-          "value": "X"
+          "value": "X",
+          "id": "long_bus_1.change.0"
         },
         {
           "start": 81,
-          "value": "0x00001001"
+          "value": "0x00001001",
+          "id": "long_bus_1.change.1"
         },
         {
           "start": 337,
-          "value": "0x00002001"
+          "value": "0x00002001",
+          "id": "long_bus_1.change.2"
         }
       ],
       "width": 32,
@@ -914,15 +1001,18 @@
       "values": [
         {
           "start": 0,
-          "value": "X"
+          "value": "X",
+          "id": "long_bus_2.change.0"
         },
         {
           "start": 82,
-          "value": "0x00001002"
+          "value": "0x00001002",
+          "id": "long_bus_2.change.1"
         },
         {
           "start": 338,
-          "value": "0x00002002"
+          "value": "0x00002002",
+          "id": "long_bus_2.change.2"
         }
       ],
       "width": 32,
@@ -950,15 +1040,18 @@
       "values": [
         {
           "start": 0,
-          "value": "X"
+          "value": "X",
+          "id": "long_bus_3.change.0"
         },
         {
           "start": 83,
-          "value": "0x00001003"
+          "value": "0x00001003",
+          "id": "long_bus_3.change.1"
         },
         {
           "start": 339,
-          "value": "0x00002003"
+          "value": "0x00002003",
+          "id": "long_bus_3.change.2"
         }
       ],
       "width": 32,
@@ -986,15 +1079,18 @@
       "values": [
         {
           "start": 0,
-          "value": "X"
+          "value": "X",
+          "id": "long_bus_4.change.0"
         },
         {
           "start": 84,
-          "value": "0x00001004"
+          "value": "0x00001004",
+          "id": "long_bus_4.change.1"
         },
         {
           "start": 340,
-          "value": "0x00002004"
+          "value": "0x00002004",
+          "id": "long_bus_4.change.2"
         }
       ],
       "width": 32,
@@ -1022,15 +1118,18 @@
       "values": [
         {
           "start": 0,
-          "value": "X"
+          "value": "X",
+          "id": "long_bus_5.change.0"
         },
         {
           "start": 85,
-          "value": "0x00001005"
+          "value": "0x00001005",
+          "id": "long_bus_5.change.1"
         },
         {
           "start": 341,
-          "value": "0x00002005"
+          "value": "0x00002005",
+          "id": "long_bus_5.change.2"
         }
       ],
       "width": 32,
@@ -1051,38 +1150,53 @@
       },
       "display": {
         "name": "state_0",
-        "visible": true
+        "visible": true,
+        "align": "center",
+        "overflow": "expand",
+        "style": {
+          "fontWeight": 600
+        }
       },
       "values": [
         {
           "start": 0,
-          "value": "RESET"
+          "value": "RESET",
+          "id": "long_state_0.change.0"
         },
         {
           "start": 8,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "long_state_0.change.1"
         },
         {
           "start": 64,
-          "value": "ACTIVE"
+          "value": "ACTIVE",
+          "id": "long_state_0.change.2"
         },
         {
           "start": 128,
-          "value": "WAIT"
+          "value": "WAIT",
+          "id": "long_state_0.change.3"
         },
         {
           "start": 192,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "long_state_0.change.4"
         },
         {
           "start": 320,
-          "value": "ACTIVE"
+          "value": "ACTIVE",
+          "id": "long_state_0.change.5"
         },
         {
           "start": 384,
-          "value": "DONE"
+          "value": "DONE",
+          "id": "long_state_0.change.6"
         }
-      ]
+      ],
+      "enumId": "enum.current.04",
+      "spacingBefore": 4,
+      "spacingAfter": 2
     },
     {
       "id": "long_state_1",
@@ -1104,31 +1218,38 @@
       "values": [
         {
           "start": 0,
-          "value": "RESET"
+          "value": "RESET",
+          "id": "long_state_1.change.0"
         },
         {
           "start": 8,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "long_state_1.change.1"
         },
         {
           "start": 65,
-          "value": "ACTIVE"
+          "value": "ACTIVE",
+          "id": "long_state_1.change.2"
         },
         {
           "start": 129,
-          "value": "WAIT"
+          "value": "WAIT",
+          "id": "long_state_1.change.3"
         },
         {
           "start": 193,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "long_state_1.change.4"
         },
         {
           "start": 321,
-          "value": "ACTIVE"
+          "value": "ACTIVE",
+          "id": "long_state_1.change.5"
         },
         {
           "start": 385,
-          "value": "DONE"
+          "value": "DONE",
+          "id": "long_state_1.change.6"
         }
       ]
     },
@@ -1152,31 +1273,38 @@
       "values": [
         {
           "start": 0,
-          "value": "RESET"
+          "value": "RESET",
+          "id": "long_state_2.change.0"
         },
         {
           "start": 8,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "long_state_2.change.1"
         },
         {
           "start": 66,
-          "value": "ACTIVE"
+          "value": "ACTIVE",
+          "id": "long_state_2.change.2"
         },
         {
           "start": 130,
-          "value": "WAIT"
+          "value": "WAIT",
+          "id": "long_state_2.change.3"
         },
         {
           "start": 194,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "long_state_2.change.4"
         },
         {
           "start": 322,
-          "value": "ACTIVE"
+          "value": "ACTIVE",
+          "id": "long_state_2.change.5"
         },
         {
           "start": 386,
-          "value": "DONE"
+          "value": "DONE",
+          "id": "long_state_2.change.6"
         }
       ]
     },
@@ -1200,31 +1328,38 @@
       "values": [
         {
           "start": 0,
-          "value": "RESET"
+          "value": "RESET",
+          "id": "long_state_3.change.0"
         },
         {
           "start": 8,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "long_state_3.change.1"
         },
         {
           "start": 67,
-          "value": "ACTIVE"
+          "value": "ACTIVE",
+          "id": "long_state_3.change.2"
         },
         {
           "start": 131,
-          "value": "WAIT"
+          "value": "WAIT",
+          "id": "long_state_3.change.3"
         },
         {
           "start": 195,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "long_state_3.change.4"
         },
         {
           "start": 323,
-          "value": "ACTIVE"
+          "value": "ACTIVE",
+          "id": "long_state_3.change.5"
         },
         {
           "start": 387,
-          "value": "DONE"
+          "value": "DONE",
+          "id": "long_state_3.change.6"
         }
       ]
     },
@@ -1248,23 +1383,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_out_0.change.0"
         },
         {
           "start": 120,
-          "value": 1
+          "value": 1,
+          "id": "long_out_0.change.1"
         },
         {
           "start": 128,
-          "value": 0
+          "value": 0,
+          "id": "long_out_0.change.2"
         },
         {
           "start": 376,
-          "value": 1
+          "value": 1,
+          "id": "long_out_0.change.3"
         },
         {
           "start": 384,
-          "value": 0
+          "value": 0,
+          "id": "long_out_0.change.4"
         }
       ]
     },
@@ -1288,23 +1428,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_out_1.change.0"
         },
         {
           "start": 121,
-          "value": 1
+          "value": 1,
+          "id": "long_out_1.change.1"
         },
         {
           "start": 129,
-          "value": 0
+          "value": 0,
+          "id": "long_out_1.change.2"
         },
         {
           "start": 377,
-          "value": 1
+          "value": 1,
+          "id": "long_out_1.change.3"
         },
         {
           "start": 385,
-          "value": 0
+          "value": 0,
+          "id": "long_out_1.change.4"
         }
       ]
     },
@@ -1328,23 +1473,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_out_2.change.0"
         },
         {
           "start": 122,
-          "value": 1
+          "value": 1,
+          "id": "long_out_2.change.1"
         },
         {
           "start": 130,
-          "value": 0
+          "value": 0,
+          "id": "long_out_2.change.2"
         },
         {
           "start": 378,
-          "value": 1
+          "value": 1,
+          "id": "long_out_2.change.3"
         },
         {
           "start": 386,
-          "value": 0
+          "value": 0,
+          "id": "long_out_2.change.4"
         }
       ]
     },
@@ -1368,23 +1518,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "long_out_3.change.0"
         },
         {
           "start": 123,
-          "value": 1
+          "value": 1,
+          "id": "long_out_3.change.1"
         },
         {
           "start": 131,
-          "value": 0
+          "value": 0,
+          "id": "long_out_3.change.2"
         },
         {
           "start": 379,
-          "value": 1
+          "value": 1,
+          "id": "long_out_3.change.3"
         },
         {
           "start": 387,
-          "value": 0
+          "value": 0,
+          "id": "long_out_3.change.4"
         }
       ]
     }
@@ -1423,7 +1578,16 @@
         "foldStyle": "axis-break",
         "foldLabel": "+128 idle cycles",
         "resumeLabelAnchorId": "la25_resume"
-      }
+      },
+      "parentId": "tg25_parent"
+    },
+    {
+      "id": "tg25_parent",
+      "name": "Stress window",
+      "category": "hierarchy",
+      "start": 160,
+      "end": 352,
+      "comment": "Parent Time Group for long-window hierarchy/fold interaction."
     }
   ],
   "annotationGroups": [],
@@ -1436,7 +1600,9 @@
       "anchor": {
         "cycle": 64,
         "point": "cycle-start"
-      }
+      },
+      "color": "#2563eb",
+      "labelPlacement": "above"
     },
     {
       "id": "a25_burst0",
@@ -1465,7 +1631,9 @@
         "cycle": 320,
         "point": "cycle-end"
       },
-      "opacity": 0.08
+      "opacity": 0.25,
+      "color": "#94a3b8",
+      "comment": "Long timing-region overlay."
     },
     {
       "id": "a25_burst1",
@@ -1490,7 +1658,14 @@
         "signalId": "long_reset_n",
         "cycle": 400,
         "point": "falling-edge"
-      }
+      },
+      "color": "#dc2626",
+      "verticalSpan": {
+        "mode": "rows",
+        "startRowId": "long_reset_n",
+        "endRowId": "long_state_0"
+      },
+      "labelPlacement": "above"
     }
   ],
   "legend": {
@@ -1523,7 +1698,12 @@
         "visible": true,
         "order": 2
       }
-    ]
+    ],
+    "style": {
+      "background": "#ffffff",
+      "border": "1px solid #c8c8c8",
+      "fontSize": 11
+    }
   },
   "layout": {
     "roleColumnWidth": 64,
@@ -1564,7 +1744,22 @@
         "long_int_0",
         "long_bus_0",
         "long_out_0"
-      ]
+      ],
+      "groupId": "tgrp.long.current",
+      "color": "#3b82f6",
+      "description": "Current-V2 04 transaction example",
+      "visible": true,
+      "category": "lane:long",
+      "style": {
+        "emphasis": "primary"
+      },
+      "metadata": {
+        "samplePack": "current-v2",
+        "sequence": 0
+      },
+      "links": {
+        "correlationId": "04-1"
+      }
     },
     {
       "id": "tx25_b1",
@@ -1596,7 +1791,22 @@
         "long_int_1",
         "long_bus_1",
         "long_out_1"
-      ]
+      ],
+      "groupId": "tgrp.long.current",
+      "color": "#8b5cf6",
+      "description": "Current-V2 04 transaction example",
+      "visible": true,
+      "category": "lane:long",
+      "style": {
+        "emphasis": "normal"
+      },
+      "metadata": {
+        "samplePack": "current-v2",
+        "sequence": 1
+      },
+      "links": {
+        "correlationId": "04-2"
+      }
     }
   ],
   "constraints": [
@@ -1617,5 +1827,47 @@
       "annotation",
       "transaction"
     ]
+  },
+  "enumDefinitions": [
+    {
+      "id": "enum.current.04",
+      "name": "state_0 States",
+      "entries": [
+        {
+          "value": "RESET",
+          "label": "RESET"
+        },
+        {
+          "value": "IDLE",
+          "label": "IDLE"
+        },
+        {
+          "value": "ACTIVE",
+          "label": "ACTIVE"
+        },
+        {
+          "value": "WAIT",
+          "label": "WAIT"
+        },
+        {
+          "value": "DONE",
+          "label": "DONE"
+        }
+      ]
+    }
+  ],
+  "transactionGroups": [
+    {
+      "id": "tgrp.long.current",
+      "name": "Long Timeline",
+      "color": "#2563eb",
+      "order": 0
+    }
+  ],
+  "transactionTimeScale": {
+    "clockCyclesPerTransactionCycle": 16,
+    "majorInterval": 4,
+    "minorInterval": 1,
+    "showSecondaryClock": true
   }
 }

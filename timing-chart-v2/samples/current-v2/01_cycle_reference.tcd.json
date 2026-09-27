@@ -369,23 +369,28 @@
       "enable": [
         {
           "start": 0,
-          "value": 1
+          "value": 1,
+          "id": "s.rclk.enable.0"
         },
         {
           "start": 44,
-          "value": 0
+          "value": 0,
+          "id": "s.rclk.enable.1"
         },
         {
           "start": 52,
-          "value": 1
+          "value": 1,
+          "id": "s.rclk.enable.2"
         },
         {
           "start": 96,
-          "value": 0
+          "value": 0,
+          "id": "s.rclk.enable.3"
         },
         {
           "start": 104,
-          "value": 1
+          "value": 1,
+          "id": "s.rclk.enable.4"
         }
       ]
     },
@@ -407,11 +412,13 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.por.change.0"
         },
         {
           "start": 4,
-          "value": 1
+          "value": 1,
+          "id": "s.por.change.1"
         }
       ],
       "resetSemantics": {
@@ -439,19 +446,23 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.rst.change.0"
         },
         {
           "start": 8,
-          "value": 1
+          "value": 1,
+          "id": "s.rst.change.1"
         },
         {
           "start": 118,
-          "value": 0
+          "value": 0,
+          "id": "s.rst.change.2"
         },
         {
           "start": 122,
-          "value": 1
+          "value": 1,
+          "id": "s.rst.change.3"
         }
       ],
       "resetSemantics": {
@@ -479,11 +490,13 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.arst.change.0"
         },
         {
           "start": 10,
-          "value": 1
+          "value": 1,
+          "id": "s.arst.change.1"
         }
       ]
     },
@@ -505,19 +518,23 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.frst.change.0"
         },
         {
           "start": 12,
-          "value": 1
+          "value": 1,
+          "id": "s.frst.change.1"
         },
         {
           "start": 94,
-          "value": 0
+          "value": 0,
+          "id": "s.frst.change.2"
         },
         {
           "start": 98,
-          "value": 1
+          "value": 1,
+          "id": "s.frst.change.3"
         }
       ]
     },
@@ -539,39 +556,48 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.reqv.change.0"
         },
         {
           "start": 8,
-          "value": 1
+          "value": 1,
+          "id": "s.reqv.change.1"
         },
         {
           "start": 11,
-          "value": 0
+          "value": 0,
+          "id": "s.reqv.change.2"
         },
         {
           "start": 24,
-          "value": 1
+          "value": 1,
+          "id": "s.reqv.change.3"
         },
         {
           "start": 27,
-          "value": 0
+          "value": 0,
+          "id": "s.reqv.change.4"
         },
         {
           "start": 70,
-          "value": 1
+          "value": 1,
+          "id": "s.reqv.change.5"
         },
         {
           "start": 74,
-          "value": 0
+          "value": 0,
+          "id": "s.reqv.change.6"
         },
         {
           "start": 112,
-          "value": 1
+          "value": 1,
+          "id": "s.reqv.change.7"
         },
         {
           "start": 115,
-          "value": 0
+          "value": 0,
+          "id": "s.reqv.change.8"
         }
       ]
     },
@@ -593,27 +619,33 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.reqr.change.0"
         },
         {
           "start": 6,
-          "value": 1
+          "value": 1,
+          "id": "s.reqr.change.1"
         },
         {
           "start": 10,
-          "value": 0
+          "value": 0,
+          "id": "s.reqr.change.2"
         },
         {
           "start": 13,
-          "value": 1
+          "value": 1,
+          "id": "s.reqr.change.3"
         },
         {
           "start": 26,
-          "value": 0
+          "value": 0,
+          "id": "s.reqr.change.4"
         },
         {
           "start": 29,
-          "value": 1
+          "value": 1,
+          "id": "s.reqr.change.5"
         }
       ]
     },
@@ -635,23 +667,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.wr.change.0"
         },
         {
           "start": 8,
-          "value": 1
+          "value": 1,
+          "id": "s.wr.change.1"
         },
         {
           "start": 24,
-          "value": 0
+          "value": 0,
+          "id": "s.wr.change.2"
         },
         {
           "start": 70,
-          "value": 1
+          "value": 1,
+          "id": "s.wr.change.3"
         },
         {
           "start": 112,
-          "value": 0
+          "value": 0,
+          "id": "s.wr.change.4"
         }
       ]
     },
@@ -670,28 +707,40 @@
       },
       "display": {
         "name": "req_addr[31:0]",
-        "visible": true
+        "visible": true,
+        "align": "left",
+        "overflow": "ellipsis",
+        "style": {
+          "fontFamily": "monospace"
+        }
       },
       "values": [
         {
           "start": 0,
-          "value": "X"
+          "value": "X",
+          "id": "s.addr.change.0"
         },
         {
           "start": 8,
-          "value": "0x1000"
+          "value": "0x1000",
+          "id": "s.addr.change.1",
+          "displayLabel": "Sample 0x1000",
+          "comment": "Current-V2 01 value-change metadata example"
         },
         {
           "start": 24,
-          "value": "0x2040"
+          "value": "0x2040",
+          "id": "s.addr.change.2"
         },
         {
           "start": 70,
-          "value": "0x80000100"
+          "value": "0x80000100",
+          "id": "s.addr.change.3"
         },
         {
           "start": 112,
-          "value": "0x3000"
+          "value": "0x3000",
+          "id": "s.addr.change.4"
         }
       ],
       "width": 32,
@@ -717,19 +766,23 @@
       "values": [
         {
           "start": 0,
-          "value": "X"
+          "value": "X",
+          "id": "s.wdata.change.0"
         },
         {
           "start": 8,
-          "value": "0x0123456789ABCDEF"
+          "value": "0x0123456789ABCDEF",
+          "id": "s.wdata.change.1"
         },
         {
           "start": 70,
-          "value": "0xDEADBEEF00000001"
+          "value": "0xDEADBEEF00000001",
+          "id": "s.wdata.change.2"
         },
         {
           "start": 112,
-          "value": "Z"
+          "value": "Z",
+          "id": "s.wdata.change.3"
         }
       ],
       "width": 64,
@@ -755,23 +808,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.id.change.0"
         },
         {
           "start": 8,
-          "value": "0x11"
+          "value": "0x11",
+          "id": "s.id.change.1"
         },
         {
           "start": 24,
-          "value": "0x12"
+          "value": "0x12",
+          "id": "s.id.change.2"
         },
         {
           "start": 70,
-          "value": "0x21"
+          "value": "0x21",
+          "id": "s.id.change.3"
         },
         {
           "start": 112,
-          "value": "0x33"
+          "value": "0x33",
+          "id": "s.id.change.4"
         }
       ],
       "width": 8,
@@ -795,23 +853,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.awv.change.0"
         },
         {
           "start": 10,
-          "value": 1
+          "value": 1,
+          "id": "s.awv.change.1"
         },
         {
           "start": 13,
-          "value": 0
+          "value": 0,
+          "id": "s.awv.change.2"
         },
         {
           "start": 72,
-          "value": 1
+          "value": 1,
+          "id": "s.awv.change.3"
         },
         {
           "start": 75,
-          "value": 0
+          "value": 0,
+          "id": "s.awv.change.4"
         }
       ]
     },
@@ -833,23 +896,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.awr.change.0"
         },
         {
           "start": 11,
-          "value": 1
+          "value": 1,
+          "id": "s.awr.change.1"
         },
         {
           "start": 14,
-          "value": 0
+          "value": 0,
+          "id": "s.awr.change.2"
         },
         {
           "start": 73,
-          "value": 1
+          "value": 1,
+          "id": "s.awr.change.3"
         },
         {
           "start": 76,
-          "value": 0
+          "value": 0,
+          "id": "s.awr.change.4"
         }
       ]
     },
@@ -871,23 +939,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.rvalid.change.0"
         },
         {
           "start": 31,
-          "value": 1
+          "value": 1,
+          "id": "s.rvalid.change.1"
         },
         {
           "start": 39,
-          "value": 0
+          "value": 0,
+          "id": "s.rvalid.change.2"
         },
         {
           "start": 120,
-          "value": 1
+          "value": 1,
+          "id": "s.rvalid.change.3"
         },
         {
           "start": 124,
-          "value": 0
+          "value": 0,
+          "id": "s.rvalid.change.4"
         }
       ]
     },
@@ -911,31 +984,38 @@
       "values": [
         {
           "start": 0,
-          "value": "X"
+          "value": "X",
+          "id": "s.rdata.change.0"
         },
         {
           "start": 31,
-          "value": "0x1000"
+          "value": "0x1000",
+          "id": "s.rdata.change.1"
         },
         {
           "start": 33,
-          "value": "0x1001"
+          "value": "0x1001",
+          "id": "s.rdata.change.2"
         },
         {
           "start": 35,
-          "value": "0x1002"
+          "value": "0x1002",
+          "id": "s.rdata.change.3"
         },
         {
           "start": 37,
-          "value": "0x1003"
+          "value": "0x1003",
+          "id": "s.rdata.change.4"
         },
         {
           "start": 120,
-          "value": "0x3000"
+          "value": "0x3000",
+          "id": "s.rdata.change.5"
         },
         {
           "start": 122,
-          "value": "0x3001"
+          "value": "0x3001",
+          "id": "s.rdata.change.6"
         }
       ],
       "width": 64,
@@ -959,23 +1039,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.irqack.change.0"
         },
         {
           "start": 91,
-          "value": 1
+          "value": 1,
+          "id": "s.irqack.change.1"
         },
         {
           "start": 92,
-          "value": 0
+          "value": 0,
+          "id": "s.irqack.change.2"
         },
         {
           "start": 119,
-          "value": 1
+          "value": 1,
+          "id": "s.irqack.change.3"
         },
         {
           "start": 120,
-          "value": 0
+          "value": 0,
+          "id": "s.irqack.change.4"
         }
       ]
     },
@@ -997,35 +1082,43 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.lp.change.0"
         },
         {
           "start": 96,
-          "value": "D"
+          "value": "D",
+          "id": "s.lp.change.1"
         },
         {
           "start": 97,
-          "value": 1
+          "value": 1,
+          "id": "s.lp.change.2"
         },
         {
           "start": 100,
-          "value": "U"
+          "value": "U",
+          "id": "s.lp.change.3"
         },
         {
           "start": 101,
-          "value": 1
+          "value": 1,
+          "id": "s.lp.change.4"
         },
         {
           "start": 108,
-          "value": 0
+          "value": 0,
+          "id": "s.lp.change.5"
         },
         {
           "start": 118,
-          "value": "X"
+          "value": "X",
+          "id": "s.lp.change.6"
         },
         {
           "start": 120,
-          "value": 0
+          "value": 0,
+          "id": "s.lp.change.7"
         }
       ]
     },
@@ -1043,38 +1136,53 @@
       },
       "display": {
         "name": "front_state",
-        "visible": true
+        "visible": true,
+        "align": "center",
+        "overflow": "expand",
+        "style": {
+          "fontWeight": 600
+        }
       },
       "values": [
         {
           "start": 0,
-          "value": "RESET"
+          "value": "RESET",
+          "id": "s.front.change.0"
         },
         {
           "start": 8,
-          "value": "ACCEPT"
+          "value": "ACCEPT",
+          "id": "s.front.change.1"
         },
         {
           "start": 12,
-          "value": "DISPATCH"
+          "value": "DISPATCH",
+          "id": "s.front.change.2"
         },
         {
           "start": 23,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "s.front.change.3"
         },
         {
           "start": 70,
-          "value": "ACCEPT"
+          "value": "ACCEPT",
+          "id": "s.front.change.4"
         },
         {
           "start": 75,
-          "value": "DISPATCH"
+          "value": "DISPATCH",
+          "id": "s.front.change.5"
         },
         {
           "start": 87,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "s.front.change.6"
         }
-      ]
+      ],
+      "enumId": "enum.current.01",
+      "spacingBefore": 4,
+      "spacingAfter": 2
     },
     {
       "id": "s.issue",
@@ -1095,27 +1203,33 @@
       "values": [
         {
           "start": 0,
-          "value": "RESET"
+          "value": "RESET",
+          "id": "s.issue.change.0"
         },
         {
           "start": 10,
-          "value": "WAIT"
+          "value": "WAIT",
+          "id": "s.issue.change.1"
         },
         {
           "start": 12,
-          "value": "ISSUE"
+          "value": "ISSUE",
+          "id": "s.issue.change.2"
         },
         {
           "start": 15,
-          "value": "STALL"
+          "value": "STALL",
+          "id": "s.issue.change.3"
         },
         {
           "start": 18,
-          "value": "ISSUE"
+          "value": "ISSUE",
+          "id": "s.issue.change.4"
         },
         {
           "start": 22,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "s.issue.change.5"
         }
       ]
     },
@@ -1138,23 +1252,28 @@
       "values": [
         {
           "start": 0,
-          "value": "RESET"
+          "value": "RESET",
+          "id": "s.exec.change.0"
         },
         {
           "start": 14,
-          "value": "EXEC"
+          "value": "EXEC",
+          "id": "s.exec.change.1"
         },
         {
           "start": 19,
-          "value": "MEM_WAIT"
+          "value": "MEM_WAIT",
+          "id": "s.exec.change.2"
         },
         {
           "start": 23,
-          "value": "DONE"
+          "value": "DONE",
+          "id": "s.exec.change.3"
         },
         {
           "start": 25,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "s.exec.change.4"
         }
       ]
     },
@@ -1177,23 +1296,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.v0.change.0"
         },
         {
           "start": 8,
-          "value": 1
+          "value": 1,
+          "id": "s.v0.change.1"
         },
         {
           "start": 12,
-          "value": 0
+          "value": 0,
+          "id": "s.v0.change.2"
         },
         {
           "start": 70,
-          "value": 1
+          "value": 1,
+          "id": "s.v0.change.3"
         },
         {
           "start": 75,
-          "value": 0
+          "value": 0,
+          "id": "s.v0.change.4"
         }
       ]
     },
@@ -1216,23 +1340,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.v1.change.0"
         },
         {
           "start": 10,
-          "value": 1
+          "value": 1,
+          "id": "s.v1.change.1"
         },
         {
           "start": 15,
-          "value": 0
+          "value": 0,
+          "id": "s.v1.change.2"
         },
         {
           "start": 72,
-          "value": 1
+          "value": 1,
+          "id": "s.v1.change.3"
         },
         {
           "start": 79,
-          "value": 0
+          "value": 0,
+          "id": "s.v1.change.4"
         }
       ]
     },
@@ -1255,23 +1384,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.v2.change.0"
         },
         {
           "start": 13,
-          "value": 1
+          "value": 1,
+          "id": "s.v2.change.1"
         },
         {
           "start": 20,
-          "value": 0
+          "value": 0,
+          "id": "s.v2.change.2"
         },
         {
           "start": 75,
-          "value": 1
+          "value": 1,
+          "id": "s.v2.change.3"
         },
         {
           "start": 85,
-          "value": 0
+          "value": 0,
+          "id": "s.v2.change.4"
         }
       ]
     },
@@ -1294,23 +1428,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.v3.change.0"
         },
         {
           "start": 18,
-          "value": 1
+          "value": 1,
+          "id": "s.v3.change.1"
         },
         {
           "start": 24,
-          "value": 0
+          "value": 0,
+          "id": "s.v3.change.2"
         },
         {
           "start": 82,
-          "value": 1
+          "value": 1,
+          "id": "s.v3.change.3"
         },
         {
           "start": 89,
-          "value": 0
+          "value": 0,
+          "id": "s.v3.change.4"
         }
       ]
     },
@@ -1333,35 +1472,43 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.stall.change.0"
         },
         {
           "start": 15,
-          "value": 1
+          "value": 1,
+          "id": "s.stall.change.1"
         },
         {
           "start": 17,
-          "value": 0
+          "value": 0,
+          "id": "s.stall.change.2"
         },
         {
           "start": 34,
-          "value": "U"
+          "value": "U",
+          "id": "s.stall.change.3"
         },
         {
           "start": 35,
-          "value": 1
+          "value": 1,
+          "id": "s.stall.change.4"
         },
         {
           "start": 36,
-          "value": 0
+          "value": 0,
+          "id": "s.stall.change.5"
         },
         {
           "start": 78,
-          "value": "D"
+          "value": "D",
+          "id": "s.stall.change.6"
         },
         {
           "start": 81,
-          "value": 0
+          "value": 0,
+          "id": "s.stall.change.7"
         }
       ]
     },
@@ -1384,31 +1531,38 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.flush.change.0"
         },
         {
           "start": 41,
-          "value": 1
+          "value": 1,
+          "id": "s.flush.change.1"
         },
         {
           "start": 42,
-          "value": 0
+          "value": 0,
+          "id": "s.flush.change.2"
         },
         {
           "start": 93,
-          "value": 1
+          "value": 1,
+          "id": "s.flush.change.3"
         },
         {
           "start": 94,
-          "value": 0
+          "value": 0,
+          "id": "s.flush.change.4"
         },
         {
           "start": 126,
-          "value": 1
+          "value": 1,
+          "id": "s.flush.change.5"
         },
         {
           "start": 127,
-          "value": 0
+          "value": 0,
+          "id": "s.flush.change.6"
         }
       ]
     },
@@ -1431,31 +1585,38 @@
       "values": [
         {
           "start": 0,
-          "value": "none"
+          "value": "none",
+          "id": "s.hazard.change.0"
         },
         {
           "start": 15,
-          "value": "rise"
+          "value": "rise",
+          "id": "s.hazard.change.1"
         },
         {
           "start": 17,
-          "value": "none"
+          "value": "none",
+          "id": "s.hazard.change.2"
         },
         {
           "start": 34,
-          "value": "rise"
+          "value": "rise",
+          "id": "s.hazard.change.3"
         },
         {
           "start": 36,
-          "value": "none"
+          "value": "none",
+          "id": "s.hazard.change.4"
         },
         {
           "start": 78,
-          "value": "rise"
+          "value": "rise",
+          "id": "s.hazard.change.5"
         },
         {
           "start": 81,
-          "value": "none"
+          "value": "none",
+          "id": "s.hazard.change.6"
         }
       ]
     },
@@ -1478,23 +1639,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.fwe.change.0"
         },
         {
           "start": 42,
-          "value": 1
+          "value": 1,
+          "id": "s.fwe.change.1"
         },
         {
           "start": 49,
-          "value": 0
+          "value": 0,
+          "id": "s.fwe.change.2"
         },
         {
           "start": 70,
-          "value": 1
+          "value": 1,
+          "id": "s.fwe.change.3"
         },
         {
           "start": 76,
-          "value": 0
+          "value": 0,
+          "id": "s.fwe.change.4"
         }
       ]
     },
@@ -1519,23 +1685,28 @@
       "values": [
         {
           "start": 0,
-          "value": "X"
+          "value": "X",
+          "id": "s.fwd.change.0"
         },
         {
           "start": 42,
-          "value": "0xA0"
+          "value": "0xA0",
+          "id": "s.fwd.change.1"
         },
         {
           "start": 44,
-          "value": "0xA1"
+          "value": "0xA1",
+          "id": "s.fwd.change.2"
         },
         {
           "start": 46,
-          "value": "0xA2"
+          "value": "0xA2",
+          "id": "s.fwd.change.3"
         },
         {
           "start": 48,
-          "value": "0xA3"
+          "value": "0xA3",
+          "id": "s.fwd.change.4"
         }
       ],
       "width": 32,
@@ -1560,23 +1731,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.full.change.0"
         },
         {
           "start": 48,
-          "value": 1
+          "value": 1,
+          "id": "s.full.change.1"
         },
         {
           "start": 52,
-          "value": 0
+          "value": 0,
+          "id": "s.full.change.2"
         },
         {
           "start": 91,
-          "value": 1
+          "value": 1,
+          "id": "s.full.change.3"
         },
         {
           "start": 94,
-          "value": 0
+          "value": 0,
+          "id": "s.full.change.4"
         }
       ]
     },
@@ -1601,23 +1777,28 @@
       "values": [
         {
           "start": 0,
-          "value": "0x00"
+          "value": "0x00",
+          "id": "s.wptr.change.0"
         },
         {
           "start": 42,
-          "value": "0x01"
+          "value": "0x01",
+          "id": "s.wptr.change.1"
         },
         {
           "start": 44,
-          "value": "0x03"
+          "value": "0x03",
+          "id": "s.wptr.change.2"
         },
         {
           "start": 46,
-          "value": "0x02"
+          "value": "0x02",
+          "id": "s.wptr.change.3"
         },
         {
           "start": 48,
-          "value": "0x06"
+          "value": "0x06",
+          "id": "s.wptr.change.4"
         }
       ],
       "width": 5,
@@ -1642,23 +1823,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.fre.change.0"
         },
         {
           "start": 58,
-          "value": 1
+          "value": 1,
+          "id": "s.fre.change.1"
         },
         {
           "start": 68,
-          "value": 0
+          "value": 0,
+          "id": "s.fre.change.2"
         },
         {
           "start": 80,
-          "value": 1
+          "value": 1,
+          "id": "s.fre.change.3"
         },
         {
           "start": 86,
-          "value": 0
+          "value": 0,
+          "id": "s.fre.change.4"
         }
       ]
     },
@@ -1683,23 +1869,28 @@
       "values": [
         {
           "start": 0,
-          "value": "X"
+          "value": "X",
+          "id": "s.frd.change.0"
         },
         {
           "start": 58,
-          "value": "0xA0"
+          "value": "0xA0",
+          "id": "s.frd.change.1"
         },
         {
           "start": 61,
-          "value": "0xA1"
+          "value": "0xA1",
+          "id": "s.frd.change.2"
         },
         {
           "start": 64,
-          "value": "0xA2"
+          "value": "0xA2",
+          "id": "s.frd.change.3"
         },
         {
           "start": 67,
-          "value": "0xA3"
+          "value": "0xA3",
+          "id": "s.frd.change.4"
         }
       ],
       "width": 32,
@@ -1724,23 +1915,28 @@
       "values": [
         {
           "start": 0,
-          "value": 1
+          "value": 1,
+          "id": "s.empty.change.0"
         },
         {
           "start": 56,
-          "value": 0
+          "value": 0,
+          "id": "s.empty.change.1"
         },
         {
           "start": 69,
-          "value": 1
+          "value": 1,
+          "id": "s.empty.change.2"
         },
         {
           "start": 78,
-          "value": 0
+          "value": 0,
+          "id": "s.empty.change.3"
         },
         {
           "start": 87,
-          "value": 1
+          "value": 1,
+          "id": "s.empty.change.4"
         }
       ]
     },
@@ -1765,23 +1961,28 @@
       "values": [
         {
           "start": 0,
-          "value": "0x00"
+          "value": "0x00",
+          "id": "s.rptr.change.0"
         },
         {
           "start": 58,
-          "value": "0x01"
+          "value": "0x01",
+          "id": "s.rptr.change.1"
         },
         {
           "start": 61,
-          "value": "0x03"
+          "value": "0x03",
+          "id": "s.rptr.change.2"
         },
         {
           "start": 64,
-          "value": "0x02"
+          "value": "0x02",
+          "id": "s.rptr.change.3"
         },
         {
           "start": 67,
-          "value": "0x06"
+          "value": "0x06",
+          "id": "s.rptr.change.4"
         }
       ],
       "width": 5,
@@ -1809,19 +2010,23 @@
       "values": [
         {
           "start": 0,
-          "value": "0x00"
+          "value": "0x00",
+          "id": "s.swptr.change.0"
         },
         {
           "start": 47,
-          "value": "0x03"
+          "value": "0x03",
+          "id": "s.swptr.change.1"
         },
         {
           "start": 53,
-          "value": "0x06"
+          "value": "0x06",
+          "id": "s.swptr.change.2"
         },
         {
           "start": 77,
-          "value": "0x04"
+          "value": "0x04",
+          "id": "s.swptr.change.3"
         }
       ],
       "width": 5,
@@ -1849,19 +2054,23 @@
       "values": [
         {
           "start": 0,
-          "value": "0x00"
+          "value": "0x00",
+          "id": "s.srptr.change.0"
         },
         {
           "start": 64,
-          "value": "0x03"
+          "value": "0x03",
+          "id": "s.srptr.change.1"
         },
         {
           "start": 70,
-          "value": "0x06"
+          "value": "0x06",
+          "id": "s.srptr.change.2"
         },
         {
           "start": 88,
-          "value": "0x05"
+          "value": "0x05",
+          "id": "s.srptr.change.3"
         }
       ],
       "width": 5,
@@ -1885,39 +2094,48 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.rspv.change.0"
         },
         {
           "start": 20,
-          "value": 1
+          "value": 1,
+          "id": "s.rspv.change.1"
         },
         {
           "start": 23,
-          "value": 0
+          "value": 0,
+          "id": "s.rspv.change.2"
         },
         {
           "start": 36,
-          "value": 1
+          "value": 1,
+          "id": "s.rspv.change.3"
         },
         {
           "start": 40,
-          "value": 0
+          "value": 0,
+          "id": "s.rspv.change.4"
         },
         {
           "start": 84,
-          "value": 1
+          "value": 1,
+          "id": "s.rspv.change.5"
         },
         {
           "start": 88,
-          "value": 0
+          "value": 0,
+          "id": "s.rspv.change.6"
         },
         {
           "start": 122,
-          "value": 1
+          "value": 1,
+          "id": "s.rspv.change.7"
         },
         {
           "start": 126,
-          "value": 0
+          "value": 0,
+          "id": "s.rspv.change.8"
         }
       ]
     },
@@ -1939,23 +2157,28 @@
       "values": [
         {
           "start": 0,
-          "value": 1
+          "value": 1,
+          "id": "s.rspr.change.0"
         },
         {
           "start": 21,
-          "value": 0
+          "value": 0,
+          "id": "s.rspr.change.1"
         },
         {
           "start": 22,
-          "value": 1
+          "value": 1,
+          "id": "s.rspr.change.2"
         },
         {
           "start": 38,
-          "value": 0
+          "value": 0,
+          "id": "s.rspr.change.3"
         },
         {
           "start": 39,
-          "value": 1
+          "value": 1,
+          "id": "s.rspr.change.4"
         }
       ]
     },
@@ -1979,19 +2202,23 @@
       "values": [
         {
           "start": 0,
-          "value": "X"
+          "value": "X",
+          "id": "s.rspd.change.0"
         },
         {
           "start": 36,
-          "value": "0x1000"
+          "value": "0x1000",
+          "id": "s.rspd.change.1"
         },
         {
           "start": 38,
-          "value": "0x1003"
+          "value": "0x1003",
+          "id": "s.rspd.change.2"
         },
         {
           "start": 122,
-          "value": "0x3000"
+          "value": "0x3000",
+          "id": "s.rspd.change.3"
         }
       ],
       "width": 64,
@@ -2015,31 +2242,38 @@
       "values": [
         {
           "start": 0,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "s.rsps.change.0"
         },
         {
           "start": 20,
-          "value": "WRITE_OK"
+          "value": "WRITE_OK",
+          "id": "s.rsps.change.1"
         },
         {
           "start": 23,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "s.rsps.change.2"
         },
         {
           "start": 36,
-          "value": "READ_OK"
+          "value": "READ_OK",
+          "id": "s.rsps.change.3"
         },
         {
           "start": 40,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "s.rsps.change.4"
         },
         {
           "start": 84,
-          "value": "RETRY"
+          "value": "RETRY",
+          "id": "s.rsps.change.5"
         },
         {
           "start": 88,
-          "value": "IDLE"
+          "value": "IDLE",
+          "id": "s.rsps.change.6"
         }
       ]
     },
@@ -2061,23 +2295,28 @@
       "values": [
         {
           "start": 0,
-          "value": 0
+          "value": 0,
+          "id": "s.irq.change.0"
         },
         {
           "start": 88,
-          "value": 1
+          "value": 1,
+          "id": "s.irq.change.1"
         },
         {
           "start": 92,
-          "value": 0
+          "value": 0,
+          "id": "s.irq.change.2"
         },
         {
           "start": 116,
-          "value": 1
+          "value": 1,
+          "id": "s.irq.change.3"
         },
         {
           "start": 120,
-          "value": 0
+          "value": 0,
+          "id": "s.irq.change.4"
         }
       ]
     },
@@ -2099,55 +2338,68 @@
       "values": [
         {
           "start": 0,
-          "value": "none"
+          "value": "none",
+          "id": "s.pev.change.0"
         },
         {
           "start": 12,
-          "value": "rise"
+          "value": "rise",
+          "id": "s.pev.change.1"
         },
         {
           "start": 14,
-          "value": "none"
+          "value": "none",
+          "id": "s.pev.change.2"
         },
         {
           "start": 20,
-          "value": "rise"
+          "value": "rise",
+          "id": "s.pev.change.3"
         },
         {
           "start": 22,
-          "value": "none"
+          "value": "none",
+          "id": "s.pev.change.4"
         },
         {
           "start": 48,
-          "value": "rise"
+          "value": "rise",
+          "id": "s.pev.change.5"
         },
         {
           "start": 50,
-          "value": "none"
+          "value": "none",
+          "id": "s.pev.change.6"
         },
         {
           "start": 58,
-          "value": "fall"
+          "value": "fall",
+          "id": "s.pev.change.7"
         },
         {
           "start": 60,
-          "value": "none"
+          "value": "none",
+          "id": "s.pev.change.8"
         },
         {
           "start": 100,
-          "value": "rise"
+          "value": "rise",
+          "id": "s.pev.change.9"
         },
         {
           "start": 102,
-          "value": "none"
+          "value": "none",
+          "id": "s.pev.change.10"
         },
         {
           "start": 112,
-          "value": "rise"
+          "value": "rise",
+          "id": "s.pev.change.11"
         },
         {
           "start": 114,
-          "value": "none"
+          "value": "none",
+          "id": "s.pev.change.12"
         }
       ]
     },
@@ -2249,14 +2501,16 @@
         "foldStyle": "axis-break",
         "foldLabel": "16 cycles",
         "resumeLabelAnchorId": "la.gap"
-      }
+      },
+      "parentId": "tg.current.mid"
     },
     {
       "id": "tg.cdc",
       "name": "CDC",
       "start": 56,
       "end": 70,
-      "category": "cdc"
+      "category": "cdc",
+      "parentId": "tg.current.mid"
     },
     {
       "id": "tg.lp",
@@ -2270,6 +2524,14 @@
         "foldLabel": "SLEEP",
         "resumeLabelAnchorId": "la.lp"
       }
+    },
+    {
+      "id": "tg.current.mid",
+      "name": "Request/CDC window",
+      "category": "hierarchy",
+      "start": 40,
+      "end": 70,
+      "comment": "Parent Time Group demonstrating current nested hierarchy."
     }
   ],
   "annotationGroups": [
@@ -2306,7 +2568,22 @@
         "cycle": 8,
         "point": "row-center",
         "signalId": "s.rst"
-      }
+      },
+      "color": "#1f2937",
+      "comment": "Current annotation text/layout semantics.",
+      "labelOffset": {
+        "x": 8,
+        "y": -10
+      },
+      "labelPlacement": "above",
+      "style": {
+        "labelWrap": true,
+        "labelMaxWidth": 220,
+        "lineHeight": 1.4
+      },
+      "rotation": 0,
+      "align": "left",
+      "locked": false
     },
     {
       "id": "a.call",
@@ -2317,10 +2594,16 @@
         "cycle": 8,
         "point": "transition-center",
         "signalId": "s.reqv",
-        "threshold": 0.5
+        "threshold": 0.5,
+        "transition": {
+          "kind": "threshold",
+          "value": 0.5
+        }
       },
       "lineType": "orthogonal",
-      "arrowhead": "end"
+      "arrowhead": "end",
+      "color": "#2563eb",
+      "labelPlacement": "end"
     },
     {
       "id": "a.vline",
@@ -2375,7 +2658,10 @@
         "cycle": 37,
         "point": "cycle-end"
       },
-      "opacity": 0.2
+      "opacity": 0.2,
+      "color": "#f59e0b",
+      "positionMode": "cycle-snap",
+      "labelPlacement": "center"
     },
     {
       "id": "a.marker",
@@ -2386,7 +2672,14 @@
         "cycle": 48,
         "point": "rising-edge",
         "signalId": "s.wclk"
-      }
+      },
+      "color": "#dc2626",
+      "verticalSpan": {
+        "mode": "rows",
+        "startRowId": "s.reqv",
+        "endRowId": "s.rspv"
+      },
+      "labelPlacement": "above"
     },
     {
       "id": "a.meas",
@@ -2405,7 +2698,25 @@
         "signalId": "s.rspv",
         "threshold": 0.5
       },
-      "arrowhead": "bidirectional"
+      "arrowhead": "bidirectional",
+      "color": "#7c3aed",
+      "measurement": {
+        "profile": "50%",
+        "anchorKind": "threshold"
+      },
+      "measurementLayout": {
+        "startMarker": "bar",
+        "endMarker": "arrow",
+        "arrowLayout": "inward",
+        "extensionLines": "both",
+        "lane": 1
+      },
+      "labelPlacement": "above",
+      "style": {
+        "labelWrap": false,
+        "labelMaxWidth": 180,
+        "lineHeight": 1.2
+      }
     },
     {
       "id": "a.arrow",
@@ -2459,7 +2770,9 @@
         "cycle": 112,
         "point": "cycle-end"
       },
-      "opacity": 0.12
+      "opacity": 0.12,
+      "color": "#16a34a",
+      "comment": "Timing Region opacity is persisted semantic presentation."
     },
     {
       "id": "a.ghost",
@@ -2478,7 +2791,9 @@
       },
       "sourceSignalId": "s.reqv",
       "traceOffsetCycles": 4,
-      "opacity": 0.35
+      "opacity": 0.35,
+      "color": "#64748b",
+      "comment": "Ghost Trace keeps a stable sourceSignalId and source-cycle offset."
     },
     {
       "id": "a.rectangle",
@@ -2535,6 +2850,15 @@
         "cycle": 20,
         "point": "row-center",
         "signalId": "s.rst"
+      },
+      "color": "#0f766e",
+      "locked": true,
+      "align": "center",
+      "labelPlacement": "below",
+      "style": {
+        "labelWrap": true,
+        "labelMaxWidth": 200,
+        "lineHeight": 1.4
       }
     }
   ],
@@ -2568,7 +2892,12 @@
         "visible": true,
         "order": 2
       }
-    ]
+    ],
+    "style": {
+      "background": "#ffffff",
+      "border": "1px solid #c8c8c8",
+      "fontSize": 11
+    }
   },
   "layout": {
     "roleColumnWidth": 56,
@@ -2614,7 +2943,22 @@
         "s.addr",
         "s.awv",
         "s.rspv"
-      ]
+      ],
+      "groupId": "tgrp.current.host",
+      "color": "#3b82f6",
+      "description": "Current-V2 01 transaction example",
+      "visible": true,
+      "category": "lane:host",
+      "style": {
+        "emphasis": "primary"
+      },
+      "metadata": {
+        "samplePack": "current-v2",
+        "sequence": 0
+      },
+      "links": {
+        "correlationId": "01-1"
+      }
     },
     {
       "id": "t.read",
@@ -2646,7 +2990,22 @@
         "s.rvalid",
         "s.rdata",
         "s.rspv"
-      ]
+      ],
+      "groupId": "tgrp.current.host",
+      "color": "#8b5cf6",
+      "description": "Current-V2 01 transaction example",
+      "visible": true,
+      "category": "lane:host",
+      "style": {
+        "emphasis": "normal"
+      },
+      "metadata": {
+        "samplePack": "current-v2",
+        "sequence": 1
+      },
+      "links": {
+        "correlationId": "01-2"
+      }
     },
     {
       "id": "t.push",
@@ -2662,7 +3021,34 @@
         "s.fwd",
         "s.full",
         "s.wptr"
-      ]
+      ],
+      "groupId": "tgrp.current.cdc",
+      "phases": [
+        {
+          "name": "Request",
+          "start": 42,
+          "end": 46
+        },
+        {
+          "name": "Complete",
+          "start": 46,
+          "end": 50
+        }
+      ],
+      "color": "#3b82f6",
+      "description": "Current-V2 01 transaction example",
+      "visible": true,
+      "category": "lane:cdc",
+      "style": {
+        "emphasis": "normal"
+      },
+      "metadata": {
+        "samplePack": "current-v2",
+        "sequence": 2
+      },
+      "links": {
+        "correlationId": "01-3"
+      }
     },
     {
       "id": "t.pop",
@@ -2678,7 +3064,34 @@
         "s.frd",
         "s.empty",
         "s.rptr"
-      ]
+      ],
+      "groupId": "tgrp.current.cdc",
+      "phases": [
+        {
+          "name": "Request",
+          "start": 58,
+          "end": 63
+        },
+        {
+          "name": "Complete",
+          "start": 63,
+          "end": 69
+        }
+      ],
+      "color": "#8b5cf6",
+      "description": "Current-V2 01 transaction example",
+      "visible": true,
+      "category": "lane:cdc",
+      "style": {
+        "emphasis": "normal"
+      },
+      "metadata": {
+        "samplePack": "current-v2",
+        "sequence": 3
+      },
+      "links": {
+        "correlationId": "01-4"
+      }
     },
     {
       "id": "t.burst",
@@ -2716,7 +3129,22 @@
         "s.v2",
         "s.v3",
         "s.stall"
-      ]
+      ],
+      "groupId": "tgrp.current.core",
+      "color": "#3b82f6",
+      "description": "Current-V2 01 transaction example",
+      "visible": true,
+      "category": "lane:core",
+      "style": {
+        "emphasis": "normal"
+      },
+      "metadata": {
+        "samplePack": "current-v2",
+        "sequence": 4
+      },
+      "links": {
+        "correlationId": "01-5"
+      }
     },
     {
       "id": "t.lp",
@@ -2746,7 +3174,22 @@
       "linkedSignals": [
         "s.lp",
         "s.rclk"
-      ]
+      ],
+      "groupId": "tgrp.current.system",
+      "color": "#8b5cf6",
+      "description": "Current-V2 01 transaction example",
+      "visible": true,
+      "category": "lane:sys",
+      "style": {
+        "emphasis": "normal"
+      },
+      "metadata": {
+        "samplePack": "current-v2",
+        "sequence": 5
+      },
+      "links": {
+        "correlationId": "01-6"
+      }
     }
   ],
   "constraints": [
@@ -2796,5 +3239,61 @@
       "visual",
       "export"
     ]
+  },
+  "enumDefinitions": [
+    {
+      "id": "enum.current.01",
+      "name": "front_state States",
+      "entries": [
+        {
+          "value": "RESET",
+          "label": "RESET"
+        },
+        {
+          "value": "ACCEPT",
+          "label": "ACCEPT"
+        },
+        {
+          "value": "DISPATCH",
+          "label": "DISPATCH"
+        },
+        {
+          "value": "IDLE",
+          "label": "IDLE"
+        }
+      ]
+    }
+  ],
+  "transactionGroups": [
+    {
+      "id": "tgrp.current.host",
+      "name": "Host",
+      "color": "#2563eb",
+      "order": 0
+    },
+    {
+      "id": "tgrp.current.cdc",
+      "name": "CDC",
+      "color": "#059669",
+      "order": 1
+    },
+    {
+      "id": "tgrp.current.core",
+      "name": "Core",
+      "color": "#7c3aed",
+      "order": 2
+    },
+    {
+      "id": "tgrp.current.system",
+      "name": "System",
+      "color": "#d97706",
+      "order": 3
+    }
+  ],
+  "transactionTimeScale": {
+    "clockCyclesPerTransactionCycle": 4,
+    "majorInterval": 4,
+    "minorInterval": 1,
+    "showSecondaryClock": true
   }
 }
