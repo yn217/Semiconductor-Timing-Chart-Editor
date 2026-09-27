@@ -86,11 +86,13 @@ describe("waveform provider primary geometry readiness", () => {
     const nonReferenceSignal = document.signals.find((signal) => signal.id !== referenceSignalId)!;
     const lifecycle: string[] = [];
     const svgBySignal = new Map<string, SVGSVGElement>();
+    const sourceCyclesBySignal = new Map<string, readonly number[] | undefined>();
     const adapter: WaveDromAdapter = {
       toWaveJson: (source) => toWaveJson(source),
       renderWave: vi.fn(async () => { throw new Error("Detached prepare/install should be used."); }),
       prepareWave: vi.fn(async (signalId, waveJson) => {
         lifecycle.push(`prepare:${signalId}`);
+        sourceCyclesBySignal.set(signalId, waveJson.geometrySourceCycles);
         const svg = {} as SVGSVGElement;
         svgBySignal.set(signalId, svg);
         return { signalId, ownerKey: signalId, svg, renderIndex: 0, waveJson };
@@ -119,8 +121,8 @@ describe("waveform provider primary geometry readiness", () => {
     const provider = createWaveformSurfaceProvider(context);
 
     await provider.mountWaveBatch!([
-      { signalId: nonReferenceSignal.id, owner: owner(), documentEpoch: 1 },
-      { signalId: referenceSignalId, owner: owner(), documentEpoch: 1 },
+      { signalId: nonReferenceSignal.id, owner: owner(), documentEpoch: 1, sourceWindow: { start: 1, end: 9 } },
+      { signalId: referenceSignalId, owner: owner(), documentEpoch: 1, sourceWindow: { start: 1, end: 9 } },
     ]);
 
     expect(lifecycle).toEqual([
@@ -132,6 +134,9 @@ describe("waveform provider primary geometry readiness", () => {
     expect(adapter.renderWave).not.toHaveBeenCalled();
     expect(adapter.installWave).toHaveBeenCalledTimes(2);
     expect(svgBySignal.size).toBe(2);
+    const referenceSourceCycles = sourceCyclesBySignal.get(referenceSignalId);
+    expect(referenceSourceCycles).toBeDefined();
+    expect(sourceCyclesBySignal.get(nonReferenceSignal.id)).toBe(referenceSourceCycles);
   });
 
   it("reuses the Signal index across unrelated document revisions with the same Signal collection", async () => {

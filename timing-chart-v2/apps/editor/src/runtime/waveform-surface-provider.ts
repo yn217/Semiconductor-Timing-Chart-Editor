@@ -132,6 +132,18 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       // prefer the first canonical clock rather than deferring every signal
       // and leaving Transaction bars without boundary X positions.
       const mapping = context.mappingCache.get(document.timeline, document.timeGroups);
+      const geometrySourceCyclesByWindow = new Map<string, readonly number[]>();
+      const geometrySourceCyclesForWindow = (rendererStart: number, rendererEnd: number, sourceStart: number, sourceEnd: number): readonly number[] => {
+        const key = `${rendererStart}:${rendererEnd}:${sourceStart}:${sourceEnd}`;
+        const cached = geometrySourceCyclesByWindow.get(key);
+        if (cached) return cached;
+        const sourceCycles = Object.freeze(Array.from({ length: rendererEnd - rendererStart + 1 }, (_, index) => {
+          const displayCycle = rendererStart + index;
+          return displayCycle === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[displayCycle] ?? sourceEnd);
+        }));
+        geometrySourceCyclesByWindow.set(key, sourceCycles);
+        return sourceCycles;
+      };
       let referenceGeometryReady = false;
       let waveSliceStartedAt = globalThis.performance.now();
       const referenceClockId = document.timeline.referenceClock ?? signalIndex.firstClockSignalId;
@@ -205,10 +217,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             });
           const mappedWaveJson = sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
             ? waveJson
-            : { ...waveJson, geometrySourceCycles: Array.from({ length: rendererEnd - rendererStart + 1 }, (_, index) => {
-              const displayCycle = rendererStart + index;
-              return displayCycle === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[displayCycle] ?? sourceWindow.end);
-            }) };
+            : { ...waveJson, geometrySourceCycles: geometrySourceCyclesForWindow(rendererStart, rendererEnd, sourceWindow.start, sourceWindow.end) };
           return { request, waveJson: mappedWaveJson, semanticValues, error: undefined, deferred: false, rendererStart, rendererEnd };
         } catch (error: unknown) {
           // Projection/conversion failures belong to one Signal only. Keep
