@@ -48,6 +48,10 @@ export interface RenderedWave {
   readonly svg: SVGElement;
   readonly renderIndex: number;
   readonly waveJson: WaveJsonSignal;
+  /** Whether cached serialized WaveDrom markup was reused (SVG parse/install is still required). */
+  readonly markupCacheHit?: boolean;
+  /** Existing per-render stage measurements, shared with adapter diagnostics. */
+  readonly renderStages?: Readonly<Record<string, number>>;
 }
 
 export interface GeometryExtractionMetrics {

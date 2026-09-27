@@ -20,10 +20,28 @@ describe("WaveRenderScheduler", () => {
     expect(runOrder).toEqual(["reference", "failure", "low"]);
     expect(results).toEqual([
       { key: "reference", status: "completed", value: "REFERENCE" },
-      { key: "stale", status: "stale" },
+      { key: "stale", status: "stale-before-run" },
       { key: "failure", status: "error", error: expect.any(Error) },
       { key: "low", status: "completed", value: "LOW" },
     ]);
+  });
+
+  it("retains a completed value when the job becomes stale after its work ran", async () => {
+    const scheduler = new WaveRenderScheduler();
+    let current = true;
+    const results = await scheduler.runBatch([{
+      key: "owner",
+      priority: 0,
+      isCurrent: () => current,
+      run: () => { current = false; return { markupBytes: 123 }; },
+    }], {
+      budgetMs: 100,
+      now: () => 0,
+      shouldYield: () => false,
+      yieldToNextTask: vi.fn(async () => undefined),
+    });
+
+    expect(results).toEqual([{ key: "owner", status: "stale-after-run", value: { markupBytes: 123 } }]);
   });
 
   it("yields between over-budget jobs but never after the final job", async () => {

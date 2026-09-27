@@ -9,7 +9,8 @@ export interface WaveRenderJob<Key, Value> {
 
 export type WaveRenderJobResult<Key, Value> =
   | Readonly<{ key: Key; status: "completed"; value: Value }>
-  | Readonly<{ key: Key; status: "stale" }>
+  | Readonly<{ key: Key; status: "stale-before-run" }>
+  | Readonly<{ key: Key; status: "stale-after-run"; value?: Value }>
   | Readonly<{ key: Key; status: "error"; error: unknown }>;
 
 export interface WaveRenderSchedulerOptions {
@@ -32,13 +33,13 @@ export class WaveRenderScheduler {
     for (let index = 0; index < ordered.length; index += 1) {
       const { job } = ordered[index]!;
       if (!job.isCurrent()) {
-        results.push({ key: job.key, status: "stale" });
+        results.push({ key: job.key, status: "stale-before-run" });
       } else {
         try {
           const value = await job.run();
-          results.push(job.isCurrent() ? { key: job.key, status: "completed", value } : { key: job.key, status: "stale" });
+          results.push(job.isCurrent() ? { key: job.key, status: "completed", value } : { key: job.key, status: "stale-after-run", value });
         } catch (error: unknown) {
-          results.push(job.isCurrent() ? { key: job.key, status: "error", error } : { key: job.key, status: "stale" });
+          results.push(job.isCurrent() ? { key: job.key, status: "error", error } : { key: job.key, status: "stale-after-run" });
         }
       }
 

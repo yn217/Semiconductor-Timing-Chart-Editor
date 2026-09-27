@@ -11,6 +11,7 @@ import type { GeometryRegistry } from "./geometry-registry.js";
 import { displayWindowForSource } from "./display-boundary.js";
 import { waveOwnerPlacement } from "./wave-owner-placement.js";
 import { WaveRenderScheduler } from "./wave-render-scheduler.js";
+import type { OpenWaveBatchMetrics } from "./open-wave-metrics.js";
 
 function yieldToBrowserTask(): Promise<void> {
   const browserScheduler = (globalThis as typeof globalThis & { scheduler?: { yield?: () => Promise<void> } }).scheduler;
@@ -36,13 +37,7 @@ export type WaveformProviderContext = Readonly<{
   adapter: WaveDromAdapter;
   geometryRegistry: GeometryRegistry;
   markOpenPhase: (phase: string, phaseTimestamp?: number) => void;
-  recordOpenWaveBatch?: (metrics: Readonly<{
-    batchWallMs: number;
-    renderAwaitMs: number;
-    renderCount: number;
-    cooperativeYieldCount: number;
-    cooperativeYieldWaitMs: number;
-  }>) => void;
+  recordOpenWaveBatch?: (metrics: OpenWaveBatchMetrics) => void;
   onReferenceGeometryReady?: () => void | Promise<void>;
   /** True only while initial Open/New artifacts are being materialized.
    * Viewport re-windowing after readiness stays a coherent batch. */
@@ -94,11 +89,39 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const primaryOpenBatch = context.isPrimaryPresentationOpening?.() === true;
       let renderAwaitMs = 0;
       let renderCount = 0;
+      let waveJsonPreparationMs = 0;
       let cooperativeYieldCount = 0;
       let cooperativeYieldWaitMs = 0;
+      let deferredCount = 0;
+      let requiredNowCount = 0;
+      let skippedStaleBeforeRunCount = 0;
+      let staleAfterRunCount = 0;
+      let reusedMarkupCount = 0;
+      let markupCacheMissCount = 0;
+      const stageTotals = primaryOpenBatch ? Object.create(null) as Record<string, number> : undefined;
+      let duplicateOwnerRequestCount = 0;
+      if (primaryOpenBatch) {
+        const seenOwners = new Set<HTMLElement>();
+        for (const request of requests) {
+          if (seenOwners.has(request.owner)) duplicateOwnerRequestCount += 1;
+          seenOwners.add(request.owner);
+        }
+      }
       const requestEpoch = requests[0]?.documentEpoch;
       const isCurrent = (request: { readonly documentEpoch?: number; readonly isFresh?: () => boolean }): boolean => (request.documentEpoch === undefined || context.getDocumentEpoch() === request.documentEpoch) && (request.isFresh?.() ?? true);
-      if (requestEpoch !== undefined && (requestEpoch !== context.getDocumentEpoch() || requests.some((request) => request.documentEpoch !== requestEpoch))) return requests.map(({ signalId }) => ({ signalId, stale: true }));
+      if (requestEpoch !== undefined && (requestEpoch !== context.getDocumentEpoch() || requests.some((request) => request.documentEpoch !== requestEpoch))) {
+        if (primaryOpenBatch) context.recordOpenWaveBatch?.({
+          batchWallMs: Math.max(0, globalThis.performance.now() - batchStartedAt), waveJsonPreparationMs: 0,
+          renderAwaitMs: 0, renderCount: 0, cooperativeYieldCount: 0, cooperativeYieldWaitMs: 0,
+          requestedCount: requests.length, requiredNowCount: 0, deferredCount: 0,
+          skippedStaleBeforeRunCount: requests.length, staleAfterRunCount: 0, duplicateOwnerRequestCount,
+          reusedMarkupCount: 0, markupCacheMissCount: 0, waveJsonBytes: 0, semanticValuesBytes: 0,
+          svgMarkupBytes: 0, cacheKeySerializeMs: 0, waveDromRenderAnyMs: 0, onmlStringifyMs: 0,
+          valueLabelLayoutMs: 0, markupSafetyMs: 0, templateParseMs: 0, svgSafetyDomWalkMs: 0,
+          domInstallMs: 0, totalSignalWallMs: 0,
+        });
+        return requests.map(({ signalId }) => ({ signalId, stale: true }));
+      }
       const currentSnapshot = context.sessionController.snapshot();
       const document = currentSnapshot.document;
       const signalIndex = signalIndexFor(document.signals);
@@ -187,9 +210,16 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           return { request, waveJson: undefined, semanticValues: undefined, error: error instanceof Error ? error : new Error(String(error)), deferred: false, rendererStart: undefined, rendererEnd: undefined };
         }
       };
+      const prepareAndMeasure = (request: (typeof requests)[number]): PreparedItem => {
+        if (!primaryOpenBatch) return prepare(request);
+        const startedAt = globalThis.performance.now();
+        const item = prepare(request);
+        waveJsonPreparationMs += Math.max(0, globalThis.performance.now() - startedAt);
+        return item;
+      };
       const prepared: PreparedItem[] = [];
       const referenceRequest = requests.find((request) => request.signalId === referenceClockId);
-      if (referenceRequest) prepared.push(prepare(referenceRequest));
+      if (referenceRequest) prepared.push(prepareAndMeasure(referenceRequest));
       // Primary ruler/grid geometry is analytic and does not depend on the
       // SVG artifact. Publish the reference map before awaiting any WaveDrom
       // render in this batch, so a slow non-reference owner cannot hold the
@@ -232,7 +262,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           prepared.push({ request, waveJson: undefined, semanticValues: undefined, error: undefined, deferred: false, rendererStart: undefined, rendererEnd: undefined });
           continue;
         }
-        prepared.push(prepare(request));
+        prepared.push(prepareAndMeasure(request));
       }
       const orderedPrepared = referenceItem === undefined
         ? prepared
@@ -276,7 +306,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       }
       const canvasPrototype = isCanvasWaveRendererSelected(document);
       const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean; readonly canvasPainted?: boolean; readonly rendererStart?: number | undefined }> = [];
-      for (const item of orderedPrepared) if (item.deferred) renderResults.push({ ...item, rendered: undefined });
+      for (const item of orderedPrepared) if (item.deferred) { deferredCount += 1; renderResults.push({ ...item, rendered: undefined }); }
       const runnableItems = orderedPrepared.filter((item) => !item.deferred);
       const itemByRequest = new Map(runnableItems.map((item) => [item.request, item] as const));
       const scheduled = await waveRenderScheduler.runBatch(runnableItems.map((item) => ({
@@ -298,8 +328,12 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           try {
             const renderStartedAt = globalThis.performance.now();
             renderCount += 1;
-            const rendered = await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues);
-            renderAwaitMs += Math.max(0, globalThis.performance.now() - renderStartedAt);
+            let rendered: RenderedWave;
+            try {
+              rendered = await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues);
+            } finally {
+              renderAwaitMs += Math.max(0, globalThis.performance.now() - renderStartedAt);
+            }
             // renderWave installs the SVG into this owner before resolving.
             // Publish the first-artifact milestone here rather than after
             // every later owner in the batch has also completed.
@@ -318,15 +352,29 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         onYield: (waitMs) => { cooperativeYieldCount += 1; cooperativeYieldWaitMs += waitMs; },
       });
       for (const result of scheduled) {
-        const item = itemByRequest.get(result.key)!;
-        if (result.status === "stale") renderResults.push({ ...item, rendered: undefined, stale: true });
+        const item = result.status === "stale-after-run" && result.value !== undefined
+          ? result.value
+          : itemByRequest.get(result.key)!;
+        if (result.status === "stale-before-run") {
+          skippedStaleBeforeRunCount += 1;
+          renderResults.push({ ...item, rendered: undefined, stale: true });
+        }
+        else if (result.status === "stale-after-run") {
+          requiredNowCount += 1;
+          staleAfterRunCount += 1;
+          renderResults.push({ ...item, rendered: undefined, stale: true });
+        }
         else if (result.status === "error") {
+          requiredNowCount += 1;
           // Canvas rendering failures historically abort the whole batch; keep
           // that policy while WaveDrom adapter failures remain row-scoped.
           if (canvasPrototype) throw result.error;
           renderResults.push({ ...item, rendered: undefined, error: result.error instanceof Error ? result.error : new Error(String(result.error)) });
         }
-        else renderResults.push(result.value);
+        else {
+          requiredNowCount += 1;
+          renderResults.push(result.value);
+        }
       }
       const renderedByRequest = new Map(renderResults.map((item) => [item.request, item] as const));
       const preparedByRequest = new Map(prepared.map((item) => [item.request, item] as const));
@@ -383,12 +431,46 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       });
       if (referenceGeometryReady && !referenceGeometryNotified) context.onReferenceGeometryReady?.();
       if (primaryOpenBatch) {
+        const openStageTotals = stageTotals!;
+        for (const result of scheduled) {
+          const value = result.status === "completed"
+            ? result.value
+            : result.status === "stale-after-run" ? result.value : undefined;
+          const rendered = value && "rendered" in value ? value.rendered : undefined;
+          if (!rendered) continue;
+          if (rendered.markupCacheHit === true) reusedMarkupCount += 1;
+          else if (rendered.markupCacheHit === false) markupCacheMissCount += 1;
+          for (const [name, amount] of Object.entries(rendered.renderStages ?? {})) {
+            openStageTotals[name] = (openStageTotals[name] ?? 0) + amount;
+          }
+        }
         context.recordOpenWaveBatch?.({
           batchWallMs: Math.max(0, globalThis.performance.now() - batchStartedAt),
+          waveJsonPreparationMs,
           renderAwaitMs,
           renderCount,
           cooperativeYieldCount,
           cooperativeYieldWaitMs,
+          requestedCount: requests.length,
+          requiredNowCount,
+          deferredCount,
+          skippedStaleBeforeRunCount,
+          staleAfterRunCount,
+          duplicateOwnerRequestCount,
+          reusedMarkupCount,
+          markupCacheMissCount,
+          waveJsonBytes: openStageTotals.waveJsonBytes ?? 0,
+          semanticValuesBytes: openStageTotals.semanticValuesBytes ?? 0,
+          svgMarkupBytes: openStageTotals.svgMarkupBytes ?? 0,
+          cacheKeySerializeMs: openStageTotals.cacheKeySerializeMs ?? 0,
+          waveDromRenderAnyMs: openStageTotals.waveDromRenderAnyMs ?? 0,
+          onmlStringifyMs: openStageTotals.onmlStringifyMs ?? 0,
+          valueLabelLayoutMs: openStageTotals.valueLabelLayoutMs ?? 0,
+          markupSafetyMs: openStageTotals.markupSafetyMs ?? 0,
+          templateParseMs: openStageTotals.templateParseMs ?? 0,
+          svgSafetyDomWalkMs: openStageTotals.svgSafetyDomWalkMs ?? 0,
+          domInstallMs: openStageTotals.domInstallMs ?? 0,
+          totalSignalWallMs: openStageTotals.totalSignalWallMs ?? 0,
         });
       }
       return results;

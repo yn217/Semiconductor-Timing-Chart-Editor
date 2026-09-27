@@ -7,6 +7,7 @@ import type { EdgeCounterProjectionMetrics } from "./edge-counter-projection.js"
 import type { ProjectionCoordinator } from "./projection-coordinator.js";
 import type { SemanticSnapCandidateService, ImmutableSnapIndex } from "@timing-chart-v2/geometry";
 import type { ViewMetricsOwner } from "./view-metrics.js";
+import type { OpenWaveBatchMetrics } from "./open-wave-metrics.js";
 export function collectWaveRenderErrors(host: HTMLElement): readonly DocumentProblem[] {
   return [...host.querySelectorAll<HTMLElement>("[data-wave-error]")].map((owner) => ({
     code: "WAVE_RENDER_ERROR",
@@ -44,13 +45,7 @@ export function publishRendererState(host: HTMLElement, session: Pick<CommandHis
 }
 export type OpenPhaseTracker = Readonly<{
   mark: (phase: string, phaseTimestamp?: number) => void;
-  recordWaveBatch: (metrics: Readonly<{
-    batchWallMs: number;
-    renderAwaitMs: number;
-    renderCount: number;
-    cooperativeYieldCount: number;
-    cooperativeYieldWaitMs: number;
-  }>) => void;
+  recordWaveBatch: (metrics: OpenWaveBatchMetrics) => void;
   begin: (commandStartedAt?: number, fileReadStartedAt?: number) => void;
 }>;
 
@@ -73,10 +68,31 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentation
   const waveBatchMetrics = {
     batchCount: 0,
     batchWallMs: 0,
+    waveJsonPreparationMs: 0,
     renderAwaitMs: 0,
     renderCount: 0,
     cooperativeYieldCount: 0,
     cooperativeYieldWaitMs: 0,
+    requestedCount: 0,
+    requiredNowCount: 0,
+    deferredCount: 0,
+    skippedStaleBeforeRunCount: 0,
+    staleAfterRunCount: 0,
+    duplicateOwnerRequestCount: 0,
+    reusedMarkupCount: 0,
+    markupCacheMissCount: 0,
+    waveJsonBytes: 0,
+    semanticValuesBytes: 0,
+    svgMarkupBytes: 0,
+    cacheKeySerializeMs: 0,
+    waveDromRenderAnyMs: 0,
+    onmlStringifyMs: 0,
+    valueLabelLayoutMs: 0,
+    markupSafetyMs: 0,
+    templateParseMs: 0,
+    svgSafetyDomWalkMs: 0,
+    domInstallMs: 0,
+    totalSignalWallMs: 0,
   };
   const publishWaveBatchMetrics = (): void => {
     rendererHost.dataset.openWaveBatchMetrics = JSON.stringify(waveBatchMetrics);
@@ -143,10 +159,31 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentation
       if (!active) return;
       waveBatchMetrics.batchCount += 1;
       waveBatchMetrics.batchWallMs += metrics.batchWallMs;
+      waveBatchMetrics.waveJsonPreparationMs += metrics.waveJsonPreparationMs;
       waveBatchMetrics.renderAwaitMs += metrics.renderAwaitMs;
       waveBatchMetrics.renderCount += metrics.renderCount;
       waveBatchMetrics.cooperativeYieldCount += metrics.cooperativeYieldCount;
       waveBatchMetrics.cooperativeYieldWaitMs += metrics.cooperativeYieldWaitMs;
+      waveBatchMetrics.requestedCount += metrics.requestedCount;
+      waveBatchMetrics.requiredNowCount += metrics.requiredNowCount;
+      waveBatchMetrics.deferredCount += metrics.deferredCount;
+      waveBatchMetrics.skippedStaleBeforeRunCount += metrics.skippedStaleBeforeRunCount;
+      waveBatchMetrics.staleAfterRunCount += metrics.staleAfterRunCount;
+      waveBatchMetrics.duplicateOwnerRequestCount += metrics.duplicateOwnerRequestCount;
+      waveBatchMetrics.reusedMarkupCount += metrics.reusedMarkupCount;
+      waveBatchMetrics.markupCacheMissCount += metrics.markupCacheMissCount;
+      waveBatchMetrics.waveJsonBytes += metrics.waveJsonBytes;
+      waveBatchMetrics.semanticValuesBytes += metrics.semanticValuesBytes;
+      waveBatchMetrics.svgMarkupBytes += metrics.svgMarkupBytes;
+      waveBatchMetrics.cacheKeySerializeMs += metrics.cacheKeySerializeMs;
+      waveBatchMetrics.waveDromRenderAnyMs += metrics.waveDromRenderAnyMs;
+      waveBatchMetrics.onmlStringifyMs += metrics.onmlStringifyMs;
+      waveBatchMetrics.valueLabelLayoutMs += metrics.valueLabelLayoutMs;
+      waveBatchMetrics.markupSafetyMs += metrics.markupSafetyMs;
+      waveBatchMetrics.templateParseMs += metrics.templateParseMs;
+      waveBatchMetrics.svgSafetyDomWalkMs += metrics.svgSafetyDomWalkMs;
+      waveBatchMetrics.domInstallMs += metrics.domInstallMs;
+      waveBatchMetrics.totalSignalWallMs += metrics.totalSignalWallMs;
       publishWaveBatchMetrics();
     },
     begin(commandStartedAt = globalThis.performance.now(), fileReadStartedAt) {
@@ -159,10 +196,31 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentation
       diagnosticsCompletedAt = undefined;
       waveBatchMetrics.batchCount = 0;
       waveBatchMetrics.batchWallMs = 0;
+      waveBatchMetrics.waveJsonPreparationMs = 0;
       waveBatchMetrics.renderAwaitMs = 0;
       waveBatchMetrics.renderCount = 0;
       waveBatchMetrics.cooperativeYieldCount = 0;
       waveBatchMetrics.cooperativeYieldWaitMs = 0;
+      waveBatchMetrics.requestedCount = 0;
+      waveBatchMetrics.requiredNowCount = 0;
+      waveBatchMetrics.deferredCount = 0;
+      waveBatchMetrics.skippedStaleBeforeRunCount = 0;
+      waveBatchMetrics.staleAfterRunCount = 0;
+      waveBatchMetrics.duplicateOwnerRequestCount = 0;
+      waveBatchMetrics.reusedMarkupCount = 0;
+      waveBatchMetrics.markupCacheMissCount = 0;
+      waveBatchMetrics.waveJsonBytes = 0;
+      waveBatchMetrics.semanticValuesBytes = 0;
+      waveBatchMetrics.svgMarkupBytes = 0;
+      waveBatchMetrics.cacheKeySerializeMs = 0;
+      waveBatchMetrics.waveDromRenderAnyMs = 0;
+      waveBatchMetrics.onmlStringifyMs = 0;
+      waveBatchMetrics.valueLabelLayoutMs = 0;
+      waveBatchMetrics.markupSafetyMs = 0;
+      waveBatchMetrics.templateParseMs = 0;
+      waveBatchMetrics.svgSafetyDomWalkMs = 0;
+      waveBatchMetrics.domInstallMs = 0;
+      waveBatchMetrics.totalSignalWallMs = 0;
       rowShellPainted = false;
       referenceGeometryReady = false;
       rulerPainted = false;

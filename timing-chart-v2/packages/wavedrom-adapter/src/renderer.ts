@@ -197,8 +197,9 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     stages.semanticValuesBytes = utf8Encoder.encode(serializedSemanticValues).byteLength;
     stages.metricCollectionOverheadMs = (stages.metricCollectionOverheadMs ?? 0) + now() - stageStartedAt;
     const cached = this.#markupCache.get(signalId);
+    const markupCacheHit = cached?.key === cacheKey;
     let markup: string;
-    if (cached?.key === cacheKey) {
+    if (markupCacheHit && cached) {
       markup = cached.markup;
       this.#cacheHits += 1;
       stageStartedAt = now();
@@ -236,11 +237,12 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     svg.setAttribute("preserveAspectRatio", "none");
     mount.setAttribute("data-wave-owner", signalId);
     mount.replaceChildren(svg);
-    const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson };
-    this.#active.set(signalId, { mount, rendered });
     stages.domInstallMs = now() - stageStartedAt;
     stages.totalSignalWallMs = now() - startedAt;
-    this.#lastRenderStages = Object.freeze({ ...stages });
+    const renderStages = Object.freeze({ ...stages });
+    const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson, markupCacheHit, renderStages };
+    this.#active.set(signalId, { mount, rendered });
+    this.#lastRenderStages = renderStages;
     const stageTotals = this.#renderStageTotals as Record<string, number>;
     for (const [key, value] of Object.entries(stages)) stageTotals[key] = (stageTotals[key] ?? 0) + value;
     this.#renderDurationMs += stages.totalSignalWallMs;

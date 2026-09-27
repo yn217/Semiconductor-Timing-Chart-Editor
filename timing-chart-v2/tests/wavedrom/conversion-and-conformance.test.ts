@@ -143,14 +143,20 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
 
     try {
       const adapter = new ProductionWaveDromAdapter();
-      await adapter.renderWave(signalId("sig_metrics"), waveJson, mount, semanticValues);
+      const firstRender = await adapter.renderWave(signalId("sig_metrics"), waveJson, mount, semanticValues);
+      const secondRender = await adapter.renderWave(signalId("sig_metrics"), waveJson, mount, semanticValues);
 
-      expect(stringifySpy.mock.calls.filter(([value]) => value === waveJson)).toHaveLength(1);
-      expect(stringifySpy.mock.calls.filter(([value]) => value === semanticValues)).toHaveLength(1);
+      expect(stringifySpy.mock.calls.filter(([value]) => value === waveJson)).toHaveLength(2);
+      expect(stringifySpy.mock.calls.filter(([value]) => value === semanticValues)).toHaveLength(2);
+      expect(firstRender.markupCacheHit).toBe(false);
+      expect(secondRender.markupCacheHit).toBe(true);
+      expect(firstRender.renderStages).toMatchObject({ waveJsonBytes: expect.any(Number), svgMarkupBytes: expect.any(Number), domInstallMs: expect.any(Number) });
+      expect(secondRender.renderStages?.domInstallMs).toBe(adapter.metrics().renderStages.last?.domInstallMs);
       const totals = adapter.metrics().renderStages.totals;
       const encoder = new TextEncoder();
-      expect(totals.waveJsonBytes).toBe(encoder.encode(JSON.stringify(waveJson)).byteLength);
-      expect(totals.semanticValuesBytes).toBe(encoder.encode(JSON.stringify(semanticValues)).byteLength);
+      expect(totals.waveJsonBytes).toBe(2 * encoder.encode(JSON.stringify(waveJson)).byteLength);
+      expect(totals.semanticValuesBytes).toBe(2 * encoder.encode(JSON.stringify(semanticValues)).byteLength);
+      expect(adapter.metrics()).toMatchObject({ cacheHits: 1, cacheMisses: 1 });
     } finally {
       stringifySpy.mockRestore();
     }
