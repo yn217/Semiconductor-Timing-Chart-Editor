@@ -19,6 +19,15 @@ function waveformWindowCycleBudget(signalCount: number): number {
   return Math.max(64, Math.min(512, Math.floor(WAVEFORM_WINDOW_SIGNAL_CYCLE_BUDGET / Math.max(1, signalCount))));
 }
 
+function waveformWindowGrid(signalCount: number): number {
+  const maxWindowCycles = waveformWindowCycleBudget(signalCount);
+  return Math.min(256, 2 ** Math.floor(Math.log2(Math.max(32, Math.floor(maxWindowCycles / 2)))));
+}
+
+function waveformWindowTileSpan(signalCount: number): number {
+  return waveformWindowGrid(signalCount) * 2;
+}
+
 export type TimelineGeometryOwnerContext = Readonly<{
   mappingCache: DisplayTimeMappingCache;
   geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>;
@@ -165,7 +174,9 @@ export class TimelineGeometryOwner {
       // render a bounded prefix so large documents can reach the viewport. This
       // is presentation bootstrap, never semantic time/X truth; the first SVG
       // geometry replaces it and is rebased through sourceWindow.start.
-      const bootstrapEnd = Math.min(document.timeline.cycleCount, Math.max(64, waveformWindowCycleBudget(signalCount)));
+      // Match the first viewport tile size so authoritative geometry does not
+      // immediately replace this bootstrap artifact with a different window.
+      const bootstrapEnd = Math.min(document.timeline.cycleCount, waveformWindowTileSpan(signalCount));
       return { start: 0, end: bootstrapEnd };
     }
     const entries = this.viewportBoundaryEntries(owner, signalId, mapping, document.timeline.cycleCount);
@@ -220,8 +231,7 @@ export class TimelineGeometryOwner {
       // window handed out last, return that same window so unchanged owners are not re-rendered.
       const last = this.#lastBoundedWindow;
       if (last && last.cycleCount === document.timeline.cycleCount && boundedStart >= last.start && boundedEnd <= last.end) return { start: last.start, end: last.end };
-      const maxWindowCycles = waveformWindowCycleBudget(signalCount);
-      const grid = Math.min(256, 2 ** Math.floor(Math.log2(Math.max(32, Math.floor(maxWindowCycles / 2)))));
+      const grid = waveformWindowGrid(signalCount);
       const start = Math.max(0, Math.floor(boundedStart / grid) * grid);
       const span = Math.min(document.timeline.cycleCount, Math.max(grid * 2, Math.ceil((boundedEnd - start) / grid) * grid));
       const clampedStart = Math.max(0, Math.min(start, document.timeline.cycleCount - span));

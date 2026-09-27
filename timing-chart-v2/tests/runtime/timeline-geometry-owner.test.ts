@@ -136,6 +136,28 @@ describe("TimelineGeometryOwner", () => {
     expect(owner.sourceWindowForLocalRange(document, 0, 1_120)).toEqual({ start: 319, end: 482 });
   });
 
+  it("bootstraps with the same quantized tile span used after geometry becomes available", () => {
+    const document = {
+      ...cycleDocument,
+      timeline: { ...cycleDocument.timeline, cycleCount: 500, end: 500 },
+      signals: Array.from({ length: 100 }, (_, index) => ({
+        ...cycleDocument.signals[0]!,
+        id: signalId(index === 0 ? "sig_cycle_clock" : `sig_perf_${index}`),
+      })),
+    };
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map(),
+      getDocument: () => document,
+      getProjection: () => ({} as RenderProjection),
+      onSnapIndexBuilt: () => undefined,
+    });
+
+    // The settled first viewport window is 0..128 for this signal density;
+    // bootstrapping 0..163 caused each owner to render once, then replace it.
+    expect(owner.sourceWindowForLocalRange(document, 0, 1_120)).toEqual({ start: 0, end: 128 });
+  });
+
   it("uses shared display mapping to window beyond retained geometry", () => {
     const clockId = signalId("sig_cycle_clock");
     const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 2_049 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle, y: 0 } })));
