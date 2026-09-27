@@ -119,9 +119,7 @@ interface ActiveOwner {
 }
 
 interface MarkupCacheEntry {
-  readonly key: string;
   readonly markup: string;
-  readonly renderIndex: number;
   readonly waveJsonBytes: number;
   readonly semanticValuesBytes: number;
   readonly svgMarkupBytes: number;
@@ -129,13 +127,70 @@ interface MarkupCacheEntry {
   parsedSvgByDocument?: WeakMap<Document, SVGElement>;
 }
 
+interface SignalMarkupBinding {
+  readonly key: string;
+  readonly renderIndex: number;
+  readonly artifact: MarkupCacheEntry;
+}
+
 const RETAINED_MARKUP_CACHE_LIMIT = 64;
+const SHARED_MARKUP_CACHE_LIMIT = 64;
+
+/**
+ * WaveDrom 3.6.2 emits owner-specific SVG IDs by appending the render index
+ * to otherwise identical markup. The geometry/rendering payload is shared, so
+ * only those generated IDs (and any references to them) need to be rebound for
+ * another Signal owner.
+ */
+function bindWaveDromRenderIndex(svg: SVGElement, renderIndex: number): void {
+  if (renderIndex === 0) return;
+
+  const elements = [svg, ...Array.from(svg.querySelectorAll("*"))];
+  const idMap = new Map<string, string>();
+  for (const element of elements) {
+    const id = element.getAttribute("id");
+    if (id?.endsWith("_0")) idMap.set(id, `${id.slice(0, -2)}_${renderIndex}`);
+  }
+  if (!idMap.has("svgcontent_0") || !idMap.has("lanes_0") || !idMap.has("wavelane_draw_0_0")) {
+    throw new WaveDromAdapterError("INVALID_WAVEDROM_IDS", "WaveDrom SVG does not expose the expected render-indexed owner IDs.");
+  }
+
+  for (const element of elements) {
+    const id = element.getAttribute("id");
+    if (id) {
+      const rebound = idMap.get(id);
+      if (rebound) element.setAttribute("id", rebound);
+    }
+    for (let index = 0; index < element.attributes.length; index += 1) {
+      const attribute = element.attributes.item(index);
+      if (!attribute) continue;
+      const name = attribute.name.toLowerCase();
+      let value = attribute.value;
+      if (name === "aria-labelledby" || name === "aria-describedby" || name === "for" || name === "headers") {
+        value = value.split(/\s+/).map((token) => idMap.get(token) ?? token).join(" ");
+      } else {
+        value = value.replace(/#([^\s)'\"]+)/g, (match, referencedId: string) => {
+          const rebound = idMap.get(referencedId);
+          return rebound ? `#${rebound}` : match;
+        });
+      }
+      if (value !== attribute.value) element.setAttribute(attribute.name, value);
+    }
+    if (element.localName.toLowerCase() === "style" && element.textContent) {
+      element.textContent = element.textContent.replace(/#([^\s)'\"]+)/g, (match, referencedId: string) => {
+        const rebound = idMap.get(referencedId);
+        return rebound ? `#${rebound}` : match;
+      });
+    }
+  }
+}
 
 export class ProductionWaveDromAdapter implements WaveDromAdapter {
   readonly #renderIndices = new Map<SignalId, number>();
   readonly #active = new Map<SignalId, ActiveOwner>();
-  readonly #markupCache = new Map<SignalId, MarkupCacheEntry>();
-  readonly #retainedMarkupCache = new Map<SignalId, MarkupCacheEntry>();
+  readonly #markupCache = new Map<SignalId, SignalMarkupBinding>();
+  readonly #retainedMarkupCache = new Map<SignalId, SignalMarkupBinding>();
+  readonly #sharedMarkupCache = new Map<string, MarkupCacheEntry>();
   readonly #renderCallsBySignal = new Map<SignalId, number>();
   readonly #preparedDurationMs = new WeakMap<RenderedWave, number>();
   #nextRenderIndex = 0;
@@ -213,22 +268,27 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       if (renderIndex === undefined) renderIndex = this.#nextRenderIndex++;
       this.#renderIndices.set(signalId, renderIndex);
     }
-    const markupCacheHit = cached?.key === cacheKey && cached.renderIndex === renderIndex;
+    const signalCacheHit = cached?.key === cacheKey && cached.renderIndex === renderIndex;
+    let cacheEntry = signalCacheHit ? cached?.artifact : this.#sharedMarkupCache.get(cacheKey);
+    const markupCacheHit = cacheEntry !== undefined;
     let markup: string;
-    let cacheEntry: MarkupCacheEntry;
-    if (markupCacheHit && cached) {
-      markup = cached.markup;
-      cacheEntry = cached;
-      stages.waveJsonBytes = cached.waveJsonBytes;
-      stages.semanticValuesBytes = cached.semanticValuesBytes;
-      stages.svgMarkupBytes = cached.svgMarkupBytes;
+    if (cacheEntry) {
+      this.#sharedMarkupCache.delete(cacheKey);
+      this.#sharedMarkupCache.set(cacheKey, cacheEntry);
+      markup = cacheEntry.markup;
+      stages.waveJsonBytes = cacheEntry.waveJsonBytes;
+      stages.semanticValuesBytes = cacheEntry.semanticValuesBytes;
+      stages.svgMarkupBytes = cacheEntry.svgMarkupBytes;
       this.#cacheHits += 1;
     } else {
       stageStartedAt = now();
       stages.waveJsonBytes = utf8Encoder.encode(serializedWaveJson).byteLength;
       stages.semanticValuesBytes = utf8Encoder.encode(serializedSemanticValues).byteLength;
       stages.metricCollectionOverheadMs = (stages.metricCollectionOverheadMs ?? 0) + now() - stageStartedAt;
-      const generated = renderWaveJsonMarkupWithMetrics(waveJson, renderIndex, semanticValues);
+      // Render a canonical owner-zero artifact once. The owner-specific IDs
+      // are rebound on the detached SVG clone below, avoiding a full
+      // WaveDrom layout/stringify pass for semantically identical signals.
+      const generated = renderWaveJsonMarkupWithMetrics(waveJson, 0, semanticValues);
       markup = generated.markup;
       stages.waveDromRenderAnyMs = generated.metrics.waveDromRenderAnyMs;
       stages.onmlStringifyMs = generated.metrics.onmlStringifyMs;
@@ -237,16 +297,21 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       stages.svgMarkupBytes = generated.metrics.svgMarkupBytes;
       this.#cacheMisses += 1;
       cacheEntry = {
-        key: cacheKey,
         markup,
-        renderIndex,
         waveJsonBytes: stages.waveJsonBytes,
         semanticValuesBytes: stages.semanticValuesBytes,
         svgMarkupBytes: stages.svgMarkupBytes,
       };
+      this.#sharedMarkupCache.set(cacheKey, cacheEntry);
+      while (this.#sharedMarkupCache.size > SHARED_MARKUP_CACHE_LIMIT) {
+        const oldestKey = this.#sharedMarkupCache.keys().next().value as string | undefined;
+        if (oldestKey === undefined) break;
+        this.#sharedMarkupCache.delete(oldestKey);
+      }
     }
-    this.#markupCache.set(signalId, cacheEntry);
-    const cachedSvg = markupCacheHit ? cacheEntry.parsedSvgByDocument?.get(ownerDocument) : undefined;
+    const binding: SignalMarkupBinding = { key: cacheKey, renderIndex, artifact: cacheEntry };
+    this.#markupCache.set(signalId, binding);
+    const cachedSvg = cacheEntry.parsedSvgByDocument?.get(ownerDocument);
     let svg: Element | null;
     if (cachedSvg) {
       svg = cachedSvg.cloneNode(true) as SVGElement;
@@ -275,6 +340,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       const parsedSvgByDocument = safetyCacheEntry.parsedSvgByDocument ??= new WeakMap<Document, SVGElement>();
       parsedSvgByDocument.set(ownerDocument, svg.cloneNode(true) as SVGElement);
     }
+    bindWaveDromRenderIndex(svg as SVGElement, renderIndex);
     const renderStages = Object.freeze({ ...stages });
     const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson, markupCacheHit, svgSafetyCacheHit, renderStages };
     this.#preparedDurationMs.set(rendered, now() - startedAt);

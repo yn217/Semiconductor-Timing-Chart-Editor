@@ -29,6 +29,83 @@ function referenceMarkup(waveJson: WaveJsonSignal): string {
   return WaveDrom.onml.stringify(WaveDrom.renderAny(0, { signal: [waveJson] }, WaveDrom.waveSkin));
 }
 
+function createMarkupDocument(): Document {
+  const createElement = () => {
+    let children: FakeSvgElement[] = [];
+    let parsedRoot = makeFakeSvgElement("svg", children);
+    return {
+      content: { get firstElementChild() { return parsedRoot; } },
+      set innerHTML(markup: string) {
+        const ids = [...markup.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]!);
+        children = ids.filter((id) => id !== ids[0]).map((id) => makeFakeSvgElement("g", [], id));
+        parsedRoot = makeFakeSvgElement("svg", children, ids[0] ?? "");
+      },
+    };
+  };
+  return { createElement } as unknown as Document;
+}
+
+interface FakeSvgElement {
+  localName: string;
+  namespaceURI: string;
+  parentElement?: Element | null;
+  textContent: string | null;
+  readonly attributes: { readonly length: number; item(index: number): Attr | null };
+  getAttribute(name: string): string | null;
+  setAttribute(name: string, value: string): void;
+  removeAttribute(name: string): void;
+  querySelectorAll(selector: string): FakeSvgElement[];
+  cloneNode(deep?: boolean): FakeSvgElement;
+  remove(): void;
+}
+
+function makeFakeSvgElement(localName: string, descendants: FakeSvgElement[], id?: string): FakeSvgElement {
+  const values = new Map<string, string>();
+  if (id) values.set("id", id);
+  const element: FakeSvgElement = {
+    localName,
+    namespaceURI: "http://www.w3.org/2000/svg",
+    parentElement: null,
+    textContent: "",
+    get attributes() {
+      const entries = [...values.entries()].map(([name, value]) => ({ name, value }) as Attr);
+      return { length: entries.length, item: (index: number) => entries[index] ?? null };
+    },
+    getAttribute: (name) => values.get(name) ?? null,
+    setAttribute: (name, value) => { values.set(name, value); },
+    removeAttribute: (name) => { values.delete(name); },
+    querySelectorAll: (selector) => {
+      const matches = selector === "[id]" ? descendants.filter((child) => child.getAttribute("id") !== null) : descendants;
+      return Object.assign(matches, { item: (index: number) => matches[index] ?? null });
+    },
+    cloneNode: (deep = false) => {
+      const clonedChildren = deep ? descendants.map((child) => child.cloneNode(true)) : [];
+      const clone = makeFakeSvgElement(localName, clonedChildren);
+      for (const [name, value] of values) clone.setAttribute(name, value);
+      clone.textContent = element.textContent;
+      return clone;
+    },
+    remove: () => { element.parentElement = null; },
+  };
+  return element;
+}
+
+function createMarkupMount(ownerDocument: Document): Element {
+  let mounted: FakeSvgElement | undefined;
+  const mount = {
+    ownerDocument,
+    setAttribute: vi.fn(),
+    getAttribute: vi.fn(() => "owner"),
+    removeAttribute: vi.fn(),
+    replaceChildren(child?: FakeSvgElement) {
+      mounted = child;
+      if (mounted) mounted.parentElement = mount as unknown as Element;
+    },
+    querySelector: (selector: string) => selector === "svg" ? mounted : undefined,
+  };
+  return mount as unknown as Element;
+}
+
 describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
   it("materializes mandatory binary and bus continuation", () => {
     const binary = logicSignal([{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 7, value: 0 }]);
@@ -58,6 +135,30 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
       }
     }
     expect(covered).toBe(WAVEDROM_STATE_TOKENS.length ** 2);
+  });
+
+  it.each([
+    ["binary", { wave: "0.1..." }],
+    ["bus", { wave: "=.=.", data: ["ADDR", "DATA"] }],
+    ["clock", { wave: "p.n.", period: 2 }],
+    ["gap", { wave: "0.|.1" }],
+  ])("keeps render-index output identical except for generated IDs (%s)", (_kind, waveJson) => {
+    const first = renderWaveJsonMarkup(waveJson, 0);
+    const second = renderWaveJsonMarkup(waveJson, 1);
+    const firstIds = [...first.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]!);
+    const secondIds = [...second.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]!);
+    const identity = new Map(secondIds.map((id, index) => [id, firstIds[index]!]));
+    const normalizedSecond = second.replace(/\bid="([^"]+)"/g, (_match, id: string) => `id="${identity.get(id) ?? id}"`);
+    const firstIndexedIds = firstIds.filter((id) => id.endsWith("_0"));
+    const secondIndexedIds = secondIds.filter((id) => id.endsWith("_1"));
+
+    expect(firstIds).toHaveLength(secondIds.length);
+    expect(new Set(firstIds).size).toBe(firstIds.length);
+    expect(new Set(secondIds).size).toBe(secondIds.length);
+    expect(firstIndexedIds.length).toBeGreaterThan(1);
+    expect(secondIndexedIds).toHaveLength(firstIndexedIds.length);
+    expect(firstIndexedIds.some((id) => secondIndexedIds.includes(id))).toBe(false);
+    expect(normalizedSecond).toBe(first);
   });
 
   it("covers the persistence matrix for every supported non-clock token", () => {
@@ -160,6 +261,40 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
       expect(adapter.metrics()).toMatchObject({ cacheHits: 1, cacheMisses: 1 });
     } finally {
       stringifySpy.mockRestore();
+    }
+  });
+
+  it("reuses one exact WaveDrom artifact across identical signal owners while rebinding SVG IDs", async () => {
+    const adapter = new ProductionWaveDromAdapter();
+    const waveJson: WaveJsonSignal = { wave: `0${".".repeat(31)}` };
+    const ownerDocument = createMarkupDocument();
+    const renderSpy = vi.spyOn(WaveDrom, "renderAny");
+    try {
+      const first = await adapter.renderWave(signalId("sig_shared_binary_a"), waveJson, createMarkupMount(ownerDocument));
+      const second = await adapter.renderWave(signalId("sig_shared_binary_b"), waveJson, createMarkupMount(ownerDocument));
+      const ids = (svg: SVGElement) => [svg.getAttribute("id"), ...Array.from(svg.querySelectorAll("[id]"), (element) => element.getAttribute("id"))].filter((id): id is string => id !== null);
+      const firstIds = ids(first.svg);
+      const secondIds = ids(second.svg);
+      const firstDynamicIds = firstIds.filter((id) => id.endsWith("_0"));
+      const secondDynamicIds = secondIds.filter((id) => id.endsWith("_1"));
+
+      expect(first.renderIndex).toBe(0);
+      expect(second.renderIndex).toBe(1);
+      expect(first.markupCacheHit).toBe(false);
+      expect(second.markupCacheHit).toBe(true);
+      expect(first.svgSafetyCacheHit).toBe(false);
+      expect(second.svgSafetyCacheHit).toBe(true);
+      expect(renderSpy).toHaveBeenCalledTimes(1);
+      expect(firstIds).toHaveLength(secondIds.length);
+      expect(firstDynamicIds.length).toBeGreaterThan(1);
+      expect(secondDynamicIds).toHaveLength(firstDynamicIds.length);
+      expect(new Set(firstIds).size).toBe(firstIds.length);
+      expect(new Set(secondIds).size).toBe(secondIds.length);
+      expect(firstDynamicIds.some((id) => secondDynamicIds.includes(id))).toBe(false);
+      expect(firstIds.filter((id) => !id.endsWith("_0"))).toEqual(secondIds.filter((id) => !id.endsWith("_1")));
+      expect(adapter.metrics()).toMatchObject({ cacheHits: 1, cacheMisses: 1, activeOwners: 2 });
+    } finally {
+      renderSpy.mockRestore();
     }
   });
 
@@ -277,11 +412,8 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
   it("does not reuse a retained WaveDrom artifact when semantic input changed", async () => {
     const adapter = new ProductionWaveDromAdapter();
     const id = signalId("sig_reopen_changed");
-    const createMount = () => {
-      const svg = { localName: "svg", namespaceURI: "http://www.w3.org/2000/svg", attributes: { length: 0, item: () => null }, querySelectorAll: () => [], setAttribute: vi.fn(), cloneNode: () => ({ ...svg, setAttribute: vi.fn() }), remove: vi.fn() };
-      const template = { content: { firstElementChild: svg }, set innerHTML(_value: string) {} };
-      return { ownerDocument: { createElement: () => template }, setAttribute: vi.fn(), getAttribute: vi.fn(() => id), removeAttribute: vi.fn(), replaceChildren: vi.fn() } as unknown as Element;
-    };
+    const ownerDocument = createMarkupDocument();
+    const createMount = () => createMarkupMount(ownerDocument);
     const firstMount = createMount();
     const first = await adapter.renderWave(id, { wave: "01.." }, firstMount);
     adapter.retainArtifact(id);
@@ -292,14 +424,11 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(adapter.metrics()).toMatchObject({ cacheHits: 0, cacheMisses: 2 });
   });
 
-  it("bounds retained document-reopen artifacts", async () => {
+  it("bounds retained owner bindings while keeping shared exact artifacts reusable", async () => {
     const adapter = new ProductionWaveDromAdapter();
     const waveJson: WaveJsonSignal = { wave: "0" };
-    const createMount = () => {
-      const svg = { localName: "svg", namespaceURI: "http://www.w3.org/2000/svg", attributes: { length: 0, item: () => null }, querySelectorAll: () => [], setAttribute: vi.fn(), cloneNode: () => ({ ...svg, setAttribute: vi.fn() }), remove: vi.fn() };
-      const template = { content: { firstElementChild: svg }, set innerHTML(_value: string) {} };
-      return { ownerDocument: { createElement: () => template }, setAttribute: vi.fn(), getAttribute: vi.fn(() => "owner"), removeAttribute: vi.fn(), replaceChildren: vi.fn() } as unknown as Element;
-    };
+    const ownerDocument = createMarkupDocument();
+    const createMount = () => createMarkupMount(ownerDocument);
     const ids = Array.from({ length: 65 }, (_, index) => signalId(`sig_reopen_lru_${index}`));
     for (const id of ids) {
       await adapter.renderWave(id, waveJson, createMount());
@@ -308,8 +437,10 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
 
     const oldest = await adapter.renderWave(ids[0]!, waveJson, createMount());
     const newestRetained = await adapter.renderWave(ids[64]!, waveJson, createMount());
-    expect(oldest.markupCacheHit).toBe(false);
+    expect(oldest.markupCacheHit).toBe(true);
+    expect(oldest.renderIndex).toBe(65);
     expect(newestRetained.markupCacheHit).toBe(true);
+    expect(newestRetained.renderIndex).toBe(64);
   });
 
   it("reports WaveDrom markup stage timings without changing serialized output", () => {
