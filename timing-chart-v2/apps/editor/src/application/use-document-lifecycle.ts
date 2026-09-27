@@ -3,7 +3,7 @@ import type { CommandHistorySession } from "@timing-chart-v2/history";
 import { validateDocumentResourceBudget, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import { commitDocumentReplacement } from "./document-replacement.js";
-import { canonicalDocumentOf, createNewDocumentFromProductTemplate, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "../file-document-controller.js";
+import { canonicalDocumentOf, createNewDocumentFromProductTemplate, decodeOpenDocumentBytes, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "../file-document-controller.js";
 
 export type PendingDocumentAction = Readonly<{ kind: "new" | "open"; requestId: number; text?: string }>;
 export type CompatibilityPreview = Readonly<{ sourceFormatVersion: number; sourceText: string; readOnly: boolean }>;
@@ -155,6 +155,24 @@ export function useDocumentLifecycle({
 
   const requestNew = useCallback(() => requestAction({ kind: "new" }), [requestAction]);
   const requestOpenText = useCallback((text: string, requestId?: number) => requestAction({ kind: "open", text }, requestId), [requestAction]);
+  const requestOpenBytes = useCallback((bytes: ArrayBuffer | Uint8Array, sourceName = "selected document", requestId = ++requestIdRef.current) => {
+    if (requestId !== requestIdRef.current) return;
+    const byteLength = bytes.byteLength;
+    if (byteLength > MAX_OPEN_FILE_BYTES) {
+      fileReadStartedAtRef.current = undefined;
+      const diagnostic = openFileByteBudgetProblem({ name: sourceName, size: byteLength });
+      application.setProblem(diagnostic.message);
+      application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
+      return;
+    }
+    try {
+      requestOpenText(decodeOpenDocumentBytes(bytes), requestId);
+    } catch {
+      if (requestId !== requestIdRef.current) return;
+      fileReadStartedAtRef.current = undefined;
+      application.setProblem("Open failed.");
+    }
+  }, [application, requestOpenText]);
   const readFile = useCallback(async (file: File) => {
     const requestId = ++requestIdRef.current;
     fileReadStartedAtRef.current = undefined;
@@ -166,15 +184,15 @@ export function useDocumentLifecycle({
     }
     fileReadStartedAtRef.current = globalThis.performance.now();
     try {
-      const text = await file.text();
+      const bytes = await file.arrayBuffer();
       if (requestId !== requestIdRef.current) return;
-      requestOpenText(text, requestId);
+      requestOpenBytes(bytes, file.name, requestId);
     } catch {
       if (requestId !== requestIdRef.current) return;
       fileReadStartedAtRef.current = undefined;
       application.setProblem("Open failed.");
     }
-  }, [application, requestOpenText]);
+  }, [application, requestOpenBytes]);
 
   const cancelPending = useCallback(() => setPendingAction(undefined), []);
   const discardPending = useCallback(() => {
@@ -247,6 +265,7 @@ export function useDocumentLifecycle({
     compatibilityPreview,
     requestNew,
     requestOpenText,
+    requestOpenBytes,
     readFile,
     cancelPending,
     discardPending,

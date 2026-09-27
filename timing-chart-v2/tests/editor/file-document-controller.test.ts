@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canonicalFixture } from "../fixtures/canonical.js";
-import { createNewDocumentFromProductTemplate, serializeSaveDocument } from "../../apps/editor/src/file-document-controller.js";
+import { createNewDocumentFromProductTemplate, decodeOpenDocumentBytes, parseOpenDocument, serializeSaveDocument } from "../../apps/editor/src/file-document-controller.js";
 
 describe("file document controller boundaries", () => {
   it("creates a new document without mutating the base document", () => {
@@ -27,5 +27,14 @@ describe("file document controller boundaries", () => {
     const document = canonicalFixture();
     const text = serializeSaveDocument(document);
     expect(JSON.parse(text)).toEqual(document);
+  });
+
+  it("routes UTF-8 bytes through the same Open parser as text, including a BOM", () => {
+    const text = JSON.stringify(canonicalFixture());
+    const bytes = new TextEncoder().encode(`\uFEFF${text}`);
+    const openedFromBytes = parseOpenDocument(decodeOpenDocumentBytes(bytes));
+    const openedFromText = parseOpenDocument(text);
+    expect(openedFromBytes).toEqual(openedFromText);
+    expect(openedFromBytes.ok).toBe(true);
   });
 });

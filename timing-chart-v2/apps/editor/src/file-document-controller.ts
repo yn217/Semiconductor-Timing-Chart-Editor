@@ -7,6 +7,11 @@ export function parseOpenDocument(text: string): ReturnType<typeof parseDocument
   return parseDocument(text);
 }
 
+/** Decode bytes at the shared Open boundary, independent of how the bytes were obtained. */
+export function decodeOpenDocumentBytes(bytes: ArrayBuffer | Uint8Array): string {
+  return new TextDecoder("utf-8").decode(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
+}
+
 export function canonicalDocumentOf(input: CanonicalDocument | ParsedCanonicalDocument): CanonicalDocument {
   if (isTrustedParsedCanonicalDocument(input)) return input.document;
   return input as CanonicalDocument;
