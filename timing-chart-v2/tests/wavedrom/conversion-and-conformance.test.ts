@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import WaveDrom from "wavedrom";
 import {
   ProductionWaveDromAdapter,
@@ -121,6 +121,39 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
   it("pins the production and test renderer to one WaveDrom version", () => {
     expect(WaveDrom.version).toBe(WAVEDROM_VERSION);
     expect(new ProductionWaveDromAdapter().metrics()).toMatchObject({ renderCalls: 0, waveJsonDurationMs: 0, renderDurationMs: 0, renderStages: { last: undefined, totals: { sourcePreparationMs: 0, metricCollectionOverheadMs: 0, cacheKeySerializeMs: 0, waveDromRenderAnyMs: 0, onmlStringifyMs: 0, valueLabelLayoutMs: 0, markupSafetyMs: 0, templateParseMs: 0, svgSafetyDomWalkMs: 0, domInstallMs: 0, totalSignalWallMs: 0, waveJsonBytes: 0, semanticValuesBytes: 0, svgMarkupBytes: 0 } }, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 });
+  });
+
+  it("reuses cache-key JSON serialization for input byte diagnostics", async () => {
+    const waveJson: WaveJsonSignal = { wave: "0..1...", data: ["READY"] };
+    const semanticValues = ["READY"];
+    const svg = {
+      localName: "svg",
+      namespaceURI: "http://www.w3.org/2000/svg",
+      attributes: { length: 0, item: () => null },
+      querySelectorAll: () => [],
+      setAttribute: vi.fn(),
+    };
+    const template = { content: { firstElementChild: svg }, set innerHTML(_markup: string) {} };
+    const mount = {
+      ownerDocument: { createElement: () => template },
+      setAttribute: vi.fn(),
+      replaceChildren: vi.fn(),
+    } as unknown as Element;
+    const stringifySpy = vi.spyOn(JSON, "stringify");
+
+    try {
+      const adapter = new ProductionWaveDromAdapter();
+      await adapter.renderWave(signalId("sig_metrics"), waveJson, mount, semanticValues);
+
+      expect(stringifySpy.mock.calls.filter(([value]) => value === waveJson)).toHaveLength(1);
+      expect(stringifySpy.mock.calls.filter(([value]) => value === semanticValues)).toHaveLength(1);
+      const totals = adapter.metrics().renderStages.totals;
+      const encoder = new TextEncoder();
+      expect(totals.waveJsonBytes).toBe(encoder.encode(JSON.stringify(waveJson)).byteLength);
+      expect(totals.semanticValuesBytes).toBe(encoder.encode(JSON.stringify(semanticValues)).byteLength);
+    } finally {
+      stringifySpy.mockRestore();
+    }
   });
 
   it("reports WaveDrom markup stage timings without changing serialized output", () => {

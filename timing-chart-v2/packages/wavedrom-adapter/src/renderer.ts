@@ -31,6 +31,8 @@ function now(): number {
   return globalThis.performance?.now() ?? Date.now();
 }
 
+const utf8Encoder = new TextEncoder();
+
 export function renderWaveJsonMarkupWithMetrics(waveJson: WaveJsonSignal, renderIndex = 0, semanticValues: readonly string[] = []): Readonly<{ markup: string; metrics: WaveMarkupStageMetrics }> {
   try {
     let startedAt = now();
@@ -186,11 +188,13 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     let stageStartedAt = now();
     this.#renderCalls += 1;
     this.#renderCallsBySignal.set(signalId, (this.#renderCallsBySignal.get(signalId) ?? 0) + 1);
-    const cacheKey = `${WAVEDROM_VERSION}\u0000${JSON.stringify(waveJson)}\u0000${JSON.stringify(semanticValues)}`;
+    const serializedWaveJson = JSON.stringify(waveJson);
+    const serializedSemanticValues = JSON.stringify(semanticValues);
+    const cacheKey = `${WAVEDROM_VERSION}\u0000${serializedWaveJson}\u0000${serializedSemanticValues}`;
     stages.cacheKeySerializeMs = now() - stageStartedAt;
     stageStartedAt = now();
-    stages.waveJsonBytes = new TextEncoder().encode(JSON.stringify(waveJson)).byteLength;
-    stages.semanticValuesBytes = new TextEncoder().encode(JSON.stringify(semanticValues)).byteLength;
+    stages.waveJsonBytes = utf8Encoder.encode(serializedWaveJson).byteLength;
+    stages.semanticValuesBytes = utf8Encoder.encode(serializedSemanticValues).byteLength;
     stages.metricCollectionOverheadMs = (stages.metricCollectionOverheadMs ?? 0) + now() - stageStartedAt;
     const cached = this.#markupCache.get(signalId);
     let markup: string;
