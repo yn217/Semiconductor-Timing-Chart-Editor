@@ -481,6 +481,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       return item.result;
     },
     disposeWave(id) { context.adapter.dispose(id); context.geometryRegistry.remove(id); context.invalidateSnapIndex(); },
+    retainWaveArtifact(id) { context.adapter.retainArtifact?.(id); context.geometryRegistry.remove(id); context.invalidateSnapIndex(); },
   };
 }
 

@@ -243,7 +243,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#diagnostics = { ...this.#diagnostics, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, diagnosticMapPrunePasses: this.#diagnosticMapPrunePasses };
       for (const [signalId, owner] of this.#waveOwners) {
         owner.remove();
-        this.#provider.disposeWave(signalId);
+        if (this.#provider.retainWaveArtifact) this.#provider.retainWaveArtifact(signalId);
+        else this.#provider.disposeWave(signalId);
         this.#waveOwners.delete(signalId);
         this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
       }

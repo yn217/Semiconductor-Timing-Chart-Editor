@@ -101,6 +101,8 @@ export interface WaveDromAdapter {
     readonly totalMatrixReads: number;
   }>;
   dispose(signalId: SignalId): void;
+  /** Release the mounted owner while retaining a bounded, identity-safe artifact for a possible document reopen. */
+  retainArtifact?(signalId: SignalId): void;
   metrics(): WaveDromAdapterMetrics;
 }
 

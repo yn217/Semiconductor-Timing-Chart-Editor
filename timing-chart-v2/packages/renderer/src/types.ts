@@ -34,6 +34,8 @@ export interface WaveformSurfaceProvider {
   /** Optional two-phase hook: all requested mounts must complete before any geometry reads. */
   mountWaveBatch?(requests: readonly WaveMountRequest[]): Promise<readonly WaveMountBatchItem[]>;
   disposeWave(signalId: WaveSignalId): void;
+  /** Release document-specific geometry/DOM but let the adapter retain a bounded reusable markup artifact. */
+  retainWaveArtifact?(signalId: WaveSignalId): void;
 }
 
 export interface RenderCounters {

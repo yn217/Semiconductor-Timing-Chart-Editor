@@ -19,6 +19,9 @@ describe("waveform provider primary geometry readiness", () => {
     const document = generatePerformanceDocument({ signalCount: 2, cycleCount: 10 });
     const referenceSignalId = document.timeline.referenceClock!;
     const recordOpenWaveBatch = vi.fn();
+    const retainArtifact = vi.fn();
+    const geometryRegistry = new GeometryRegistry();
+    const invalidateSnapIndex = vi.fn();
     const owner = { style: { removeProperty: vi.fn() }, dataset: {}, isConnected: true } as unknown as HTMLElement;
     let renders = 0;
     const adapter: WaveDromAdapter = {
@@ -31,6 +34,7 @@ describe("waveform provider primary geometry readiness", () => {
       extractLocalGeometry: vi.fn(() => { throw new Error("SVG extraction is not used in analytic mode."); }),
       geometryMetrics: () => ({ last: undefined, totalDurationMs: 0, totalUsesVisited: 0, totalGeometryEntriesEmitted: 0, totalDuplicateKeyChecks: 0, totalDuplicateKeyCollisions: 0, totalTransitionBrickLookups: 0, totalSkinPathParses: 0, totalMatrixReads: 0 }),
       dispose: vi.fn(),
+      retainArtifact,
       metrics: () => ({ renderCalls: renders, waveJsonDurationMs: 0, renderDurationMs: 0, renderCallsBySignal: {}, cacheHits: 1, cacheMisses: 1, mounts: renders, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 1, allocatedRenderIndices: 1 }),
     };
     const context: WaveformProviderContext = {
@@ -38,11 +42,11 @@ describe("waveform provider primary geometry readiness", () => {
       getDocumentEpoch: () => 1,
       mappingCache: new DisplayTimeMappingCache(),
       adapter,
-      geometryRegistry: new GeometryRegistry(),
+      geometryRegistry,
       markOpenPhase: vi.fn(),
       recordOpenWaveBatch,
       isPrimaryPresentationOpening: () => true,
-      invalidateSnapIndex: vi.fn(),
+      invalidateSnapIndex,
       getViewMode: () => "Cycle",
     };
     const provider = createWaveformSurfaceProvider(context);
@@ -65,6 +69,10 @@ describe("waveform provider primary geometry readiness", () => {
       svgMarkupBytes: 40,
       domInstallMs: 4,
     }));
+    const priorSnapInvalidations = invalidateSnapIndex.mock.calls.length;
+    provider.retainWaveArtifact!(referenceSignalId);
+    expect(retainArtifact).toHaveBeenCalledWith(referenceSignalId);
+    expect(invalidateSnapIndex).toHaveBeenCalledTimes(priorSnapInvalidations + 1);
   });
 
   it("reuses the Signal index across unrelated document revisions with the same Signal collection", async () => {

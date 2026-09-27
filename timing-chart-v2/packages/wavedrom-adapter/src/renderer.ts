@@ -121,12 +121,16 @@ interface ActiveOwner {
 interface MarkupCacheEntry {
   readonly key: string;
   readonly markup: string;
+  readonly renderIndex: number;
 }
+
+const RETAINED_MARKUP_CACHE_LIMIT = 64;
 
 export class ProductionWaveDromAdapter implements WaveDromAdapter {
   readonly #renderIndices = new Map<SignalId, number>();
   readonly #active = new Map<SignalId, ActiveOwner>();
   readonly #markupCache = new Map<SignalId, MarkupCacheEntry>();
+  readonly #retainedMarkupCache = new Map<SignalId, MarkupCacheEntry>();
   readonly #renderCallsBySignal = new Map<SignalId, number>();
   #nextRenderIndex = 0;
   #renderCalls = 0;
@@ -179,12 +183,6 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const stages = Object.fromEntries(Object.keys(this.#renderStageTotals).map((key) => [key, 0])) as Record<string, number>;
     const existing = this.#active.get(signalId);
     if (existing && existing.mount !== mount) this.#clearOwner(existing);
-    let renderIndex = this.#renderIndices.get(signalId);
-    if (renderIndex === undefined) {
-      renderIndex = this.#nextRenderIndex;
-      this.#nextRenderIndex += 1;
-      this.#renderIndices.set(signalId, renderIndex);
-    }
     let stageStartedAt = now();
     this.#renderCalls += 1;
     this.#renderCallsBySignal.set(signalId, (this.#renderCallsBySignal.get(signalId) ?? 0) + 1);
@@ -192,12 +190,25 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const serializedSemanticValues = JSON.stringify(semanticValues);
     const cacheKey = `${WAVEDROM_VERSION}\u0000${serializedWaveJson}\u0000${serializedSemanticValues}`;
     stages.cacheKeySerializeMs = now() - stageStartedAt;
+    let renderIndex = this.#renderIndices.get(signalId);
+    let cached = this.#markupCache.get(signalId);
+    if (renderIndex === undefined) {
+      const retained = this.#retainedMarkupCache.get(signalId);
+      if (retained?.key === cacheKey) {
+        renderIndex = retained.renderIndex;
+        cached = retained;
+        this.#retainedMarkupCache.delete(signalId);
+      } else {
+        this.#retainedMarkupCache.delete(signalId);
+      }
+      if (renderIndex === undefined) renderIndex = this.#nextRenderIndex++;
+      this.#renderIndices.set(signalId, renderIndex);
+    }
     stageStartedAt = now();
     stages.waveJsonBytes = utf8Encoder.encode(serializedWaveJson).byteLength;
     stages.semanticValuesBytes = utf8Encoder.encode(serializedSemanticValues).byteLength;
     stages.metricCollectionOverheadMs = (stages.metricCollectionOverheadMs ?? 0) + now() - stageStartedAt;
-    const cached = this.#markupCache.get(signalId);
-    const markupCacheHit = cached?.key === cacheKey;
+    const markupCacheHit = cached?.key === cacheKey && cached.renderIndex === renderIndex;
     let markup: string;
     if (markupCacheHit && cached) {
       markup = cached.markup;
@@ -213,9 +224,9 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       stages.valueLabelLayoutMs = generated.metrics.valueLabelLayoutMs;
       stages.markupSafetyMs = generated.metrics.markupSafetyMs;
       stages.svgMarkupBytes = generated.metrics.svgMarkupBytes;
-      this.#markupCache.set(signalId, { key: cacheKey, markup });
       this.#cacheMisses += 1;
     }
+    this.#markupCache.set(signalId, { key: cacheKey, markup, renderIndex });
     const template = mount.ownerDocument.createElement("template");
     stageStartedAt = now();
     template.innerHTML = markup.trim();
@@ -277,7 +288,26 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     this.#active.delete(signalId);
     this.#renderIndices.delete(signalId);
     this.#markupCache.delete(signalId);
+    this.#retainedMarkupCache.delete(signalId);
     this.#renderCallsBySignal.delete(signalId);
+  }
+
+  retainArtifact(signalId: SignalId): void {
+    const owner = this.#active.get(signalId);
+    if (owner) this.#clearOwner(owner);
+    this.#active.delete(signalId);
+    const cached = this.#markupCache.get(signalId);
+    this.#markupCache.delete(signalId);
+    this.#renderIndices.delete(signalId);
+    this.#renderCallsBySignal.delete(signalId);
+    if (!cached) return;
+    this.#retainedMarkupCache.delete(signalId);
+    this.#retainedMarkupCache.set(signalId, cached);
+    while (this.#retainedMarkupCache.size > RETAINED_MARKUP_CACHE_LIMIT) {
+      const oldestSignalId = this.#retainedMarkupCache.keys().next().value as SignalId | undefined;
+      if (oldestSignalId === undefined) break;
+      this.#retainedMarkupCache.delete(oldestSignalId);
+    }
   }
 
   metrics(): WaveDromAdapterMetrics {

@@ -162,6 +162,92 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     }
   });
 
+  it("reuses identical markup across document release without changing WaveDrom IDs", async () => {
+    const adapter = new ProductionWaveDromAdapter();
+    const id = signalId("sig_reopen_cache");
+    const waveJson: WaveJsonSignal = { wave: "01.." };
+    const createMount = () => {
+      let markup = "";
+      let mountedSvg: Record<string, unknown> | undefined;
+      const svg = {
+        localName: "svg", namespaceURI: "http://www.w3.org/2000/svg", attributes: { length: 0, item: () => null },
+        parentElement: undefined as unknown, setAttribute: vi.fn(),
+        querySelectorAll: (selector: string) => selector === "[id]"
+          ? [...markup.matchAll(/\bid=["']([^"']+)["']/g)].map((match) => ({ id: match[1] }))
+          : [],
+        remove() { mountedSvg = undefined; this.parentElement = undefined; },
+      };
+      const template = {
+        content: { firstElementChild: svg },
+        set innerHTML(value: string) { markup = value; },
+      };
+      const mount = {
+        ownerDocument: { createElement: () => template },
+        setAttribute: vi.fn(),
+        getAttribute: vi.fn(() => id),
+        removeAttribute: vi.fn(),
+        replaceChildren(child?: unknown) { mountedSvg = child as Record<string, unknown> | undefined; svg.parentElement = mount; },
+        querySelector: (selector: string) => selector === "svg" ? mountedSvg : undefined,
+      };
+      return mount as unknown as Element;
+    };
+    const firstMount = createMount();
+    const first = await adapter.renderWave(id, waveJson, firstMount);
+    const firstIds = [...first.svg.querySelectorAll("[id]")].map((element) => element.id);
+    expect(first.markupCacheHit).toBe(false);
+    expect(firstIds.length).toBeGreaterThan(0);
+
+    adapter.retainArtifact(id);
+    expect(firstMount.querySelector("svg")).toBeUndefined();
+    expect(adapter.metrics().activeOwners).toBe(0);
+
+    const reopenedMount = createMount();
+    const reopened = await adapter.renderWave(id, waveJson, reopenedMount);
+    expect(reopened.markupCacheHit).toBe(true);
+    expect(reopened.renderIndex).toBe(first.renderIndex);
+    expect([...reopened.svg.querySelectorAll("[id]")].map((element) => element.id)).toEqual(firstIds);
+    expect((reopenedMount as unknown as { querySelector: (selector: string) => unknown }).querySelector("svg")).toBe(reopened.svg);
+    expect(adapter.metrics()).toMatchObject({ cacheHits: 1, cacheMisses: 1, activeOwners: 1 });
+  });
+
+  it("does not reuse a retained WaveDrom artifact when semantic input changed", async () => {
+    const adapter = new ProductionWaveDromAdapter();
+    const id = signalId("sig_reopen_changed");
+    const createMount = () => {
+      const svg = { localName: "svg", namespaceURI: "http://www.w3.org/2000/svg", attributes: { length: 0, item: () => null }, querySelectorAll: () => [], setAttribute: vi.fn(), remove: vi.fn() };
+      const template = { content: { firstElementChild: svg }, set innerHTML(_value: string) {} };
+      return { ownerDocument: { createElement: () => template }, setAttribute: vi.fn(), getAttribute: vi.fn(() => id), removeAttribute: vi.fn(), replaceChildren: vi.fn() } as unknown as Element;
+    };
+    const firstMount = createMount();
+    const first = await adapter.renderWave(id, { wave: "01.." }, firstMount);
+    adapter.retainArtifact(id);
+
+    const reopened = await adapter.renderWave(id, { wave: "10.." }, createMount());
+    expect(reopened.markupCacheHit).toBe(false);
+    expect(reopened.renderIndex).not.toBe(first.renderIndex);
+    expect(adapter.metrics()).toMatchObject({ cacheHits: 0, cacheMisses: 2 });
+  });
+
+  it("bounds retained document-reopen artifacts", async () => {
+    const adapter = new ProductionWaveDromAdapter();
+    const waveJson: WaveJsonSignal = { wave: "0" };
+    const createMount = () => {
+      const svg = { localName: "svg", namespaceURI: "http://www.w3.org/2000/svg", attributes: { length: 0, item: () => null }, querySelectorAll: () => [], setAttribute: vi.fn(), remove: vi.fn() };
+      const template = { content: { firstElementChild: svg }, set innerHTML(_value: string) {} };
+      return { ownerDocument: { createElement: () => template }, setAttribute: vi.fn(), getAttribute: vi.fn(() => "owner"), removeAttribute: vi.fn(), replaceChildren: vi.fn() } as unknown as Element;
+    };
+    const ids = Array.from({ length: 65 }, (_, index) => signalId(`sig_reopen_lru_${index}`));
+    for (const id of ids) {
+      await adapter.renderWave(id, waveJson, createMount());
+      adapter.retainArtifact(id);
+    }
+
+    const oldest = await adapter.renderWave(ids[0]!, waveJson, createMount());
+    const newestRetained = await adapter.renderWave(ids[64]!, waveJson, createMount());
+    expect(oldest.markupCacheHit).toBe(false);
+    expect(newestRetained.markupCacheHit).toBe(true);
+  });
+
   it("reports WaveDrom markup stage timings without changing serialized output", () => {
     const waveJson = { wave: "=.=.", data: ["LONG_VALUE", "NEXT"] };
     const measured = renderWaveJsonMarkupWithMetrics(waveJson, 0, ["LONG_VALUE", "NEXT"]);
