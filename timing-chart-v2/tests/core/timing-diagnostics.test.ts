@@ -96,7 +96,7 @@ describe("derived timing diagnostics", () => {
     expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, oneRequest, earlyThenValidAck], [minTwo]), { enabledCategories: ["protocol"] })).toEqual([]);
     const onlyEarlyAck = { ...acknowledge, values: [{ start: 0, value: 0 }, { start: 3, value: 1 }] };
     expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, oneRequest, onlyEarlyAck], [minTwo]), { enabledCategories: ["protocol"] })).toMatchObject([
-      { code: "LATENCY_RANGE_VIOLATION", sourceCycle: 2 },
+      { code: "LATENCY_RANGE_VIOLATION", sourceCycle: 2, message: expect.stringContaining("first later edge is 1 cycles after the request") },
     ]);
 
     const lateAck = { ...acknowledge, values: [{ start: 0, value: 0 }, { start: 6, value: 1 }] };

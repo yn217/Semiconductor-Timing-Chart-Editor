@@ -178,6 +178,28 @@ function risingEdges(signal: ValueSignal): readonly number[] {
   return edges;
 }
 
+function firstCycleAtOrAfter(cycles: readonly number[], targetCycle: number): number {
+  let low = 0;
+  let high = cycles.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (cycles[middle]! < targetCycle) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
+function firstCycleAtLatency(cycles: readonly number[], requestCycle: number, minCycles: number): number {
+  let low = 0;
+  let high = cycles.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (cycles[middle]! - requestCycle < minCycles) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
 function latencyRangeDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>): TimingDiagnostic[] {
   if (!enabled.has("protocol")) return [];
   const problems: TimingDiagnostic[] = [];
@@ -210,9 +232,11 @@ function latencyRangeDiagnostics(document: CanonicalDocument, enabled: ReadonlyS
     }
     const acknowledgeEdges = risingEdges(acknowledge);
     for (const requestCycle of risingEdges(request)) {
-      const matchingCycle = acknowledgeEdges.find((cycle) => cycle >= requestCycle && cycle - requestCycle >= minCycles && cycle - requestCycle <= maxCycles);
-      if (matchingCycle !== undefined) continue;
-      const firstLaterCycle = acknowledgeEdges.find((cycle) => cycle >= requestCycle);
+      const firstLaterIndex = firstCycleAtOrAfter(acknowledgeEdges, requestCycle);
+      const matchIndex = minCycles === 0 ? firstLaterIndex : firstCycleAtLatency(acknowledgeEdges, requestCycle, minCycles);
+      const matchingCycle = acknowledgeEdges[matchIndex];
+      if (matchingCycle !== undefined && matchingCycle - requestCycle <= maxCycles) continue;
+      const firstLaterCycle = acknowledgeEdges[firstLaterIndex];
       const observed = firstLaterCycle === undefined ? "no acknowledge rising edge at or after the request" : `no acknowledge rising edge in range (first later edge is ${firstLaterCycle - requestCycle} cycles after the request)`;
       add("LATENCY_RANGE_VIOLATION", `${basePath}.acknowledgeSignalId`, `Request '${request.name}' rises at cycle ${requestCycle}; ${observed}, expected ${minCycles}..${maxCycles} cycles.`, constraint.id, requestCycle);
     }
