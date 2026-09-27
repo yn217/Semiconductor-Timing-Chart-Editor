@@ -166,28 +166,35 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     const adapter = new ProductionWaveDromAdapter();
     const id = signalId("sig_reopen_cache");
     const waveJson: WaveJsonSignal = { wave: "01.." };
-    const createMount = () => {
-      let markup = "";
+    const ownerDocument = {
+      createElement: () => {
+        let markup = "";
+        const svg = {
+          localName: "svg", namespaceURI: "http://www.w3.org/2000/svg", attributes: { length: 0, item: () => null },
+          parentElement: undefined as unknown, removed: false, setAttribute: vi.fn(),
+          querySelectorAll: (selector: string) => selector === "[id]"
+            ? [...markup.matchAll(/\bid=["']([^"']+)["']/g)].map((match) => ({ id: match[1] }))
+            : [],
+          remove() { this.removed = true; this.parentElement = undefined; },
+        };
+        return {
+          content: { firstElementChild: svg },
+          set innerHTML(value: string) { markup = value; },
+        };
+      },
+    };
+    const createMount = (document = ownerDocument) => {
       let mountedSvg: Record<string, unknown> | undefined;
-      const svg = {
-        localName: "svg", namespaceURI: "http://www.w3.org/2000/svg", attributes: { length: 0, item: () => null },
-        parentElement: undefined as unknown, setAttribute: vi.fn(),
-        querySelectorAll: (selector: string) => selector === "[id]"
-          ? [...markup.matchAll(/\bid=["']([^"']+)["']/g)].map((match) => ({ id: match[1] }))
-          : [],
-        remove() { mountedSvg = undefined; this.parentElement = undefined; },
-      };
-      const template = {
-        content: { firstElementChild: svg },
-        set innerHTML(value: string) { markup = value; },
-      };
       const mount = {
-        ownerDocument: { createElement: () => template },
+        ownerDocument: document,
         setAttribute: vi.fn(),
         getAttribute: vi.fn(() => id),
         removeAttribute: vi.fn(),
-        replaceChildren(child?: unknown) { mountedSvg = child as Record<string, unknown> | undefined; svg.parentElement = mount; },
-        querySelector: (selector: string) => selector === "svg" ? mountedSvg : undefined,
+        replaceChildren(child?: unknown) {
+          mountedSvg = child as Record<string, unknown> | undefined;
+          if (mountedSvg) mountedSvg.parentElement = mount;
+        },
+        querySelector: (selector: string) => selector === "svg" && !mountedSvg?.removed ? mountedSvg : undefined,
       };
       return mount as unknown as Element;
     };
@@ -195,6 +202,7 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     const first = await adapter.renderWave(id, waveJson, firstMount);
     const firstIds = [...first.svg.querySelectorAll("[id]")].map((element) => element.id);
     expect(first.markupCacheHit).toBe(false);
+    expect(first.svgSafetyCacheHit).toBe(false);
     expect(firstIds.length).toBeGreaterThan(0);
 
     adapter.retainArtifact(id);
@@ -204,10 +212,21 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     const reopenedMount = createMount();
     const reopened = await adapter.renderWave(id, waveJson, reopenedMount);
     expect(reopened.markupCacheHit).toBe(true);
+    expect(reopened.svgSafetyCacheHit).toBe(true);
     expect(reopened.renderIndex).toBe(first.renderIndex);
     expect([...reopened.svg.querySelectorAll("[id]")].map((element) => element.id)).toEqual(firstIds);
     expect((reopenedMount as unknown as { querySelector: (selector: string) => unknown }).querySelector("svg")).toBe(reopened.svg);
-    expect(adapter.metrics()).toMatchObject({ cacheHits: 1, cacheMisses: 1, activeOwners: 1 });
+
+    adapter.retainArtifact(id);
+    const secondReopened = await adapter.renderWave(id, waveJson, createMount());
+    expect(secondReopened.markupCacheHit).toBe(true);
+    expect(secondReopened.svgSafetyCacheHit).toBe(true);
+
+    const differentDocumentMount = createMount({ createElement: ownerDocument.createElement });
+    const differentDocument = await adapter.renderWave(id, waveJson, differentDocumentMount);
+    expect(differentDocument.markupCacheHit).toBe(true);
+    expect(differentDocument.svgSafetyCacheHit).toBe(false);
+    expect(adapter.metrics()).toMatchObject({ cacheHits: 3, cacheMisses: 1, activeOwners: 1 });
   });
 
   it("does not reuse a retained WaveDrom artifact when semantic input changed", async () => {

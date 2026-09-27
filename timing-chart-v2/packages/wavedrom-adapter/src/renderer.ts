@@ -122,6 +122,7 @@ interface MarkupCacheEntry {
   readonly key: string;
   readonly markup: string;
   readonly renderIndex: number;
+  safetyDocument?: Document;
 }
 
 const RETAINED_MARKUP_CACHE_LIMIT = 64;
@@ -226,7 +227,10 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       stages.svgMarkupBytes = generated.metrics.svgMarkupBytes;
       this.#cacheMisses += 1;
     }
-    this.#markupCache.set(signalId, { key: cacheKey, markup, renderIndex });
+    const cacheEntry = markupCacheHit && cached
+      ? cached
+      : { key: cacheKey, markup, renderIndex };
+    this.#markupCache.set(signalId, cacheEntry);
     const template = mount.ownerDocument.createElement("template");
     stageStartedAt = now();
     template.innerHTML = markup.trim();
@@ -235,9 +239,16 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     if (!svg || svg.namespaceURI !== "http://www.w3.org/2000/svg" || svg.localName !== "svg") {
       throw new WaveDromAdapterError("INVALID_WAVEDROM_SVG", "WaveDrom did not return an SVG root.");
     }
-    stageStartedAt = now();
-    assertSafeWaveDromSvg(svg);
-    stages.svgSafetyDomWalkMs = now() - stageStartedAt;
+    const safetyCacheEntry = markupCacheHit && cached ? cached : cacheEntry;
+    const svgSafetyCacheHit = safetyCacheEntry.safetyDocument === mount.ownerDocument;
+    if (svgSafetyCacheHit) {
+      stages.svgSafetyDomWalkMs = 0;
+    } else {
+      stageStartedAt = now();
+      assertSafeWaveDromSvg(svg);
+      stages.svgSafetyDomWalkMs = now() - stageStartedAt;
+      safetyCacheEntry.safetyDocument = mount.ownerDocument;
+    }
     stageStartedAt = now();
     svg.setAttribute("data-wave-owner", signalId);
     svg.setAttribute("data-wave-render-index", String(renderIndex));
@@ -251,7 +262,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     stages.domInstallMs = now() - stageStartedAt;
     stages.totalSignalWallMs = now() - startedAt;
     const renderStages = Object.freeze({ ...stages });
-    const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson, markupCacheHit, renderStages };
+    const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson, markupCacheHit, svgSafetyCacheHit, renderStages };
     this.#active.set(signalId, { mount, rendered });
     this.#lastRenderStages = renderStages;
     const stageTotals = this.#renderStageTotals as Record<string, number>;

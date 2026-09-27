@@ -50,6 +50,8 @@ export interface RenderedWave {
   readonly waveJson: WaveJsonSignal;
   /** Whether cached serialized WaveDrom markup was reused (SVG parse/install is still required). */
   readonly markupCacheHit?: boolean;
+  /** Whether DOM safety validation was safely reused for the same exact markup and owner Document. */
+  readonly svgSafetyCacheHit?: boolean;
   /** Existing per-render stage measurements, shared with adapter diagnostics. */
   readonly renderStages?: Readonly<Record<string, number>>;
 }
