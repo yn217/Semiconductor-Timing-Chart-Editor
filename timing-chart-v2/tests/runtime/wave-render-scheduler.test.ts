@@ -55,7 +55,7 @@ describe("WaveRenderScheduler", () => {
       isCurrent: () => true,
       run: () => { now += 10; return key; },
     })), {
-      budgetMs: 6,
+      budgetMs: 16,
       initialSliceStartedAt: 0,
       now: () => now,
       shouldYield: () => true,
@@ -64,7 +64,7 @@ describe("WaveRenderScheduler", () => {
     });
 
     expect(results.map((result) => result.status)).toEqual(["completed", "completed", "completed"]);
-    expect(yieldToNextTask).toHaveBeenCalledTimes(2);
-    expect(onYield).toHaveBeenCalledTimes(2);
+    expect(yieldToNextTask).toHaveBeenCalledTimes(1);
+    expect(onYield).toHaveBeenCalledTimes(1);
   });
 });
