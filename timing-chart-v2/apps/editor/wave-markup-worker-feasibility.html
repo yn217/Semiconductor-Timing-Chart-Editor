@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WaveDrom Worker Feasibility</title>
+  </head>
+  <body>
+    <main>
+      <h1>WaveDrom module Worker feasibility</h1>
+      <output id="result" aria-live="polite">Running…</output>
+    </main>
+    <script type="module">
+      import { renderWaveJsonMarkup, WAVEDROM_VERSION } from "@timing-chart-v2/wavedrom-adapter";
+
+      const result = document.querySelector("#result");
+      const waveJson = { wave: "p...", data: ["READY"] };
+      const semanticValues = ["READY"];
+      const startedAt = performance.now();
+      const mainMarkup = renderWaveJsonMarkup(waveJson, 7, semanticValues);
+      const worker = new Worker(new URL("./wave-markup-feasibility.worker.ts", import.meta.url), { type: "module" });
+      const timeout = setTimeout(() => {
+        worker.terminate();
+        result.textContent = "FAIL: module Worker timed out";
+        result.dataset.result = "fail";
+      }, 5000);
+      worker.onmessage = ({ data }) => {
+        clearTimeout(timeout);
+        worker.terminate();
+        const equal = data.markup === mainMarkup;
+        const summary = {
+          status: equal ? "PASS" : "FAIL",
+          workerType: "module",
+          waveDromVersion: WAVEDROM_VERSION,
+          outputEqual: equal,
+          markupBytes: new TextEncoder().encode(data.markup).byteLength,
+          workerMs: data.durationMs,
+          totalMs: performance.now() - startedAt,
+          workerPrefix: data.markup.slice(0, 4),
+          workerSuffix: data.markup.slice(-6),
+        };
+        result.textContent = JSON.stringify(summary, null, 2);
+        result.dataset.result = equal ? "pass" : "fail";
+      };
+      worker.onerror = (event) => {
+        clearTimeout(timeout);
+        worker.terminate();
+        result.textContent = `FAIL: ${event.message}`;
+        result.dataset.result = "fail";
+      };
+      worker.postMessage({ waveJson, renderIndex: 7, semanticValues });
+    </script>
+  </body>
+</html>
