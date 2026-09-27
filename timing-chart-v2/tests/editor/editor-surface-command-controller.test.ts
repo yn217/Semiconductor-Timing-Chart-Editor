@@ -55,6 +55,18 @@ describe("editor surface command controller", () => {
     ]);
   });
 
+  it("routes Annotation collection replacement through one atomic semantic command", () => {
+    const execute = vi.fn(() => ({ ok: true } as never));
+    const executeBatch = vi.fn(() => ({ ok: true } as never));
+    const controller = createEditorSurfaceCommandController({ execute, executeBatch, nextCommandId: (operation) => `test_${operation}` as never });
+    const annotations = [{ id: "annotation_imported" as never, type: "text", label: "Imported", visible: true, anchor: { cycle: 3, point: "cycle-start" } }] as never;
+
+    controller.replaceAnnotations(annotations);
+
+    expect(execute).toHaveBeenCalledWith({ id: "test_annotation_import_replace", type: "annotation.replaceCollection", annotations });
+    expect(executeBatch).not.toHaveBeenCalled();
+  });
+
   it("owns Document Properties command construction and keeps metadata/legend changes batched", () => {
     const execute = vi.fn(() => ({ ok: true } as never));
     const executeBatch = vi.fn(() => ({ ok: true } as never));

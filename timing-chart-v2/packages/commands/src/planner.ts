@@ -1,6 +1,7 @@
 import { TIMING_DIAGNOSTIC_CATEGORIES, type ValidationProblem } from "@timing-chart-v2/core";
 import type {
   Annotation,
+  AnnotationId,
   CanonicalDocument,
   CommandId,
   CommentRow,
@@ -1301,6 +1302,30 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (document.annotations.some((annotation) => annotation.id === command.annotation.id)) return fail("invalid", "DUPLICATE_ID", "$.annotation.id", `Annotation '${command.annotation.id}' already exists.`);
       const changeSet: ChangeSet = { annotationPosition: [command.annotation.id], annotationStyle: [command.annotation.id], minimapOverview: true };
       return { ok: true, document: { ...document, annotations: [...document.annotations, command.annotation] }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotation.replaceCollection": {
+      const importedIds = new Set<AnnotationId>();
+      for (const [index, annotation] of command.annotations.entries()) {
+        if (!isStableId(annotation.id)) return fail("invalid", "INVALID_STABLE_ID", `$.annotations[${index}].id`, "Annotation ID must be stable.");
+        if (importedIds.has(annotation.id)) return fail("invalid", "DUPLICATE_ID", `$.annotations[${index}].id`, `Annotation '${annotation.id}' occurs more than once in the replacement collection.`);
+        importedIds.add(annotation.id);
+      }
+      if (semanticEqual(document.annotations, command.annotations)) return fail("no-op", "NO_OP", "$.annotations", "Annotation collection is unchanged.");
+      const changedGroups = (document.annotationGroups ?? []).flatMap((group) => {
+        const annotationIds = group.annotationIds.filter((id) => importedIds.has(id));
+        return annotationIds.length === group.annotationIds.length ? [] : [{ ...group, annotationIds }];
+      });
+      const changedGroupById = new Map(changedGroups.map((group) => [group.id, group]));
+      const annotationGroups = (document.annotationGroups ?? []).map((group) => changedGroupById.get(group.id) ?? group);
+      const affectedIds = [...new Set([...document.annotations.map((annotation) => annotation.id), ...command.annotations.map((annotation) => annotation.id)])];
+      const changeSet: ChangeSet = {
+        annotationPosition: affectedIds,
+        annotationStyle: affectedIds,
+        annotationOrder: affectedIds,
+        ...(changedGroups.length > 0 ? { annotationGroups: changedGroups.map((group) => group.id) } : {}),
+        minimapOverview: true,
+      };
+      return { ok: true, document: { ...document, annotations: command.annotations, annotationGroups }, changeSet, inverseChangeSet: changeSet };
     }
     case "annotation.delete": {
       const annotation = document.annotations.find((item) => item.id === command.annotationId);

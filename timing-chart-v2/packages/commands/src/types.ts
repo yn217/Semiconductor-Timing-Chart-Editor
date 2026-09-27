@@ -126,6 +126,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "timeline.setReferenceEdge"; edge: "rising" | "falling" }>
   | Readonly<{ id: CommandId; type: "annotation.updateAnchor"; annotationId: AnnotationId; anchor: SemanticAnchor }>
   | Readonly<{ id: CommandId; type: "annotation.create"; annotation: Annotation }>
+  | Readonly<{ id: CommandId; type: "annotation.replaceCollection"; annotations: readonly Annotation[] }>
   | Readonly<{ id: CommandId; type: "annotation.delete"; annotationId: AnnotationId }>
   | Readonly<{ id: CommandId; type: "annotation.setAnchor"; annotationId: AnnotationId; field: "anchor" | "start" | "end" | "from" | "to"; anchor: SemanticAnchor }>
   | Readonly<{ id: CommandId; type: "annotation.translateOffsets"; annotationId: AnnotationId; delta: PixelOffset }>

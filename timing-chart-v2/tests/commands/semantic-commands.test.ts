@@ -998,6 +998,48 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.annotationGroups?.[0]?.annotationIds).toEqual([other.id]);
   });
 
+  it("replaces an Annotation collection in one action while reconciling groups by stable ID", () => {
+    const a: Annotation = { id: "ann_import_a" as AnnotationId, type: "text", label: "A", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 1, point: "cycle-start" } };
+    const b: Annotation = { id: "ann_import_b" as AnnotationId, type: "text", label: "B", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 2, point: "cycle-start" } };
+    const c: Annotation = { id: "ann_import_c" as AnnotationId, type: "text", label: "C", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 3, point: "cycle-start" } };
+    const groupA = { id: "ann_import_group_a" as never, name: "Primary", annotationIds: [a.id, b.id] };
+    const groupC = { id: "ann_import_group_c" as never, name: "Secondary", annotationIds: [c.id] };
+    const initial = { ...canonicalFixture(), annotations: [a, b, c], annotationGroups: [groupA, groupC] };
+    const session = new CommandHistorySession(initial);
+    const unchangedImport = session.execute({ id: commandId("annotation_collection_same"), type: "annotation.replaceCollection", annotations: [a, b, c] });
+    expect(unchangedImport).toMatchObject({ ok: false, reason: "no-op" });
+    expect(session.getSnapshot().document).toEqual(initial);
+    expect(session.historyState().undoDepth).toBe(0);
+    const importedA = { ...a, label: "A updated" };
+    const importedC = c;
+    const added: Annotation = { id: "ann_import_new" as AnnotationId, type: "text", label: "New", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 4, point: "cycle-start" } };
+
+    const accepted = session.execute({ id: commandId("annotation_collection_replace"), type: "annotation.replaceCollection", annotations: [importedA, importedC, added] });
+    expect(accepted.ok).toBe(true);
+    expect(session.historyState().undoDepth).toBe(1);
+    const replaced = session.getSnapshot().document;
+    expect(replaced.annotations).toEqual([importedA, importedC, added]);
+    expect(replaced.annotationGroups).toEqual([
+      { ...groupA, annotationIds: [a.id] },
+      groupC,
+    ]);
+    expect(replaced.annotationGroups?.[0]).toMatchObject({ id: groupA.id, name: groupA.name });
+    const saved = serializeValidatedCanonicalDocument(replaced);
+    const reopened = parseDocument(saved);
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect(reopened.document).toEqual(replaced);
+
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(initial);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(replaced);
+
+    const duplicate = session.execute({ id: commandId("annotation_collection_duplicate"), type: "annotation.replaceCollection", annotations: [added, added] });
+    expect(duplicate).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "DUPLICATE_ID" }] });
+    expect(session.getSnapshot().document).toEqual(replaced);
+    expect(session.historyState().undoDepth).toBe(1);
+  });
+
   it("updates Measurement profile atomically and restores it through Undo/Redo", () => {
     const source = canonicalFixture();
     const annotation: Annotation = { id: "ann_measurement_profile" as AnnotationId, type: "measurement", label: "Measurement", visible: true, start: { signalId: "sig_data" as SignalId, cycle: 1, point: "cycle-start" }, end: { signalId: "sig_data" as SignalId, cycle: 4, point: "cycle-end" } };

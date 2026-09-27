@@ -70,12 +70,16 @@ export function AnnotationCollectionPanel({ annotations, selectedId, document, d
         return;
       }
       const imported = items as Annotation[];
-      const result = current.commands.replaceAnnotations(current.annotations.map((annotation) => annotation.id), imported);
+      const result = current.commands.replaceAnnotations(imported);
       if (result === undefined) {
         setImportStatus(`Imported ${imported.length} annotations (no changes).`);
         return;
       }
       if (!result.ok) {
+        if (result.reason === "no-op") {
+          setImportStatus(`Imported ${imported.length} annotations (no changes).`);
+          return;
+        }
         setImportStatus(result.problems[0]?.message ?? "Annotation import was rejected.");
         return;
       }
