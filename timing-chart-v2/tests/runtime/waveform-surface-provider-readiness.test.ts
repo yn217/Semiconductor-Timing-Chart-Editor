@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DisplayTimeMappingCache } from "@timing-chart-v2/projection";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 import { toWaveJson } from "@timing-chart-v2/wavedrom-adapter";
@@ -15,6 +15,11 @@ function deferred<T>() {
 }
 
 describe("waveform provider primary geometry readiness", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
   it("records Open job classification, duplicate owners, markup reuse, and render stages", async () => {
     const document = generatePerformanceDocument({ signalCount: 2, cycleCount: 10 });
     const referenceSignalId = document.timeline.referenceClock!;
@@ -299,6 +304,11 @@ describe("waveform provider primary geometry readiness", () => {
     const toWaveJsonSpy = vi.fn(toWaveJson);
     const mappingCache = new DisplayTimeMappingCache();
     const remapValueChanges = vi.spyOn(mappingCache, "remapValueChanges");
+    const recordOpenWaveBatch = vi.fn();
+    let now = 0;
+    vi.spyOn(globalThis.performance, "now").mockImplementation(() => { now += 10; return now; });
+    const yieldForTest = vi.fn(async () => undefined);
+    vi.stubGlobal("scheduler", { yield: yieldForTest });
     const adapter: WaveDromAdapter = {
       toWaveJson: toWaveJsonSpy,
       renderWave: vi.fn(async (signalId, waveJson) => ({ signalId, ownerKey: signalId, svg: {} as SVGSVGElement, renderIndex: 0, waveJson })),
@@ -314,6 +324,8 @@ describe("waveform provider primary geometry readiness", () => {
       adapter,
       geometryRegistry: new GeometryRegistry(),
       markOpenPhase: vi.fn(),
+      recordOpenWaveBatch,
+      isPrimaryPresentationOpening: () => true,
       onReferenceGeometryReady: async () => { nonReferenceFresh = false; },
       invalidateSnapIndex: vi.fn(),
       getViewMode: () => "Cycle",
@@ -332,6 +344,10 @@ describe("waveform provider primary geometry readiness", () => {
     expect(adapter.renderWave.mock.calls[0]?.[0]).toBe(referenceSignalId);
     expect(results.find((item) => item.signalId === nonReferenceSignalId)).toMatchObject({ stale: true });
     expect(results.find((item) => item.signalId === referenceSignalId)?.result).toBeDefined();
+    expect(recordOpenWaveBatch).toHaveBeenCalledWith(expect.objectContaining({
+      skippedStaleBeforeRunCount: 1,
+      cooperativeYieldCount: 0,
+    }));
   });
 
   it("isolates a clock projection failure to that signal while rendering valid siblings", async () => {

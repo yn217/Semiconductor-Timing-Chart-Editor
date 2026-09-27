@@ -314,7 +314,18 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const canvasPrototype = isCanvasWaveRendererSelected(document);
       const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean; readonly canvasPainted?: boolean; readonly rendererStart?: number | undefined }> = [];
       for (const item of orderedPrepared) if (item.deferred) { deferredCount += 1; renderResults.push({ ...item, rendered: undefined }); }
-      const runnableItems = orderedPrepared.filter((item) => !item.deferred);
+      const runnableItems = orderedPrepared.filter((item) => {
+        if (item.deferred) return false;
+        if (!isCurrent(item.request)) {
+          // A reference-geometry publication may invalidate this batch before
+          // WaveRenderScheduler starts. Preserve its stale result, but do not
+          // spend a scheduler slot/yield on work that cannot be installed.
+          skippedStaleBeforeRunCount += 1;
+          renderResults.push({ ...item, rendered: undefined, stale: true });
+          return false;
+        }
+        return true;
+      });
       const itemByRequest = new Map(runnableItems.map((item) => [item.request, item] as const));
       const scheduled = await waveRenderScheduler.runBatch(runnableItems.map((item) => ({
         key: item.request,
