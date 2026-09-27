@@ -123,6 +123,7 @@ interface MarkupCacheEntry {
   readonly markup: string;
   readonly renderIndex: number;
   safetyDocument?: Document;
+  parsedSvgByDocument?: WeakMap<Document, SVGElement>;
 }
 
 const RETAINED_MARKUP_CACHE_LIMIT = 64;
@@ -231,23 +232,35 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       ? cached
       : { key: cacheKey, markup, renderIndex };
     this.#markupCache.set(signalId, cacheEntry);
-    const template = mount.ownerDocument.createElement("template");
-    stageStartedAt = now();
-    template.innerHTML = markup.trim();
-    const svg = template.content.firstElementChild;
-    stages.templateParseMs = now() - stageStartedAt;
+    const ownerDocument = mount.ownerDocument;
+    const cachedSvg = markupCacheHit ? cacheEntry.parsedSvgByDocument?.get(ownerDocument) : undefined;
+    let svg: Element | null;
+    if (cachedSvg) {
+      svg = cachedSvg.cloneNode(true) as SVGElement;
+      stages.templateParseMs = 0;
+    } else {
+      const template = ownerDocument.createElement("template");
+      stageStartedAt = now();
+      template.innerHTML = markup.trim();
+      svg = template.content.firstElementChild;
+      stages.templateParseMs = now() - stageStartedAt;
+    }
     if (!svg || svg.namespaceURI !== "http://www.w3.org/2000/svg" || svg.localName !== "svg") {
       throw new WaveDromAdapterError("INVALID_WAVEDROM_SVG", "WaveDrom did not return an SVG root.");
     }
-    const safetyCacheEntry = markupCacheHit && cached ? cached : cacheEntry;
-    const svgSafetyCacheHit = safetyCacheEntry.safetyDocument === mount.ownerDocument;
+    const safetyCacheEntry = cacheEntry;
+    const svgSafetyCacheHit = Boolean(cachedSvg) || safetyCacheEntry.safetyDocument === ownerDocument;
     if (svgSafetyCacheHit) {
       stages.svgSafetyDomWalkMs = 0;
     } else {
       stageStartedAt = now();
       assertSafeWaveDromSvg(svg);
       stages.svgSafetyDomWalkMs = now() - stageStartedAt;
-      safetyCacheEntry.safetyDocument = mount.ownerDocument;
+      safetyCacheEntry.safetyDocument = ownerDocument;
+    }
+    if (!cachedSvg) {
+      const parsedSvgByDocument = safetyCacheEntry.parsedSvgByDocument ??= new WeakMap<Document, SVGElement>();
+      parsedSvgByDocument.set(ownerDocument, svg.cloneNode(true) as SVGElement);
     }
     stageStartedAt = now();
     svg.setAttribute("data-wave-owner", signalId);

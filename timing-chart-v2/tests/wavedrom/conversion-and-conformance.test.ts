@@ -132,6 +132,7 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
       attributes: { length: 0, item: () => null },
       querySelectorAll: () => [],
       setAttribute: vi.fn(),
+      cloneNode: () => ({ ...svg, setAttribute: vi.fn() }),
     };
     const template = { content: { firstElementChild: svg }, set innerHTML(_markup: string) {} };
     const mount = {
@@ -166,8 +167,10 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     const adapter = new ProductionWaveDromAdapter();
     const id = signalId("sig_reopen_cache");
     const waveJson: WaveJsonSignal = { wave: "01.." };
+    let templatesCreated = 0;
     const ownerDocument = {
       createElement: () => {
+        templatesCreated += 1;
         let markup = "";
         const svg = {
           localName: "svg", namespaceURI: "http://www.w3.org/2000/svg", attributes: { length: 0, item: () => null },
@@ -175,6 +178,7 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
           querySelectorAll: (selector: string) => selector === "[id]"
             ? [...markup.matchAll(/\bid=["']([^"']+)["']/g)].map((match) => ({ id: match[1] }))
             : [],
+          cloneNode: () => ({ ...svg, parentElement: undefined, removed: false, setAttribute: vi.fn() }),
           remove() { this.removed = true; this.parentElement = undefined; },
         };
         return {
@@ -203,6 +207,7 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     const firstIds = [...first.svg.querySelectorAll("[id]")].map((element) => element.id);
     expect(first.markupCacheHit).toBe(false);
     expect(first.svgSafetyCacheHit).toBe(false);
+    expect(templatesCreated).toBe(1);
     expect(firstIds.length).toBeGreaterThan(0);
 
     adapter.retainArtifact(id);
@@ -213,6 +218,7 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     const reopened = await adapter.renderWave(id, waveJson, reopenedMount);
     expect(reopened.markupCacheHit).toBe(true);
     expect(reopened.svgSafetyCacheHit).toBe(true);
+    expect(templatesCreated).toBe(1);
     expect(reopened.renderIndex).toBe(first.renderIndex);
     expect([...reopened.svg.querySelectorAll("[id]")].map((element) => element.id)).toEqual(firstIds);
     expect((reopenedMount as unknown as { querySelector: (selector: string) => unknown }).querySelector("svg")).toBe(reopened.svg);
@@ -221,11 +227,13 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     const secondReopened = await adapter.renderWave(id, waveJson, createMount());
     expect(secondReopened.markupCacheHit).toBe(true);
     expect(secondReopened.svgSafetyCacheHit).toBe(true);
+    expect(templatesCreated).toBe(1);
 
     const differentDocumentMount = createMount({ createElement: ownerDocument.createElement });
     const differentDocument = await adapter.renderWave(id, waveJson, differentDocumentMount);
     expect(differentDocument.markupCacheHit).toBe(true);
     expect(differentDocument.svgSafetyCacheHit).toBe(false);
+    expect(templatesCreated).toBe(2);
     expect(adapter.metrics()).toMatchObject({ cacheHits: 3, cacheMisses: 1, activeOwners: 1 });
   });
 
@@ -233,7 +241,7 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     const adapter = new ProductionWaveDromAdapter();
     const id = signalId("sig_reopen_changed");
     const createMount = () => {
-      const svg = { localName: "svg", namespaceURI: "http://www.w3.org/2000/svg", attributes: { length: 0, item: () => null }, querySelectorAll: () => [], setAttribute: vi.fn(), remove: vi.fn() };
+      const svg = { localName: "svg", namespaceURI: "http://www.w3.org/2000/svg", attributes: { length: 0, item: () => null }, querySelectorAll: () => [], setAttribute: vi.fn(), cloneNode: () => ({ ...svg, setAttribute: vi.fn() }), remove: vi.fn() };
       const template = { content: { firstElementChild: svg }, set innerHTML(_value: string) {} };
       return { ownerDocument: { createElement: () => template }, setAttribute: vi.fn(), getAttribute: vi.fn(() => id), removeAttribute: vi.fn(), replaceChildren: vi.fn() } as unknown as Element;
     };
@@ -251,7 +259,7 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     const adapter = new ProductionWaveDromAdapter();
     const waveJson: WaveJsonSignal = { wave: "0" };
     const createMount = () => {
-      const svg = { localName: "svg", namespaceURI: "http://www.w3.org/2000/svg", attributes: { length: 0, item: () => null }, querySelectorAll: () => [], setAttribute: vi.fn(), remove: vi.fn() };
+      const svg = { localName: "svg", namespaceURI: "http://www.w3.org/2000/svg", attributes: { length: 0, item: () => null }, querySelectorAll: () => [], setAttribute: vi.fn(), cloneNode: () => ({ ...svg, setAttribute: vi.fn() }), remove: vi.fn() };
       const template = { content: { firstElementChild: svg }, set innerHTML(_value: string) {} };
       return { ownerDocument: { createElement: () => template }, setAttribute: vi.fn(), getAttribute: vi.fn(() => "owner"), removeAttribute: vi.fn(), replaceChildren: vi.fn() } as unknown as Element;
     };
