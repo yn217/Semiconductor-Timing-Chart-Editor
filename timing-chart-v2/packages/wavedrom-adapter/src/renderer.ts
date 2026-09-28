@@ -418,7 +418,9 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const binding: SignalMarkupBinding = { key: cacheKey, renderIndex, artifact: cacheEntry };
     this.#markupCache.set(signalId, binding);
     const cachedSvg = cacheEntry.parsedSvgByDocument?.get(ownerDocument);
-    const useSharedSvgImage = markupCacheHit && !signalCacheHit && !isSvgGeometryDebugMode()
+    // Keep each validated WaveDrom payload out of the parent document's DOM.
+    // The canonical parsed SVG remains available for geometry extraction.
+    const useSharedSvgImage = !isSvgGeometryDebugMode()
       && typeof ownerDocument.createElementNS === "function";
     let svg: Element | null;
     if (cachedSvg && useSharedSvgImage) {
