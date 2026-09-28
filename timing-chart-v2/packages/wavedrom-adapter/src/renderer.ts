@@ -420,7 +420,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const cachedSvg = cacheEntry.parsedSvgByDocument?.get(ownerDocument);
     // Keep each validated WaveDrom payload out of the parent document's DOM.
     // The canonical parsed SVG remains available for geometry extraction.
-    const useSharedSvgImage = !isSvgGeometryDebugMode()
+    const useSharedSvgImage = markupCacheHit && !signalCacheHit && !isSvgGeometryDebugMode()
       && typeof ownerDocument.createElementNS === "function";
     let svg: Element | null;
     if (cachedSvg && useSharedSvgImage) {
@@ -464,12 +464,16 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       }
     }
     const isImageOwner = typeof svg?.querySelector === "function" && Boolean(svg.querySelector("image[data-wave-svg-image]"));
+    const geometrySvg = isImageOwner && renderIndex > 0
+      ? parsedSvg.cloneNode(true) as SVGElement
+      : isImageOwner ? parsedSvg : undefined;
+    if (geometrySvg && renderIndex > 0) bindWaveDromRenderIndex(geometrySvg, renderIndex);
     const sharedDefinitions = isImageOwner ? undefined : prepareSharedWaveDromDefinitions(svg as SVGElement, ownerDocument);
     if (!isImageOwner) bindWaveDromRenderIndex(svg as SVGElement, renderIndex);
     const renderStages = Object.freeze({ ...stages });
     const rendered: RenderedWave = {
       signalId, ownerKey: signalId, svg: svg as SVGElement,
-      ...(isImageOwner ? { geometrySvg: parsedSvg } : {}),
+      ...(geometrySvg ? { geometrySvg } : {}),
       renderIndex, waveJson, markupCacheHit, svgSafetyCacheHit, renderStages,
     };
     if (sharedDefinitions) this.#preparedDefinitions.set(rendered, sharedDefinitions);
