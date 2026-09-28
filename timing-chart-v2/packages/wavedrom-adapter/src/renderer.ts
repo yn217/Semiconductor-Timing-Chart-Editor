@@ -169,6 +169,10 @@ function bindWaveDromRenderIndex(svg: SVGElement, renderIndex: number): void {
       if (name === "aria-labelledby" || name === "aria-describedby" || name === "for" || name === "headers") {
         value = value.split(/\s+/).map((token) => idMap.get(token) ?? token).join(" ");
       } else {
+        // WaveDrom's large path/geometry attributes contain no fragment IDs.
+        // Avoid running the fragment-rewrite regex across every such value
+        // for every cloned owner SVG.
+        if (!value.includes("#")) continue;
         value = value.replace(/#([^\s)'\"]+)/g, (match, referencedId: string) => {
           const rebound = idMap.get(referencedId);
           return rebound ? `#${rebound}` : match;
@@ -176,7 +180,7 @@ function bindWaveDromRenderIndex(svg: SVGElement, renderIndex: number): void {
       }
       if (value !== attribute.value) element.setAttribute(attribute.name, value);
     }
-    if (element.localName.toLowerCase() === "style" && element.textContent) {
+    if (element.localName.toLowerCase() === "style" && element.textContent?.includes("#")) {
       element.textContent = element.textContent.replace(/#([^\s)'\"]+)/g, (match, referencedId: string) => {
         const rebound = idMap.get(referencedId);
         return rebound ? `#${rebound}` : match;
