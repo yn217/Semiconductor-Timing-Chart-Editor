@@ -159,33 +159,42 @@ const counters = async (page: Page) => JSON.parse(await page.getByTestId("cycle-
 const diagnostics = async (page: Page) => JSON.parse(await page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']").getAttribute("data-performance-counters") ?? "null") as Record<string, any>;
 const sessionCounters = async (page: Page) => JSON.parse(await page.getByTestId("cycle-surface").getAttribute("data-session-counters") ?? "null") as Record<string, any>;
 
-test("full-span Open builds the ruler once after reference geometry bootstrap", async ({ page }, testInfo) => {
+test("fixed 100x500 Open renders the full source span for every mounted owner", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
-  await page.setViewportSize({ width: 1672, height: 6000 });
+  await page.setViewportSize({ width: 13_000, height: 6_000 });
   await start(page);
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Zoom preset").selectOption("50");
+  await expect(page.getByTestId("zoom-status")).toHaveText("50%");
   await page.getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-view-mode", "Cycle");
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Performance.enable");
+  const browserBefore = await cdpMetrics(cdp);
   const before = await sessionCounters(page);
   const document = await openFixture(page, { signalCount: 100, cycleCount: 500 });
   const after = await sessionCounters(page);
-  const ruler = page.getByTestId("cycle-ruler");
-  await expect(ruler.locator(".cycle-tick")).toHaveCount(501);
-  await expect(ruler.locator(".cycle-tick").first()).toHaveAttribute("data-source-cycle", "0");
-  await expect(ruler.locator(".cycle-tick").last()).toHaveAttribute("data-source-cycle", "500");
-  expect(after.rulerBuilds - before.rulerBuilds).toBe(1);
+  const browserAfter = await cdpMetrics(cdp);
+  const waveWindows = await page.locator("[data-role='wave-owner']").evaluateAll((owners) => owners.map((owner) => {
+    const element = owner as HTMLElement;
+    return { signalId: element.dataset.signalId ?? element.dataset.waveOwner, start: element.dataset.renderedSourceWindowStart, end: element.dataset.renderedSourceWindowEnd };
+  }));
+  expect(waveWindows).toHaveLength(100);
+  expect(waveWindows.filter((window) => window.start === "0" && window.end === "500")).toHaveLength(100);
   const evidence = await host.evaluate((surface) => {
     const durations = JSON.parse(surface.getAttribute("data-open-phase-durations") ?? "{}") as Record<string, number>;
     const counters = JSON.parse(surface.getAttribute("data-session-counters") ?? "{}") as Record<string, any>;
     const waveBatches = JSON.parse(surface.getAttribute("data-open-wave-batch-metrics") ?? "{}") as Record<string, number>;
     return { openIdleMs: durations.idle, visibleWaveformsReadyMs: durations["visible-waveforms-ready"], rulerBuilds: counters.rulerBuilds, mountedWaveOwners: counters.mountedWaveOwners, waveBatches, title: document.querySelector(".app-titlebar h1")?.textContent };
   });
+  const browserDelta = Object.fromEntries(["TaskDuration", "ScriptDuration", "LayoutDuration", "RecalcStyleDuration", "PaintDuration"].map((name) => [name, ((browserAfter[name] ?? 0) - (browserBefore[name] ?? 0)) * 1_000]));
   expect(evidence.title).toBe(document.document.title);
   expect(evidence.waveBatches.requestedCount).toBe(evidence.mountedWaveOwners + 1);
   expect(evidence.waveBatches.renderCount).toBe(evidence.mountedWaveOwners);
-  await testInfo.attach("full-span-ruler-open.json", { body: Buffer.from(JSON.stringify({ fixture: "generated-100x500", evidence, rulerBuildDelta: after.rulerBuilds - before.rulerBuilds }, null, 2)), contentType: "application/json" });
-  console.log(`[full-span-ruler-open] ${JSON.stringify({ ...evidence, rulerBuildDelta: after.rulerBuilds - before.rulerBuilds })}`);
+  await testInfo.attach("fixed-100x500-open.json", { body: Buffer.from(JSON.stringify({ fixture: "generated-100x500", zoom: "50%", viewport: { width: 13_000, height: 6_000 }, waveWindows, evidence, browserDelta, rulerBuildDelta: after.rulerBuilds - before.rulerBuilds }, null, 2)), contentType: "application/json" });
+  console.log(`[fixed-100x500-open] ${JSON.stringify({ ...evidence, zoom: "50%", viewport: "13000x6000", fullSpanOwners: waveWindows.length, browserDelta, rulerBuildDelta: after.rulerBuilds - before.rulerBuilds })}`);
 });
 
 test("heavy renderer diagnostics are pull-based and absent from hot-path DOM counters", async ({ page }) => {

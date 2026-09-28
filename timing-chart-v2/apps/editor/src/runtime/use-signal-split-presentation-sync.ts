@@ -23,7 +23,6 @@ export function useSignalSplitPresentationSync(input: TimelineSurfaceRuntimeInpu
         const scale = host.current.style.getPropertyValue("--presentation-x-scale");
         if (scale) {
           hostLower.current.style.setProperty("--presentation-x-scale", scale);
-          viewportLower.current?.style.setProperty("--presentation-x-scale", scale);
         }
       }
     };

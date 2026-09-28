@@ -18,7 +18,7 @@ export type TimelineNavigationAttachment = Readonly<{
   viewMetrics: ViewMetricsOwner;
   timelineOffset: () => number;
   getPresentationScale: () => number;
-  syncPresentationScale: (viewport: HTMLElement, host: HTMLElement, rulerViewport: HTMLElement, zoom: number, presentationScale: number) => void;
+  syncPresentationScale: (host: HTMLElement, zoom: number, presentationScale: number) => void;
   getDocument: () => CanonicalDocument;
   getRange: () => TimelineRange;
   setSelectedCycle: (cycle: number) => void;
@@ -137,7 +137,7 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
           const wave = Number.parseFloat(context.viewport.style.getPropertyValue("--wave-width"));
           return Number.isFinite(wave) && wave > 0 ? wave : undefined;
         },
-        onPresentationScale: (nextZoom) => context.syncPresentationScale(context.viewport, context.rendererHost, context.rulerViewport, nextZoom, context.getPresentationScale()),
+        onPresentationScale: (nextZoom) => context.syncPresentationScale(context.rendererHost, nextZoom, context.getPresentationScale()),
         onZoom: (nextZoom) => {
           zoomRef.current = nextZoom;
           const activeMode = activeModeRef.current;

@@ -15,12 +15,12 @@ test("Cycle Mode default 100% pitch renders at the document's real geometry widt
   await expect(page.locator("text=/Zoom: \\d+%/").first()).toHaveText("Zoom: 100%");
 
   const measured = await page.evaluate(() => {
-    const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
+    const host = document.querySelector<HTMLElement>("[data-testid='cycle-surface']");
     const clockOwner = Array.from(document.querySelectorAll<HTMLElement>("[data-role='wave-owner']"))
       .find((el) => el.getAttribute("data-wave-owner")?.toLowerCase().includes("clock"));
     const svg = clockOwner?.querySelector("svg");
     return {
-      presentationXScale: viewport ? Number(getComputedStyle(viewport).getPropertyValue("--presentation-x-scale")) : undefined,
+      presentationXScale: host ? Number(getComputedStyle(host).getPropertyValue("--presentation-x-scale")) : undefined,
       viewBoxWidth: svg?.viewBox.baseVal.width,
       renderedWidth: svg?.getBoundingClientRect().width,
     };
