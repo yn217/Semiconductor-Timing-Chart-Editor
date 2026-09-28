@@ -1077,45 +1077,48 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
       cache.set(rowId, shell);
       creates += 1;
     }
-    shell.dataset.kind = row.kind;
-    shell.dataset.name = row.name;
-    shell.dataset.groupId = row.groupId;
-    shell.dataset.groupName = row.groupName;
-    shell.dataset.pinnedRow = String(row.pinned === true);
-    if (surface === "left" && row.pinned) shell.setAttribute("aria-description", "Pinned Signal; remains visible while scrolling.");
-    else if (surface === "left") shell.removeAttribute("aria-description");
-    if (surface === "left") {
-      shell.setAttribute("role", "treeitem");
-      shell.tabIndex = -1;
-      shell.setAttribute("aria-level", "2");
-    }
-    const groupStyleApplies = groupStyleAppliesToSurface(row.groupStyle?.extend, surface);
-    const rowBackground = groupStyleApplies && row.groupStyle?.showBackground
-      ? groupBackgroundColor(row.groupStyle.background, row.groupStyle.opacity)
-      : undefined;
-    if (rowBackground) shell.style.setProperty("--group-background", rowBackground);
-    else shell.style.removeProperty("--group-background");
-    shell.style.removeProperty("opacity");
-    if (groupStyleApplies && row.groupStyle?.border) shell.style.setProperty("--group-border", row.groupStyle.border); else shell.style.removeProperty("--group-border");
-    shell.dataset.groupStart = String(row.groupId !== previousGroupId);
-    shell.dataset.instancePath = row.instancePath?.join(".") ?? "";
-    shell.dataset.fullPath = row.fullPath ?? row.name;
-    if (row.role) shell.dataset.signalRole = row.role; else delete shell.dataset.signalRole;
-    applyDisplayStyle(shell, row);
     if (!shell.hasAttribute("aria-selected")) shell.setAttribute("aria-selected", "false");
-    if (surface === "left" && (row.kind === "timing" || row.kind === "spacer")) {
-      shell.draggable = true;
-      shell.setAttribute("aria-grabbed", "false");
-    }
-    const signature = `${row.kind}\u0000${row.name}\u0000${row.commentTitle ?? ""}\u0000${row.commentBody ?? ""}\u0000${row.groupId}\u0000${row.role ?? ""}\u0000${row.fullPath ?? ""}\u0000${JSON.stringify(row.groupStyle ?? {})}\u0000${JSON.stringify(row.displayStyle ?? {})}\u0000${row.displayAlign ?? ""}\u0000${row.displayOverflow ?? ""}\u0000${row.visible}\u0000${row.groupId !== previousGroupId}`;
+    const signature = `${row.kind}\u0000${row.name}\u0000${row.commentTitle ?? ""}\u0000${row.commentBody ?? ""}\u0000${row.groupId}\u0000${row.groupName}\u0000${row.role ?? ""}\u0000${row.instancePath?.join(".") ?? ""}\u0000${row.fullPath ?? ""}\u0000${row.pinned === true}\u0000${JSON.stringify(row.groupStyle ?? {})}\u0000${JSON.stringify(row.displayStyle ?? {})}\u0000${row.displayAlign ?? ""}\u0000${row.displayOverflow ?? ""}\u0000${row.visible}\u0000${row.groupId !== previousGroupId}`;
     const typedSignature = `${signature}\u0000${row.signalType ?? ""}`;
-    if (shell.dataset.shellSignature !== typedSignature) { populateShell(shell, row, surface, row.groupId !== previousGroupId); shell.dataset.shellSignature = typedSignature; }
-    if (surface === "left" && row.kind === "timing") {
-      const visibility = shell.querySelector<HTMLElement>("[data-role='tree-visibility']");
-      if (visibility) {
-        visibility.setAttribute("aria-pressed", String(row.visible));
-        visibility.dataset.visibilityState = row.visible ? "on" : "off";
-        visibility.setAttribute("aria-label", `${row.visible ? "Hide" : "Show"} ${row.name}`);
+    if (shell.dataset.shellSignature !== typedSignature) {
+      shell.dataset.kind = row.kind;
+      shell.dataset.name = row.name;
+      shell.dataset.groupId = row.groupId;
+      shell.dataset.groupName = row.groupName;
+      shell.dataset.pinnedRow = String(row.pinned === true);
+      if (surface === "left" && row.pinned) shell.setAttribute("aria-description", "Pinned Signal; remains visible while scrolling.");
+      else if (surface === "left") shell.removeAttribute("aria-description");
+      if (surface === "left") {
+        shell.setAttribute("role", "treeitem");
+        shell.tabIndex = -1;
+        shell.setAttribute("aria-level", "2");
+      }
+      const groupStyleApplies = groupStyleAppliesToSurface(row.groupStyle?.extend, surface);
+      const rowBackground = groupStyleApplies && row.groupStyle?.showBackground
+        ? groupBackgroundColor(row.groupStyle.background, row.groupStyle.opacity)
+        : undefined;
+      if (rowBackground) shell.style.setProperty("--group-background", rowBackground);
+      else shell.style.removeProperty("--group-background");
+      shell.style.removeProperty("opacity");
+      if (groupStyleApplies && row.groupStyle?.border) shell.style.setProperty("--group-border", row.groupStyle.border); else shell.style.removeProperty("--group-border");
+      shell.dataset.groupStart = String(row.groupId !== previousGroupId);
+      shell.dataset.instancePath = row.instancePath?.join(".") ?? "";
+      shell.dataset.fullPath = row.fullPath ?? row.name;
+      if (row.role) shell.dataset.signalRole = row.role; else delete shell.dataset.signalRole;
+      applyDisplayStyle(shell, row);
+      if (surface === "left" && (row.kind === "timing" || row.kind === "spacer")) {
+        shell.draggable = true;
+        shell.setAttribute("aria-grabbed", "false");
+      }
+      populateShell(shell, row, surface, row.groupId !== previousGroupId);
+      shell.dataset.shellSignature = typedSignature;
+      if (surface === "left" && row.kind === "timing") {
+        const visibility = shell.querySelector<HTMLElement>("[data-role='tree-visibility']");
+        if (visibility) {
+          visibility.setAttribute("aria-pressed", String(row.visible));
+          visibility.dataset.visibilityState = row.visible ? "on" : "off";
+          visibility.setAttribute("aria-label", `${row.visible ? "Hide" : "Show"} ${row.name}`);
+        }
       }
     }
     place(shell, row);
@@ -1360,8 +1363,10 @@ function applyDisplayStyle(shell: HTMLElement, row: RowLayoutEntry): void {
 }
 
 function place(element: HTMLElement, row: Pick<RowLayoutEntry, "y" | "height">): void {
-  element.style.transform = `translateY(${row.y}px)`;
-  element.style.height = `${row.height}px`;
+  const transform = `translateY(${row.y}px)`;
+  const height = `${row.height}px`;
+  if (element.style.transform !== transform) element.style.transform = transform;
+  if (element.style.height !== height) element.style.height = height;
 }
 
 function assertCrossSurfaceInvariant(projection: RenderProjection): void {
