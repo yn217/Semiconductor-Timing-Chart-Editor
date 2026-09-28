@@ -7,7 +7,7 @@
 
 .surface-host [data-role$="-row"], .surface-host [data-role="wave-owner"] { position: absolute; width: 100%; overflow: hidden; border-bottom: 1px solid #e7ebf0; cursor: default; }
 
-.surface-host [data-role="wave-owner"] { width: var(--wave-width, 640px); pointer-events: none; }
+.surface-host [data-role="wave-owner"] { width: var(--wave-width, 640px); pointer-events: none; contain: style; }
 
 .surface-host [data-role="wave-owner"] svg { display: block; overflow: visible; }
 
