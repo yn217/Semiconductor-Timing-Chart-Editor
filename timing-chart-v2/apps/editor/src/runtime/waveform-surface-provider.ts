@@ -452,6 +452,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         if (item.stale === true || !isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
         if (item.canvasPainted === true) return { signalId: item.request.signalId, result: { waveDromRenders: 0, localGeometryBuilds: 1 } };
         if (item.error || !item.rendered) return { signalId: item.request.signalId, error: item.error ?? new Error("Waveform render did not produce an SVG.") };
+        const rendered = item.rendered;
         try {
           if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
           // A semantic delete can occur without advancing documentEpoch. Do
@@ -469,15 +470,20 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           // Renderer-independent Local Geometry (#755): computed from the WaveJson + pinned WaveDrom layout, not by reading
           // the rendered SVG DOM (getScreenCTM / <use> walk). `?geometrySource=svg` restores DOM extraction for comparison.
           const geometry = useDomGeometrySource()
-            ? context.adapter.extractLocalGeometry(item.rendered)
+            ? context.adapter.extractLocalGeometry(rendered)
             : referenceGeometrySeeded && item.request.signalId === referenceClockId
               ? seededReferenceGeometry!
-              : analyticLocalGeometry(item.request.signalId, item.rendered.waveJson);
+              : new LazyAnalyticGeometryMap(
+                item.request.signalId,
+                rendered.waveJson,
+                rendered.waveJson.geometrySourceCycles
+                  ?? Array.from({ length: rendered.waveJson.wave.length + 1 }, (_, index) => (rendered.waveJson.sourceWindow?.start ?? 0) + index),
+              );
           if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
           if (!(referenceGeometrySeeded && item.request.signalId === referenceClockId && !useDomGeometrySource())) {
             context.geometryRegistry.maps.set(item.request.signalId, absoluteWindowGeometry(geometry, item.rendererStart));
           }
-          context.geometryRegistry.svgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
+          context.geometryRegistry.svgs.set(item.request.signalId, rendered.svg as SVGSVGElement);
           const ownerGeometry = referenceGeometrySeeded && item.request.signalId === referenceClockId && !useDomGeometrySource()
             ? seededReferenceOwnerGeometry
             : geometry;

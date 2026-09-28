@@ -5,6 +5,7 @@ import { toWaveJson } from "@timing-chart-v2/wavedrom-adapter";
 import type { BookmarkId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { GeometryRegistry } from "../../apps/editor/src/runtime/geometry-registry.js";
+import { LazyAnalyticGeometryMap } from "../../apps/editor/src/runtime/lazy-analytic-geometry.js";
 import { createWaveformSurfaceProvider, type WaveformProviderContext } from "../../apps/editor/src/runtime/waveform-surface-provider.js";
 import type { RenderedWave, WaveDromAdapter, WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 
@@ -85,6 +86,7 @@ describe("waveform provider primary geometry readiness", () => {
     const referenceSignalId = document.timeline.referenceClock!;
     const nonReferenceSignalIds = document.signals.filter((signal) => signal.id !== referenceSignalId).map((signal) => signal.id);
     const lifecycle: string[] = [];
+    const geometryRegistry = new GeometryRegistry();
     const svgBySignal = new Map<string, SVGSVGElement>();
     const sourceCyclesBySignal = new Map<string, readonly number[] | undefined>();
     const adapter: WaveDromAdapter = {
@@ -111,7 +113,7 @@ describe("waveform provider primary geometry readiness", () => {
       getDocumentEpoch: () => 1,
       mappingCache: new DisplayTimeMappingCache(),
       adapter,
-      geometryRegistry: new GeometryRegistry(),
+      geometryRegistry,
       markOpenPhase: vi.fn(),
       isPrimaryPresentationOpening: () => true,
       invalidateSnapIndex: vi.fn(),
@@ -141,6 +143,8 @@ describe("waveform provider primary geometry readiness", () => {
     expect(referenceSourceCycles).toBeDefined();
     expect(sourceCyclesBySignal.get(nonReferenceSignalIds[0]!)).toBe(referenceSourceCycles);
     expect(sourceCyclesBySignal.get(nonReferenceSignalIds[1]!)).toBe(referenceSourceCycles);
+    expect(geometryRegistry.maps.get(nonReferenceSignalIds[0]!)).toBeInstanceOf(LazyAnalyticGeometryMap);
+    expect(geometryRegistry.maps.get(nonReferenceSignalIds[1]!)).toBeInstanceOf(LazyAnalyticGeometryMap);
   });
 
   it("does not install a prepared waveform after its request becomes stale", async () => {
