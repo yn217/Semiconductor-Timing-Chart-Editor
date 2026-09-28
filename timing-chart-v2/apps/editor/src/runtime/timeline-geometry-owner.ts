@@ -205,13 +205,18 @@ export class TimelineGeometryOwner {
         ? firstDisplay + (localX - firstEntry.x) / pitch
         : localX;
       const displayCycle = Math.max(0, Math.min(mapping.displayCycleCount, Math.round(displayIndex)));
+      if (displayCycle === mapping.displayCycleCount) return document.timeline.cycleCount;
       return mapping.displayToSource[displayCycle] ?? fallback;
     };
     let start = sourceAtMappedBoundary(localStart, firstEntry?.cycle ?? 0);
     let end = sourceAtMappedBoundary(localEnd, lastEntry?.cycle ?? document.timeline.cycleCount);
     if (firstEntry && lastEntry && localStart <= lastEntry.x && localEnd >= firstEntry.x) {
-      start = firstEntry.cycle;
-      end = lastEntry.cycle;
+      // A viewport may overlap the retained geometry while extending beyond
+      // either edge. Preserve the extrapolated endpoint in that case; clamping
+      // it to the mounted edge makes the shared window grow one tile per
+      // WaveDrom batch, needlessly reinstalling every visible owner.
+      start = localStart < firstEntry.x ? sourceAtMappedBoundary(localStart, firstEntry.cycle) : firstEntry.cycle;
+      end = localEnd > lastEntry.x ? sourceAtMappedBoundary(localEnd, lastEntry.cycle) : lastEntry.cycle;
       for (const entry of entries) {
         if (entry.x <= localStart) start = entry.cycle;
         if (entry.x >= localEnd) { end = entry.cycle; break; }
@@ -236,7 +241,7 @@ export class TimelineGeometryOwner {
       const span = Math.min(document.timeline.cycleCount, Math.max(grid * 2, Math.ceil((boundedEnd - start) / grid) * grid));
       const clampedStart = Math.max(0, Math.min(start, document.timeline.cycleCount - span));
       this.#lastBoundedWindow = { start: clampedStart, end: clampedStart + span, cycleCount: document.timeline.cycleCount };
-    return { start: clampedStart, end: clampedStart + span };
+      return { start: clampedStart, end: clampedStart + span };
     }
     return { start: boundedStart, end: boundedEnd };
   }
