@@ -108,8 +108,8 @@ export function parseDocument(input: string | unknown): ParseDocumentResult {
   } catch (error) {
     return { ok: false, kind: "syntax", problems: [syntaxProblem(error, input)] };
   }
-  const complexityProblems = validateDocumentInputComplexity(parsed);
-  if (complexityProblems.length > 0) return { ok: false, kind: "validation", problems: complexityProblems };
+  // normalizeDocument owns the post-parse complexity gate. Running it here as
+  // well traversed every JSON node twice on the production string-Open path.
   return normalizeDocument(parsed);
 }
 
