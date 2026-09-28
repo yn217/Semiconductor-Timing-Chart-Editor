@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
+import { parseDocument } from "@timing-chart-v2/schema";
 import { commitDocumentReplacement, type DocumentReplacementPort } from "../../apps/editor/src/application/document-replacement.js";
 
 const small = () => generatePerformanceDocument({ signalCount: 2, cycleCount: 8, profile: "transaction-heavy" });
@@ -23,6 +24,18 @@ describe("commitDocumentReplacement (#743)", () => {
     expect(outcome.ok).toBe(true);
     expect(calls).toEqual(["replaceSession", "advanceEpoch"]);
     if (outcome.ok) { expect(outcome.documentEpoch).toBe(7); expect(outcome.session).toBe(session); }
+  });
+
+  it("accepts the parser-validated Open handoff without changing the replacement contract", () => {
+    const parsed = parseDocument(JSON.stringify(small()));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    const { value, calls } = port();
+
+    const outcome = commitDocumentReplacement(value, parsed);
+
+    expect(outcome.ok).toBe(true);
+    expect(calls).toEqual(["replaceSession", "advanceEpoch"]);
   });
 
   it("a throwing replaceSession leaves the epoch untouched and reports the failure instead of throwing", () => {

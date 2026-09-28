@@ -1,6 +1,6 @@
 import type { CommandHistorySession } from "@timing-chart-v2/history";
 import type { CanonicalDocument, DocumentProblem, ParsedCanonicalDocument } from "@timing-chart-v2/schema";
-import { validateDocumentResourceBudget } from "@timing-chart-v2/schema";
+import { isTrustedParsedCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
 import { canonicalDocumentOf } from "../file-document-controller.js";
 
 export type MigrationWarning = Readonly<{ code: string; path: string; message: string }>;
@@ -23,8 +23,13 @@ export type DocumentReplacementOutcome =
 
 export function commitDocumentReplacement(port: DocumentReplacementPort, input: CanonicalDocument | ParsedCanonicalDocument, migrationWarnings: readonly MigrationWarning[] = []): DocumentReplacementOutcome {
   const document = canonicalDocumentOf(input);
-  const problems = validateDocumentResourceBudget(document);
-  if (problems.length > 0) return { ok: false, reason: "resource-budget", problems };
+  // parseDocument already checked canonical structure and the same resource
+  // budget. Preserve that trusted handoff through the replacement boundary;
+  // raw New/other canonical inputs still receive the required budget check.
+  if (!isTrustedParsedCanonicalDocument(input)) {
+    const problems = validateDocumentResourceBudget(document);
+    if (problems.length > 0) return { ok: false, reason: "resource-budget", problems };
+  }
   const diagnostics = migrationWarnings.map((warning, index) => ({ code: warning.code, path: `${warning.path}[migration:${index}]`, message: warning.message }));
   let session: CommandHistorySession;
   try {
