@@ -454,8 +454,8 @@ export function deriveTimingDiagnostics(document: CanonicalDocument, options: Ti
   const configured = options.enabledCategories ?? document.checkSettings.enabledCategories;
   const enabled = new Set<TimingDiagnosticCategory>(configured === undefined ? TIMING_DIAGNOSTIC_CATEGORIES : configured.filter((category): category is TimingDiagnosticCategory => TIMING_DIAGNOSTIC_CATEGORIES.some((known) => known === category)));
   const indexes = buildTimingDiagnosticIndexes(document, enabled);
-  return TIMING_DIAGNOSTIC_RULES.flatMap((rule) => rule.evaluate(document, enabled, indexes)
-    .filter(() => enabled.has(rule.category))
+  return TIMING_DIAGNOSTIC_RULES.filter((rule) => enabled.has(rule.category))
+    .flatMap((rule) => rule.evaluate(document, enabled, indexes)
     .map((diagnostic) => ({ ...diagnostic, ruleId: rule.id, stableKey: `${rule.id}:${diagnostic.code}:${diagnostic.objectId ?? diagnostic.entityId ?? ""}:${diagnostic.path}${diagnostic.sourceCycle === undefined ? "" : `:cycle:${diagnostic.sourceCycle}`}` })))
     .sort(diagnosticOrder);
 }
