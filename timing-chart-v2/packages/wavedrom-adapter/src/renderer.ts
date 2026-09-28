@@ -135,6 +135,44 @@ interface SignalMarkupBinding {
 
 const RETAINED_MARKUP_CACHE_LIMIT = 64;
 const SHARED_MARKUP_CACHE_LIMIT = 64;
+const sharedDefinitionSprites = new WeakMap<Document, SVGSVGElement>();
+
+/**
+ * The pinned WaveDrom skin's definitions (transition bricks and markers) are
+ * invariant across render owners. Keeping a copy in every installed SVG
+ * multiplies a large, identical subtree by the number of Signals. SVG
+ * fragment references resolve within the containing document, so keep one
+ * inert document-level sprite and remove only definitions that exactly match
+ * that pinned skin. Unexpected definitions remain local rather than being
+ * discarded.
+ */
+function shareWaveDromDefinitions(svg: SVGElement, ownerDocument: Document): void {
+  if (typeof svg.querySelector !== "function") return;
+  const definitions = svg.querySelector("defs");
+  if (!definitions) return;
+  if (!ownerDocument.body || typeof ownerDocument.createElementNS !== "function" || typeof ownerDocument.querySelector !== "function") return;
+  let sprite = sharedDefinitionSprites.get(ownerDocument)
+    ?? ownerDocument.querySelector<SVGSVGElement>("svg[data-wavedrom-definition-sprite]")
+    ?? undefined;
+  if (!sprite) {
+    sprite = ownerDocument.createElementNS("http://www.w3.org/2000/svg", "svg");
+    sprite.setAttribute("data-wavedrom-definition-sprite", "true");
+    sprite.setAttribute("aria-hidden", "true");
+    sprite.setAttribute("focusable", "false");
+    sprite.setAttribute("width", "0");
+    sprite.setAttribute("height", "0");
+    sprite.style.cssText = "position:absolute;left:-10000px;top:-10000px;width:0;height:0;overflow:hidden;pointer-events:none";
+    ownerDocument.body.append(sprite);
+  }
+  sharedDefinitionSprites.set(ownerDocument, sprite);
+  const sharedDefinitions = sprite.querySelector("defs");
+  if (!sharedDefinitions) {
+    sprite.append(definitions.cloneNode(true));
+    definitions.remove();
+  } else if (sharedDefinitions.isEqualNode(definitions)) {
+    definitions.remove();
+  }
+}
 
 /**
  * WaveDrom 3.6.2 emits owner-specific SVG IDs by appending the render index
@@ -358,6 +396,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const existing = this.#active.get(prepared.signalId);
     if (existing && existing.mount !== mount) this.#clearOwner(existing);
     const stageStartedAt = now();
+    shareWaveDromDefinitions(prepared.svg, mount.ownerDocument);
     prepared.svg.setAttribute("data-wave-owner", prepared.signalId);
     prepared.svg.setAttribute("data-wave-render-index", String(prepared.renderIndex));
     // WaveDrom's default SVG is sized from the row height. The browser's default
