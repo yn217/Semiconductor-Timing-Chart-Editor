@@ -145,6 +145,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         return sourceCycles;
       };
       let referenceGeometryReady = false;
+      let geometryRegistryChanged = false;
       let waveSliceStartedAt = globalThis.performance.now();
       const referenceClockId = document.timeline.referenceClock ?? signalIndex.firstClockSignalId;
       const markReferenceClockPaintedIfCurrent = (signalId: SignalId): void => {
@@ -350,7 +351,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             const canvasGeometry = new LazyAnalyticGeometryMap(item.request.signalId, item.waveJson, sourceCycles);
             publishCycleBoundarySnapshotAccessor(item.request.owner, canvasGeometry);
             context.geometryRegistry.maps.set(item.request.signalId, absoluteWindowGeometry(canvasGeometry, item.rendererStart));
-            context.invalidateSnapIndex();
+            geometryRegistryChanged = true;
             context.markOpenPhase("first-visible-wave-painted");
             markReferenceClockPaintedIfCurrent(item.request.signalId);
             return { ...item, rendered: undefined, canvasPainted: true };
@@ -482,6 +483,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
           if (!(referenceGeometrySeeded && item.request.signalId === referenceClockId && !useDomGeometrySource())) {
             context.geometryRegistry.maps.set(item.request.signalId, absoluteWindowGeometry(geometry, item.rendererStart));
+            geometryRegistryChanged = true;
           }
           context.geometryRegistry.svgs.set(item.request.signalId, rendered.svg as SVGSVGElement);
           const ownerGeometry = referenceGeometrySeeded && item.request.signalId === referenceClockId && !useDomGeometrySource()
@@ -490,17 +492,21 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           publishCycleBoundarySnapshotAccessor(item.request.owner, ownerGeometry);
           if (item.request.signalId === currentReferenceClock) { context.markOpenPhase("reference-geometry-ready"); referenceGeometryReady = true; }
           context.markOpenPhase("first-visible-wave-painted");
-          context.invalidateSnapIndex();
           return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
         } catch (error: unknown) {
           context.geometryRegistry.svgs.delete(item.request.signalId);
           if (!(referenceGeometrySeeded && item.request.signalId === referenceClockId && !useDomGeometrySource())) {
             context.geometryRegistry.maps.delete(item.request.signalId);
+            geometryRegistryChanged = true;
           }
-          context.invalidateSnapIndex();
           return { signalId: item.request.signalId, error };
         }
       });
+      // Each result above updates the shared geometry registry synchronously.
+      // Invalidate its derived indexes once after the batch instead of once per
+      // owner; repeated invalidation also discarded the identical source-window
+      // query while the remaining owners were still being accepted.
+      if (geometryRegistryChanged) context.invalidateSnapIndex();
       if (referenceGeometryReady && !referenceGeometryNotified) context.onReferenceGeometryReady?.();
       if (primaryOpenBatch) {
         const openStageTotals = stageTotals!;

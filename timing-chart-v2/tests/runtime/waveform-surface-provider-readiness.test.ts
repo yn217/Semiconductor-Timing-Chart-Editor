@@ -87,6 +87,7 @@ describe("waveform provider primary geometry readiness", () => {
     const nonReferenceSignalIds = document.signals.filter((signal) => signal.id !== referenceSignalId).map((signal) => signal.id);
     const lifecycle: string[] = [];
     const geometryRegistry = new GeometryRegistry();
+    const invalidateSnapIndex = vi.fn();
     const svgBySignal = new Map<string, SVGSVGElement>();
     const sourceCyclesBySignal = new Map<string, readonly number[] | undefined>();
     const adapter: WaveDromAdapter = {
@@ -116,7 +117,7 @@ describe("waveform provider primary geometry readiness", () => {
       geometryRegistry,
       markOpenPhase: vi.fn(),
       isPrimaryPresentationOpening: () => true,
-      invalidateSnapIndex: vi.fn(),
+      invalidateSnapIndex,
       getViewMode: () => "Cycle",
     };
     const owner = () => ({ style: { removeProperty: vi.fn() }, dataset: {}, ownerDocument: {} as Document, isConnected: true }) as unknown as HTMLElement;
@@ -139,6 +140,9 @@ describe("waveform provider primary geometry readiness", () => {
     expect(adapter.renderWave).not.toHaveBeenCalled();
     expect(adapter.installWave).toHaveBeenCalledTimes(3);
     expect(svgBySignal.size).toBe(3);
+    // Reference bootstrap publishes once before rendering; the two other
+    // owner maps are committed together and invalidate their shared indexes once.
+    expect(invalidateSnapIndex).toHaveBeenCalledTimes(2);
     const referenceSourceCycles = sourceCyclesBySignal.get(referenceSignalId);
     expect(referenceSourceCycles).toBeDefined();
     expect(sourceCyclesBySignal.get(nonReferenceSignalIds[0]!)).toBe(referenceSourceCycles);
