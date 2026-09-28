@@ -1,10 +1,26 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
-import type { GroupId, SignalId } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, GroupId, SignalId } from "@timing-chart-v2/schema";
 import type { RenderProjection, VirtualizationWindow } from "@timing-chart-v2/projection";
 import { buildViewportWindow } from "./viewport-window.js";
+import { usesFullDocumentWaveformWindow } from "./timeline-geometry-owner.js";
 import type { ProjectionCoordinator } from "./projection-coordinator.js";
 import type { RenderCoordinator } from "./render-coordinator.js";
 import type { TimingChartRenderer } from "@timing-chart-v2/renderer";
+
+/** Keep the first large-document paint to the geometry owner; its publication
+ * triggers the authoritative viewport projection that queues the remaining waves. */
+export function initialWaveSignalIds(document: CanonicalDocument): readonly SignalId[] | undefined {
+  if (usesFullDocumentWaveformWindow(document.timeline.cycleCount, document.signals.length)) return undefined;
+  const referenceClock = document.timeline.referenceClock ?? document.signals.find((signal) => signal.type === "clock")?.id;
+  return referenceClock === undefined ? undefined : [referenceClock];
+}
+
+/** Filter only the first renderer update; retain the complete shared projection. */
+export function projectionForInitialWaveBootstrap(projection: RenderProjection, signalIds: readonly SignalId[] | undefined): RenderProjection {
+  if (signalIds === undefined || !signalIds.some((signalId) => projection.mountedSignalIds.includes(signalId))) return projection;
+  const allowed = new Set(signalIds);
+  return { ...projection, mountedSignalIds: projection.mountedSignalIds.filter((signalId) => allowed.has(signalId)) };
+}
 
 export function projectViewportWindow({
   viewport,
@@ -71,16 +87,12 @@ export function mountInitialTimelineProjection(context: {
   context.coordinator.mount(context.host);
   const window = buildViewportWindow(context.viewport, context.referenceClock, context.stickyRowIds);
   const projection = context.projectionCoordinator.project({ snapshot: context.snapshot, changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: context.collapsedGroupIds });
-  const initialWaveSignalIds = context.initialWaveSignalIds;
-  const referenceWaveIsMounted = initialWaveSignalIds?.some((signalId) => projection.mountedSignalIds.includes(signalId)) === true;
   // New mounted owners are normally queued automatically by the renderer.
   // Restrict only this initial bootstrap update so a provisional/thinned
   // projection does not enqueue every visible WaveDrom owner before reference
   // geometry triggers the authoritative reproject. Keep the full projection
   // as the returned/shared value; the follow-up renderer update mounts every
   // visible owner normally.
-  context.renderer.update(referenceWaveIsMounted
-    ? { ...projection, mountedSignalIds: projection.mountedSignalIds.filter((signalId) => initialWaveSignalIds!.includes(signalId)) }
-    : projection);
+  context.renderer.update(projectionForInitialWaveBootstrap(projection, context.initialWaveSignalIds));
   return { window, projection };
 }

@@ -20,7 +20,7 @@ import { resolveTransactionSnapCycle } from "./interaction-controller.js";
 import { scheduleInitialTimelineRefresh } from "./document-lifecycle-controller.js";
 import { refreshRendererForReason } from "./render-coordinator.js";
 import { createWaveformSurfaceProvider } from "./waveform-surface-provider.js";
-import { mountInitialTimelineProjection, projectViewportWindow } from "./viewport-projection.js";
+import { initialWaveSignalIds, mountInitialTimelineProjection, projectViewportWindow, projectionForInitialWaveBootstrap } from "./viewport-projection.js";
 import { fixedColumnsOutsideTimeline, timelineScrollOwner } from "./timeline-scroll-owner.js";
 import { refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshTimelinePresentation, syncPresentationScale, syncRulerScroll } from "./timeline-presentation-refresh.js";
 import { attachTimelineSurfaceInteractions, createTimelineCycleBoundaryResolver, createTimelineViewportKeyDownHandler, type TimelineSurfaceInteractionHandle } from "./timeline-surface-interactions.js";
@@ -270,10 +270,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     const initialDocument = sessionController.snapshot().document;
     const bootstrapReferenceClock = initialDocument.timeline.referenceClock
       ?? initialDocument.signals.find((signal) => signal.type === "clock")?.id;
-    const initialWaveSignalIds = !usesFullDocumentWaveformWindow(initialDocument.timeline.cycleCount, initialDocument.signals.length)
-      && bootstrapReferenceClock !== undefined
-      ? [bootstrapReferenceClock]
-      : undefined;
+    const initialWaveIds = initialWaveSignalIds(initialDocument);
     const initialProjection = mountInitialTimelineProjection({
       coordinator: renderCoordinator,
       renderer,
@@ -284,7 +281,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       projectionCoordinator,
       snapshot: sessionController.snapshot(),
       collapsedGroupIds: [...collapsedGroupIdsRef.current],
-      ...(initialWaveSignalIds === undefined ? {} : { initialWaveSignalIds }),
+      ...(initialWaveIds === undefined ? {} : { initialWaveSignalIds: initialWaveIds }),
     });
     let window: VirtualizationWindow = initialProjection.window;
     projection = initialProjection.projection;
@@ -679,7 +676,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       viewportElement.scrollTop = 0;
         window = buildViewportWindow(viewportElement, canonicalDocument.timeline.referenceClock, input.presentation.getPinnedSignalIds());
       projection = projectionCoordinator.project({ snapshot: sessionController.snapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
-      renderer.update(projection);
+      // Match the initial-mount bootstrap: render just the stable geometry
+      // owner first. Its geometry-ready callback reprojects this full
+      // projection and queues the other visible signals once with final bounds.
+      renderer.update(projectionForInitialWaveBootstrap(projection, initialWaveSignalIds(canonicalDocument)));
       signalSplitRuntimeRef.current?.onDocumentReplaced();
       markOpenPhase("canonical-replaced");
       markOpenPhase("renderer-updated");

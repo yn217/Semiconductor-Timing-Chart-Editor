@@ -1,10 +1,26 @@
 import { describe, expect, it } from "vitest";
 import type { SignalId } from "@timing-chart-v2/schema";
 import { buildViewportWindow } from "../../apps/editor/src/runtime/viewport-window.js";
-import { mountInitialTimelineProjection, projectViewportWindow } from "../../apps/editor/src/runtime/viewport-projection.js";
+import { initialWaveSignalIds, mountInitialTimelineProjection, projectViewportWindow, projectionForInitialWaveBootstrap } from "../../apps/editor/src/runtime/viewport-projection.js";
 import { pinnedSignalIdsForEpoch, signalPinStateForEpoch } from "../../apps/editor/src/workspace/signal-pin-state.js";
 
 describe("Signal pin viewport ownership", () => {
+  it("bootstraps file replacement with only the reference wave while preserving the full projection", () => {
+    const clock = "clock-id" as SignalId;
+    const data = "signal-a" as SignalId;
+    const document = {
+      timeline: { cycleCount: 500, referenceClock: clock },
+      signals: Array.from({ length: 100 }, (_, index) => index === 0 ? { id: clock, type: "clock" } : { id: `${data}-${index}`, type: "binary" }),
+    } as never;
+    const otherMounted = "signal-99" as SignalId;
+    const projection = { mountedSignalIds: [clock, otherMounted], waveSignalIds: [clock, otherMounted] } as never;
+
+    const bootstrap = projectionForInitialWaveBootstrap(projection, initialWaveSignalIds(document));
+
+    expect(bootstrap.mountedSignalIds).toEqual([clock]);
+    expect(projection.mountedSignalIds).toEqual([clock, otherMounted]);
+  });
+
   it("retains the reference clock and multiple user pins by stable ID", () => {
     const window = buildViewportWindow({ scrollTop: 100, clientHeight: 200 }, "clock-id" as SignalId, ["signal-a", "signal-b", "clock-id"] as SignalId[]);
     expect(window.pinnedRowIds).toEqual(["clock-id", "signal-a", "signal-b"]);
