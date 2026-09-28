@@ -20,7 +20,7 @@ import { resolveTransactionSnapCycle } from "./interaction-controller.js";
 import { scheduleInitialTimelineRefresh } from "./document-lifecycle-controller.js";
 import { refreshRendererForReason } from "./render-coordinator.js";
 import { createWaveformSurfaceProvider } from "./waveform-surface-provider.js";
-import { mountInitialTimelineProjection, projectViewportWindow } from "./viewport-projection.js";
+import { mountInitialTimelineProjection, projectionForInitialWaveMount, projectViewportWindow } from "./viewport-projection.js";
 import { fixedColumnsOutsideTimeline, timelineScrollOwner } from "./timeline-scroll-owner.js";
 import { refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshTimelinePresentation, syncPresentationScale, syncRulerScroll } from "./timeline-presentation-refresh.js";
 import { attachTimelineSurfaceInteractions, createTimelineCycleBoundaryResolver, createTimelineViewportKeyDownHandler, type TimelineSurfaceInteractionHandle } from "./timeline-surface-interactions.js";
@@ -679,7 +679,18 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       viewportElement.scrollTop = 0;
         window = buildViewportWindow(viewportElement, canonicalDocument.timeline.referenceClock, input.presentation.getPinnedSignalIds());
       projection = projectionCoordinator.project({ snapshot: sessionController.snapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
-      renderer.update(projection);
+      const bootstrapReferenceClock = canonicalDocument.timeline.referenceClock
+        ?? canonicalDocument.signals.find((signal) => signal.type === "clock")?.id;
+      const initialWaveSignalIds = !usesFullDocumentWaveformWindow(canonicalDocument.timeline.cycleCount, canonicalDocument.signals.length)
+        && bootstrapReferenceClock !== undefined
+        ? [bootstrapReferenceClock]
+        : undefined;
+      // Match initial mount: the first large/windowed Open update renders only
+      // the reference owner needed to establish shared time geometry. That
+      // callback reprojects the unchanged full projection and queues the full
+      // visible set, avoiding a provisional all-owner batch made stale by its
+      // own geometry-ready reproject.
+      renderer.update(projectionForInitialWaveMount(projection, initialWaveSignalIds));
       signalSplitRuntimeRef.current?.onDocumentReplaced();
       markOpenPhase("canonical-replaced");
       markOpenPhase("renderer-updated");
