@@ -159,6 +159,27 @@ const counters = async (page: Page) => JSON.parse(await page.getByTestId("cycle-
 const diagnostics = async (page: Page) => JSON.parse(await page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']").getAttribute("data-performance-counters") ?? "null") as Record<string, any>;
 const sessionCounters = async (page: Page) => JSON.parse(await page.getByTestId("cycle-surface").getAttribute("data-session-counters") ?? "null") as Record<string, any>;
 
+test("full-span Open builds the ruler once after reference geometry bootstrap", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await start(page);
+  const before = await sessionCounters(page);
+  const document = await openFixture(page, { signalCount: 100, cycleCount: 500 });
+  const after = await sessionCounters(page);
+  const ruler = page.getByTestId("cycle-ruler");
+  await expect(ruler.locator(".cycle-tick")).toHaveCount(501);
+  await expect(ruler.locator(".cycle-tick").first()).toHaveAttribute("data-source-cycle", "0");
+  await expect(ruler.locator(".cycle-tick").last()).toHaveAttribute("data-source-cycle", "500");
+  expect(after.rulerBuilds - before.rulerBuilds).toBe(1);
+  const evidence = await page.getByTestId("cycle-surface").evaluate((host) => {
+    const durations = JSON.parse(host.getAttribute("data-open-phase-durations") ?? "{}") as Record<string, number>;
+    const counters = JSON.parse(host.getAttribute("data-session-counters") ?? "{}") as Record<string, any>;
+    return { openIdleMs: durations.idle, visibleWaveformsReadyMs: durations["visible-waveforms-ready"], rulerBuilds: counters.rulerBuilds, mountedWaveOwners: counters.mountedWaveOwners, title: document.querySelector(".app-titlebar h1")?.textContent };
+  });
+  expect(evidence.title).toBe(document.document.title);
+  await testInfo.attach("full-span-ruler-open.json", { body: Buffer.from(JSON.stringify({ fixture: "generated-100x500", evidence, rulerBuildDelta: after.rulerBuilds - before.rulerBuilds }, null, 2)), contentType: "application/json" });
+  console.log(`[full-span-ruler-open] ${JSON.stringify({ ...evidence, rulerBuildDelta: after.rulerBuilds - before.rulerBuilds })}`);
+});
+
 test("heavy renderer diagnostics are pull-based and absent from hot-path DOM counters", async ({ page }) => {
   await start(page);
   const surface = page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']");

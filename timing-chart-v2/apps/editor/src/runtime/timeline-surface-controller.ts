@@ -688,7 +688,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       publishState();
       void renderer.whenIdle().then(() => {
         if (!active || !rendererHost.isConnected) return;
-        timelineRuntime.refreshRuler();
+        // The reference-geometry callback may already have built the ruler
+        // before reprojecting the remaining rows. Keep this post-idle pass as
+        // a fallback for documents where no geometry callback initialized it.
+        if (!rulerInitialized) timelineRuntime.refreshRuler();
         timelineRuntime.refreshPlayhead();
         timelineRuntime.refreshGrid();
         timelineRuntime.setZoom(timelineNavigation.getZoom());
