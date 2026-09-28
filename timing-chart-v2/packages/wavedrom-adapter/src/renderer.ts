@@ -136,6 +136,7 @@ interface SignalMarkupBinding {
 const RETAINED_MARKUP_CACHE_LIMIT = 64;
 const SHARED_MARKUP_CACHE_LIMIT = 64;
 const sharedDefinitionSprites = new WeakMap<Document, SVGSVGElement>();
+const sharedDefinitionTemplates = new WeakMap<Document, SVGElement>();
 
 /**
  * The pinned WaveDrom skin's definitions (transition bricks and markers) are
@@ -146,10 +147,21 @@ const sharedDefinitionSprites = new WeakMap<Document, SVGSVGElement>();
  * that pinned skin. Unexpected definitions remain local rather than being
  * discarded.
  */
-function shareWaveDromDefinitions(svg: SVGElement, ownerDocument: Document): void {
-  if (typeof svg.querySelector !== "function") return;
-  const definitions = svg.querySelector("defs");
-  if (!definitions) return;
+function prepareSharedWaveDromDefinitions(svg: SVGElement, ownerDocument: Document): SVGElement | undefined {
+  if (typeof svg.querySelector !== "function" || typeof ownerDocument.querySelector !== "function") return;
+  const localDefinitions = svg.querySelector("defs");
+  let sharedDefinitions = sharedDefinitionTemplates.get(ownerDocument)
+    ?? ownerDocument.querySelector<SVGSVGElement>("svg[data-wavedrom-definition-sprite]")?.querySelector("defs")
+    ?? undefined;
+  if (!sharedDefinitions && localDefinitions) {
+    sharedDefinitions = localDefinitions.cloneNode(true) as SVGElement;
+    sharedDefinitionTemplates.set(ownerDocument, sharedDefinitions);
+  }
+  if (sharedDefinitions && localDefinitions?.isEqualNode(sharedDefinitions)) localDefinitions.remove();
+  return sharedDefinitions;
+}
+
+function installSharedWaveDromDefinitions(ownerDocument: Document, definitions: SVGElement): void {
   if (!ownerDocument.body || typeof ownerDocument.createElementNS !== "function" || typeof ownerDocument.querySelector !== "function") return;
   let sprite = sharedDefinitionSprites.get(ownerDocument)
     ?? ownerDocument.querySelector<SVGSVGElement>("svg[data-wavedrom-definition-sprite]")
@@ -165,13 +177,7 @@ function shareWaveDromDefinitions(svg: SVGElement, ownerDocument: Document): voi
     ownerDocument.body.append(sprite);
   }
   sharedDefinitionSprites.set(ownerDocument, sprite);
-  const sharedDefinitions = sprite.querySelector("defs");
-  if (!sharedDefinitions) {
-    sprite.append(definitions.cloneNode(true));
-    definitions.remove();
-  } else if (sharedDefinitions.isEqualNode(definitions)) {
-    definitions.remove();
-  }
+  if (!sprite.querySelector("defs")) sprite.append(definitions.cloneNode(true));
 }
 
 /**
@@ -235,6 +241,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   readonly #sharedMarkupCache = new Map<string, MarkupCacheEntry>();
   readonly #renderCallsBySignal = new Map<SignalId, number>();
   readonly #preparedDurationMs = new WeakMap<RenderedWave, number>();
+  readonly #preparedDefinitions = new WeakMap<RenderedWave, SVGElement>();
   #nextRenderIndex = 0;
   #renderCalls = 0;
   #waveJsonDurationMs = 0;
@@ -378,6 +385,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       stages.svgSafetyDomWalkMs = now() - stageStartedAt;
       safetyCacheEntry.safetyDocument = ownerDocument;
     }
+    const sharedDefinitions = prepareSharedWaveDromDefinitions(svg as SVGElement, ownerDocument);
     if (!cachedSvg) {
       const parsedSvgByDocument = safetyCacheEntry.parsedSvgByDocument ??= new WeakMap<Document, SVGElement>();
       parsedSvgByDocument.set(ownerDocument, svg.cloneNode(true) as SVGElement);
@@ -385,6 +393,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     bindWaveDromRenderIndex(svg as SVGElement, renderIndex);
     const renderStages = Object.freeze({ ...stages });
     const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson, markupCacheHit, svgSafetyCacheHit, renderStages };
+    if (sharedDefinitions) this.#preparedDefinitions.set(rendered, sharedDefinitions);
     this.#preparedDurationMs.set(rendered, now() - startedAt);
     return rendered;
   }
@@ -396,7 +405,14 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const existing = this.#active.get(prepared.signalId);
     if (existing && existing.mount !== mount) this.#clearOwner(existing);
     const stageStartedAt = now();
-    shareWaveDromDefinitions(prepared.svg, mount.ownerDocument);
+    const shared = this.#preparedDefinitions.get(prepared);
+    const localDefinitions = typeof prepared.svg.querySelector === "function" ? prepared.svg.querySelector("defs") : null;
+    const definitions = shared ?? localDefinitions;
+    if (definitions) {
+      installSharedWaveDromDefinitions(mount.ownerDocument, definitions);
+      if (localDefinitions?.isEqualNode(definitions)) localDefinitions.remove();
+    }
+    this.#preparedDefinitions.delete(prepared);
     prepared.svg.setAttribute("data-wave-owner", prepared.signalId);
     prepared.svg.setAttribute("data-wave-render-index", String(prepared.renderIndex));
     // WaveDrom's default SVG is sized from the row height. The browser's default
