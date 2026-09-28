@@ -160,8 +160,13 @@ const diagnostics = async (page: Page) => JSON.parse(await page.getByTestId("cyc
 const sessionCounters = async (page: Page) => JSON.parse(await page.getByTestId("cycle-surface").getAttribute("data-session-counters") ?? "null") as Record<string, any>;
 
 test("full-span Open builds the ruler once after reference geometry bootstrap", async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 1672, height: 941 });
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1672, height: 6000 });
   await start(page);
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-view-mode", "Cycle");
   const before = await sessionCounters(page);
   const document = await openFixture(page, { signalCount: 100, cycleCount: 500 });
   const after = await sessionCounters(page);
@@ -170,12 +175,15 @@ test("full-span Open builds the ruler once after reference geometry bootstrap", 
   await expect(ruler.locator(".cycle-tick").first()).toHaveAttribute("data-source-cycle", "0");
   await expect(ruler.locator(".cycle-tick").last()).toHaveAttribute("data-source-cycle", "500");
   expect(after.rulerBuilds - before.rulerBuilds).toBe(1);
-  const evidence = await page.getByTestId("cycle-surface").evaluate((host) => {
-    const durations = JSON.parse(host.getAttribute("data-open-phase-durations") ?? "{}") as Record<string, number>;
-    const counters = JSON.parse(host.getAttribute("data-session-counters") ?? "{}") as Record<string, any>;
-    return { openIdleMs: durations.idle, visibleWaveformsReadyMs: durations["visible-waveforms-ready"], rulerBuilds: counters.rulerBuilds, mountedWaveOwners: counters.mountedWaveOwners, title: document.querySelector(".app-titlebar h1")?.textContent };
+  const evidence = await host.evaluate((surface) => {
+    const durations = JSON.parse(surface.getAttribute("data-open-phase-durations") ?? "{}") as Record<string, number>;
+    const counters = JSON.parse(surface.getAttribute("data-session-counters") ?? "{}") as Record<string, any>;
+    const waveBatches = JSON.parse(surface.getAttribute("data-open-wave-batch-metrics") ?? "{}") as Record<string, number>;
+    return { openIdleMs: durations.idle, visibleWaveformsReadyMs: durations["visible-waveforms-ready"], rulerBuilds: counters.rulerBuilds, mountedWaveOwners: counters.mountedWaveOwners, waveBatches, title: document.querySelector(".app-titlebar h1")?.textContent };
   });
   expect(evidence.title).toBe(document.document.title);
+  expect(evidence.waveBatches.requestedCount).toBe(evidence.mountedWaveOwners + 1);
+  expect(evidence.waveBatches.renderCount).toBe(evidence.mountedWaveOwners);
   await testInfo.attach("full-span-ruler-open.json", { body: Buffer.from(JSON.stringify({ fixture: "generated-100x500", evidence, rulerBuildDelta: after.rulerBuilds - before.rulerBuilds }, null, 2)), contentType: "application/json" });
   console.log(`[full-span-ruler-open] ${JSON.stringify({ ...evidence, rulerBuildDelta: after.rulerBuilds - before.rulerBuilds })}`);
 });

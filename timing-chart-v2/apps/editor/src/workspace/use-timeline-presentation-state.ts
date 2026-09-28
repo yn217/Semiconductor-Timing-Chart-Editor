@@ -18,6 +18,7 @@ export interface TimelinePresentationState {
   readonly selectedCycle: number;
   readonly selectedEdge: SelectedClockEdge | undefined;
   readonly setCollapsedGroups: (next: ReadonlySet<GroupId>) => void;
+  readonly resetCollapsedGroups: () => void;
   readonly toggleCollapsedGroup: (id: GroupId) => void;
   readonly setTreePresentationRevision: StateSetter<number>;
   readonly setPlayheadPresentationRevision: StateSetter<number>;
@@ -44,6 +45,7 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
   const [rangePresentationRevision, setRangePresentationRevision] = useState(0);
   const collapsedGroupIdsRef = useRef<ReadonlySet<GroupId>>(new Set());
   const applyCollapsedGroupsRef = useRef<(ids: ReadonlySet<GroupId>) => void>(() => undefined);
+  const replacementProjectionPreparedRef = useRef(false);
   const [timelineRangeState, setTimelineRangeState] = useState<TimelineRange>(() => input.visualReference ? { start: 0, end: 1 } : { start: 2, end: 4 });
   const [rangeSelectionActiveState, setRangeSelectionActiveState] = useState(false);
   const [selectedCycleState, setSelectedCycleState] = useState(() => input.visualReference ? 0 : 2);
@@ -58,7 +60,8 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
     const empty = new Set<GroupId>();
     collapsedGroupIdsRef.current = empty;
     setCollapsedGroupIds(empty);
-    applyCollapsedGroupsRef.current(empty);
+    if (replacementProjectionPreparedRef.current) replacementProjectionPreparedRef.current = false;
+    else applyCollapsedGroupsRef.current(empty);
     const initialRange = input.visualReference ? { start: 0, end: 1 } : { start: 2, end: 4 };
     timelineRangeRef.current = initialRange;
     rangeSelectionActiveRef.current = false;
@@ -74,6 +77,12 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
     collapsedGroupIdsRef.current = stable;
     setCollapsedGroupIds(stable);
     applyCollapsedGroupsRef.current(stable);
+  }, []);
+  const resetCollapsedGroups = useCallback(() => {
+    const empty = new Set<GroupId>();
+    collapsedGroupIdsRef.current = empty;
+    setCollapsedGroupIds(empty);
+    replacementProjectionPreparedRef.current = true;
   }, []);
   const toggleCollapsedGroup = useCallback((id: GroupId) => {
     const next = new Set(collapsedGroupIdsRef.current);
@@ -111,6 +120,7 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
     selectedCycle: selectedCycleState,
     selectedEdge: selectedEdgeRef.current,
     setCollapsedGroups,
+    resetCollapsedGroups,
     toggleCollapsedGroup,
     setTreePresentationRevision,
     setPlayheadPresentationRevision,
