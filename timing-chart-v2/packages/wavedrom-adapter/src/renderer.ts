@@ -125,6 +125,8 @@ interface MarkupCacheEntry {
   readonly svgMarkupBytes: number;
   safetyDocument?: Document;
   parsedSvgByDocument?: WeakMap<Document, SVGElement>;
+  svgImageUrlByDocument?: WeakMap<Document, string>;
+  svgImageDecodeByDocument?: WeakMap<Document, Promise<void>>;
 }
 
 interface SignalMarkupBinding {
@@ -178,6 +180,61 @@ function installSharedWaveDromDefinitions(ownerDocument: Document, definitions: 
   }
   sharedDefinitionSprites.set(ownerDocument, sprite);
   if (!sprite.querySelector("defs")) sprite.append(definitions.cloneNode(true));
+}
+
+function svgImageUrl(entry: MarkupCacheEntry, ownerDocument: Document): string | undefined {
+  if (typeof URL.createObjectURL !== "function" || typeof Blob !== "function") return;
+  const urls = entry.svgImageUrlByDocument ??= new WeakMap<Document, string>();
+  const cached = urls.get(ownerDocument);
+  if (cached) return cached;
+  const url = URL.createObjectURL(new Blob([entry.markup], { type: "image/svg+xml;charset=utf-8" }));
+  urls.set(ownerDocument, url);
+  return url;
+}
+
+function svgImageDecode(entry: MarkupCacheEntry, ownerDocument: Document, url: string): Promise<void> {
+  const decodes = entry.svgImageDecodeByDocument ??= new WeakMap<Document, Promise<void>>();
+  let decoded = decodes.get(ownerDocument);
+  if (!decoded) {
+    const ImageConstructor = ownerDocument.defaultView?.Image;
+    if (!ImageConstructor) return Promise.resolve();
+    const image = new ImageConstructor();
+    image.src = url;
+    decoded = typeof image.decode === "function"
+      ? image.decode().then(() => undefined)
+      : new Promise<void>((resolve, reject) => {
+          image.onload = () => resolve();
+          image.onerror = () => reject(new WaveDromAdapterError("WAVEDROM_IMAGE_DECODE_FAILED", "The validated WaveDrom SVG image could not be decoded."));
+        });
+    decodes.set(ownerDocument, decoded);
+  }
+  return decoded;
+}
+
+function createWaveImageSvg(source: SVGElement, ownerDocument: Document, imageUrl: string, renderIndex: number): SVGElement {
+  const svg = ownerDocument.createElementNS("http://www.w3.org/2000/svg", "svg");
+  for (let index = 0; index < source.attributes.length; index += 1) {
+    const attribute = source.attributes.item(index);
+    if (!attribute || attribute.name === "id" || attribute.name === "xmlns" || attribute.name === "xmlns:xlink") continue;
+    svg.setAttribute(attribute.name, attribute.value);
+  }
+  svg.setAttribute("id", `svgcontent_${renderIndex}`);
+  const image = ownerDocument.createElementNS("http://www.w3.org/2000/svg", "image");
+  image.setAttribute("x", "0");
+  image.setAttribute("y", "0");
+  image.setAttribute("width", "100%");
+  image.setAttribute("height", "100%");
+  image.setAttribute("preserveAspectRatio", "none");
+  image.setAttribute("data-wave-svg-image", "");
+  image.setAttribute("data-wave-svg-source", imageUrl);
+  image.setAttribute("href", imageUrl);
+  svg.append(image);
+  return svg;
+}
+
+function isSvgGeometryDebugMode(): boolean {
+  try { return typeof location !== "undefined" && new URLSearchParams(location.search).get("geometrySource") === "svg"; }
+  catch { return false; }
 }
 
 /**
@@ -361,8 +418,13 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const binding: SignalMarkupBinding = { key: cacheKey, renderIndex, artifact: cacheEntry };
     this.#markupCache.set(signalId, binding);
     const cachedSvg = cacheEntry.parsedSvgByDocument?.get(ownerDocument);
+    const useSharedSvgImage = markupCacheHit && !signalCacheHit && !isSvgGeometryDebugMode()
+      && typeof ownerDocument.createElementNS === "function";
     let svg: Element | null;
-    if (cachedSvg) {
+    if (cachedSvg && useSharedSvgImage) {
+      svg = cachedSvg;
+      stages.templateParseMs = 0;
+    } else if (cachedSvg) {
       svg = cachedSvg.cloneNode(true) as SVGElement;
       stages.templateParseMs = 0;
     } else {
@@ -385,14 +447,29 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       stages.svgSafetyDomWalkMs = now() - stageStartedAt;
       safetyCacheEntry.safetyDocument = ownerDocument;
     }
-    const sharedDefinitions = prepareSharedWaveDromDefinitions(svg as SVGElement, ownerDocument);
+    const parsedSvg = cachedSvg ?? svg as SVGElement;
     if (!cachedSvg) {
       const parsedSvgByDocument = safetyCacheEntry.parsedSvgByDocument ??= new WeakMap<Document, SVGElement>();
-      parsedSvgByDocument.set(ownerDocument, svg.cloneNode(true) as SVGElement);
+      parsedSvgByDocument.set(ownerDocument, parsedSvg.cloneNode(true) as SVGElement);
     }
-    bindWaveDromRenderIndex(svg as SVGElement, renderIndex);
+    if (useSharedSvgImage) {
+      const imageUrl = svgImageUrl(safetyCacheEntry, ownerDocument);
+      if (imageUrl) {
+        await svgImageDecode(safetyCacheEntry, ownerDocument, imageUrl);
+        svg = createWaveImageSvg(parsedSvg, ownerDocument, imageUrl, renderIndex);
+      } else {
+        svg = parsedSvg.cloneNode(true) as SVGElement;
+      }
+    }
+    const isImageOwner = typeof svg?.querySelector === "function" && Boolean(svg.querySelector("image[data-wave-svg-image]"));
+    const sharedDefinitions = isImageOwner ? undefined : prepareSharedWaveDromDefinitions(svg as SVGElement, ownerDocument);
+    if (!isImageOwner) bindWaveDromRenderIndex(svg as SVGElement, renderIndex);
     const renderStages = Object.freeze({ ...stages });
-    const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson, markupCacheHit, svgSafetyCacheHit, renderStages };
+    const rendered: RenderedWave = {
+      signalId, ownerKey: signalId, svg: svg as SVGElement,
+      ...(isImageOwner ? { geometrySvg: parsedSvg } : {}),
+      renderIndex, waveJson, markupCacheHit, svgSafetyCacheHit, renderStages,
+    };
     if (sharedDefinitions) this.#preparedDefinitions.set(rendered, sharedDefinitions);
     this.#preparedDurationMs.set(rendered, now() - startedAt);
     return rendered;
@@ -436,7 +513,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
 
   extractLocalGeometry(rendered: RenderedWave): LocalGeometryMap {
     const extractionMetrics = { signalId: rendered.signalId, usesVisited: 0, geometryEntriesEmitted: 0, duplicateKeyChecks: 0, duplicateKeyCollisions: 0, transitionBrickLookups: 0, skinPathParses: 0, matrixReads: 0, durationMs: 0 };
-    const geometry = extractLocalGeometry(rendered, extractionMetrics);
+    const geometry = extractLocalGeometry(rendered.geometrySvg ? { ...rendered, svg: rendered.geometrySvg } : rendered, extractionMetrics);
     this.#geometryBuilds += 1;
     this.#geometryMatrixReads += 2;
     this.#lastGeometryMetrics = Object.freeze({ ...extractionMetrics });

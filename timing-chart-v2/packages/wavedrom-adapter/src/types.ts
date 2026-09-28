@@ -46,6 +46,8 @@ export interface RenderedWave {
   readonly signalId: SignalId;
   readonly ownerKey: SignalId;
   readonly svg: SVGElement;
+  /** Validated canonical SVG template backing an exact shared SVG image owner. */
+  readonly geometrySvg?: SVGElement;
   readonly renderIndex: number;
   readonly waveJson: WaveJsonSignal;
   /** Whether cached serialized WaveDrom markup was reused (SVG parse/install is still required). */

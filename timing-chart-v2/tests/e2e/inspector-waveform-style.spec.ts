@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { PNG } from "pngjs";
 import { startInCycleMode } from "./cycle-startup.js";
 
 startInCycleMode(test);
@@ -19,8 +20,14 @@ async function ready(page: import("@playwright/test").Page) {
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
 }
 
-function waveformStroke(page: import("@playwright/test").Page, signalId: string) {
-  return page.locator(`[data-role='wave-owner'][data-signal-id='${signalId}'] path`).first().evaluate((el) => getComputedStyle(el).stroke);
+async function waveformColorPixelCount(page: import("@playwright/test").Page, signalId: string, color: "red" | "blue") {
+  const image = PNG.sync.read(await page.locator(`[data-role='wave-owner'][data-signal-id='${signalId}']`).screenshot());
+  let count = 0;
+  for (let offset = 0; offset < image.data.length; offset += 4) {
+    const [red, green, blue] = image.data.slice(offset, offset + 3);
+    if (color === "red" ? red > 160 && green < 100 && blue < 100 : blue > 150 && red < 100 && green < 130) count += 1;
+  }
+  return count;
 }
 
 test("Waveform Color Apply repaints the actual rendered waveform stroke, leaves unrelated Signals alone, and stays exact through Undo/Redo/reselection", async ({ page }) => {
@@ -28,30 +35,30 @@ test("Waveform Color Apply repaints the actual rendered waveform stroke, leaves 
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_reset_n']").click();
 
-  expect(await waveformStroke(page, "sig_cycle_reset_n")).toBe("rgb(0, 0, 0)");
+  expect(await waveformColorPixelCount(page, "sig_cycle_reset_n", "red")).toBe(0);
   const colorInput = page.getByLabel("Inspector waveform color");
   await colorInput.fill("#ff0000");
   // Draft: pre-Apply, the Canvas is unchanged.
-  expect(await waveformStroke(page, "sig_cycle_reset_n")).toBe("rgb(0, 0, 0)");
-  expect(await waveformStroke(page, "sig_cycle_request")).toBe("rgb(0, 0, 0)");
+  expect(await waveformColorPixelCount(page, "sig_cycle_reset_n", "red")).toBe(0);
+  expect(await waveformColorPixelCount(page, "sig_cycle_request", "red")).toBe(0);
 
   await page.getByTestId("inspector").getByRole("button", { name: "Apply", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  expect(await waveformStroke(page, "sig_cycle_reset_n")).toBe("rgb(255, 0, 0)");
+  await expect.poll(() => waveformColorPixelCount(page, "sig_cycle_reset_n", "red")).toBeGreaterThan(0);
   // Unrelated Signal untouched.
-  expect(await waveformStroke(page, "sig_cycle_request")).toBe("rgb(0, 0, 0)");
+  expect(await waveformColorPixelCount(page, "sig_cycle_request", "red")).toBe(0);
 
   // Reselection: Inspector value and Canvas stay synchronized.
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_reset_n']").click();
   await expect(colorInput).toHaveValue("#ff0000");
-  expect(await waveformStroke(page, "sig_cycle_reset_n")).toBe("rgb(255, 0, 0)");
+  expect(await waveformColorPixelCount(page, "sig_cycle_reset_n", "red")).toBeGreaterThan(0);
 
   // Undo/Redo exact.
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
-  expect(await waveformStroke(page, "sig_cycle_reset_n")).toBe("rgb(0, 0, 0)");
+  expect(await waveformColorPixelCount(page, "sig_cycle_reset_n", "red")).toBe(0);
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
-  expect(await waveformStroke(page, "sig_cycle_reset_n")).toBe("rgb(255, 0, 0)");
+  expect(await waveformColorPixelCount(page, "sig_cycle_reset_n", "red")).toBeGreaterThan(0);
 });
 
 test("Waveform Color survives Save/Open and re-renders visibly, and applies correctly to a Bus Signal", async ({ page }) => {
@@ -61,7 +68,7 @@ test("Waveform Color survives Save/Open and re-renders visibly, and applies corr
   await page.getByLabel("Inspector waveform color").fill("#0000ff");
   await page.getByTestId("inspector").getByRole("button", { name: "Apply", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  expect(await waveformStroke(page, "sig_cycle_data")).toBe("rgb(0, 0, 255)");
+  await expect.poll(() => waveformColorPixelCount(page, "sig_cycle_data", "blue")).toBeGreaterThan(0);
 
   const downloadPromise = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
@@ -71,5 +78,5 @@ test("Waveform Color survives Save/Open and re-renders visibly, and applies corr
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
-  expect(await waveformStroke(page, "sig_cycle_data")).toBe("rgb(0, 0, 255)");
+  expect(await waveformColorPixelCount(page, "sig_cycle_data", "blue")).toBeGreaterThan(0);
 });

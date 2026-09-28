@@ -1340,16 +1340,97 @@ function parseWaveformStyle(style: Record<string, unknown> | undefined): { reado
   return { color: typeof source.waveformColor === "string" && /^#[0-9a-f]{3,8}$/i.test(source.waveformColor) ? source.waveformColor : undefined };
 }
 const WAVEFORM_DEFAULT_STROKE = "#000";
+const waveformImageStyleStates = new WeakMap<SVGImageElement, { color: string | undefined; revision: number }>();
+const waveformUseStyleStates = new WeakMap<SVGSVGElement, { color: string; defs: SVGDefsElement; originalHrefByUse: Map<SVGUseElement, string> }>();
+let nextWaveformStyleSymbolId = 0;
+
+function applySharedSymbolWaveformColor(svg: SVGSVGElement, color: string | undefined, classes: ReadonlySet<string>): void {
+  const existing = waveformUseStyleStates.get(svg);
+  if (!color) {
+    if (!existing) return;
+    for (const [use, href] of existing.originalHrefByUse) {
+      use.setAttribute("href", href);
+      use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", href);
+    }
+    existing.defs.remove();
+    waveformUseStyleStates.delete(svg);
+    return;
+  }
+  if (existing?.color === color) return;
+  const sprite = svg.ownerDocument.querySelector<SVGSVGElement>("svg[data-wavedrom-definition-sprite]");
+  if (!sprite) return;
+  const state = existing ?? {
+    color,
+    defs: svg.ownerDocument.createElementNS("http://www.w3.org/2000/svg", "defs"),
+    originalHrefByUse: new Map<SVGUseElement, string>(),
+  };
+  state.color = color;
+  state.defs.setAttribute("data-waveform-style-defs", "");
+  if (!state.defs.isConnected) svg.insertBefore(state.defs, svg.firstChild);
+  else state.defs.replaceChildren();
+  const styledIds = new Map<string, string>();
+  for (const use of Array.from(svg.querySelectorAll<SVGUseElement>("use"))) {
+    const currentHref = use.getAttribute("href") ?? use.getAttributeNS("http://www.w3.org/1999/xlink", "href") ?? "";
+    const sourceHref = state.originalHrefByUse.get(use) ?? currentHref;
+    state.originalHrefByUse.set(use, sourceHref);
+    if (!sourceHref.startsWith("#")) continue;
+    const sourceId = sourceHref.slice(1);
+    let styledId = styledIds.get(sourceId);
+    if (!styledId) {
+      const source = sprite.querySelector<SVGGElement>(`#${CSS.escape(sourceId)}`);
+      if (!source) continue;
+      const clone = source.cloneNode(true) as SVGGElement;
+      styledId = `wave-style-symbol-${++nextWaveformStyleSymbolId}`;
+      clone.id = styledId;
+      for (const node of [clone, ...Array.from(clone.querySelectorAll<SVGElement>("*"))]) {
+        if (Array.from(node.classList).some((className) => classes.has(className))) node.style.setProperty("stroke", color, "important");
+      }
+      state.defs.append(clone);
+      styledIds.set(sourceId, styledId);
+    }
+    const styledHref = `#${styledId}`;
+    use.setAttribute("href", styledHref);
+    use.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", styledHref);
+  }
+  waveformUseStyleStates.set(svg, state);
+}
+
 function applyWaveformStyle(owner: HTMLElement, parsed: ReturnType<typeof parseWaveformStyle>): void {
+  const image = owner.querySelector<SVGImageElement>("svg > image[data-wave-svg-image]");
+  if (image) {
+    const source = image.dataset.waveSvgSource;
+    if (!source) return;
+    const state = waveformImageStyleStates.get(image) ?? { color: undefined, revision: 0 };
+    if (state.color === parsed.color) return;
+    state.color = parsed.color;
+    const revision = ++state.revision;
+    waveformImageStyleStates.set(image, state);
+    if (!parsed.color) { image.setAttribute("href", source); return; }
+    void fetch(source).then((response) => response.text()).then((markup) => {
+      if (waveformImageStyleStates.get(image)?.revision !== revision) return;
+      const defaultStrokePattern = new RegExp(`\\.(s\\d+)\\{[^}]*\\bstroke:${WAVEFORM_DEFAULT_STROKE.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\b[^}]*\\}`, "g");
+      const classes = [...markup.matchAll(defaultStrokePattern)].map((match) => match[1]);
+      if (classes.length === 0) { image.setAttribute("href", source); return; }
+      const overrides = classes.map((className) => `.${className}{stroke:${parsed.color} !important}`).join("");
+      const colored = markup.replace(/<\/svg>\s*$/i, `<style>${overrides}</style></svg>`);
+      image.setAttribute("href", `data:image/svg+xml;charset=utf-8,${encodeURIComponent(colored)}`);
+    }).catch(() => {
+      if (waveformImageStyleStates.get(image)?.revision === revision) image.setAttribute("href", source);
+    });
+    return;
+  }
   const OVERRIDE_ATTR = "data-waveform-style-override";
   const existing = owner.querySelector(`style[${OVERRIDE_ATTR}]`);
-  if (!parsed.color) { existing?.remove(); return; }
   const embedded = owner.querySelector("svg > style");
   const defaultStrokePattern = new RegExp(`\\.(s\\d+)\\{[^}]*\\bstroke:${WAVEFORM_DEFAULT_STROKE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b[^}]*\\}`, "g");
-  const classes = [...(embedded?.textContent ?? "").matchAll(defaultStrokePattern)].map((match) => match[1]);
-  if (classes.length === 0) { existing?.remove(); return; }
+  const classNames = Array.from((embedded?.textContent ?? "").matchAll(defaultStrokePattern), (match) => match[1])
+    .filter((className): className is string => className !== undefined);
+  const svg = owner.querySelector<SVGSVGElement>("svg");
+  if (svg) applySharedSymbolWaveformColor(svg, parsed.color, new Set(classNames));
+  if (!parsed.color) { existing?.remove(); return; }
+  if (classNames.length === 0) { existing?.remove(); return; }
   const signalId = owner.dataset.signalId ?? "";
-  const selector = classes.map((className) => `[data-role="wave-owner"][data-signal-id="${CSS.escape(signalId)}"] svg .${className}`).join(",");
+  const selector = classNames.map((className) => `[data-role="wave-owner"][data-signal-id="${CSS.escape(signalId)}"] svg .${className}`).join(",");
   const rule = `${selector}{stroke:${parsed.color} !important}`;
   const style = existing ?? owner.ownerDocument.createElement("style");
   if (!existing) { style.setAttribute(OVERRIDE_ATTR, ""); owner.append(style); }
