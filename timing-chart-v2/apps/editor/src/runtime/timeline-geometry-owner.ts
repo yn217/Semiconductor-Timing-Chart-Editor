@@ -60,6 +60,7 @@ export class TimelineGeometryOwner {
   #snapIndex: ImmutableSnapIndex | undefined;
   #cycleBoundaryCandidates: ReturnType<ImmutableSnapIndex["entries"]> = [];
   #viewportBoundaryCache: { readonly geometry: LocalGeometryMap; readonly mapping: DisplayTimeMapping; readonly entries: readonly { readonly cycle: number; readonly x: number }[] } | undefined;
+  #sourceWindowCache: { readonly document: CanonicalDocument; readonly localStart: number; readonly localEnd: number; readonly overscan: number; readonly result: Readonly<{ start: number; end: number }> } | undefined;
   #requestedSourceCycle: number | undefined;
 
   constructor(private readonly context: TimelineGeometryOwnerContext) {
@@ -165,6 +166,12 @@ export class TimelineGeometryOwner {
       const start = Math.max(0, Math.min(this.#requestedSourceCycle - Math.floor(span / 2), document.timeline.cycleCount - span));
       return { start, end: Math.min(document.timeline.cycleCount, start + span) };
     }
+    const cached = this.#sourceWindowCache;
+    if (cached?.document === document && cached.localStart === localStart && cached.localEnd === localEnd && cached.overscan === overscan) return cached.result;
+    const remember = (result: Readonly<{ start: number; end: number }>) => {
+      this.#sourceWindowCache = { document, localStart, localEnd, overscan, result };
+      return result;
+    };
     const axis = this.resolveTimeAxis(document);
     const mapping = this.displayMapping;
     const owner = axis.geometry && axis.ownerSignalId !== undefined ? axis.geometry : this.geometryMaps.values().next().value;
@@ -177,7 +184,7 @@ export class TimelineGeometryOwner {
       // Match the first viewport tile size so authoritative geometry does not
       // immediately replace this bootstrap artifact with a different window.
       const bootstrapEnd = Math.min(document.timeline.cycleCount, waveformWindowTileSpan(signalCount));
-      return { start: 0, end: bootstrapEnd };
+      return remember({ start: 0, end: bootstrapEnd });
     }
     const entries = this.viewportBoundaryEntries(owner, signalId, mapping, document.timeline.cycleCount);
     // A first WaveDrom paint may expose only presentation-thinned marks. Do
@@ -185,7 +192,7 @@ export class TimelineGeometryOwner {
     // document; request the bounded bootstrap window until a windowed render
     // replaces it with semantic boundaries.
     if (document.timeline.cycleCount > 4096 && entries.length < 512 && localEnd <= 2_048) {
-      return { start: 0, end: Math.min(document.timeline.cycleCount, 2048) };
+      return remember({ start: 0, end: Math.min(document.timeline.cycleCount, 2048) });
     }
     // Retained geometry is intentionally bounded. When the requested local
     // range lies outside that retained interval, use the same shared display
@@ -235,15 +242,15 @@ export class TimelineGeometryOwner {
       // Tile-style reuse (#621): while the visible range (with overscan) still lies inside the
       // window handed out last, return that same window so unchanged owners are not re-rendered.
       const last = this.#lastBoundedWindow;
-      if (last && last.cycleCount === document.timeline.cycleCount && boundedStart >= last.start && boundedEnd <= last.end) return { start: last.start, end: last.end };
+      if (last && last.cycleCount === document.timeline.cycleCount && boundedStart >= last.start && boundedEnd <= last.end) return remember({ start: last.start, end: last.end });
       const grid = waveformWindowGrid(signalCount);
       const start = Math.max(0, Math.floor(boundedStart / grid) * grid);
       const span = Math.min(document.timeline.cycleCount, Math.max(grid * 2, Math.ceil((boundedEnd - start) / grid) * grid));
       const clampedStart = Math.max(0, Math.min(start, document.timeline.cycleCount - span));
       this.#lastBoundedWindow = { start: clampedStart, end: clampedStart + span, cycleCount: document.timeline.cycleCount };
-      return { start: clampedStart, end: clampedStart + span };
+      return remember({ start: clampedStart, end: clampedStart + span });
     }
-    return { start: boundedStart, end: boundedEnd };
+    return remember({ start: boundedStart, end: boundedEnd });
   }
 
   viewportForLocalRange(localStart: number, localEnd: number, rowStart: number, rowEnd: number, generation: number, pinnedIds: readonly string[] = []): DisplayTimeViewport {
@@ -296,7 +303,7 @@ export class TimelineGeometryOwner {
     return this.#snapIndex;
   }
 
-  invalidateSnapIndex(): void { this.#snapIndex = undefined; this.#cycleBoundaryCandidates = []; this.#viewportBoundaryCache = undefined; }
+  invalidateSnapIndex(): void { this.#snapIndex = undefined; this.#cycleBoundaryCandidates = []; this.#viewportBoundaryCache = undefined; this.#sourceWindowCache = undefined; }
 
   private viewportBoundaryEntries(owner: LocalGeometryMap, signalId: SignalId, mapping: DisplayTimeMapping, cycleCount: number): readonly { readonly cycle: number; readonly x: number }[] {
     const cached = this.#viewportBoundaryCache;

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ImmutableLocalGeometryMap } from "@timing-chart-v2/geometry";
 import { DisplayTimeMappingCache, type RenderProjection } from "@timing-chart-v2/projection";
 import type { SignalId } from "@timing-chart-v2/schema";
@@ -90,6 +90,34 @@ describe("TimelineGeometryOwner", () => {
     const sourceWindow = owner.sourceWindowForLocalRange(document, 0, 100);
     expect(sourceWindow).toEqual({ start: 0, end: 2_048 });
     expect(findCalls).toBe(0);
+  });
+
+  it("reuses an exact source-window query across mounted owners until geometry invalidation", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 129 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle * 40, y: 0 } })));
+    const document = {
+      ...cycleDocument,
+      timeline: { ...cycleDocument.timeline, cycleCount: 500, end: 500 },
+      signals: Array.from({ length: 100 }, (_, index) => ({ ...cycleDocument.signals[0]!, id: signalId(index === 0 ? "sig_cycle_clock" : `sig_perf_${index}`) })),
+    };
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => document,
+      getProjection: () => ({} as RenderProjection),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
+    const resolveAxis = vi.spyOn(owner, "resolveTimeAxis");
+
+    const first = owner.sourceWindowForLocalRange(document, 0, 1_120);
+    const repeated = owner.sourceWindowForLocalRange(document, 0, 1_120);
+    expect(repeated).toEqual(first);
+    expect(resolveAxis).toHaveBeenCalledTimes(1);
+
+    owner.invalidateSnapIndex();
+    expect(owner.sourceWindowForLocalRange(document, 0, 1_120)).toEqual(first);
+    expect(resolveAxis).toHaveBeenCalledTimes(2);
   });
 
   it.each([160, 3_000, 4_096])("keeps the full WaveDrom source range stable while scrolling a %i-cycle document", (cycleCount) => {
