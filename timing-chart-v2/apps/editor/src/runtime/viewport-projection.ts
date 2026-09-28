@@ -72,21 +72,15 @@ export function mountInitialTimelineProjection(context: {
   const window = buildViewportWindow(context.viewport, context.referenceClock, context.stickyRowIds);
   const projection = context.projectionCoordinator.project({ snapshot: context.snapshot, changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: context.collapsedGroupIds });
   const initialWaveSignalIds = context.initialWaveSignalIds;
+  const referenceWaveIsMounted = initialWaveSignalIds?.some((signalId) => projection.mountedSignalIds.includes(signalId)) === true;
   // New mounted owners are normally queued automatically by the renderer.
   // Restrict only this initial bootstrap update so a provisional/thinned
   // projection does not enqueue every visible WaveDrom owner before reference
   // geometry triggers the authoritative reproject. Keep the full projection
   // as the returned/shared value; the follow-up renderer update mounts every
   // visible owner normally.
-  context.renderer.update(projectionForInitialWaveMount(projection, initialWaveSignalIds));
+  context.renderer.update(referenceWaveIsMounted
+    ? { ...projection, mountedSignalIds: projection.mountedSignalIds.filter((signalId) => initialWaveSignalIds!.includes(signalId)) }
+    : projection);
   return { window, projection };
-}
-
-/** Restrict a provisional first renderer update without narrowing shared projection state. */
-export function projectionForInitialWaveMount(
-  projection: RenderProjection,
-  initialWaveSignalIds: readonly SignalId[] | undefined,
-): RenderProjection {
-  if (initialWaveSignalIds === undefined || !initialWaveSignalIds.some((signalId) => projection.mountedSignalIds.includes(signalId))) return projection;
-  return { ...projection, mountedSignalIds: projection.mountedSignalIds.filter((signalId) => initialWaveSignalIds.includes(signalId)) };
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SignalId } from "@timing-chart-v2/schema";
 import { buildViewportWindow } from "../../apps/editor/src/runtime/viewport-window.js";
-import { mountInitialTimelineProjection, projectionForInitialWaveMount, projectViewportWindow } from "../../apps/editor/src/runtime/viewport-projection.js";
+import { mountInitialTimelineProjection, projectViewportWindow } from "../../apps/editor/src/runtime/viewport-projection.js";
 import { pinnedSignalIdsForEpoch, signalPinStateForEpoch } from "../../apps/editor/src/workspace/signal-pin-state.js";
 
 describe("Signal pin viewport ownership", () => {
@@ -61,18 +61,5 @@ describe("Signal pin viewport ownership", () => {
 
     expect(updateArgument?.mountedSignalIds).toEqual([clock]);
     expect(result.projection.mountedSignalIds).toEqual([clock, data]);
-  });
-
-  it("keeps the full projection while limiting an Open bootstrap update to its mounted reference owner", () => {
-    const clock = "clock-id" as SignalId;
-    const data = "signal-a" as SignalId;
-    const projection = { mountedSignalIds: [clock, data], waveSignalIds: [clock, data] } as never;
-    const firstUpdate = projectionForInitialWaveMount(projection, [clock]);
-
-    expect(firstUpdate.mountedSignalIds).toEqual([clock]);
-    expect(firstUpdate.waveSignalIds).toEqual([clock, data]);
-    expect(projection.mountedSignalIds).toEqual([clock, data]);
-    expect(projectionForInitialWaveMount(projection, ["not-mounted" as SignalId])).toBe(projection);
-    expect(projectionForInitialWaveMount(projection, undefined)).toBe(projection);
   });
 });
