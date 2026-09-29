@@ -4,6 +4,8 @@ export type EventTableIndex<T extends EventTableChange> = Readonly<{
   ordered: readonly T[];
   occupied: ReadonlySet<number>;
   endByStart: ReadonlyMap<number, number>;
+  /** start cycle -> position in `ordered` (#856: no repeated linear find). */
+  indexByStart: ReadonlyMap<number, number>;
   firstFree: (extra?: number) => number | undefined;
   nextEnd: (start: number) => number;
 }>;
@@ -11,6 +13,7 @@ export type EventTableIndex<T extends EventTableChange> = Readonly<{
 export function buildEventTableIndex<T extends EventTableChange>(values: readonly T[], cycleCount: number): EventTableIndex<T> {
   const ordered = [...values].sort((left, right) => left.start - right.start);
   const occupied = new Set(ordered.map((change) => change.start));
+  const indexByStart = new Map(ordered.map((change, index) => [change.start, index] as const));
   const endByStart = new Map(ordered.map((change, index) => [change.start, ordered[index + 1]?.start ?? cycleCount]));
   const firstFree = (extra?: number) => {
     let candidate = 0;
@@ -30,5 +33,5 @@ export function buildEventTableIndex<T extends EventTableChange>(values: readonl
     while (low < high) { const middle = (low + high) >>> 1; if (ordered[middle]!.start <= start) low = middle + 1; else high = middle; }
     return ordered[low]?.start ?? cycleCount;
   };
-  return { ordered, occupied, endByStart, firstFree, nextEnd };
+  return { ordered, occupied, endByStart, indexByStart, firstFree, nextEnd };
 }

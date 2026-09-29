@@ -65,9 +65,11 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   useEffect(() => {
     setCheckedKeys((current) => pruneExternalSelection(current, validKeys));
   }, [validKeys]);
-  const selected = indexed.ordered.find((change) => transitionIdentity(change) === selectedKey);
+  // #856: identity -> ordered position, rebuilt only when the data changes (not on scroll), so selection/reveal lookups are O(1).
+  const orderedIndexByKey = useMemo(() => new Map(indexed.ordered.map((change, index) => [transitionIdentity(change), index] as const)), [indexed]);
+  const selected = selectedKey === undefined ? undefined : indexed.ordered[orderedIndexByKey.get(selectedKey) ?? -1];
   const selectTransition = (startValue: number) => {
-    const change = indexed.ordered.find((item) => item.start === startValue);
+    const change = indexed.ordered[indexed.indexByStart.get(startValue) ?? -1];
     setSelectedKey(change === undefined ? undefined : transitionIdentity(change));
   };
   const nextStart = indexed.firstFree() ?? Math.max(0, cycleCount - 1);
@@ -208,7 +210,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   // "N selected" count next to the section title make that relationship
   // explicit without relying on the reader to infer it from the footer
   // alone.
-  const allChecked = signal.values.length > 0 && signal.values.every((change) => checkedKeys.has(transitionIdentity(change)));
+  const allChecked = useMemo(() => signal.values.length > 0 && signal.values.every((change) => checkedKeys.has(transitionIdentity(change))), [signal.values, checkedKeys]);
   const selectAllRef = useRef<HTMLInputElement>(null);
   useEffect(() => { if (selectAllRef.current) selectAllRef.current.indeterminate = checkedCount > 0 && !allChecked; }, [checkedCount, allChecked]);
   const toggleAll = () => setCheckedKeys(allChecked ? new Set() : new Set(signal.values.map(transitionIdentity)));
@@ -217,7 +219,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   const renderedEvents = indexed.ordered.slice(eventFirst, eventLast);
   useEffect(() => {
     if (selectedKey === undefined || !eventViewportRef.current) return;
-    const index = indexed.ordered.findIndex((change) => transitionIdentity(change) === selectedKey);
+    const index = orderedIndexByKey.get(selectedKey) ?? -1;
     if (index < 0) return;
     const top = index * EVENT_ROW_HEIGHT;
     const bottom = top + EVENT_ROW_HEIGHT;
