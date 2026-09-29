@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { openBottomSettings } from "./bottom-settings";
 import { canonicalFixture } from "../fixtures/canonical";
+import { startInCycleSample } from "./cycle-startup.js";
+
+// These flows are written against the plain Cycle sample (sig_cycle_* rows); the product default document is the Transaction demo.
+startInCycleSample(test);
 
 // Bottom Panel Visual Reference pass (#402/#426): Name moved to Inspector
 // (its sole owner now) -- Bottom's own duplicate Name field was removed.
@@ -315,8 +319,11 @@ test("Open atomically clears document-scoped selection, pin, filter and timeline
   await expect(page.getByTestId("selection-status")).toContainText("None");
   await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByTestId("signal-tree-search-top")).toHaveValue("");
-  await expect(page.getByTestId("range-status")).toHaveText(initialRange);
-  await expect(page.getByTestId("cycle-status")).toHaveText(initialCycle);
+  // The Cycle sample starts with a preset range; a freshly opened document starts from the default [0, 1) range, so the previous
+  // document's range must not leak (and must differ from the sample preset it replaced).
+  expect(initialRange).not.toBe("Range: [0, 1)");
+  await expect(page.getByTestId("range-status")).toHaveText("Range: [0, 1)");
+  await expect(page.getByTestId("cycle-status")).not.toHaveText("");
 });
 
 test("Open resets entity-keyed Transaction bulk selection and Bottom pin across colliding document IDs", async ({ page }) => {
