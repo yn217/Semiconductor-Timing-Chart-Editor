@@ -17,7 +17,7 @@ test("Canvas repaint follows the real horizontal scroll owner, ignores vertical 
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
   await expect.poll(() => page.locator("canvas[data-wave-canvas]").count(), { timeout: 30_000 }).toBeGreaterThan(0);
-  await expect(page.locator("[data-role='wave-owner'][data-wave-renderer='canvas']").first()).toBeVisible();
+  await expect(page.locator("[data-role='wave-owner'][data-wave-renderer='canvas'][data-wave-state='ready']").first()).toBeVisible();
 
   // Count 2D repaints per canvas (clearRect is the first call of every draw) without touching production code.
   await page.evaluate(() => {

@@ -652,6 +652,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         this.#localGeometryBuildsBySignal.set(request.signalId, (this.#localGeometryBuildsBySignal.get(request.signalId) ?? 0) + delta.localGeometryBuilds);
         this.#diagnostics = { ...this.#diagnostics, waveRendersBySignalCount: this.#diagnostics.waveRendersBySignalCount + (firstWaveRenderForSignal ? 1 : 0), localGeometryBuildsBySignalCount: this.#diagnostics.localGeometryBuildsBySignalCount + (firstGeometryBuildForSignal ? 1 : 0) };
         request.owner.removeAttribute("data-wave-error");
+        // #787: renderer-neutral readiness; consumers must not infer it from an <svg> child.
+        request.owner.dataset.waveState = "ready";
+        request.owner.dataset.waveRenderer = request.owner.querySelector("canvas[data-wave-canvas]") ? "canvas" : "svg";
         if (request.sourceWindow) {
           request.owner.dataset.renderedSourceWindowStart = String(request.sourceWindow.start);
           request.owner.dataset.renderedSourceWindowEnd = String(request.sourceWindow.end);
@@ -666,6 +669,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         if ((this.#waveVersions.get(request.signalId) ?? 0) === request.version) this.#dirtyWaves.delete(request.signalId);
       } else {
         request.owner.replaceChildren();
+        request.owner.dataset.waveState = "error";
         request.owner.dataset.waveError = item?.error instanceof Error ? item.error.message : "Unknown waveform render failure";
       }
       if (this.#isWavePending(request.signalId, request)) this.#wavePending.delete(request.signalId);

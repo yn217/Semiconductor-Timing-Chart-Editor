@@ -41,3 +41,15 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     expect(await page.getByTestId("dirty-status").innerText()).toBe(dirty);
   });
 }
+
+test("Bottom always states whether it follows the selection or is pinned", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const chip = page.getByTestId("bottom-target-mode");
+  await expect(chip).toHaveAttribute("data-mode", "following");
+  await page.getByTestId("bottom-settings").click();
+  await page.getByTestId("bottom-pin").click();
+  await expect(chip).toHaveText("Pinned");
+  await page.getByTestId("bottom-pin").click();
+  await expect(chip).toHaveAttribute("data-mode", "following");
+});
