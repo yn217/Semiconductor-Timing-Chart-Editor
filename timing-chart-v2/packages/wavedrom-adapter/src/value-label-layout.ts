@@ -63,6 +63,26 @@ function dataSlots(wave: string): number[] {
   return [...wave].flatMap((token, index) => token === "=" ? [index] : []);
 }
 
+/**
+ * Large data segments can share one geometry/render artifact while keeping
+ * their Signal-specific labels as small SVG text nodes. Only opt in when the
+ * normal WaveDrom label presentation is provably unchanged (no shrink,
+ * ellipsis, or semantic/display-label divergence).
+ */
+export function canShareValueLabelGeometry(waveJson: WaveJsonSignal, semanticValues: readonly string[] = []): boolean {
+  const labels = waveJson.data;
+  if (!labels?.length || waveJson.wave.length <= 128 || semanticValues.length !== labels.length) return false;
+  const slots = dataSlots(waveJson.wave);
+  if (slots.length !== labels.length) return false;
+  let minimumSpan = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < slots.length; index += 1) {
+    const span = (slots[index + 1] ?? waveJson.wave.length) - slots[index]!;
+    if (span < 4) return false;
+    minimumSpan = Math.min(minimumSpan, span);
+  }
+  return labels.every((label) => estimatedWidth(label, BASE_FONT_PT) <= minimumSpan * 40 - SEGMENT_PADDING);
+}
+
 function replaceAttribute(attributes: string, name: string, value: string): string {
   const pattern = new RegExp(`\\s${name}="[^"]*"`);
   return pattern.test(attributes) ? attributes.replace(pattern, ` ${name}="${value}"`) : `${attributes} ${name}="${value}"`;

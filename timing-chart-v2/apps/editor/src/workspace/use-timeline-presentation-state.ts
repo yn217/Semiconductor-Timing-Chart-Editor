@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { GroupId } from "@timing-chart-v2/schema";
 import type { SelectedClockEdge } from "../runtime/edge-counter-projection.js";
@@ -18,6 +18,8 @@ export interface TimelinePresentationState {
   readonly selectedCycle: number;
   readonly selectedEdge: SelectedClockEdge | undefined;
   readonly setCollapsedGroups: (next: ReadonlySet<GroupId>) => void;
+  readonly resetCollapsedGroups: () => void;
+  readonly resetForDocument: (cycleCount: number) => void;
   readonly toggleCollapsedGroup: (id: GroupId) => void;
   readonly setTreePresentationRevision: StateSetter<number>;
   readonly setPlayheadPresentationRevision: StateSetter<number>;
@@ -36,7 +38,7 @@ export interface TimelinePresentationState {
   };
 }
 
-export function useTimelinePresentationState(input: { readonly visualReference: boolean; readonly documentEpoch?: number }): TimelinePresentationState {
+export function useTimelinePresentationState(input: { readonly visualReference: boolean }): TimelinePresentationState {
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<GroupId>>(new Set());
   const [treePresentationRevision, setTreePresentationRevision] = useState(0);
   const [playheadPresentationRevision, setPlayheadPresentationRevision] = useState(0);
@@ -51,29 +53,38 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
   const rangeSelectionActiveRef = useRef(rangeSelectionActiveState);
   const selectedCycleRef = useRef(selectedCycleState);
   const selectedEdgeRef = useRef<SelectedClockEdge | undefined>(undefined);
-  const previousDocumentEpochRef = useRef(input.documentEpoch);
-  useEffect(() => {
-    if (previousDocumentEpochRef.current === input.documentEpoch) return;
-    previousDocumentEpochRef.current = input.documentEpoch;
-    const empty = new Set<GroupId>();
-    collapsedGroupIdsRef.current = empty;
-    setCollapsedGroupIds(empty);
-    applyCollapsedGroupsRef.current(empty);
-    const initialRange = input.visualReference ? { start: 0, end: 1 } : { start: 2, end: 4 };
-    timelineRangeRef.current = initialRange;
-    rangeSelectionActiveRef.current = false;
-    selectedCycleRef.current = input.visualReference ? 0 : 2;
-    selectedEdgeRef.current = undefined;
-    setTimelineRangeState(initialRange);
-    setRangeSelectionActiveState(false);
-    setSelectedCycleState(input.visualReference ? 0 : 2);
-  }, [input.documentEpoch]);
-
   const setCollapsedGroups = useCallback((next: ReadonlySet<GroupId>) => {
     const stable = new Set(next);
     collapsedGroupIdsRef.current = stable;
     setCollapsedGroupIds(stable);
     applyCollapsedGroupsRef.current(stable);
+  }, []);
+  const resetCollapsedGroups = useCallback(() => {
+    if (collapsedGroupIdsRef.current.size === 0) return;
+    const empty = new Set<GroupId>();
+    collapsedGroupIdsRef.current = empty;
+    setCollapsedGroupIds(empty);
+  }, []);
+  const resetForDocument = useCallback((cycleCount: number) => {
+    if (collapsedGroupIdsRef.current.size > 0) {
+      const empty = new Set<GroupId>();
+      collapsedGroupIdsRef.current = empty;
+      setCollapsedGroupIds(empty);
+    }
+    const nextRange = { start: 0, end: Math.min(1, Math.max(0, cycleCount)) };
+    if (timelineRangeRef.current.start !== nextRange.start || timelineRangeRef.current.end !== nextRange.end) {
+      timelineRangeRef.current = nextRange;
+      setTimelineRangeState(nextRange);
+    }
+    if (rangeSelectionActiveRef.current) {
+      rangeSelectionActiveRef.current = false;
+      setRangeSelectionActiveState(false);
+    }
+    if (selectedCycleRef.current !== 0) {
+      selectedCycleRef.current = 0;
+      setSelectedCycleState(0);
+    }
+    selectedEdgeRef.current = undefined;
   }, []);
   const toggleCollapsedGroup = useCallback((id: GroupId) => {
     const next = new Set(collapsedGroupIdsRef.current);
@@ -111,6 +122,8 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
     selectedCycle: selectedCycleState,
     selectedEdge: selectedEdgeRef.current,
     setCollapsedGroups,
+    resetCollapsedGroups,
+    resetForDocument,
     toggleCollapsedGroup,
     setTreePresentationRevision,
     setPlayheadPresentationRevision,

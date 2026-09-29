@@ -12,9 +12,9 @@ const owners: readonly EpochOwner[] = [
     markers: [/documentEpoch\.advance\(\)/, /applyReplacement/],
   },
   {
-    owner: "timeline presentation collapse state",
+    owner: "timeline presentation reset owner",
     file: "apps/editor/src/workspace/use-timeline-presentation-state.ts",
-    markers: [/input\.documentEpoch/, /setCollapsedGroupIds\(empty\)/],
+    markers: [/resetForDocument = useCallback/, /setCollapsedGroupIds\(empty\)/],
   },
   {
     owner: "entity editor and inspector drafts",
@@ -64,7 +64,7 @@ describe("document-relative transient state ownership", () => {
     }
     expect(owners.map((entry) => entry.owner)).toEqual(expect.arrayContaining([
       "document replacement lifecycle",
-      "timeline presentation collapse state",
+      "timeline presentation reset owner",
       "entity editor and inspector drafts",
       "transaction group and drag state",
       "transaction group disclosure",
@@ -73,6 +73,33 @@ describe("document-relative transient state ownership", () => {
       "retained bookmark drafts",
       "document-relative UI reset",
     ]));
+  });
+  it("resets timeline presentation once at document replacement without duplicate publication", () => {
+    const source = readFileSync(resolve(workspace, "apps/editor/src/workspace/use-timeline-presentation-state.ts"), "utf8");
+    const reset = source.slice(source.indexOf("resetForDocument = useCallback"), source.indexOf("const toggleCollapsedGroup"));
+    expect(reset).not.toContain("applyCollapsedGroupsRef.current");
+    expect(reset).toMatch(/collapsedGroupIdsRef\.current\.size\s*>\s*0/);
+    expect(reset).toMatch(/timelineRangeRef\.current\.start\s*!==\s*nextRange\.start/);
+    expect(reset).toMatch(/if \(rangeSelectionActiveRef\.current\)/);
+    expect(reset).toMatch(/selectedCycleRef\.current\s*!==\s*0/);
+    expect(source).not.toContain("input.documentEpoch");
+    expect(source).toMatch(/resetCollapsedGroups = useCallback\(\(\) => \{\s*if \(collapsedGroupIdsRef\.current\.size === 0\) return;/);
+    expect(source).toContain("applyCollapsedGroupsRef.current(stable)");
+    const controller = readFileSync(resolve(workspace, "apps/editor/src/runtime/timeline-surface-controller.ts"), "utf8");
+    const replacement = controller.slice(controller.indexOf("applyReplacement: ({ document: canonicalDocument"), controller.indexOf("const onViewportKeyDown", controller.indexOf("applyReplacement: ({ document: canonicalDocument")));
+    expect(replacement).toContain("resetForDocument(canonicalDocument.timeline.cycleCount)");
+    expect(replacement).not.toContain("setTimelineRange(replacementRange)");
+    expect(replacement).not.toContain("setSelectedCycle(0)");
+    expect(replacement).not.toContain("resetCollapsedGroups()");
+  });
+  it("does not invalidate Transaction presentation from Cycle-only reference geometry readiness", () => {
+    const source = readFileSync(resolve(workspace, "apps/editor/src/runtime/timeline-surface-controller.ts"), "utf8");
+    const callback = source.slice(source.indexOf("onReferenceGeometryReady: () => {"), source.indexOf("invalidateSnapIndex:", source.indexOf("onReferenceGeometryReady: () => {")));
+    expect(callback).toContain("requestTransactionPresentationRefresh()");
+    const refreshPolicy = readFileSync(resolve(workspace, "apps/editor/src/runtime/transaction-presentation-refresh.ts"), "utf8");
+    expect(refreshPolicy).toMatch(/if \(input\.getViewMode\(\) === "Cycle"\) return;/);
+    expect(callback).toContain("referenceGeometryReconciled = true");
+    expect(callback).toContain("renderer.update(projection)");
   });
   // #743: the failure boundary is commitDocumentReplacement (behaviour tested in tests/editor/document-replacement.test.ts); here we pin that the
   // lifecycle hook goes through it and advances the epoch nowhere else, and that inside it the epoch advance follows the session replacement.

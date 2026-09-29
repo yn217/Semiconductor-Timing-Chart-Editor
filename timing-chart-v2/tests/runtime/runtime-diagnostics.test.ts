@@ -47,19 +47,44 @@ describe("open phase readiness contract", () => {
     expect(host.dataset.cycleViewReady).toBe("true");
   });
 
-  it("notifies the diagnostics owner once at presentation readiness", () => {
+  it("notifies presentation and diagnostics owners at their respective readiness stages", () => {
     const host = { dataset: {} } as unknown as HTMLElement;
     let presentationNotifications = 0;
-    const tracker = createOpenPhaseTracker(host, () => { presentationNotifications += 1; });
+    let diagnosticsNotifications = 0;
+    const tracker = createOpenPhaseTracker(host, () => { presentationNotifications += 1; }, () => { diagnosticsNotifications += 1; });
 
     tracker.begin(0);
     tracker.mark("canonical-replaced", 1);
     tracker.mark("row-shell-painted", 2);
     tracker.mark("reference-geometry-ready", 3);
     tracker.mark("ruler-painted", 4);
-    tracker.mark("first-visible-wave-painted", 5);
-    tracker.mark("all-visible-idle", 6);
     expect(presentationNotifications).toBe(1);
+    expect(diagnosticsNotifications).toBe(0);
+    tracker.mark("visible-waveforms-ready", 5);
+    tracker.mark("visible-waveforms-ready", 6);
+    expect(diagnosticsNotifications).toBe(1);
+    tracker.begin(7);
+    tracker.mark("canonical-replaced", 8);
+    tracker.mark("row-shell-painted", 9);
+    tracker.mark("reference-geometry-ready", 10);
+    tracker.mark("ruler-painted", 11);
+    expect(diagnosticsNotifications).toBe(1);
+    tracker.mark("visible-waveforms-ready", 12);
+    expect(diagnosticsNotifications).toBe(2);
+  });
+
+  it("waits for presentation before notifying diagnostics if visible waves finish first", () => {
+    const host = { dataset: {} } as unknown as HTMLElement;
+    let diagnosticsNotifications = 0;
+    const tracker = createOpenPhaseTracker(host, undefined, () => { diagnosticsNotifications += 1; });
+    tracker.begin(0);
+    tracker.mark("canonical-replaced", 1);
+    tracker.mark("visible-waveforms-ready", 2);
+    expect(diagnosticsNotifications).toBe(0);
+    tracker.mark("row-shell-painted", 3);
+    tracker.mark("reference-geometry-ready", 4);
+    tracker.mark("ruler-painted", 5);
+    expect(diagnosticsNotifications).toBe(1);
   });
 
   it("aggregates Open waveform batch scheduling metrics and resets them for the next Open", () => {

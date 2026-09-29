@@ -61,7 +61,12 @@ function transitionSegments(svg: SVGElement, brickId: string, cache: Map<string,
   const cached = cache.get(brickId);
   if (cached) return cached;
   if (metrics) metrics.transitionBrickLookups += 1;
-  const brick = Array.from(svg.querySelectorAll<SVGGElement>("defs g[id]")).find((item) => item.id === brickId);
+  const localBrick = Array.from(svg.querySelectorAll<SVGGElement>("defs g[id]")).find((item) => item.id === brickId);
+  const sharedSprite = svg.ownerDocument.querySelector<SVGSVGElement>("svg[data-wavedrom-definition-sprite]");
+  const sharedBrick = sharedSprite
+    ? Array.from(sharedSprite.querySelectorAll<SVGGElement>("defs g[id]")).find((item) => item.id === brickId)
+    : undefined;
+  const brick = localBrick ?? sharedBrick;
   if (!brick) throw new WaveDromAdapterError("MISSING_WAVEDROM_BRICK", `Rendered SVG does not contain brick '${brickId}'.`);
   const segments: Segment[] = [];
   for (const path of Array.from(brick.querySelectorAll<SVGPathElement>("path.s1"))) {

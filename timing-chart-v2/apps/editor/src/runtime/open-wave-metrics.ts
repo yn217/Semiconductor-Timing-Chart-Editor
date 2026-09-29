@@ -15,7 +15,7 @@ export type OpenWaveBatchMetrics = Readonly<{
   staleAfterRunCount: number;
   /** Contextual overlap: duplicate owner requests remain included in scheduler outcome counts. */
   duplicateOwnerRequestCount: number;
-  /** Reuses only serialized markup; each owner still needs parse, safety-check, and DOM installation. */
+  /** Reuses an exact WaveDrom artifact across equivalent signals; owner SVG installation remains per signal. */
   reusedMarkupCount: number;
   markupCacheMissCount: number;
   waveJsonBytes: number;

@@ -33,14 +33,22 @@ function syntaxProblem(error: unknown, source: string): DocumentProblem {
   return { code: diagnostic.code, path: `$@${diagnostic.line}:${diagnostic.column}`, message: diagnostic.message, detail: message, offset: diagnostic.offset, line: diagnostic.line, column: diagnostic.column };
 }
 
-export function migrateDocument(input: unknown): { document: CanonicalDocument; warnings: readonly MigrationWarning[] } | undefined {
+function migrateDocumentOwned(input: unknown, ownsInput: boolean): { document: CanonicalDocument; warnings: readonly MigrationWarning[] } | undefined {
   if (input === null || typeof input !== "object" || Array.isArray(input)) return undefined;
   const migrated = migrateThroughRegistry(input, 2);
   if (!migrated) return undefined;
-  const document = cloneUnknown(migrated.value) as CanonicalDocument;
+  // String Open has just produced this detached object tree with JSON.parse.
+  // Re-cloning every nested Signal/value entry adds a second full-document
+  // allocation before validation/freezing. Public object normalization still
+  // clones so legacy cleanup never mutates caller-owned data.
+  const document = (ownsInput ? migrated.value : cloneUnknown(migrated.value)) as CanonicalDocument;
   dropLegacySplitPane(document);
   defaultAdditiveCollections(document);
   return { document, warnings: migrated.warnings };
+}
+
+export function migrateDocument(input: unknown): { document: CanonicalDocument; warnings: readonly MigrationWarning[] } | undefined {
+  return migrateDocumentOwned(input, false);
 }
 
 /**
@@ -74,7 +82,7 @@ export function parseJsonInput(source: string): JsonInputResult {
   return complexityProblems.length > 0 ? { ok: false, problems: complexityProblems } : { ok: true, value };
 }
 
-export function normalizeDocument(input: unknown): ParseDocumentResult {
+function normalizeOwnedDocument(input: unknown, ownsInput: boolean): ParseDocumentResult {
   if (input === null || typeof input !== "object" || Array.isArray(input)) {
     return { ok: false, kind: "validation", problems: [{ code: "DOCUMENT_ROOT", path: "$", message: "Document root must be an object." }] };
   }
@@ -87,7 +95,7 @@ export function normalizeDocument(input: unknown): ParseDocumentResult {
   if (version !== 1 && version !== 2) {
     return { ok: false, kind: "unsupported-version", sourceFormatVersion: version as number, problems: [{ code: "UNSUPPORTED_FORMAT_VERSION", path: "$.formatVersion", message: `Format version ${String(version)} is not supported; the source was preserved without replacement.` }], raw: cloneUnknown(input) };
   }
-  const migrated = migrateDocument(input);
+  const migrated = migrateDocumentOwned(input, ownsInput);
   if (!migrated) return { ok: false, kind: "validation", problems: [{ code: "MIGRATION_FAILED", path: "$", message: "Document migration could not be selected." }] };
   const problems = validateCanonicalDocument(migrated.document);
   if (problems.length > 0) return { ok: false, kind: "validation", sourceFormatVersion: version, problems };
@@ -96,6 +104,10 @@ export function normalizeDocument(input: unknown): ParseDocumentResult {
   const result = { ok: true as const, document: migrated.document, warnings: migrated.warnings, validated: true as const };
   trustedParsedDocuments.add(result);
   return result as ParseDocumentResult;
+}
+
+export function normalizeDocument(input: unknown): ParseDocumentResult {
+  return normalizeOwnedDocument(input, false);
 }
 
 export function parseDocument(input: string | unknown): ParseDocumentResult {
@@ -108,9 +120,9 @@ export function parseDocument(input: string | unknown): ParseDocumentResult {
   } catch (error) {
     return { ok: false, kind: "syntax", problems: [syntaxProblem(error, input)] };
   }
-  const complexityProblems = validateDocumentInputComplexity(parsed);
-  if (complexityProblems.length > 0) return { ok: false, kind: "validation", problems: complexityProblems };
-  return normalizeDocument(parsed);
+  // normalizeDocument owns the post-parse complexity gate. Running it here as
+  // well traversed every JSON node twice on the production string-Open path.
+  return normalizeOwnedDocument(parsed, true);
 }
 
 /**

@@ -132,7 +132,20 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       // prefer the first canonical clock rather than deferring every signal
       // and leaving Transaction bars without boundary X positions.
       const mapping = context.mappingCache.get(document.timeline, document.timeGroups);
+      const geometrySourceCyclesByWindow = new Map<string, readonly number[]>();
+      const geometrySourceCyclesForWindow = (rendererStart: number, rendererEnd: number, sourceStart: number, sourceEnd: number): readonly number[] => {
+        const key = `${rendererStart}:${rendererEnd}:${sourceStart}:${sourceEnd}`;
+        const cached = geometrySourceCyclesByWindow.get(key);
+        if (cached) return cached;
+        const sourceCycles = Object.freeze(Array.from({ length: rendererEnd - rendererStart + 1 }, (_, index) => {
+          const displayCycle = rendererStart + index;
+          return displayCycle === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[displayCycle] ?? sourceEnd);
+        }));
+        geometrySourceCyclesByWindow.set(key, sourceCycles);
+        return sourceCycles;
+      };
       let referenceGeometryReady = false;
+      let geometryRegistryChanged = false;
       let waveSliceStartedAt = globalThis.performance.now();
       const referenceClockId = document.timeline.referenceClock ?? signalIndex.firstClockSignalId;
       const markReferenceClockPaintedIfCurrent = (signalId: SignalId): void => {
@@ -205,10 +218,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             });
           const mappedWaveJson = sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
             ? waveJson
-            : { ...waveJson, geometrySourceCycles: Array.from({ length: rendererEnd - rendererStart + 1 }, (_, index) => {
-              const displayCycle = rendererStart + index;
-              return displayCycle === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[displayCycle] ?? sourceWindow.end);
-            }) };
+            : { ...waveJson, geometrySourceCycles: geometrySourceCyclesForWindow(rendererStart, rendererEnd, sourceWindow.start, sourceWindow.end) };
           return { request, waveJson: mappedWaveJson, semanticValues, error: undefined, deferred: false, rendererStart, rendererEnd };
         } catch (error: unknown) {
           // Projection/conversion failures belong to one Signal only. Keep
@@ -225,6 +235,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         return item;
       };
       const prepared: PreparedItem[] = [];
+      const canvasPrototype = isCanvasWaveRendererSelected(document);
+      const supportsDetachedWaveInstall = context.adapter.prepareWave !== undefined && context.adapter.installWave !== undefined;
       const referenceRequest = requests.find((request) => request.signalId === referenceClockId);
       if (referenceRequest) prepared.push(prepareAndMeasure(referenceRequest));
       // Primary ruler/grid geometry is analytic and does not depend on the
@@ -237,6 +249,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       let seededReferenceGeometry: LocalGeometryMap | undefined;
       let seededReferenceOwnerGeometry: LocalGeometryMap | undefined;
       let referenceGeometryNotified = false;
+      let referenceGeometryRefresh: Promise<void> | undefined;
       if (referenceItem?.waveJson && !referenceItem.deferred && !referenceItem.error && !useDomGeometrySource() && isCurrent(referenceItem.request)) {
         const geometry = analyticLocalGeometry(referenceItem.request.signalId, referenceItem.waveJson);
         if (isCurrent(referenceItem.request)) {
@@ -252,19 +265,90 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             context.geometryRegistry.maps.set(referenceItem.request.signalId, seededReferenceGeometry);
             context.markOpenPhase("reference-geometry-ready");
             context.invalidateSnapIndex();
-            await context.onReferenceGeometryReady?.();
+            const refresh = context.onReferenceGeometryReady?.();
+            referenceGeometryRefresh = refresh === undefined ? undefined : Promise.resolve(refresh);
             referenceGeometrySeeded = true;
             referenceGeometryNotified = true;
           }
         }
       }
+      const pxPerDisplayCycle = context.getWaveWidthPxPerDisplayCycle?.();
+      const waveOriginPx = context.getWaveOriginPx?.() ?? 0;
+      const applyOwnerPlacement = (item: PreparedItem): void => {
+        if (pxPerDisplayCycle !== undefined && item.rendererStart !== undefined && item.rendererEnd !== undefined && item.rendererEnd > item.rendererStart) {
+          const placement = waveOwnerPlacement({ displayStart: item.rendererStart, displayEnd: item.rendererEnd, pxPerDisplayCycle, waveOriginPx, presentationScale: context.getPresentationScale?.() ?? 1 });
+          item.request.owner.style.width = `${placement.width}px`;
+          item.request.owner.style.left = `${placement.left}px`;
+        } else {
+          item.request.owner.style.removeProperty("width");
+          item.request.owner.style.removeProperty("left");
+        }
+      };
+      const progressiveRequest = referenceRequest && isCurrent(referenceRequest)
+        ? referenceRequest
+        : requests.find((request) => isCurrent(request));
+      let progressiveItem = prepared.find((item) => item.request === progressiveRequest);
+      if (!progressiveItem && progressiveRequest) {
+        progressiveItem = prepareAndMeasure(progressiveRequest);
+        prepared.push(progressiveItem);
+      }
+      const progressivePrepared = new Map<PreparedItem["request"], Readonly<{ rendered?: RenderedWave; error?: Error; stale?: boolean }>>();
+      const imageReady: Promise<void>[] = [];
+      const readyRegistered = new Set<(typeof requests)[number]>();
+      const registerVisibleWaveReady = (request: (typeof requests)[number], rendered: RenderedWave): void => {
+        if (readyRegistered.has(request) || !isCurrent(request) || !request.owner.isConnected) return;
+        readyRegistered.add(request);
+        const markReady = (): void => {
+          if (!isCurrent(request) || !request.owner.isConnected) return;
+          context.markOpenPhase("first-visible-wave-painted");
+          markReferenceClockPaintedIfCurrent(request.signalId);
+        };
+        if (rendered.svgImageReady) imageReady.push(rendered.svgImageReady.then(markReady));
+        else markReady();
+      };
+      // Start the first visible SVG's asynchronous resource decode before the
+      // remaining owners' synchronous WaveJSON/remap preparation. The same
+      // prepared node is handed to the scheduler below, so this overlaps
+      // independent work without duplicating WaveDrom preparation or install.
+      if (primaryOpenBatch && supportsDetachedWaveInstall && !canvasPrototype
+        && progressiveItem?.waveJson && !progressiveItem.error && !progressiveItem.deferred
+        && isCurrent(progressiveItem.request)) {
+        const renderStartedAt = globalThis.performance.now();
+        renderCount += 1;
+        try {
+          context.adapter.waveMarkupArtifactKey?.(progressiveItem.waveJson, progressiveItem.semanticValues);
+          applyOwnerPlacement(progressiveItem);
+          let rendered = await context.adapter.prepareWave!(
+            progressiveItem.request.signalId,
+            progressiveItem.waveJson,
+            progressiveItem.request.owner.ownerDocument,
+            progressiveItem.semanticValues,
+          );
+          if (!isCurrent(progressiveItem.request)) {
+            progressivePrepared.set(progressiveItem.request, { stale: true });
+          } else {
+            rendered = context.adapter.installWave!(rendered, progressiveItem.request.owner);
+            registerVisibleWaveReady(progressiveItem.request, rendered);
+            progressivePrepared.set(progressiveItem.request, { rendered });
+          }
+        } catch (error: unknown) {
+          progressivePrepared.set(progressiveItem.request, { error: error instanceof Error ? error : new Error(String(error)) });
+        } finally {
+          renderAwaitMs += Math.max(0, globalThis.performance.now() - renderStartedAt);
+        }
+      }
+      // The callback has already synchronously refreshed ruler/grid owners.
+      // Its remaining frame-bound reprojection may proceed alongside the
+      // detached reference SVG preparation/decode, but must finish before we
+      // prepare/publish requests that the reprojection could invalidate.
+      if (referenceGeometryRefresh) await referenceGeometryRefresh;
       // The reference-ready callback may reproject the just-created document
       // on the next frame, invalidating the original viewport requests. Do
       // not pay WaveJSON/remap/window preparation for those requests before
       // checking freshness; the replacement projection will request the
       // current owners itself.
       for (const request of requests) {
-        if (request === referenceRequest) continue;
+        if (request === referenceRequest || request === progressiveRequest) continue;
         if (!isCurrent(request)) {
           prepared.push({ request, waveJson: undefined, semanticValues: undefined, error: undefined, deferred: false, rendererStart: undefined, rendererEnd: undefined });
           continue;
@@ -286,33 +370,10 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       // ratio (never a `--wave-width` CSS read -- see the context field doc).
       // Non-windowed owners, or when the ratio isn't known yet, fall back to
       // the shared CSS rule (full document width) as before.
-      const pxPerDisplayCycle = context.getWaveWidthPxPerDisplayCycle?.();
-      const waveOriginPx = context.getWaveOriginPx?.() ?? 0;
       for (const item of prepared) {
-        if (pxPerDisplayCycle !== undefined && item.rendererStart !== undefined && item.rendererEnd !== undefined && item.rendererEnd > item.rendererStart) {
-          const placement = waveOwnerPlacement({ displayStart: item.rendererStart, displayEnd: item.rendererEnd, pxPerDisplayCycle, waveOriginPx, presentationScale: context.getPresentationScale?.() ?? 1 });
-          item.request.owner.style.width = `${placement.width}px`;
-          // The shared wave-owner layer (`stable-waveform-surface`) is one
-          // element as wide as the whole document (`--wave-width`), scrolled
-          // natively; `place()` (stable-surface.ts) only ever sets each
-          // owner's *vertical* position via translateY. A windowed owner
-          // whose SVG covers a cycle range starting partway through the
-          // document -- anything after the first #614 re-windowing fires --
-          // was left at its default horizontal position (effectively x=0,
-          // i.e. document start) with no offset for where its own window
-          // actually begins, so its rendered content appeared at completely
-          // the wrong horizontal position once scrolled away from cycle 0.
-          // `waveOriginPx` carries the ruler's own coordinate-system origin
-          // (WaveDrom's fixed left margin) so this lines up with ruler ticks
-          // exactly, not just proportionally (#620).
-          item.request.owner.style.left = `${placement.left}px`;
-        } else {
-          item.request.owner.style.removeProperty("width");
-          item.request.owner.style.removeProperty("left");
-        }
+        if (item !== progressiveItem || !progressivePrepared.has(item.request)) applyOwnerPlacement(item);
       }
-      const canvasPrototype = isCanvasWaveRendererSelected(document);
-      const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean; readonly canvasPainted?: boolean; readonly rendererStart?: number | undefined }> = [];
+      const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean; readonly canvasPainted?: boolean; readonly installed?: boolean; readonly rendererStart?: number | undefined }> = [];
       for (const item of orderedPrepared) if (item.deferred) { deferredCount += 1; renderResults.push({ ...item, rendered: undefined }); }
       const runnableItems = orderedPrepared.filter((item) => {
         if (item.deferred) return false;
@@ -327,11 +388,31 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         return true;
       });
       const itemByRequest = new Map(runnableItems.map((item) => [item.request, item] as const));
+      // Image-backed SVG artifacts decode asynchronously and are shared by
+      // exact WaveJSON/semantic-value identity. Start one decode for every
+      // distinct artifact early, before spending scheduler slices preparing
+      // additional owners that can only reuse those artifacts. This keeps
+      // the same complete owner work and cooperative budget while overlapping
+      // independent browser decode with the remaining owner preparation.
+      const seenArtifactKeys = new Set<string>();
+      const progressiveSignalId = progressiveRequest?.signalId;
       const scheduled = await waveRenderScheduler.runBatch(runnableItems.map((item) => ({
         key: item.request,
-        priority: item.request.signalId === referenceClockId ? 1 : 0,
+        priority: (() => {
+          if (item.request.signalId === referenceClockId) return 2;
+          if (!primaryOpenBatch || !supportsDetachedWaveInstall || !item.waveJson) return 0;
+          const artifactKey = context.adapter.waveMarkupArtifactKey?.(item.waveJson, item.semanticValues)
+            ?? JSON.stringify([item.waveJson, item.semanticValues]);
+          if (seenArtifactKeys.has(artifactKey)) return 0;
+          seenArtifactKeys.add(artifactKey);
+          return 1;
+        })(),
         isCurrent: () => isCurrent(item.request),
         run: async () => {
+          const early = progressivePrepared.get(item.request);
+          if (early?.stale) return { ...item, rendered: undefined, stale: true };
+          if (early?.error) return { ...item, rendered: undefined, error: early.error };
+          if (early?.rendered) return { ...item, rendered: early.rendered, installed: true };
           if (item.error || !item.waveJson) return { ...item, rendered: undefined };
           if (canvasPrototype) {
             paintWaveCanvas(item.request.owner, item.waveJson);
@@ -339,7 +420,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             const canvasGeometry = new LazyAnalyticGeometryMap(item.request.signalId, item.waveJson, sourceCycles);
             publishCycleBoundarySnapshotAccessor(item.request.owner, canvasGeometry);
             context.geometryRegistry.maps.set(item.request.signalId, absoluteWindowGeometry(canvasGeometry, item.rendererStart));
-            context.invalidateSnapIndex();
+            geometryRegistryChanged = true;
             context.markOpenPhase("first-visible-wave-painted");
             markReferenceClockPaintedIfCurrent(item.request.signalId);
             return { ...item, rendered: undefined, canvasPainted: true };
@@ -349,28 +430,37 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             renderCount += 1;
             let rendered: RenderedWave;
             try {
-              rendered = await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues);
+              if (supportsDetachedWaveInstall) {
+                rendered = await context.adapter.prepareWave!(item.request.signalId, item.waveJson, item.request.owner.ownerDocument, item.semanticValues);
+                if (!isCurrent(item.request)) {
+                  return { ...item, rendered: undefined, stale: true };
+                }
+                if (!primaryOpenBatch || item.request.signalId === progressiveSignalId) {
+                  rendered = context.adapter.installWave!(rendered, item.request.owner);
+                }
+              } else {
+                rendered = await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues);
+              }
             } finally {
               renderAwaitMs += Math.max(0, globalThis.performance.now() - renderStartedAt);
+            }
+            // The progressive reference owner is installed during its job.
+            // Register its readiness immediately so the first-visible
+            // milestone does not wait for unrelated owners to finish.
+            if (!primaryOpenBatch || item.request.signalId === progressiveSignalId || !supportsDetachedWaveInstall) {
+              registerVisibleWaveReady(item.request, rendered);
             }
             // renderWave installs the SVG into this owner before resolving.
             // Publish the first-artifact milestone here rather than after
             // every later owner in the batch has also completed.
-            if (isCurrent(item.request) && item.request.owner.isConnected) {
-              context.markOpenPhase("first-visible-wave-painted");
-              markReferenceClockPaintedIfCurrent(item.request.signalId);
-            }
-            return { ...item, rendered };
+            return { ...item, rendered, installed: true };
           } catch (error: unknown) {
             return { ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) };
           }
         },
       })), {
-        // Keep the initial Open scheduler near a frame-sized slice. The
-        // previous 6ms budget forced a task hop between small owner renders;
-        // the larger slice reduces yield wait without disabling cooperative
-        // yielding or changing which waveform owners are rendered.
-        budgetMs: 16,
+        // Keep owner work in a short cooperative slice while opening.
+        budgetMs: 32,
         initialSliceStartedAt: waveSliceStartedAt,
         now: () => globalThis.performance.now(),
         shouldYield: () => context.isPrimaryPresentationOpening?.() === true,
@@ -398,9 +488,31 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           renderResults.push({ ...item, rendered: undefined, error: result.error instanceof Error ? result.error : new Error(String(result.error)) });
         }
         else {
+          const value = result.value;
+          if (value.rendered && primaryOpenBatch && supportsDetachedWaveInstall && value.request.signalId !== progressiveSignalId) {
+            if (!isCurrent(value.request)) {
+              requiredNowCount += 1;
+              staleAfterRunCount += 1;
+              renderResults.push({ ...value, rendered: undefined, stale: true });
+              continue;
+            }
+            try {
+              const installStartedAt = globalThis.performance.now();
+              const installed = context.adapter.installWave!(value.rendered, value.request.owner);
+              renderAwaitMs += Math.max(0, globalThis.performance.now() - installStartedAt);
+              renderResults.push({ ...value, rendered: installed, installed: true });
+            } catch (error: unknown) {
+              renderResults.push({ ...value, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) });
+            }
+          } else {
+            renderResults.push(value);
+          }
           requiredNowCount += 1;
-          renderResults.push(result.value);
         }
+      }
+      for (const item of renderResults) {
+        if (!item.rendered || item.stale === true) continue;
+        registerVisibleWaveReady(item.request, item.rendered);
       }
       const renderedByRequest = new Map(renderResults.map((item) => [item.request, item] as const));
       const preparedByRequest = new Map(prepared.map((item) => [item.request, item] as const));
@@ -412,6 +524,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         if (item.stale === true || !isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
         if (item.canvasPainted === true) return { signalId: item.request.signalId, result: { waveDromRenders: 0, localGeometryBuilds: 1 } };
         if (item.error || !item.rendered) return { signalId: item.request.signalId, error: item.error ?? new Error("Waveform render did not produce an SVG.") };
+        const rendered = item.rendered;
         try {
           if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
           // A semantic delete can occur without advancing documentEpoch. Do
@@ -429,40 +542,54 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           // Renderer-independent Local Geometry (#755): computed from the WaveJson + pinned WaveDrom layout, not by reading
           // the rendered SVG DOM (getScreenCTM / <use> walk). `?geometrySource=svg` restores DOM extraction for comparison.
           const geometry = useDomGeometrySource()
-            ? context.adapter.extractLocalGeometry(item.rendered)
+            ? context.adapter.extractLocalGeometry(rendered)
             : referenceGeometrySeeded && item.request.signalId === referenceClockId
               ? seededReferenceGeometry!
-              : analyticLocalGeometry(item.request.signalId, item.rendered.waveJson);
+              : new LazyAnalyticGeometryMap(
+                item.request.signalId,
+                rendered.waveJson,
+                rendered.waveJson.geometrySourceCycles
+                  ?? Array.from({ length: rendered.waveJson.wave.length + 1 }, (_, index) => (rendered.waveJson.sourceWindow?.start ?? 0) + index),
+              );
           if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
           if (!(referenceGeometrySeeded && item.request.signalId === referenceClockId && !useDomGeometrySource())) {
             context.geometryRegistry.maps.set(item.request.signalId, absoluteWindowGeometry(geometry, item.rendererStart));
+            geometryRegistryChanged = true;
           }
-          context.geometryRegistry.svgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
+          context.geometryRegistry.svgs.set(item.request.signalId, rendered.svg as SVGSVGElement);
           const ownerGeometry = referenceGeometrySeeded && item.request.signalId === referenceClockId && !useDomGeometrySource()
             ? seededReferenceOwnerGeometry
             : geometry;
           publishCycleBoundarySnapshotAccessor(item.request.owner, ownerGeometry);
           if (item.request.signalId === currentReferenceClock) { context.markOpenPhase("reference-geometry-ready"); referenceGeometryReady = true; }
-          context.markOpenPhase("first-visible-wave-painted");
-          context.invalidateSnapIndex();
           return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
         } catch (error: unknown) {
           context.geometryRegistry.svgs.delete(item.request.signalId);
           if (!(referenceGeometrySeeded && item.request.signalId === referenceClockId && !useDomGeometrySource())) {
             context.geometryRegistry.maps.delete(item.request.signalId);
+            geometryRegistryChanged = true;
           }
-          context.invalidateSnapIndex();
           return { signalId: item.request.signalId, error };
         }
       });
+      // Each result above updates the shared geometry registry synchronously.
+      // Invalidate its derived indexes once after the batch instead of once per
+      // owner; repeated invalidation also discarded the identical source-window
+      // query while the remaining owners were still being accepted.
+      if (geometryRegistryChanged) context.invalidateSnapIndex();
       if (referenceGeometryReady && !referenceGeometryNotified) context.onReferenceGeometryReady?.();
+      // Geometry is derived from validated WaveJSON, not decoded image pixels.
+      // Publish it while asynchronous SVG image decodes are still in flight
+      // instead of serializing registry work behind the final paint dependency.
+      if (imageReady.length > 0) {
+        const imageReadyStartedAt = globalThis.performance.now();
+        await Promise.all(imageReady);
+        renderAwaitMs += Math.max(0, globalThis.performance.now() - imageReadyStartedAt);
+      }
       if (primaryOpenBatch) {
         const openStageTotals = stageTotals!;
-        for (const result of scheduled) {
-          const value = result.status === "completed"
-            ? result.value
-            : result.status === "stale-after-run" ? result.value : undefined;
-          const rendered = value && "rendered" in value ? value.rendered : undefined;
+        for (const result of renderResults) {
+          const rendered = result.rendered;
           if (!rendered) continue;
           if (rendered.markupCacheHit === true) reusedMarkupCount += 1;
           else if (rendered.markupCacheHit === false) markupCacheMissCount += 1;

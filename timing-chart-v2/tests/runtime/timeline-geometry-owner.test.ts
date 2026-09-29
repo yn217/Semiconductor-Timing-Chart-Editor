@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ImmutableLocalGeometryMap } from "@timing-chart-v2/geometry";
 import { DisplayTimeMappingCache, type RenderProjection } from "@timing-chart-v2/projection";
+import type { SignalId } from "@timing-chart-v2/schema";
 import { cycleDocument } from "../../apps/editor/src/fixtures-cycle-reference-documents.js";
 import { signalId } from "../../apps/editor/src/minimal-cycle-view-fixture-helpers.js";
 import { TimelineGeometryOwner, usesFullDocumentWaveformWindow } from "../../apps/editor/src/runtime/timeline-geometry-owner.js";
@@ -91,6 +92,34 @@ describe("TimelineGeometryOwner", () => {
     expect(findCalls).toBe(0);
   });
 
+  it("reuses an exact source-window query across mounted owners until geometry invalidation", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 129 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle * 40, y: 0 } })));
+    const document = {
+      ...cycleDocument,
+      timeline: { ...cycleDocument.timeline, cycleCount: 500, end: 500 },
+      signals: Array.from({ length: 100 }, (_, index) => ({ ...cycleDocument.signals[0]!, id: signalId(index === 0 ? "sig_cycle_clock" : `sig_perf_${index}`) })),
+    };
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => document,
+      getProjection: () => ({} as RenderProjection),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
+    const resolveAxis = vi.spyOn(owner, "resolveTimeAxis");
+
+    const first = owner.sourceWindowForLocalRange(document, 0, 1_120);
+    const repeated = owner.sourceWindowForLocalRange(document, 0, 1_120);
+    expect(repeated).toEqual(first);
+    expect(resolveAxis).toHaveBeenCalledTimes(1);
+
+    owner.invalidateSnapIndex();
+    expect(owner.sourceWindowForLocalRange(document, 0, 1_120)).toEqual(first);
+    expect(resolveAxis).toHaveBeenCalledTimes(2);
+  });
+
   it.each([160, 3_000, 4_096])("keeps the full WaveDrom source range stable while scrolling a %i-cycle document", (cycleCount) => {
     const clockId = signalId("sig_cycle_clock");
     const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 31 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle * 40, y: 0 } })));
@@ -156,6 +185,60 @@ describe("TimelineGeometryOwner", () => {
     // The settled first viewport window is 0..128 for this signal density;
     // bootstrapping 0..163 caused each owner to render once, then replace it.
     expect(owner.sourceWindowForLocalRange(document, 0, 1_120)).toEqual({ start: 0, end: 128 });
+  });
+
+  it("projects a viewport beyond a retained edge in one bounded-window update", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const signals = Array.from({ length: 100 }, (_, index) => ({
+      ...cycleDocument.signals[0]!,
+      id: signalId(index === 0 ? "sig_cycle_clock" : `sig_perf_${index}`),
+    }));
+    const document = { ...cycleDocument, timeline: { ...cycleDocument.timeline, cycleCount: 500, end: 500 }, signals };
+    const geometryMaps = new Map<SignalId, ImmutableLocalGeometryMap>();
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps,
+      getDocument: () => document,
+      getProjection: () => ({} as RenderProjection),
+      onSnapIndexBuilt: () => undefined,
+    });
+    const installGeometry = (end: number) => {
+      const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: end + 1 }, (_, cycle) => ({
+        cycle, point: "cycle-start" as const, position: { x: 20.5 + cycle * 40, y: 0 },
+      })));
+      geometryMaps.set(clockId, geometry);
+      owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
+    };
+
+    installGeometry(128);
+    expect(owner.sourceWindowForLocalRange(document, 0, 12_197)).toEqual({ start: 0, end: 320 });
+
+    installGeometry(320);
+    expect(owner.sourceWindowForLocalRange(document, 0, 12_197)).toEqual({ start: 0, end: 320 });
+  });
+
+  it("resolves the terminal display boundary to the canonical cycle count", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const signals = Array.from({ length: 100 }, (_, index) => ({
+      ...cycleDocument.signals[0]!,
+      id: signalId(index === 0 ? "sig_cycle_clock" : `sig_perf_${index}`),
+    }));
+    const document = { ...cycleDocument, timeline: { ...cycleDocument.timeline, cycleCount: 500, end: 500 }, signals };
+    const geometryMaps = new Map<SignalId, ImmutableLocalGeometryMap>();
+    const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 129 }, (_, cycle) => ({
+      cycle, point: "cycle-start" as const, position: { x: 20.5 + cycle * 40, y: 0 },
+    })));
+    geometryMaps.set(clockId, geometry);
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps,
+      getDocument: () => document,
+      getProjection: () => ({} as RenderProjection),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
+
+    expect(owner.sourceWindowForLocalRange(document, 0, 25_000)).toEqual({ start: 0, end: 500 });
   });
 
   it("uses shared display mapping to window beyond retained geometry", () => {

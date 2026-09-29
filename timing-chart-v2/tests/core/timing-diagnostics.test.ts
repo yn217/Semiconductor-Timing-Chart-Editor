@@ -52,6 +52,20 @@ describe("derived timing diagnostics", () => {
     expect(diagnostic.stableKey).toContain(diagnostic.path);
   });
 
+  it("does not evaluate disabled diagnostic categories", () => {
+    const source = canonicalFixture();
+    let constraintTypeReads = 0;
+    const constraint = Object.defineProperty({}, "type", {
+      get() {
+        constraintTypeReads += 1;
+        throw new Error("disabled protocol diagnostics must not inspect constraints");
+      },
+    }) as Constraint;
+
+    expect(deriveTimingDiagnostics({ ...source, constraints: [constraint] }, { enabledCategories: ["unknown-value"] })).toEqual([]);
+    expect(constraintTypeReads).toBe(0);
+  });
+
   it("builds one reusable Signal ID/index context per full diagnostic pass", () => {
     const document = canonicalFixture();
     const expected = deriveTimingDiagnostics(document);

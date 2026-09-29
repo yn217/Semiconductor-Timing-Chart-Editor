@@ -46,6 +46,10 @@ export interface RenderedWave {
   readonly signalId: SignalId;
   readonly ownerKey: SignalId;
   readonly svg: SVGElement;
+  /** Validated canonical SVG template backing an exact shared SVG image owner. */
+  readonly geometrySvg?: SVGElement;
+  /** Resolves when an image-backed SVG is decoded or its validated inline fallback is installed. */
+  readonly svgImageReady?: Promise<void>;
   readonly renderIndex: number;
   readonly waveJson: WaveJsonSignal;
   /** Whether cached serialized WaveDrom markup was reused (SVG parse/install is still required). */
@@ -89,7 +93,13 @@ export interface WaveDromAdapterMetrics {
 
 export interface WaveDromAdapter {
   toWaveJson(source: CanonicalSignalSource): WaveJsonSignal;
+  /** Resolve the exact immutable markup-cache identity before scheduling, so priority selection and preparation share one serialization. */
+  waveMarkupArtifactKey?(waveJson: WaveJsonSignal, semanticValues?: readonly string[]): string;
   renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues?: readonly string[]): Promise<RenderedWave>;
+  /** Prepare and safety-check an SVG without mutating the live surface. */
+  prepareWave?(signalId: SignalId, waveJson: WaveJsonSignal, ownerDocument: Document, semanticValues?: readonly string[]): Promise<RenderedWave>;
+  /** Install a previously prepared SVG into its current owner. */
+  installWave?(rendered: RenderedWave, mount: Element): RenderedWave;
   extractLocalGeometry(rendered: RenderedWave): LocalGeometryMap;
   geometryMetrics(): Readonly<{
     readonly last: GeometryExtractionMetrics | undefined;

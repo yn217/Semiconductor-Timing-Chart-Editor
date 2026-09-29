@@ -74,6 +74,29 @@ describe("canonical v2 schema and roundtrip", () => {
     expect(result).toMatchObject({ ok: false, kind: "unsupported-version", sourceFormatVersion: 999, raw: future });
   });
 
+  it("keeps caller-owned normalization immutable while string Open normalizes its owned tree", () => {
+    const input = clone(canonicalFixture()) as unknown as Record<string, unknown>;
+    const signals = input.signals as Array<{ display: Record<string, unknown> }>;
+    signals[0]!.display.splitPane = "lower";
+    delete input.annotationGroups;
+    const before = JSON.stringify(input);
+
+    const normalized = normalizeDocument(input);
+    expect(normalized.ok).toBe(true);
+    expect(JSON.stringify(input)).toBe(before);
+    if (normalized.ok) {
+      expect(normalized.document.signals[0]!.display).not.toHaveProperty("splitPane");
+      expect(normalized.document.annotationGroups).toEqual([]);
+    }
+
+    const opened = parseDocument(before);
+    expect(opened.ok).toBe(true);
+    if (opened.ok) {
+      expect(opened.document.signals[0]!.display).not.toHaveProperty("splitPane");
+      expect(opened.document.annotationGroups).toEqual([]);
+    }
+  });
+
   it("reports syntax locations", () => {
     const result = parseDocument("{\n  \"formatVersion\": 2,\n  ]");
     expect(result.ok).toBe(false);

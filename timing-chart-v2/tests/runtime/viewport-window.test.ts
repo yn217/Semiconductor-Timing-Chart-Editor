@@ -1,10 +1,26 @@
 import { describe, expect, it } from "vitest";
 import type { SignalId } from "@timing-chart-v2/schema";
 import { buildViewportWindow } from "../../apps/editor/src/runtime/viewport-window.js";
-import { projectViewportWindow } from "../../apps/editor/src/runtime/viewport-projection.js";
+import { initialWaveSignalIds, mountInitialTimelineProjection, projectViewportWindow, projectionForInitialWaveBootstrap } from "../../apps/editor/src/runtime/viewport-projection.js";
 import { pinnedSignalIdsForEpoch, signalPinStateForEpoch } from "../../apps/editor/src/workspace/signal-pin-state.js";
 
 describe("Signal pin viewport ownership", () => {
+  it("bootstraps file replacement with only the reference wave while preserving the full projection", () => {
+    const clock = "clock-id" as SignalId;
+    const data = "signal-a" as SignalId;
+    const document = {
+      timeline: { cycleCount: 500, referenceClock: clock },
+      signals: Array.from({ length: 100 }, (_, index) => index === 0 ? { id: clock, type: "clock" } : { id: `${data}-${index}`, type: "binary" }),
+    } as never;
+    const otherMounted = "signal-99" as SignalId;
+    const projection = { mountedSignalIds: [clock, otherMounted], waveSignalIds: [clock, otherMounted] } as never;
+
+    const bootstrap = projectionForInitialWaveBootstrap(projection, initialWaveSignalIds(document));
+
+    expect(bootstrap.mountedSignalIds).toEqual([clock]);
+    expect(projection.mountedSignalIds).toEqual([clock, otherMounted]);
+  });
+
   it("retains the reference clock and multiple user pins by stable ID", () => {
     const window = buildViewportWindow({ scrollTop: 100, clientHeight: 200 }, "clock-id" as SignalId, ["signal-a", "signal-b", "clock-id"] as SignalId[]);
     expect(window.pinnedRowIds).toEqual(["clock-id", "signal-a", "signal-b"]);
@@ -40,5 +56,26 @@ describe("Signal pin viewport ownership", () => {
     expect(projected).toBe(1);
     expect(receivedWindow?.stickyRowIds).toEqual([signalA]);
     expect(receivedWindow?.pinnedRowIds).toEqual([signalA]);
+  });
+
+  it("queues only the reference waveform during a large-document bootstrap, retaining the full projection", () => {
+    const clock = "clock-id" as SignalId;
+    const data = "signal-a" as SignalId;
+    const projection = { mountedSignalIds: [clock, data], waveSignalIds: [clock, data] } as never;
+    let updateArgument: { mountedSignalIds: readonly SignalId[] } | undefined;
+    const result = mountInitialTimelineProjection({
+      coordinator: { mount: () => undefined },
+      renderer: { update: (value) => { updateArgument = value; } },
+      host: {} as HTMLElement,
+      viewport: { scrollTop: 0, clientHeight: 600 } as HTMLElement,
+      referenceClock: clock,
+      projectionCoordinator: { project: () => projection },
+      snapshot: {} as never,
+      collapsedGroupIds: [],
+      initialWaveSignalIds: [clock],
+    });
+
+    expect(updateArgument?.mountedSignalIds).toEqual([clock]);
+    expect(result.projection.mountedSignalIds).toEqual([clock, data]);
   });
 });

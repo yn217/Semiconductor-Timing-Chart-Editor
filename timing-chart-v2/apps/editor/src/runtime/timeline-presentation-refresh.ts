@@ -46,6 +46,12 @@ export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDo
   renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, gridHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode, grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? cyclesPerTc : 1);
 }
 
+export function refreshRulerAndGridIfNeeded(isInitialized: () => boolean, refreshRuler: () => void, refreshGrid: () => void): void {
+  if (isInitialized()) return;
+  refreshRuler();
+  refreshGrid();
+}
+
 export function refreshPlayheadPresentation(ruler: HTMLElement, cycle: number, boundaryToLocalX: (cycle: number) => number | undefined): void {
   const playheadX = boundaryToLocalX(cycle);
   let playhead = ruler.querySelector<HTMLElement>("[data-role='playhead']");
@@ -87,7 +93,7 @@ export function refreshTimelinePresentation(context: {
     const minimumWaveWidth = Math.max(160, inTransaction ? metrics.viewportWidth : metrics.viewportWidth - metrics.leftPaneWidth - metrics.frozenPaneWidth);
     const currentTimeAxis = resolveTimeAxisGeometry(context.document, context.geometryMaps);
     const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, currentTimeAxis.ownerSignalId ? context.geometrySvgs.get(currentTimeAxis.ownerSignalId) : undefined, metrics.zoom, minimumWaveWidth, context.viewport, context.cyclesPerTc);
-    timeAxis = rebuilt.timeAxis; screenGeometryScale = rebuilt.scale; waveWidthPxPerDisplayCycle = rebuilt.waveWidthPxPerDisplayCycle; waveOriginPx = rebuilt.waveOriginPx; rulerInitialized = true; context.markOpenPhase("ruler-painted"); syncPresentationScale(context.viewport, context.host, context.rulerViewport, context.currentZoom, screenGeometryScale);
+    timeAxis = rebuilt.timeAxis; screenGeometryScale = rebuilt.scale; waveWidthPxPerDisplayCycle = rebuilt.waveWidthPxPerDisplayCycle; waveOriginPx = rebuilt.waveOriginPx; rulerInitialized = true; context.markOpenPhase("ruler-painted"); syncPresentationScale(context.host, context.currentZoom, screenGeometryScale);
   }
   if (context.reason !== "scroll") { context.metricsOwner.update({ viewportWidth: context.viewport.clientWidth }); const metrics = context.metricsOwner.snapshot(); refreshGridPresentation(context.grid, context.document, context.geometryMaps, context.mappingCache, context.gridEnabled, context.totalHeight, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, screenGeometryScale, context.cyclesPerTc); }
   if (context.reason === "playhead") context.onPlayhead();
@@ -97,11 +103,12 @@ export function refreshTimelinePresentation(context: {
   return { timeAxis, screenGeometryScale, rulerInitialized, waveWidthPxPerDisplayCycle, waveOriginPx };
 }
 
-export function syncPresentationScale(viewport: HTMLElement, host: HTMLElement, rulerViewport: HTMLElement, zoom: number, screenGeometryScale: number): void {
+export function syncPresentationScale(host: HTMLElement, zoom: number, screenGeometryScale: number): void {
   const presentationScale = Math.max(0.0001, zoom * screenGeometryScale);
-  viewport.style.setProperty("--presentation-x-scale", String(presentationScale));
+  // This variable is consumed only by waveform SVG text (waveform.css).
+  // The outer viewport and ruler viewport have no consumers; publish only at
+  // the renderer host that owns those waveform labels.
   host.style.setProperty("--presentation-x-scale", String(presentationScale));
-  rulerViewport.style.setProperty("--presentation-x-scale", String(presentationScale));
 }
 
 const scrollVariableConsumerCache = new WeakMap<HTMLElement, readonly HTMLElement[]>();
