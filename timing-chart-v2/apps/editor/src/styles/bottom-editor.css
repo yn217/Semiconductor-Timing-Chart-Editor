@@ -122,7 +122,16 @@
    field this Annotation actually has. */
 .annotation-anchor-mini { display: flex; align-items: center; gap: 5px; margin: 2px 0; }
 .annotation-anchor-mini-label { flex: 0 0 34px; color: #5c687c; font-size: 10px; font-weight: 650; }
-.annotation-anchor-mini select { flex: 1 1 auto; min-width: 0; height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; padding: 2px 5px; font-size: 10px; }
+.annotation-anchor-mini .signal-picker { flex: 1 1 auto; min-width: 0; }
+.annotation-anchor-mini .signal-picker > input { width: 100%; min-width: 0; height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; padding: 2px 5px; font-size: 10px; }
+.signal-picker { position: relative; min-width: 0; }
+.signal-picker-results { position: absolute; z-index: 50; inset: calc(100% + 2px) 0 auto; max-height: 180px; overflow: auto; border: 1px solid #9eacbd; border-radius: 4px; background: #fff; box-shadow: 0 4px 12px #14233a2b; }
+.signal-picker-results [role="option"] { display: flex; justify-content: space-between; gap: 8px; padding: 5px 8px; cursor: pointer; }
+.signal-picker-results [role="option"][data-active="true"] { background: #e3efff; outline: 1px solid #6b9de1; }
+.signal-picker-results [role="option"] small { overflow: hidden; color: #637187; text-overflow: ellipsis; white-space: nowrap; }
+.signal-picker-results .inspector-note { display: block; padding: 5px 8px; }
+.annotation-vertical-span-editor label .signal-picker { width: 100%; }
+.annotation-vertical-span-editor label .signal-picker > input { width: 100%; min-width: 0; }
 .annotation-anchor-mini input { flex: 0 0 52px; height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; padding: 2px 5px; font-size: 10px; }
 .annotation-anchor-mini button { flex: 0 0 auto; height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 2px 8px; font-size: 10px; }
 .annotation-anchor-mini button:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; }

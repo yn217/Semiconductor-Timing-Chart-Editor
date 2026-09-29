@@ -18,7 +18,11 @@ test("Annotation Inspector edits the selected endpoint offset through one semant
   const surface = host.locator("[data-role='timing-chart-surface']");
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await inspector.getByLabel("Inspector annotation endpoint").selectOption("from");
-  await inspector.getByLabel("Inspector annotation anchor signal").selectOption("sig_cycle_ready");
+  const signalPicker = inspector.getByRole("combobox", { name: "Inspector annotation anchor signal" });
+  await expect(signalPicker.locator("option")).toHaveCount(0);
+  await signalPicker.fill("READY");
+  await signalPicker.press("ArrowDown");
+  await signalPicker.press("Enter");
   await inspector.getByLabel("Inspector annotation anchor cycle").fill("8");
   await inspector.getByLabel("Inspector annotation anchor point").selectOption("rising-edge");
   await inspector.getByLabel("Inspector annotation anchor X").fill("7");
