@@ -633,10 +633,12 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
           rendererHost.dataset.acceptedCommandCount = String(Number(rendererHost.dataset.acceptedCommandCount ?? "0") + 1);
           rendererHost.dataset.lastApplyToIdleMs = String(Math.max(0, idleAt - context.commandStartedAt));
           rendererHost.dataset.lastDiagnosticsDurationMs = String(context.diagnosticsDurationMs ?? 0);
-          const diagnosticPasses = Number(rendererHost.dataset.timingDiagnosticsFullPasses ?? "0") + (context.diagnosticsRecomputed ? 1 : 0);
+          const diagnosticPasses = Number(rendererHost.dataset.timingDiagnosticsFullPasses ?? "0") + (context.diagnosticsRulesEvaluated?.length === context.diagnosticsRuleCount && (context.diagnosticsRuleCount ?? 0) > 0 ? 1 : 0);
           const diagnosticReuses = Number(rendererHost.dataset.timingDiagnosticsReuses ?? "0") + (context.diagnosticsRecomputed ? 0 : 1);
           rendererHost.dataset.timingDiagnosticsFullPasses = String(diagnosticPasses);
           rendererHost.dataset.timingDiagnosticsReuses = String(diagnosticReuses);
+          rendererHost.dataset.lastTimingDiagnosticRulesEvaluated = (context.diagnosticsRulesEvaluated ?? []).join(",");
+          rendererHost.dataset.lastTimingDiagnosticRulesReused = (context.diagnosticsRulesReused ?? []).join(",");
         });
       });
     });

@@ -461,24 +461,79 @@ export function deriveTimingDiagnostics(document: CanonicalDocument, options: Ti
 }
 
 /**
- * Reuse a previous timing-diagnostic result when all of its canonical inputs
- * are structurally shared. These are the complete document dependencies of
- * the registered rules; unrelated immutable edits (for example Annotation,
- * Bookmark, or Transaction presentation changes) therefore do no rule work.
- * Collection identity is deliberately the correctness guard rather than a
- * command-name allowlist, so newly added commands remain safe by default.
+ * Reuse prior rule outputs when their canonical inputs are structurally shared.
+ * The unknown-value rule depends on Signals/settings; protocol rules depend on
+ * Signals/constraints/settings. Unrelated immutable edits therefore do no rule
+ * work, and a constraint-only edit does not rescan Signal values. Collection
+ * identity is the correctness guard rather than a command-name allowlist, so
+ * newly added commands remain conservative by default. `recomputed` means at
+ * least one rule ran; `rulesEvaluated` distinguishes partial from full passes.
  */
 export function deriveTimingDiagnosticsIfInputsChanged(
   previousDocument: CanonicalDocument,
   nextDocument: CanonicalDocument,
   previousDiagnostics: readonly TimingDiagnostic[],
   options: Readonly<{ timingDiagnosticsUnchanged?: boolean }> = {},
-): Readonly<{ diagnostics: readonly TimingDiagnostic[]; recomputed: boolean }> {
+): Readonly<{
+  diagnostics: readonly TimingDiagnostic[];
+  recomputed: boolean;
+  rulesEvaluated: readonly string[];
+  rulesReused: readonly string[];
+}> {
   const sharedRuleInputs = previousDocument.constraints === nextDocument.constraints
     && previousDocument.checkSettings === nextDocument.checkSettings;
+  const configured = nextDocument.checkSettings.enabledCategories;
+  const enabled = new Set<TimingDiagnosticCategory>(configured === undefined
+    ? TIMING_DIAGNOSTIC_CATEGORIES
+    : configured.filter((category): category is TimingDiagnosticCategory => TIMING_DIAGNOSTIC_CATEGORIES.some((known) => known === category)));
   if (sharedRuleInputs && (previousDocument.signals === nextDocument.signals
     || (options.timingDiagnosticsUnchanged === true && previousDocument.signals.length === nextDocument.signals.length))) {
-    return { diagnostics: previousDiagnostics, recomputed: false };
+    return {
+      diagnostics: previousDiagnostics,
+      recomputed: false,
+      rulesEvaluated: [],
+      rulesReused: TIMING_DIAGNOSTIC_RULES.filter((rule) => enabled.has(rule.category)).map((rule) => rule.id),
+    };
   }
-  return { diagnostics: deriveTimingDiagnostics(nextDocument), recomputed: true };
+
+  const previousByRule = new Map<string, TimingDiagnostic[]>();
+  for (const diagnostic of previousDiagnostics) {
+    if (!diagnostic.ruleId) continue;
+    const entries = previousByRule.get(diagnostic.ruleId) ?? [];
+    entries.push(diagnostic);
+    previousByRule.set(diagnostic.ruleId, entries);
+  }
+
+  const rulesEvaluated: string[] = [];
+  const rulesReused: string[] = [];
+  const protocolInputsShared = previousDocument.signals === nextDocument.signals
+    && previousDocument.constraints === nextDocument.constraints
+    && previousDocument.checkSettings === nextDocument.checkSettings;
+  const unknownValueInputsShared = previousDocument.signals === nextDocument.signals
+    && previousDocument.checkSettings === nextDocument.checkSettings;
+  const needsIndexes = TIMING_DIAGNOSTIC_RULES.some((rule) => enabled.has(rule.category)
+    && rule.category !== "unknown-value"
+    && !protocolInputsShared);
+  const indexes = needsIndexes ? buildTimingDiagnosticIndexes(nextDocument, enabled) : undefined;
+  const results = TIMING_DIAGNOSTIC_RULES.filter((rule) => enabled.has(rule.category)).flatMap((rule) => {
+    const canReuse = rule.category === "unknown-value" ? unknownValueInputsShared : protocolInputsShared;
+    if (canReuse) {
+      rulesReused.push(rule.id);
+      return previousByRule.get(rule.id) ?? [];
+    }
+    rulesEvaluated.push(rule.id);
+    return rule.evaluate(nextDocument, enabled, indexes)
+      .map((diagnostic) => ({
+        ...diagnostic,
+        ruleId: rule.id,
+        stableKey: `${rule.id}:${diagnostic.code}:${diagnostic.objectId ?? diagnostic.entityId ?? ""}:${diagnostic.path}${diagnostic.sourceCycle === undefined ? "" : `:cycle:${diagnostic.sourceCycle}`}`,
+      }));
+  }).sort(diagnosticOrder);
+
+  return {
+    diagnostics: results,
+    recomputed: rulesEvaluated.length > 0,
+    rulesEvaluated,
+    rulesReused,
+  };
 }

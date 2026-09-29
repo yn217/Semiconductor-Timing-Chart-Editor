@@ -1,13 +1,13 @@
 import { useCallback, useRef, useState } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import { deriveTimingDiagnostics, deriveTimingDiagnosticsIfInputsChanged, type CanonicalSnapshot, type TimingDiagnostic } from "@timing-chart-v2/core";
+import { deriveTimingDiagnostics, deriveTimingDiagnosticsIfInputsChanged, TIMING_DIAGNOSTIC_RULES, type CanonicalSnapshot, type TimingDiagnostic } from "@timing-chart-v2/core";
 import type { HistoryState } from "@timing-chart-v2/history";
 import { validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import { buildCommandRejectionDiagnostics } from "../command-diagnostics.js";
 import { EditorApplicationRuntime } from "../runtime/editor-application-runtime.js";
 
 type AcceptedCommandResult = Extract<CommandResult, { readonly ok: true }>;
-type AcceptedContext = Readonly<{ operation: string; command?: SemanticCommand; batchId?: CommandId; commandStartedAt: number; diagnosticsDurationMs?: number; diagnosticsRecomputed?: boolean }>;
+type AcceptedContext = Readonly<{ operation: string; command?: SemanticCommand; batchId?: CommandId; commandStartedAt: number; diagnosticsDurationMs?: number; diagnosticsRecomputed?: boolean; diagnosticsRulesEvaluated?: readonly string[]; diagnosticsRulesReused?: readonly string[]; diagnosticsRuleCount?: number }>;
 type AcceptedHandler = (result: AcceptedCommandResult, context: AcceptedContext) => void;
 
 function withoutCommandRejectionDiagnostics(current: readonly DocumentProblem[]): readonly DocumentProblem[] {
@@ -97,8 +97,11 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     // structure here (validatorInvocations stays put); only the timing diagnostics are derived again.
     const nextDocument = result.snapshot.document;
     const diagnosticsStartedAt = globalThis.performance.now();
+    const enabledRuleIds = TIMING_DIAGNOSTIC_RULES
+      .filter((rule) => nextDocument.checkSettings.enabledCategories === undefined || nextDocument.checkSettings.enabledCategories.includes(rule.category))
+      .map((rule) => rule.id);
     const diagnosticsUpdate = interruptedOpenDiagnostics
-      ? { diagnostics: deriveTimingDiagnostics(nextDocument), recomputed: true }
+      ? { diagnostics: deriveTimingDiagnostics(nextDocument), recomputed: enabledRuleIds.length > 0, rulesEvaluated: enabledRuleIds, rulesReused: [] as readonly string[] }
       : deriveTimingDiagnosticsIfInputsChanged(timingDiagnosticsDocumentRef.current, nextDocument, timingDiagnosticsRef.current, { timingDiagnosticsUnchanged: result.changeSet.timingDiagnosticsUnchanged === true });
     const diagnosticsDurationMs = Math.max(0, globalThis.performance.now() - diagnosticsStartedAt);
     // The reused diagnostic value is now valid for this accepted snapshot too;
@@ -111,7 +114,14 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     completePendingOpenDiagnostics?.();
     setProblem("");
     setRuntimeDiagnostics(withoutCommandRejectionDiagnostics);
-    acceptedHandlerRef.current?.(result, { ...context, diagnosticsDurationMs, diagnosticsRecomputed: diagnosticsUpdate.recomputed });
+    acceptedHandlerRef.current?.(result, {
+      ...context,
+      diagnosticsDurationMs,
+      diagnosticsRecomputed: diagnosticsUpdate.recomputed,
+      diagnosticsRulesEvaluated: diagnosticsUpdate.rulesEvaluated,
+      diagnosticsRulesReused: diagnosticsUpdate.rulesReused,
+      diagnosticsRuleCount: enabledRuleIds.length,
+    });
     return result;
   }, [runtime]);
 

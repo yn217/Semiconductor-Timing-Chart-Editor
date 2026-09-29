@@ -20,13 +20,20 @@ describe("derived timing diagnostics", () => {
     const currentDiagnostics = deriveTimingDiagnostics(current);
     const unrelatedEdit = { ...current, transactions: [...current.transactions] };
     const reused = deriveTimingDiagnosticsIfInputsChanged(current, unrelatedEdit, currentDiagnostics);
-    expect(reused).toEqual({ diagnostics: currentDiagnostics, recomputed: false });
+    expect(reused).toEqual({
+      diagnostics: currentDiagnostics,
+      recomputed: false,
+      rulesEvaluated: [],
+      rulesReused: ["timing.unknown-value", "timing.handshake", "timing.latency-range", "timing.latency"],
+    });
 
     const changedSignalName = { ...current, signals: current.signals.map((signal) => signal.id === current.signals[1]!.id ? { ...signal, name: "RENAMED" } : signal) };
     expect(deriveTimingDiagnosticsIfInputsChanged(current, changedSignalName, currentDiagnostics).recomputed).toBe(true);
     const displayOnlySignalEdit = { ...current, signals: current.signals.map((signal) => signal.id === current.signals[1]!.id ? { ...signal, display: { ...signal.display, visible: false } } : signal) };
     const displayOnly = deriveTimingDiagnosticsIfInputsChanged(current, displayOnlySignalEdit, currentDiagnostics, { timingDiagnosticsUnchanged: true });
-    expect(displayOnly).toEqual({ diagnostics: currentDiagnostics, recomputed: false });
+    expect(displayOnly.diagnostics).toBe(currentDiagnostics);
+    expect(displayOnly.recomputed).toBe(false);
+    expect(displayOnly.rulesEvaluated).toEqual([]);
 
     const nonIterableSignals = new Proxy(displayOnlySignalEdit.signals, {
       get(target, property, receiver) {
@@ -41,6 +48,20 @@ describe("derived timing diagnostics", () => {
     expect(deriveTimingDiagnosticsIfInputsChanged(current, changedConstraints, currentDiagnostics).recomputed).toBe(true);
     const changedSettings = { ...current, checkSettings: { enabledCategories: ["protocol"] as const } };
     expect(deriveTimingDiagnosticsIfInputsChanged(current, changedSettings, currentDiagnostics).recomputed).toBe(true);
+  });
+
+  it("reuses value diagnostics when only protocol constraints change", () => {
+    const source = canonicalFixture();
+    const current = withSignals(source, [source.signals[0]!, { ...source.signals[1]!, values: [{ start: 1, value: "X" }] }]);
+    const previousDiagnostics = deriveTimingDiagnostics(current);
+    const nextDocument = { ...current, constraints: [...current.constraints] };
+
+    const update = deriveTimingDiagnosticsIfInputsChanged(current, nextDocument, previousDiagnostics);
+
+    expect(update.diagnostics).toEqual(deriveTimingDiagnostics(nextDocument));
+    expect(update.recomputed).toBe(true);
+    expect(update.rulesEvaluated).toEqual(["timing.handshake", "timing.latency-range", "timing.latency"]);
+    expect(update.rulesReused).toEqual(["timing.unknown-value"]);
   });
 
   it("evaluates through a shared rule registry with stable semantic keys", () => {
