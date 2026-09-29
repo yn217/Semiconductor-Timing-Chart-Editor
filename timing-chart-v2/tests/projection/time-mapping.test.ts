@@ -88,8 +88,10 @@ describe("buildDisplayTimeMapping", () => {
 describe("DisplayTimeMappingCache", () => {
   it("reuses a mapping when mapping-relevant timeline and fold state are unchanged", () => {
     const cache = new DisplayTimeMappingCache();
-    const first = cache.get(timeline(12), [collapsedGroup("g1", 4, 8)]);
-    const second = cache.get(timeline(12), [collapsedGroup("g1", 4, 8)]);
+    const sourceTimeline = timeline(12);
+    const groups = [collapsedGroup("g1", 4, 8)];
+    const first = cache.get(sourceTimeline, groups);
+    const second = cache.get(sourceTimeline, groups);
 
     expect(second).toBe(first);
     const metrics = cache.metrics();
@@ -104,17 +106,21 @@ describe("DisplayTimeMappingCache", () => {
     expect(metrics.identityFastPathHits).toBe(0);
   });
 
-  it("ignores unrelated TimeGroup fields while invalidating on fold geometry", () => {
+  it("uses immutable collection identity for O(1) invalidation without serializing group fields", () => {
     const cache = new DisplayTimeMappingCache();
-    const first = cache.get(timeline(12), [{ ...collapsedGroup("g1", 4, 8), name: "Initial" }]);
-    const renamed = cache.get(timeline(12), [{ ...collapsedGroup("g1", 4, 8), name: "Renamed" }]);
-    const moved = cache.get(timeline(12), [{ ...collapsedGroup("g1", 5, 8), name: "Renamed" }]);
+    const sourceTimeline = timeline(12);
+    const initialGroups = [{ ...collapsedGroup("g1", 4, 8), name: "Initial" }];
+    const first = cache.get(sourceTimeline, initialGroups);
+    const renamedGroups = [{ ...collapsedGroup("g1", 4, 8), name: "Renamed" }];
+    const renamed = cache.get(sourceTimeline, renamedGroups);
+    const movedGroups = [{ ...collapsedGroup("g1", 5, 8), name: "Renamed" }];
+    const moved = cache.get(sourceTimeline, movedGroups);
 
-    expect(renamed).toBe(first);
+    expect(renamed).not.toBe(first);
     expect(moved).not.toBe(first);
-    expect(cache.metrics().builds).toBe(2);
-    expect(cache.metrics().hits).toBe(1);
-    expect(cache.metrics().sourceCyclesVisited).toBe(24);
+    expect(cache.metrics().builds).toBe(3);
+    expect(cache.metrics().hits).toBe(0);
+    expect(cache.metrics().sourceCyclesVisited).toBe(36);
   });
 
   it("counts remap work separately from the identity fast path", () => {
