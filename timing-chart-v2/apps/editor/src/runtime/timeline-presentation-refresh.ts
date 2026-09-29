@@ -46,6 +46,12 @@ export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDo
   renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, gridHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode, grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? cyclesPerTc : 1);
 }
 
+export function refreshRulerAndGridIfNeeded(isInitialized: () => boolean, refreshRuler: () => void, refreshGrid: () => void): void {
+  if (isInitialized()) return;
+  refreshRuler();
+  refreshGrid();
+}
+
 export function refreshPlayheadPresentation(ruler: HTMLElement, cycle: number, boundaryToLocalX: (cycle: number) => number | undefined): void {
   const playheadX = boundaryToLocalX(cycle);
   let playhead = ruler.querySelector<HTMLElement>("[data-role='playhead']");
