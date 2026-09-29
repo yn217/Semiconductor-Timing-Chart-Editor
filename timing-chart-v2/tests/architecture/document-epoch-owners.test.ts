@@ -88,7 +88,9 @@ describe("document-relative transient state ownership", () => {
   it("does not invalidate Transaction presentation from Cycle-only reference geometry readiness", () => {
     const source = readFileSync(resolve(workspace, "apps/editor/src/runtime/timeline-surface-controller.ts"), "utf8");
     const callback = source.slice(source.indexOf("onReferenceGeometryReady: () => {"), source.indexOf("invalidateSnapIndex:", source.indexOf("onReferenceGeometryReady: () => {")));
-    expect(callback).toContain('if (input.viewMode !== "Cycle") setTransactionPresentationRevision');
+    expect(callback).toContain("requestTransactionPresentationRefresh()");
+    const refreshPolicy = readFileSync(resolve(workspace, "apps/editor/src/runtime/transaction-presentation-refresh.ts"), "utf8");
+    expect(refreshPolicy).toMatch(/if \(input\.getViewMode\(\) === "Cycle"\) return;/);
     expect(callback).toContain("referenceGeometryReconciled = true");
     expect(callback).toContain("renderer.update(projection)");
   });
