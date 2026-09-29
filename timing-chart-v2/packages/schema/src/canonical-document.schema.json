@@ -472,6 +472,7 @@
         "from": { "$ref": "#/$defs/anchor" },
         "to": { "$ref": "#/$defs/anchor" },
         "labelOffset": { "$ref": "#/$defs/offset" },
+        "labelPlacement": { "enum": ["start", "center", "end", "above", "below"] },
         "style": { "$ref": "#/$defs/jsonObject" },
         "lineType": { "enum": ["straight", "orthogonal", "curve", "diagonal"] },
         "arrowhead": { "enum": ["end", "start", "bidirectional", "none"] },
@@ -507,7 +508,7 @@
             "endMarker": { "enum": ["none", "bar", "arrow"] },
             "arrowLayout": { "enum": ["inward", "outward", "auto"] },
             "extensionLines": { "enum": ["none", "start", "end", "both"] },
-            "lane": { "type": "integer", "minimum": 0 }
+            "lane": { "type": "integer", "minimum": 0, "maximum": 19999 }
           }
         },
         "verticalSpan": {

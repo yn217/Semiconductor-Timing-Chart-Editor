@@ -37,7 +37,10 @@ export function TransactionTimeScalePanel({ document, cyclesPerTc: activeCyclesP
   }, [activeCyclesPerTc, open]);
 
   useLayoutEffect(() => {
-    if (!open) { setPosition(undefined); return; }
+    // Keep the last valid coordinates while closed. Clearing them here can
+    // race a rapid close/reopen and leave the newly mounted dialog hidden
+    // before its next positioning pass.
+    if (!open) return;
     const updatePosition = () => {
       const trigger = triggerRef.current;
       const panel = panelRef.current;

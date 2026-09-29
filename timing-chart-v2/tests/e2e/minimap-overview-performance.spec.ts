@@ -11,6 +11,7 @@ async function readState(page: import("@playwright/test").Page) {
     return {
       overviewBuilds: minimap.dataset.overviewBuilds,
       signalLookups: minimap.dataset.overviewSignalLookups,
+      overviewReuseSignalComparisons: minimap.dataset.overviewReuseSignalComparisons,
       overviewRows: minimap.querySelectorAll(".minimap-rows > span").length,
       session: JSON.parse(host.dataset.sessionCounters ?? "null") as Record<string, number>,
       render: JSON.parse(surface.dataset.renderCounters ?? "null") as Record<string, number>,
@@ -20,6 +21,24 @@ async function readState(page: import("@playwright/test").Page) {
     };
   });
 }
+
+test("Bookmark-only document commits do not compare the unchanged MiniMap Signal collection", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const before = await readState(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range start").fill("0");
+  await page.getByLabel("Timeline range end").fill("1");
+  await page.getByTestId("timeline-editor").getByRole("button", { name: "Add marker", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const after = await readState(page);
+  expect(after.revision).not.toBe(before.revision);
+  expect(after.overviewBuilds).toBe(before.overviewBuilds);
+  expect(after.overviewReuseSignalComparisons).toBe(before.overviewReuseSignalComparisons);
+  expect(after.history).not.toBe(before.history);
+  expect(after.dirty).not.toBe(before.dirty);
+});
 
 test("MiniMap viewport updates do not rebuild the static overview", async ({ page }) => {
   await page.goto("/");

@@ -1,5 +1,5 @@
 import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
-import type { Signal, SignalId } from "@timing-chart-v2/schema";
+import type { EnumDefinition, Signal, SignalId } from "@timing-chart-v2/schema";
 
 export const WAVEDROM_VERSION = "3.6.2" as const;
 export const WAVEDROM_STATE_TOKENS = ["0", "1", "x", "z", "d", "u"] as const;
@@ -16,6 +16,7 @@ export const WAVEDROM_UNSUPPORTED_CAPABILITIES = [
 export interface CanonicalSignalSource {
   readonly signal: Signal;
   readonly cycleCount: number;
+  readonly enumDefinitions?: readonly EnumDefinition[] | undefined;
   /** Derived timeline-gap positions. Each position replaces a continuation slot. */
   readonly gapCycles?: readonly number[];
 }
@@ -47,6 +48,12 @@ export interface RenderedWave {
   readonly svg: SVGElement;
   readonly renderIndex: number;
   readonly waveJson: WaveJsonSignal;
+  /** Whether cached serialized WaveDrom markup was reused (SVG parse/install is still required). */
+  readonly markupCacheHit?: boolean;
+  /** Whether DOM safety validation was safely reused for the same exact markup and owner Document. */
+  readonly svgSafetyCacheHit?: boolean;
+  /** Existing per-render stage measurements, shared with adapter diagnostics. */
+  readonly renderStages?: Readonly<Record<string, number>>;
 }
 
 export interface GeometryExtractionMetrics {
@@ -65,6 +72,10 @@ export interface WaveDromAdapterMetrics {
   readonly renderCalls: number;
   readonly waveJsonDurationMs: number;
   readonly renderDurationMs: number;
+  readonly renderStages: Readonly<{
+    readonly last: Readonly<Record<string, number>> | undefined;
+    readonly totals: Readonly<Record<string, number>>;
+  }>;
   readonly renderCallsBySignal: Readonly<Record<string, number>>;
   readonly cacheHits: number;
   readonly cacheMisses: number;
@@ -92,6 +103,8 @@ export interface WaveDromAdapter {
     readonly totalMatrixReads: number;
   }>;
   dispose(signalId: SignalId): void;
+  /** Release the mounted owner while retaining a bounded, identity-safe artifact for a possible document reopen. */
+  retainArtifact?(signalId: SignalId): void;
   metrics(): WaveDromAdapterMetrics;
 }
 

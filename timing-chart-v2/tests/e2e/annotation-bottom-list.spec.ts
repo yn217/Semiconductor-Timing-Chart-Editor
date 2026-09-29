@@ -43,7 +43,14 @@ test("Annotation Bottom keeps a stable collection while selection, import, and S
   await page.getByLabel("Import annotations").setInputFiles({ name: "annotations.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify([{ id: importedId, type: "text", label: "Imported", visible: true, anchor: { signalId: "sig_cycle_request", cycle: 2, point: "cycle-start" } }])) });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
-  await expect(page.getByTestId("annotation-list").locator(`[data-annotation-list-id="${importedId}"]`)).toHaveAttribute("data-selected", "true");
+  const importedRow = page.getByTestId("annotation-list").locator(`[data-annotation-list-id="${importedId}"]`);
+  await expect(importedRow).toHaveAttribute("data-selected", "true");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(importedRow).toHaveCount(0);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 1");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(importedRow).toHaveAttribute("data-selected", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 
   const downloadPromise = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();

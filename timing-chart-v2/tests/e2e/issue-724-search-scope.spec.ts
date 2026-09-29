@@ -7,7 +7,24 @@ test("Tree and Bottom search scope is explicit, active filters are visible and z
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
   const treeSearch = page.getByTestId("transaction-tree-search");
   await expect(treeSearch).toHaveAttribute("placeholder", "Search transactions…");
-  await expect(page.getByTestId("transaction-list-search")).toHaveAttribute("placeholder", "Search transactions…");
+  const bottomSearch = page.getByTestId("transaction-list-search");
+  await expect(bottomSearch).toHaveAttribute("placeholder", "Search transactions…");
+  const treeRead = page.getByTestId("transaction-left-tree-row-demo_txn_read");
+  const treeWrite = page.getByTestId("transaction-left-tree-row-demo_txn_write");
+  const tableRows = page.locator(".transaction-list-row[data-transaction-row-id]");
+
+  // The two search controls have independent scopes: a Tree filter must not
+  // narrow the Bottom table, and a Bottom query must not replace the Tree filter.
+  await treeSearch.fill("Read_0");
+  await expect(treeRead).toBeVisible();
+  await expect(treeWrite).toHaveCount(0);
+  await expect(tableRows).toHaveCount(6);
+  await bottomSearch.fill("Write_0");
+  await expect(tableRows).toHaveCount(1);
+  await expect(tableRows.first()).toHaveAttribute("data-transaction-row-id", "demo_txn_write");
+  await expect(treeRead).toBeVisible();
+  await expect(treeWrite).toHaveCount(0);
+  await bottomSearch.fill("");
 
   const mode = page.getByRole("combobox", { name: "Filter transactions" });
   await expect(mode).toHaveAttribute("data-filter-active", "false");

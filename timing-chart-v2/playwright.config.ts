@@ -4,7 +4,15 @@ export default defineConfig({
   testDir: "tests/e2e",
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI ? "github" : "list",
+  reporter: [
+    process.env.CI ? ["github"] : ["list"],
+    [
+      "json",
+      {
+        outputFile: `test-results/e2e-results-${process.env.PW_TEST_RUN_ID ?? process.env.GITHUB_RUN_ID ?? "manual"}.json`,
+      },
+    ],
+  ],
   use: {
     baseURL: `http://127.0.0.1:${process.env.PW_TEST_PORT ?? "4198"}`,
     trace: "retain-on-failure",

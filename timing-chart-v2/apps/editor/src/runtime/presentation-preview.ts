@@ -1,6 +1,7 @@
 import type { AnnotationId, ClockGenerator, ClockSignal, GroupId, SignalGroupStyle } from "@timing-chart-v2/schema";
 import type { RefObject } from "react";
 import { assertSafeWaveDromSvg, renderWaveJsonMarkup, toWaveJson, WaveDromAdapterError } from "@timing-chart-v2/wavedrom-adapter";
+import { groupBackgroundColor } from "@timing-chart-v2/renderer";
 
 function groupStyleAppliesToSurface(style: SignalGroupStyle | undefined, surface: "left" | "frozen" | "timing"): boolean {
   const scope = style?.extend ?? "both";
@@ -12,8 +13,11 @@ export function refreshGroupStylePreview(host: HTMLElement, groupId: GroupId, st
   for (const [surface, rowRole, headerRole] of surfaces) {
     const applies = groupStyleAppliesToSurface(style, surface);
     for (const element of host.querySelectorAll<HTMLElement>(`[data-role='${rowRole}'][data-group-id='${CSS.escape(groupId)}'], [data-role='${headerRole}'][data-group-id='${CSS.escape(groupId)}']`)) {
-      if (applies && style?.showBackground && style.background) element.style.setProperty("--group-background", style.background); else element.style.removeProperty("--group-background");
-      if (applies && style?.opacity !== undefined) element.style.opacity = String(style.opacity); else element.style.removeProperty("opacity");
+      const background = applies && style?.showBackground
+        ? groupBackgroundColor(style.background, style.opacity)
+        : undefined;
+      if (background) element.style.setProperty("--group-background", background); else element.style.removeProperty("--group-background");
+      element.style.removeProperty("opacity");
       if (applies && style?.border) element.style.setProperty("--group-border", style.border); else element.style.removeProperty("--group-border");
       element.dataset.groupStylePreview = style === undefined ? "false" : "true";
     }

@@ -2,7 +2,7 @@ import type { Annotation, AnnotationId, CanonicalDocument, ClockSignal, GroupId,
 
 export interface PerformanceCounterExpectation { readonly counter: "waveDromRenders" | "localGeometryBuilds" | "rowPositionUpdates" | "overlayUpdates"; readonly delta: number }
 export type PerformanceProfile = "standard" | "clock-heavy" | "bus-heavy" | "annotation-heavy" | "transaction-heavy" | "mixed";
-export interface PerformanceFixtureSpec { readonly signalCount: 50 | 100 | 500 | 1000; readonly cycleCount: 100 | 500 | 1000; readonly profile?: PerformanceProfile; readonly transitionCount?: number }
+export interface PerformanceFixtureSpec { readonly signalCount: 50 | 100 | 500 | 1000 | 5000 | 10000; readonly cycleCount: 100 | 500 | 1000; readonly profile?: PerformanceProfile; readonly transitionCount?: number }
 
 const signalId = (index: number) => `sig_perf_${index}` as SignalId;
 

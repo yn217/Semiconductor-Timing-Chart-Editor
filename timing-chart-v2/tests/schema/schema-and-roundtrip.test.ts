@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   canonicalSchema,
   DOCUMENT_RESOURCE_BUDGET,
+  MAX_MEASUREMENT_LANE,
   normalizeDocument,
   parseDocument,
   serializeCanonicalDocument,
@@ -142,6 +143,32 @@ describe("canonical v2 schema and roundtrip", () => {
 });
 
 describe("semantic validation", () => {
+  it("bounds explicit Measurement lanes and preserves the maximum through Save/Open", () => {
+    const base = clone(canonicalFixture());
+    const signal = base.signals[1]!;
+    const measurement = {
+      id: "ann_lane_bound" as AnnotationId,
+      type: "measurement" as const,
+      label: "lane bound",
+      visible: true,
+      measurement: { profile: "cycle" as const, anchorKind: "threshold" as const },
+      measurementLayout: { startMarker: "bar" as const, endMarker: "bar" as const, arrowLayout: "auto" as const, extensionLines: "both" as const, lane: MAX_MEASUREMENT_LANE },
+      start: { signalId: signal.id, cycle: 1, point: "cycle-start" as const },
+      end: { signalId: signal.id, cycle: 3, point: "cycle-end" as const },
+    };
+    const valid = { ...base, annotations: [measurement] };
+    expect(validateCanonicalDocument(valid)).toEqual([]);
+    const reopened = parseDocument(serializeCanonicalDocument(valid));
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect(reopened.document.annotations[0]?.measurementLayout?.lane).toBe(MAX_MEASUREMENT_LANE);
+
+    const invalid = { ...valid, annotations: [{ ...measurement, measurementLayout: { ...measurement.measurementLayout, lane: MAX_MEASUREMENT_LANE + 1 } }] };
+    expect(validateCanonicalDocument(invalid).map((item) => item.code)).toContain("SCHEMA_MAXIMUM");
+    expect(parseDocument(JSON.stringify(invalid)).ok).toBe(false);
+    const laneSchema = (canonicalSchema as { $defs: { annotation: { properties: { measurementLayout: { properties: { lane: { maximum: number } } } } } } }).$defs.annotation.properties.measurementLayout.properties.lane;
+    expect(laneSchema.maximum).toBe(MAX_MEASUREMENT_LANE);
+  });
+
   it("enforces shared document resource budgets without truncation", () => {
     const base = canonicalFixture();
     expect(validateDocumentResourceBudget(base)).toEqual([]);

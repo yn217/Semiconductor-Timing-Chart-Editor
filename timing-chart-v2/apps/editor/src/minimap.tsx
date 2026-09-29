@@ -15,6 +15,7 @@ type SignalOverviewFingerprint = Readonly<{
 }>;
 type MiniMapOverviewCache = Readonly<{
   signalGroups: MiniMapSource["signalGroups"];
+  signalCollection: MiniMapSource["signals"];
   cycleCount: number;
   signals: readonly SignalOverviewFingerprint[];
   overview: MiniMapOverview;
@@ -40,9 +41,12 @@ function fingerprintSignals(signals: readonly Signal[]): readonly SignalOverview
   return signals.map((signal) => ({ id: signal.id, type: signal.type, values: overviewValues(signal) }));
 }
 
-function canReuseOverview(cache: MiniMapOverviewCache, document: MiniMapSource, cycleCount: number): boolean {
-  if (cache.signalGroups !== document.signalGroups || cache.cycleCount !== cycleCount || cache.signals.length !== document.signals.length) return false;
+function canReuseOverview(cache: MiniMapOverviewCache, document: MiniMapSource, cycleCount: number, onSignalCompared?: () => void): boolean {
+  if (cache.signalGroups !== document.signalGroups || cache.cycleCount !== cycleCount) return false;
+  if (cache.signalCollection === document.signals) return true;
+  if (cache.signals.length !== document.signals.length) return false;
   return document.signals.every((signal, index) => {
+    onSignalCompared?.();
     const previous = cache.signals[index];
     return previous?.id === signal.id && previous.type === signal.type && previous.values === overviewValues(signal);
   });
@@ -67,6 +71,7 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
   const [metrics, setMetrics] = useState({ top: 0, ratio: 1, left: 0, width: 1 });
   const dragging = useRef(false);
   const overviewBuilds = useRef(0);
+  const overviewReuseSignalComparisons = useRef(0);
   const transactionOverviewBuilds = useRef(0);
   const transactionOverviewFullBuilds = useRef(0);
   const transactionOverviewIncrementalUpdates = useRef(0);
@@ -77,10 +82,13 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
   const overview = useMemo(() => {
     const cycleCount = Math.max(1, document.timeline.cycleCount);
     const cached = overviewCache.current;
-    if (cached && canReuseOverview(cached, document, cycleCount)) return cached.overview;
+    if (cached && canReuseOverview(cached, document, cycleCount, () => { overviewReuseSignalComparisons.current += 1; })) {
+      if (cached.signalCollection !== document.signals) overviewCache.current = { ...cached, signalCollection: document.signals };
+      return cached.overview;
+    }
     const next = buildMiniMapOverview(document);
     overviewBuilds.current += 1;
-    overviewCache.current = { signalGroups: document.signalGroups, cycleCount, signals: fingerprintSignals(document.signals), overview: next };
+    overviewCache.current = { signalGroups: document.signalGroups, signalCollection: document.signals, cycleCount, signals: fingerprintSignals(document.signals), overview: next };
     return next;
   }, [document]);
   // Keep the Transaction overview's sorted/bucketed model alive across
@@ -169,5 +177,5 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
   const indicatorWidth = Math.min(1 - metrics.left, Math.max(0.04, metrics.width));
   const indicatorHeight = Math.min(1 - metrics.top, Math.max(0.04, metrics.ratio));
   const fullViewport = metrics.ratio >= 0.999 && metrics.width >= 0.999;
-  return <div ref={documentRef} className="minimap" data-testid="minimap" data-minimap-mode={mode} data-time-policy="full-source-overview" data-transaction-overview-builds={String(transactionOverviewBuilds.current)} data-transaction-overview-full-builds={String(transactionOverviewFullBuilds.current)} data-transaction-overview-incremental-updates={String(transactionOverviewIncrementalUpdates.current)} aria-label="MiniMap timeline navigator" title="Click or drag to navigate the timeline" data-overview-builds={String(overviewBuilds.current)} data-overview-signal-lookups={String(overview.signalLookups)} data-viewport-top={String(metrics.top)} data-viewport-ratio={String(metrics.ratio)} data-viewport-left={String(metrics.left)} data-viewport-width={String(metrics.width)} onPointerDown={(event) => { if (event.button !== 0) return; dragging.current = true; event.currentTarget.setPointerCapture(event.pointerId); pan(event.clientX, event.clientY); }} onPointerMove={(event) => { if (dragging.current) pan(event.clientX, event.clientY); }} onPointerUp={(event) => { dragging.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => { dragging.current = false; }}><div className="minimap-overview-frame"><div className="minimap-rows">{transactionOverview ? <MiniMapTransactionOverviewRows overview={transactionOverview} /> : <MiniMapOverviewRows overview={overview} />}<div className="minimap-folds" aria-label="Collapsed time groups">{document.timeGroups.filter((group) => group.presentation?.collapsed).map((group) => <i key={group.id} data-testid={`minimap-fold-${group.id}`} title={`${group.name}: ${group.start}–${group.end}`} style={{ left: `${group.start / document.timeline.cycleCount * 100}%`, width: `${Math.max(0.5, (group.end - group.start) / document.timeline.cycleCount * 100)}%` }} />)}</div><i data-testid="minimap-viewport" data-viewport-full={String(fullViewport)} style={{ "--minimap-left": `${metrics.left * 100}%`, "--minimap-width": `${indicatorWidth * 100}%`, "--minimap-top": `${metrics.top * 100}%`, "--minimap-height": `${indicatorHeight * 100}%` } as CSSProperties} /></div></div></div>;
+  return <div ref={documentRef} className="minimap" data-testid="minimap" data-minimap-mode={mode} data-time-policy="full-source-overview" data-transaction-overview-builds={String(transactionOverviewBuilds.current)} data-transaction-overview-full-builds={String(transactionOverviewFullBuilds.current)} data-transaction-overview-incremental-updates={String(transactionOverviewIncrementalUpdates.current)} aria-label="MiniMap timeline navigator" title="Click or drag to navigate the timeline" data-overview-builds={String(overviewBuilds.current)} data-overview-signal-lookups={String(overview.signalLookups)} data-overview-reuse-signal-comparisons={String(overviewReuseSignalComparisons.current)} data-viewport-top={String(metrics.top)} data-viewport-ratio={String(metrics.ratio)} data-viewport-left={String(metrics.left)} data-viewport-width={String(metrics.width)} onPointerDown={(event) => { if (event.button !== 0) return; dragging.current = true; event.currentTarget.setPointerCapture(event.pointerId); pan(event.clientX, event.clientY); }} onPointerMove={(event) => { if (dragging.current) pan(event.clientX, event.clientY); }} onPointerUp={(event) => { dragging.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => { dragging.current = false; }}><div className="minimap-overview-frame"><div className="minimap-rows">{transactionOverview ? <MiniMapTransactionOverviewRows overview={transactionOverview} /> : <MiniMapOverviewRows overview={overview} />}<div className="minimap-folds" aria-label="Collapsed time groups">{document.timeGroups.filter((group) => group.presentation?.collapsed).map((group) => <i key={group.id} data-testid={`minimap-fold-${group.id}`} title={`${group.name}: ${group.start}–${group.end}`} style={{ left: `${group.start / document.timeline.cycleCount * 100}%`, width: `${Math.max(0.5, (group.end - group.start) / document.timeline.cycleCount * 100)}%` }} />)}</div><i data-testid="minimap-viewport" data-viewport-full={String(fullViewport)} style={{ "--minimap-left": `${metrics.left * 100}%`, "--minimap-width": `${indicatorWidth * 100}%`, "--minimap-top": `${metrics.top * 100}%`, "--minimap-height": `${indicatorHeight * 100}%` } as CSSProperties} /></div></div></div>;
 }

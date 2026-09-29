@@ -14,6 +14,7 @@ describe("editor surface command controller", () => {
     controller.duplicateTransaction({ id: "transaction_3" as never, name: "Write Copy", start: 4, end: 6, laneId: "lane_0" });
     controller.renameSignals([{ signalId: "signal_1" as never, name: "Renamed" }, { signalId: "signal_2" as never, name: "Renamed 2" }]);
     controller.setTransactionTimeScale({ clockCyclesPerTransactionCycle: 2, majorInterval: 5, minorInterval: 1 });
+    controller.updateCheckSettings({ enabledCategories: ["protocol"] });
     controller.normalizeLayout({ rowHeight: 24, signalSpacing: 2 } as never);
 
     expect(execute.mock.calls.map(([command]) => command as SemanticCommand)).toEqual([
@@ -24,6 +25,7 @@ describe("editor surface command controller", () => {
       expect.objectContaining({ id: "test_home_transaction_duplicate", type: "transaction.create", transaction: expect.objectContaining({ id: "transaction_3" }) }),
       expect.objectContaining({ id: "test_find_replace_rename", type: "signal.rename", signalId: "signal_1", name: "Renamed" }),
       expect.objectContaining({ id: "test_transaction_time_scale_set", type: "transaction.setTimeScale", scale: { clockCyclesPerTransactionCycle: 2, majorInterval: 5, minorInterval: 1 } }),
+      expect.objectContaining({ id: "test_check_settings_update", type: "document.updateCheckSettings", checkSettings: { enabledCategories: ["protocol"] } }),
       expect.objectContaining({ id: "test_home_auto_layout", type: "document.updateLayout" }),
     ]);
   });
@@ -51,6 +53,18 @@ describe("editor surface command controller", () => {
       expect.objectContaining({ id: "test_annotation_reset_offsets", type: "annotation.resetOffsets" }),
       expect.objectContaining({ id: "test_annotation_measurement", type: "annotation.updateMeasurement" }),
     ]);
+  });
+
+  it("routes Annotation collection replacement through one atomic semantic command", () => {
+    const execute = vi.fn(() => ({ ok: true } as never));
+    const executeBatch = vi.fn(() => ({ ok: true } as never));
+    const controller = createEditorSurfaceCommandController({ execute, executeBatch, nextCommandId: (operation) => `test_${operation}` as never });
+    const annotations = [{ id: "annotation_imported" as never, type: "text", label: "Imported", visible: true, anchor: { cycle: 3, point: "cycle-start" } }] as never;
+
+    controller.replaceAnnotations(annotations);
+
+    expect(execute).toHaveBeenCalledWith({ id: "test_annotation_import_replace", type: "annotation.replaceCollection", annotations });
+    expect(executeBatch).not.toHaveBeenCalled();
   });
 
   it("owns Document Properties command construction and keeps metadata/legend changes batched", () => {

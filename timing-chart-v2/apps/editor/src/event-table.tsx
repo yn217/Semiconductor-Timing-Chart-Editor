@@ -2,13 +2,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { DragEvent } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
-import type { ValueSignal } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, EnumDefinition, ValueSignal } from "@timing-chart-v2/schema";
 import { DOCUMENT_RESOURCE_BUDGET, parseJsonInput } from "@timing-chart-v2/schema";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./event-table-components.js";
 import { buildEventTableIndex } from "./runtime/event-table-index.js";
 import { reorderTransitionBlock, transitionIdentity } from "./runtime/transition-reorder.js";
 import { registerActiveGestureCancel } from "./runtime/active-gesture-cancellation.js";
+import { pruneExternalSelection } from "./runtime/external-draft-reconciliation.js";
 
 // Signal transitions have no separately persisted row ID; within the
 // canonical value list, the start boundary is the unique row identity.
@@ -34,7 +35,7 @@ function valueHelperCopy(signal: ValueSignal): { readonly label: string; readonl
   }
 }
 
-export function EventTable({ signal, cycleCount, commands, generatorSlot }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly commands: Pick<SignalEditorCommandActions, "replaceValues" | "updateValue" | "replaceValue" | "removeValue">; readonly generatorSlot?: ReactNode }) {
+export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic, cycleCount, enumDefinitions, commands, generatorSlot }: { readonly signal: ValueSignal; readonly documentEpoch: number; readonly revision: number; readonly onImportDiagnostic: (message: string) => void; readonly cycleCount: number; readonly enumDefinitions?: CanonicalDocument["enumDefinitions"]; readonly commands: Pick<SignalEditorCommandActions, "replaceValues" | "updateValue" | "replaceValue" | "removeValue">; readonly generatorSlot?: ReactNode }) {
   const [start, setStart] = useState(0);
   const [value, setValue] = useState(defaultEventValue(signal));
   const [comment, setComment] = useState("");
@@ -44,12 +45,26 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
   // used by the per-row inline Draft/Apply/Cancel and by the toolbar's
   // Duplicate/Delete) -- checking rows only ever feeds the table footer's
   // bulk actions below.
-  const [checkedKeys, setCheckedKeys] = useState<ReadonlySet<string>>(new Set());
+  const [storedCheckedKeys, setCheckedKeys] = useState<ReadonlySet<string>>(new Set());
   const [eventScrollTop, setEventScrollTop] = useState(0);
   const eventViewportRef = useRef<HTMLDivElement>(null);
   const [importStatus, setImportStatus] = useState("Import signal events");
   const fileInput = useRef<HTMLInputElement>(null);
+  const importRequestId = useRef(0);
+  const importMounted = useRef(false);
+  const latestImportContext = useRef({ documentEpoch, revision, signalId: signal.id, onImportDiagnostic });
+  latestImportContext.current = { documentEpoch, revision, signalId: signal.id, onImportDiagnostic };
+  useEffect(() => {
+    importMounted.current = true;
+    return () => { importMounted.current = false; importRequestId.current += 1; };
+  }, []);
   const indexed = useMemo(() => buildEventTableIndex(signal.values, cycleCount), [signal.values, cycleCount]);
+  const enumDefinition: EnumDefinition | undefined = signal.type === "state" && signal.enumId !== undefined ? enumDefinitions?.find((definition) => definition.id === signal.enumId) : undefined;
+  const validKeys = useMemo(() => new Set(signal.values.map(transitionIdentity)), [signal.values]);
+  const checkedKeys = useMemo(() => pruneExternalSelection(storedCheckedKeys, validKeys), [storedCheckedKeys, validKeys]);
+  useEffect(() => {
+    setCheckedKeys((current) => pruneExternalSelection(current, validKeys));
+  }, [validKeys]);
   const selected = indexed.ordered.find((change) => transitionIdentity(change) === selectedKey);
   const selectTransition = (startValue: number) => {
     const change = indexed.ordered.find((item) => item.start === startValue);
@@ -80,12 +95,20 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
     URL.revokeObjectURL(url);
   };
   const importValues = (file: File) => {
+    const token = { documentEpoch, revision, targetSignalId: signal.id, requestId: ++importRequestId.current };
     if (file.size > DOCUMENT_RESOURCE_BUDGET.inputBytes) {
       setImportStatus(`Import rejected: file exceeds ${DOCUMENT_RESOURCE_BUDGET.inputBytes.toLocaleString()} bytes.`);
       return;
     }
     const reader = new FileReader();
     reader.onload = () => {
+      const current = latestImportContext.current;
+      if (!importMounted.current || importRequestId.current !== token.requestId || current.documentEpoch !== token.documentEpoch || current.revision !== token.revision || current.signalId !== token.targetSignalId) {
+        const message = "Event import cancelled because the document, revision, Signal target, or editor changed while the file was being read. Retry the import on the current Signal.";
+        current.onImportDiagnostic(message);
+        if (importMounted.current) setImportStatus(message);
+        return;
+      }
       try {
         const parsedResult = parseJsonInput(String(reader.result));
         if (!parsedResult.ok) {
@@ -105,7 +128,9 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
         setImportStatus("Import rejected: invalid JSON.");
       }
     };
-    reader.onerror = () => setImportStatus("Import rejected: file could not be read.");
+    reader.onerror = () => {
+      if (importMounted.current && importRequestId.current === token.requestId) setImportStatus("Import rejected: file could not be read.");
+    };
     reader.readAsText(file);
   };
   // #402: preview-only End/Duration for the Add/Edit Transition form's Draft
@@ -230,7 +255,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
               with a Transition row's own inline editor) resolves the
               right control from the Signal's type (a closed logic domain
               gets a real <select>; an open one gets a combo). */}
-          <label className="field-inline transition-field-value"><span>Value</span><ValueEditorControl signal={signal} value={value} onChange={setValue} ariaLabel="New event value" listId="add-edit-transition-value-options" /></label>
+          <label className="field-inline transition-field-value"><span>Value</span><ValueEditorControl signal={signal} enumDefinition={enumDefinition} value={value} onChange={setValue} ariaLabel="New event value" listId="add-edit-transition-value-options" /></label>
           <label className="field-inline transition-field-comment"><span>Comment</span><input aria-label="New event comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
         </div>
         <span className="event-add-preview" data-derived="true" title="Derived from the transitions after this Start; not editable">End: {previewEnd} / Duration: {previewEnd - start} cycles</span>
@@ -275,7 +300,7 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
             not a decorative header cell. */}
         <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span className="event-derived-column" data-derived="true" title="Derived: End is the next transition's Start (or the last cycle). Edit Start to change it.">End</span><span className="event-derived-column" data-derived="true" title="Derived: End minus Start. Not directly editable.">Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
         <div aria-hidden="true" style={{ height: eventFirst * EVENT_ROW_HEIGHT }} />
-        {renderedEvents.map((change, offset) => { const index = eventFirst + offset; const key = transitionIdentity(change); return <EventRow key={key} index={index + 1} signal={signal} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={key === selectedKey} checked={checkedKeys.has(key)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change)} onSelect={selectTransition} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedKeys.has(key) && checkedCount > 1 ? checkedKeys : [key]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
+        {renderedEvents.map((change, offset) => { const index = eventFirst + offset; const key = transitionIdentity(change); return <EventRow key={key} index={index + 1} signal={signal} enumDefinition={enumDefinition} change={change} end={indexed.ordered[index + 1]?.start ?? cycleCount} selected={key === selectedKey} checked={checkedKeys.has(key)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change)} onSelect={selectTransition} onDuplicate={() => duplicateChange(change)} commands={commands} draggable onDragStart={() => setActiveDragStarts(new Set(checkedKeys.has(key) && checkedCount > 1 ? checkedKeys : [key]))} onDragOver={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); }} onDrop={(event: DragEvent<HTMLFormElement>) => { event.preventDefault(); reorderDrop(change.start); }} onDragEnd={() => setActiveDragStarts(undefined)} />; })}
         <div aria-hidden="true" style={{ height: Math.max(0, indexed.ordered.length - eventLast) * EVENT_ROW_HEIGHT }} />
       </div>
     </div>

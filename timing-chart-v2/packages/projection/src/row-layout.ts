@@ -21,7 +21,23 @@ export interface RowLayoutResult {
   readonly paneExcludedRowIds: ReadonlySet<RowId>;
 }
 
-export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean; readonly reserveHiddenSpace?: boolean; readonly pane?: "upper" | "lower" } = {}): RowLayoutResult {
+export interface RowLayoutSourceIndex {
+  readonly signals: CanonicalDocument["signals"];
+  readonly signalGroups: CanonicalDocument["signalGroups"];
+  readonly signalsById: ReadonlyMap<string, Signal>;
+  readonly spacersById: ReadonlyMap<string, SpacerRow>;
+  readonly canonicalRowIds: readonly RowId[];
+}
+
+export function buildRowLayoutSourceIndex(document: CanonicalDocument): RowLayoutSourceIndex {
+  const signalsById = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
+  const spacersById = new Map<string, SpacerRow>();
+  for (const group of document.signalGroups) for (const spacer of group.spacers ?? []) spacersById.set(spacer.id, spacer);
+  const canonicalRowIds = document.signalGroups.flatMap((group) => group.rows);
+  return Object.freeze({ signals: document.signals, signalGroups: document.signalGroups, signalsById, spacersById, canonicalRowIds });
+}
+
+export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean; readonly reserveHiddenSpace?: boolean; readonly pane?: "upper" | "lower"; readonly sourceIndex?: RowLayoutSourceIndex } = {}): RowLayoutResult {
   const includeHidden = options.includeHidden ?? true;
   // Signal Split is two viewports over the same canonical Signal sequence.
   // The legacy pane option remains accepted by callers during migration, but
@@ -37,10 +53,13 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
   // hidden row would have been -- see the caller passing
   // `reserveHiddenSpace: false` for that instance.
   const reserveHiddenSpace = options.reserveHiddenSpace ?? true;
-  const signals = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
-  const spacers = new Map<string, SpacerRow>();
-  for (const group of document.signalGroups) for (const spacer of group.spacers ?? []) spacers.set(spacer.id, spacer);
-  const canonicalRowIds = document.signalGroups.flatMap((group) => group.rows);
+  const requestedSourceIndex = options.sourceIndex;
+  const sourceIndex = requestedSourceIndex?.signals === document.signals && requestedSourceIndex.signalGroups === document.signalGroups
+    ? requestedSourceIndex
+    : buildRowLayoutSourceIndex(document);
+  const signals = sourceIndex.signalsById;
+  const spacers = sourceIndex.spacersById;
+  const canonicalRowIds = sourceIndex.canonicalRowIds;
   const navigationRows: RowLayoutEntry[] = [];
   const visibleRows: RowLayoutEntry[] = [];
   const groupHeaders: GroupHeaderLayoutEntry[] = [];

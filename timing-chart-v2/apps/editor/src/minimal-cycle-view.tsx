@@ -58,7 +58,7 @@ export function MinimalCycleView() {
   const application = useEditorApplicationOwner(initialDocument);
   const documentLifecycle = useDocumentLifecycle({ application, productTemplate: cycleDocument, persistText: downloadText });
   const exportController = useMemo(() => createEditorExportController(), []);
-  const { snapshot, history, problem, validationDiagnostics, runtimeDiagnostics, setProblem, setRuntimeDiagnostics } = application;
+  const { snapshot, history, problem, validationDiagnostics, validationPending, runtimeDiagnostics, setProblem, setRuntimeDiagnostics } = application;
   const host = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const ruler = useRef<HTMLDivElement>(null);
@@ -127,7 +127,7 @@ export function MinimalCycleView() {
   // The normal preview starts on the built-in Transaction sample so a browser
   // refresh immediately shows the populated reference surface. The dedicated
   // visual-reference fixture remains a Cycle-oriented inspection entry point.
-  const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>({
+  const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId, BookmarkId>({
     documentEpoch,
     cycleCount: snapshot.document.timeline.cycleCount,
     initialViewMode: visualReference ? "Cycle" : readPreferredViewMode("Transaction"),
@@ -157,6 +157,7 @@ export function MinimalCycleView() {
     followSelection, setFollowSelection, followSelectionRef,
     bottomPinned, setBottomPinned, bottomPinnedRef,
     pinnedBottomSelection, setPinnedBottomSelection,
+    pinnedSignalIds, setPinnedSignalIds, getPinnedSignalIds,
     cursorA, cursorB, cursorDelta, setCursor, clearCursor, moveCursor, swapCursors,
     activePane, setActivePane,
   } = workspace;
@@ -164,7 +165,7 @@ export function MinimalCycleView() {
   transactionCyclesPerTcRef.current = cyclesPerTc;
   // Keep standalone Cycle and Transaction presentation zoom independent while
   // Combined continues to use the shared time viewport zoom.
-  const timelineNavigation = useTimelineNavigationOwner(viewMode);
+  const timelineNavigation = useTimelineNavigationOwner(viewMode, documentEpoch);
   const zoom = timelineNavigation.zoom;
   useEffect(() => {
     if (typeof window !== "undefined" && modeComposition.persistsAsDefault) window.localStorage.setItem("timing-chart-v2.view-mode", viewMode);
@@ -341,6 +342,8 @@ export function MinimalCycleView() {
   const groupById = useMemo(() => new Map(snapshot.document.signalGroups.map((group) => [group.id, group] as const)), [snapshot.document]);
   const annotationById = useMemo(() => new Map(snapshot.document.annotations.map((annotation) => [annotation.id, annotation] as const)), [snapshot.document]);
   const transactionById = useMemo(() => new Map(snapshot.document.transactions.map((transaction) => [transaction.id, transaction] as const)), [snapshot.document]);
+  const bookmarkById = useMemo(() => new Map(snapshot.document.bookmarks.map((bookmark) => [bookmark.id, bookmark] as const)), [snapshot.document]);
+  const selectedBookmarkIdRef = useRef<BookmarkId | undefined>(undefined);
   const firstNonCommentSignal = useMemo(() => snapshot.document.signals.find((signal) => signal.type !== "commentRow"), [snapshot.document]);
   const referenceClockSignal = useMemo(() => {
     const referenceClockId = snapshot.document.timeline.referenceClock;
@@ -381,6 +384,7 @@ export function MinimalCycleView() {
         ...(selectedGroupId === undefined ? {} : { groupId: selectedGroupId }),
         ...(selectedAnnotationId === undefined ? {} : { annotationId: selectedAnnotationId }),
         ...(selectedTransactionId === undefined ? {} : { transactionId: selectedTransactionId }),
+        ...(selectedBookmarkIdRef.current === undefined ? {} : { bookmarkId: selectedBookmarkIdRef.current }),
       });
     } else if (value && !bottomPinned) {
       setPinnedBottomSelection(undefined);
@@ -392,7 +396,8 @@ export function MinimalCycleView() {
     const targetExists = (pinnedBottomSelection.signalId === undefined || snapshot.document.signals.some((item) => item.id === pinnedBottomSelection.signalId))
       && (pinnedBottomSelection.groupId === undefined || snapshot.document.signalGroups.some((item) => item.id === pinnedBottomSelection.groupId))
       && (pinnedBottomSelection.annotationId === undefined || snapshot.document.annotations.some((item) => item.id === pinnedBottomSelection.annotationId))
-      && (pinnedBottomSelection.transactionId === undefined || snapshot.document.transactions.some((item) => item.id === pinnedBottomSelection.transactionId));
+      && (pinnedBottomSelection.transactionId === undefined || snapshot.document.transactions.some((item) => item.id === pinnedBottomSelection.transactionId))
+      && (pinnedBottomSelection.bookmarkId === undefined || snapshot.document.bookmarks.some((item) => item.id === pinnedBottomSelection.bookmarkId));
     if (!targetExists) {
       if (bottomPinned) setBottomPinned(false);
       if (!followSelection) setFollowSelection(true);
@@ -435,8 +440,8 @@ export function MinimalCycleView() {
     commandRegistry,
     executeBatch,
     dom: { host, viewport, ruler, gridLayer, viewportLower, rulerLower, hostLower, gridLayerLower, signalSplitRuntimeRef },
-    presentation: { collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef },
-    state: { setRuntimeDiagnostics, setProblem, setTreePresentationRevision, setTransactionPresentationRevision, setRangePresentationRevision, setPlayheadPresentationRevision, setTimelineRange, setRangeSelectionActive, setSelectedCycle, setBottomPinned, setPinnedBottomSelection, setTreeFilter, setTreeTypeFilter, setTreeAddMenuOpen, setTreeMoreMenuOpen, setContextMenu, setArrowPickStatus, setRenameDialogOpen, setCollapsedGroups, toggleCollapsedGroup, closeContextMenu },
+    presentation: { getPinnedSignalIds, collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef },
+    state: { setRuntimeDiagnostics, setProblem, setTreePresentationRevision, setTransactionPresentationRevision, setRangePresentationRevision, setPlayheadPresentationRevision, setTimelineRange, setRangeSelectionActive, setSelectedCycle, setBottomPinned, setPinnedBottomSelection, setPinnedSignalIds, setTreeFilter, setTreeTypeFilter, setTreeAddMenuOpen, setTreeMoreMenuOpen, setContextMenu, setArrowPickStatus, setRenameDialogOpen, setCollapsedGroups, toggleCollapsedGroup, closeContextMenu },
     viewMetricsOwner,
     signalSplitEnabled,
     signalSplitRatio,
@@ -559,6 +564,8 @@ export function MinimalCycleView() {
     saveAndContinuePendingFileAction,
     requestNewDocument,
   } = actions;
+  selectedBookmarkIdRef.current = selectedBookmarkId;
+  const bottomBookmark = frozen ? (pinnedBottomSelection!.bookmarkId === undefined ? undefined : bookmarkById.get(pinnedBottomSelection!.bookmarkId)) : (selectedBookmarkId === undefined ? undefined : bookmarkById.get(selectedBookmarkId));
   useEditorDialogRuntime({
     dirty: history.dirty,
     documentLifecycle,
@@ -600,6 +607,8 @@ export function MinimalCycleView() {
   });
   const secondarySurfaces = useEditorSecondarySurfaces({
     document: snapshot.document,
+    validationDiagnostics,
+    validationPending,
     documentEpoch,
     revision: snapshot.revision,
     transactionPresentationRevision,
@@ -615,11 +624,11 @@ export function MinimalCycleView() {
       executeBatch,
       nextCommandId,
     },
-    selected: { signal: selectedSignal, signalIds: selectedSignalIds, group: selectedGroup, annotation: selectedAnnotation, transaction: selectedTransaction, transactionIds: selectedTransactionIds, bookmark: selectedBookmark, transactionId: selectedTransactionId },
-    bottom: { signal: bottomSignal, group: bottomGroup, annotation: bottomAnnotation, transaction: bottomTransaction },
+    selected: { signal: selectedSignal, signalIds: selectedSignalIds, group: selectedGroup, annotation: selectedAnnotation, transaction: selectedTransaction, transactionIds: selectedTransactionIds, bookmark: selectedBookmark, transactionId: selectedTransactionId, legendSelected: selection.state.legendSelected },
+    bottom: { signal: bottomSignal, group: bottomGroup, annotation: bottomAnnotation, transaction: bottomTransaction, bookmark: bottomBookmark },
     timeline: { range: timelineRange, collapsedGroupIds, setCollapsedGroups, toggleCollapsedGroup },
     setBottomVisible,
-    workspace: { viewMode, activeContext, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionWithFreeze, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, cyclesPerTc, setCyclesPerTc, setRibbonTab },
+    workspace: { viewMode, setViewMode, activeContext, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionWithFreeze, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, cyclesPerTc, setCyclesPerTc, setRibbonTab },
     dialog: { treeAddMenuOpen, setTreeAddMenuOpen, treeMoreMenuOpen, setTreeMoreMenuOpen, bulkRegistrationText, setBulkRegistrationText, bulkRegistrationGroupId, setBulkRegistrationGroupId, bulkRegistrationStatus, setBulkRegistrationStatus, setBulkRegistrationVisible, setHierarchyVisible, contextMenu, setContextMenu, closeTreeAddMenu, closeTreeMoreMenu, bottomResetToken, setBottomResetToken, inspectorResetToken, setInspectorResetToken, setInspectorVisible },
     annotationTargetSignalId,
     referenceClockName: referenceClockSignal?.display.name,
@@ -628,13 +637,23 @@ export function MinimalCycleView() {
     actions,
     setRuntimeDiagnostics,
     navigateProblem,
-    ai: { getZoom: timelineNavigation.getZoom, fitAll: timelineNavigation.fitAll, fitSelection: timelineNavigation.fitSelection },
+    ai: { getZoom: timelineNavigation.getZoom, fitAll: timelineNavigation.fitAll, fitSelection: timelineNavigation.fitSelection, fitSourceRange: timelineNavigation.fitSourceRange },
   });
   const capabilities = deriveSelectionCapabilities(snapshot.document, selection.state);
   const { hasSelectedSignal, hasSelectedEntity, hasSelectedClipboard, hasDeletableSelection, canMoveUp, canMoveDown } = capabilities;
   const canRenameSelection = capabilities.canRename;
   const canShowSelection = capabilities.canShow;
   const canHideSelection = capabilities.canHide;
+  const selectedSignalsPinned = selectedSignalIds.size > 0 && [...selectedSignalIds].every((id) => pinnedSignalIds.includes(id));
+  const togglePinnedSignals = () => {
+    const selected = [...selectedSignalIds];
+    if (selected.length === 0) return;
+    const current = new Set(pinnedSignalIds);
+    if (selected.every((id) => current.has(id))) selected.forEach((id) => current.delete(id));
+    else selected.forEach((id) => current.add(id));
+    setPinnedSignalIds([...current]);
+    timelineRuntimeRef.current?.onViewportScroll();
+  };
   const shellRibbon = {
     tabs: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} />,
     main: {
@@ -684,6 +703,7 @@ export function MinimalCycleView() {
       onSpacerCreated: selection.selectSpacer,
       onTransactionCreated: selection.selectTransaction,
       problemsCount: diagnostics.length,
+      problemsPending: validationPending,
       diagnostics,
       onNavigateProblem: navigateProblem,
       onRefreshChecks: () => { application.validateDocument(snapshot.document); publishStateRef.current(); },
@@ -792,11 +812,11 @@ export function MinimalCycleView() {
     },
   };
   const shellStatus = {
-    toolStatus: arrowPickStatus === "idle" ? (rangeSelectionActive ? "Range select active" : "Ready · Tool: Select") : `Arrow pick · ${arrowPickStatus}`,
+    toolStatus: arrowPickStatus === "idle" ? (rangeSelectionActive ? (viewMode === "Cycle" ? "Range select active" : "Source range select active") : "Ready · Tool: Select") : `Arrow pick · ${arrowPickStatus}`,
     selectionStatus: selectedSignalIds.size > 1 ? `${selectedSignalIds.size} signals` : selectedTransactionIds.size > 1 ? `${selectedTransactionIds.size} transactions` : selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None",
     signalCount: snapshot.document.signals.length,
     annotationCount: snapshot.document.annotations.length,
-    rangeStatus: visualReference ? `Time Range: ${snapshot.document.timeline.start} – ${snapshot.document.timeline.end} cycles` : `Range: [${timelineRange.start}, ${timelineRange.end})`,
+    rangeStatus: visualReference ? `Time Range: ${snapshot.document.timeline.start} – ${snapshot.document.timeline.end} cycles` : `${viewMode === "Cycle" ? "Range" : "Source range"}: [${timelineRange.start}, ${timelineRange.end})`,
     selectedCycle,
     zoom,
     snapEnabled,
@@ -809,6 +829,7 @@ export function MinimalCycleView() {
     timeAxisStatus: `Time Axis: ${snapshot.document.timeline.referenceClock ? `Clock · ${referenceClockSignal?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time · No Clock Reference"}`,
     dirty: history.dirty,
     problemsCount: diagnostics.length,
+    problemsPending: validationPending,
     waveDromHasError,
     // #431/#459: `cursorA`/`cursorB` are source-time cycle numbers; empty
     // string formatting stays out of EditorStatusBar per its own "pure
@@ -845,10 +866,10 @@ export function MinimalCycleView() {
       fileInputRef={fileInput}
       onFileChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) { capturePendingFileOrigin(); void documentLifecycle.readFile(file); } event.currentTarget.value = ""; }}
     >
-    <ContextMenuPanel contextMenu={contextMenu} hasSelectedClipboard={hasSelectedClipboard} clipboardAvailable={clipboardAvailable} hasSelectedEntity={hasSelectedEntity} hasSelectedSignal={hasSelectedSignal} hasDeletableSelection={hasDeletableSelection} canRenameSelection={canRenameSelection} canMoveUp={canMoveUp} canMoveDown={canMoveDown} canShowSelection={canShowSelection} canHideSelection={canHideSelection} copySelectedSignal={copySelectedSignal} cutSelectedSignal={cutSelectedSignal} pasteSelectedEntity={pasteSelectedEntity} duplicateSelectedEntity={duplicateSelectedEntity} moveSelection={moveSelection} setSelectionVisibility={setSelectionVisibility} renameSelection={renameSelection} closeContextMenu={closeContextMenu} deleteSelection={() => commandRegistry.current.execute("selection.delete")} addBookmarkAtCycle={addBookmarkAtCycle} transactionGroups={snapshot.document.transactionGroups} selectedTransactionGroupId={selectedTransaction?.groupId} moveSelectedTransactionToGroup={(groupId: TransactionGroup["id"] | undefined) => secondarySurfaces.surfaceCommands.moveTransactionToGroup(selectedTransactionId!, groupId)} />
+    <ContextMenuPanel contextMenu={contextMenu} hasSelectedClipboard={hasSelectedClipboard} clipboardAvailable={clipboardAvailable} hasSelectedEntity={hasSelectedEntity} hasSelectedSignal={hasSelectedSignal} hasDeletableSelection={hasDeletableSelection} canRenameSelection={canRenameSelection} canMoveUp={canMoveUp} canMoveDown={canMoveDown} canShowSelection={canShowSelection} canHideSelection={canHideSelection} signalPinned={selectedSignalsPinned} togglePinnedSignals={togglePinnedSignals} copySelectedSignal={copySelectedSignal} cutSelectedSignal={cutSelectedSignal} pasteSelectedEntity={pasteSelectedEntity} duplicateSelectedEntity={duplicateSelectedEntity} moveSelection={moveSelection} setSelectionVisibility={setSelectionVisibility} renameSelection={renameSelection} closeContextMenu={closeContextMenu} deleteSelection={() => commandRegistry.current.execute("selection.delete")} addBookmarkAtCycle={addBookmarkAtCycle} transactionGroups={snapshot.document.transactionGroups} selectedTransactionGroupId={selectedTransaction?.groupId} moveSelectedTransactionToGroup={(groupId: TransactionGroup["id"] | undefined) => secondarySurfaces.surfaceCommands.moveTransactionToGroup(selectedTransactionId!, groupId)} />
     {renameDialogOpen && <RenameDialog dialogRef={renameDialogRef} draft={renameDraft} onDraftChange={(value) => { setRenameDraft(value); setRenameError(""); }} error={renameError} onApply={applyRename} onClose={() => setRenameDialogOpen(false)} />}
     {hierarchyVisible && <HardwareHierarchyBrowser document={snapshot.document} selectedSignalId={selectedSignal?.id} onSelect={selectHierarchySignal} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setHierarchyVisible(false))} />}
-    {propertiesVisible && <DocumentProperties document={snapshot.document} commands={secondarySurfaces.surfaceCommands} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setPropertiesVisible(false))} />}
+    {propertiesVisible && <DocumentProperties document={snapshot.document} viewport={viewport} commands={secondarySurfaces.surfaceCommands} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setPropertiesVisible(false))} />}
     {bulkRegistrationVisible && <BulkRegistrationDialog dialogRef={bulkRegistrationDialogRef} groups={snapshot.document.signalGroups} text={bulkRegistrationText} onTextChange={(value) => { setBulkRegistrationText(value); setBulkRegistrationPreview(undefined); setBulkRegistrationStatus(""); }} groupId={bulkRegistrationGroupId} onGroupIdChange={setBulkRegistrationGroupId} status={bulkRegistrationStatus} preview={bulkRegistrationPreview} onPreview={previewBulkSignals} onApply={registerBulkSignals} onClose={() => closeDialog(() => { setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); })} />}
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} controller={exportController} restoreFocusRef={dialogOriginRef} onDiagnostic={(next) => setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("export-failure:")), ...(next ? [next] : [])])} onClose={() => closeDialog(() => setExportVisible(false))} />}
      {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const saved = documentLifecycle.saveAs(name); if (saved) closeDialog(() => setSaveAsVisible(false)); return saved; }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}

@@ -34,6 +34,8 @@ export interface WaveformSurfaceProvider {
   /** Optional two-phase hook: all requested mounts must complete before any geometry reads. */
   mountWaveBatch?(requests: readonly WaveMountRequest[]): Promise<readonly WaveMountBatchItem[]>;
   disposeWave(signalId: WaveSignalId): void;
+  /** Release document-specific geometry/DOM but let the adapter retain a bounded reusable markup artifact. */
+  retainWaveArtifact?(signalId: WaveSignalId): void;
 }
 
 export interface RenderCounters {
@@ -127,6 +129,7 @@ export interface AnnotationOverlayPrimitive {
   readonly anchors: readonly OverlayAnchorPoint[];
   readonly verticalExtent?: Readonly<{ readonly top: number; readonly bottom: number }>;
   readonly labelOffset?: Readonly<{ x: number; y: number }>;
+  readonly labelPlacement?: "start" | "center" | "end" | "above" | "below";
   readonly lineType?: "straight" | "orthogonal" | "curve" | "diagonal";
   readonly arrowhead?: "end" | "start" | "bidirectional" | "none";
   readonly surfaceHeight: number;

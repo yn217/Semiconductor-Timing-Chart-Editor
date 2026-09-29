@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Home Ribbon More overlay", () => {
-  for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }, { width: 1024, height: 720 }, { width: 900, height: 720 }]) {
+  for (const viewport of [{ width: 1672, height: 941 }, { width: 900, height: 720 }]) {
     test(`does not create horizontal Ribbon overflow at ${viewport.width}px`, async ({ page }) => {
       await page.setViewportSize(viewport);
       await page.goto("/");

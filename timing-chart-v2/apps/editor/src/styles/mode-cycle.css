@@ -7,6 +7,9 @@
 .editor-shell[data-view-mode="Cycle"] .desktop-workspace {
   grid-template-rows: minmax(260px, 1fr) 10px var(--gui-bottom-height);
 }
+.editor-shell[data-view-mode="Cycle"] .cycle-panel {
+  --time-domain-left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px));
+}
 .editor-shell[data-bottom-visible="false"][data-view-mode="Cycle"] .desktop-workspace {
   grid-template-rows: minmax(0, 1fr) 0 0;
 }
@@ -17,6 +20,7 @@
 .editor-shell[data-view-mode="Cycle"] .bottom-resize-track { grid-column: 2; grid-row: 2; }
 .editor-shell[data-view-mode="Cycle"] .bottom-editor { grid-column: 2; grid-row: 3; }
 .editor-shell[data-view-mode="Cycle"] .cycle-panel .cycle-viewport { height: calc(100% - 37px); }
+.editor-shell[data-view-mode="Cycle"] .split-signal-content { position: relative; }
 .editor-shell[data-view-mode="Cycle"] .left-workspace-rail { pointer-events: none; background: transparent; }
 .editor-shell[data-view-mode="Cycle"] .left-workspace-rail > .left-panel-tail { pointer-events: auto; }
 /* #756: the Signals/Groups tree lives in the timing surface (row 1). Below it the left rail continues as one closed,
@@ -65,6 +69,12 @@
 .editor-shell[data-view-mode="Cycle"][data-bottom-visible="true"] { --cycle-bottom-cover: calc(var(--gui-bottom-height) + 10px); }
 /* The column resize handles cover only the visible Main area (Bottom sits above the rest of the panel). */
 .editor-shell[data-view-mode="Cycle"] .left-pane-resize-handle, .editor-shell[data-view-mode="Cycle"] .frozen-pane-resize-handle { bottom: var(--cycle-bottom-cover); }
+/* Keep the resize affordances attached to the fixed-column header rather
+   than painting short, detached marks halfway down an otherwise empty pane.
+   The full-height separator hit targets and continuous column borders remain
+   unchanged; only their visible grips move into the 37px heading band. */
+.editor-shell[data-view-mode="Cycle"] .left-pane-resize-handle::after,
+.editor-shell[data-view-mode="Cycle"] .frozen-pane-resize-handle::after { top: 6px; height: 24px; transform: none; }
 /* The surface fills the whole viewport (--cycle-fill, published by the Timeline track owner) so the rail columns reach the bottom; the
    cover is padding so the last rows stay reachable above Bottom, and the rail layers extend over it. */
 .editor-shell[data-view-mode="Cycle"] .surface-host [data-role="timing-chart-surface"] { box-sizing: content-box; padding-bottom: var(--cycle-cover); min-height: calc(var(--cycle-fill, 0px) - var(--cycle-cover)); }

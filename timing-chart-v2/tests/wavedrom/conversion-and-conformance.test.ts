@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import WaveDrom from "wavedrom";
 import {
   ProductionWaveDromAdapter,
@@ -7,6 +7,7 @@ import {
   WAVEDROM_VERSION,
   assertSafeWaveDromMarkup,
   renderWaveJsonMarkup,
+  renderWaveJsonMarkupWithMetrics,
   toWaveJson,
   toWaveJsonWindow,
   VALUE_LABEL_LAYOUT_POLICY,
@@ -34,6 +35,16 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(toWaveJson({ signal: binary, cycleCount: 10 })).toEqual({ wave: "0..1...0.." });
     const bus = { ...canonicalFixture().signals[1]!, values: [{ start: 0, value: "IDLE" }, { start: 3, value: "0x1000" }, { start: 7, value: "IDLE" }] } as ValueSignal;
     expect(toWaveJson({ signal: bus, cycleCount: 10 })).toEqual({ wave: "=..=...=..", data: ["IDLE", "0x1000", "IDLE"] });
+  });
+
+  it("projects sized HDL bus literals using their declared width", () => {
+    const bus = {
+      ...canonicalFixture().signals[1]!,
+      width: 4,
+      displayFormat: "hex",
+      values: [{ start: 0, value: "4'hFF" }, { start: 3, value: "8'h1FF" }],
+    } as ValueSignal;
+    expect(toWaveJson({ signal: bus, cycleCount: 6 })).toEqual({ wave: "=..=..", data: ["0xF", "0xFF"] });
   });
 
   it("covers every ordered transition in the supported non-clock token manifest", () => {
@@ -109,7 +120,175 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
 
   it("pins the production and test renderer to one WaveDrom version", () => {
     expect(WaveDrom.version).toBe(WAVEDROM_VERSION);
-    expect(new ProductionWaveDromAdapter().metrics()).toEqual({ renderCalls: 0, waveJsonDurationMs: 0, renderDurationMs: 0, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 });
+    expect(new ProductionWaveDromAdapter().metrics()).toMatchObject({ renderCalls: 0, waveJsonDurationMs: 0, renderDurationMs: 0, renderStages: { last: undefined, totals: { sourcePreparationMs: 0, metricCollectionOverheadMs: 0, cacheKeySerializeMs: 0, waveDromRenderAnyMs: 0, onmlStringifyMs: 0, valueLabelLayoutMs: 0, markupSafetyMs: 0, templateParseMs: 0, svgSafetyDomWalkMs: 0, domInstallMs: 0, totalSignalWallMs: 0, waveJsonBytes: 0, semanticValuesBytes: 0, svgMarkupBytes: 0 } }, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 });
+  });
+
+  it("reuses cache-key JSON serialization for input byte diagnostics", async () => {
+    const waveJson: WaveJsonSignal = { wave: "0..1...", data: ["READY"] };
+    const semanticValues = ["READY"];
+    const svg = {
+      localName: "svg",
+      namespaceURI: "http://www.w3.org/2000/svg",
+      attributes: { length: 0, item: () => null },
+      querySelectorAll: () => [],
+      setAttribute: vi.fn(),
+      cloneNode: () => ({ ...svg, setAttribute: vi.fn() }),
+    };
+    const template = { content: { firstElementChild: svg }, set innerHTML(_markup: string) {} };
+    const mount = {
+      ownerDocument: { createElement: () => template },
+      setAttribute: vi.fn(),
+      replaceChildren: vi.fn(),
+    } as unknown as Element;
+    const stringifySpy = vi.spyOn(JSON, "stringify");
+
+    try {
+      const adapter = new ProductionWaveDromAdapter();
+      const firstRender = await adapter.renderWave(signalId("sig_metrics"), waveJson, mount, semanticValues);
+      const secondRender = await adapter.renderWave(signalId("sig_metrics"), waveJson, mount, semanticValues);
+
+      expect(stringifySpy.mock.calls.filter(([value]) => value === waveJson)).toHaveLength(2);
+      expect(stringifySpy.mock.calls.filter(([value]) => value === semanticValues)).toHaveLength(2);
+      expect(firstRender.markupCacheHit).toBe(false);
+      expect(secondRender.markupCacheHit).toBe(true);
+      expect(firstRender.renderStages).toMatchObject({ waveJsonBytes: expect.any(Number), svgMarkupBytes: expect.any(Number), domInstallMs: expect.any(Number) });
+      expect(secondRender.renderStages?.domInstallMs).toBe(adapter.metrics().renderStages.last?.domInstallMs);
+      const totals = adapter.metrics().renderStages.totals;
+      const encoder = new TextEncoder();
+      expect(totals.waveJsonBytes).toBe(2 * encoder.encode(JSON.stringify(waveJson)).byteLength);
+      expect(totals.semanticValuesBytes).toBe(2 * encoder.encode(JSON.stringify(semanticValues)).byteLength);
+      expect(adapter.metrics()).toMatchObject({ cacheHits: 1, cacheMisses: 1 });
+    } finally {
+      stringifySpy.mockRestore();
+    }
+  });
+
+  it("reuses identical markup across document release without changing WaveDrom IDs", async () => {
+    const adapter = new ProductionWaveDromAdapter();
+    const id = signalId("sig_reopen_cache");
+    const waveJson: WaveJsonSignal = { wave: "01.." };
+    let templatesCreated = 0;
+    const ownerDocument = {
+      createElement: () => {
+        templatesCreated += 1;
+        let markup = "";
+        const svg = {
+          localName: "svg", namespaceURI: "http://www.w3.org/2000/svg", attributes: { length: 0, item: () => null },
+          parentElement: undefined as unknown, removed: false, setAttribute: vi.fn(),
+          querySelectorAll: (selector: string) => selector === "[id]"
+            ? [...markup.matchAll(/\bid=["']([^"']+)["']/g)].map((match) => ({ id: match[1] }))
+            : [],
+          cloneNode: () => ({ ...svg, parentElement: undefined, removed: false, setAttribute: vi.fn() }),
+          remove() { this.removed = true; this.parentElement = undefined; },
+        };
+        return {
+          content: { firstElementChild: svg },
+          set innerHTML(value: string) { markup = value; },
+        };
+      },
+    };
+    const createMount = (document = ownerDocument) => {
+      let mountedSvg: Record<string, unknown> | undefined;
+      const mount = {
+        ownerDocument: document,
+        setAttribute: vi.fn(),
+        getAttribute: vi.fn(() => id),
+        removeAttribute: vi.fn(),
+        replaceChildren(child?: unknown) {
+          mountedSvg = child as Record<string, unknown> | undefined;
+          if (mountedSvg) mountedSvg.parentElement = mount;
+        },
+        querySelector: (selector: string) => selector === "svg" && !mountedSvg?.removed ? mountedSvg : undefined,
+      };
+      return mount as unknown as Element;
+    };
+    const firstMount = createMount();
+    const first = await adapter.renderWave(id, waveJson, firstMount);
+    const firstIds = [...first.svg.querySelectorAll("[id]")].map((element) => element.id);
+    expect(first.markupCacheHit).toBe(false);
+    expect(first.svgSafetyCacheHit).toBe(false);
+    expect(templatesCreated).toBe(1);
+    expect(firstIds.length).toBeGreaterThan(0);
+
+    adapter.retainArtifact(id);
+    expect(firstMount.querySelector("svg")).toBeUndefined();
+    expect(adapter.metrics().activeOwners).toBe(0);
+
+    const reopenedMount = createMount();
+    const reopened = await adapter.renderWave(id, waveJson, reopenedMount);
+    expect(reopened.markupCacheHit).toBe(true);
+    expect(reopened.svgSafetyCacheHit).toBe(true);
+    expect(templatesCreated).toBe(1);
+    expect(reopened.renderIndex).toBe(first.renderIndex);
+    expect([...reopened.svg.querySelectorAll("[id]")].map((element) => element.id)).toEqual(firstIds);
+    expect((reopenedMount as unknown as { querySelector: (selector: string) => unknown }).querySelector("svg")).toBe(reopened.svg);
+
+    adapter.retainArtifact(id);
+    const secondReopened = await adapter.renderWave(id, waveJson, createMount());
+    expect(secondReopened.markupCacheHit).toBe(true);
+    expect(secondReopened.svgSafetyCacheHit).toBe(true);
+    expect(templatesCreated).toBe(1);
+
+    const differentDocumentMount = createMount({ createElement: ownerDocument.createElement });
+    const differentDocument = await adapter.renderWave(id, waveJson, differentDocumentMount);
+    expect(differentDocument.markupCacheHit).toBe(true);
+    expect(differentDocument.svgSafetyCacheHit).toBe(false);
+    expect(templatesCreated).toBe(2);
+    expect(adapter.metrics()).toMatchObject({ cacheHits: 3, cacheMisses: 1, activeOwners: 1 });
+  });
+
+  it("does not reuse a retained WaveDrom artifact when semantic input changed", async () => {
+    const adapter = new ProductionWaveDromAdapter();
+    const id = signalId("sig_reopen_changed");
+    const createMount = () => {
+      const svg = { localName: "svg", namespaceURI: "http://www.w3.org/2000/svg", attributes: { length: 0, item: () => null }, querySelectorAll: () => [], setAttribute: vi.fn(), cloneNode: () => ({ ...svg, setAttribute: vi.fn() }), remove: vi.fn() };
+      const template = { content: { firstElementChild: svg }, set innerHTML(_value: string) {} };
+      return { ownerDocument: { createElement: () => template }, setAttribute: vi.fn(), getAttribute: vi.fn(() => id), removeAttribute: vi.fn(), replaceChildren: vi.fn() } as unknown as Element;
+    };
+    const firstMount = createMount();
+    const first = await adapter.renderWave(id, { wave: "01.." }, firstMount);
+    adapter.retainArtifact(id);
+
+    const reopened = await adapter.renderWave(id, { wave: "10.." }, createMount());
+    expect(reopened.markupCacheHit).toBe(false);
+    expect(reopened.renderIndex).not.toBe(first.renderIndex);
+    expect(adapter.metrics()).toMatchObject({ cacheHits: 0, cacheMisses: 2 });
+  });
+
+  it("bounds retained document-reopen artifacts", async () => {
+    const adapter = new ProductionWaveDromAdapter();
+    const waveJson: WaveJsonSignal = { wave: "0" };
+    const createMount = () => {
+      const svg = { localName: "svg", namespaceURI: "http://www.w3.org/2000/svg", attributes: { length: 0, item: () => null }, querySelectorAll: () => [], setAttribute: vi.fn(), cloneNode: () => ({ ...svg, setAttribute: vi.fn() }), remove: vi.fn() };
+      const template = { content: { firstElementChild: svg }, set innerHTML(_value: string) {} };
+      return { ownerDocument: { createElement: () => template }, setAttribute: vi.fn(), getAttribute: vi.fn(() => "owner"), removeAttribute: vi.fn(), replaceChildren: vi.fn() } as unknown as Element;
+    };
+    const ids = Array.from({ length: 65 }, (_, index) => signalId(`sig_reopen_lru_${index}`));
+    for (const id of ids) {
+      await adapter.renderWave(id, waveJson, createMount());
+      adapter.retainArtifact(id);
+    }
+
+    const oldest = await adapter.renderWave(ids[0]!, waveJson, createMount());
+    const newestRetained = await adapter.renderWave(ids[64]!, waveJson, createMount());
+    expect(oldest.markupCacheHit).toBe(false);
+    expect(newestRetained.markupCacheHit).toBe(true);
+  });
+
+  it("reports WaveDrom markup stage timings without changing serialized output", () => {
+    const waveJson = { wave: "=.=.", data: ["LONG_VALUE", "NEXT"] };
+    const measured = renderWaveJsonMarkupWithMetrics(waveJson, 0, ["LONG_VALUE", "NEXT"]);
+    expect(measured.markup).toBe(renderWaveJsonMarkup(waveJson, 0, ["LONG_VALUE", "NEXT"]));
+    expect(measured.metrics.svgMarkupBytes).toBeGreaterThan(0);
+    expect(Object.values(measured.metrics).every((value) => Number.isFinite(value) && value >= 0)).toBe(true);
+  });
+
+  it("reports WaveDrom markup stage timings without changing the serialized output", () => {
+    const waveJson = { wave: "=.=.", data: ["LONG_VALUE", "NEXT"] };
+    const measured = renderWaveJsonMarkupWithMetrics(waveJson, 0, ["LONG_VALUE", "NEXT"]);
+    expect(measured.markup).toBe(renderWaveJsonMarkup(waveJson, 0, ["LONG_VALUE", "NEXT"]));
+    expect(measured.metrics.svgMarkupBytes).toBeGreaterThan(0);
+    expect(Object.values(measured.metrics).every((value) => Number.isFinite(value) && value >= 0)).toBe(true);
   });
 
   it("preserves the left-edge value when converting a bounded source window", () => {
@@ -170,6 +349,17 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     const bus = { ...canonicalFixture().signals[1]!, values: [{ start: 0, value: "0x12345678", displayLabel: "READY" }] } as ValueSignal;
     expect(bus.values[0]?.value).toBe("0x12345678");
     expect(toWaveJson({ signal: bus, cycleCount: 4 })).toEqual({ wave: "=...", data: ["READY"] });
+  });
+
+  it("projects State enum labels for full and bounded waves while preserving source values and unknown fallback", () => {
+    const state = { ...canonicalFixture().signals[1]!, type: "state", enumId: "enum.mode", values: [{ start: 0, value: 0 }, { start: 3, value: 7 }, { start: 6, value: 1 }] } as ValueSignal;
+    const enumDefinitions = [{ id: "enum.mode", name: "Mode", entries: [{ value: 0, label: "IDLE" }, { value: 1, label: "RUN" }] }] as const;
+    const full = toWaveJson({ signal: state, cycleCount: 8, enumDefinitions });
+    expect(full).toEqual({ wave: "=..=..=.", data: ["IDLE", "7", "RUN"] });
+    expect(state.values.map((change) => change.value)).toEqual([0, 7, 1]);
+    expect(toWaveJsonWindow({ signal: state, cycleCount: 8, enumDefinitions }, 2, 8).data).toEqual(["IDLE", "7", "RUN"]);
+    const override = { ...state, values: [{ start: 0, value: 1, displayLabel: "CUSTOM" }] } as ValueSignal;
+    expect(toWaveJson({ signal: override, cycleCount: 4, enumDefinitions }).data).toEqual(["CUSTOM"]);
   });
 
   it("defines Auto document defaults and presentation-only SignalValueChange overrides", () => {

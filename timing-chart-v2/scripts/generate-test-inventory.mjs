@@ -69,9 +69,27 @@ function visit(suites, file = "", suitePath = []) {
         const specReview = reviewsByFile.get(record.file);
         if (review || specReview) {
           if (specReview) matchedSpecReviews.add(record.file);
-          const selectedReview = review ?? specReview;
+          const selectedReview = { ...(specReview ?? {}), ...(review ?? {}) };
+          // A case-level review may intentionally leave file-wide metadata
+          // unspecified. Do not let nulls/empty arrays erase a reviewed
+          // file-level default when materializing the case inventory.
+          for (const key of ["domain", "originIssue", "type", "costClass", "measuredRuntimeMs", "primaryContract", "duplicateGroup", "executionTier", "decision", "reason", "replacementTest"]) {
+            if (selectedReview[key] == null && specReview?.[key] != null) selectedReview[key] = specReview[key];
+          }
+          if ((!selectedReview.profiles || selectedReview.profiles.length === 0) && specReview?.profiles?.length) {
+            selectedReview.profiles = specReview.profiles;
+          }
           if (review) matchedReviewKeys.add(`${record.file}\n${record.title}`);
-          Object.assign(record, selectedReview, { file: record.file, title: record.title, suitePath: childSuitePath, line: spec.line, reviewStatus: "REVIEWED" });
+          Object.assign(record, selectedReview, {
+            file: record.file,
+            title: record.title,
+            suitePath: childSuitePath,
+            line: spec.line,
+            contractId: selectedReview.contractId ?? selectedReview.domain ?? null,
+            originIssue: selectedReview.originIssue ?? (Number(record.file.match(/(?:issue|acceptance)-(\d+)/i)?.[1]) || null),
+            costClass: selectedReview.costClass === "SMALL" ? "FAST" : selectedReview.costClass,
+            reviewStatus: "REVIEWED",
+          });
         }
         cases.push(record);
       }
@@ -86,6 +104,16 @@ if (missingReviewKeys.length) throw new Error(`Curated test reviews no longer ma
 const missingSpecReviewFiles = [...reviewsByFile.keys()].filter((file) => !matchedSpecReviews.has(file));
 if (missingSpecReviewFiles.length) throw new Error(`File-level reviews no longer match Playwright collection:\n${missingSpecReviewFiles.join("\n")}`);
 cases.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line || a.title.localeCompare(b.title));
+const validCostClasses = new Set(["FAST", "MEDIUM", "HEAVY", "VERY_HEAVY"]);
+const invalidReviewedCases = cases.filter((test) => test.reviewStatus === "REVIEWED" && (
+  !test.domain || !test.type || !test.contractId || !test.primaryContract || !test.executionTier ||
+  !test.decision || !test.reason || !Array.isArray(test.profiles) || !validCostClasses.has(test.costClass) ||
+  !Object.hasOwn(test, "originIssue") ||
+  (test.profiles.length === 0 && !(test.decision === "MOVE_LAYER" && test.replacementTest))
+));
+if (invalidReviewedCases.length) {
+  throw new Error(`Reviewed test metadata is incomplete or invalid:\n${invalidReviewedCases.map(({ file, title }) => `${file} — ${title}`).join("\n")}`);
+}
 const caseKeys = new Set(cases.map((test) => `${test.file}\n${test.title}`));
 for (const item of consolidationMap.consolidations) {
   const fromKey = `${item.from.file}\n${item.from.title}`;
@@ -190,11 +218,15 @@ for (const test of cases) {
   if (test.reviewStatus === "REVIEWED") counts.reviewed += 1;
   fileCounts.set(test.file, counts);
 }
+const slowestMeasuredCases = cases
+  .filter((test) => Number.isFinite(test.measuredRuntimeMs))
+  .sort((a, b) => b.measuredRuntimeMs - a.measuredRuntimeMs || a.file.localeCompare(b.file))
+  .slice(0, 20);
 const markdown = [
   "# Playwright test inventory",
   "",
   `Generated from Playwright collection (${inventory.playwrightVersion}); ${inventory.specFileCount} spec files and ${inventory.caseCount} test cases. Collection does not execute tests.`,
-  `Baseline ${inventory.baseline.commit}: ${inventory.baseline.specFileCount} spec files / ${inventory.baseline.caseCount} cases. Runtime metrics: not measured.`,
+  `Baseline ${inventory.baseline.commit}: ${inventory.baseline.specFileCount} spec files / ${inventory.baseline.caseCount} cases. Full-profile wall time and aggregate percentiles: not measured.`,
   `Semantic review progress: ${inventory.reviewedCaseCount}/${inventory.caseCount} cases reviewed.`,
   "",
   "## Curated profile membership",
@@ -204,6 +236,14 @@ const markdown = [
   "| Profile | Reviewed cases |",
   "| --- | ---: |",
   ...Object.entries(inventory.curatedProfileCounts).map(([profile, count]) => `| \`${profile}\` | ${count} |`),
+  "",
+  "## Top recorded per-case runtimes",
+  "",
+  "These are the highest non-null `measuredRuntimeMs` values already recorded in the curated manifest. Inventory generation does not execute tests or refresh these measurements; treat them as case-level observations, not a full-profile runtime baseline.",
+  "",
+  "| Runtime (ms) | Profile | Spec file | Test case |",
+  "| ---: | --- | --- | --- |",
+  ...slowestMeasuredCases.map((test) => `| ${test.measuredRuntimeMs} | ${(test.profiles ?? []).map((profile) => `\`${profile}\``).join(", ") || "—"} | \`${test.file}\` | ${test.title.replaceAll("|", "\\|")} |`),
   "",
   "> This is a complete name/location inventory, not a completed semantic review. Per-file counts show reviewed/total cases; remaining cases stay `UNREVIEWED` until their product invariant, layer, cost, tier, decision, and replacement mapping (if any) have been reviewed in the JSON manifest.",
   "",

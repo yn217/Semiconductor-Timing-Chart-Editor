@@ -24,6 +24,19 @@ export interface CanonicalReference {
   readonly path: string;
 }
 
+type CanonicalReferenceIndex = ReadonlyMap<
+  CanonicalReferenceTarget,
+  ReadonlyMap<string, readonly CanonicalReference[]>
+>;
+
+// Reference results are owned by these immutable collections, not by the root
+// document wrapper. The document ID is stored at the leaf because it supplies
+// the owner ID of the timeline.referenceClock record; other document metadata
+// does not invalidate the index. Weak keys bound cache lifetime to its owners.
+type ReferenceIndexCacheEntry = Readonly<{ documentId: string; index: CanonicalReferenceIndex }>;
+type ReferenceIndexCacheNode = WeakMap<object, ReferenceIndexCacheNode | ReferenceIndexCacheEntry>;
+const referenceIndexes: ReferenceIndexCacheNode = new WeakMap();
+
 /**
  * Enumerates the currently supported canonical stable-ID relationships.
  * Consumers use this registry instead of rediscovering cross-references from
@@ -129,9 +142,54 @@ export function canonicalReferences(document: CanonicalDocument): readonly Canon
   return references;
 }
 
-export function referencesTo(document: CanonicalDocument, targetType: CanonicalReferenceTarget, targetId: string): readonly CanonicalReference[] {
-  return canonicalReferences(document).filter((reference) => reference.targetType === targetType && reference.targetId === targetId);
+function canonicalReferenceIndex(document: CanonicalDocument): CanonicalReferenceIndex {
+  const owners: readonly object[] = [
+    document.signals,
+    document.timeGroups,
+    document.annotations,
+    document.transactions,
+    document.timeline,
+    document.signalGroups,
+  ];
+  let node = referenceIndexes;
+  for (const owner of owners.slice(0, -1)) {
+    const cached = node.get(owner);
+    if (cached instanceof WeakMap) node = cached;
+    else {
+      const child: ReferenceIndexCacheNode = new WeakMap();
+      node.set(owner, child);
+      node = child;
+    }
+  }
+  const leafOwner = owners[owners.length - 1]!;
+  const cached = node.get(leafOwner);
+  if (cached !== undefined && !(cached instanceof WeakMap) && cached.documentId === document.document.id) return cached.index;
+
+  const mutable = new Map<CanonicalReferenceTarget, Map<string, CanonicalReference[]>>();
+  for (const reference of canonicalReferences(document)) {
+    let byId = mutable.get(reference.targetType);
+    if (byId === undefined) {
+      byId = new Map();
+      mutable.set(reference.targetType, byId);
+    }
+    const bucket = byId.get(reference.targetId);
+    if (bucket === undefined) byId.set(reference.targetId, [reference]);
+    else bucket.push(reference);
+  }
+
+  for (const byId of mutable.values()) {
+    for (const bucket of byId.values()) Object.freeze(bucket);
+  }
+  const index: CanonicalReferenceIndex = mutable;
+  node.set(leafOwner, { documentId: document.document.id, index });
+  return index;
 }
+
+export function referencesTo(document: CanonicalDocument, targetType: CanonicalReferenceTarget, targetId: string): readonly CanonicalReference[] {
+  return canonicalReferenceIndex(document).get(targetType)?.get(targetId) ?? EMPTY_REFERENCES;
+}
+
+const EMPTY_REFERENCES: readonly CanonicalReference[] = Object.freeze([]);
 
 export function referencesToSignal(document: CanonicalDocument, signalId: string): readonly CanonicalReference[] {
   return referencesTo(document, "signal", signalId);

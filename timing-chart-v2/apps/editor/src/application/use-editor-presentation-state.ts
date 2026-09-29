@@ -40,6 +40,11 @@ export function useEditorPresentationState(input: { readonly hostRef: MutableRef
     for (const id of affectedAnnotationIds) for (const owner of rendererHost.querySelectorAll<HTMLElement>(`[data-annotation-id="${CSS.escape(String(id))}"]`)) owner.dataset.selected = String(next.annotationIds.has(id));
     const affectedGroupIds = new Set([previous?.groupId, next.groupId].filter(Boolean));
     for (const id of affectedGroupIds) for (const treeItem of rendererHost.querySelectorAll<HTMLElement>(`[role="treeitem"][data-row-id="${CSS.escape(String(id))}:header"]`)) treeItem.setAttribute("aria-selected", String(id === next.groupId));
+    const legend = rendererHost.querySelector<HTMLElement>("[data-testid='editor-legend']");
+    if (legend) {
+      legend.dataset.selected = String(next.legendSelected);
+      legend.setAttribute("aria-label", next.legendSelected ? "Legend, selected" : "Legend");
+    }
     previousSelectionDecorationRef.current = next;
   };
 

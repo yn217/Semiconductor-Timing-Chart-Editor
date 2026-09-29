@@ -1,13 +1,13 @@
 import { useCallback, useRef, useState } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import { deriveTimingDiagnostics, type CanonicalSnapshot } from "@timing-chart-v2/core";
+import { deriveTimingDiagnostics, deriveTimingDiagnosticsIfInputsChanged, type CanonicalSnapshot, type TimingDiagnostic } from "@timing-chart-v2/core";
 import type { HistoryState } from "@timing-chart-v2/history";
-import { isTrustedParsedCanonicalDocument, validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
+import { validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import { buildCommandRejectionDiagnostics } from "../command-diagnostics.js";
 import { EditorApplicationRuntime } from "../runtime/editor-application-runtime.js";
 
 type AcceptedCommandResult = Extract<CommandResult, { readonly ok: true }>;
-type AcceptedContext = Readonly<{ operation: string; command?: SemanticCommand; batchId?: CommandId }>;
+type AcceptedContext = Readonly<{ operation: string; command?: SemanticCommand; batchId?: CommandId; commandStartedAt: number; diagnosticsDurationMs?: number; diagnosticsRecomputed?: boolean }>;
 type AcceptedHandler = (result: AcceptedCommandResult, context: AcceptedContext) => void;
 
 function withoutCommandRejectionDiagnostics(current: readonly DocumentProblem[]): readonly DocumentProblem[] {
@@ -42,6 +42,9 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   const [snapshot, setSnapshot] = useState<CanonicalSnapshot>(() => runtime.session.snapshot());
   const [history, setHistory] = useState<HistoryState>(() => runtime.session.current().historyState());
   const [problem, setProblem] = useState("");
+  const [validationPending, setValidationPending] = useState(false);
+  const timingDiagnosticsDocumentRef = useRef(initialDocument);
+  const timingDiagnosticsRef = useRef<readonly TimingDiagnostic[]>([]);
   // #175: proves "View-only React rerender never runs a full Canonical
   // validation pass" mechanically rather than by inspection -- this counts
   // actual `validateCanonicalDocument` calls (the expensive whole-document
@@ -52,9 +55,17 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   // `publishRendererState` call) so an e2e test can assert the delta is 0
   // across Selection/Ribbon-tab/Zoom/Scroll/panel-resize.
   const validatorInvocationsRef = useRef(0);
-  const [validationDiagnostics, setValidationDiagnostics] = useState<readonly DocumentProblem[]>(() => { validatorInvocationsRef.current += 1; return [...validateCanonicalDocument(initialDocument), ...deriveTimingDiagnostics(initialDocument)]; });
+  const [validationDiagnostics, setValidationDiagnostics] = useState<readonly DocumentProblem[]>(() => {
+    validatorInvocationsRef.current += 1;
+    const timingDiagnostics = deriveTimingDiagnostics(initialDocument);
+    timingDiagnosticsRef.current = timingDiagnostics;
+    return [...validateCanonicalDocument(initialDocument), ...timingDiagnostics];
+  });
   const [runtimeDiagnostics, setRuntimeDiagnostics] = useState<readonly DocumentProblem[]>([]);
   const acceptedHandlerRef = useRef<AcceptedHandler | undefined>(undefined);
+  const openDiagnosticsGenerationRef = useRef(0);
+  const pendingOpenDiagnosticsRef = useRef<Readonly<{ generation: number; document: CanonicalDocument; revision: number }> | undefined>(undefined);
+  const pendingOpenDiagnosticsCompletionRef = useRef<(() => void) | undefined>(undefined);
 
   const dispatchResult = useCallback((result: CommandResult, context: AcceptedContext): CommandResult => {
     if (!result.ok) {
@@ -71,6 +82,11 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     }
     setSnapshot(result.snapshot);
     setHistory(runtime.session.current().historyState());
+    const interruptedOpenDiagnostics = pendingOpenDiagnosticsRef.current !== undefined;
+    openDiagnosticsGenerationRef.current += 1;
+    pendingOpenDiagnosticsRef.current = undefined;
+    const completePendingOpenDiagnostics = pendingOpenDiagnosticsCompletionRef.current;
+    pendingOpenDiagnosticsCompletionRef.current = undefined;
     // Keep Problems derived from the committed Canonical snapshot. Clearing
     // the previous list after every successful command made an unchanged or
     // newly introduced timing warning disappear until the user manually ran
@@ -79,17 +95,30 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     // #744: the DocumentSession already ran the ONE authoritative canonical validation for this commit (execute / batch / Undo / Redo)
     // and rejects any candidate with a problem, so an accepted snapshot has no canonical problems by construction. Do not rescan the
     // structure here (validatorInvocations stays put); only the timing diagnostics are derived again.
-    setValidationDiagnostics(deriveTimingDiagnostics(result.snapshot.document));
+    const nextDocument = result.snapshot.document;
+    const diagnosticsStartedAt = globalThis.performance.now();
+    const diagnosticsUpdate = interruptedOpenDiagnostics
+      ? { diagnostics: deriveTimingDiagnostics(nextDocument), recomputed: true }
+      : deriveTimingDiagnosticsIfInputsChanged(timingDiagnosticsDocumentRef.current, nextDocument, timingDiagnosticsRef.current, { timingDiagnosticsUnchanged: result.changeSet.timingDiagnosticsUnchanged === true });
+    const diagnosticsDurationMs = Math.max(0, globalThis.performance.now() - diagnosticsStartedAt);
+    // The reused diagnostic value is now valid for this accepted snapshot too;
+    // advance both owners so the next ChangeSet is compared with the actual
+    // previous document (including repeated presentation-only commands).
+    timingDiagnosticsDocumentRef.current = nextDocument;
+    if (diagnosticsUpdate.recomputed) timingDiagnosticsRef.current = diagnosticsUpdate.diagnostics;
+    setValidationDiagnostics(diagnosticsUpdate.diagnostics);
+    setValidationPending(false);
+    completePendingOpenDiagnostics?.();
     setProblem("");
     setRuntimeDiagnostics(withoutCommandRejectionDiagnostics);
-    acceptedHandlerRef.current?.(result, context);
+    acceptedHandlerRef.current?.(result, { ...context, diagnosticsDurationMs, diagnosticsRecomputed: diagnosticsUpdate.recomputed });
     return result;
   }, [runtime]);
 
-  const execute = useCallback((command: SemanticCommand) => dispatchResult(runtime.session.execute(command), { operation: command.type, command }), [dispatchResult, runtime]);
-  const executeBatch = useCallback((id: CommandId, commands: readonly SemanticCommand[]) => dispatchResult(runtime.session.executeBatch(id, commands), { operation: `batch:${id}`, batchId: id }), [dispatchResult, runtime]);
-  const undo = useCallback(() => dispatchResult(runtime.session.undo(), { operation: "history.undo" }), [dispatchResult, runtime]);
-  const redo = useCallback(() => dispatchResult(runtime.session.redo(), { operation: "history.redo" }), [dispatchResult, runtime]);
+  const execute = useCallback((command: SemanticCommand) => dispatchResult(runtime.session.execute(command), { operation: command.type, command, commandStartedAt: globalThis.performance.now() }), [dispatchResult, runtime]);
+  const executeBatch = useCallback((id: CommandId, commands: readonly SemanticCommand[]) => dispatchResult(runtime.session.executeBatch(id, commands), { operation: `batch:${id}`, batchId: id, commandStartedAt: globalThis.performance.now() }), [dispatchResult, runtime]);
+  const undo = useCallback(() => dispatchResult(runtime.session.undo(), { operation: "history.undo", commandStartedAt: globalThis.performance.now() }), [dispatchResult, runtime]);
+  const redo = useCallback(() => dispatchResult(runtime.session.redo(), { operation: "history.redo", commandStartedAt: globalThis.performance.now() }), [dispatchResult, runtime]);
   const attachAcceptedHandler = useCallback((handler: AcceptedHandler) => {
     acceptedHandlerRef.current = handler;
     return () => { if (acceptedHandlerRef.current === handler) acceptedHandlerRef.current = undefined; };
@@ -98,11 +127,37 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     const session = runtime.session.replace(document);
     setSnapshot(session.getSnapshot());
     setHistory(session.historyState());
-    const canonical = isTrustedParsedCanonicalDocument(document) ? document.document : document;
-    setValidationDiagnostics(deriveTimingDiagnostics(canonical));
+    const canonical = session.getSnapshot().document;
+    const generation = ++openDiagnosticsGenerationRef.current;
+    pendingOpenDiagnosticsCompletionRef.current = undefined;
+    pendingOpenDiagnosticsRef.current = { generation, document: canonical, revision: session.getSnapshot().revision };
+    setValidationDiagnostics([]);
+    setValidationPending(true);
     setProblem("");
     setRuntimeDiagnostics(diagnostics);
     return session;
+  }, [runtime]);
+  const runPendingTimingDiagnostics = useCallback((onComplete?: () => void) => {
+    const pending = pendingOpenDiagnosticsRef.current;
+    if (!pending) { onComplete?.(); return; }
+    pendingOpenDiagnosticsCompletionRef.current = onComplete;
+    // Run in a later task so the browser can paint the already-published
+    // primary presentation before the full-document Problems derivation.
+    globalThis.setTimeout(() => {
+      if (pendingOpenDiagnosticsRef.current?.generation !== pending.generation || openDiagnosticsGenerationRef.current !== pending.generation) return;
+      const current = runtime.session.snapshot();
+      if (current.revision !== pending.revision || current.document !== pending.document) return;
+      const diagnostics = deriveTimingDiagnostics(pending.document);
+      const latest = runtime.session.snapshot();
+      if (pendingOpenDiagnosticsRef.current?.generation !== pending.generation || latest.revision !== pending.revision || latest.document !== pending.document) return;
+      pendingOpenDiagnosticsRef.current = undefined;
+      pendingOpenDiagnosticsCompletionRef.current = undefined;
+      timingDiagnosticsDocumentRef.current = pending.document;
+      timingDiagnosticsRef.current = diagnostics;
+      setValidationDiagnostics(diagnostics);
+      setValidationPending(false);
+      onComplete?.();
+    }, 0);
   }, [runtime]);
   const publishHistory = useCallback(() => setHistory(runtime.session.current().historyState()), [runtime]);
   // The one production entry point that actually re-runs the validator on
@@ -110,8 +165,17 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   // update above only clears/resets the array.
   const validateDocument = useCallback((document: CanonicalDocument) => {
     validatorInvocationsRef.current += 1;
-    const problems = [...validateCanonicalDocument(document), ...deriveTimingDiagnostics(document)];
+    const timingDiagnostics = deriveTimingDiagnostics(document);
+    const problems = [...validateCanonicalDocument(document), ...timingDiagnostics];
+    timingDiagnosticsDocumentRef.current = document;
+    timingDiagnosticsRef.current = timingDiagnostics;
+    openDiagnosticsGenerationRef.current += 1;
+    pendingOpenDiagnosticsRef.current = undefined;
+    const completePendingOpenDiagnostics = pendingOpenDiagnosticsCompletionRef.current;
+    pendingOpenDiagnosticsCompletionRef.current = undefined;
     setValidationDiagnostics(problems);
+    setValidationPending(false);
+    completePendingOpenDiagnostics?.();
     return problems;
   }, []);
 
@@ -121,6 +185,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     history,
     problem,
     validationDiagnostics,
+    validationPending,
     runtimeDiagnostics,
     diagnostics: [...validationDiagnostics, ...runtimeDiagnostics] as readonly DocumentProblem[],
     execute,
@@ -129,6 +194,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     redo,
     attachAcceptedHandler,
     replaceSession,
+    runPendingTimingDiagnostics,
     publishHistory,
     setProblem,
     setValidationDiagnostics,

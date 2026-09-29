@@ -1,14 +1,16 @@
 import { expect, test } from "@playwright/test";
 
 // #746: Group creation is visible in the Tree header and in Bottom, both through the same createTransactionGroup command; one History entry each; Undo removes it.
-for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
-  test(`Tree and Bottom expose visible Group creation at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+test("Tree and Bottom expose visible Group creation at both supported viewports", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Workspace preset").selectOption("transaction");
+  const status = () => page.evaluate(() => [document.querySelector("[data-testid='history-status']")?.textContent, document.querySelector("[data-testid='dirty-status']")?.textContent]);
+
+  for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
     await page.setViewportSize(viewport);
-    await page.goto("/");
-    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
-    await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
-    await page.getByLabel("Workspace preset").selectOption("transaction");
-    const status = () => page.evaluate(() => [document.querySelector("[data-testid='history-status']")?.textContent, document.querySelector("[data-testid='dirty-status']")?.textContent]);
     const tree = page.getByTestId("add-transaction-group-tree-visible");
     await expect(tree).toBeVisible();
     const box = (await tree.boundingBox())!;
@@ -26,5 +28,5 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await page.keyboard.press("Control+z");
     await page.keyboard.press("Control+z");
     await expect.poll(groupCount).toBe(groups);
-  });
-}
+  }
+});

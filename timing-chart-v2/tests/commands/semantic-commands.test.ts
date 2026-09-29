@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import { parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId } from "@timing-chart-v2/schema";
+import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-chart-v2/core";
+import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
+import { valueChangeIdAllocator } from "../../packages/commands/src/value-change-id-allocator.js";
 
 const commandId = (id: string) => id as CommandId;
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -55,6 +57,7 @@ describe("pure Semantic Command planning", () => {
     const document = { ...source, timeline: { ...source.timeline, end: 10, cycleCount: 10 }, signals: [{ ...clock, generator: { ...clock.generator, start: 4, period: 2, suppressedPeriods: [1] } }, ...source.signals.slice(1)] };
     const valid = planCommand(document, { id: commandId("cmd_delayed_suppression_valid"), type: "signal.updateClockGenerator", signalId: clock.id, generator: { ...clock.generator, start: 4, period: 2, suppressedPeriods: [0, 2] } });
     expect(valid.ok).toBe(true);
+    if (valid.ok) expect(valid.changeSet.timingDiagnosticsUnchanged).toBe(true);
     const invalid = planCommand(document, { id: commandId("cmd_delayed_suppression_invalid"), type: "signal.updateClockGenerator", signalId: clock.id, generator: { ...clock.generator, start: 4, period: 2, suppressedPeriods: [3] } });
     expect(invalid).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_SUPPRESSED_PERIODS" }] });
   });
@@ -159,6 +162,45 @@ describe("pure Semantic Command planning", () => {
     expect(session.getSnapshot().document.layout).toEqual(source.layout);
     expect(session.redo().ok).toBe(true);
     expect(session.getSnapshot().document.layout).toEqual(layout);
+  });
+
+  it("updates timing check categories through one undoable document command", () => {
+    const source = canonicalFixture();
+    const data = source.signals[1]!;
+    if (data.type !== "bus") throw new Error("fixture DATA must be a bus");
+    const document = { ...source, signals: source.signals.map((signal) => signal.id === data.id ? { ...data, values: [{ start: 1, value: "X" }] } : signal) };
+    const session = new CommandHistorySession(document);
+    expect(deriveTimingDiagnostics(session.getSnapshot().document).some((item) => item.category === "unknown-value")).toBe(true);
+
+    const result = session.execute({ id: commandId("cmd_check_settings"), type: "document.updateCheckSettings", checkSettings: { enabledCategories: ["protocol"] } });
+    expect(result).toMatchObject({ ok: true, changeSet: {} });
+    expect(session.getSnapshot().document.checkSettings).toEqual({ enabledCategories: ["protocol"] });
+    expect(deriveTimingDiagnostics(session.getSnapshot().document).some((item) => item.category === "unknown-value")).toBe(false);
+    expect(session.historyState()).toMatchObject({ undoDepth: 1, redoDepth: 0, dirty: true });
+    const reopened = parseDocument(serializeValidatedCanonicalDocument(session.getSnapshot().document));
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect(reopened.document.checkSettings).toEqual({ enabledCategories: ["protocol"] });
+
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.checkSettings).toEqual(document.checkSettings);
+    expect(deriveTimingDiagnostics(session.getSnapshot().document).some((item) => item.category === "unknown-value")).toBe(true);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.checkSettings).toEqual({ enabledCategories: ["protocol"] });
+  });
+
+  it("rejects unsupported or duplicate check categories and canonicalizes all-enabled defaults", () => {
+    const source = canonicalFixture();
+    const session = new CommandHistorySession(source);
+    const invalidUnknown = session.execute({ id: commandId("cmd_check_unknown"), type: "document.updateCheckSettings", checkSettings: { enabledCategories: ["made-up"] } });
+    expect(invalidUnknown).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_CHECK_SETTINGS" }] });
+    const invalidDuplicate = session.execute({ id: commandId("cmd_check_duplicate"), type: "document.updateCheckSettings", checkSettings: { enabledCategories: ["protocol", "protocol"] } });
+    expect(invalidDuplicate).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_CHECK_SETTINGS" }] });
+    const invalidMissingSettings = session.execute({ id: commandId("cmd_check_missing"), type: "document.updateCheckSettings" } as never);
+    expect(invalidMissingSettings).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_CHECK_SETTINGS" }] });
+    const allEnabled = session.execute({ id: commandId("cmd_check_all"), type: "document.updateCheckSettings", checkSettings: { enabledCategories: [...TIMING_DIAGNOSTIC_CATEGORIES] } });
+    expect(allEnabled).toMatchObject({ ok: false, reason: "no-op" });
+    expect(session.getSnapshot().document.checkSettings).toEqual(source.checkSettings);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
   });
 
   it("updates Legend presentation without touching waveform domains", () => {
@@ -431,6 +473,73 @@ describe("pure Semantic Command planning", () => {
     expect(finalValues.find((change) => change.start === 2)?.id).not.toBe(createdId);
   });
 
+  it("allocates a value-change ID without scanning unrelated Signals", () => {
+    const source = canonicalFixture();
+    const target = source.signals.find((signal) => signal.id === "sig_data");
+    if (!target || target.type === "clock" || target.type === "commentRow") throw new Error("Expected a target value Signal in the fixture.");
+    const unrelated = { ...target, id: "sig_other" as SignalId, display: { ...target.display, name: "Other" } };
+    const values = new Proxy(unrelated.values, {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator) throw new Error("Unrelated Signal values were scanned during ID allocation.");
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const document = {
+      ...source,
+      signals: [...source.signals, { ...unrelated, values }],
+    } as CanonicalDocument;
+
+    const planned = planCommand(document, { id: commandId("cmd_value_id_scope"), type: "signal.updateValue", signalId: "sig_data" as SignalId, start: 2, value: "1F" });
+
+    expect(planned.ok).toBe(true);
+    if (planned.ok) {
+      const data = planned.document.signals.find((signal) => signal.id === "sig_data");
+      expect(data && "values" in data ? data.values.find((change) => change.start === 2)?.id : undefined).toMatch(/^value_sig_data_/);
+    }
+
+    const session = new CommandHistorySession(canonicalFixture());
+    expect(session.execute({ id: commandId("cmd_value_id_roundtrip"), type: "signal.updateValue", signalId: "sig_data" as SignalId, start: 2, value: "1F" }).ok).toBe(true);
+    const generatedId = (session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data") as ValueSignal).values.find((change) => change.start === 2)?.id;
+    expect(generatedId).toMatch(/^value_sig_data_/);
+    expect(session.undo().ok).toBe(true);
+    expect(session.redo().ok).toBe(true);
+    const redoneId = (session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data") as ValueSignal).values.find((change) => change.start === 2)?.id;
+    expect(redoneId).toBe(generatedId);
+    const reopened = parseDocument(serializeValidatedCanonicalDocument(session.getSnapshot().document));
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect((reopened.document.signals.find((signal) => signal.id === "sig_data") as ValueSignal).values.find((change) => change.start === 2)?.id).toBe(generatedId);
+  });
+
+  it("keeps generated value-change IDs unique across repeated edits to one Signal", () => {
+    const source = canonicalFixture();
+    const session = new CommandHistorySession({ ...source, timeline: { ...source.timeline, cycleCount: 128, end: 128 } });
+    const initialSignal = source.signals.find((item) => item.id === "sig_data");
+    const initialValueCount = initialSignal && "values" in initialSignal ? initialSignal.values.length : 0;
+    const allocationSpy = vi.spyOn(valueChangeIdAllocator, "allocate");
+    const ids: string[] = [];
+    try {
+      for (let cycle = 10; cycle < 110; cycle += 1) {
+        const result = session.execute({ id: commandId(`cmd_repeated_value_${cycle}`), type: "signal.updateValue", signalId: "sig_data" as SignalId, start: cycle, value: cycle % 2 ? "1F" : "0F" });
+        expect(result.ok).toBe(true);
+        const signal = session.getSnapshot().document.signals.find((item) => item.id === "sig_data");
+        if (!signal || signal.type === "clock" || signal.type === "commentRow") throw new Error("Expected the edited Value Signal.");
+        ids.push(signal.values.find((change) => change.start === cycle)?.id ?? "");
+      }
+      expect(allocationSpy.mock.results.map((result) => result.value.valuesVisited)).toEqual([initialValueCount, ...new Array(99).fill(0)]);
+    } finally {
+      allocationSpy.mockRestore();
+    }
+    expect(new Set(ids).size).toBe(100);
+    expect(ids.every((id) => /^value_sig_data_\d+$/.test(id))).toBe(true);
+    const saved = serializeValidatedCanonicalDocument(session.getSnapshot().document);
+    expect(parseDocument(saved)).toMatchObject({ ok: true });
+    for (let index = 0; index < ids.length; index += 1) expect(session.undo().ok).toBe(true);
+    for (let index = 0; index < ids.length; index += 1) expect(session.redo().ok).toBe(true);
+    const reopened = parseDocument(saved);
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect(reopened.document.signals.find((item) => item.id === "sig_data")).toEqual(session.getSnapshot().document.signals.find((item) => item.id === "sig_data"));
+  });
+
   it("keeps reorder and visibility out of WaveDrom and Local Geometry domains", () => {
     const source = canonicalFixture();
     const reorder = planCommand(source, { id: commandId("cmd_move"), type: "signal.move", signalId: "sig_data" as SignalId, targetGroupId: "grp_main" as GroupId, index: 0 });
@@ -447,6 +556,7 @@ describe("pure Semantic Command planning", () => {
       expect(visibility.changeSet.waveSemantics).toBeUndefined();
       expect(visibility.changeSet.geometryLocal).toBeUndefined();
       expect(visibility.changeSet.rowPresentation).toEqual(["sig_data"]);
+      expect(visibility.changeSet.timingDiagnosticsUnchanged).toBe(true);
     }
   });
 
@@ -466,12 +576,14 @@ describe("pure Semantic Command planning", () => {
     if (formatted.ok) {
       expect(formatted.document.signals[1]).toMatchObject({ name: "DATA_OUT", role: "output", displayFormat: "binary", display: { name: "DATA_OUT" } });
       expect(formatted.changeSet).toMatchObject({ rowPresentation: ["sig_data"], waveSemantics: ["sig_data"] });
+      expect(formatted.changeSet.timingDiagnosticsUnchanged).toBeUndefined();
     }
     const inspectorProperties = planCommand(source, { id: commandId("cmd_inspector_properties"), type: "signal.updateProperties", signalId: "sig_data" as SignalId, name: "DATA_INSPECTED", role: "output", signalType: "bus", width: 16, displayFormat: "binary", visible: false, displayAlign: "center", displayOverflow: "wrap", displayStyle: { color: "#114477" } });
     expect(inspectorProperties.ok).toBe(true);
     if (inspectorProperties.ok) {
       expect(inspectorProperties.document.signals[1]).toMatchObject({ name: "DATA_INSPECTED", role: "output", type: "bus", width: 16, displayFormat: "binary", display: { name: "DATA_INSPECTED", visible: false, align: "center", overflow: "wrap", style: { color: "#114477" } } });
       expect(inspectorProperties.changeSet).toMatchObject({ rowPresentation: ["sig_data"], waveSemantics: ["sig_data"], geometryLocal: ["sig_data"] });
+      expect(inspectorProperties.changeSet.timingDiagnosticsUnchanged).toBeUndefined();
     }
     const spacing = planCommand(source, { id: commandId("cmd_signal_spacing"), type: "signal.updateProperties", signalId: "sig_data" as SignalId, name: "DATA", role: "output", spacingBefore: 3, spacingAfter: 5 });
     expect(spacing.ok).toBe(true);
@@ -480,6 +592,7 @@ describe("pure Semantic Command planning", () => {
       expect(spacing.changeSet).toMatchObject({ rowPresentation: ["sig_data"], geometryScreenY: ["sig_data"] });
       expect(spacing.changeSet.waveSemantics).toBeUndefined();
       expect(spacing.changeSet.geometryLocal).toBeUndefined();
+      expect(spacing.changeSet.timingDiagnosticsUnchanged).toBe(true);
     }
     const retyped = planCommand(source, { id: commandId("cmd_retype"), type: "signal.updateProperties", signalId: "sig_data" as SignalId, name: "DATA", role: "internal", signalType: "binary" });
     expect(retyped.ok).toBe(false);
@@ -550,6 +663,23 @@ describe("command execution and atomic history", () => {
     expect(invalidId).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_COMMAND_ID" }] });
     expect(session.getSnapshot()).toBe(before);
     expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 1, dirty: false });
+  });
+
+  it("atomically rejects sized bus literals that exceed the Signal width", () => {
+    const source = canonicalFixture();
+    const bus = source.signals.find((signal) => signal.id === "sig_data");
+    if (!bus || bus.type !== "bus") throw new Error("Canonical fixture must contain its Bus Signal.");
+    const narrowBus = { ...bus, width: 4, values: [{ start: 0, value: "0" }, { start: 2, value: "F" }] };
+    const document = { ...source, signals: source.signals.map((signal) => signal.id === bus.id ? narrowBus : signal) };
+    const session = new CommandHistorySession(document);
+    const before = session.getSnapshot();
+    const historyBefore = session.historyState();
+
+    const rejected = session.execute({ id: commandId("cmd_sized_bus_overflow"), type: "signal.updateValue", signalId: bus.id, start: 0, value: "8'hFF" });
+
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "BUS_WIDTH_OVERFLOW" }] });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState()).toEqual(historyBefore);
   });
 
   it("keeps Event data values and Pulse logic values type-safe on atomic edits", () => {
@@ -743,11 +873,17 @@ describe("command execution and atomic history", () => {
     const result = session.execute({ id: commandId("cmd_edge_numbers"), type: "signal.updateEdgeCounter", signalId: "sig_clk" as SignalId, edgeCounter: { show: true, mode: "rising", startNumber: 4, countFrom: "signal-start", labelEvery: 2, position: "above", offset: { x: 1, y: -8 } } });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.changeSet).toEqual({ rowPresentation: ["sig_clk"], edgeCounter: ["sig_clk"] });
+      expect(result.changeSet).toEqual({ rowPresentation: ["sig_clk"], edgeCounter: ["sig_clk"], timingDiagnosticsUnchanged: true });
       expect(result.changeSet.waveSemantics).toBeUndefined();
       expect(result.changeSet.geometryLocal).toBeUndefined();
     }
     expect(session.getSnapshot().document.signals[0]).toMatchObject({ edgeCounter: { show: true, mode: "rising", labelEvery: 2 } });
+  });
+
+  it("marks reset-semantics edits as unrelated to derived timing diagnostics", () => {
+    const planned = planCommand(canonicalFixture(), { id: commandId("reset_semantics_diagnostics_reuse"), type: "signal.updateResetSemantics", signalId: "sig_data" as SignalId, resetSemantics: { polarity: "active-low", synchronization: "synchronous", assertCycle: 0, deassertCycle: 1 } });
+    expect(planned.ok).toBe(true);
+    if (planned.ok) expect(planned.changeSet.timingDiagnosticsUnchanged).toBe(true);
   });
 
   it("atomically rejects invalid Edge Counter enums and booleans", () => {
@@ -804,6 +940,36 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.annotations[0]?.to).not.toHaveProperty("offset");
     expect(session.execute({ id: commandId("cmd_ann_delete"), type: "annotation.delete", annotationId: annotation.id }).ok).toBe(true);
     expect(session.getSnapshot().document.annotations).toEqual([]);
+  });
+
+  it("validates and persists annotation label layout through one undoable semantic update", () => {
+    const annotation: Annotation = { id: "ann_label_layout" as AnnotationId, type: "callout", label: "A long callout label", visible: true, anchor: { cycle: 2, point: "cycle-center" } };
+    const session = new CommandHistorySession({ ...canonicalFixture(), annotations: [annotation] });
+    const initial = session.getSnapshot();
+    const initialHistory = session.historyState().undoDepth;
+    const invalid = session.execute({ id: commandId("ann_label_layout_invalid"), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: true, style: { labelMaxWidth: 23 } });
+    expect(invalid).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_ANNOTATION_STYLE", path: "$.style.labelMaxWidth" }] });
+    expect(session.getSnapshot()).toEqual(initial);
+    const invalidLineHeight = session.execute({ id: commandId("ann_label_line_height_invalid"), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: true, style: { lineHeight: 3.1 } });
+    expect(invalidLineHeight).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_ANNOTATION_STYLE", path: "$.annotations[0].style.lineHeight" }] });
+    expect(session.getSnapshot()).toEqual(initial);
+    const invalidPlacement = session.execute({ id: commandId("ann_label_placement_invalid"), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: true, labelPlacement: "diagonal" as never });
+    expect(invalidPlacement).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_ANNOTATION_STYLE", path: "$.labelPlacement" }] });
+    expect(session.getSnapshot()).toEqual(initial);
+
+    const applied = session.execute({ id: commandId("ann_label_layout_apply"), type: "annotation.updateProperties", annotationId: annotation.id, label: annotation.label, visible: true, labelPlacement: "end", style: { labelWrap: true, labelMaxWidth: 48, lineHeight: 1.8 } });
+    expect(applied).toMatchObject({ ok: true, changeSet: { annotationStyle: [annotation.id] } });
+    expect(session.getSnapshot().document.annotations[0]?.style).toEqual({ labelWrap: true, labelMaxWidth: 48, lineHeight: 1.8 });
+    expect(session.getSnapshot().document.annotations[0]?.labelPlacement).toBe("end");
+    expect(session.historyState().undoDepth).toBe(initialHistory + 1);
+    const serialized = serializeValidatedCanonicalDocument(session.getSnapshot().document);
+    const reopened = parseDocument(serialized);
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect(reopened.document.annotations[0]).toMatchObject({ labelPlacement: "end", style: { labelWrap: true, labelMaxWidth: 48, lineHeight: 1.8 } });
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.annotations[0]).toEqual(annotation);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.annotations[0]).toMatchObject({ labelPlacement: "end", style: { labelWrap: true, labelMaxWidth: 48, lineHeight: 1.8 } });
   });
 
   it("round-trips Marker/Bracket presentation after SemanticCommand edits", () => {
@@ -874,6 +1040,48 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.annotationGroups?.[0]?.annotationIds).toEqual([other.id]);
   });
 
+  it("replaces an Annotation collection in one action while reconciling groups by stable ID", () => {
+    const a: Annotation = { id: "ann_import_a" as AnnotationId, type: "text", label: "A", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 1, point: "cycle-start" } };
+    const b: Annotation = { id: "ann_import_b" as AnnotationId, type: "text", label: "B", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 2, point: "cycle-start" } };
+    const c: Annotation = { id: "ann_import_c" as AnnotationId, type: "text", label: "C", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 3, point: "cycle-start" } };
+    const groupA = { id: "ann_import_group_a" as never, name: "Primary", annotationIds: [a.id, b.id] };
+    const groupC = { id: "ann_import_group_c" as never, name: "Secondary", annotationIds: [c.id] };
+    const initial = { ...canonicalFixture(), annotations: [a, b, c], annotationGroups: [groupA, groupC] };
+    const session = new CommandHistorySession(initial);
+    const unchangedImport = session.execute({ id: commandId("annotation_collection_same"), type: "annotation.replaceCollection", annotations: [a, b, c] });
+    expect(unchangedImport).toMatchObject({ ok: false, reason: "no-op" });
+    expect(session.getSnapshot().document).toEqual(initial);
+    expect(session.historyState().undoDepth).toBe(0);
+    const importedA = { ...a, label: "A updated" };
+    const importedC = c;
+    const added: Annotation = { id: "ann_import_new" as AnnotationId, type: "text", label: "New", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 4, point: "cycle-start" } };
+
+    const accepted = session.execute({ id: commandId("annotation_collection_replace"), type: "annotation.replaceCollection", annotations: [importedA, importedC, added] });
+    expect(accepted.ok).toBe(true);
+    expect(session.historyState().undoDepth).toBe(1);
+    const replaced = session.getSnapshot().document;
+    expect(replaced.annotations).toEqual([importedA, importedC, added]);
+    expect(replaced.annotationGroups).toEqual([
+      { ...groupA, annotationIds: [a.id] },
+      groupC,
+    ]);
+    expect(replaced.annotationGroups?.[0]).toMatchObject({ id: groupA.id, name: groupA.name });
+    const saved = serializeValidatedCanonicalDocument(replaced);
+    const reopened = parseDocument(saved);
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect(reopened.document).toEqual(replaced);
+
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(initial);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(replaced);
+
+    const duplicate = session.execute({ id: commandId("annotation_collection_duplicate"), type: "annotation.replaceCollection", annotations: [added, added] });
+    expect(duplicate).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "DUPLICATE_ID" }] });
+    expect(session.getSnapshot().document).toEqual(replaced);
+    expect(session.historyState().undoDepth).toBe(1);
+  });
+
   it("updates Measurement profile atomically and restores it through Undo/Redo", () => {
     const source = canonicalFixture();
     const annotation: Annotation = { id: "ann_measurement_profile" as AnnotationId, type: "measurement", label: "Measurement", visible: true, start: { signalId: "sig_data" as SignalId, cycle: 1, point: "cycle-start" }, end: { signalId: "sig_data" as SignalId, cycle: 4, point: "cycle-end" } };
@@ -886,5 +1094,23 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document).toEqual(before);
     expect(session.redo().ok).toBe(true);
     expect(session.getSnapshot().document.annotations[0]?.measurement).toEqual({ profile: "custom", anchorKind: "ratio" });
+  });
+
+  it("rejects out-of-range Measurement lanes without changing document or History", () => {
+    const source = canonicalFixture();
+    const annotation: Annotation = { id: "ann_measurement_lane" as AnnotationId, type: "measurement", label: "Measurement", visible: true, start: { signalId: "sig_data" as SignalId, cycle: 1, point: "cycle-start" }, end: { signalId: "sig_data" as SignalId, cycle: 4, point: "cycle-end" } };
+    const session = new CommandHistorySession({ ...source, annotations: [annotation] });
+    const before = session.getSnapshot().document;
+    const accepted = session.execute({ id: commandId("cmd_measurement_lane_max"), type: "annotation.updateMeasurement", annotationId: annotation.id, profile: "cycle", anchorKind: "threshold", start: 0, end: 1, layout: { ...DEFAULT_MEASUREMENT_LAYOUT, lane: MAX_MEASUREMENT_LANE } });
+    expect(accepted.ok).toBe(true);
+    expect(session.getSnapshot().document.annotations[0]?.measurementLayout?.lane).toBe(MAX_MEASUREMENT_LANE);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(before);
+
+    const historyBeforeReject = session.historyState();
+    const rejected = session.execute({ id: commandId("cmd_measurement_lane_too_large"), type: "annotation.updateMeasurement", annotationId: annotation.id, profile: "cycle", anchorKind: "threshold", start: 0, end: 1, layout: { ...DEFAULT_MEASUREMENT_LAYOUT, lane: MAX_MEASUREMENT_LANE + 1 } });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_LANE", path: "$.layout.lane" }] });
+    expect(session.getSnapshot().document).toEqual(before);
+    expect(session.historyState()).toEqual(historyBeforeReject);
   });
 });

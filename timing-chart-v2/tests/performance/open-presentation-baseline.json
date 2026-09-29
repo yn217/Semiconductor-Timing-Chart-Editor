@@ -1,0 +1,14 @@
+{
+  "sourceCommit": "6f13683",
+  "measurement": "browser-internal data-open-phase-durations.presentation-ready from open-command-start",
+  "sampleCount": 3,
+  "percentileMethod": "nearest-rank (p95 is the max of three samples)",
+  "absoluteP95BudgetMsExclusive": 1000,
+  "maxMedianRegressionRatio": 1.5,
+  "maxP95RegressionRatio": 1.5,
+  "fixtures": {
+    "showcase-48x128": { "medianMs": 186.2, "p95Ms": 218.7 },
+    "perf-50x100": { "medianMs": 251.6, "p95Ms": 568 }
+  },
+  "limitations": "Approved-main reference is a three-open summary; its nearest-rank p95 is a max-of-three proxy, not a statistically robust tail estimate. The gate combines relative p50/p95 checks with the absolute <1000ms product SLO."
+}

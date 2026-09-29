@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 import { startInCycleSample } from "./cycle-startup.js";
 
 startInCycleSample(test);
@@ -29,9 +30,10 @@ test("Arrange controls distinguish selection/context-unavailable from a real dis
   // One annotation selected: Group/Align/Same width need a second member;
   // Ungroup correctly reports the selection isn't grouped at all.
   await page.getByLabel("Annotation type").selectOption("text");
+  const beforeFirst = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  const firstId = await host.locator("[data-role='annotation-owner']").last().getAttribute("data-annotation-id");
+  const firstId = await waitForCreatedAnnotationId(host, beforeFirst, "text");
   await expect(groupButton).toHaveAttribute("title", "Select at least 2 annotations");
   await openMenu();
   const menu = page.locator(".arrange-menu");
@@ -47,9 +49,10 @@ test("Arrange controls distinguish selection/context-unavailable from a real dis
   // Anchor the second Annotation on another Signal so the two labels do not overlap.
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid']").click();
   await page.getByLabel("Annotation type").selectOption("marker");
+  const beforeSecond = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  const secondId = await host.locator("[data-role='annotation-owner']").last().getAttribute("data-annotation-id");
+  const secondId = await waitForCreatedAnnotationId(host, beforeSecond, "marker");
   const first = host.locator(`[data-role='annotation-owner'][data-annotation-id='${firstId}']`);
   const second = host.locator(`[data-role='annotation-owner'][data-annotation-id='${secondId}']`);
   await first.locator("[data-role='annotation-label']").click();

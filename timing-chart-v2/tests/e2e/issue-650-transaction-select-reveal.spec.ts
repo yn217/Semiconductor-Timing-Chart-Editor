@@ -74,7 +74,7 @@ for (const viewportSize of [
     // cycle 0. The Tree is fixed outside this scroll owner, so its rows remain
     // genuinely clickable during the scroll.
     await page.mouse.move(scrollMetrics.rect.left + scrollMetrics.clientWidth / 2, scrollMetrics.rect.top + scrollMetrics.clientHeight / 2);
-    await page.mouse.wheel(scrollMetrics.maxScroll * 0.45, 0);
+    await page.mouse.wheel(scrollMetrics.maxScroll * 0.75, 0);
     await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(scrollMetrics.maxScroll * 0.35);
     const preMidSelection = await viewport.evaluate((element) => element.scrollLeft);
 

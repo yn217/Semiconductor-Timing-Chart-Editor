@@ -448,6 +448,29 @@ test("edits Measurement semantics with one history step and preserves them throu
   await expect(owner.locator("[data-role='annotation-handle'][data-anchor-transition-kind='ratio']")).toHaveCount(2);
 });
 
+test("Measurement lane UI rejects values above the document-safe maximum", async ({ page }) => {
+  await page.goto("/");
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await selectRequestSignal(page.getByTestId("cycle-surface"));
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  const toolbar = page.getByTestId("annotation-toolbar");
+  await toolbar.getByLabel("Annotation type").selectOption("measurement");
+  await toolbar.getByRole("button", { name: "Add annotation" }).click();
+  const editor = page.getByTestId("annotation-editor");
+  const lane = editor.getByLabel("Measurement lane");
+  await expect(lane).toHaveAttribute("max", "19999");
+  const historyBefore = await page.getByTestId("history-status").textContent();
+  await lane.fill("20000");
+  await expect(lane).toHaveAttribute("aria-invalid", "true");
+  await expect(editor.getByTestId("apply-measurement-semantics")).toBeDisabled();
+  await expect(page.getByTestId("history-status")).toHaveText(historyBefore ?? "");
+  await lane.fill("19999");
+  await expect(lane).toHaveAttribute("aria-invalid", "false");
+  await editor.getByTestId("apply-measurement-semantics").click();
+  await expect(page.getByTestId("history-status")).not.toHaveText(historyBefore ?? "");
+});
+
 test("cancels an active Annotation drag when New replaces the document", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");

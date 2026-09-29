@@ -12,6 +12,7 @@ import { expect, test } from "@playwright/test";
 
 const PORT = 4610;
 const TOKEN = "e2e-test-bridge-token";
+const EDITOR_TOKEN = "e2e-test-editor-transport-token";
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 async function waitForBridgeReady(): Promise<void> {
@@ -49,7 +50,7 @@ test.describe.configure({ mode: "serial" });
 let bridge: ChildProcess | undefined;
 
 test.beforeEach(async () => {
-  bridge = spawn(process.execPath, ["scripts/ai-bridge-server.mjs"], { env: { ...process.env, AI_BRIDGE_PORT: String(PORT), AI_BRIDGE_TOKEN: TOKEN }, stdio: "ignore" });
+  bridge = spawn(process.execPath, ["scripts/ai-bridge-server.mjs"], { env: { ...process.env, AI_BRIDGE_PORT: String(PORT), AI_BRIDGE_TOKEN: TOKEN, AI_BRIDGE_EDITOR_TOKEN: EDITOR_TOKEN }, stdio: "ignore" });
   await waitForBridgeReady();
 });
 
@@ -75,8 +76,32 @@ test("external AI setup guide exposes client configs without copying a bearer se
   await guide.getByLabel("MCP client setup").selectOption("claude-code");
   await expect(guide.getByTestId("ai-client-config")).toContainText('"type": "http"');
   await expect(guide.getByTestId("ai-client-config")).toContainText("${TIMING_CHART_MCP_TOKEN}");
-  await expect(guide.getByLabel("Bridge connection token")).toHaveAttribute("type", "password");
+  await expect(guide.getByLabel("Editor transport token")).toHaveAttribute("type", "password");
   await expect(guide).not.toContainText(TOKEN);
+});
+
+test("New retires the previous Editor session immediately instead of waiting for stale-session expiry", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected", { timeout: 10_000 });
+
+  const before = await callTool("list_editor_sessions");
+  const oldId = (JSON.parse(before.body.result!.content[0]!.text) as { editorSessionId: string }[])[0]!.editorSessionId;
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
+  const discard = page.getByTestId("unsaved-discard");
+  if (await discard.isVisible().catch(() => false)) await discard.click();
+  await expect.poll(async () => {
+    const listed = await callTool("list_editor_sessions");
+    return (JSON.parse(listed.body.result!.content[0]!.text) as { editorSessionId: string }[]).some((session) => session.editorSessionId === oldId);
+  }, { timeout: 5_000 }).toBe(false);
 });
 
 test("a test MCP client can connect, read the live document/selection, and request a view-only operation with zero Canonical/History/Dirty delta", async ({ page }) => {
@@ -91,7 +116,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
   await expect(page.getByTestId("ai-provider-status")).toContainText("external agent connected");
@@ -101,7 +126,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  const addedTools = ["set_selection", "propose_move_signal_group", "propose_delete_signal_group", "fit_selection", "propose_create_time_group", "propose_update_time_group", "propose_delete_time_group"];
+  const addedTools = ["set_selection", "propose_move_signal_group", "propose_delete_signal_group", "fit_selection", "propose_create_time_group", "propose_update_time_group", "propose_delete_time_group", "switch_mode", "open_panel", "set_visible_time_range"];
   expect(tools.filter((tool) => addedTools.includes(tool))).toEqual(addedTools);
   const existingTools = tools.filter((tool) => !addedTools.includes(tool));
   expect(existingTools).toEqual(["list_editor_sessions", "get_document_summary", "get_view_context", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_transaction", "get_transaction_groups", "get_transaction_phases", "get_linked_signals", "get_annotations", "get_bookmarks", "get_time_groups", "get_problems", "fit_all", "propose_edit", "propose_create_signal", "propose_rename_signal", "propose_update_signal", "propose_move_signal", "propose_insert_cycles", "propose_delete_cycles", "propose_move_range", "propose_duplicate_range", "propose_create_signal_group", "propose_rename_signal_group", "propose_create_transaction_group", "propose_rename_transaction_group", "propose_delete_transaction_group", "propose_create_transaction", "propose_update_transaction", "propose_move_transaction", "propose_resize_transaction", "propose_delete_transaction", "propose_add_phase", "propose_update_phase", "propose_delete_phase", "propose_link_signal", "propose_unlink_signal", "propose_create_bookmark", "propose_move_bookmark", "propose_update_bookmark", "propose_delete_bookmark", "propose_create_annotation", "propose_update_annotation", "propose_delete_annotation"]);
@@ -152,6 +177,19 @@ test("a test MCP client can connect, read the live document/selection, and reque
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+
+  const visibleRange = await callTool("set_visible_time_range", TOKEN, { startCycle: 40, endCycle: 80 });
+  expect(JSON.parse(visibleRange.body.result!.content[0]!.text)).toEqual({ applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 });
+  const showInspector = await callTool("open_panel", TOKEN, { panel: "inspector" });
+  expect(JSON.parse(showInspector.body.result!.content[0]!.text)).toEqual({ applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 });
+  await expect(page.getByTestId("inspector")).toBeVisible();
+  const switchMode = await callTool("switch_mode", TOKEN, { mode: "Transaction" });
+  expect(JSON.parse(switchMode.body.result!.content[0]!.text)).toEqual({ applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 });
+  const transactionView = await callTool("get_view_context");
+  expect(JSON.parse(transactionView.body.result!.content[0]!.text)).toEqual(expect.objectContaining({ mode: "Transaction" }));
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
 });
 
 test("get_transactions, get_annotations, get_bookmarks and get_problems are read-only semantic projections", async ({ page }) => {
@@ -163,7 +201,7 @@ test("get_transactions, get_annotations, get_bookmarks and get_problems are read
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
@@ -227,7 +265,7 @@ test("external Transaction+Phases+Signals proposal validates and applies as one 
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
   const beforeRevision = await host.getAttribute("data-canonical-revision");
@@ -278,7 +316,7 @@ test("propose_edit builds a Preview only -- it never auto-validates or auto-appl
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
@@ -315,7 +353,7 @@ test("propose_rename_signal targets a stable Signal ID and still requires human 
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
@@ -358,7 +396,7 @@ test("the Editor session and pending AI proposal survive Bottom tab switches, th
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
@@ -407,7 +445,7 @@ test("propose_create_signal uses a stable Group ID and remains a Preview until e
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
   const groupsResponse = await callTool("get_signal_groups");
@@ -435,7 +473,7 @@ test("Signal Group move and delete tools target stable IDs and apply only after 
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
@@ -483,7 +521,7 @@ test("an unauthorized propose_edit call (bad token) never reaches the document, 
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
@@ -503,7 +541,7 @@ test("rejects a request with an invalid token, and rejects any tool outside the 
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
@@ -518,7 +556,7 @@ test("rejects a request with an invalid token, and rejects any tool outside the 
   // client can't even reach the endpoints above being reachable at all
   // says nothing about *this specific page's* honesty, so also confirm
   // the Settings status itself never shows Connected for a bad token.
-  await settings.getByLabel("Bridge connection token").fill("wrong-token");
+  await settings.getByLabel("Editor transport token").fill("wrong-token");
   await settings.getByLabel("Enable external agents").uncheck();
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveText(/Disconnected/, { timeout: 10_000 });
@@ -540,7 +578,7 @@ test("bridge disconnect is surfaced truthfully, and the same tab recovers on its
   const ai = page.getByTestId("ai-operation-panel");
   await ai.getByTestId("ai-settings-toggle").click();
   const settings = ai.getByTestId("ai-settings");
-  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Editor transport token").fill(EDITOR_TOKEN);
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
@@ -548,7 +586,7 @@ test("bridge disconnect is surfaced truthfully, and the same tab recovers on its
   bridge = undefined;
   await expect(ai.getByTestId("ai-bridge-status")).not.toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 
-  bridge = spawn(process.execPath, ["scripts/ai-bridge-server.mjs"], { env: { ...process.env, AI_BRIDGE_PORT: String(PORT), AI_BRIDGE_TOKEN: TOKEN }, stdio: "ignore" });
+  bridge = spawn(process.execPath, ["scripts/ai-bridge-server.mjs"], { env: { ...process.env, AI_BRIDGE_PORT: String(PORT), AI_BRIDGE_TOKEN: TOKEN, AI_BRIDGE_EDITOR_TOKEN: EDITOR_TOKEN }, stdio: "ignore" });
   await waitForBridgeReady();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveAttribute("data-bridge-status", "connected-external-client", { timeout: 10_000 });
 

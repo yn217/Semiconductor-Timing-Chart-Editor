@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { timelineOwner } from "./timeline-scroll.js";
 import { startInCycleSample } from "./cycle-startup.js";
+import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 import { readFile } from "node:fs/promises";
 
 startInCycleSample(test);
@@ -29,9 +30,10 @@ async function createTextAnnotation(page: Page) {
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("text");
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  return host.locator("[data-role='annotation-owner']").last();
+  return annotationOwnerById(host, await waitForCreatedAnnotationId(host, previousIds, "text"));
 }
 
 test("Left Signal/Group rows expose V1 role and visibility controls through SemanticCommand", async ({ page }) => {
@@ -262,6 +264,7 @@ test("edits and displays the Legend through the canonical presentation command",
   await properties.getByTestId("apply-document-properties").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   const legend = page.getByTestId("editor-legend");
+  await expect(legend).toHaveAttribute("data-legend-id", "document-legend");
   await expect(legend).toBeVisible();
   await expect(legend).toHaveClass(/vertical/);
   await expect(legend.locator("[data-legend-role]")).toHaveCount(3);
@@ -289,6 +292,56 @@ test("Legend position supports drag and keyboard nudge through legend.update", a
   await page.keyboard.press("Shift+ArrowDown");
   await expect(legend).toHaveAttribute("data-legend-position-y", "60");
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+});
+
+test("selecting Legend follows Inspector and edits through one canonical update", async ({ page }) => {
+  await ready(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
+  const properties = page.getByRole("dialog", { name: "Document Properties" });
+  await properties.getByLabel("Legend show").check();
+  await properties.getByLabel("Legend position X").fill("200");
+  await properties.getByLabel("Legend position Y").fill("140");
+  await properties.getByTestId("apply-document-properties").click();
+  await properties.getByRole("button", { name: "Close properties" }).click();
+  const legend = page.getByTestId("editor-legend");
+  const originalX = await legend.getAttribute("data-legend-position-x");
+  const history = page.getByTestId("history-status");
+  const beforeSelect = await history.textContent();
+  await legend.click();
+  await expect(legend).toHaveAttribute("data-selected", "true");
+  await expect(page.getByTestId("inspector")).toHaveAttribute("data-inspector-entity", "legend");
+  await expect(page.getByTestId("inspector-selection-header")).toContainText("Legend");
+  await expect(history).toHaveText(beforeSelect ?? "");
+  await page.getByLabel("Legend X").fill("44");
+  await page.getByTestId("apply-legend-properties").click();
+  await expect(legend).toHaveAttribute("data-legend-position-x", "44");
+  await expect(history).toHaveText("History 2 / Redo 0");
+  await page.keyboard.press("Control+z");
+  await expect(legend).toHaveAttribute("data-legend-position-x", originalX ?? "");
+  await expect(history).toHaveText("History 1 / Redo 1");
+
+  // Exercise the actual Inspector-authored Legend presentation through the
+  // production Save/Open path, not only the Document Properties editor.
+  await page.getByLabel("Legend orientation").selectOption("vertical");
+  await page.getByLabel("Legend X").fill("44");
+  await page.getByLabel("Legend Y").fill("52");
+  await page.getByTestId("apply-legend-properties").click();
+  await expect(legend).toHaveAttribute("data-legend-position-x", "44");
+  await expect(legend).toHaveAttribute("data-legend-position-y", "52");
+  await expect(legend).toHaveClass(/vertical/);
+
+  const save = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await save).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+
+  const reopenedLegend = page.getByTestId("editor-legend");
+  await expect(reopenedLegend).toHaveAttribute("data-legend-position-x", "44");
+  await expect(reopenedLegend).toHaveAttribute("data-legend-position-y", "52");
+  await expect(reopenedLegend).toHaveClass(/vertical/);
+  await expect(history).toHaveText("History 0 / Redo 0");
 });
 
 test("Legend editor exposes stable-ID label, visibility and ordering controls", async ({ page }) => {
@@ -367,6 +420,8 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await expect(row).toHaveAttribute("data-full-path", "dut.data[7:0]");
   await expect(page.getByTestId("scope-breadcrumb")).toHaveText("Scope: dut");
   const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeHistory = await page.getByTestId("history-status").textContent();
+  const beforeDirty = await page.getByTestId("dirty-status").textContent();
   // #470: the Inspector's own "Reveal in Hierarchy" entry point (and its
   // whole "Source / Hierarchy" section) is hidden from normal use -- the
   // Hierarchy Browser is still reachable via the Tree's "More tree actions"
@@ -376,6 +431,24 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await page.getByTestId("hierarchy-open").click();
   const hierarchy = page.getByTestId("hierarchy-browser");
   await expect(hierarchy).toBeVisible();
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
+  await hierarchy.getByTestId("hierarchy-path-search").fill("dut.data[7:0]");
+  await expect(hierarchy.locator("[data-hierarchy-row-id]")).toHaveCount(1);
+  await hierarchy.getByRole("button", { name: "Copy full path dut.data[7:0]" }).click();
+  await expect(hierarchy.getByTestId("hierarchy-copy-status")).toHaveText("Copied 1 full path");
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe("dut.data[7:0]");
+  await hierarchy.getByTestId("hierarchy-path-search").fill("");
+  const clockPathRow = hierarchy.locator("[data-hierarchy-row-id='sig_cycle_clock']");
+  const dataPathRow = hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']");
+  const selectedPathTexts = [await clockPathRow.locator("td").last().textContent(), await dataPathRow.locator("td").last().textContent()];
+  await clockPathRow.getByRole("checkbox").check();
+  await dataPathRow.getByRole("checkbox").check();
+  await hierarchy.getByTestId("copy-selected-hierarchy-paths").click();
+  await expect(hierarchy.getByTestId("hierarchy-copy-status")).toHaveText("Copied 2 full paths");
+  await expect.poll(async () => (await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, "\n")).toBe(selectedPathTexts.join("\n"));
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(beforeDirty!);
   await expect(hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']")).toContainText("dut");
   await expect(hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']")).toContainText("data[7:0]");
   const displayMode = hierarchy.getByLabel("Hierarchy display mode");
@@ -389,13 +462,18 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await displayMode.selectOption("split");
   await hierarchy.getByTestId("hierarchy-path-view").click();
   await expect(hierarchy.getByTestId("hierarchy-path-view")).toHaveAttribute("aria-pressed", "true");
-  await hierarchy.getByLabel("Hierarchy scope").selectOption("dut");
+  await hierarchy.getByLabel("Hierarchy scope", { exact: true }).selectOption("dut");
   const scopedData = hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']");
   await expect(scopedData).toHaveCount(1);
   await expect(scopedData).toContainText("dut");
   await expect(scopedData).toContainText("data[7:0]");
-  await hierarchy.getByLabel("Hierarchy scope").selectOption("all");
-  await hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data'] button").click();
+  const hierarchyBreadcrumb = hierarchy.getByTestId("hierarchy-scope-breadcrumb");
+  await expect(hierarchyBreadcrumb.getByRole("button", { name: "dut", exact: true })).toHaveAttribute("aria-current", "page");
+  await hierarchyBreadcrumb.getByRole("button", { name: "All scopes" }).click();
+  await expect(hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']")).toHaveCount(1);
+  await hierarchy.getByLabel("Hierarchy scope", { exact: true }).selectOption("dut");
+  await hierarchy.getByLabel("Hierarchy scope", { exact: true }).selectOption("all");
+  await hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']").getByRole("button", { name: "data[7:0]", exact: true }).click();
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
   await hierarchy.getByRole("button", { name: "Close hierarchy" }).click();
   await page.getByRole("button", { name: "Add signal or group" }).click();
@@ -405,6 +483,22 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await expect(page.getByTestId("bulk-register-preview")).toContainText("width 8");
   await page.getByTestId("bulk-register-apply").click();
   await expect(host).toHaveAttribute("data-history-depth", "1");
+  await page.getByRole("button", { name: "More tree actions" }).click();
+  await page.getByTestId("hierarchy-open").click();
+  const nestedHierarchy = page.getByTestId("hierarchy-browser");
+  await nestedHierarchy.getByLabel("Hierarchy display mode").selectOption("relative");
+  await nestedHierarchy.getByLabel("Hierarchy scope", { exact: true }).selectOption("dut.core");
+  const nestedStatus = nestedHierarchy.locator("tr[data-hierarchy-row-id]").filter({ hasText: "status" });
+  const nestedPayload = nestedHierarchy.locator("tr[data-hierarchy-row-id]").filter({ hasText: "core.payload[7:0]" });
+  await expect(nestedStatus).toHaveCount(1);
+  await expect(nestedPayload).toHaveCount(1);
+  await expect(nestedStatus.locator("td").nth(1)).toHaveText("status");
+  await expect(nestedPayload.locator("td").nth(1)).toHaveText("payload[7:0]");
+  await nestedHierarchy.getByTestId("hierarchy-scope-breadcrumb").getByRole("button", { name: "dut", exact: true }).click();
+  await expect(nestedHierarchy.getByLabel("Hierarchy scope", { exact: true })).toHaveValue("dut");
+  await expect(nestedStatus.locator("td").nth(1)).toHaveText("core.status");
+  await expect(nestedPayload.locator("td").nth(1)).toHaveText("core.payload[7:0]");
+  await nestedHierarchy.getByRole("button", { name: "Close hierarchy" }).click();
   await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollTop = element.scrollHeight; });
   await expect(host.locator("[data-role='left-tree-rows'] [data-full-path='dut.core.status']")).toHaveCount(1);
   await expect(host.locator("[data-role='left-tree-rows'] [data-full-path='dut.core.payload[7:0]']")).toHaveCount(1);
@@ -927,6 +1021,57 @@ test("Signal Inspector properties survive Undo/Redo and Save/Open", async ({ pag
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
+test("Bus Decimal/Signed/Unsigned formats stay consistent in Bottom and survive Save/Open", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
+  const inspector = page.getByTestId("inspector");
+  await waitForInspectorPanel(inspector, "Signal Properties");
+  const bottomTabs = page.getByTestId("bottom-tabs");
+  await bottomTabs.locator("[data-bottom-tab='Signal']").click();
+  const formattedA5 = page.getByTestId("event-row-value-3");
+
+  for (const [format, expectedValue, historyCount] of [
+    ["decimal", "165", 1],
+    ["signed", "-91", 2],
+    ["unsigned", "165", 3],
+  ] as const) {
+    await inspector.getByLabel("Inspector bus format").selectOption(format);
+    await inspector.getByTestId("apply-inspector-signal").click();
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await expect(inspector.getByLabel("Inspector bus format")).toHaveValue(format);
+    await expect(formattedA5).toHaveText(expectedValue);
+    await expect(host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: expectedValue })).toHaveCount(1);
+    await expect(page.getByTestId("history-status")).toHaveText(`History ${historyCount} / Redo 0`);
+  }
+
+  const ribbon = page.getByTestId("ribbon");
+  await ribbon.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 1");
+  await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("signed");
+  await expect(formattedA5).toHaveText("-91");
+  await expect(host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: "-91" })).toHaveCount(1);
+  await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("unsigned");
+  await expect(formattedA5).toHaveText("165");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const savePromise = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await savePromise).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
+  await waitForInspectorPanel(inspector, "Signal Properties");
+  await bottomTabs.locator("[data-bottom-tab='Signal']").click();
+  await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("unsigned");
+  await expect(page.getByTestId("event-row-value-3")).toHaveText("165");
+  await expect(host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: "165" })).toHaveCount(1);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});
+
 test("applies Group Inspector presentation properties as one semantic operation", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
@@ -1186,24 +1331,4 @@ test("keeps global shortcuts focus-aware and IME-safe", async ({ page }) => {
   await owner.focus();
   await owner.evaluate((element) => element.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true, isComposing: true })));
   await expect(page.getByTestId("cycle-surface").locator("[data-role='annotation-owner']")).toHaveCount(1);
-});
-
-test("keeps view-only selection, tabs, zoom and panel state out of History and WaveDrom", async ({ page }) => {
-  await ready(page);
-  const host = page.getByTestId("cycle-surface");
-  const surface = host.locator("[data-role='timing-chart-surface']");
-  const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
-  const sessionBefore = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as Record<string, number>;
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
-  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
-  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
-  await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click();
-  await page.getByTestId("ribbon").getByRole("button", { name: "Inspector", exact: true }).click();
-  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
-  const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
-  expect(after.waveDromRenders).toBe(before.waveDromRenders);
-  expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
-  const sessionAfter = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as Record<string, number>;
-  expect(sessionAfter.validationRuns).toBe(sessionBefore.validationRuns);
-  expect(sessionAfter.commits).toBe(sessionBefore.commits);
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_RULES } from "@timing-chart-v2/core";
-import type { CanonicalDocument, Constraint, SignalId } from "@timing-chart-v2/schema";
+import { deriveTimingDiagnostics, deriveTimingDiagnosticsIfInputsChanged, TIMING_DIAGNOSTIC_RULES } from "@timing-chart-v2/core";
+import { parseDocument, serializeValidatedCanonicalDocument, type CanonicalDocument, type Constraint, type SignalId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 function withSignals(document: CanonicalDocument, signals: CanonicalDocument["signals"], constraints: readonly Constraint[] = document.constraints): CanonicalDocument {
@@ -14,14 +14,66 @@ function withSignals(document: CanonicalDocument, signals: CanonicalDocument["si
 }
 
 describe("derived timing diagnostics", () => {
+  it("reuses derived Problems for unrelated immutable edits and invalidates every diagnostic input", () => {
+    const source = canonicalFixture();
+    const current = withSignals(source, [source.signals[0]!, { ...source.signals[1]!, values: [{ start: 1, value: "X" }] }]);
+    const currentDiagnostics = deriveTimingDiagnostics(current);
+    const unrelatedEdit = { ...current, transactions: [...current.transactions] };
+    const reused = deriveTimingDiagnosticsIfInputsChanged(current, unrelatedEdit, currentDiagnostics);
+    expect(reused).toEqual({ diagnostics: currentDiagnostics, recomputed: false });
+
+    const changedSignalName = { ...current, signals: current.signals.map((signal) => signal.id === current.signals[1]!.id ? { ...signal, name: "RENAMED" } : signal) };
+    expect(deriveTimingDiagnosticsIfInputsChanged(current, changedSignalName, currentDiagnostics).recomputed).toBe(true);
+    const displayOnlySignalEdit = { ...current, signals: current.signals.map((signal) => signal.id === current.signals[1]!.id ? { ...signal, display: { ...signal.display, visible: false } } : signal) };
+    const displayOnly = deriveTimingDiagnosticsIfInputsChanged(current, displayOnlySignalEdit, currentDiagnostics, { timingDiagnosticsUnchanged: true });
+    expect(displayOnly).toEqual({ diagnostics: currentDiagnostics, recomputed: false });
+
+    const nonIterableSignals = new Proxy(displayOnlySignalEdit.signals, {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator || ["forEach", "map", "find", "findIndex", "filter", "some", "indexOf"].includes(String(property))) {
+          throw new Error(`unexpected full Signal scan through ${String(property)}`);
+        }
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    expect(deriveTimingDiagnosticsIfInputsChanged(current, { ...displayOnlySignalEdit, signals: nonIterableSignals }, currentDiagnostics, { timingDiagnosticsUnchanged: true }).recomputed).toBe(false);
+    const changedConstraints = { ...current, constraints: [...current.constraints] };
+    expect(deriveTimingDiagnosticsIfInputsChanged(current, changedConstraints, currentDiagnostics).recomputed).toBe(true);
+    const changedSettings = { ...current, checkSettings: { enabledCategories: ["protocol"] as const } };
+    expect(deriveTimingDiagnosticsIfInputsChanged(current, changedSettings, currentDiagnostics).recomputed).toBe(true);
+  });
+
   it("evaluates through a shared rule registry with stable semantic keys", () => {
-    expect(TIMING_DIAGNOSTIC_RULES.map((rule) => rule.id)).toEqual(["timing.unknown-value", "timing.handshake"]);
+    expect(TIMING_DIAGNOSTIC_RULES.map((rule) => rule.id)).toEqual(["timing.unknown-value", "timing.handshake", "timing.latency-range", "timing.latency"]);
     const source = canonicalFixture();
     const signal = { ...source.signals[1]!, values: [{ start: 1, value: "X" }] };
     const diagnostic = deriveTimingDiagnostics(withSignals(source, [source.signals[0]!, signal]))[0]!;
     expect(diagnostic.ruleId).toBe("timing.unknown-value");
     expect(diagnostic.stableKey).toContain(diagnostic.path);
   });
+
+  it("builds one reusable Signal ID/index context per full diagnostic pass", () => {
+    const document = canonicalFixture();
+    const expected = deriveTimingDiagnostics(document);
+    let signalCollectionPasses = 0;
+    const signals = new Proxy(document.signals, {
+      get(target, property, receiver) {
+        const value = Reflect.get(target, property, receiver);
+        if (property !== "forEach" && property !== "map") return value;
+        return (...args: unknown[]) => {
+          signalCollectionPasses += 1;
+          return Reflect.apply(value as (...items: unknown[]) => unknown, target, args);
+        };
+      },
+    });
+
+    expect(deriveTimingDiagnostics({ ...document, signals })).toEqual(expected);
+    // One pass builds O(1) lookup indexes shared by protocol rules; one pass
+    // evaluates per-Signal unknown-value diagnostics. Rules must not rebuild
+    // their own copies of the same whole-document indexes.
+    expect(signalCollectionPasses).toBe(2);
+  });
+
   it("reports explicit and implicit unknown values without changing the canonical validator contract", () => {
     const source = canonicalFixture();
     const data = source.signals[1]!;
@@ -44,6 +96,120 @@ describe("derived timing diagnostics", () => {
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]).toMatchObject({ code: "HANDSHAKE_DATA_UNSTABLE", path: "$.signals[3].values[1].start", objectId: payload.id });
     expect(deriveTimingDiagnostics({ ...document, signals: document.signals.map((signal) => signal.id === acknowledge.id ? { ...signal, values: [{ start: 0, value: 0 }] } : signal) })).toEqual(expect.arrayContaining([expect.objectContaining({ code: "HANDSHAKE_NO_ACK", objectId: constraint.id })]));
+  });
+
+  it("uses indexed acknowledge and stable-change windows without changing overlapping-request findings", () => {
+    const source = canonicalFixture();
+    const request = { ...source.signals[1]!, id: "sig_req_overlap" as SignalId, name: "REQ", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }, { start: 4, value: 0 }, { start: 6, value: 1 }] };
+    const acknowledge = { ...source.signals[1]!, id: "sig_ack_overlap" as SignalId, name: "ACK", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 10, value: 1 }] };
+    const payload = { ...source.signals[1]!, id: "sig_payload_overlap" as SignalId, name: "PAYLOAD", values: [{ start: 0, value: "00" }, { start: 3, value: "01" }, { start: 5, value: "10" }, { start: 7, value: "11" }, { start: 11, value: "00" }] };
+    const constraint: Constraint = { id: "constraint_handshake_overlap", type: "handshake", data: { requestSignalId: request.id, acknowledgeSignalId: acknowledge.id, stableSignalIds: [payload.id] } };
+    const document = withSignals(source, [source.signals[0]!, request, acknowledge, payload], [constraint]);
+    const findings = deriveTimingDiagnostics(document).filter((item) => item.code === "HANDSHAKE_DATA_UNSTABLE");
+    expect(findings).toHaveLength(4);
+    expect(findings.map((item) => item.path)).toEqual([
+      "$.signals[3].values[1].start",
+      "$.signals[3].values[2].start",
+      "$.signals[3].values[3].start",
+      "$.signals[3].values[3].start",
+    ]);
+  });
+
+  it("checks rising-edge latency ranges and diagnoses invalid references or bounds", () => {
+    const source = canonicalFixture();
+    const request = { ...source.signals[1]!, id: "sig_req" as SignalId, name: "REQ", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }, { start: 7, value: 0 }, { start: 9, value: 1 }] };
+    const acknowledge = { ...source.signals[1]!, id: "sig_ack" as SignalId, name: "ACK", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 4, value: 1 }, { start: 6, value: 0 }, { start: 11, value: 1 }] };
+    const valid: Constraint = { id: "constraint_latency", type: "latency-range", data: { requestSignalId: request.id, acknowledgeSignalId: acknowledge.id, minCycles: 1, maxCycles: 3 } };
+    const document = withSignals(source, [source.signals[0]!, request, acknowledge], [valid]);
+    expect(deriveTimingDiagnostics(document, { enabledCategories: ["protocol"] })).toEqual([]);
+
+    const lowerBoundaryAck = { ...acknowledge, values: [{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 6, value: 0 }, { start: 12, value: 1 }] };
+    expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, request, lowerBoundaryAck], [valid]), { enabledCategories: ["protocol"] })).toEqual([]);
+
+    const earlyThenValidAck = { ...acknowledge, values: [{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 4, value: 0 }, { start: 5, value: 1 }] };
+    const oneRequest = { ...request, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    const minTwo: Constraint = { ...valid, data: { ...valid.data, minCycles: 2 } };
+    expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, oneRequest, earlyThenValidAck], [minTwo]), { enabledCategories: ["protocol"] })).toEqual([]);
+    const onlyEarlyAck = { ...acknowledge, values: [{ start: 0, value: 0 }, { start: 3, value: 1 }] };
+    expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, oneRequest, onlyEarlyAck], [minTwo]), { enabledCategories: ["protocol"] })).toMatchObject([
+      { code: "LATENCY_RANGE_VIOLATION", sourceCycle: 2, message: expect.stringContaining("first later edge is 1 cycles after the request") },
+    ]);
+
+    const lateAck = { ...acknowledge, values: [{ start: 0, value: 0 }, { start: 6, value: 1 }] };
+    const lateDocument = withSignals(document, [source.signals[0]!, request, lateAck], [valid]);
+    expect(deriveTimingDiagnostics(lateDocument, { enabledCategories: ["protocol"] })).toMatchObject([
+      { code: "LATENCY_RANGE_VIOLATION", objectId: valid.id, path: "$.constraints[0].data.acknowledgeSignalId", sourceCycle: 2, ruleId: "timing.latency-range" },
+      { code: "LATENCY_RANGE_VIOLATION", objectId: valid.id, path: "$.constraints[0].data.acknowledgeSignalId", sourceCycle: 9, ruleId: "timing.latency-range" },
+    ]);
+    const lateFindings = deriveTimingDiagnostics(lateDocument, { enabledCategories: ["protocol"] });
+    expect(lateFindings[0]?.stableKey).not.toBe(lateFindings[1]?.stableKey);
+    expect(deriveTimingDiagnostics(lateDocument, { enabledCategories: ["protocol"] })).toEqual(lateFindings);
+    expect(deriveTimingDiagnostics(lateDocument, { enabledCategories: ["stability"] })).toEqual([]);
+
+    const invalid: Constraint = { ...valid, data: { ...valid.data, maxCycles: 0, acknowledgeSignalId: "missing" } };
+    expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, request], [invalid]), { enabledCategories: ["protocol"] })).toMatchObject([
+      { code: "LATENCY_RANGE_CONSTRAINT_INVALID", path: "$.constraints[0].data", objectId: invalid.id },
+    ]);
+    const invalidRef: Constraint = { ...valid, data: { ...valid.data, acknowledgeSignalId: "missing" } };
+    expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, request], [invalidRef]), { enabledCategories: ["protocol"] })).toMatchObject([
+      { code: "LATENCY_RANGE_CONSTRAINT_INVALID", path: "$.constraints[0].data.acknowledgeSignalId", objectId: invalidRef.id },
+    ]);
+    const clockRef: Constraint = { ...valid, data: { ...valid.data, acknowledgeSignalId: source.signals[0]!.id } };
+    expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, request], [clockRef]), { enabledCategories: ["protocol"] })).toMatchObject([
+      { code: "LATENCY_RANGE_CONSTRAINT_INVALID", path: "$.constraints[0].data.acknowledgeSignalId", objectId: clockRef.id },
+    ]);
+    const busRef: Constraint = { ...valid, data: { ...valid.data, acknowledgeSignalId: source.signals[1]!.id } };
+    expect(deriveTimingDiagnostics(withSignals(document, [source.signals[0]!, request, source.signals[1]!], [busRef]), { enabledCategories: ["protocol"] })).toMatchObject([
+      { code: "LATENCY_RANGE_CONSTRAINT_INVALID", path: "$.constraints[0].data.acknowledgeSignalId", objectId: busRef.id },
+    ]);
+  });
+
+  it("evaluates deterministic latency assertions and preserves them through Save/Open", () => {
+    const source = canonicalFixture();
+    const template = source.signals[1]!;
+    const request = { ...template, id: "sig_latency_req" as SignalId, name: "REQ", values: [{ start: 0, value: "0" }, { start: 2, value: "1" }] };
+    const acknowledge = { ...template, id: "sig_latency_ack" as SignalId, name: "ACK", values: [{ start: 0, value: "0" }, { start: 4, value: "1" }] };
+    const constraint: Constraint = { id: "constraint_latency" as never, type: "latency", data: { triggerSignalId: request.id, triggerEdge: "rising", responseSignalId: acknowledge.id, responseEdge: "rising", minCycles: 1, maxCycles: 3 } };
+    const document = withSignals(source, [source.signals[0]!, request, acknowledge], [constraint]);
+    expect(deriveTimingDiagnostics(document).filter((item) => item.ruleId === "timing.latency")).toEqual([]);
+    expect(deriveTimingDiagnostics(document, { enabledCategories: ["unknown-value"] }).some((item) => item.ruleId === "timing.latency")).toBe(false);
+    const saved = serializeValidatedCanonicalDocument(document);
+    const reopened = parseDocument(saved);
+    expect(reopened.ok, JSON.stringify(reopened)).toBe(true);
+    if (reopened.ok) {
+      expect(reopened.document.constraints).toEqual([constraint]);
+      expect(deriveTimingDiagnostics(reopened.document)).toEqual(deriveTimingDiagnostics(document));
+    }
+
+    const lateAck = { ...acknowledge, values: [{ start: 0, value: "0" }, { start: 6, value: "1" }] };
+    expect(deriveTimingDiagnostics(withSignals(source, [source.signals[0]!, request, lateAck], [constraint])).filter((item) => item.ruleId === "timing.latency")).toMatchObject([
+      { code: "LATENCY_OUT_OF_RANGE", objectId: constraint.id, entityId: lateAck.id, value: 4, expected: "1..3 cycles" },
+    ]);
+
+    const noAck = { ...acknowledge, values: [{ start: 0, value: "0" }] };
+    expect(deriveTimingDiagnostics(withSignals(source, [source.signals[0]!, request, noAck], [constraint])).filter((item) => item.ruleId === "timing.latency")).toMatchObject([
+      { code: "LATENCY_RESPONSE_MISSING", objectId: constraint.id, entityId: noAck.id, expected: "1..3 cycles" },
+    ]);
+
+    const invalid = { ...constraint, data: { ...constraint.data, maxCycles: 0 } };
+    expect(deriveTimingDiagnostics(withSignals(source, [source.signals[0]!, request, acknowledge], [invalid])).filter((item) => item.ruleId === "timing.latency")).toMatchObject([
+      { code: "LATENCY_CONSTRAINT_INVALID", objectId: invalid.id },
+    ]);
+  });
+
+  it("resolves latency diagnostic Signal paths from the shared ID index", () => {
+    const source = canonicalFixture();
+    const template = source.signals[1]!;
+    const request = { ...template, id: "sig_latency_index_req" as SignalId, name: "REQ", values: [{ start: 0, value: "0" }, { start: 2, value: "1" }] };
+    const acknowledge = { ...template, id: "sig_latency_index_ack" as SignalId, name: "ACK", values: [{ start: 0, value: "0" }] };
+    const constraint: Constraint = { id: "constraint_latency_index" as never, type: "latency", data: { triggerSignalId: request.id, triggerEdge: "rising", responseSignalId: acknowledge.id, responseEdge: "rising", minCycles: 1, maxCycles: 3 } };
+    const signals = [source.signals[0]!, request, acknowledge] as CanonicalDocument["signals"] & { indexOf: never };
+    Object.defineProperty(signals, "indexOf", { value: () => { throw new Error("latency diagnostics must not linearly search Signals"); } });
+
+    const diagnostics = deriveTimingDiagnostics(withSignals(source, signals, [constraint]), { enabledCategories: ["protocol"] });
+    expect(diagnostics).toMatchObject([
+      { code: "LATENCY_RESPONSE_MISSING", path: "$.signals[2]", entityId: acknowledge.id, objectId: constraint.id },
+    ]);
   });
 
   it("is deterministic and honors category selection", () => {

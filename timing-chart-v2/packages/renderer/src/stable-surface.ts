@@ -1,12 +1,13 @@
 import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
+import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, wrapAnnotationLabel } from "@timing-chart-v2/schema";
 import { LEFT_TREE_ICON_DOTS, LEFT_TREE_ICON_PATHS, LEFT_TREE_ICON_PUPIL, type LeftTreeIconPathName } from "./left-tree-icon-spec.js";
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
+import { groupBackgroundColor } from "./group-background.js";
 
 export function isWaveMountRequestFresh(request: Pick<WaveMountRequest, "documentEpoch" | "isFresh">, currentDocumentEpoch: number): boolean {
   return (request.documentEpoch === undefined || request.documentEpoch === currentDocumentEpoch) && (request.isFresh?.() ?? true);
 }
 
-const WAVE_BATCH_LIMIT = 8;
 const diagnosticEncoder = new TextEncoder();
 
 function signalTypeLabel(type: string | undefined): string {
@@ -104,6 +105,12 @@ interface Layers {
   readonly interactive: HTMLElement;
 }
 
+interface PendingWaveRequest {
+  readonly owner: HTMLElement;
+  readonly version: number;
+  readonly documentEpoch: number;
+}
+
 export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #provider: WaveformSurfaceProvider;
   readonly #leftRows = new Map<string, HTMLElement>();
@@ -118,9 +125,10 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #edgeCounterOwners = new Map<string, HTMLElement>();
   readonly #dirtyWaves = new Set<WaveSignalId>();
   readonly #waveVersions = new Map<WaveSignalId, number>();
-  readonly #wavePending = new Map<WaveSignalId, number>();
-  readonly #waveQueue = new Map<WaveSignalId, { readonly owner: HTMLElement; readonly version: number; readonly documentEpoch: number }>();
+  readonly #wavePending = new Map<WaveSignalId, PendingWaveRequest>();
+  readonly #waveQueue = new Map<WaveSignalId, PendingWaveRequest>();
   readonly #waveWindowRetryKeys = new Set<string>();
+  readonly #waveStaleRetryKeys = new Set<string>();
   readonly #waveRendersBySignal = new Map<WaveSignalId, number>();
   readonly #localGeometryBuildsBySignal = new Map<WaveSignalId, number>();
   #waveBatchScheduled = false;
@@ -232,10 +240,12 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#waveQueue.clear();
       this.#wavePending.clear();
       this.#waveWindowRetryKeys.clear();
+      this.#waveStaleRetryKeys.clear();
       this.#diagnostics = { ...this.#diagnostics, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, diagnosticMapPrunePasses: this.#diagnosticMapPrunePasses };
       for (const [signalId, owner] of this.#waveOwners) {
         owner.remove();
-        this.#provider.disposeWave(signalId);
+        if (this.#provider.retainWaveArtifact) this.#provider.retainWaveArtifact(signalId);
+        else this.#provider.disposeWave(signalId);
         this.#waveOwners.delete(signalId);
         this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
       }
@@ -263,6 +273,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#dirtyWaves.delete(signalId);
       this.#waveVersions.delete(signalId);
       this.#wavePending.delete(signalId);
+      const retryPrefix = `${this.#documentEpoch}:${signalId}:`;
+      for (const key of this.#waveStaleRetryKeys) if (key.startsWith(retryPrefix)) this.#waveStaleRetryKeys.delete(key);
       this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
     }
     const mounted = new Set(projection.mountedSignalIds);
@@ -290,6 +302,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       if (row) {
         owner.dataset.groupId = row.groupId;
         owner.dataset.groupStart = String(firstTimingRowByGroup.get(row.groupId) === row.rowId);
+        owner.dataset.pinnedRow = String(row.pinned === true);
         place(owner, row);
         const waveformStyle = parseWaveformStyle(row.displayStyle);
         applyWaveformStyle(owner, waveformStyle);
@@ -332,6 +345,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       const owner = this.#waveOwners.get(signalId);
       const row = rows.get(signalId);
       if (!owner || !row) continue;
+      owner.dataset.pinnedRow = String(row.pinned === true);
       applyWaveformStyle(owner, parseWaveformStyle(row.displayStyle));
     }
     this.#rowLayoutSource = projection.rowLayout;
@@ -477,6 +491,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#wavePending.clear();
     this.#waveQueue.clear();
     this.#waveWindowRetryKeys.clear();
+    this.#waveStaleRetryKeys.clear();
     this.#waveRendersBySignal.clear();
     this.#localGeometryBuildsBySignal.clear();
     this.#waveBatchScheduled = false;
@@ -503,11 +518,24 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
 
   #queueWave(signalId: WaveSignalId, owner: HTMLElement): void {
     const documentEpoch = this.#documentEpoch;
-    if (this.#wavePending.get(signalId) === documentEpoch) return;
-    this.#wavePending.set(signalId, documentEpoch);
+    // Signals first mounted after a document replacement were not part of
+    // that replacement's initial version seeding. Store their implicit
+    // version before creating the freshness closure; otherwise the request
+    // captures 0 while the map still returns undefined, so every offscreen
+    // row's first render is discarded as stale when it enters the viewport.
     const version = this.#waveVersions.get(signalId) ?? 0;
-    this.#waveQueue.set(signalId, { owner, version, documentEpoch });
+    if (!this.#waveVersions.has(signalId)) this.#waveVersions.set(signalId, version);
+    const pending = this.#wavePending.get(signalId);
+    if (pending?.owner === owner && pending.version === version && pending.documentEpoch === documentEpoch) return;
+    const request = { owner, version, documentEpoch };
+    this.#wavePending.set(signalId, request);
+    this.#waveQueue.set(signalId, request);
     this.#scheduleWaveBatch();
+  }
+
+  #isWavePending(signalId: WaveSignalId, request: PendingWaveRequest): boolean {
+    const pending = this.#wavePending.get(signalId);
+    return pending?.owner === request.owner && pending.version === request.version && pending.documentEpoch === request.documentEpoch;
   }
 
   #indexedRows(source: readonly RowLayoutEntry[], navigation: boolean): ReadonlyMap<string, RowLayoutEntry> {
@@ -543,7 +571,12 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   }
 
   async #flushWaveBatch(): Promise<void> {
-    const queued = [...this.#waveQueue.entries()].slice(0, WAVE_BATCH_LIMIT).map(([signalId, item]) => {
+    // The queue is populated only from viewport-mounted owners. Drain the
+    // complete current viewport batch together so rows do not remain blank
+    // for extra paint frames merely because the visible set exceeds an
+    // arbitrary per-frame count. Detached owners are still filtered below,
+    // and large-document providers retain their own cooperative frame yields.
+    const queued = [...this.#waveQueue.entries()].map(([signalId, item]) => {
       const configured = this.#provider.getSourceWindow?.(item.owner);
       const start = configured?.start ?? Number(item.owner.dataset.sourceWindowStart);
       const end = configured?.end ?? Number(item.owner.dataset.sourceWindowEnd);
@@ -558,7 +591,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       // Virtualized owners can leave the viewport after they were queued but
       // before their frame runs. Keep the signal dirty so a later remount can
       // render it, but never spend WaveDrom/geometry work on a detached owner.
-      if (this.#wavePending.get(request.signalId) === request.documentEpoch) this.#wavePending.delete(request.signalId);
+      if (this.#isWavePending(request.signalId, request)) this.#wavePending.delete(request.signalId);
+      if (request.documentEpoch === this.#documentEpoch && this.#canonicalSignalIdSet.has(request.signalId)) this.#dirtyWaves.add(request.signalId);
       return false;
     });
     if (requests.length === 0) return;
@@ -593,7 +627,16 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       const stale = !isWaveMountRequestFresh(request, this.#documentEpoch) || item?.stale === true;
       if (stale) {
         this.#diagnostics = { ...this.#diagnostics, staleWaveResultsDropped: this.#diagnostics.staleWaveResultsDropped + 1 };
-        if (this.#wavePending.get(request.signalId) === request.documentEpoch) this.#wavePending.delete(request.signalId);
+        if (this.#isWavePending(request.signalId, request)) this.#wavePending.delete(request.signalId);
+        if (request.documentEpoch === this.#documentEpoch && this.#canonicalSignalIdSet.has(request.signalId)) {
+          this.#dirtyWaves.add(request.signalId);
+          const currentOwner = this.#waveOwners.get(request.signalId);
+          const retryKey = `${request.documentEpoch}:${request.signalId}:${this.#waveVersions.get(request.signalId) ?? 0}`;
+          if (currentOwner?.isConnected && !this.#waveStaleRetryKeys.has(retryKey)) {
+            this.#waveStaleRetryKeys.add(retryKey);
+            this.#queueWave(request.signalId, currentOwner);
+          }
+        }
         continue;
       }
       if (item?.result) {
@@ -625,7 +668,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         request.owner.replaceChildren();
         request.owner.dataset.waveError = item?.error instanceof Error ? item.error.message : "Unknown waveform render failure";
       }
-      if (this.#wavePending.get(request.signalId) === request.documentEpoch) this.#wavePending.delete(request.signalId);
+      if (this.#isWavePending(request.signalId, request)) this.#wavePending.delete(request.signalId);
+      this.#waveStaleRetryKeys.delete(`${request.documentEpoch}:${request.signalId}:${request.version}`);
       const currentWindow = request.owner.isConnected ? this.#provider.getSourceWindow?.(request.owner) : undefined;
       const windowStillStale = currentWindow !== undefined &&
         (request.owner.dataset.renderedSourceWindowStart !== String(currentWindow.start) ||
@@ -787,14 +831,24 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   const label = document.createElement("span");
   label.dataset.role = "annotation-label";
   label.dataset.annotationLabel = "true";
-  label.textContent = primitive.label;
-  // #377: Callout (and any Annotation) supports real multi-line text --
-  // a plain <span> collapses embedded "\n" characters by default, so
-  // pre-wrap is required to actually render them as separate lines.
-  label.style.whiteSpace = "pre-wrap";
-  applyTextStyle(label, parseTextStyle(primitive.style));
+  const labelPresentation = parsePresentationStyle(primitive.style);
+  const textStyle = parseTextStyle(primitive.style);
+  label.textContent = labelPresentation.labelWrap === false ? primitive.label : wrapAnnotationLabel(primitive.label, labelPresentation.labelMaxWidth ?? ANNOTATION_LABEL_MAX_WIDTH.default, textStyle.fontSize);
+  // Authored label layout remains presentation-only but follows the same
+  // persisted style consumed by ExportScene. Missing fields retain the
+  // historical 180px wrap behavior.
+  label.style.whiteSpace = "pre";
+  label.style.maxWidth = "none";
+  applyTextStyle(label, textStyle);
   if (primitive.align) label.style.textAlign = primitive.align; else label.style.removeProperty("text-align");
-  label.style.transform = `translate(${(lineFirst.x + lineSecond.x) / 2 + (primitive.labelOffset?.x ?? 0)}px, ${(lineFirst.y + lineSecond.y) / 2 + (primitive.labelOffset?.y ?? (measurementPlacedBelow ? 14 : -14))}px)`;
+  const labelMidpoint = { x: (lineFirst.x + lineSecond.x) / 2, y: (lineFirst.y + lineSecond.y) / 2 };
+  const labelAnchor = primitive.labelPlacement === "start" ? first
+    : primitive.labelPlacement === "end" ? second
+    : labelMidpoint;
+  const labelBaseY = primitive.labelPlacement === "above" ? labelMidpoint.y - 14
+    : primitive.labelPlacement === "below" ? labelMidpoint.y + 14
+    : labelAnchor.y;
+  label.style.transform = `translate(${labelAnchor.x + (primitive.labelOffset?.x ?? 0)}px, ${labelBaseY + (primitive.labelOffset?.y ?? (measurementPlacedBelow ? 14 : -14))}px)`;
   // #378: a real (SVG, not Unicode) lock glyph -- `label` is already
   // `position: absolute` (center-columns.css), which makes it a containing
   // block for this glyph's own `position: absolute`, so it rides along with
@@ -1027,15 +1081,21 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     shell.dataset.name = row.name;
     shell.dataset.groupId = row.groupId;
     shell.dataset.groupName = row.groupName;
+    shell.dataset.pinnedRow = String(row.pinned === true);
+    if (surface === "left" && row.pinned) shell.setAttribute("aria-description", "Pinned Signal; remains visible while scrolling.");
+    else if (surface === "left") shell.removeAttribute("aria-description");
     if (surface === "left") {
       shell.setAttribute("role", "treeitem");
       shell.tabIndex = -1;
       shell.setAttribute("aria-level", "2");
     }
     const groupStyleApplies = groupStyleAppliesToSurface(row.groupStyle?.extend, surface);
-    if (groupStyleApplies && row.groupStyle?.showBackground && row.groupStyle.background) shell.style.setProperty("--group-background", row.groupStyle.background);
+    const rowBackground = groupStyleApplies && row.groupStyle?.showBackground
+      ? groupBackgroundColor(row.groupStyle.background, row.groupStyle.opacity)
+      : undefined;
+    if (rowBackground) shell.style.setProperty("--group-background", rowBackground);
     else shell.style.removeProperty("--group-background");
-    if (groupStyleApplies && row.groupStyle?.opacity !== undefined) shell.style.opacity = String(row.groupStyle.opacity); else shell.style.removeProperty("opacity");
+    shell.style.removeProperty("opacity");
     if (groupStyleApplies && row.groupStyle?.border) shell.style.setProperty("--group-border", row.groupStyle.border); else shell.style.removeProperty("--group-border");
     shell.dataset.groupStart = String(row.groupId !== previousGroupId);
     shell.dataset.instancePath = row.instancePath?.join(".") ?? "";
@@ -1156,7 +1216,10 @@ function syncGroupHeaderLayer(layer: HTMLElement, cache: Map<string, HTMLElement
       shell.setAttribute("aria-selected", "false");
     }
     const groupStyleApplies = groupStyleAppliesToSurface(header.groupStyle?.extend, surface);
-    if (groupStyleApplies && header.groupStyle?.showBackground && header.groupStyle.background) shell.style.setProperty("--group-background", header.groupStyle.background);
+    const headerBackground = groupStyleApplies && header.groupStyle?.showBackground
+      ? groupBackgroundColor(header.groupStyle.background, header.groupStyle.opacity)
+      : undefined;
+    if (headerBackground) shell.style.setProperty("--group-background", headerBackground);
     else shell.style.removeProperty("--group-background");
     if (groupStyleApplies && header.groupStyle?.border) shell.style.setProperty("--group-border", header.groupStyle.border);
     else shell.style.removeProperty("--group-border");
@@ -1216,13 +1279,15 @@ function populateGroupHeader(shell: HTMLElement, header: GroupHeaderLayoutEntry)
  * free-form-JsonObject convention as parseTextStyle below -- an absent or
  * malformed value here means "use the shape's existing CSS default",
  * never a thrown error or a garbage inline style. */
-function parsePresentationStyle(style: Record<string, unknown> | undefined): { readonly strokeWidth?: number | undefined; readonly strokeStyle?: "solid" | "dashed" | "dotted" | undefined; readonly fillColor?: string | undefined; readonly fillOpacity?: number | undefined } {
+function parsePresentationStyle(style: Record<string, unknown> | undefined): { readonly strokeWidth?: number | undefined; readonly strokeStyle?: "solid" | "dashed" | "dotted" | undefined; readonly fillColor?: string | undefined; readonly fillOpacity?: number | undefined; readonly labelWrap?: boolean | undefined; readonly labelMaxWidth?: number | undefined } {
   const source = style ?? {};
   return {
     strokeWidth: typeof source.strokeWidth === "number" && source.strokeWidth >= 1 && source.strokeWidth <= 8 ? source.strokeWidth : undefined,
     strokeStyle: source.strokeStyle === "solid" || source.strokeStyle === "dashed" || source.strokeStyle === "dotted" ? source.strokeStyle : undefined,
     fillColor: typeof source.fillColor === "string" && (source.fillColor === "none" || /^#[0-9a-f]{3,8}$/i.test(source.fillColor)) ? source.fillColor : undefined,
     fillOpacity: typeof source.fillOpacity === "number" && source.fillOpacity >= 0 && source.fillOpacity <= 1 ? source.fillOpacity : undefined,
+    labelWrap: typeof source.labelWrap === "boolean" ? source.labelWrap : undefined,
+    labelMaxWidth: typeof source.labelMaxWidth === "number" && source.labelMaxWidth >= ANNOTATION_LABEL_MAX_WIDTH.min && source.labelMaxWidth <= ANNOTATION_LABEL_MAX_WIDTH.max ? source.labelMaxWidth : undefined,
   };
 }
 
@@ -1236,7 +1301,7 @@ function parseTextStyle(style: Record<string, unknown> | undefined): { readonly 
     fontFamily: typeof source.fontFamily === "string" && source.fontFamily.length <= 120 ? source.fontFamily : undefined,
     fontSize: typeof source.fontSize === "number" && source.fontSize >= 6 && source.fontSize <= 48 ? source.fontSize : undefined,
     textDecoration: typeof source.textDecoration === "string" && /^(|underline|line-through|underline line-through)$/.test(source.textDecoration) ? source.textDecoration : undefined,
-    lineHeight: typeof source.lineHeight === "number" && source.lineHeight >= 1 && source.lineHeight <= 3 ? source.lineHeight : undefined,
+    lineHeight: typeof source.lineHeight === "number" && source.lineHeight >= ANNOTATION_LABEL_LINE_HEIGHT.min && source.lineHeight <= ANNOTATION_LABEL_LINE_HEIGHT.max ? source.lineHeight : undefined,
   };
 }
 

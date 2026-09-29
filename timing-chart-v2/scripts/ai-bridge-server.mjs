@@ -10,16 +10,18 @@
 // Transport: a minimal HTTP JSON-RPC 2.0 surface (MCP's "Streamable
 // HTTP" transport, simplified to one request per call rather than a
 // persistent SSE session) for the MCP client side, plus a short-poll
-// HTTP pair (/bridge/poll, /bridge/respond) the browser tab uses to pick
-// up pending tool calls and post results back. Every request on every
-// endpoint must carry the same bearer token this process generates (or
-// is given) at startup; anything else is rejected with 401.
+// HTTP pair (/bridge/poll, /bridge/respond, /bridge/close) the browser tab
+// uses to pick up pending tool calls and post results back. MCP clients and
+// Editor tabs use separate bearer tokens so an MCP client cannot impersonate
+// or evict an Editor session.
 import { createServer } from "node:http";
 import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 
 const HOST = "127.0.0.1"; // never 0.0.0.0 -- localhost-only by construction.
 const PORT = Number(process.env.AI_BRIDGE_PORT ?? 4610);
 const TOKEN = process.env.AI_BRIDGE_TOKEN ?? randomBytes(24).toString("hex");
+const EDITOR_TOKEN = process.env.AI_BRIDGE_EDITOR_TOKEN ?? randomBytes(24).toString("hex");
+if (TOKEN === EDITOR_TOKEN) throw new Error("AI_BRIDGE_TOKEN and AI_BRIDGE_EDITOR_TOKEN must be different credentials.");
 const POLL_TIMEOUT_MS = 25_000;
 const EDITOR_SESSION_TIMEOUT_MS = 15_000;
 
@@ -28,7 +30,7 @@ const EDITOR_SESSION_TIMEOUT_MS = 15_000;
 // tools/call rejects any name not in this map before it is ever queued
 // for the browser.
 const READ_TOOLS = new Set(["get_document_summary", "get_view_context", "get_selection", "get_viewport_snapshot", "get_signals", "get_signal", "get_signal_groups", "get_transactions", "get_transaction", "get_transaction_groups", "get_transaction_phases", "get_linked_signals", "get_annotations", "get_bookmarks", "get_time_groups", "get_problems"]);
-const VIEW_ONLY_TOOLS = new Set(["fit_all", "fit_selection", "set_selection"]);
+const VIEW_ONLY_TOOLS = new Set(["fit_all", "fit_selection", "set_selection", "switch_mode", "open_panel", "set_visible_time_range"]);
 // #395 PR4: propose_edit is the one tool that reaches into document-changing
 // territory, but it still only ever builds a Preview (identical to the user
 // typing the same query and clicking Preview themselves) -- it never
@@ -87,6 +89,9 @@ const TOOL_CATALOG = [
   { name: "propose_delete_annotation", description: "Propose deleting the Annotation identified by stable annotationId. Creates a Preview only; a human must Validate and Apply it.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, annotationId: { type: "string", minLength: 1 } }, required: ["editorSessionId", "annotationId"], additionalProperties: false } },
   { name: "fit_all", description: "View-only: fit the complete timeline in the explicitly targeted Editor session. Canonical/History/Dirty delta is always 0.", inputSchema: sessionSchema },
   { name: "fit_selection", description: "View-only: fit the currently selected source-time range in the explicitly targeted Editor session. Canonical/History/Dirty delta is always 0.", inputSchema: sessionSchema },
+  { name: "switch_mode", description: "View-only: switch the explicitly targeted Editor session between Cycle, Transaction, and Combined modes. Canonical/History/Dirty delta is always 0.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, mode: { type: "string", enum: ["Cycle", "Transaction", "Combined"] } }, required: ["editorSessionId", "mode"], additionalProperties: false } },
+  { name: "open_panel", description: "View-only: show the Inspector or Bottom panel in the explicitly targeted Editor session. Canonical/History/Dirty delta is always 0.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, panel: { type: "string", enum: ["inspector", "bottom"] } }, required: ["editorSessionId", "panel"], additionalProperties: false } },
+  { name: "set_visible_time_range", description: "View-only: fit the source-cycle interval [startCycle,endCycle) using the shared timeline geometry/navigation owner. Canonical/History/Dirty delta is always 0.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, startCycle: { type: "integer", minimum: 0 }, endCycle: { type: "integer", minimum: 1 } }, required: ["editorSessionId", "startCycle", "endCycle"], additionalProperties: false } },
   { name: "propose_edit", description: "Submit a document-changing edit request to the explicitly targeted Editor session as a Preview only -- it is never auto-validated or auto-applied. A human must open the AI Assistant panel and manually Validate + Apply it.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, query: { type: "string", minLength: 1 } }, required: ["editorSessionId", "query"], additionalProperties: false } },
   { name: "propose_create_signal", description: "Propose creating a typed Signal in the Signal Group identified by stable groupId. initialValue is validated against the Signal type. Creates a Preview only; a human must Validate and Apply it.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, name: { type: "string", minLength: 1 }, type: { type: "string", enum: ["binary", "logic", "bus", "state", "event", "pulse"] }, role: { type: "string", enum: ["input", "output", "internal"] }, groupId: { type: "string", minLength: 1 }, width: { type: "integer", minimum: 1 }, initialValue: { type: ["string", "number"] } }, required: ["editorSessionId", "name", "type", "role", "groupId"], additionalProperties: false } },
   { name: "propose_create_transaction_group", description: "Propose a Transaction Group with a stable ID and optional semantic color. Preview only; a human must Validate and Apply it.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, name: { type: "string", minLength: 1 }, color: { type: "string", pattern: "^#[0-9a-fA-F]{6}$" } }, required: ["editorSessionId", "name"], additionalProperties: false } },
@@ -97,18 +102,18 @@ const TOOL_CATALOG = [
   { name: "propose_delete_time_group", description: "Propose deleting the Time Group identified by stable timeGroupId. Existing SemanticCommand behavior promotes child groups and removes owned resume anchors; creates a Preview only.", inputSchema: { type: "object", properties: { editorSessionId: sessionInput, timeGroupId: { type: "string", minLength: 1 } }, required: ["editorSessionId", "timeGroupId"], additionalProperties: false } },
 ];
 
-function timingSafeTokenEquals(candidate) {
+function timingSafeTokenEquals(candidate, expected = TOKEN) {
   if (typeof candidate !== "string" || candidate.length === 0) return false;
   const a = Buffer.from(candidate);
-  const b = Buffer.from(TOKEN);
+  const b = Buffer.from(expected);
   if (a.length !== b.length) return false;
   return timingSafeEqual(a, b);
 }
 
-function bearerToken(req, url) {
+function bearerToken(req) {
   const header = req.headers.authorization;
   if (typeof header === "string" && header.startsWith("Bearer ")) return header.slice("Bearer ".length);
-  return url.searchParams.get("token") ?? undefined;
+  return undefined;
 }
 
 // Polling remains immediate, but calls are bound to an explicit Editor
@@ -183,12 +188,11 @@ function registerEditorSession(body) {
   }
   if (typeof documentTitle !== "string" || documentTitle.length > 256) throw new Error("Editor poll requires a documentTitle string up to 256 characters.");
   const previousSessionId = sessionByTab.get(tabId);
-  if (previousSessionId && previousSessionId !== editorSessionId) removeEditorSession(previousSessionId);
   const existing = editorSessions.get(editorSessionId);
   if (existing && (existing.tabId !== tabId || existing.documentId !== documentId)) {
-    removeEditorSession(editorSessionId);
     throw staleSessionError(editorSessionId);
   }
+  if (previousSessionId && previousSessionId !== editorSessionId) removeEditorSession(previousSessionId);
   const count = (value) => Number.isSafeInteger(value) && value >= 0 ? value : 0;
   const session = existing ?? { tabId, editorSessionId, documentId, createdAt: Date.now() };
   session.documentTitle = documentTitle;
@@ -289,7 +293,8 @@ const server = createServer(async (req, res) => {
   applyCors(res);
   if (req.method === "OPTIONS") { res.writeHead(204); res.end(); return; }
   const url = new URL(req.url ?? "/", `http://${HOST}:${PORT}`);
-  if (!timingSafeTokenEquals(bearerToken(req, url))) { sendJson(res, 401, { error: "Missing or invalid bridge token." }); return; }
+  const expectedToken = url.pathname === "/mcp" ? TOKEN : ["/bridge/poll", "/bridge/respond", "/bridge/close"].includes(url.pathname) ? EDITOR_TOKEN : undefined;
+  if (!expectedToken || !timingSafeTokenEquals(bearerToken(req), expectedToken)) { sendJson(res, 401, { error: "Missing or invalid bridge token for this endpoint." }); return; }
 
   if (req.method === "POST" && url.pathname === "/mcp") {
     let body;
@@ -351,8 +356,9 @@ server.listen(PORT, HOST, () => {
   const listeningPort = typeof address === "object" && address ? address.port : PORT;
   // eslint-disable-next-line no-console
   console.log(`[ai-bridge] listening on http://${HOST}:${listeningPort} (localhost-only)`);
-  console.log(`[ai-bridge] token: ${TOKEN}`);
-  console.log("[ai-bridge] paste this token into the Editor's AI Settings > Agent Connection to authorize a browser tab.");
+  console.log(`[ai-bridge] MCP client token: ${TOKEN}`);
+  console.log(`[ai-bridge] Editor transport token: ${EDITOR_TOKEN}`);
+  console.log("[ai-bridge] Use the MCP client token only in your MCP client; paste the Editor transport token into AI Settings.");
 });
 
-export { HOST, PORT, TOKEN, server };
+export { HOST, PORT, TOKEN, EDITOR_TOKEN, server };

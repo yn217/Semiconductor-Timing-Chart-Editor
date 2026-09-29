@@ -2,6 +2,7 @@ import type { CanonicalSnapshot, ValidationProblem } from "@timing-chart-v2/core
 import type {
   CanonicalDocument,
   Layout,
+  CheckSettings,
   AnnotationId,
   Annotation,
   AnnotationGroup,
@@ -35,6 +36,7 @@ import type {
   TransactionTimeScale,
   CommentRow,
   ValueSignal,
+  EnumDefinition,
 } from "@timing-chart-v2/schema";
 
 export type SignalValue = string | number;
@@ -43,7 +45,10 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "document.replace"; document: CanonicalDocument }>
   | Readonly<{ id: CommandId; type: "document.updateMetadata"; title: string; header: CanonicalDocument["document"]["header"]; footer: CanonicalDocument["document"]["footer"] }>
   | Readonly<{ id: CommandId; type: "document.updateLayout"; layout: Layout }>
+  | Readonly<{ id: CommandId; type: "document.updateCheckSettings"; checkSettings: CheckSettings }>
   | Readonly<{ id: CommandId; type: "legend.update"; legend: CanonicalDocument["legend"] }>
+  | Readonly<{ id: CommandId; type: "enum.create"; definition: EnumDefinition }>
+  | Readonly<{ id: CommandId; type: "enum.update"; enumId: string; name: string; entries: EnumDefinition["entries"] }>
   | Readonly<{ id: CommandId; type: "enum.rename"; enumId: string; name: string }>
   | Readonly<{ id: CommandId; type: "enum.delete"; enumId: string }>
   | Readonly<{ id: CommandId; type: "signal.create"; signal: Signal; targetGroupId: GroupId; index: number }>
@@ -57,7 +62,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "signal.replaceValue"; signalId: SignalId; fromStart: number; start: number; value: SignalValue; comment?: string }>
   | Readonly<{ id: CommandId; type: "signal.moveValue"; signalId: SignalId; fromStart: number; toStart: number }>
   | Readonly<{ id: CommandId; type: "signal.removeValue"; signalId: SignalId; start: number }>
-  | Readonly<{ id: CommandId; type: "signal.updateProperties"; signalId: SignalId; name: string; role: SignalRole; signalType?: ValueSignal["type"]; width?: number; displayFormat?: ValueSignal["displayFormat"]; visible?: boolean; displayAlign?: Signal["display"]["align"]; displayOverflow?: Signal["display"]["overflow"]; displayStyle?: Signal["display"]["style"]; spacingBefore?: number; spacingAfter?: number }>
+  | Readonly<{ id: CommandId; type: "signal.updateProperties"; signalId: SignalId; name: string; role: SignalRole; signalType?: ValueSignal["type"]; width?: number; displayFormat?: ValueSignal["displayFormat"]; enumId?: string; clearEnumId?: boolean; visible?: boolean; displayAlign?: Signal["display"]["align"]; displayOverflow?: Signal["display"]["overflow"]; displayStyle?: Signal["display"]["style"]; spacingBefore?: number; spacingAfter?: number }>
   | Readonly<{ id: CommandId; type: "signal.convertClock"; signalId: SignalId; targetType: "binary" | "bus" | "state" }>
   | Readonly<{ id: CommandId; type: "commentRow.create"; commentRow: CommentRow; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "commentRow.update"; signalId: SignalId; title: string; body: string; spacingBefore?: number; spacingAfter?: number; displayStyle?: CommentRow["display"]["style"] }>
@@ -121,12 +126,13 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "timeline.setReferenceEdge"; edge: "rising" | "falling" }>
   | Readonly<{ id: CommandId; type: "annotation.updateAnchor"; annotationId: AnnotationId; anchor: SemanticAnchor }>
   | Readonly<{ id: CommandId; type: "annotation.create"; annotation: Annotation }>
+  | Readonly<{ id: CommandId; type: "annotation.replaceCollection"; annotations: readonly Annotation[] }>
   | Readonly<{ id: CommandId; type: "annotation.delete"; annotationId: AnnotationId }>
   | Readonly<{ id: CommandId; type: "annotation.setAnchor"; annotationId: AnnotationId; field: "anchor" | "start" | "end" | "from" | "to"; anchor: SemanticAnchor }>
   | Readonly<{ id: CommandId; type: "annotation.translateOffsets"; annotationId: AnnotationId; delta: PixelOffset }>
   | Readonly<{ id: CommandId; type: "annotation.resetOffsets"; annotationId: AnnotationId }>
   | Readonly<{ id: CommandId; type: "annotation.updateLabelOffset"; annotationId: AnnotationId; labelOffset: PixelOffset }>
-  | Readonly<{ id: CommandId; type: "annotation.updateProperties"; annotationId: AnnotationId; label: string; visible: boolean; color?: string; lineType?: Annotation["lineType"]; arrowhead?: Annotation["arrowhead"]; sourceSignalId?: SignalId; traceOffsetCycles?: number; opacity?: number; labelOffset?: Annotation["labelOffset"]; style?: Annotation["style"]; measurement?: Annotation["measurement"] }>
+  | Readonly<{ id: CommandId; type: "annotation.updateProperties"; annotationId: AnnotationId; label: string; visible: boolean; color?: string; lineType?: Annotation["lineType"]; arrowhead?: Annotation["arrowhead"]; sourceSignalId?: SignalId; traceOffsetCycles?: number; opacity?: number; labelOffset?: Annotation["labelOffset"]; labelPlacement?: Annotation["labelPlacement"]; style?: Annotation["style"]; measurement?: Annotation["measurement"] }>
   | Readonly<{ id: CommandId; type: "annotation.updateVerticalSpan"; annotationId: AnnotationId; verticalSpan: NonNullable<Annotation["verticalSpan"]> }>
   | Readonly<{ id: CommandId; type: "annotation.setPositionMode"; annotationId: AnnotationId; positionMode: "cycle-snap" | "free" }>
   | Readonly<{ id: CommandId; type: "annotation.updateMeasurement"; annotationId: AnnotationId; profile: "cycle" | "30-70" | "10-90" | "20-80" | "50%" | "custom"; anchorKind: "threshold" | "ratio"; start: number; end: number; layout?: Annotation["measurementLayout"] }>
@@ -141,6 +147,8 @@ export type SemanticCommand =
 
 export interface ChangeSet {
   readonly fullDocumentReplace?: boolean;
+  /** The command changes presentation only and leaves derived timing Problems unchanged. */
+  readonly timingDiagnosticsUnchanged?: true;
   readonly rowOrder?: readonly RowId[];
   readonly rowPresentation?: readonly RowId[];
   readonly edgeCounter?: readonly SignalId[];

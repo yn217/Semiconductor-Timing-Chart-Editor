@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildExportScene, DeterministicExportService, renderExportSvg } from "@timing-chart-v2/export";
-import type { AnnotationId, BookmarkId, CanonicalDocument, ClockSignal, CommentRow, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
+import { MAX_MEASUREMENT_LANE, type AnnotationId, type BookmarkId, type CanonicalDocument, type ClockSignal, type CommentRow, type GroupId, type SignalId, type TimeGroupId, type TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 function scaleFixture(signalCount: number): CanonicalDocument {
@@ -110,11 +110,41 @@ describe("deterministic document export", () => {
     expect(svg).toContain('lengthAdjust="spacingAndGlyphs"');
   });
 
+  it("exports authored Annotation line spacing using the same font-size multiplier as the live overlay", () => {
+    const base = canonicalFixture();
+    const annotation = { id: "ann_line_spacing" as AnnotationId, type: "callout" as const, label: "first\nsecond", visible: true, anchor: { cycle: 2, point: "cycle-center" as const }, style: { fontSize: 12, lineHeight: 1.8 } };
+    const svg = renderExportSvg(buildExportScene({ ...base, annotations: [annotation] }, { format: "svg", scope: "document" }));
+    expect(svg).toContain('<tspan x="');
+    expect(svg).toContain('dy="21.6">second</tspan>');
+  });
+
+  it("exports authored Annotation label placement at the selected semantic endpoint", () => {
+    const base = canonicalFixture();
+    const signalId = base.signals[1]!.id;
+    const annotation = { id: "ann_label_end" as AnnotationId, type: "range" as const, label: "End", visible: true, start: { signalId, cycle: 2, point: "cycle-start" as const }, end: { signalId, cycle: 7, point: "cycle-start" as const }, labelOffset: { x: 0, y: 0 }, labelPlacement: "end" as const };
+    const scene = buildExportScene({ ...base, annotations: [annotation] }, { format: "svg", scope: "document" });
+    const projected = scene.annotations.find((item) => item.id === annotation.id)!;
+    expect(renderExportSvg(scene)).toContain(`<text x="${projected.x2}" y="${projected.y2}"`);
+  });
+
   it("exports the canonical editable Legend position", () => {
     const document = { ...canonicalFixture(), legend: { ...canonicalFixture().legend, show: true, position: { x: 36, y: 48 } } };
     const scene = buildExportScene(document, { format: "svg", scope: "document" });
     expect(scene.legendPosition).toEqual({ x: 36, y: 48 });
-    expect(renderExportSvg(scene)).toContain('<g data-layer="legend" transform="translate(36 48)"');
+    const svg = renderExportSvg(scene);
+    expect(svg).toContain('<g data-layer="legend" data-orientation="horizontal" transform="translate(36 48)"');
+    expect(svg).toContain('<text x="12" y="12">');
+    expect(svg).not.toContain(`<text x="12" y="${scene.height - 12}">`);
+  });
+
+  it("preserves vertical Legend orientation in SVG export", () => {
+    const base = canonicalFixture();
+    const labels = ["Input", "Output"];
+    const document = { ...base, legend: { ...base.legend, show: true, orientation: "vertical" as const, usedRolesOnly: false, items: labels.map((label, order) => ({ id: `legend-${order}`, role: order === 0 ? "input" as const : "output" as const, label, visible: true, order })) } };
+    const svg = renderExportSvg(buildExportScene(document, { format: "svg", scope: "document" }));
+    expect(svg).toContain('<g data-layer="legend" data-orientation="vertical"');
+    expect(svg).toContain('<text x="12" y="12">Input</text>');
+    expect(svg).toContain('<text x="12" y="26">Output</text>');
   });
 
   it("exports Group Band presentation and derived per-object spacing", () => {
@@ -242,6 +272,17 @@ describe("deterministic document export", () => {
     expect(first).toContain('data-role="measurement-marker" data-marker-side="start" data-marker-kind="arrow"');
     expect(first).toContain('data-role="measurement-extension" data-extension-side="start"');
     expect(first).toContain('data-measurement-profile="custom"');
+  });
+
+  it("keeps maximum authored Measurement lane coordinates finite and rejects hostile values", () => {
+    const base = canonicalFixture();
+    const signal = base.signals[1]!;
+    const measurement = { id: "ann_max_lane" as AnnotationId, type: "measurement" as const, label: "maximum lane", visible: true, measurement: { profile: "cycle" as const, anchorKind: "threshold" as const }, measurementLayout: { startMarker: "bar" as const, endMarker: "bar" as const, arrowLayout: "auto" as const, extensionLines: "both" as const, lane: MAX_MEASUREMENT_LANE }, start: { signalId: signal.id, cycle: 1, point: "cycle-start" as const }, end: { signalId: signal.id, cycle: 3, point: "cycle-end" as const } };
+    const scene = buildExportScene({ ...base, annotations: [measurement] }, { format: "svg", scope: "document" });
+    expect(scene.annotations[0]?.measurementLane).toBe(MAX_MEASUREMENT_LANE);
+    expect(renderExportSvg(scene)).toContain(`data-measurement-lane="${MAX_MEASUREMENT_LANE}"`);
+    const hostile = { ...measurement, measurementLayout: { ...measurement.measurementLayout, lane: MAX_MEASUREMENT_LANE + 1 } };
+    expect(() => buildExportScene({ ...base, annotations: [hostile] }, { format: "svg", scope: "document" })).toThrow(RangeError);
   });
 
   it("uses the same non-overlapping automatic Measurement lanes as the live overlay", () => {

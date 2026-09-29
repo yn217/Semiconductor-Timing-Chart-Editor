@@ -39,6 +39,7 @@ test("Escape closes modal dialogs without mutating canonical revision, history, 
   await expect(reopenedBulk.getByLabel("Bulk signal definitions")).toHaveValue("dut.demo.signal binary");
   await page.keyboard.press("Escape");
   await expect(reopenedBulk).toBeHidden();
+  await expect(page.getByRole("button", { name: "Add signal or group" })).toBeFocused();
 
   const properties = await openFileDialog(page, "Properties");
   const originalTitle = await properties.getByLabel("Document title").inputValue();
@@ -49,6 +50,7 @@ test("Escape closes modal dialogs without mutating canonical revision, history, 
   await expect(reopenedProperties.getByLabel("Document title")).toHaveValue(originalTitle);
   await page.keyboard.press("Escape");
   await expect(reopenedProperties).toBeHidden();
+  await expect(page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true })).toBeFocused();
 
   const saveAs = await openFileDialog(page, "Save As");
   await saveAs.getByLabel("Save As filename").fill("esc-copy");
@@ -64,6 +66,7 @@ test("Escape closes modal dialogs without mutating canonical revision, history, 
   await hierarchy.getByTestId("hierarchy-path-view").focus();
   await page.keyboard.press("Escape");
   await expect(hierarchy).toBeHidden();
+  await expect(page.getByRole("button", { name: "More tree actions" })).toBeFocused();
 
   await expect(page.getByTestId("revision-status")).toHaveText(before.revision ?? "");
   await expect(page.getByTestId("history-status")).toHaveText(before.history ?? "");

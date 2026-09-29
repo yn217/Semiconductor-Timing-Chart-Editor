@@ -1,19 +1,20 @@
 import { useState } from "react";
 import type { ComponentProps } from "react";
 import { AIOperationPanel } from "../ai-operation-panel.js";
-import type { AIBridgeStatus, AISelectionEntityType } from "../ai-bridge-client.js";
+import type { AIBridgeStatus, AIBridgeViewOperation, AISelectionEntityType } from "../ai-bridge-client.js";
 import type { AIViewIntent } from "../ai-proposal-provider.js";
 import type { DocumentProblem } from "@timing-chart-v2/schema";
 
 type PanelProps = ComponentProps<typeof AIOperationPanel>;
 
-export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "documentEpoch" | "revision" | "mode" | "selectedSignalId" | "selectedGroupId" | "selectedAnnotationId" | "selectedTransactionId" | "range" | "onCommand"> & {
+export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "validationDiagnostics" | "documentEpoch" | "revision" | "mode" | "selectedSignalId" | "selectedGroupId" | "selectedAnnotationId" | "selectedTransactionId" | "range" | "onCommand"> & {
   readonly onCommandBatch: NonNullable<PanelProps["onCommandBatch"]>;
   readonly getZoom: NonNullable<PanelProps["getZoom"]>;
   readonly onFitAll: () => void;
   readonly onFitSelection: () => void;
   readonly onOpenTimeline: () => void;
   readonly onSetSelection: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void;
+  readonly onViewOperation: (operation: AIBridgeViewOperation, args: Readonly<Record<string, unknown>>) => void;
   readonly setRuntimeDiagnostics: (updater: (current: readonly DocumentProblem[]) => readonly DocumentProblem[]) => void;
 }) {
   const [bridgeEnabled, setBridgeEnabled] = useState(false);
@@ -26,6 +27,7 @@ export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "
   };
   const panelProps = {
     document: input.document,
+    validationDiagnostics: input.validationDiagnostics,
     documentEpoch: input.documentEpoch,
     revision: input.revision,
     mode: input.mode,
@@ -37,6 +39,7 @@ export function useEditorAiAssistantModel(input: Pick<PanelProps, "document" | "
     onCommand: input.onCommand,
     onCommandBatch: input.onCommandBatch,
     onViewIntent,
+    onViewOperation: input.onViewOperation,
     onSetSelection: input.onSetSelection,
     onDiagnostic,
     icon: null,

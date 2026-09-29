@@ -26,34 +26,119 @@ async function cellGeometry(page: Page, mode: "Cycle" | "Transaction", cycle: nu
   return { x: zero.x + pitch * cycle, pitch };
 }
 
-for (const mode of ["Cycle", "Transaction"] as const) for (const size of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
-  test(`ruler cell is the hit target, in ${mode} at ${size.width}x${size.height}`, async ({ page }) => {
-    await open(page, mode, size);
-    const rulerBox = (await page.getByTestId("cycle-ruler").boundingBox())!;
-    const lowerY = rulerBox.y + rulerBox.height - 6;
-    const upperY = rulerBox.y + 4;
-    const history = page.getByTestId("history-status");
+for (const mode of ["Cycle", "Transaction"] as const) {
+  test(`ruler cell hit targets and bidirectional range gestures in ${mode} at both supported viewports`, async ({ page }) => {
+    test.setTimeout(60_000);
+    const sizes = [{ width: 1280, height: 720 }, { width: 1672, height: 941 }];
+    for (const [sizeIndex, size] of sizes.entries()) {
+      if (sizeIndex === 0) await open(page, mode, size);
+      else {
+        // Reflow the same production document instead of paying for another full app boot.
+        await page.setViewportSize(size);
+        await expect(page.getByTestId("cycle-ruler")).toBeVisible();
+      }
+      const firstTick = await rawTick(page, 0);
+      const lowerY = firstTick.y + firstTick.height - 2;
+      const upperY = firstTick.y + 2;
+      const history = page.getByTestId("history-status");
 
-    // Whitespace at the left, middle, right and near the boundary of a cell, lower and upper part of the row.
-    for (const [cycle, dx, y] of [[5, 2, lowerY], [6, 12, lowerY], [7, 25, lowerY], [8, 37, lowerY], [9, 20, upperY]] as const) {
-      const cell = await cellGeometry(page, mode, cycle);
-      await page.mouse.click(cell.x + dx * cell.pitch / 40, y);
-      await expect.poll(() => range(page), { message: `click ${dx}px into cell ${cycle}` }).toBe(`${cycle}-${cycle + 1}`);
+      // Whitespace at the left, middle, right and near the boundary of a cell, lower and upper part of the row.
+      for (const [cycle, dx, y] of [[5, 2, lowerY], [6, 12, lowerY], [7, 25, lowerY], [8, 37, lowerY], [9, 20, upperY]] as const) {
+        const cell = await cellGeometry(page, mode, cycle);
+        const x = cell.x + dx * cell.pitch / 40;
+        await page.mouse.click(x, y);
+        await expect.poll(() => range(page), { message: `click ${dx}px into cell ${cycle} at ${size.width}x${size.height}` }).toBe(`${cycle}-${cycle + 1}`);
+      }
+
+      // Preserve the current-main low-cycle hit coverage and report the event target on failure.
+      for (const [cycle, dx, y] of [[0, 2, lowerY], [1, 12, lowerY], [2, 25, lowerY], [3, 37, lowerY], [4, 20, upperY]] as const) {
+        const cell = await cellGeometry(page, mode, cycle);
+        const x = cell.x + dx * cell.pitch / 40;
+        const hit = await page.evaluate(({ x: screenX, y: screenY }) => document.elementFromPoint(screenX, screenY)?.outerHTML.slice(0, 180), { x, y });
+        await page.mouse.click(x, y);
+        await expect.poll(() => range(page), { message: `click cell ${cycle} at ${size.width}x${size.height}; target=${hit}` }).toBe(`${cycle}-${cycle + 1}`);
+      }
+
+      // Drags span the boundaries nearest the pointer at both ends (same rule), so both directions give the same range.
+      const a = await cellGeometry(page, mode, 3);
+      const b = await cellGeometry(page, mode, 9);
+      await page.mouse.move(a.x + 25 * a.pitch / 40, lowerY);
+      await page.mouse.down();
+      await page.mouse.move(b.x + 25 * b.pitch / 40, lowerY, { steps: 8 });
+      await page.mouse.up();
+      await expect.poll(() => range(page), { message: `drag 3 -> 9 at ${size.width}x${size.height}` }).toBe("4-10");
+      await page.mouse.move(b.x + 25 * b.pitch / 40, lowerY);
+      await page.mouse.down();
+      await page.mouse.move(a.x + 25 * a.pitch / 40, lowerY, { steps: 8 });
+      await page.mouse.up();
+      await expect.poll(() => range(page), { message: `drag 9 -> 3 at ${size.width}x${size.height}` }).toBe("4-10");
+
+      const shortA = await cellGeometry(page, mode, 1);
+      const shortB = await cellGeometry(page, mode, 4);
+      await page.mouse.move(shortA.x + 25 * shortA.pitch / 40, lowerY);
+      await page.mouse.down();
+      await page.mouse.move(shortB.x + 25 * shortB.pitch / 40, lowerY, { steps: 8 });
+      await page.mouse.up();
+      await expect.poll(() => range(page), { message: `drag 1 -> 4 at ${size.width}x${size.height}` }).toBe("2-5");
+      await page.mouse.move(shortB.x + 25 * shortB.pitch / 40, lowerY);
+      await page.mouse.down();
+      await page.mouse.move(shortA.x + 25 * shortA.pitch / 40, lowerY, { steps: 8 });
+      await page.mouse.up();
+      await expect.poll(() => range(page), { message: `drag 4 -> 1 at ${size.width}x${size.height}` }).toBe("2-5");
+      await expect(history).toHaveText("History 0 / Redo 0"); // view-only
     }
-
-    // Drags span the boundaries nearest the pointer at both ends (same rule), so both directions give the same range.
-    const a = await cellGeometry(page, mode, 3);
-    const b = await cellGeometry(page, mode, 9);
-    await page.mouse.move(a.x + 25 * a.pitch / 40, lowerY);
-    await page.mouse.down();
-    await page.mouse.move(b.x + 25 * b.pitch / 40, lowerY, { steps: 8 });
-    await page.mouse.up();
-    await expect.poll(() => range(page), { message: "drag 3 -> 9" }).toBe("4-10");
-    await page.mouse.move(b.x + 25 * b.pitch / 40, lowerY);
-    await page.mouse.down();
-    await page.mouse.move(a.x + 25 * a.pitch / 40, lowerY, { steps: 8 });
-    await page.mouse.up();
-    await expect.poll(() => range(page), { message: "drag 9 -> 3" }).toBe("4-10");
-    await expect(history).toHaveText("History 0 / Redo 0"); // view-only
   });
 }
+
+test("Combined ruler accepts clicks across the full visible cell at both supported viewports", async ({ page }) => {
+  test.setTimeout(60_000);
+  const sizes = [{ width: 1280, height: 720 }, { width: 1672, height: 941 }];
+  for (const [sizeIndex, size] of sizes.entries()) {
+    await page.setViewportSize(size);
+    if (sizeIndex === 0) {
+      await page.goto("/?transaction-demo");
+      await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+      await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
+      await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Combined");
+      await expect(page.locator(".split-transaction-pane")).toBeVisible();
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+    } else {
+      await expect(page.getByTestId("cycle-ruler")).toBeVisible();
+    }
+
+    const cells = await page.getByTestId("cycle-ruler").evaluate((ruler) => {
+      const bounds = ruler.getBoundingClientRect();
+      const ticks = Array.from(ruler.querySelectorAll<HTMLElement>(".cycle-tick[data-source-cycle]"))
+        .map((tick) => ({ cycle: Number(tick.dataset.sourceCycle), x: tick.getBoundingClientRect().left }))
+        .filter((tick) => tick.x >= bounds.left && tick.x < bounds.right)
+        .sort((a, b) => a.x - b.x);
+      const rect = { left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom };
+      return {
+        rect,
+        cells: ticks.flatMap((tick, index) => {
+          const next = ticks[index + 1];
+          return next && next.cycle === tick.cycle + 1 && next.x - tick.x > 2
+            ? [{ cycle: tick.cycle, x0: tick.x, x1: next.x }]
+            : [];
+        }).slice(0, 3),
+      };
+    });
+    expect(cells.cells.length, `visible complete ruler cells at ${size.width}x${size.height}: ${JSON.stringify(cells)}`).toBeGreaterThan(0);
+
+    const history = page.getByTestId("history-status");
+    const revision = await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision");
+    for (const cell of cells.cells) {
+      for (const [fraction, y] of [
+        [0.08, cells.rect.top + 2], [0.08, cells.rect.bottom - 2],
+        [0.5, cells.rect.top + 2], [0.5, cells.rect.bottom - 2],
+        [0.92, cells.rect.top + 2], [0.92, cells.rect.bottom - 2],
+      ] as const) {
+        await page.mouse.click(cell.x0 + (cell.x1 - cell.x0) * fraction, y);
+        await expect.poll(() => range(page), { message: `Combined ruler cell ${cell.cycle} at ${fraction} across ${size.width}x${size.height}` })
+          .toBe(`${cell.cycle}-${cell.cycle + 1}`);
+      }
+    }
+    await expect(history).toHaveText("History 0 / Redo 0");
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", revision!);
+  }
+});

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
+import { snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
 startInCycleSample(test);
 
@@ -105,13 +106,14 @@ test("Annotation clipboard is view-only on Copy, creates a fresh entity on Paste
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  const previousIds = await snapshotAnnotationIds(host);
   await page.getByTestId("annotation-toolbar").getByRole("button", { name: "Add annotation", exact: true }).click();
   await expect(page.getByTestId("annotation-count-status")).toHaveText("Annotations: 1");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   const annotationList = page.getByTestId("annotation-list");
   await expect(annotationList).toBeVisible();
-  const annotation = annotationList.locator("[data-annotation-list-id]").last();
-  const originalId = await annotation.getAttribute("data-annotation-list-id");
+  const originalId = await waitForCreatedAnnotationId(host, previousIds);
+  const annotation = annotationList.locator(`[data-annotation-list-id='${originalId}']`);
   await annotation.click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   const ribbon = page.getByTestId("ribbon");
@@ -127,9 +129,12 @@ test("Annotation clipboard is view-only on Copy, creates a fresh entity on Paste
   const beforeCopyCounters = JSON.parse(countersBeforeCopy ?? "{}") as { waveDromRenders?: number; localGeometryBuilds?: number };
   expect(afterCopyCounters.waveDromRenders).toBe(beforeCopyCounters.waveDromRenders);
   expect(afterCopyCounters.localGeometryBuilds).toBe(beforeCopyCounters.localGeometryBuilds);
+  const beforePasteIds = await snapshotAnnotationIds(host);
   await ribbon.getByRole("button", { name: "Paste", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(ribbon.getByTestId("clipboard-status")).toHaveText(/Pasted .* annotation/);
+  const pastedId = await waitForCreatedAnnotationId(host, beforePasteIds);
+  const pastedAnnotation = annotationList.locator(`[data-annotation-list-id='${pastedId}']`);
   const idsAfterPaste = await annotationList.locator("[data-annotation-list-id]").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-annotation-list-id")));
   expect(idsAfterPaste).toContain(originalId);
   expect(new Set(idsAfterPaste).size).toBe(idsAfterPaste.length);
@@ -148,7 +153,6 @@ test("Annotation clipboard is view-only on Copy, creates a fresh entity on Paste
   await page.getByRole("button", { name: "Home", exact: true }).click();
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
-  const pastedAnnotation = annotationList.locator("[data-annotation-list-id]").last();
   await pastedAnnotation.click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await ribbon.getByRole("button", { name: "Cut", exact: true }).click();

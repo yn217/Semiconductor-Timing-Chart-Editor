@@ -7,6 +7,7 @@ import { ContextMenuSurface } from "./context-menu-surface.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 import { EditorIcon } from "./editor-icon.js";
 import { signalTypeLabel } from "./runtime/signal-type-registry.js";
+import { usePeerMenuSurface } from "./runtime/peer-menu-surface.js";
 import type { TransactionTreeFilterMode } from "./workspace/use-workspace-ui-state.js";
 
 
@@ -14,11 +15,12 @@ export type MinimalCycleViewPanelsProps = { readonly children?: ReactNode; reado
 const spacerId = (value: string) => value as SpacerId;
 export function MinimalCycleViewPanels({ children, workspace, tail, bottom, inspector, overlays, fileInput, status }: MinimalCycleViewPanelsProps) { if (children !== undefined) return <>{children}</>; return <><div className="desktop-workspace">{workspace}{tail}{bottom}{inspector}</div>{overlays}{fileInput}{status}</>; }
 
-export function ContextMenuPanel({ contextMenu, hasSelectedClipboard, clipboardAvailable, hasSelectedEntity, hasSelectedSignal, hasDeletableSelection, canRenameSelection, canMoveUp, canMoveDown, canShowSelection, canHideSelection, copySelectedSignal, cutSelectedSignal, pasteSelectedEntity, duplicateSelectedEntity, moveSelection, setSelectionVisibility, renameSelection, closeContextMenu, deleteSelection, addBookmarkAtCycle, transactionGroups = [], selectedTransactionGroupId, moveSelectedTransactionToGroup }: any) {
-  if (contextMenu?.target === "ruler") return <ContextMenuSurface anchor={contextMenu} target="ruler" label="Ruler context menu">
+export function ContextMenuPanel({ contextMenu, hasSelectedClipboard, clipboardAvailable, hasSelectedEntity, hasSelectedSignal, hasDeletableSelection, canRenameSelection, canMoveUp, canMoveDown, canShowSelection, canHideSelection, signalPinned, togglePinnedSignals, copySelectedSignal, cutSelectedSignal, pasteSelectedEntity, duplicateSelectedEntity, moveSelection, setSelectionVisibility, renameSelection, closeContextMenu, deleteSelection, addBookmarkAtCycle, transactionGroups = [], selectedTransactionGroupId, moveSelectedTransactionToGroup }: any) {
+  if (contextMenu?.target === "ruler") return <ContextMenuSurface anchor={contextMenu} target="ruler" label="Ruler context menu" onDismiss={closeContextMenu}>
     <button type="button" role="menuitem" data-testid="ruler-add-bookmark" onClick={() => { addBookmarkAtCycle(contextMenu.cycle); closeContextMenu(); }}>ブックマークを追加</button>
   </ContextMenuSurface>;
-  return contextMenu ? <ContextMenuSurface anchor={contextMenu} target={contextMenu.target} label={contextMenu.target === "group" ? "Group context menu" : contextMenu.target === "annotation" ? "Annotation context menu" : contextMenu.target === "transaction" ? "Transaction context menu" : "Signal context menu"}>
+  return contextMenu ? <ContextMenuSurface anchor={contextMenu} target={contextMenu.target} label={contextMenu.target === "group" ? "Group context menu" : contextMenu.target === "annotation" ? "Annotation context menu" : contextMenu.target === "transaction" ? "Transaction context menu" : "Signal context menu"} onDismiss={closeContextMenu}>
+    {contextMenu.target === "signal" && <button type="button" role="menuitemcheckbox" aria-checked={Boolean(signalPinned)} aria-label={`${signalPinned ? "Unpin" : "Pin"} selected Signals`} disabled={!hasSelectedSignal} onClick={() => { togglePinnedSignals?.(); closeContextMenu(); }}>{signalPinned ? "Unpin selected Signals" : "Pin selected Signals"}</button>}
     <button type="button" role="menuitem" onClick={() => { copySelectedSignal(); closeContextMenu(); }} disabled={!hasSelectedClipboard}>Copy</button>
     <button type="button" role="menuitem" onClick={() => { cutSelectedSignal(); closeContextMenu(); }} disabled={!hasSelectedClipboard}>Cut</button>
     <button type="button" role="menuitem" onClick={() => { pasteSelectedEntity(); closeContextMenu(); }} disabled={!clipboardAvailable}>Paste</button>
@@ -160,6 +162,9 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
   }, [addMenuOpen, moreMenuOpen]);
   const [transactionMoreOpen, setTransactionMoreOpen] = useState(false);
   const transactionMoreButton = useRef<HTMLButtonElement>(null);
+  usePeerMenuSurface(addMenuOpen, onCloseAddMenu);
+  usePeerMenuSurface(moreMenuOpen, onCloseMoreMenu);
+  usePeerMenuSurface(transactionMoreOpen, () => setTransactionMoreOpen(false));
   useEffect(() => {
     if (!transactionMoreOpen) return;
     const close = (event: Event) => {
@@ -240,7 +245,7 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
         <button type="button" role="menuitem" onClick={() => { onCollapseAllGroups(); onCloseMoreMenu(); }}>Collapse All Groups</button>
         <button type="button" role="menuitem" onClick={() => { onExpandAllGroups(); onCloseMoreMenu(); }}>Expand All Groups</button>
         <button type="button" role="menuitem" onClick={() => { onClearTreeFilter(); onCloseMoreMenu(); }}>Clear Filter</button>
-        <button type="button" role="menuitem" data-testid="hierarchy-open" onClick={() => { onOpenHierarchy(); onCloseMoreMenu(); }}>Hierarchy</button>
+        <button type="button" role="menuitem" data-testid="hierarchy-open" onClick={() => { onOpenHierarchy(); onCloseMoreMenu(); }}>Signal Full Path List / Hierarchy…</button>
       </div>}
     </span>
     <span className="role-column-heading" aria-label="Role">Role</span>
@@ -272,6 +277,7 @@ export type BottomEditorPanelProps<Tab extends string> = {
 export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelectTab, onTabKeyDown, followSelection, onFollowSelectionChange, pinned, onTogglePinned, summary, content, contentClassName }: BottomEditorPanelProps<Tab>) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLSpanElement>(null);
+  usePeerMenuSurface(settingsOpen, () => setSettingsOpen(false));
   useEffect(() => {
     if (!settingsOpen) return;
     const close = (event: PointerEvent) => { if (!(event.target instanceof Node) || !settingsRef.current?.contains(event.target)) setSettingsOpen(false); };
@@ -328,6 +334,7 @@ export type EditorStatusBarProps = {
   readonly timeAxisStatus: string;
   readonly dirty: boolean;
   readonly problemsCount: number;
+  readonly problemsPending: boolean;
   readonly waveDromHasError: boolean;
   // #431/#459: Cursor A/B (source-time workspace state, never Canonical --
   // see use-workspace-ui-state.ts) had a fully-built state API with zero
@@ -347,7 +354,7 @@ export type EditorStatusBarProps = {
 /** The editor's bottom status bar. Purely a display of values already
  * computed by their owners (Application/History, Selection, Timeline
  * Geometry/Navigation, Workspace UI State) -- no state or logic of its own. */
-export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, annotationCount, rangeStatus, selectedCycle, zoom, snapEnabled, viewMode, statusContext, hideRevisionDetail, revision, undoDepth, redoDepth, timeAxisStatus, dirty, problemsCount, waveDromHasError, cursorStatus, activePaneStatus }: EditorStatusBarProps) {
+export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, annotationCount, rangeStatus, selectedCycle, zoom, snapEnabled, viewMode, statusContext, hideRevisionDetail, revision, undoDepth, redoDepth, timeAxisStatus, dirty, problemsCount, problemsPending, waveDromHasError, cursorStatus, activePaneStatus }: EditorStatusBarProps) {
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const gestureHint = useSyncExternalStore(subscribeGestureHint, getGestureHint);
   const diagnosticClass = hideRevisionDetail ? "status-detail-hidden" : diagnosticsOpen ? undefined : "visually-hidden";
@@ -357,11 +364,11 @@ export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, anno
     {cursorStatus && <span data-testid="cursor-status">{cursorStatus}</span>}
     {activePaneStatus && <span data-testid="active-pane-status">{activePaneStatus}</span>}
     <span>Selected: <strong data-testid="selection-status">{selectionStatus}</strong></span>
-    <span data-testid="signal-count-status">Signals: {signalCount}</span><span data-testid="annotation-count-status">Annotations: {annotationCount}</span><span data-testid="range-status">{rangeStatus}</span><span data-testid="cycle-status">Cycle {selectedCycle}</span><span data-testid="zoom-status-bar">Zoom: {Math.round(zoom * 100)}%</span><span data-testid="snap-status">Snap: {snapEnabled ? "On" : "Off"}</span><span data-testid="view-mode-status">Mode: {viewMode === "Split" ? "Combined" : viewMode}</span>
+    <span data-testid="signal-count-status">Signals: {signalCount}</span><span data-testid="annotation-count-status">Annotations: {annotationCount}</span><span data-testid="range-status">{rangeStatus}</span><span data-testid="cycle-status">{viewMode === "Cycle" ? "Cycle" : "Source cycle"} {selectedCycle}</span><span data-testid="zoom-status-bar">Zoom: {Math.round(zoom * 100)}%</span><span data-testid="snap-status">Snap: {snapEnabled ? "On" : "Off"}</span><span data-testid="view-mode-status">Mode: {viewMode === "Split" ? "Combined" : viewMode}</span>
     <span className="status-context" data-testid="status-context">{statusContext}</span>
     <span className={diagnosticClass} data-testid="revision-status">Canonical revision {revision}</span>
     <span className={diagnosticClass} data-testid="history-status">History {undoDepth} / Redo {redoDepth}</span>
-    <span data-testid="time-axis-status">{timeAxisStatus}</span><span data-testid="dirty-status">{dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">Problems: {problemsCount}</span><span className={waveDromHasError ? undefined : diagnosticClass} data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
+    <span data-testid="time-axis-status">{timeAxisStatus}</span><span data-testid="dirty-status">{dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">{problemsPending ? "Problems: Checking…" : `Problems: ${problemsCount}`}</span><span className={waveDromHasError ? undefined : diagnosticClass} data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
   </footer>;
 }
 

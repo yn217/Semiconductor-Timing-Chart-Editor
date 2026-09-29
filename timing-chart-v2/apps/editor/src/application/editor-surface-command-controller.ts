@@ -1,5 +1,5 @@
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, Bookmark, BookmarkId, CanonicalDocument, ClockGenerator, CommentRow, EdgeCounterSettings, GroupId, JsonObject, LabelAnchorId, ResetSemantics, SemanticAnchor, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, TimeGroup, TimeGroupId, TimelineLabelAnchor, Transaction, TransactionGroup, TransactionId, CommandId, TransactionTimeScale, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, Bookmark, BookmarkId, CanonicalDocument, CheckSettings, ClockGenerator, CommentRow, EdgeCounterSettings, EnumDefinition, GroupId, JsonObject, LabelAnchorId, ResetSemantics, SemanticAnchor, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, TimeGroup, TimeGroupId, TimelineLabelAnchor, Transaction, TransactionGroup, TransactionId, CommandId, TransactionTimeScale, ValueSignal } from "@timing-chart-v2/schema";
 
 type CommandOf<T extends SemanticCommand["type"]> = Extract<SemanticCommand, { readonly type: T }>;
 type CommandPayload<T extends SemanticCommand["type"]> = Omit<CommandOf<T>, "id" | "type">;
@@ -68,11 +68,13 @@ export interface DocumentPropertiesCommandActions {
     readonly header: CanonicalDocument["document"]["header"];
     readonly footer: CanonicalDocument["document"]["footer"];
     readonly legend: CanonicalDocument["legend"];
+    readonly enumDefinitions: CanonicalDocument["enumDefinitions"];
   }) => CommandResult | undefined;
 }
 
 export interface LegendCommandActions {
   readonly updateLegend: (legend: CanonicalDocument["legend"]) => CommandResult;
+  readonly updateCheckSettings: (checkSettings: CheckSettings) => CommandResult;
 }
 
 export interface RibbonCommandActions {
@@ -91,6 +93,8 @@ export interface RibbonCommandActions {
   readonly duplicateTimeline: (start: number, end: number, at: number) => CommandResult;
   readonly moveTimeline: (start: number, end: number, to: number) => CommandResult;
   readonly createBookmark: (bookmark: Bookmark) => CommandResult;
+  /** Replace the Annotation collection as one undoable semantic batch. */
+  readonly replaceAnnotations: (annotations: readonly Annotation[]) => CommandResult | undefined;
   readonly createLabelAnchor: (labelAnchor: TimelineLabelAnchor) => CommandResult;
   readonly updateLabelAnchor: (labelAnchorId: LabelAnchorId, source: number, display: number) => CommandResult;
   readonly deleteLabelAnchor: (labelAnchorId: LabelAnchorId) => CommandResult;
@@ -132,6 +136,15 @@ export function createEditorSurfaceCommandController(input: {
     if (JSON.stringify(document.legend) !== JSON.stringify(update.legend)) {
       commands.push({ id: input.nextCommandId("legend_update"), type: "legend.update", legend: update.legend });
     }
+    const currentEnums = document.enumDefinitions ?? [];
+    const nextEnums = update.enumDefinitions ?? [];
+    const nextById = new Map(nextEnums.map((definition) => [definition.id, definition]));
+    for (const definition of nextEnums) {
+      const current = currentEnums.find((item) => item.id === definition.id);
+      if (current === undefined) commands.push({ id: input.nextCommandId("enum_create"), type: "enum.create", definition });
+      else if (JSON.stringify(current) !== JSON.stringify(definition)) commands.push({ id: input.nextCommandId("enum_update"), type: "enum.update", enumId: definition.id, name: definition.name, entries: definition.entries });
+    }
+    for (const current of currentEnums) if (!nextById.has(current.id)) commands.push({ id: input.nextCommandId("enum_delete"), type: "enum.delete", enumId: current.id });
     return commands.length === 0 ? undefined : input.executeBatch(input.nextCommandId("document_properties"), commands);
   };
   return {
@@ -190,6 +203,7 @@ export function createEditorSurfaceCommandController(input: {
     setAnnotationPositionMode: (annotationId, positionMode) => dispatch<"annotation.setPositionMode">("annotation_position_mode", { type: "annotation.setPositionMode", annotationId, positionMode }),
     updateDocumentProperties,
     updateLegend: (legend) => dispatch<"legend.update">("legend_update", { type: "legend.update", legend }),
+    updateCheckSettings: (checkSettings) => dispatch<"document.updateCheckSettings">("check_settings_update", { type: "document.updateCheckSettings", checkSettings }),
     createSignal: (signal, targetGroupId, index) => dispatch<"signal.create">("insert_signal", { type: "signal.create", signal, targetGroupId, index }),
     createCommentRow: (commentRow, targetGroupId, index) => dispatch<"commentRow.create">("insert_comment_row", { type: "commentRow.create", commentRow, targetGroupId, index }),
     createGroup: (group, index) => dispatch<"group.create">("insert_group", { type: "group.create", group, index }),
@@ -199,6 +213,7 @@ export function createEditorSurfaceCommandController(input: {
     duplicateTimeline: (start, end, at) => dispatch<"timeline.duplicateRange">("timeline_duplicate", { type: "timeline.duplicateRange", start, end, at }),
     moveTimeline: (start, end, to) => dispatch<"timeline.moveRange">("timeline_move", { type: "timeline.moveRange", start, end, to }),
     createBookmark: (bookmark) => dispatch<"bookmark.create">("marker", { type: "bookmark.create", bookmark }),
+    replaceAnnotations: (annotations) => input.execute({ id: input.nextCommandId("annotation_import_replace"), type: "annotation.replaceCollection", annotations }),
     createLabelAnchor: (labelAnchor) => dispatch<"labelAnchor.create">("label_anchor_create", { type: "labelAnchor.create", labelAnchor }),
     updateLabelAnchor: (labelAnchorId, source, display) => dispatch<"labelAnchor.update">("label_anchor_update", { type: "labelAnchor.update", labelAnchorId, source, display }),
     deleteLabelAnchor: (labelAnchorId) => dispatch<"labelAnchor.delete">("label_anchor_delete", { type: "labelAnchor.delete", labelAnchorId }),

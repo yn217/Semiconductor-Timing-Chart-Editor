@@ -1,9 +1,53 @@
 import { describe, expect, it } from "vitest";
-import { canonicalReferences, referencesToSignal, referencesToTimeGroup, validateCanonicalDocument } from "@timing-chart-v2/schema";
+import { canonicalReferences, referencesTo, referencesToSignal, referencesToTimeGroup, validateCanonicalDocument } from "@timing-chart-v2/schema";
 import type { AnnotationId, BookmarkId, CanonicalDocument, LabelAnchorId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("canonical stable-ID reference registry", () => {
+  it("builds one target index per immutable document snapshot and matches authoritative enumeration", () => {
+    const document = canonicalFixture();
+    const allReferences = canonicalReferences(document);
+    for (const targetType of ["signal", "time-group", "group", "spacer", "bookmark", "enum"] as const) {
+      const targetIds = new Set(allReferences.filter((reference) => reference.targetType === targetType).map((reference) => reference.targetId));
+      for (const targetId of targetIds) {
+        const bucket = referencesTo(document, targetType, targetId);
+        expect(bucket).toEqual(allReferences.filter((reference) => reference.targetType === targetType && reference.targetId === targetId));
+        expect(referencesTo(document, targetType, targetId)).toBe(bucket);
+      }
+    }
+
+    const nextSnapshot = { ...document, annotations: [...document.annotations] };
+    expect(referencesTo(nextSnapshot, "signal", document.signals[0]!.id)).not.toBe(referencesTo(document, "signal", document.signals[0]!.id));
+  });
+
+  it("reuses the reference index when only document metadata changes", () => {
+    const document = canonicalFixture();
+    const signalId = document.signals[0]!.id;
+    const originalBucket = referencesToSignal(document, signalId);
+    const nextSnapshot: CanonicalDocument = {
+      ...document,
+      layout: { ...document.layout },
+      document: { ...document.document, title: "Renamed document" },
+    };
+
+    expect(referencesToSignal(nextSnapshot, signalId)).toBe(originalBucket);
+  });
+
+  it("rebuilds document-owned references when the stable document identity changes", () => {
+    const document = canonicalFixture();
+    const signalId = document.signals[0]!.id;
+    const originalBucket = referencesToSignal(document, signalId);
+    const nextDocumentId = "fixture_reidentified" as typeof document.document.id;
+    const nextSnapshot: CanonicalDocument = { ...document, document: { ...document.document, id: nextDocumentId } };
+
+    expect(referencesToSignal(nextSnapshot, signalId)).not.toBe(originalBucket);
+    expect(referencesToSignal(nextSnapshot, signalId)).toContainEqual(expect.objectContaining({
+      kind: "timeline.referenceClock",
+      ownerId: nextDocumentId,
+      targetId: signalId,
+    }));
+  });
+
   it("enumerates the supported signal and time-group relationships from one owner", () => {
     const base = canonicalFixture();
     const signal = base.signals[1]!;
