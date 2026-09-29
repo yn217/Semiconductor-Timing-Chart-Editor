@@ -34,6 +34,7 @@ import type { BottomPinnedSelection, TreeTypeFilter } from "../workspace/use-wor
 import type { ContextMenuState } from "../workspace/use-dialog-menu-state.js";
 import { resetInspectorAccordionState } from "../inspector-accordion.js";
 import { deriveTransactionExtent } from "./transaction-extent.js";
+import { createTransactionPresentationRefreshRequester } from "./transaction-presentation-refresh.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type TimelineRange = Readonly<{ start: number; end: number }>;
@@ -181,6 +182,18 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     let referenceGeometryReconciled = false;
     let primaryPresentationOpening = true;
     let primaryPresentationGeneration = 0;
+    const requestTransactionPresentationRefresh = createTransactionPresentationRefreshRequester({
+      getViewMode: () => input.viewMode,
+      getGeneration: () => primaryPresentationGeneration,
+      getDocumentEpoch: () => documentEpoch.current(),
+      isActive: () => active,
+      isDocumentEpochCurrent: (epoch) => documentEpoch.isCurrent(epoch),
+      scheduleFrame: (callback) => {
+        if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(() => startTransition(callback));
+        else globalThis.setTimeout(() => startTransition(callback), 0);
+      },
+      publish: () => setTransactionPresentationRevision((value) => value + 1),
+    });
     let transactionExtentSource: CanonicalDocument["transactions"] | undefined;
     let transactionExtent: Readonly<{ start: number; end: number }> | undefined;
     let publishState: () => void = () => undefined;
@@ -223,7 +236,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
           // projection before this document's Cycle geometry was published.
           // Invalidate once at the first geometry-ready boundary; later
           // virtualized owner remounts must not reproject bars during scroll.
-          if (input.viewMode !== "Cycle") setTransactionPresentationRevision((value) => value + 1);
+          requestTransactionPresentationRefresh();
           // Small/medium documents always render one full-document waveform
           // window. Reference geometry therefore changes the ruler/Transaction
           // projection state, but cannot change the WaveDrom request set; avoid
@@ -519,7 +532,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       grid: () => { if (active) timelineRuntime.refreshGrid(); },
       zoom: () => { if (active) timelineRuntime.setZoom(timelineNavigation.getZoom()); },
       overlays: () => { if (active) timelineRuntime.refreshOverlays(); },
-      transactionPresentation: () => { if (active) setTransactionPresentationRevision((value) => value + 1); },
+      transactionPresentation: requestTransactionPresentationRefresh,
       collectErrors: () => { if (active) collectWaveErrors(); },
       publish: () => { if (active) publishState(); },
     }, { isCurrent: () => active && documentEpoch.isCurrent(initialDocumentEpoch) });
