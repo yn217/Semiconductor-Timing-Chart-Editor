@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMiniMapOverview, buildMiniMapTransactionOverview, updateMiniMapTransactionOverview } from "@timing-chart-v2/projection";
+import { buildMiniMapOverview, buildMiniMapTransactionOverview, updateMiniMapOverview, updateMiniMapTransactionOverview } from "@timing-chart-v2/projection";
 import type { SignalId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -25,6 +25,47 @@ describe("MiniMap overview derivation", () => {
     expect(overview.rows[999]?.rowId).toBe("mini_999");
   });
 
+  it("rebuilds only the edited Signal row and visits only its value changes", () => {
+    const source = canonicalFixture();
+    const previous = buildMiniMapOverview(source);
+    const data = source.signals.find((signal) => signal.id === "sig_data")!;
+    const changed = { ...data, values: [...data.values, { start: 6, value: "FF" }] };
+    const next = { ...source, signals: source.signals.map((signal) => signal.id === data.id ? changed : signal) };
+    const updated = updateMiniMapOverview(previous, source.signals, source.signalGroups, next);
+    expect(updated.rows.find((row) => row.rowId === "sig_clk")).toBe(previous.rows.find((row) => row.rowId === "sig_clk"));
+    expect(updated.rows.find((row) => row.rowId === "sig_data")).not.toBe(previous.rows.find((row) => row.rowId === "sig_data"));
+    expect(updated.rowsRebuilt).toBe(1);
+    expect(updated.valueChangesVisited).toBe(changed.values.length);
+    expect(updated.rows.find((row) => row.rowId === "sig_data")?.segments).toHaveLength(changed.values.length);
+  });
+
+  it("uses a stable Signal hint to avoid scanning unrelated rows for a one-value edit", () => {
+    const source = canonicalFixture();
+    const template = source.signals.find((signal) => signal.id === "sig_data")!;
+    const signals = Array.from({ length: 10_000 }, (_, index) => ({ ...template, id: `signal_${index}` as SignalId }));
+    const groups = [{ ...source.signalGroups[0]!, rows: signals.map((signal) => signal.id) }];
+    const before = { ...source, signals, signalGroups: groups };
+    const previous = buildMiniMapOverview(before);
+    const changed = { ...signals[5]!, values: [...signals[5]!.values, { start: 6, value: "FF" }] };
+    const next = { ...before, signals: signals.map((signal, index) => index === 5 ? changed : signal) };
+    const updated = updateMiniMapOverview(previous, signals, groups, next, [changed]);
+    expect(updated.rowsRebuilt).toBe(1);
+    expect(updated.signalLookups).toBe(1);
+    expect(updated.valueChangesVisited).toBe(changed.values.length);
+    expect(updated.rows[4]).toBe(previous.rows[4]);
+    expect(updated.rows[5]).not.toBe(previous.rows[5]);
+  });
+
+  it("reuses all Signal rows for a name-only edit", () => {
+    const source = canonicalFixture();
+    const previous = buildMiniMapOverview(source);
+    const next = { ...source, signals: source.signals.map((signal) => signal.id === "sig_data" ? { ...signal, name: "RENAMED" } : signal) };
+    const updated = updateMiniMapOverview(previous, source.signals, source.signalGroups, next);
+    expect(updated.rows).toBe(previous.rows);
+    expect(updated.rowsRebuilt).toBe(0);
+    expect(updated.valueChangesVisited).toBe(0);
+  });
+
   it("updates only the changed Transaction lane and reuses unaffected rows", () => {
     const source = canonicalFixture();
     const transactions = [
@@ -38,6 +79,23 @@ describe("MiniMap overview derivation", () => {
     expect(updated).not.toBe(previous);
     expect(updated.rows.find((row) => row.key === "ungrouped:lane_0")?.segments[0]).toEqual({ start: 2, end: 5, color: "#8895a7" });
     expect(updated.rows.find((row) => row.key === "ungrouped:lane_1")).toBe(previous.rows.find((row) => row.key === "ungrouped:lane_1"));
+    expect(updated.laneBucketsRebuilt).toBe(1);
+    expect(updated.updateKind).toBe("incremental");
+  });
+
+  it("uses a stable changed-Transaction hint to visit one row and rebuild only its lane", () => {
+    const source = canonicalFixture();
+    const transactions = Array.from({ length: 10_000 }, (_, index) => ({ id: `txn_${index}`, name: `T${index}`, start: index % 7, end: index % 7 + 1, laneId: `lane_${index % 8}`, linkedSignals: [] }));
+    const before = { ...source, transactions };
+    const previous = buildMiniMapTransactionOverview(before);
+    const afterChanged = { ...transactions[5]!, start: 2, end: 3 };
+    const nextTransactions = transactions.map((transaction, index) => index === 5 ? afterChanged : transaction);
+    const updated = updateMiniMapTransactionOverview(previous, transactions, before.transactionGroups, { ...before, transactions: nextTransactions }, [afterChanged]);
+    expect(updated.transactionsVisited).toBe(1);
+    expect(updated.laneBucketsRebuilt).toBe(1);
+    expect(updated.updateKind).toBe("incremental");
+    expect(updated.rows.find((row) => row.key === "ungrouped:lane_5")?.segments).toContainEqual({ start: 2, end: 3, color: "#8895a7" });
+    expect(updated.rows.find((row) => row.key === "ungrouped:lane_0")).toBe(previous.rows.find((row) => row.key === "ungrouped:lane_0"));
   });
 
   it("falls back to a full overview when a new lane is introduced", () => {

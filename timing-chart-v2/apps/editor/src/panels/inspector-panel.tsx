@@ -284,7 +284,7 @@ export function InspectorPanel({ signal, selectedSignalIds, group, annotation, t
         // error-reporting mechanism.
         if (!result.ok && result.reason !== "no-op") setTransactionStatus(result.problems[0]?.message ?? "Could not apply Transaction changes."); }} applyDisabled={transactionName === transaction.name && transactionStart === transaction.start && transactionEnd === transaction.end && transactionLane === (transaction.laneId ?? "lane_0") && transactionGroupId === (transaction.groupId ?? "") && transactionColor === (transaction.color ?? "") && transactionDescription === (transaction.description ?? "") && phaseDraft === undefined} applyTestId="apply-inspector-transaction" />
     </>}
-    <MiniMap document={document} viewport={viewport} mode={minimapMode} />
+    <MiniMap document={document} viewport={viewport} mode={minimapMode} {...(transaction ? { transactionHint: transaction } : {})} />
   </aside>;
 }
 
@@ -546,6 +546,6 @@ export function InspectorValueSignalEditor({ signal, document, viewport, command
       {hasChanges && <output className="draft-unapplied-indicator" data-testid="inspector-signal-unapplied" hidden>● Signal properties: unapplied changes</output>}
       <InspectorFooter changeCount={changeCount} onCancel={onCancel} onApply={apply} applyDisabled={!hasChanges} applyTestId="apply-inspector-signal" />
     </form>
-    <MiniMap document={document} viewport={viewport} />
+    <MiniMap document={document} viewport={viewport} signalHint={signal} />
   </aside>;
 }
