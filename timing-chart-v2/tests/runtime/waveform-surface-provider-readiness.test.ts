@@ -90,15 +90,26 @@ describe("waveform provider primary geometry readiness", () => {
     const invalidateSnapIndex = vi.fn();
     const svgBySignal = new Map<string, SVGSVGElement>();
     const sourceCyclesBySignal = new Map<string, readonly number[] | undefined>();
+    const decode = deferred<void>();
+    let referencePrepareStarted = false;
+    let nonReferencePreparedDuringDecode = false;
+    let referenceDecodeResolved = false;
+    const mappingCache = new DisplayTimeMappingCache();
+    const remapValueChanges = mappingCache.remapValueChanges.bind(mappingCache);
+    vi.spyOn(mappingCache, "remapValueChanges").mockImplementation((changes, mapping) => {
+      if (referencePrepareStarted && !referenceDecodeResolved) nonReferencePreparedDuringDecode = true;
+      return remapValueChanges(changes, mapping);
+    });
     const adapter: WaveDromAdapter = {
       toWaveJson: (source) => toWaveJson(source),
       renderWave: vi.fn(async () => { throw new Error("Detached prepare/install should be used."); }),
       prepareWave: vi.fn(async (signalId, waveJson) => {
         lifecycle.push(`prepare:${signalId}`);
+        if (signalId === referenceSignalId) referencePrepareStarted = true;
         sourceCyclesBySignal.set(signalId, waveJson.geometrySourceCycles);
         const svg = {} as SVGSVGElement;
         svgBySignal.set(signalId, svg);
-        return { signalId, ownerKey: signalId, svg, renderIndex: 0, waveJson };
+        return { signalId, ownerKey: signalId, svg, renderIndex: 0, waveJson, ...(signalId === referenceSignalId ? { svgImageReady: decode.promise } : {}) };
       }),
       installWave: vi.fn((rendered, _mount) => {
         lifecycle.push(`install:${rendered.signalId}`);
@@ -112,7 +123,7 @@ describe("waveform provider primary geometry readiness", () => {
     const context: WaveformProviderContext = {
       sessionController: { snapshot: () => ({ document, revision: 0 }) },
       getDocumentEpoch: () => 1,
-      mappingCache: new DisplayTimeMappingCache(),
+      mappingCache,
       adapter,
       geometryRegistry,
       markOpenPhase: vi.fn(),
@@ -123,11 +134,15 @@ describe("waveform provider primary geometry readiness", () => {
     const owner = () => ({ style: { removeProperty: vi.fn() }, dataset: {}, ownerDocument: {} as Document, isConnected: true }) as unknown as HTMLElement;
     const provider = createWaveformSurfaceProvider(context);
 
-    await provider.mountWaveBatch!([
+    const batch = provider.mountWaveBatch!([
       { signalId: nonReferenceSignalIds[0]!, owner: owner(), documentEpoch: 1, sourceWindow: { start: 1, end: 9 } },
       { signalId: nonReferenceSignalIds[1]!, owner: owner(), documentEpoch: 1, sourceWindow: { start: 1, end: 9 } },
       { signalId: referenceSignalId, owner: owner(), documentEpoch: 1, sourceWindow: { start: 1, end: 9 } },
     ]);
+    await vi.waitFor(() => expect(nonReferencePreparedDuringDecode).toBe(true));
+    referenceDecodeResolved = true;
+    decode.resolve();
+    await batch;
 
     expect(lifecycle).toEqual([
       `prepare:${referenceSignalId}`,
@@ -139,6 +154,7 @@ describe("waveform provider primary geometry readiness", () => {
     ]);
     expect(adapter.renderWave).not.toHaveBeenCalled();
     expect(adapter.installWave).toHaveBeenCalledTimes(3);
+    expect(nonReferencePreparedDuringDecode).toBe(true);
     expect(svgBySignal.size).toBe(3);
     // Reference bootstrap publishes once before rendering; the two other
     // owner maps are committed together and invalidate their shared indexes once.
@@ -200,7 +216,7 @@ describe("waveform provider primary geometry readiness", () => {
       ...repeatedBinaryIds.slice(1),
     ]);
     expect(adapter.installWave).toHaveBeenCalledTimes(document.signals.length);
-    expect(waveMarkupArtifactKey).toHaveBeenCalledTimes(document.signals.length - 1);
+    expect(waveMarkupArtifactKey).toHaveBeenCalledTimes(document.signals.length);
   });
 
   it("does not install a prepared waveform after its request becomes stale", async () => {

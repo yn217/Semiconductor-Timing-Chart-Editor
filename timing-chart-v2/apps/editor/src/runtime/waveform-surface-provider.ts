@@ -235,6 +235,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         return item;
       };
       const prepared: PreparedItem[] = [];
+      const canvasPrototype = isCanvasWaveRendererSelected(document);
+      const supportsDetachedWaveInstall = context.adapter.prepareWave !== undefined && context.adapter.installWave !== undefined;
       const referenceRequest = requests.find((request) => request.signalId === referenceClockId);
       if (referenceRequest) prepared.push(prepareAndMeasure(referenceRequest));
       // Primary ruler/grid geometry is analytic and does not depend on the
@@ -268,13 +270,78 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           }
         }
       }
+      const pxPerDisplayCycle = context.getWaveWidthPxPerDisplayCycle?.();
+      const waveOriginPx = context.getWaveOriginPx?.() ?? 0;
+      const applyOwnerPlacement = (item: PreparedItem): void => {
+        if (pxPerDisplayCycle !== undefined && item.rendererStart !== undefined && item.rendererEnd !== undefined && item.rendererEnd > item.rendererStart) {
+          const placement = waveOwnerPlacement({ displayStart: item.rendererStart, displayEnd: item.rendererEnd, pxPerDisplayCycle, waveOriginPx, presentationScale: context.getPresentationScale?.() ?? 1 });
+          item.request.owner.style.width = `${placement.width}px`;
+          item.request.owner.style.left = `${placement.left}px`;
+        } else {
+          item.request.owner.style.removeProperty("width");
+          item.request.owner.style.removeProperty("left");
+        }
+      };
+      const progressiveRequest = referenceRequest && isCurrent(referenceRequest)
+        ? referenceRequest
+        : requests.find((request) => isCurrent(request));
+      let progressiveItem = prepared.find((item) => item.request === progressiveRequest);
+      if (!progressiveItem && progressiveRequest) {
+        progressiveItem = prepareAndMeasure(progressiveRequest);
+        prepared.push(progressiveItem);
+      }
+      const progressivePrepared = new Map<PreparedItem["request"], Readonly<{ rendered?: RenderedWave; error?: Error; stale?: boolean }>>();
+      const imageReady: Promise<void>[] = [];
+      const readyRegistered = new Set<(typeof requests)[number]>();
+      const registerVisibleWaveReady = (request: (typeof requests)[number], rendered: RenderedWave): void => {
+        if (readyRegistered.has(request) || !isCurrent(request) || !request.owner.isConnected) return;
+        readyRegistered.add(request);
+        const markReady = (): void => {
+          if (!isCurrent(request) || !request.owner.isConnected) return;
+          context.markOpenPhase("first-visible-wave-painted");
+          markReferenceClockPaintedIfCurrent(request.signalId);
+        };
+        if (rendered.svgImageReady) imageReady.push(rendered.svgImageReady.then(markReady));
+        else markReady();
+      };
+      // Start the first visible SVG's asynchronous resource decode before the
+      // remaining owners' synchronous WaveJSON/remap preparation. The same
+      // prepared node is handed to the scheduler below, so this overlaps
+      // independent work without duplicating WaveDrom preparation or install.
+      if (primaryOpenBatch && supportsDetachedWaveInstall && !canvasPrototype
+        && progressiveItem?.waveJson && !progressiveItem.error && !progressiveItem.deferred
+        && isCurrent(progressiveItem.request)) {
+        const renderStartedAt = globalThis.performance.now();
+        renderCount += 1;
+        try {
+          context.adapter.waveMarkupArtifactKey?.(progressiveItem.waveJson, progressiveItem.semanticValues);
+          applyOwnerPlacement(progressiveItem);
+          let rendered = await context.adapter.prepareWave!(
+            progressiveItem.request.signalId,
+            progressiveItem.waveJson,
+            progressiveItem.request.owner.ownerDocument,
+            progressiveItem.semanticValues,
+          );
+          if (!isCurrent(progressiveItem.request)) {
+            progressivePrepared.set(progressiveItem.request, { stale: true });
+          } else {
+            rendered = context.adapter.installWave!(rendered, progressiveItem.request.owner);
+            registerVisibleWaveReady(progressiveItem.request, rendered);
+            progressivePrepared.set(progressiveItem.request, { rendered });
+          }
+        } catch (error: unknown) {
+          progressivePrepared.set(progressiveItem.request, { error: error instanceof Error ? error : new Error(String(error)) });
+        } finally {
+          renderAwaitMs += Math.max(0, globalThis.performance.now() - renderStartedAt);
+        }
+      }
       // The reference-ready callback may reproject the just-created document
       // on the next frame, invalidating the original viewport requests. Do
       // not pay WaveJSON/remap/window preparation for those requests before
       // checking freshness; the replacement projection will request the
       // current owners itself.
       for (const request of requests) {
-        if (request === referenceRequest) continue;
+        if (request === referenceRequest || request === progressiveRequest) continue;
         if (!isCurrent(request)) {
           prepared.push({ request, waveJson: undefined, semanticValues: undefined, error: undefined, deferred: false, rendererStart: undefined, rendererEnd: undefined });
           continue;
@@ -296,46 +363,10 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       // ratio (never a `--wave-width` CSS read -- see the context field doc).
       // Non-windowed owners, or when the ratio isn't known yet, fall back to
       // the shared CSS rule (full document width) as before.
-      const pxPerDisplayCycle = context.getWaveWidthPxPerDisplayCycle?.();
-      const waveOriginPx = context.getWaveOriginPx?.() ?? 0;
       for (const item of prepared) {
-        if (pxPerDisplayCycle !== undefined && item.rendererStart !== undefined && item.rendererEnd !== undefined && item.rendererEnd > item.rendererStart) {
-          const placement = waveOwnerPlacement({ displayStart: item.rendererStart, displayEnd: item.rendererEnd, pxPerDisplayCycle, waveOriginPx, presentationScale: context.getPresentationScale?.() ?? 1 });
-          item.request.owner.style.width = `${placement.width}px`;
-          // The shared wave-owner layer (`stable-waveform-surface`) is one
-          // element as wide as the whole document (`--wave-width`), scrolled
-          // natively; `place()` (stable-surface.ts) only ever sets each
-          // owner's *vertical* position via translateY. A windowed owner
-          // whose SVG covers a cycle range starting partway through the
-          // document -- anything after the first #614 re-windowing fires --
-          // was left at its default horizontal position (effectively x=0,
-          // i.e. document start) with no offset for where its own window
-          // actually begins, so its rendered content appeared at completely
-          // the wrong horizontal position once scrolled away from cycle 0.
-          // `waveOriginPx` carries the ruler's own coordinate-system origin
-          // (WaveDrom's fixed left margin) so this lines up with ruler ticks
-          // exactly, not just proportionally (#620).
-          item.request.owner.style.left = `${placement.left}px`;
-        } else {
-          item.request.owner.style.removeProperty("width");
-          item.request.owner.style.removeProperty("left");
-        }
+        if (item !== progressiveItem || !progressivePrepared.has(item.request)) applyOwnerPlacement(item);
       }
-      const canvasPrototype = isCanvasWaveRendererSelected(document);
       const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean; readonly canvasPainted?: boolean; readonly installed?: boolean; readonly rendererStart?: number | undefined }> = [];
-      const imageReady: Promise<void>[] = [];
-      const readyRegistered = new Set<(typeof requests)[number]>();
-      const registerVisibleWaveReady = (request: (typeof requests)[number], rendered: RenderedWave): void => {
-        if (readyRegistered.has(request) || !isCurrent(request) || !request.owner.isConnected) return;
-        readyRegistered.add(request);
-        const markReady = (): void => {
-          if (!isCurrent(request) || !request.owner.isConnected) return;
-          context.markOpenPhase("first-visible-wave-painted");
-          markReferenceClockPaintedIfCurrent(request.signalId);
-        };
-        if (rendered.svgImageReady) imageReady.push(rendered.svgImageReady.then(markReady));
-        else markReady();
-      };
       for (const item of orderedPrepared) if (item.deferred) { deferredCount += 1; renderResults.push({ ...item, rendered: undefined }); }
       const runnableItems = orderedPrepared.filter((item) => {
         if (item.deferred) return false;
@@ -350,7 +381,6 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         return true;
       });
       const itemByRequest = new Map(runnableItems.map((item) => [item.request, item] as const));
-      const supportsDetachedWaveInstall = context.adapter.prepareWave !== undefined && context.adapter.installWave !== undefined;
       // Image-backed SVG artifacts decode asynchronously and are shared by
       // exact WaveJSON/semantic-value identity. Start one decode for every
       // distinct artifact early, before spending scheduler slices preparing
@@ -358,7 +388,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       // the same complete owner work and cooperative budget while overlapping
       // independent browser decode with the remaining owner preparation.
       const seenArtifactKeys = new Set<string>();
-      const progressiveSignalId = referenceClockId ?? runnableItems[0]?.request.signalId;
+      const progressiveSignalId = progressiveRequest?.signalId;
       const scheduled = await waveRenderScheduler.runBatch(runnableItems.map((item) => ({
         key: item.request,
         priority: (() => {
@@ -372,6 +402,10 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         })(),
         isCurrent: () => isCurrent(item.request),
         run: async () => {
+          const early = progressivePrepared.get(item.request);
+          if (early?.stale) return { ...item, rendered: undefined, stale: true };
+          if (early?.error) return { ...item, rendered: undefined, error: early.error };
+          if (early?.rendered) return { ...item, rendered: early.rendered, installed: true };
           if (item.error || !item.waveJson) return { ...item, rendered: undefined };
           if (canvasPrototype) {
             paintWaveCanvas(item.request.owner, item.waveJson);
