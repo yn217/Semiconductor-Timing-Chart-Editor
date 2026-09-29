@@ -45,7 +45,6 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
   const [rangePresentationRevision, setRangePresentationRevision] = useState(0);
   const collapsedGroupIdsRef = useRef<ReadonlySet<GroupId>>(new Set());
   const applyCollapsedGroupsRef = useRef<(ids: ReadonlySet<GroupId>) => void>(() => undefined);
-  const replacementProjectionPreparedRef = useRef(false);
   const [timelineRangeState, setTimelineRangeState] = useState<TimelineRange>(() => input.visualReference ? { start: 0, end: 1 } : { start: 2, end: 4 });
   const [rangeSelectionActiveState, setRangeSelectionActiveState] = useState(false);
   const [selectedCycleState, setSelectedCycleState] = useState(() => input.visualReference ? 0 : 2);
@@ -57,19 +56,26 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
   useEffect(() => {
     if (previousDocumentEpochRef.current === input.documentEpoch) return;
     previousDocumentEpochRef.current = input.documentEpoch;
-    const empty = new Set<GroupId>();
-    collapsedGroupIdsRef.current = empty;
-    setCollapsedGroupIds(empty);
-    if (replacementProjectionPreparedRef.current) replacementProjectionPreparedRef.current = false;
-    else applyCollapsedGroupsRef.current(empty);
+    if (collapsedGroupIdsRef.current.size > 0) {
+      const empty = new Set<GroupId>();
+      collapsedGroupIdsRef.current = empty;
+      setCollapsedGroupIds(empty);
+    }
     const initialRange = input.visualReference ? { start: 0, end: 1 } : { start: 2, end: 4 };
-    timelineRangeRef.current = initialRange;
-    rangeSelectionActiveRef.current = false;
-    selectedCycleRef.current = input.visualReference ? 0 : 2;
+    if (timelineRangeRef.current.start !== initialRange.start || timelineRangeRef.current.end !== initialRange.end) {
+      timelineRangeRef.current = initialRange;
+      setTimelineRangeState(initialRange);
+    }
+    if (rangeSelectionActiveRef.current) {
+      rangeSelectionActiveRef.current = false;
+      setRangeSelectionActiveState(false);
+    }
+    const initialCycle = input.visualReference ? 0 : 2;
+    if (selectedCycleRef.current !== initialCycle) {
+      selectedCycleRef.current = initialCycle;
+      setSelectedCycleState(initialCycle);
+    }
     selectedEdgeRef.current = undefined;
-    setTimelineRangeState(initialRange);
-    setRangeSelectionActiveState(false);
-    setSelectedCycleState(input.visualReference ? 0 : 2);
   }, [input.documentEpoch]);
 
   const setCollapsedGroups = useCallback((next: ReadonlySet<GroupId>) => {
@@ -79,10 +85,10 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
     applyCollapsedGroupsRef.current(stable);
   }, []);
   const resetCollapsedGroups = useCallback(() => {
+    if (collapsedGroupIdsRef.current.size === 0) return;
     const empty = new Set<GroupId>();
     collapsedGroupIdsRef.current = empty;
     setCollapsedGroupIds(empty);
-    replacementProjectionPreparedRef.current = true;
   }, []);
   const toggleCollapsedGroup = useCallback((id: GroupId) => {
     const next = new Set(collapsedGroupIdsRef.current);

@@ -74,6 +74,24 @@ describe("document-relative transient state ownership", () => {
       "document-relative UI reset",
     ]));
   });
+  it("resets timeline presentation without duplicate projection or no-op state publication", () => {
+    const source = readFileSync(resolve(workspace, "apps/editor/src/workspace/use-timeline-presentation-state.ts"), "utf8");
+    const epochEffect = source.slice(source.indexOf("useEffect(() => {"), source.indexOf("}, [input.documentEpoch]);"));
+    expect(epochEffect).not.toContain("applyCollapsedGroupsRef.current");
+    expect(epochEffect).toMatch(/collapsedGroupIdsRef\.current\.size\s*>\s*0/);
+    expect(epochEffect).toMatch(/timelineRangeRef\.current\.start\s*!==\s*initialRange\.start/);
+    expect(epochEffect).toMatch(/if \(rangeSelectionActiveRef\.current\)/);
+    expect(epochEffect).toMatch(/selectedCycleRef\.current\s*!==\s*initialCycle/);
+    expect(source).toMatch(/resetCollapsedGroups = useCallback\(\(\) => \{\s*if \(collapsedGroupIdsRef\.current\.size === 0\) return;/);
+    expect(source).toContain("applyCollapsedGroupsRef.current(stable)");
+  });
+  it("does not invalidate Transaction presentation from Cycle-only reference geometry readiness", () => {
+    const source = readFileSync(resolve(workspace, "apps/editor/src/runtime/timeline-surface-controller.ts"), "utf8");
+    const callback = source.slice(source.indexOf("onReferenceGeometryReady: () => {"), source.indexOf("invalidateSnapIndex:", source.indexOf("onReferenceGeometryReady: () => {")));
+    expect(callback).toContain('if (input.viewMode !== "Cycle") setTransactionPresentationRevision');
+    expect(callback).toContain("referenceGeometryReconciled = true");
+    expect(callback).toContain("renderer.update(projection)");
+  });
   // #743: the failure boundary is commitDocumentReplacement (behaviour tested in tests/editor/document-replacement.test.ts); here we pin that the
   // lifecycle hook goes through it and advances the epoch nowhere else, and that inside it the epoch advance follows the session replacement.
   it("routes every replacement through commitDocumentReplacement (epoch advance strictly after session replacement, once)", () => {

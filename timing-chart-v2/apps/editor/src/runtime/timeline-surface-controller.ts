@@ -223,7 +223,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
           // projection before this document's Cycle geometry was published.
           // Invalidate once at the first geometry-ready boundary; later
           // virtualized owner remounts must not reproject bars during scroll.
-          setTransactionPresentationRevision((value) => value + 1);
+          if (input.viewMode !== "Cycle") setTransactionPresentationRevision((value) => value + 1);
           // Small/medium documents always render one full-document waveform
           // window. Reference geometry therefore changes the ruler/Transaction
           // projection state, but cannot change the WaveDrom request set; avoid
