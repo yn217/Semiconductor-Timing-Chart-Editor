@@ -1,5 +1,13 @@
 export type TransactionPresentationViewMode = "Cycle" | "Transaction" | "Split";
 
+export function shouldRefreshTransactionPresentation(
+  viewMode: TransactionPresentationViewMode,
+  changeSet: Readonly<{ fullDocumentReplace?: boolean; transactionSemantics?: unknown }>,
+): boolean {
+  return viewMode !== "Cycle"
+    && (changeSet.fullDocumentReplace === true || changeSet.transactionSemantics !== undefined);
+}
+
 /** Coalesce document-ready presentation invalidations without publishing stale React work. */
 export function createTransactionPresentationRefreshRequester(input: {
   readonly getViewMode: () => TransactionPresentationViewMode;

@@ -1,5 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
-import { createTransactionPresentationRefreshRequester } from "../../apps/editor/src/runtime/transaction-presentation-refresh.js";
+import { createTransactionPresentationRefreshRequester, shouldRefreshTransactionPresentation } from "../../apps/editor/src/runtime/transaction-presentation-refresh.js";
+
+describe("transaction presentation revision policy", () => {
+  it("skips Cycle-only surfaces while preserving Transaction and Combined invalidations", () => {
+    expect(shouldRefreshTransactionPresentation("Cycle", { fullDocumentReplace: true })).toBe(false);
+    expect(shouldRefreshTransactionPresentation("Cycle", { transactionSemantics: { changed: true } })).toBe(false);
+    expect(shouldRefreshTransactionPresentation("Transaction", { fullDocumentReplace: true })).toBe(true);
+    expect(shouldRefreshTransactionPresentation("Split", { transactionSemantics: { changed: true } })).toBe(true);
+    expect(shouldRefreshTransactionPresentation("Transaction", {})).toBe(false);
+  });
+});
 
 describe("transaction presentation refresh requester", () => {
   it("skips Cycle mode and coalesces ready notifications once per generation", () => {

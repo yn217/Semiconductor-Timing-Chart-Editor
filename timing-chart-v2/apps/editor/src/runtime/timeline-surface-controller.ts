@@ -34,7 +34,7 @@ import type { BottomPinnedSelection, TreeTypeFilter } from "../workspace/use-wor
 import type { ContextMenuState } from "../workspace/use-dialog-menu-state.js";
 import { resetInspectorAccordionState } from "../inspector-accordion.js";
 import { deriveTransactionExtent } from "./transaction-extent.js";
-import { createTransactionPresentationRefreshRequester } from "./transaction-presentation-refresh.js";
+import { createTransactionPresentationRefreshRequester, shouldRefreshTransactionPresentation } from "./transaction-presentation-refresh.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type TimelineRange = Readonly<{ start: number; end: number }>;
@@ -559,7 +559,9 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       if (changed.fullDocumentReplace === true || changed.rowOrder !== undefined || changed.rowPresentation !== undefined || changed.addedSignals !== undefined || changed.removedSignals !== undefined || changed.addedGroups !== undefined || changed.removedGroups !== undefined) {
         setTreePresentationRevision((value) => value + 1);
       }
-      if (changed.fullDocumentReplace === true || changed.transactionSemantics !== undefined) {
+      const currentViewMode = surfaceViewMode();
+      const presentationMode = currentViewMode === "Split" || currentViewMode === "Transaction" ? currentViewMode : "Cycle";
+      if (shouldRefreshTransactionPresentation(presentationMode, changed)) {
         setTransactionPresentationRevision((value) => value + 1);
       }
       if (changed.fullDocumentReplace === true) {
