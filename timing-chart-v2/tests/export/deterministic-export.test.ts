@@ -205,6 +205,29 @@ describe("deterministic document export", () => {
     expect(first).toEqual(second);
   });
 
+  it("renders selected-range WaveDrom inputs as bounded windows without changing source cycles", () => {
+    const base = canonicalFixture();
+    const document = {
+      ...base,
+      timeline: { ...base.timeline, end: 100, cycleCount: 100 },
+      signals: [base.signals[0]!, { ...base.signals[1]!, values: [{ start: 0, value: "00" }, { start: 22, value: "A5" }, { start: 50, value: "FF" }] }],
+    };
+    const scene = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 20, end: 25 } });
+
+    expect(scene.waveforms).toHaveLength(2);
+    for (const waveform of scene.waveforms) {
+      expect(JSON.parse(waveform.waveJson).wave).toHaveLength(5);
+      expect(waveform.cropX).toBe(0);
+      expect(waveform.width).toBeGreaterThan(0);
+      expect(waveform.sourceWidth).toBeLessThan(100 * 20);
+    }
+    expect(JSON.parse(scene.waveforms.find((wave) => wave.signalId === document.signals[1]!.id)!.waveJson).data).toEqual(["0x00", "0xA5"]);
+
+    const wholeDocument = buildExportScene(document, { format: "svg", scope: "document" });
+    expect(JSON.parse(wholeDocument.waveforms[0]!.waveJson).wave).toHaveLength(100);
+    expect(JSON.parse(wholeDocument.waveforms[1]!.waveJson).wave).toHaveLength(100);
+  });
+
   it("applies page size, orientation, margin and fit through the shared ExportScene", () => {
     const document = scaleFixture(2);
     const page = { size: "A4" as const, orientation: "portrait" as const, margin: 32, fit: "page" as const };
@@ -258,6 +281,23 @@ describe("deterministic document export", () => {
     expect(svg).toContain('data-source-signal-id="sig_data"');
     expect(svg).toContain('data-trace-offset-cycles="-1"');
     expect(svg).toContain('stroke-dasharray="6 4"');
+  });
+
+  it("bounds selected-range Ghost Trace point generation while retaining its full source waveform", () => {
+    const base = canonicalFixture();
+    const source = base.signals[1]!;
+    const document = {
+      ...base,
+      timeline: { ...base.timeline, end: 100, cycleCount: 100 },
+      signals: [base.signals[0]!, { ...source, values: [{ start: 0, value: "00" }, { start: 50, value: "A5" }] }],
+      annotations: [{ id: "ann_long_ghost" as AnnotationId, type: "ghostTrace" as const, label: "Window", visible: true, sourceSignalId: source.id, traceOffsetCycles: -1, start: { signalId: source.id, cycle: 0, point: "cycle-start" as const }, end: { signalId: source.id, cycle: 100, point: "cycle-end" as const } }],
+    };
+    const scene = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 40, end: 45 } });
+    const ghost = scene.annotations.find((annotation) => annotation.id === "ann_long_ghost");
+
+    expect(ghost?.tracePoints).toHaveLength(6);
+    expect(JSON.parse(scene.waveforms.find((wave) => wave.signalId === source.id)!.waveJson).wave).toHaveLength(100);
+    expect(JSON.parse(scene.waveforms.find((wave) => wave.signalId === base.signals[0]!.id)!.waveJson).wave).toHaveLength(5);
   });
 
   it("exports datasheet Measurement dimension markers, extensions, and lane metadata deterministically", () => {
@@ -347,6 +387,20 @@ describe("deterministic document export", () => {
     const visibleRange = buildExportScene({ ...document, signals: [{ ...document.signals[0]!, edgeCounter: { ...document.signals[0]!.edgeCounter, countFrom: "visible-range-start" as const } }, document.signals[1]!] }, { format: "svg", scope: "selected-range", range: { start: 4, end: 7 } });
     expect(visibleRange.edgeCounters[0]?.cycle).toBeGreaterThanOrEqual(4);
     expect(visibleRange.edgeCounters[0]?.label).toBe("10");
+  });
+
+  it("bounds simple selected-range edge counters without renumbering global labels", () => {
+    const base = canonicalFixture();
+    const clock = base.signals[0]!;
+    const document = {
+      ...base,
+      timeline: { ...base.timeline, end: 100, cycleCount: 100 },
+      signals: [{ ...clock, generator: { ...clock.generator, period: 4 }, edgeCounter: { ...clock.edgeCounter, show: true, mode: "both" as const, startNumber: 10, labelEvery: 2 } }, base.signals[1]!],
+    };
+    const complete = buildExportScene(document, { format: "svg", scope: "document" });
+    const bounded = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 42, end: 50 } });
+    const expected = complete.edgeCounters.filter((edge) => edge.cycle >= 42 && edge.cycle < 50).map(({ cycle, kind, label }) => ({ cycle, kind, label }));
+    expect(bounded.edgeCounters.map(({ cycle, kind, label }) => ({ cycle, kind, label }))).toEqual(expected);
   });
 
   it("uses the configured Bookmark rather than the earliest Bookmark for export", () => {
