@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+// Written against the plain Cycle sample (no demo Bookmarks); the product default document is the Transaction demo.
+startInCycleSample(test);
 
 // #772 Failure B: an unapplied Bookmark Name/Cycle/Comment draft must not be silently destroyed by selecting another Bookmark row --
 // it is kept under the original stable Bookmark ID and announced, mirroring #763's Transaction Phase draft policy.
@@ -9,8 +13,9 @@ test("switching Bookmark selection keeps an unapplied draft, announced, until Ap
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   for (const start of [3, 10]) {
-    await page.getByLabel("Timeline range start").fill(String(start));
+    // End first: raising Start past the previous End would otherwise be rejected and both markers would land on the old range.
     await page.getByLabel("Timeline range end").fill(String(start + 1));
+    await page.getByLabel("Timeline range start").fill(String(start));
     await page.getByRole("button", { name: "Add marker" }).click();
   }
   await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
@@ -55,8 +60,9 @@ test("Bookmark Bottom Pin follows the pinned stable ID and deletes the displayed
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   for (const start of [3, 10]) {
-    await page.getByLabel("Timeline range start").fill(String(start));
+    // End first: raising Start past the previous End would otherwise be rejected and both markers would land on the old range.
     await page.getByLabel("Timeline range end").fill(String(start + 1));
+    await page.getByLabel("Timeline range start").fill(String(start));
     await page.getByRole("button", { name: "Add marker" }).click();
   }
   await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();

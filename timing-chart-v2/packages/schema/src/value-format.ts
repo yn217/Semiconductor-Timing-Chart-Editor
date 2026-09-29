@@ -21,6 +21,8 @@ export function parseBusValue(input: string | number, width?: number): ParsedBus
   }
   const sizedWidth = sized ? Number(sized[1]) : undefined;
   if (sizedWidth !== undefined && (!Number.isSafeInteger(sizedWidth) || sizedWidth <= 0)) throw new Error("Sized bus literal width must be a positive safe integer.");
+  // #456: validate the radix alphabet BEFORE classifying an X/Z/? literal, so unknown digits cannot hide an invalid digit.
+  if ((sized || prefixed) && !({ 2: /^[01xz?]+$/i, 10: /^[0-9xz?]+$/i, 16: /^[0-9a-fxz?]+$/i }[base] as RegExp).test(digits)) throw new Error("Invalid digit for the bus literal radix.");
   if (/[xz?]/i.test(digits)) return { kind: "unknown", width: width ?? (sizedWidth ?? (base === 16 ? digits.length * 4 : digits.length)) };
   let value = BigInt(base === 16 ? `0x${digits}` : base === 2 ? `0b${digits}` : digits);
   if (sizedWidth !== undefined && value !== 0n && value.toString(2).length > sizedWidth) {

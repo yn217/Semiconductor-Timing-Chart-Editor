@@ -87,7 +87,7 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
   const transactionGroupFingerprintCache = useRef(new WeakMap<NonNullable<CanonicalDocument["transactionGroups"]>, string>());
   useEffect(() => {
     let active = true;
-    let observer: MutationObserver | undefined;
+    let pollFrame = 0;
     let scheduledBuild: number | undefined;
     let scheduledBuildKind: "idle" | "timer" | undefined;
     const buildOverview = () => {
@@ -148,16 +148,19 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
     const readyHost = currentViewport?.closest<HTMLElement>(".cycle-panel")?.querySelector<HTMLElement>("[data-testid='cycle-surface']");
     if (!readyHost || readyHost.dataset.cycleViewReady === "true") scheduleOverviewBuild();
     else {
-      observer = new MutationObserver(() => {
-        if (readyHost.dataset.cycleViewReady !== "true") return;
-        observer?.disconnect();
-        scheduleOverviewBuild();
-      });
-      observer.observe(readyHost, { attributes: true, attributeFilter: ["data-cycle-view-ready"] });
+      // Wait for the surface ready flag with a bounded frame poll (no DOM observers for render synchronization).
+      let frames = 0;
+      const waitForReady = () => {
+        pollFrame = 0;
+        if (!active) return;
+        if (readyHost.dataset.cycleViewReady === "true" || (frames += 1) > 600) { scheduleOverviewBuild(); return; }
+        pollFrame = globalThis.requestAnimationFrame(waitForReady);
+      };
+      pollFrame = globalThis.requestAnimationFrame(waitForReady);
     }
     return () => {
       active = false;
-      observer?.disconnect();
+      if (pollFrame !== 0) globalThis.cancelAnimationFrame(pollFrame);
       if (scheduledBuild === undefined) return;
       if (scheduledBuildKind === "idle" && typeof globalThis.cancelIdleCallback === "function") globalThis.cancelIdleCallback(scheduledBuild);
       else if (scheduledBuildKind === "timer") globalThis.clearTimeout(scheduledBuild);

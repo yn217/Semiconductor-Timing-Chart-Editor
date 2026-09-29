@@ -52,4 +52,20 @@ describe("canonical bus width validation uses shared literal radix semantics", (
     document.signals = document.signals.map((entry, index) => index === signalIndex ? invalidSizedBus : entry);
     expect(validateCanonicalDocument(document).some((problem) => problem.code === "INVALID_BUS_LITERAL")).toBe(true);
   });
+
+  // #456: the radix alphabet is validated before X/Z/? classification.
+  it.each(["4'b10x1", "8'hA?zF", "0d12x", "0b1zx0", "0x1FxZ"])("keeps %s as an unknown literal", (literal) => {
+    expect(parseBusValue(literal).kind).toBe("unknown");
+  });
+  it.each(["4'b2X", "0bF?", "8'dA?", "0d1F", "0b2X", "0dAx"])("rejects %s (invalid digit hidden by X/Z/?)", (literal) => {
+    expect(() => parseBusValue(literal)).toThrow();
+  });
+  it("Canonical validation reports INVALID_BUS_LITERAL for a radix-invalid unknown literal", () => {
+    const document = structuredClone(canonicalFixture()) as CanonicalDocument;
+    const index = document.signals.findIndex((signal) => signal.id === "sig_data");
+    const signal = document.signals[index];
+    if (!signal || signal.type !== "bus") throw new Error("fixture must contain its Bus signal");
+    document.signals = document.signals.map((entry, position) => position === index ? { ...signal, width: 4, values: [{ start: 0, value: "4'b2X" }] } : entry);
+    expect(validateCanonicalDocument(document).map((problem) => problem.code)).toContain("INVALID_BUS_LITERAL");
+  });
 });

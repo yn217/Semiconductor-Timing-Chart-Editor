@@ -1,5 +1,5 @@
 import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
-import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, wrapAnnotationLabel } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, wrapAnnotationLabel } from "@timing-chart-v2/geometry";
 import { LEFT_TREE_ICON_DOTS, LEFT_TREE_ICON_PATHS, LEFT_TREE_ICON_PUPIL, type LeftTreeIconPathName } from "./left-tree-icon-spec.js";
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
 import { groupBackgroundColor } from "./group-background.js";
@@ -1146,6 +1146,29 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     return;
   }
   const document = shell.ownerDocument;
+  // #900: a Spacer is vertical spacing, not a Signal. No role badge / empty name / visibility eye; the Left Tree keeps a muted label
+  // and the row actions (select, drag, delete) so the spacing stays editable, the Frozen and Timing surfaces stay blank.
+  if (row.kind === "spacer") {
+    shell.dataset.rowKind = "spacer";
+    if (surface !== "left") { shell.replaceChildren(); return; }
+    const branch = document.createElement("span");
+    branch.dataset.role = "tree-branch";
+    branch.dataset.groupId = row.groupId;
+    branch.draggable = groupStart;
+    branch.textContent = "";
+    const label = document.createElement("span");
+    label.dataset.role = "tree-spacer-label";
+    label.textContent = "Spacer";
+    label.title = `Spacer · ${row.height}px`;
+    const more = document.createElement("button");
+    more.type = "button";
+    more.dataset.role = "tree-more";
+    more.dataset.treeSignalId = row.rowId;
+    more.setAttribute("aria-label", "More actions for spacer");
+    more.append(createLeftTreeIcon(document, "more", "surface-icon more-icon"));
+    shell.replaceChildren(label, more, branch);
+    return;
+  }
   if (surface === "left") {
     const branch = document.createElement("span");
     branch.dataset.role = "tree-branch";
@@ -1396,6 +1419,14 @@ function applySharedSymbolWaveformColor(svg: SVGSVGElement, color: string | unde
 }
 
 function applyWaveformStyle(owner: HTMLElement, parsed: ReturnType<typeof parseWaveformStyle>): void {
+  // Canvas-painted owner (no SVG): the painter reads the color from the owner and repaints on this event.
+  if (owner.querySelector("canvas[data-wave-canvas]")) {
+    if ((owner.dataset.waveformStyleColor ?? "") !== (parsed.color ?? "")) {
+      if (parsed.color) owner.dataset.waveformStyleColor = parsed.color; else delete owner.dataset.waveformStyleColor;
+      owner.dispatchEvent(new Event("wave-canvas-restyle"));
+    }
+    return;
+  }
   const image = owner.querySelector<SVGImageElement>("svg > image[data-wave-svg-image]");
   if (image) {
     const source = image.dataset.waveSvgSource;

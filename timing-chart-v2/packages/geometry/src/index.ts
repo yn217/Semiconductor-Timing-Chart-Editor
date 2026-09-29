@@ -453,3 +453,7 @@ export class SemanticSnapCandidateService {
   }
 }
 export * from "./uniform-cycle-geometry.js";
+
+/** Annotation label layout constants/wrapping are data-only presentation helpers owned by schema; the renderer reaches them through
+ * geometry so `renderer` keeps no direct schema dependency (architecture/packages.json). */
+export { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, wrapAnnotationLabel } from "@timing-chart-v2/schema";

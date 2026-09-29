@@ -1,7 +1,7 @@
 import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
 import { waveDomainPaddingPx, waveOwnerPlacement } from "./wave-owner-placement.js";
 import { buildTimeGroupHierarchy, type CanonicalDocument, type SignalId } from "@timing-chart-v2/schema";
-import type { DisplayTimeMapping } from "@timing-chart-v2/projection";
+import { timeGroupOutlineHeight, type DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { presentationCycles } from "../presentation-cycles.js";
 import { displayWindowForSource } from "./display-boundary.js";
@@ -23,7 +23,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   rangeBand.setAttribute("aria-hidden", "true");
   rangeBand.hidden = true;
   const hierarchy = buildTimeGroupHierarchy(document.timeGroups);
-  const outlineHeight = hierarchy.maxDepth === 0 && document.timeGroups.length === 0 ? 0 : (hierarchy.maxDepth + 1) * 20;
+  const outlineHeight = timeGroupOutlineHeight(document);
   const rulerFrame = element.parentElement;
   if (rulerFrame) {
     rulerFrame.style.height = `${34 + outlineHeight}px`;

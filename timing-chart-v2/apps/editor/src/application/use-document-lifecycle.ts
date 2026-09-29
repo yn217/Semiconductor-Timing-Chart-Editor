@@ -1,9 +1,15 @@
 import { useCallback, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import type { CommandHistorySession } from "@timing-chart-v2/history";
 import { validateDocumentResourceBudget, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import { commitDocumentReplacement } from "./document-replacement.js";
 import { canonicalDocumentOf, createNewDocumentFromProductTemplate, decodeOpenDocumentBytes, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "../file-document-controller.js";
+
+/** Largest serialized document (chars) kept as a synchronous localStorage Recent copy (#789). */
+const RECENT_CONTENT_LIMIT = 512 * 1024;
+const RECENT_KEY = "timing-chart-v2.recent";
+const RECENT_META_KEY = "timing-chart-v2.recent-meta";
 
 export type PendingDocumentAction = Readonly<{ kind: "new" | "open"; requestId: number; text?: string }>;
 export type CompatibilityPreview = Readonly<{ sourceFormatVersion: number; sourceText: string; readOnly: boolean }>;
@@ -94,7 +100,11 @@ export function useDocumentLifecycle({
 
   const replaceDocument = useCallback((input: CanonicalDocument | ParsedCanonicalDocument, migrationWarnings: readonly { code: string; path: string; message: string }[] = []) => {
     // #743: the failure boundary lives in commitDocumentReplacement (validate -> replaceSession -> epoch advance once); effects are published only on success.
-    const outcome = commitDocumentReplacement({ replaceSession: (value, diagnostics) => application.replaceSession(value, diagnostics), advanceEpoch: () => application.runtime.documentEpoch.advance() }, input, migrationWarnings);
+    // #208: the session replacement queues the React publication of the new document (title, status, Inspector, Bottom). Commit it
+    // synchronously so it lands in the same task as the imperative Timeline replacement below; otherwise a frame can paint the new
+    // Signal Tree / rows next to the previous document's title, status and context.
+    let outcome!: ReturnType<typeof commitDocumentReplacement>;
+    flushSync(() => { outcome = commitDocumentReplacement({ replaceSession: (value, diagnostics) => application.replaceSession(value, diagnostics), advanceEpoch: () => application.runtime.documentEpoch.advance() }, input, migrationWarnings); });
     if (!outcome.ok) {
       if (outcome.reason === "resource-budget") {
         const diagnostics = openProblems(outcome.problems).map((item) => ({ ...item, recommendation: "Reduce the document resource count, then retry Open." }));
@@ -224,7 +234,12 @@ export function useDocumentLifecycle({
     application.publishHistory();
     application.setRuntimeDiagnostics((current) => current.filter((item) => !isSaveDiagnostic(item)));
     try {
-      localStorage.setItem("timing-chart-v2.recent", text);
+      // #789: Recent metadata is always kept; the full document text goes into synchronous localStorage only under a bounded policy,
+      // so a large Save never pays a synchronous multi-MB copy after the download. Larger documents reopen from the saved file.
+      const document = session.getSnapshot().document;
+      localStorage.setItem(RECENT_META_KEY, JSON.stringify({ filename, title: document.document.title, documentId: document.document.id, size: text.length, savedAt: Date.now(), contentKept: text.length <= RECENT_CONTENT_LIMIT }));
+      if (text.length <= RECENT_CONTENT_LIMIT) localStorage.setItem(RECENT_KEY, text);
+      else localStorage.removeItem(RECENT_KEY);
       application.setProblem("");
     } catch (error) {
       const diagnostic = recentSaveWarning(error);
@@ -244,7 +259,7 @@ export function useDocumentLifecycle({
   }, [pendingAction, performAction, save]);
   const openRecent = useCallback(() => {
     let text: string | null;
-    try { text = localStorage.getItem("timing-chart-v2.recent"); }
+    try { text = localStorage.getItem(RECENT_KEY); }
     catch (error) {
       const diagnostic = recentOpenFailure(error);
       application.setProblem(diagnostic.message);
@@ -252,7 +267,9 @@ export function useDocumentLifecycle({
       return false;
     }
     if (text) { requestOpenText(text); return true; }
-    application.setProblem("No recent document is available.");
+    let large = false;
+    try { large = (JSON.parse(localStorage.getItem(RECENT_META_KEY) ?? "null") as { contentKept?: boolean } | null)?.contentKept === false; } catch { /* metadata is advisory */ }
+    application.setProblem(large ? "The last saved document is too large to keep as a Recent copy. Use Open to reload the saved file." : "No recent document is available.");
     return false;
   }, [application, requestOpenText]);
   const attachEffects = useCallback((effects: LifecycleEffects) => {

@@ -1,4 +1,4 @@
-import type { CanonicalDocument, GroupId, RowId, Signal, SpacerRow } from "@timing-chart-v2/schema";
+import { buildTimeGroupHierarchy, type CanonicalDocument, type GroupId, type RowId, type Signal, type SpacerRow } from "@timing-chart-v2/schema";
 import type { GroupHeaderLayoutEntry, RowLayoutEntry } from "./types.js";
 
 export interface RowLayoutResult {
@@ -53,6 +53,13 @@ export function buildRowLayoutSourceIndex(document: CanonicalDocument): RowLayou
   return getRowLayoutSourceIndex(document).index;
 }
 
+/** Height the time ruler adds above its 34px tick band for Time Group outline levels (20px per level). Single owner: the ruler
+ * frame (build-ruler) and the row-Y origin below both use it, so rows never start under the taller ruler (#901). */
+export function timeGroupOutlineHeight(document: Pick<CanonicalDocument, "timeGroups">): number {
+  if (document.timeGroups.length === 0) return 0;
+  return (buildTimeGroupHierarchy(document.timeGroups).maxDepth + 1) * 20;
+}
+
 export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean; readonly reserveHiddenSpace?: boolean; readonly pane?: "upper" | "lower"; readonly sourceIndex?: RowLayoutSourceIndex } = {}): RowLayoutResult {
   const includeHidden = options.includeHidden ?? true;
   // Signal Split is two viewports over the same canonical Signal sequence.
@@ -80,7 +87,8 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
   const visibleRows: RowLayoutEntry[] = [];
   const groupHeaders: GroupHeaderLayoutEntry[] = [];
   const paneExcludedRowIds = new Set<RowId>();
-  let y = 0;
+  // Rows start below the ruler outline band (the first Group header sits under the 34px tick band, as before).
+  let y = timeGroupOutlineHeight(document);
 
   for (const group of document.signalGroups) {
     const groupRows = group.rows.filter((rowId) => {

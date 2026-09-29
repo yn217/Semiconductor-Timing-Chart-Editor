@@ -273,9 +273,9 @@
       },
       "generator": {
         "start": 0,
-        "period": 1,
-        "duty": 0.4,
-        "phase": 0.1,
+        "period": 2,
+        "duty": 0.25,
+        "phase": 0.5,
         "initial": 0,
         "polarity": "positive"
       },
@@ -310,7 +310,7 @@
         "start": 0,
         "period": 2,
         "duty": 0.5,
-        "phase": 0.25,
+        "phase": 0.5,
         "initial": 0,
         "polarity": "positive",
         "suppressedPeriods": [
@@ -373,12 +373,12 @@
           "id": "s.rclk.enable.0"
         },
         {
-          "start": 44,
+          "start": 45,
           "value": 0,
           "id": "s.rclk.enable.1"
         },
         {
-          "start": 52,
+          "start": 51,
           "value": 1,
           "id": "s.rclk.enable.2"
         },
@@ -388,7 +388,7 @@
           "id": "s.rclk.enable.3"
         },
         {
-          "start": 104,
+          "start": 105,
           "value": 1,
           "id": "s.rclk.enable.4"
         }

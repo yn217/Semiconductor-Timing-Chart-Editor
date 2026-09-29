@@ -182,6 +182,12 @@ for (const [owner, max] of ownerBudgets) {
   const ownerLines = ownerSource.split(/\r?\n/).length;
   if (ownerLines > max) preferredWarnings.push(`${owner} exceeds preferred ${max} lines (${ownerLines})`);
 }
+const ratchet = JSON.parse(await readFile(resolve(root, "architecture/size-ratchet.json"), "utf8"));
+for (const [ratchetFile, ceiling] of Object.entries(ratchet)) {
+  if (ratchetFile.startsWith("_")) continue;
+  const ratchetLines = (await readFile(resolve(root, ratchetFile), "utf8")).split("\n").length;
+  if (ratchetLines > ceiling) violations.push(`${ratchetFile} grew past its ratchet ceiling ${ceiling} (${ratchetLines}); extract an owner or lower the ceiling with the refactor`);
+}
 const effectBodies = [...source.matchAll(/use(?:Layout)?Effect\(\(\) => \{([\s\S]*?)\n\s*\},/g)];
 for (const [index, match] of effectBodies.entries()) {
   const effectLines = match[1].split(/\r?\n/).length;
