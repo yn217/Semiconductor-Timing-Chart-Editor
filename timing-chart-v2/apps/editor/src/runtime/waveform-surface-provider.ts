@@ -249,6 +249,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       let seededReferenceGeometry: LocalGeometryMap | undefined;
       let seededReferenceOwnerGeometry: LocalGeometryMap | undefined;
       let referenceGeometryNotified = false;
+      let referenceGeometryRefresh: Promise<void> | undefined;
       if (referenceItem?.waveJson && !referenceItem.deferred && !referenceItem.error && !useDomGeometrySource() && isCurrent(referenceItem.request)) {
         const geometry = analyticLocalGeometry(referenceItem.request.signalId, referenceItem.waveJson);
         if (isCurrent(referenceItem.request)) {
@@ -264,7 +265,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             context.geometryRegistry.maps.set(referenceItem.request.signalId, seededReferenceGeometry);
             context.markOpenPhase("reference-geometry-ready");
             context.invalidateSnapIndex();
-            await context.onReferenceGeometryReady?.();
+            const refresh = context.onReferenceGeometryReady?.();
+            referenceGeometryRefresh = refresh === undefined ? undefined : Promise.resolve(refresh);
             referenceGeometrySeeded = true;
             referenceGeometryNotified = true;
           }
@@ -335,6 +337,11 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           renderAwaitMs += Math.max(0, globalThis.performance.now() - renderStartedAt);
         }
       }
+      // The callback has already synchronously refreshed ruler/grid owners.
+      // Its remaining frame-bound reprojection may proceed alongside the
+      // detached reference SVG preparation/decode, but must finish before we
+      // prepare/publish requests that the reprojection could invalidate.
+      if (referenceGeometryRefresh) await referenceGeometryRefresh;
       // The reference-ready callback may reproject the just-created document
       // on the next frame, invalidating the original viewport requests. Do
       // not pay WaveJSON/remap/window preparation for those requests before
