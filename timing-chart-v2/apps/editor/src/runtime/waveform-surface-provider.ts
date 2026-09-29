@@ -323,6 +323,19 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       }
       const canvasPrototype = isCanvasWaveRendererSelected(document);
       const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean; readonly canvasPainted?: boolean; readonly installed?: boolean; readonly rendererStart?: number | undefined }> = [];
+      const imageReady: Promise<void>[] = [];
+      const readyRegistered = new Set<(typeof requests)[number]>();
+      const registerVisibleWaveReady = (request: (typeof requests)[number], rendered: RenderedWave): void => {
+        if (readyRegistered.has(request) || !isCurrent(request) || !request.owner.isConnected) return;
+        readyRegistered.add(request);
+        const markReady = (): void => {
+          if (!isCurrent(request) || !request.owner.isConnected) return;
+          context.markOpenPhase("first-visible-wave-painted");
+          markReferenceClockPaintedIfCurrent(request.signalId);
+        };
+        if (rendered.svgImageReady) imageReady.push(rendered.svgImageReady.then(markReady));
+        else markReady();
+      };
       for (const item of orderedPrepared) if (item.deferred) { deferredCount += 1; renderResults.push({ ...item, rendered: undefined }); }
       const runnableItems = orderedPrepared.filter((item) => {
         if (item.deferred) return false;
@@ -375,6 +388,12 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             } finally {
               renderAwaitMs += Math.max(0, globalThis.performance.now() - renderStartedAt);
             }
+            // The progressive reference owner is installed during its job.
+            // Register its readiness immediately so the first-visible
+            // milestone does not wait for unrelated owners to finish.
+            if (!primaryOpenBatch || item.request.signalId === progressiveSignalId || !supportsDetachedWaveInstall) {
+              registerVisibleWaveReady(item.request, rendered);
+            }
             // renderWave installs the SVG into this owner before resolving.
             // Publish the first-artifact milestone here rather than after
             // every later owner in the batch has also completed.
@@ -385,7 +404,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         },
       })), {
         // Keep owner work in a short cooperative slice while opening.
-        budgetMs: 24,
+        budgetMs: 32,
         initialSliceStartedAt: waveSliceStartedAt,
         now: () => globalThis.performance.now(),
         shouldYield: () => context.isPrimaryPresentationOpening?.() === true,
@@ -435,16 +454,9 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           requiredNowCount += 1;
         }
       }
-      const imageReady: Promise<void>[] = [];
       for (const item of renderResults) {
-        if (!item.rendered || item.stale === true || !isCurrent(item.request) || !item.request.owner.isConnected) continue;
-        const markVisibleWaveReady = (): void => {
-          if (!isCurrent(item.request) || !item.request.owner.isConnected) return;
-          context.markOpenPhase("first-visible-wave-painted");
-          markReferenceClockPaintedIfCurrent(item.request.signalId);
-        };
-        if (item.rendered.svgImageReady) imageReady.push(item.rendered.svgImageReady.then(markVisibleWaveReady));
-        else markVisibleWaveReady();
+        if (!item.rendered || item.stale === true) continue;
+        registerVisibleWaveReady(item.request, item.rendered);
       }
       if (imageReady.length > 0) {
         const imageReadyStartedAt = globalThis.performance.now();
