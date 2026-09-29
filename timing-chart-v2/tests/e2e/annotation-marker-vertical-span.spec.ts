@@ -34,8 +34,18 @@ test("Marker's Vertical span is editable in the Bottom Panel, dispatching the ex
   // Rows mode requires both endpoints before it's a valid command --
   // Apply stays disabled until both are picked.
   await expect(applyBtn).toBeDisabled();
-  await page.getByLabel("Marker vertical span start row").selectOption({ label: "CLOCK" });
-  await page.getByLabel("Marker vertical span end row").selectOption({ label: "READY" });
+  const startRow = page.getByRole("combobox", { name: "Marker vertical span start row" });
+  const endRow = page.getByRole("combobox", { name: "Marker vertical span end row" });
+  await expect(startRow.locator("option")).toHaveCount(0);
+  await expect(endRow.locator("option")).toHaveCount(0);
+  await expect(startRow).toHaveAttribute("aria-expanded", "false");
+  await startRow.fill("CLOCK");
+  await expect(page.getByRole("listbox", { name: "Marker vertical span start row results" }).getByRole("option")).toHaveCount(1);
+  await startRow.press("ArrowDown");
+  await startRow.press("Enter");
+  await endRow.fill("READY");
+  await endRow.press("ArrowDown");
+  await endRow.press("Enter");
   await expect(applyBtn).toBeEnabled();
 
   await applyBtn.click();

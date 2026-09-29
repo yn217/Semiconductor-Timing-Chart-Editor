@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { CanonicalDocument } from "@timing-chart-v2/schema";
 import type { Signal, SignalId, Transaction } from "@timing-chart-v2/schema";
+import { signalPickerIndex } from "./signal-picker-model.js";
 
 type UnlinkButton = (label: string, onClick: () => void) => ReactNode;
 
@@ -24,9 +25,7 @@ export function TransactionLinkedSignals({ transaction, document, onToggle, rend
   const [query, setQuery] = useState("");
   const [linkedFilter, setLinkedFilter] = useState("");
   const linkedIds = new Set(transaction.linkedSignals ?? []);
-  const searchableSignals = useMemo(() => document.signals
-    .filter((signal) => signal.type !== "commentRow")
-    .map((signal) => ({ signal, normalizedSearchText: [...signal.source.instancePath, signal.source.signalName, signal.display.name].join(" ").toLocaleLowerCase() })), [document]);
+  const searchableSignals = signalPickerIndex(document.signals).entries;
   const signals = searchableSignals.map((item) => item.signal);
   const linked = signals.filter((signal) => linkedIds.has(signal.id));
   const normalizedLinkedFilter = linkedFilter.trim().toLocaleLowerCase();
