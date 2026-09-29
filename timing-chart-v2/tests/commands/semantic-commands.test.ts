@@ -746,6 +746,30 @@ describe("command execution and atomic history", () => {
     expect(session.historyState().undoDepth).toBe(0);
   });
 
+  it("bulk-deletes Signals with one atomic history action while preserving reference cleanup and rollback", () => {
+    const source = canonicalFixture();
+    const document = { ...source, transactions: [{ id: "txn_link" as TransactionId, name: "Linked", start: 1, end: 3, linkedSignals: ["sig_data" as SignalId] }] };
+    const session = new CommandHistorySession(document);
+    const command = { id: commandId("cmd_bulk_delete_signals"), type: "signal.bulkDelete" as const, signalIds: ["sig_clk", "sig_data"] as SignalId[] };
+
+    expect(session.execute(command)).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document.signals).toEqual([]);
+    expect(session.getSnapshot().document.signalGroups[0]?.rows).toEqual([]);
+    expect(session.getSnapshot().document.timeline).not.toHaveProperty("referenceClock");
+    expect(session.getSnapshot().document.transactions[0]?.linkedSignals).toEqual([]);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo()).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document).toEqual(document);
+    expect(session.redo()).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document.signals).toEqual([]);
+
+    const rejected = new CommandHistorySession(source);
+    const before = rejected.getSnapshot();
+    expect(rejected.execute({ id: commandId("cmd_bulk_delete_duplicate"), type: "signal.bulkDelete", signalIds: ["sig_data", "sig_data"] as SignalId[] })).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "DUPLICATE_ID" }] });
+    expect(rejected.getSnapshot()).toBe(before);
+    expect(rejected.historyState().undoDepth).toBe(0);
+  });
+
   it("supports Group lifecycle without implicitly moving rows", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const group = { id: "grp_empty" as GroupId, name: "Empty", rows: [] };

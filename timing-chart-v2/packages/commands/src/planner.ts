@@ -19,7 +19,7 @@ import type {
   ValueSignal,
   EnumDefinition,
 } from "@timing-chart-v2/schema";
-import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, canonicalDocumentsEqual, canonicalEntityIds, canonicalReferences, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -717,6 +717,57 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const nextDocument = { ...document, timeline: nextTimeline, signals: document.signals.filter((item) => item.id !== command.signalId), signalGroups: groups, transactions };
       const changeSet: ChangeSet = { removedSignals: [command.signalId], rowOrder: [command.signalId], transactionSemantics: linkedTransactions.map((transaction) => transaction.id), minimapOverview: true, ...(referenceDeleted ? { timelineSemantics: true, geometryScreenX: true } : {}) };
       const inverseChangeSet: ChangeSet = { addedSignals: [command.signalId], rowOrder: [command.signalId], waveSemantics: signal.type === "commentRow" ? [] : [command.signalId], geometryLocal: signal.type === "commentRow" ? [] : [command.signalId], transactionSemantics: linkedTransactions.map((transaction) => transaction.id), minimapOverview: true, ...(referenceDeleted ? { timelineSemantics: true, geometryScreenX: true } : {}) };
+      return { ok: true, document: nextDocument, changeSet, inverseChangeSet };
+    }
+    case "signal.bulkDelete": {
+      if (command.signalIds.length === 0) return fail("no-op", "NO_OP", "$.signalIds", "Bulk delete requires at least one Signal.");
+      const requestedIds = new Set<SignalId>();
+      for (const signalId of command.signalIds) {
+        if (requestedIds.has(signalId)) return fail("invalid", "DUPLICATE_ID", "$.signalIds", `Signal '${signalId}' appears more than once.`);
+        requestedIds.add(signalId);
+      }
+      const signalsById = new Map(document.signals.map((signal) => [signal.id, signal] as const));
+      for (const signalId of requestedIds) {
+        if (!signalsById.has(signalId)) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalIds", `Signal '${signalId}' does not exist.`);
+      }
+
+      // Build the canonical reference inventory once, then classify all selected targets.
+      const references = canonicalReferences(document);
+      const annotationDependentsBySignal = new Map<SignalId, string[]>();
+      const linkedTransactionIds = new Set<string>();
+      for (const reference of references) {
+        if (!requestedIds.has(reference.targetId as SignalId)) continue;
+        if (reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource" || reference.kind === "annotation.markerSpanStart" || reference.kind === "annotation.markerSpanEnd") {
+          const dependents = annotationDependentsBySignal.get(reference.targetId as SignalId) ?? [];
+          dependents.push(reference.ownerId);
+          annotationDependentsBySignal.set(reference.targetId as SignalId, dependents);
+        }
+        if (reference.kind === "transaction.linkedSignal") linkedTransactionIds.add(reference.ownerId);
+      }
+      for (const signalId of requestedIds) {
+        const dependentIds = annotationDependentsBySignal.get(signalId);
+        if (dependentIds && dependentIds.length > 0) return fail("invalid", "SIGNAL_HAS_DEPENDENTS", "$.signalIds", `Signal has annotation dependents: ${[...new Set(dependentIds)].join(", ")}.`);
+      }
+
+      const removedSignals = command.signalIds;
+      const linkedTransactions = document.transactions.filter((transaction) => linkedTransactionIds.has(transaction.id));
+      const transactions = linkedTransactions.length === 0 ? document.transactions : document.transactions.map((transaction) => {
+        if (!linkedTransactionIds.has(transaction.id) || transaction.linkedSignals === undefined) return transaction;
+        const linkedSignals = transaction.linkedSignals.filter((signalId) => !requestedIds.has(signalId));
+        return linkedSignals.length === transaction.linkedSignals.length ? transaction : { ...transaction, linkedSignals };
+      });
+      const groups = document.signalGroups.map((group) => {
+        const rows = group.rows.filter((row) => !requestedIds.has(row as SignalId));
+        return rows.length === group.rows.length ? group : { ...group, rows };
+      });
+      const referenceDeleted = document.timeline.referenceClock !== undefined && requestedIds.has(document.timeline.referenceClock);
+      const timeline = referenceDeleted ? (() => { const { referenceClock: _removed, ...rest } = document.timeline; return rest; })() : document.timeline;
+      const removedIds = new Set(removedSignals);
+      const remainingSignals = document.signals.filter((signal) => !removedIds.has(signal.id));
+      const nextDocument = { ...document, timeline, signals: remainingSignals, signalGroups: groups, transactions };
+      const linkedIds = linkedTransactions.map((transaction) => transaction.id);
+      const changeSet: ChangeSet = { removedSignals, rowOrder: removedSignals, transactionSemantics: linkedIds, minimapOverview: true, ...(referenceDeleted ? { timelineSemantics: true, geometryScreenX: true } : {}) };
+      const inverseChangeSet: ChangeSet = { addedSignals: removedSignals, rowOrder: removedSignals, waveSemantics: command.signalIds.filter((id) => signalsById.get(id)?.type !== "commentRow"), geometryLocal: command.signalIds.filter((id) => signalsById.get(id)?.type !== "commentRow"), transactionSemantics: linkedIds, minimapOverview: true, ...(referenceDeleted ? { timelineSemantics: true, geometryScreenX: true } : {}) };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet };
     }
     case "signal.rename": {
