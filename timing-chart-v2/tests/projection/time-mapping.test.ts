@@ -14,6 +14,8 @@ describe("buildDisplayTimeMapping", () => {
   it("interpolates fractional source positions through the shared mapping", () => {
     const mapping = buildDisplayTimeMapping(timeline(10), []);
     expect(resolveSourcePosition(mapping, 1.5, "interpolate")).toBe(1.5);
+    expect(resolveSourcePosition(mapping, 1.5, "floor")).toBe(1);
+    expect(resolveSourcePosition(mapping, 1.5, "ceil")).toBe(1);
   });
 
   it("resolves fractional positions around a collapsed range without pixel fallback", () => {
@@ -21,10 +23,38 @@ describe("buildDisplayTimeMapping", () => {
     expect(resolveSourcePosition(mapping, 3.5, "interpolate")).toBe(3.5);
     expect(resolveSourcePosition(mapping, 10.5, "interpolate")).toBe(5.5);
   });
+
+  it("resolves floor/ceil across a wide fold from the shared interval index", () => {
+    let numericReads = 0;
+    const sourceToDisplay = new Proxy([0, 1, ...Array.from({ length: 99_997 }, () => undefined), 2] as (number | undefined)[], {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\\d+$/.test(property)) {
+          numericReads += 1;
+          if (numericReads > 2) throw new Error("wide folded hole must not be linearly scanned");
+        }
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const mapping = {
+      sourceCycleCount: 100_000,
+      displayCycleCount: 3,
+      isIdentity: false,
+      collapsedRanges: [[2, 99_999]] as const,
+      displayAtSource: (sourceCycle: number) => sourceToDisplay[sourceCycle],
+      sourceAtDisplay: (displayCycle: number) => [0, 1, 99_999][displayCycle],
+      labelFor: (cycle: number) => cycle,
+    };
+
+    expect(resolveSourcePosition(mapping, 50_000, "floor")).toBe(1);
+    numericReads = 0;
+    expect(resolveSourcePosition(mapping, 50_000, "ceil")).toBe(2);
+  });
+
   it("is the identity mapping when there are no collapsed TimeGroups", () => {
     const mapping = buildDisplayTimeMapping(timeline(10), []);
     expect(mapping.displayCycleCount).toBe(10);
-    expect(mapping.displayToSource).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(mapping.sourceCycleCount).toBe(10);
+    expect(Array.from({ length: 10 }, (_, cycle) => mapping.sourceAtDisplay(cycle))).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(mapping.labelFor(4)).toBe(4);
   });
 
@@ -32,32 +62,42 @@ describe("buildDisplayTimeMapping", () => {
     // source cycles 0..19; collapse [5, 15) — 10 hidden cycles
     const mapping = buildDisplayTimeMapping(timeline(20), [collapsedGroup("g1", 5, 15)]);
     expect(mapping.displayCycleCount).toBe(10); // 20 - 10 hidden
-    expect(mapping.sourceToDisplay[4]).toBe(4);
-    expect(mapping.sourceToDisplay[5]).toBeUndefined();
-    expect(mapping.sourceToDisplay[14]).toBeUndefined();
-    expect(mapping.sourceToDisplay[15]).toBe(5); // first cycle after the gap
-    expect(mapping.displayToSource[5]).toBe(15);
-    expect(mapping.displayToSource[9]).toBe(19);
+    expect(mapping.displayAtSource(4)).toBe(4);
+    expect(mapping.displayAtSource(5)).toBeUndefined();
+    expect(mapping.displayAtSource(14)).toBeUndefined();
+    expect(mapping.displayAtSource(15)).toBe(5); // first cycle after the gap
+    expect(mapping.sourceAtDisplay(5)).toBe(15);
+    expect(mapping.sourceAtDisplay(9)).toBe(19);
     expect(mapping.labelFor(mapping.displayCycleCount)).toBe(20);
   });
 
   it("handles multiple non-overlapping collapsed ranges", () => {
     const mapping = buildDisplayTimeMapping(timeline(30), [collapsedGroup("g1", 20, 25), collapsedGroup("g2", 5, 10)]);
     expect(mapping.displayCycleCount).toBe(30 - 5 - 5);
-    expect(mapping.sourceToDisplay[4]).toBe(4);
-    expect(mapping.sourceToDisplay[10]).toBe(5);
-    expect(mapping.sourceToDisplay[19]).toBe(14);
-    expect(mapping.sourceToDisplay[25]).toBe(15);
+    expect(mapping.displayAtSource(4)).toBe(4);
+    expect(mapping.displayAtSource(10)).toBe(5);
+    expect(mapping.displayAtSource(19)).toBe(14);
+    expect(mapping.displayAtSource(25)).toBe(15);
   });
 
   it("merges overlapping collapsed ranges while preserving the half-open mapping", () => {
     const mapping = buildDisplayTimeMapping(timeline(20), [collapsedGroup("g1", 4, 10), collapsedGroup("g2", 8, 14)]);
     expect(mapping.displayCycleCount).toBe(10);
-    expect(mapping.sourceToDisplay[3]).toBe(3);
-    expect(mapping.sourceToDisplay[4]).toBeUndefined();
-    expect(mapping.sourceToDisplay[13]).toBeUndefined();
-    expect(mapping.sourceToDisplay[14]).toBe(4);
-    expect(mapping.displayToSource[4]).toBe(14);
+    expect(mapping.displayAtSource(3)).toBe(3);
+    expect(mapping.displayAtSource(4)).toBeUndefined();
+    expect(mapping.displayAtSource(13)).toBeUndefined();
+    expect(mapping.displayAtSource(14)).toBe(4);
+    expect(mapping.sourceAtDisplay(4)).toBe(14);
+  });
+
+  it("preserves canonical first-match fold identity with indexed Bookmark lookup", () => {
+    const inner = collapsedGroup("inner-first", 4, 6);
+    const outer = collapsedGroup("outer-second", 2, 8);
+    const mapping = buildDisplayTimeMapping(timeline(12), [inner, outer]);
+
+    expect(mapping.collapsedGroupAtSource(3)?.id).toBe(outer.id);
+    expect(mapping.collapsedGroupAtSource(5)?.id).toBe(inner.id);
+    expect(mapping.collapsedGroupAtSource(8)).toBeUndefined();
   });
 
   it("uses source as the canonical anchor position and display as its ruler label", () => {
@@ -88,14 +128,16 @@ describe("buildDisplayTimeMapping", () => {
 describe("DisplayTimeMappingCache", () => {
   it("reuses a mapping when mapping-relevant timeline and fold state are unchanged", () => {
     const cache = new DisplayTimeMappingCache();
-    const first = cache.get(timeline(12), [collapsedGroup("g1", 4, 8)]);
-    const second = cache.get(timeline(12), [collapsedGroup("g1", 4, 8)]);
+    const sourceTimeline = timeline(12);
+    const groups = [collapsedGroup("g1", 4, 8)];
+    const first = cache.get(sourceTimeline, groups);
+    const second = cache.get(sourceTimeline, groups);
 
     expect(second).toBe(first);
     const metrics = cache.metrics();
     expect(metrics.builds).toBe(1);
     expect(metrics.hits).toBe(1);
-    expect(metrics.sourceCyclesVisited).toBe(12);
+    expect(metrics.sourceCyclesVisited).toBe(0);
     expect(metrics.foldRangesVisited).toBe(1);
     expect(metrics.buildDurationMs).toBeGreaterThanOrEqual(0);
     expect(metrics.buildDurationMedianMs).toBe(metrics.buildDurationMs);
@@ -104,17 +146,21 @@ describe("DisplayTimeMappingCache", () => {
     expect(metrics.identityFastPathHits).toBe(0);
   });
 
-  it("ignores unrelated TimeGroup fields while invalidating on fold geometry", () => {
+  it("uses immutable collection identity for O(1) invalidation without serializing group fields", () => {
     const cache = new DisplayTimeMappingCache();
-    const first = cache.get(timeline(12), [{ ...collapsedGroup("g1", 4, 8), name: "Initial" }]);
-    const renamed = cache.get(timeline(12), [{ ...collapsedGroup("g1", 4, 8), name: "Renamed" }]);
-    const moved = cache.get(timeline(12), [{ ...collapsedGroup("g1", 5, 8), name: "Renamed" }]);
+    const sourceTimeline = timeline(12);
+    const initialGroups = [{ ...collapsedGroup("g1", 4, 8), name: "Initial" }];
+    const first = cache.get(sourceTimeline, initialGroups);
+    const renamedGroups = [{ ...collapsedGroup("g1", 4, 8), name: "Renamed" }];
+    const renamed = cache.get(sourceTimeline, renamedGroups);
+    const movedGroups = [{ ...collapsedGroup("g1", 5, 8), name: "Renamed" }];
+    const moved = cache.get(sourceTimeline, movedGroups);
 
-    expect(renamed).toBe(first);
+    expect(renamed).not.toBe(first);
     expect(moved).not.toBe(first);
-    expect(cache.metrics().builds).toBe(2);
-    expect(cache.metrics().hits).toBe(1);
-    expect(cache.metrics().sourceCyclesVisited).toBe(24);
+    expect(cache.metrics().builds).toBe(3);
+    expect(cache.metrics().hits).toBe(0);
+    expect(cache.metrics().sourceCyclesVisited).toBe(0);
   });
 
   it("counts remap work separately from the identity fast path", () => {
@@ -137,7 +183,7 @@ describe("DisplayTimeMappingCache", () => {
     expect(identity.isIdentity).toBe(true);
     expect(mapping.displayCycleCount).toBe(99_000);
     expect(metrics.builds).toBe(2);
-    expect(metrics.sourceCyclesVisited).toBe(200_000);
+    expect(metrics.sourceCyclesVisited).toBe(0);
     expect(metrics.foldRangesVisited).toBe(1_000);
     expect(Number.isFinite(metrics.buildDurationMs)).toBe(true);
     expect(metrics.buildDurationP95Ms).toBeGreaterThanOrEqual(metrics.buildDurationMedianMs);
@@ -160,6 +206,31 @@ describe("remapValueChangesToDisplay", () => {
     // active value at source 4 is "1" (from start:3); active value at source 10/11 is "0" (from start:7, hidden inside the collapse)
     const remapped = remapValueChangesToDisplay(values, mapping);
     expect(remapped).toEqual([{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 5, value: 0 }]);
+  });
+
+  it("remaps sparse changes without iterating the display-cycle domain", () => {
+    const displayToSource = new Proxy([] as number[], {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\\d+$/.test(property)) throw new Error("display-cycle scan is forbidden");
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const mapping = {
+      sourceCycleCount: 8,
+      displayCycleCount: 1_000_000,
+      isIdentity: false,
+      collapsedRanges: [[2, 6]] as const,
+      displayAtSource: (sourceCycle: number) => [0, 1, undefined, undefined, undefined, undefined, 2, 3][sourceCycle],
+      sourceAtDisplay: (displayCycle: number) => displayToSource[displayCycle],
+      labelFor: (cycle: number) => cycle,
+    };
+    const values = [{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 7, value: 0 }];
+
+    expect(remapValueChangesToDisplay(values, mapping)).toEqual([
+      { start: 0, value: 0 },
+      { start: 2, value: 1 },
+      { start: 3, value: 0 },
+    ]);
   });
 
   it("drops redundant consecutive display entries with the same active value", () => {

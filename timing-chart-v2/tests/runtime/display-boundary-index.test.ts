@@ -12,8 +12,8 @@ describe("display mapping lookups", () => {
     for (let source = 0; source <= 40; source += 1) {
       let expected: number | undefined;
       if (source === 40) expected = mapping.displayCycleCount;
-      else if (mapping.sourceToDisplay[source] !== undefined) expected = mapping.sourceToDisplay[source];
-      else { expected = mapping.displayCycleCount; for (let next = source + 1; next < 40; next += 1) { const display = mapping.sourceToDisplay[next]; if (display !== undefined) { expected = display; break; } } }
+      else if (mapping.displayAtSource(source) !== undefined) expected = mapping.displayAtSource(source)!;
+      else { expected = mapping.displayCycleCount; for (let next = source + 1; next < 40; next += 1) { const display = mapping.displayAtSource(next); if (display !== undefined) { expected = display; break; } } }
       expect(displayBoundaryForSource(mapping, source, 40)).toBe(expected);
     }
   });

@@ -21,7 +21,7 @@ export function buildSnapIndex(document: CanonicalDocument, projection: RenderPr
     ...(axisOwnerSignalId === undefined ? {} : { axisOwnerSignalId }),
     rowY: new Map(projection.rowLayout.flatMap((row) => document.signals.some((signal) => signal.id === row.rowId) ? [[row.rowId as SignalId, row.y] as const] : [])),
     renderedCycleCount: mapping.displayCycleCount,
-    sourceCycleForRenderedCycle: (renderedCycle) => renderedCycle === mapping.displayCycleCount ? document.timeline.cycleCount : mapping.displayToSource[renderedCycle],
-    renderedCycleForSourceCycle: (sourceCycle) => mapping.sourceToDisplay[sourceCycle],
+    sourceCycleForRenderedCycle: (renderedCycle) => renderedCycle === mapping.displayCycleCount ? document.timeline.cycleCount : mapping.sourceAtDisplay(renderedCycle),
+    renderedCycleForSourceCycle: (sourceCycle) => mapping.displayAtSource(sourceCycle),
   });
 }

@@ -39,7 +39,7 @@ describe("TimelineGeometryOwner", () => {
       const stored = entries.find((entry) => entry.anchor.cycle === cycle)?.point.x;
       const resolved = expected === undefined ? undefined : owner.cycleBoundaryAtLocalX(expected, 1, true);
       const index = entries.findIndex((entry) => entry.anchor.cycle === cycle);
-      return { cycle, expectedBoundaryX: expected, storedBoundaryX: stored, displayMappedX: mapping.sourceToDisplay[cycle], resolvedCycle: resolved, previousBoundaryX: entries[index - 1]?.point.x, nextBoundaryX: entries[index + 1]?.point.x };
+      return { cycle, expectedBoundaryX: expected, storedBoundaryX: stored, displayMappedX: mapping.displayAtSource(cycle), resolvedCycle: resolved, previousBoundaryX: entries[index - 1]?.point.x, nextBoundaryX: entries[index + 1]?.point.x };
     });
     console.table({ configuration: name, rows });
     const firstFailure = rows.find((row) => row.resolvedCycle !== row.cycle);
@@ -276,12 +276,12 @@ describe("TimelineGeometryOwner", () => {
     });
     owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1, 5, 13);
 
-    const displayCycle = owner.displayMapping.sourceToDisplay[70];
+    const displayCycle = owner.displayMapping.displayAtSource(70);
     expect(displayCycle).toBeDefined();
     expect(geometry.find({ signalId: clockId, cycle: 70, point: "cycle-start" })).toBeUndefined();
     expect(owner.sourceBoundaryToLocalX(document, 70)).toBe(13 + displayCycle! * 5);
     // Folded source cycles use displayBoundaryForSource's established shared
     // mapping semantics rather than a Transaction-local projection.
-    expect(owner.sourceBoundaryToLocalX(document, 50)).toBe(13 + owner.displayMapping.sourceToDisplay[60]! * 5);
+    expect(owner.sourceBoundaryToLocalX(document, 50)).toBe(13 + owner.displayMapping.displayAtSource(60)! * 5);
   });
 });

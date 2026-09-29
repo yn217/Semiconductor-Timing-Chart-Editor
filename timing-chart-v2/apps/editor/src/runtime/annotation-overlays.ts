@@ -96,7 +96,7 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
         for (let cycle = start; cycle <= end; cycle += 1) {
           const sourceCycle = cycle + offset;
           if (sourceCycle < 0 || sourceCycle > document.timeline.cycleCount) continue;
-          const renderedCycle = mapping.sourceToDisplay[sourceCycle];
+          const renderedCycle = mapping.displayAtSource(sourceCycle);
           if (renderedCycle === undefined) continue;
           for (const point of ["cycle-start", "transition-center"] as const) {
             const local = sourceMap.find({ signalId: annotation.sourceSignalId, cycle: renderedCycle, point });
