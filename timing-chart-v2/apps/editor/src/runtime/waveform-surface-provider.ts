@@ -293,7 +293,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         progressiveItem = prepareAndMeasure(progressiveRequest);
         prepared.push(progressiveItem);
       }
-      const progressivePrepared = new Map<PreparedItem["request"], Readonly<{ rendered?: RenderedWave; error?: Error; stale?: boolean }>>();
+      const progressivePrepared = new Map<PreparedItem["request"], Readonly<{ rendered?: RenderedWave; error?: Error; stale?: boolean; installed?: boolean }>>();
       const imageReady: Promise<void>[] = [];
       const readyRegistered = new Set<(typeof requests)[number]>();
       const registerVisibleWaveReady = (request: (typeof requests)[number], rendered: RenderedWave): void => {
@@ -327,10 +327,15 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           );
           if (!isCurrent(progressiveItem.request)) {
             progressivePrepared.set(progressiveItem.request, { stale: true });
+          } else if (referenceGeometryRefresh) {
+            // The frame-bound reprojection can invalidate this request. Keep
+            // the detached artifact prepared, but do not publish it into the
+            // live owner until the geometry owner confirms this generation.
+            progressivePrepared.set(progressiveItem.request, { rendered });
           } else {
             rendered = context.adapter.installWave!(rendered, progressiveItem.request.owner);
             registerVisibleWaveReady(progressiveItem.request, rendered);
-            progressivePrepared.set(progressiveItem.request, { rendered });
+            progressivePrepared.set(progressiveItem.request, { rendered, installed: true });
           }
         } catch (error: unknown) {
           progressivePrepared.set(progressiveItem.request, { error: error instanceof Error ? error : new Error(String(error)) });
@@ -343,6 +348,24 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       // detached reference SVG preparation/decode, but must finish before we
       // prepare/publish requests that the reprojection could invalidate.
       if (referenceGeometryRefresh) await referenceGeometryRefresh;
+      if (referenceGeometryRefresh && progressiveItem) {
+        const early = progressivePrepared.get(progressiveItem.request);
+        if (early?.rendered && !early.installed && !early.error && !early.stale) {
+          if (!isCurrent(progressiveItem.request)) {
+            progressivePrepared.set(progressiveItem.request, { stale: true });
+          } else {
+            try {
+              const installed = context.adapter.installWave!(early.rendered, progressiveItem.request.owner);
+              registerVisibleWaveReady(progressiveItem.request, installed);
+              progressivePrepared.set(progressiveItem.request, { rendered: installed, installed: true });
+            } catch (error: unknown) {
+              progressivePrepared.set(progressiveItem.request, { error: error instanceof Error ? error : new Error(String(error)) });
+            }
+          }
+        } else if (early?.rendered && !early.installed && !isCurrent(progressiveItem.request)) {
+          progressivePrepared.set(progressiveItem.request, { stale: true });
+        }
+      }
       // The reference-ready callback may reproject the just-created document
       // on the next frame, invalidating the original viewport requests. Do
       // not pay WaveJSON/remap/window preparation for those requests before
