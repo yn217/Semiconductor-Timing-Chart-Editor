@@ -81,7 +81,8 @@ describe("runtime controller boundaries", () => {
     expect(refresh.ruler).toHaveBeenCalledTimes(2);
     expect(refresh.range).toHaveBeenCalledOnce();
     expect(refresh.publish).toHaveBeenCalledOnce();
-    expect(host.dataset.editorIdle).toBe("true");
+    // editorIdle is owned by the staged readiness model; the initial refresh publishes the view-ready flag.
+    expect(host.dataset.cycleViewReady).toBe("true");
   });
 
   it("drops an initial refresh for an obsolete document epoch", async () => {
