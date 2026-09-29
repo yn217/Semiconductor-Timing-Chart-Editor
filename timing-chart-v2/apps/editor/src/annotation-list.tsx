@@ -41,12 +41,24 @@ export function AnnotationList({
   const listRef = useRef<HTMLDivElement>(null);
   const signalNames = useMemo(() => new Map(document.signals.map((signal) => [signal.id, signal.display.name])), [document.signals]);
   const [scrollTop, setScrollTop] = useState(0);
-  const viewportHeight = listRef.current?.clientHeight ?? 320;
+  const [viewportHeight, setViewportHeight] = useState(320);
   const firstVisible = Math.max(0, Math.floor(Math.max(0, scrollTop - ANNOTATION_HEADER_HEIGHT) / ANNOTATION_ROW_HEIGHT) - ANNOTATION_OVERSCAN);
   const visibleCount = Math.ceil(viewportHeight / ANNOTATION_ROW_HEIGHT) + ANNOTATION_OVERSCAN * 2;
   const lastVisible = Math.min(annotations.length, firstVisible + visibleCount);
   const visibleAnnotations = annotations.slice(firstVisible, lastVisible);
-  const annotationOrderKey = annotations.map((item) => item.id).join("\u0000");
+  const annotationOrderKey = useMemo(() => annotations.map((item) => item.id).join("\u0000"), [annotations]);
+
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return undefined;
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      const nextHeight = Math.max(0, Math.round(entry.contentRect.height));
+      setViewportHeight((current) => current === nextHeight ? current : nextHeight);
+    });
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     setScrollTop(0);

@@ -6,7 +6,7 @@ import type { CanonicalDocument, EnumDefinition, ValueSignal } from "@timing-cha
 import { DOCUMENT_RESOURCE_BUDGET, parseJsonInput } from "@timing-chart-v2/schema";
 import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./event-table-components.js";
-import { buildEventTableIndex } from "./runtime/event-table-index.js";
+import { buildEventTableIndex, selectedIndexRange } from "./runtime/event-table-index.js";
 import { reorderTransitionBlock, transitionIdentity } from "./runtime/transition-reorder.js";
 import { registerActiveGestureCancel } from "./runtime/active-gesture-cancellation.js";
 import { pruneExternalSelection } from "./runtime/external-draft-reconciliation.js";
@@ -178,10 +178,10 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
     if (commandResult.ok) setCheckedKeys(new Set(result.values.slice(result.firstIndex, result.firstIndex + result.blockSize).map(transitionIdentity)));
   };
   const orderedStarts = indexed.ordered;
-  const selectedIndexes = orderedStarts.map((change, index) => checkedKeys.has(transitionIdentity(change)) ? index : -1).filter((index) => index >= 0);
-  const isContiguous = selectedIndexes.length > 0 && selectedIndexes.length === selectedIndexes.at(-1)! - selectedIndexes[0]! + 1;
-  const canMoveUp = isContiguous && selectedIndexes[0]! > 0;
-  const canMoveDown = isContiguous && selectedIndexes.at(-1)! < orderedStarts.length - 1;
+  const selectedRange = useMemo(() => selectedIndexRange(orderedIndexByKey, checkedKeys), [checkedKeys, orderedIndexByKey]);
+  const isContiguous = selectedRange.count > 0 && selectedRange.count === selectedRange.last - selectedRange.first + 1;
+  const canMoveUp = isContiguous && selectedRange.first > 0;
+  const canMoveDown = isContiguous && selectedRange.last < orderedStarts.length - 1;
   const [dragStarts, setDragStarts] = useState<ReadonlySet<string>>();
   const dragStartsRef = useRef<ReadonlySet<string> | undefined>(undefined);
   const setActiveDragStarts = (starts: ReadonlySet<string> | undefined) => { dragStartsRef.current = starts; setDragStarts(starts); };

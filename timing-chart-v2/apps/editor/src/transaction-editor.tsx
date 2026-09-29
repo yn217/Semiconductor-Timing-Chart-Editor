@@ -1,5 +1,5 @@
 import { cyclesToTc, tcFieldLabel, tcToCycles } from "./transaction-tc.js";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import type { HistoryState } from "@timing-chart-v2/history";
 import type { CanonicalDocument, SignalId, Transaction, TransactionGroup, TransactionId, TransactionPhase } from "@timing-chart-v2/schema";
@@ -8,6 +8,8 @@ import type { TransactionEditorCommandActions } from "./application/editor-surfa
 import { EditorIconButton } from "./editor-icon.js";
 import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 import { DraftStatus } from "./draft-status.js";
+
+const EMPTY_TRANSACTION_SELECTION: ReadonlySet<TransactionId> = new Set();
 
 export function TransactionEditor({ transaction, selectedTransactionIds, document, cyclesPerTc: perTc = 10, history, onSelect, onSelectTransactions, commands, onUndo, onRedo, onDelete, onCancel, onToggleTransactionSignal }: { readonly transaction: Transaction | undefined; readonly selectedTransactionIds?: ReadonlySet<TransactionId>; readonly document: CanonicalDocument; readonly cyclesPerTc?: number; readonly history: HistoryState; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSelectTransactions: (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => void; readonly commands: TransactionEditorCommandActions; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void }) {
   const [name, setName] = useState("Transaction");
@@ -93,13 +95,15 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   const [applyError, setApplyError] = useState("");
   useEffect(() => setApplyError(""), [transaction?.id]);
   const [expandedPhaseTransactionIds, setExpandedPhaseTransactionIds] = useState<ReadonlySet<TransactionId>>(new Set());
-  const groupNameById = new Map(document.transactionGroups?.map((group) => [group.id, group.name]) ?? []);
+  const groupNameById = useMemo(() => new Map(document.transactionGroups?.map((group) => [group.id, group.name]) ?? []), [document.transactionGroups]);
+  const transactionsById = useMemo(() => new Map(document.transactions.map((item) => [item.id, item])), [document.transactions]);
+  const selectedIds = selectedTransactionIds ?? EMPTY_TRANSACTION_SELECTION;
   const needle = search.trim().toLocaleLowerCase();
-  const filteredTransactions = needle.length === 0 ? document.transactions : document.transactions.filter((item) => item.name.toLocaleLowerCase().includes(needle) || (item.groupId !== undefined && (groupNameById.get(item.groupId) ?? "").toLocaleLowerCase().includes(needle)));
-  const visibleTransactions = sortKey === "document" ? filteredTransactions : [...filteredTransactions].sort((left, right) => {
+  const filteredTransactions = useMemo(() => needle.length === 0 ? document.transactions : document.transactions.filter((item) => item.name.toLocaleLowerCase().includes(needle) || (item.groupId !== undefined && (groupNameById.get(item.groupId) ?? "").toLocaleLowerCase().includes(needle))), [document.transactions, groupNameById, needle]);
+  const visibleTransactions = useMemo(() => sortKey === "document" ? filteredTransactions : [...filteredTransactions].sort((left, right) => {
     const order = sortKey === "start" ? left.start - right.start || left.end - right.end : sortKey === "end" ? left.end - right.end || left.start - right.start : left.name.localeCompare(right.name);
     return sortDescending ? -order : order;
-  });
+  }), [filteredTransactions, sortDescending, sortKey]);
   // #770 Policy A (visible-scope selection): narrowing the filter must not leave a destructive bulk action operating on rows the user can
   // no longer see. Pruning the shared selection to what the filter currently shows is itself view-only (Canonical/History/Dirty delta 0).
   useEffect(() => {
@@ -110,10 +114,10 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on the filter text only; re-derives current selection/visibility from this render's closures.
   }, [needle]);
   type TransactionListEntry = Readonly<{ kind: "transaction"; item: Transaction } | { kind: "phase"; transaction: Transaction; phase: TransactionPhase; index: number }>;
-  const listEntries: readonly TransactionListEntry[] = visibleTransactions.flatMap((item) => [
+  const listEntries: readonly TransactionListEntry[] = useMemo(() => visibleTransactions.flatMap((item) => [
     { kind: "transaction" as const, item },
     ...(expandedPhaseTransactionIds.has(item.id) ? (item.phases ?? []).map((phase, index) => ({ kind: "phase" as const, transaction: item, phase, index })) : []),
-  ]);
+  ]), [expandedPhaseTransactionIds, visibleTransactions]);
   const transactionRowHeight = 30;
   const shouldVirtualizeTransactions = listEntries.length > 200;
   const transactionListViewportRef = useRef<HTMLDivElement>(null);
@@ -123,7 +127,13 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   const transactionFirstVisibleIndex = shouldVirtualizeTransactions ? Math.max(0, Math.floor(transactionListScrollTop / transactionRowHeight) - transactionOverscan) : 0;
   const transactionLastVisibleIndex = shouldVirtualizeTransactions ? Math.min(listEntries.length, Math.ceil((transactionListScrollTop + transactionViewportHeight) / transactionRowHeight) + transactionOverscan) : listEntries.length;
   const renderedEntries = listEntries.slice(transactionFirstVisibleIndex, transactionLastVisibleIndex);
-  const selectedIds = selectedTransactionIds ?? new Set<TransactionId>();
+  const hasGroupedSelection = useMemo(() => {
+    for (const id of selectedIds) {
+      const selected = transactionsById.get(id);
+      if (selected?.groupId !== undefined) return true;
+    }
+    return false;
+  }, [selectedIds, transactionsById]);
   const selectionAnchorRef = useRef<TransactionId | undefined>(transaction?.id);
   const selectVisibleRow = (id: TransactionId, event: MouseEvent<HTMLButtonElement>) => {
     const anchor = selectionAnchorRef.current;
@@ -230,7 +240,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
       <button type="button" className="danger" data-testid="bottom-transaction-delete" disabled={selectedIds.size === 0} title={selectedIds.size === 0 ? "Select a Transaction first" : "Delete selected Transaction(s)"} onClick={() => selectedIds.size > 1 ? bulkDelete() : onDelete()}>Delete</button>
       <button type="button" data-testid="bottom-transaction-add-group" onClick={addTransactionGroup}>Add Group</button>
       <label className="field-inline transaction-group-control"><span aria-hidden="true">Group ▾</span><select aria-label="Move selected transaction to group" title={selectedIds.size === 0 ? "Select a Transaction first" : "Move selected Transaction(s) to a Group"} disabled={selectedIds.size === 0} value={selectedIds.size === 1 ? transaction?.groupId ?? "" : ""} onChange={(event) => moveSelectedToGroup(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
-      <button type="button" data-testid="bottom-transaction-ungroup" disabled={!document.transactions.some((item) => selectedIds.has(item.id) && item.groupId !== undefined)} title={selectedIds.size === 0 ? "Select a Transaction first" : document.transactions.some((item) => selectedIds.has(item.id) && item.groupId !== undefined) ? "Remove selected Transaction(s) from their Group" : "The selected Transaction(s) are already ungrouped"} onClick={() => moveSelectedToGroup(undefined)}>Ungroup</button>
+      <button type="button" data-testid="bottom-transaction-ungroup" disabled={!hasGroupedSelection} title={selectedIds.size === 0 ? "Select a Transaction first" : hasGroupedSelection ? "Remove selected Transaction(s) from their Group" : "The selected Transaction(s) are already ungrouped"} onClick={() => moveSelectedToGroup(undefined)}>Ungroup</button>
       <label className="field-inline transaction-color-control"><span aria-hidden="true">Color ▾</span><input aria-label="Set selected transaction color" title={selectedIds.size === 0 ? "Select a Transaction first" : "Set color of selected Transaction"} type="color" disabled={selectedIds.size === 0} value={transaction?.color ?? "#8895a7"} onChange={(event) => selectedIds.size > 1 ? bulkColor(event.target.value) : colorSelected(event.target.value)} /></label>
       {selectedIds.size > 1 && <span className="transaction-selection-count" data-testid="transaction-selection-count">{selectedIds.size} selected</span>}
       {/* Delete already lives in the header as "Delete Transaction"
