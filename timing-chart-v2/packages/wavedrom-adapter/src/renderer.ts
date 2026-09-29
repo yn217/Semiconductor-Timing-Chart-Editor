@@ -464,16 +464,12 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       }
     }
     const isImageOwner = typeof svg?.querySelector === "function" && Boolean(svg.querySelector("image[data-wave-svg-image]"));
-    const geometrySvg = isImageOwner && renderIndex > 0
-      ? parsedSvg.cloneNode(true) as SVGElement
-      : isImageOwner ? parsedSvg : undefined;
-    if (geometrySvg && renderIndex > 0) bindWaveDromRenderIndex(geometrySvg, renderIndex);
     const sharedDefinitions = isImageOwner ? undefined : prepareSharedWaveDromDefinitions(svg as SVGElement, ownerDocument);
     if (!isImageOwner) bindWaveDromRenderIndex(svg as SVGElement, renderIndex);
     const renderStages = Object.freeze({ ...stages });
     const rendered: RenderedWave = {
       signalId, ownerKey: signalId, svg: svg as SVGElement,
-      ...(geometrySvg ? { geometrySvg } : {}),
+      ...(isImageOwner ? { geometrySvg: parsedSvg } : {}),
       renderIndex, waveJson, markupCacheHit, svgSafetyCacheHit, renderStages,
     };
     if (sharedDefinitions) this.#preparedDefinitions.set(rendered, sharedDefinitions);
@@ -519,7 +515,14 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
 
   extractLocalGeometry(rendered: RenderedWave): LocalGeometryMap {
     const extractionMetrics = { signalId: rendered.signalId, usesVisited: 0, geometryEntriesEmitted: 0, duplicateKeyChecks: 0, duplicateKeyCollisions: 0, transitionBrickLookups: 0, skinPathParses: 0, matrixReads: 0, durationMs: 0 };
-    const geometry = extractLocalGeometry(rendered.geometrySvg ? { ...rendered, svg: rendered.geometrySvg } : rendered, extractionMetrics);
+    // Shared parsed templates retain WaveDrom's canonical owner-zero IDs.
+    // Geometry is identical for an exact markup-cache hit, so resolve those
+    // IDs against owner zero instead of cloning/rebinding the entire SVG tree
+    // for every image-backed owner.
+    const geometrySource = rendered.geometrySvg
+      ? { ...rendered, svg: rendered.geometrySvg, renderIndex: 0 }
+      : rendered;
+    const geometry = extractLocalGeometry(geometrySource, extractionMetrics);
     this.#geometryBuilds += 1;
     this.#geometryMatrixReads += 2;
     this.#lastGeometryMetrics = Object.freeze({ ...extractionMetrics });
