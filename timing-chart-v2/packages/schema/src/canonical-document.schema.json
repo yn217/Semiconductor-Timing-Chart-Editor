@@ -615,7 +615,7 @@
       "type": "object", "additionalProperties": false,
       "required": ["clockCyclesPerTransactionCycle", "majorInterval", "minorInterval"],
       "properties": {
-        "clockCyclesPerTransactionCycle": { "type": "number", "exclusiveMinimum": 0 },
+        "clockCyclesPerTransactionCycle": { "type": "integer", "minimum": 1 },
         "majorInterval": { "type": "integer", "minimum": 1 },
         "minorInterval": { "type": "integer", "minimum": 1 },
         "showSecondaryClock": { "type": "boolean" }
