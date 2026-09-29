@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import type { CanonicalDocument, Signal, SignalId, Transaction, TransactionId } from "@timing-chart-v2/schema";
@@ -73,17 +73,19 @@ export function FindReplacePanel({ document, mode = "signals", onRenameSignals, 
     };
   }, [open]);
 
-  const needle = findText.trim();
+  // #859: typing stays responsive at 10k names — the collection search follows the input at deferred priority.
+  const needle = useDeferredValue(findText.trim());
   // #859: compile the escaped literal needle ONCE per query (the search regex has no `g`, so .test() is stateless; String.replace resets
   // lastIndex of a global regex on every call) and recompute only when the owning collection, mode, needle or replacement changes.
+  const deferredReplaceText = useDeferredValue(replaceText);
   const { matches, preview } = useMemo(() => {
     if (!needle) return { matches: [] as readonly (typeof document.signals[number] | typeof document.transactions[number])[], preview: [] as { item: typeof document.signals[number] | typeof document.transactions[number]; nextName: string }[] };
     const search = new RegExp(escapeRegExp(needle), "i");
     const replacement = new RegExp(escapeRegExp(needle), "gi");
     const found = mode === "transactions" ? document.transactions.filter((transaction) => search.test(transaction.name)) : document.signals.filter((signal) => search.test(signal.display.name));
-    const rows = found.map((item) => ({ item, nextName: itemName(item).replace(replacement, replaceText).trim() })).filter((item) => item.nextName.length > 0);
+    const rows = found.map((item) => ({ item, nextName: itemName(item).replace(replacement, deferredReplaceText).trim() })).filter((item) => item.nextName.length > 0);
     return { matches: found, preview: rows };
-  }, [document.signals, document.transactions, mode, needle, replaceText]);
+  }, [document.signals, document.transactions, mode, needle, deferredReplaceText]);
   const skippedCount = matches.length - preview.length;
 
   const replaceAll = () => {
