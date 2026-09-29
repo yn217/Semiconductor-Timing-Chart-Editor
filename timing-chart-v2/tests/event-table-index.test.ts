@@ -23,4 +23,21 @@ describe("EventTable indexed transition model", () => {
     expect(nonContiguous.count).not.toBe(nonContiguous.last - nonContiguous.first + 1);
     expect(selectedIndexRange(indexByKey, ["deleted-transition"])).toEqual({ count: 0, first: -1, last: -1 });
   });
+
+  it("looks up only selected identities instead of traversing the ordered transition domain", () => {
+    let lookups = 0;
+    const indexedRows: ReadonlyMap<string, number> = {
+      get(key) { lookups += 1; return key === "transition-500000" ? 500_000 : undefined; },
+      has() { throw new Error("selected range must not scan the index"); },
+      entries() { throw new Error("selected range must not enumerate the index"); },
+      keys() { throw new Error("selected range must not enumerate the index"); },
+      values() { throw new Error("selected range must not enumerate the index"); },
+      forEach() { throw new Error("selected range must not enumerate the index"); },
+      get size() { throw new Error("selected range must not inspect the index size"); },
+      [Symbol.iterator]() { throw new Error("selected range must not enumerate the index"); },
+    };
+
+    expect(selectedIndexRange(indexedRows, ["transition-500000"])).toEqual({ count: 1, first: 500_000, last: 500_000 });
+    expect(lookups).toBe(1);
+  });
 });
