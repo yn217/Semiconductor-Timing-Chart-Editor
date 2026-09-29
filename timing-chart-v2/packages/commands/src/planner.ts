@@ -417,24 +417,26 @@ function sameValue(left: SignalValueChange | undefined, right: SignalValueChange
   return left?.value === right?.value && left?.comment === right?.comment;
 }
 
-function compressCycleStates(states: readonly (SignalValueChange | undefined)[]): SignalValueChange[] {
-  const changes: SignalValueChange[] = [];
+/** Sparse equivalent of the old dense per-cycle rebuild (#855): the output is described as source intervals placed at output offsets;
+ * the state only changes at an interval start or at a source change point inside it, so only those breakpoints are visited. */
+type RangeSegment = Readonly<{ from: number; to: number; outputStart: number }>;
+function sparseChangesFromSegments(changes: readonly SignalValueChange[], segments: readonly RangeSegment[]): SignalValueChange[] {
+  const result: SignalValueChange[] = [];
   let previous: SignalValueChange | undefined;
-  states.forEach((state, start) => {
-    if (state && !sameValue(state, previous)) changes.push({ start, value: state.value, ...(state.comment === undefined ? {} : { comment: state.comment }) });
+  const visit = (start: number, state: SignalValueChange | undefined) => {
+    if (state && !sameValue(state, previous)) result.push({ start, value: state.value, ...(state.comment === undefined ? {} : { comment: state.comment }) });
     previous = state;
-  });
-  return changes;
-}
-
-function cycleStates(changes: readonly SignalValueChange[], cycleCount: number): (SignalValueChange | undefined)[] {
-  return Array.from({ length: cycleCount }, (_, cycle) => valueAt(changes, cycle));
+  };
+  for (const segment of [...segments].filter((item) => item.to > item.from).sort((left, right) => left.outputStart - right.outputStart)) {
+    visit(segment.outputStart, valueAt(changes, segment.from));
+    for (const change of changes) if (change.start > segment.from && change.start < segment.to) visit(segment.outputStart + (change.start - segment.from), change);
+  }
+  return result;
 }
 
 function duplicateChanges(changes: readonly SignalValueChange[], cycleCount: number, start: number, end: number, at: number): SignalValueChange[] {
-  const states = cycleStates(changes, cycleCount);
-  states.splice(at, 0, ...states.slice(start, end));
-  return compressCycleStates(states);
+  const length = end - start;
+  return sparseChangesFromSegments(changes, [{ from: 0, to: at, outputStart: 0 }, { from: start, to: end, outputStart: at }, { from: at, to: cycleCount, outputStart: at + length }]);
 }
 
 function moveCycleIndex(cycle: number, start: number, end: number, to: number): number {
@@ -451,10 +453,11 @@ function moveCycleIndex(cycle: number, start: number, end: number, to: number): 
 }
 
 function moveChanges(changes: readonly SignalValueChange[], cycleCount: number, start: number, end: number, to: number): SignalValueChange[] {
-  const source = cycleStates(changes, cycleCount);
-  const moved = Array<SignalValueChange | undefined>(cycleCount);
-  source.forEach((state, cycle) => { moved[moveCycleIndex(cycle, start, end, to)] = state; });
-  return compressCycleStates(moved);
+  const length = end - start;
+  const cuts = [...new Set([0, start, end, to, to + length, cycleCount].filter((cut) => cut >= 0 && cut <= cycleCount))].sort((left, right) => left - right);
+  const segments: RangeSegment[] = [];
+  for (let index = 0; index + 1 < cuts.length; index += 1) segments.push({ from: cuts[index]!, to: cuts[index + 1]!, outputStart: moveCycleIndex(cuts[index]!, start, end, to) });
+  return sparseChangesFromSegments(changes, segments);
 }
 
 function duplicateAnchor(anchor: SemanticAnchor | undefined, start: number, end: number, at: number): SemanticAnchor | undefined {
