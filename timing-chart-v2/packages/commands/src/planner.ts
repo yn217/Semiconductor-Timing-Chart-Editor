@@ -19,7 +19,7 @@ import type {
   ValueSignal,
   EnumDefinition,
 } from "@timing-chart-v2/schema";
-import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, referencesToTargets, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -95,13 +95,13 @@ function changedPositions<T extends string>(before: readonly T[], after: readonl
 
 function annotationsForSignals(document: CanonicalDocument, signalIds: SignalId | readonly SignalId[]) {
   const affected = new Set(Array.isArray(signalIds) ? signalIds : [signalIds]);
-  const annotationIds = new Set<string>();
-  for (const signalId of affected) {
-    for (const reference of referencesToSignal(document, signalId)) {
-      if (reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource") annotationIds.add(reference.ownerId);
-    }
-  }
-  return document.annotations.filter((annotation) => annotationIds.has(annotation.id)).map((annotation) => annotation.id);
+  const annotationIds = new Set(referencesToTargets(document, "signal", affected)
+    .filter((reference) => reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource")
+    .map((reference) => reference.ownerId as AnnotationId));
+  // Canonical reference order follows the annotation collection order, so Set
+  // insertion order preserves deterministic ChangeSet ordering without
+  // rescanning the complete Annotation collection.
+  return [...annotationIds];
 }
 
 function replaceSignal(document: CanonicalDocument, index: number, signal: Signal): CanonicalDocument {
@@ -110,11 +110,10 @@ function replaceSignal(document: CanonicalDocument, index: number, signal: Signa
   return { ...document, signals };
 }
 
-function dependentAnnotations(document: CanonicalDocument, signalId: SignalId): Annotation[] {
-  const annotationIds = new Set(referencesToSignal(document, signalId)
+function dependentAnnotations(document: CanonicalDocument, signalId: SignalId): AnnotationId[] {
+  return [...new Set(referencesToSignal(document, signalId)
     .filter((reference) => reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource" || reference.kind === "annotation.markerSpanStart" || reference.kind === "annotation.markerSpanEnd")
-    .map((reference) => reference.ownerId));
-  return document.annotations.filter((annotation) => annotationIds.has(annotation.id));
+    .map((reference) => reference.ownerId as AnnotationId))];
 }
 
 function moveSignal(document: CanonicalDocument, command: Extract<SemanticCommand, { type: "signal.move" }>): CommandPlanResult {
@@ -582,7 +581,7 @@ function moveTimelineRange(document: CanonicalDocument, start: number, end: numb
   };
 }
 
-export function planCommand(document: CanonicalDocument, command: SemanticCommand): CommandPlanResult {
+function planCommandWithoutMetrics(document: CanonicalDocument, command: SemanticCommand): CommandPlanResult {
   if (!isStableId(command.id)) return fail("invalid", "INVALID_COMMAND_ID", "$.id", "Command ID must be a stable ID.");
   switch (command.type) {
     case "document.replace": {
@@ -680,7 +679,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (index < 0) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalId", `Signal '${command.signalId}' does not exist.`);
       const annotationDependents = dependentAnnotations(document, command.signalId);
       if (annotationDependents.length > 0) {
-        const dependentIds = annotationDependents.map((annotation) => annotation.id).join(", ");
+        const dependentIds = annotationDependents.join(", ");
         return fail("invalid", "SIGNAL_HAS_DEPENDENTS", "$.signalId", `Signal has annotation dependents: ${dependentIds}.`);
       }
       const signal = document.signals[index];
@@ -739,7 +738,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const previousIdIndex = valueChangeIdAllocator.getIndex(signal.id, signal.values);
       if (allocation) valueChangeIdAllocator.remember(signal.id, values, allocation.nextIndex);
       else if (previousIdIndex) valueChangeIdAllocator.remember(signal.id, values, previousIdIndex);
-      const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
+      const affectedAnnotations = dependentAnnotations(document, signal.id);
       const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
       return { ok: true, document: replaceSignal(document, index, { ...signal, values }), changeSet, inverseChangeSet: changeSet };
     }
@@ -754,7 +753,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const valueProblem = valuesCompatibleForType(signal.type, values);
       if (valueProblem) return fail("invalid", "UNSUPPORTED_SIGNAL_VALUE", "$.values", valueProblem);
       if (semanticEqual(signal.values, values)) return fail("no-op", "NO_OP", "$.values", "Signal values are unchanged.");
-      const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
+      const affectedAnnotations = dependentAnnotations(document, signal.id);
       const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
       return { ok: true, document: replaceSignal(document, index, { ...signal, values }), changeSet, inverseChangeSet: changeSet };
     }
@@ -775,7 +774,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const previousIdIndex = valueChangeIdAllocator.getIndex(signal.id, signal.values);
       if (allocation) valueChangeIdAllocator.remember(signal.id, values, allocation.nextIndex);
       else if (previousIdIndex) valueChangeIdAllocator.remember(signal.id, values, previousIdIndex);
-      const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
+      const affectedAnnotations = dependentAnnotations(document, signal.id);
       const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
       return { ok: true, document: replaceSignal(document, index, { ...signal, values }), changeSet, inverseChangeSet: changeSet };
     }
@@ -789,7 +788,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (command.fromStart === command.toStart) return fail("no-op", "NO_OP", "$", "Change point is already at the requested cycle.");
       if (signal.values.some((change) => change.start === command.toStart)) return fail("invalid", "DUPLICATE_CHANGE_POINT", "$.toStart", `A change already starts at cycle ${command.toStart}.`);
       const values = signal.values.map((change) => change === source ? { ...change, start: command.toStart } : change).sort((left, right) => left.start - right.start);
-      const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
+      const affectedAnnotations = dependentAnnotations(document, signal.id);
       const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
       return { ok: true, document: replaceSignal(document, index, { ...signal, values }), changeSet, inverseChangeSet: changeSet };
     }
@@ -799,7 +798,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!signal || signal.type === "clock" || signal.type === "commentRow") return fail("invalid", "SIGNAL_NOT_EDITABLE", "$.signalId", "Value changes require a non-clock timing signal.");
       if (!signal.values.some((change) => change.start === command.start)) return fail("invalid", "CHANGE_NOT_FOUND", "$.start", `No change starts at cycle ${command.start}.`);
       if (signal.values.length === 1) return fail("invalid", "LAST_CHANGE_REQUIRED", "$.start", "A value signal must retain at least one change point.");
-      const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
+      const affectedAnnotations = dependentAnnotations(document, signal.id);
       const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
       return { ok: true, document: replaceSignal(document, index, { ...signal, values: signal.values.filter((change) => change.start !== command.start) }), changeSet, inverseChangeSet: changeSet };
     }
@@ -863,7 +862,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = {
         rowPresentation: [signal.id],
         ...(visibilityChanged ? { geometryScreenY: [...new Set([...(spacingChanged ? geometryRowsFrom(document, signal.id) : []), ...visibilityRows])], annotationPosition: annotationsForSignals(document, [...new Set([signal.id, ...visibilityRows])]), minimapOverview: true } : spacingChanged ? { geometryScreenY: geometryRowsFrom(document, signal.id) } : {}),
-        ...(waveformChanged ? { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: dependentAnnotations(document, signal.id).map((annotation) => annotation.id) } : {}),
+        ...(waveformChanged ? { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: dependentAnnotations(document, signal.id) } : {}),
         ...(signal.name === name && signal.type === nextType ? { timingDiagnosticsUnchanged: true } : {}),
       };
       return { ok: true, document: replaceSignal(document, index, next), changeSet, inverseChangeSet: changeSet };
@@ -904,7 +903,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
         if (!representable) return fail("invalid", "UNSUPPORTED_CLOCK_DUTY", "$.generator.duty", "This WaveDrom-backed editor supports non-50% duty only at exact half-cycle boundaries with the inactive initial level.");
       }
       if (semanticEqual(signal.generator, generator)) return fail("no-op", "NO_OP", "$", "Clock Generator is unchanged.");
-      const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
+      const affectedAnnotations = dependentAnnotations(document, signal.id);
       const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true, timingDiagnosticsUnchanged: true };
       return { ok: true, document: replaceSignal(document, index, { ...signal, generator }), changeSet, inverseChangeSet: changeSet };
     }
@@ -1762,5 +1761,32 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { timeGroupSemantics: [group.id, ...document.timeGroups.filter(item => item.parentId === group.id).map(item => item.id)], geometryScreenX: true, minimapOverview: true, ...(group.presentation?.collapsed ? { waveSemantics: timingSignalIds(nextDocument), geometryLocal: timingSignalIds(nextDocument) } : {}) };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
+  }
+}
+
+export interface CommandPlannerMetrics {
+  readonly calls: number;
+  readonly plannerDurationMs: number;
+}
+
+let plannerCalls = 0;
+let plannerDurationMs = 0;
+
+export function getCommandPlannerMetrics(): CommandPlannerMetrics {
+  return Object.freeze({ calls: plannerCalls, plannerDurationMs });
+}
+
+export function resetCommandPlannerMetrics(): void {
+  plannerCalls = 0;
+  plannerDurationMs = 0;
+}
+
+export function planCommand(document: CanonicalDocument, command: SemanticCommand): CommandPlanResult {
+  const startedAt = Date.now();
+  plannerCalls += 1;
+  try {
+    return planCommandWithoutMetrics(document, command);
+  } finally {
+    plannerDurationMs += Date.now() - startedAt;
   }
 }

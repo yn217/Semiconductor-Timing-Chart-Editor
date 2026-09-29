@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
+import { commandPolicyCodes, commandPolicyDescriptors, getCommandPlannerMetrics, planCommand, resetCommandPlannerMetrics, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-chart-v2/core";
-import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
+import { canonicalReferences, DEFAULT_MEASUREMENT_LAYOUT, getCanonicalReferenceMetrics, MAX_MEASUREMENT_LANE, parseDocument, resetCanonicalReferenceMetrics, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { valueChangeIdAllocator } from "../../packages/commands/src/value-change-id-allocator.js";
 
@@ -780,6 +780,10 @@ describe("command execution and atomic history", () => {
     const document = canonicalFixture();
     document.annotations = [{ id: "ann_spacing" as AnnotationId, type: "text", label: "Data", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 2, point: "value-start" } }];
     const session = new CommandHistorySession(document);
+    const affectedSignalIds = new Set(["sig_clk", "sig_data"]);
+    const expectedVisitedReferences = canonicalReferences(document).filter((reference) => reference.targetType === "signal" && affectedSignalIds.has(reference.targetId)).length;
+    resetCanonicalReferenceMetrics();
+    resetCommandPlannerMetrics();
     const result = session.execute({ id: commandId("cmd_group_spacing"), type: "group.updateLayout", groupId: "grp_main" as GroupId, spacingBefore: 7, spacingAfter: 11 });
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -787,6 +791,9 @@ describe("command execution and atomic history", () => {
       expect(result.changeSet.waveSemantics).toBeUndefined();
       expect(result.changeSet.geometryLocal).toBeUndefined();
     }
+    expect(getCanonicalReferenceMetrics()).toMatchObject({ targetQueries: 1, affectedSignalCount: 2, referencesVisited: expectedVisitedReferences });
+    expect(getCommandPlannerMetrics().calls).toBe(1);
+    expect(getCommandPlannerMetrics().plannerDurationMs).toBeGreaterThanOrEqual(0);
   });
 
   it("applies Group presentation properties in one canonical commit", () => {
