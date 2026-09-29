@@ -3,7 +3,7 @@ import type { BulkSignalDefinition } from "../bulk-signal-parser.js";
 
 export type ContextMenuState =
   | { readonly x: number; readonly y: number; readonly target: "ruler"; readonly cycle: number }
-  | { readonly x: number; readonly y: number; readonly target: "signal" | "group" | "annotation" | "transaction" };
+  | { readonly x: number; readonly y: number; readonly target: "signal" | "group" | "annotation" | "transaction"; /** Stable id of the row that invoked the menu (#899): the menu follows/dismisses with it. */ readonly originRowId?: string };
 
 export type BulkRegistrationPreviewState<GroupId> = {
   readonly sourceText: string;

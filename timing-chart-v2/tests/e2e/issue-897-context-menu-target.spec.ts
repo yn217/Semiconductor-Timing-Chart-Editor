@@ -42,3 +42,28 @@ test("Signal context menu opens enabled for the invoking row on its first visibl
   const enabled = first.items - first.disabled;
   expect(enabled, `menu painted with ${first.disabled}/${first.items} disabled items on its first frame`).toBeGreaterThan(first.items / 2);
 });
+
+/** #899: the menu is anchored to a fixed screen point, so a scroll that can virtualize its invoking row away must dismiss it. */
+test("Signal context menu is dismissed when the virtualized tree scrolls under it", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  const surface = page.getByTestId("cycle-surface");
+  await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/showcase/21_large_feature_showcase.tcd.json"));
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", "48");
+  await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
+  const row = surface.locator("[data-role='frozen-row'][data-row-id='s.reqv']");
+  await row.click({ button: "right" });
+  const menu = page.getByTestId("signal-context-menu");
+  await expect(menu).toBeVisible();
+  await page.waitForTimeout(400);
+  const box = (await page.getByTestId("cycle-viewport").boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.85, box.y + 60);
+  const before = await page.getByTestId("cycle-viewport").evaluate((el) => el.scrollTop);
+  await page.mouse.wheel(0, 600);
+  await expect.poll(() => page.getByTestId("cycle-viewport").evaluate((el) => el.scrollTop)).not.toBe(before);
+  await expect(menu).toHaveCount(0);
+  // Mutation-free: scrolling only dismissed the menu.
+  await expect(page.getByTestId("dirty-status")).not.toHaveText("Modified");
+});

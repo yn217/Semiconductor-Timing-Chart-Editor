@@ -287,7 +287,8 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     const alreadySelected = (rowId !== undefined && selection.refs.signalIds.current.has(rowId as SignalId)) || (annotationId !== undefined && selection.refs.annotationIds.current.has(annotationId as AnnotationId));
     // #897: the menu derives its command capabilities from the committed selection, so the invoking row must be selected before the menu publishes.
     if (!alreadySelected) onSelect(event, { synchronous: true });
-    setContextMenu({ x: event.clientX, y: event.clientY, target: target?.dataset.annotationId ? "annotation" : target?.closest("[data-role='tree-group-more']") ? "group" : "signal" });
+    const originRowId = rowId ?? annotationId;
+    setContextMenu({ x: event.clientX, y: event.clientY, target: target?.dataset.annotationId ? "annotation" : target?.closest("[data-role='tree-group-more']") ? "group" : "signal", ...(originRowId === undefined ? {} : { originRowId }) });
   };
   const onCanvasClick = (event: MouseEvent) => {
     if (suppressCanvasClickRef.current) { suppressCanvasClickRef.current = false; return; }
