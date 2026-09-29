@@ -269,16 +269,18 @@ test("concurrent Open requests are latest-request-wins", async ({ page }) => {
 
 test("Open rechecks Dirty after a delayed file read", async ({ page }) => {
   await page.addInitScript(() => {
-    const nativeText = Blob.prototype.text;
+    // Open reads the file with File.arrayBuffer() (byte-budgeted decode); hold that read open until the test releases it.
+    const nativeRead = Blob.prototype.arrayBuffer;
     Object.assign(globalThis, { __delayedOpenResolve: undefined as (() => void) | undefined });
-    File.prototype.text = function () {
+    File.prototype.arrayBuffer = function () {
       const file = this;
-      return new Promise<string>((resolve, reject) => {
-        (globalThis as typeof globalThis & { __delayedOpenResolve?: () => void }).__delayedOpenResolve = () => { void nativeText.call(file).then(resolve, reject); };
+      return new Promise<ArrayBuffer>((resolve, reject) => {
+        (globalThis as typeof globalThis & { __delayedOpenResolve?: () => void }).__delayedOpenResolve = () => { void nativeRead.call(file).then(resolve, reject); };
       });
     };
   });
   await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   const replacement = canonicalFixture();
   replacement.document.title = "Delayed Replacement";
   const input = page.locator("input[accept='.json,.tcd']");
