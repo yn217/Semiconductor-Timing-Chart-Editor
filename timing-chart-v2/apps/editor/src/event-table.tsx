@@ -191,13 +191,14 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   }, [dragStarts]);
   const reorderDrop = (targetStart: number) => {
     const activeDragStarts = dragStartsRef.current;
-    const target = indexed.ordered.find((change) => change.start === targetStart);
+    const target = indexed.ordered[indexed.indexByStart.get(targetStart) ?? -1];
     if (activeDragStarts === undefined || target === undefined || activeDragStarts.has(transitionIdentity(target))) return;
     const ordered = [...indexed.ordered];
-    const selectedIndexes = ordered.map((change, index) => activeDragStarts.has(transitionIdentity(change)) ? index : -1).filter((index) => index >= 0);
+    // #856: positions come from the dragged keys via the identity index (O(dragged)), not a map/filter over every transition.
+    const selectedIndexes = [...activeDragStarts].map((key) => orderedIndexByKey.get(key) ?? -1).filter((index) => index >= 0).sort((left, right) => left - right);
     const from = selectedIndexes[0] ?? -1;
     const last = selectedIndexes.at(-1) ?? -1;
-    const to = ordered.findIndex((change) => change.start === targetStart);
+    const to = indexed.indexByStart.get(targetStart) ?? -1;
     if (from < 0 || to < 0 || selectedIndexes.length !== last - from + 1) { setActiveDragStarts(undefined); return; }
     const result = reorderTransitionBlock(ordered, activeDragStarts, to, cycleCount);
     if (result) { const commandResult = commands.replaceValues(signal.id, result.values); if (commandResult.ok) setCheckedKeys(new Set(result.values.slice(result.firstIndex, result.firstIndex + result.blockSize).map(transitionIdentity))); }
