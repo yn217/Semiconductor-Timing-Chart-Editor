@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import type { CommandHistorySession } from "@timing-chart-v2/history";
 import { validateDocumentResourceBudget, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
@@ -94,7 +95,11 @@ export function useDocumentLifecycle({
 
   const replaceDocument = useCallback((input: CanonicalDocument | ParsedCanonicalDocument, migrationWarnings: readonly { code: string; path: string; message: string }[] = []) => {
     // #743: the failure boundary lives in commitDocumentReplacement (validate -> replaceSession -> epoch advance once); effects are published only on success.
-    const outcome = commitDocumentReplacement({ replaceSession: (value, diagnostics) => application.replaceSession(value, diagnostics), advanceEpoch: () => application.runtime.documentEpoch.advance() }, input, migrationWarnings);
+    // #208: the session replacement queues the React publication of the new document (title, status, Inspector, Bottom). Commit it
+    // synchronously so it lands in the same task as the imperative Timeline replacement below; otherwise a frame can paint the new
+    // Signal Tree / rows next to the previous document's title, status and context.
+    let outcome!: ReturnType<typeof commitDocumentReplacement>;
+    flushSync(() => { outcome = commitDocumentReplacement({ replaceSession: (value, diagnostics) => application.replaceSession(value, diagnostics), advanceEpoch: () => application.runtime.documentEpoch.advance() }, input, migrationWarnings); });
     if (!outcome.ok) {
       if (outcome.reason === "resource-budget") {
         const diagnostics = openProblems(outcome.problems).map((item) => ({ ...item, recommendation: "Reduce the document resource count, then retry Open." }));
