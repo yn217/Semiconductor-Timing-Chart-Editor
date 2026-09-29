@@ -730,8 +730,20 @@ describe("command execution and atomic history", () => {
     expect(session.metrics()).toEqual({ validationRuns: before.validationRuns + 1, commits: before.commits + 1 });
     expect(session.historyState().undoDepth).toBe(1);
     expect(session.getSnapshot().document.signals.find((signal) => signal.id === second.id)?.source.instancePath).toEqual(["dut", "core"]);
+    expect(session.getSnapshot().document.signalGroups[0]?.rows.slice(2, 4)).toEqual([first.id, second.id]);
     expect(session.undo()).toMatchObject({ ok: true });
     expect(session.getSnapshot().document.signals.some((signal) => signal.id === first.id)).toBe(false);
+  });
+
+  it("preflights bulk Signal IDs atomically before rebuilding the target row collection", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const before = session.getSnapshot();
+    const metrics = session.metrics();
+    const rejected = session.execute({ id: commandId("cmd_bulk_duplicate_id"), type: "signal.bulkCreate", signals: [extraSignal("sig_bulk_fresh"), extraSignal("sig_data")], targetGroupId: "grp_main" as GroupId, index: 0 });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "DUPLICATE_ID" }] });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.metrics()).toEqual(metrics);
+    expect(session.historyState().undoDepth).toBe(0);
   });
 
   it("supports Group lifecycle without implicitly moving rows", () => {

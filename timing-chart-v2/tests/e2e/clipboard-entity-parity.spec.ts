@@ -181,8 +181,10 @@ test("Transaction clipboard is view-only on Copy, creates a fresh entity on Past
 
   const editor = await openTransactionEditor(page);
   await editor.getByLabel("New Transaction name").fill("Clip Test");
-  await editor.getByLabel("New Transaction start").fill("2");
-  await editor.getByLabel("New Transaction end").fill("6");
+  // The editor fields are TC-scaled (1 TC = 10 source cycles); keep the
+  // intended source range [2, 6] inside this 8-cycle fixture.
+  await editor.getByLabel("New Transaction start").fill("0.2");
+  await editor.getByLabel("New Transaction end").fill("0.6");
   await editor.getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");

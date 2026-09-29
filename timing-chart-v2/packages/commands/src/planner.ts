@@ -663,17 +663,35 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
     }
     case "signal.bulkCreate": {
       if (command.signals.length === 0) return fail("no-op", "NO_OP", "$.signals", "Bulk registration requires at least one signal.");
-      let candidate = document;
-      const forward: ChangeSet[] = [];
-      const inverse: ChangeSet[] = [];
-      for (const [offset, signal] of command.signals.entries()) {
-        const plan = planCommand(candidate, { id: `${command.id}_item_${offset}` as CommandId, type: "signal.create", signal, targetGroupId: command.targetGroupId, index: command.index + offset });
-        if (!plan.ok) return plan;
-        candidate = plan.document;
-        forward.push(plan.changeSet);
-        inverse.unshift(plan.inverseChangeSet);
+      const groupIndex = document.signalGroups.findIndex((group) => group.id === command.targetGroupId);
+      const group = document.signalGroups[groupIndex];
+      if (!group) return fail("invalid", "GROUP_NOT_FOUND", "$.targetGroupId", `Group '${command.targetGroupId}' does not exist.`);
+      if (!Number.isInteger(command.index) || command.index < 0 || command.index > group.rows.length) return fail("invalid", "INDEX_OUT_OF_RANGE", "$.index", "Signal insertion index is outside the group rows.");
+
+      // Preflight the complete batch before constructing any replacement arrays.
+      const signalIds = new Set(document.signals.map((signal) => signal.id));
+      for (const signal of command.signals) {
+        if (signalIds.has(signal.id)) return fail("invalid", "DUPLICATE_ID", "$.signal.id", `Signal '${signal.id}' already exists.`);
+        signalIds.add(signal.id);
       }
-      return { ok: true, document: candidate, changeSet: mergeChangeSets(forward), inverseChangeSet: mergeChangeSets(inverse) };
+
+      const insertedIds = command.signals.map((signal) => signal.id);
+      const rows = [...group.rows.slice(0, command.index), ...insertedIds, ...group.rows.slice(command.index)];
+      const signalGroups = [...document.signalGroups];
+      signalGroups[groupIndex] = { ...group, rows };
+      const changeSets = command.signals.map((signal): ChangeSet => ({
+        addedSignals: [signal.id],
+        rowOrder: [signal.id],
+        ...(signal.type === "commentRow" ? {} : { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenY: [signal.id] }),
+        minimapOverview: true,
+      }));
+      const inverseChangeSets = command.signals.map((signal): ChangeSet => ({ removedSignals: [signal.id], rowOrder: [signal.id], minimapOverview: true }));
+      return {
+        ok: true,
+        document: { ...document, signals: [...document.signals, ...command.signals], signalGroups },
+        changeSet: mergeChangeSets(changeSets),
+        inverseChangeSet: mergeChangeSets(inverseChangeSets),
+      };
     }
     case "signal.delete": {
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);

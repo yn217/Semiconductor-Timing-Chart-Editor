@@ -2,8 +2,9 @@ import { useRef, useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { Annotation, AnnotationId, GroupId, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { nextCommandId } from "../command-id.js";
-import { nextEntityId } from "../entity-id.js";
+import { createEntityIdAllocator, nextEntityId } from "../entity-id.js";
 import { groupId, signalId } from "../minimal-cycle-view-fixture-helpers.js";
+import { clipboardDocumentIndex } from "./clipboard-document-index.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
 
@@ -27,19 +28,26 @@ export function useClipboardActions({ application, selection }: { application: E
   const selected = () => {
     const current = document();
     const state = selection.refs.state.current;
-    const group = state.groupId === undefined ? undefined : current.signalGroups.find((item) => item.id === state.groupId);
+    const index = clipboardDocumentIndex(current);
+    const group = state.groupId === undefined ? undefined : index.groupsById.get(state.groupId)?.group;
+    const transactions = [...state.transactionIds].flatMap((id) => {
+      const entry = index.transactionsById.get(id);
+      return entry ? [entry] : [];
+    }).sort((left, right) => left.index - right.index).map((entry) => entry.transaction);
+    const signals = [...state.signalIds].flatMap((id) => {
+      const entry = index.signalsById.get(id);
+      const owner = index.signalLocationById.get(id);
+      return entry && owner ? [{ signal: entry.signal, signalIndex: entry.index, groupId: owner.group.id, index: owner.index }] : [];
+    }).sort((left, right) => left.signalIndex - right.signalIndex).map(({ signal, groupId, index }) => ({ signal, groupId, index }));
     return {
       document: current,
       state,
       group,
       spacer: state.spacerId === undefined ? undefined : group?.spacers?.find((item) => item.id === state.spacerId),
-      annotation: state.annotationId === undefined ? undefined : current.annotations.find((item) => item.id === state.annotationId),
-      transaction: state.transactionId === undefined ? undefined : current.transactions.find((item) => item.id === state.transactionId),
-      transactions: current.transactions.filter((item) => state.transactionIds.has(item.id)),
-      signals: current.signals.filter((signal) => state.signalIds.has(signal.id)).flatMap((signal) => {
-        const owner = current.signalGroups.find((candidate) => candidate.rows.includes(signal.id));
-        return owner ? [{ signal, groupId: owner.id, index: owner.rows.indexOf(signal.id) }] : [];
-      }),
+      annotation: state.annotationId === undefined ? undefined : index.annotationsById.get(state.annotationId),
+      transaction: state.transactionId === undefined ? undefined : index.transactionsById.get(state.transactionId)?.transaction,
+      transactions,
+      signals,
     };
   };
   const setClipboard = ({ signals = [], group, annotation, transactions = [], spacer, cutSignals = false }: { signals?: readonly SignalClipboardItem[]; group?: GroupClipboardItem; annotation?: Annotation; transactions?: readonly Transaction[]; spacer?: SpacerClipboardItem; cutSignals?: boolean }) => {
@@ -77,7 +85,8 @@ export function useClipboardActions({ application, selection }: { application: E
       setClipboard({ spacer: { spacer: value.spacer, groupId: value.group.id, index: value.group.rows.indexOf(value.spacer.id) } });
       setStatus(`Copied spacer ${value.spacer.id}`);
     } else if (value.group && !value.spacer) {
-      const rows = value.group.rows.flatMap((rowId) => value.document.signals.find((signal) => signal.id === rowId) ?? []);
+      const signalsById = clipboardDocumentIndex(value.document).signalsById;
+      const rows = value.group.rows.flatMap((rowId) => signalsById.get(rowId as SignalId)?.signal ?? []);
       setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group) } });
       setStatus(`Copied ${value.group.name} group`);
     } else if (value.transactions.length > 0 && value.signals.length === 0 && !value.annotation) {
@@ -101,9 +110,10 @@ export function useClipboardActions({ application, selection }: { application: E
       return;
     }
     if (value.group) {
-      const rows = value.group.rows.flatMap((rowId) => value.document.signals.find((signal) => signal.id === rowId) ?? []);
+      const signalsById = clipboardDocumentIndex(value.document).signalsById;
+      const rows = value.group.rows.flatMap((rowId) => signalsById.get(rowId as SignalId)?.signal ?? []);
       setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group) } });
-      const commands: SemanticCommand[] = value.group.rows.map((rowId) => value.document.signals.some((signal) => signal.id === rowId)
+      const commands: SemanticCommand[] = value.group.rows.map((rowId) => signalsById.has(rowId as SignalId)
         ? { id: nextCommandId("cut_group_signal"), type: "signal.delete", signalId: rowId as SignalId }
         : { id: nextCommandId("cut_group_spacer"), type: "spacer.delete", spacerId: rowId as SpacerId });
       commands.push({ id: nextCommandId("cut_group_delete"), type: "group.delete", groupId: value.group.id });
@@ -147,14 +157,17 @@ export function useClipboardActions({ application, selection }: { application: E
     if (input.length === 0) { setStatus("No signal clipboard available"); return; }
     const current = document();
     const selectedSignalId = selection.refs.signalId.current;
-    const selectedGroup = placement === "current-selection" ? current.signalGroups.find((item) => selectedSignalId !== undefined && item.rows.includes(selectedSignalId)) : undefined;
+    const selectedGroup = placement === "current-selection" && selectedSignalId !== undefined
+      ? clipboardDocumentIndex(current).signalLocationById.get(selectedSignalId)?.group
+      : undefined;
+    const allocateId = createEntityIdAllocator(current);
     const commands: SemanticCommand[] = [];
     const created: Signal[] = [];
     const insertedByGroup = new Map<GroupId, number>();
     for (const source of input) {
       const target = selectedGroup ?? current.signalGroups.find((item) => item.id === source.groupId) ?? current.signalGroups.at(-1);
       if (!target) continue;
-      const id = signalId(nextEntityId(source.signal.type === "commentRow" ? "commentRow" : "signal", { ...current, signals: [...current.signals, ...created] }));
+      const id = signalId(allocateId(source.signal.type === "commentRow" ? "commentRow" : "signal"));
       const copyOrdinal = created.length + 1;
       const name = `${source.signal.display.name}_${operation === "duplicate" ? "duplicate" : "copy"}${input.length > 1 ? `_${copyOrdinal}` : ""}`;
       const signal: Signal = { ...source.signal, id, name, display: { ...source.signal.display, name } };
@@ -173,22 +186,24 @@ export function useClipboardActions({ application, selection }: { application: E
   };
   const createGroup = (input: GroupClipboardItem, operation: "paste" | "duplicate") => {
     const current = document();
-    const newGroupId = groupId(nextEntityId("group", current));
+    const allocateId = createEntityIdAllocator(current);
+    const newGroupId = groupId(allocateId("group"));
     const group: SignalGroup = { ...input.group, id: newGroupId, rows: [], ...(input.group.spacers === undefined ? {} : { spacers: [] }) };
     const commands: SemanticCommand[] = [{ id: nextCommandId(`${operation}_group`), type: "group.create", group, index: Math.min(current.signalGroups.length, input.sourceIndex + 1) }];
     const createdSignals: Signal[] = [];
     const sourceSpacers = new Map<string, SpacerRow>((input.group.spacers ?? []).map((item) => [item.id, item]));
+    const sourceById = new Map(input.rows.map((signal) => [signal.id, signal] as const));
     for (const rowId of input.group.rows) {
-      const source = input.rows.find((signal) => signal.id === rowId);
+      const source = sourceById.get(rowId as SignalId);
       if (source) {
-        const id = signalId(nextEntityId(source.type === "commentRow" ? "commentRow" : "signal", { ...current, signals: [...current.signals, ...createdSignals] }));
+        const id = signalId(allocateId(source.type === "commentRow" ? "commentRow" : "signal"));
         const signal: Signal = { ...source, id };
         createdSignals.push(signal);
         commands.push({ id: nextCommandId(`${operation}_group_item`), type: signal.type === "commentRow" ? "commentRow.create" : "signal.create", ...(signal.type === "commentRow" ? { commentRow: signal } : { signal }), targetGroupId: newGroupId, index: commands.length - 1 } as SemanticCommand);
       } else {
         const sourceSpacer = sourceSpacers.get(rowId);
         if (!sourceSpacer) continue;
-        const id = spacerId(nextEntityId("spacer", { ...current, signals: [...current.signals, ...createdSignals] }));
+        const id = spacerId(allocateId("spacer"));
         commands.push({ id: nextCommandId(`${operation}_group_spacer`), type: "spacer.create", spacer: { ...sourceSpacer, id }, targetGroupId: newGroupId, index: commands.length - 1 });
       }
     }
@@ -202,9 +217,10 @@ export function useClipboardActions({ application, selection }: { application: E
   };
   const createTransactions = (sources: readonly Transaction[], operation: "paste" | "duplicate") => {
     const current = document();
+    const allocateId = createEntityIdAllocator(current);
     const created: Transaction[] = [];
     for (const source of sources) {
-      const transaction: Transaction = { ...source, id: nextEntityId("transaction", { ...current, transactions: [...current.transactions, ...created] }) as TransactionId, name: `${source.name} ${operation === "paste" ? "Paste" : "Copy"}` };
+      const transaction: Transaction = { ...source, id: allocateId("transaction") as TransactionId, name: `${source.name} ${operation === "paste" ? "Paste" : "Copy"}` };
       created.push(transaction);
     }
     const result = application.executeBatch(nextCommandId(`${operation}_transactions`), created.map((transaction) => ({ id: nextCommandId(`${operation}_transaction`), type: "transaction.create" as const, transaction })));
@@ -234,7 +250,7 @@ export function useClipboardActions({ application, selection }: { application: E
   const duplicate = () => {
     const value = selected();
     if (value.spacer && value.group) createSpacer({ spacer: value.spacer, groupId: value.group.id, index: value.group.rows.indexOf(value.spacer.id) }, "duplicate");
-    else if (value.group) createGroup({ group: value.group, rows: value.group.rows.flatMap((rowId) => value.document.signals.find((signal) => signal.id === rowId) ?? []), sourceIndex: value.document.signalGroups.indexOf(value.group) }, "duplicate");
+    else if (value.group) createGroup({ group: value.group, rows: value.group.rows.flatMap((rowId) => clipboardDocumentIndex(value.document).signalsById.get(rowId as SignalId)?.signal ?? []), sourceIndex: value.document.signalGroups.indexOf(value.group) }, "duplicate");
     else if (value.annotation) createAnnotation(value.annotation, "duplicate");
     else if (value.transactions.length > 0) createTransactions(value.transactions, "duplicate");
     else createSignals(value.signals, "duplicate");
