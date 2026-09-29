@@ -413,9 +413,17 @@ export class SemanticSnapCandidateService {
       const map = input.geometryMaps.get(signal.id);
       if (!map) continue;
       const y = input.rowY.get(signal.id) ?? 0;
-      for (let renderedCycle = 0; renderedCycle <= renderedCycleCount; renderedCycle += 1) {
-        const cycle = sourceCycleForRenderedCycle(renderedCycle);
-        if (cycle === undefined) continue;
+      // Geometry maps may retain only the current rendered/source window.
+      // Enumerate those semantic boundaries directly instead of scanning the
+      // entire document display range and probing `find()` for absent cycles.
+      // Keep the display-range fallback for third-party maps that do not yet
+      // expose their bounded boundary index.
+      const boundaryEntries = map.cycleBoundaryEntries?.();
+      const sourceCycles = boundaryEntries === undefined || boundaryEntries.length === 0
+        ? Array.from({ length: renderedCycleCount + 1 }, (_, renderedCycle) => sourceCycleForRenderedCycle(renderedCycle))
+        : boundaryEntries.map((entry) => entry.cycle);
+      for (const cycle of sourceCycles) {
+        if (cycle === undefined || renderedCycleForSourceCycle(cycle) === undefined && cycle !== input.document.timeline.cycleCount) continue;
         const points: readonly { readonly point: AnchorPoint; readonly kind: SnapKind }[] = [
           { point: "cycle-start", kind: "cycle-boundary" },
           ...(cycle === input.document.timeline.cycleCount ? [] : [{ point: "cycle-center" as const, kind: "cycle-center" as const }]),

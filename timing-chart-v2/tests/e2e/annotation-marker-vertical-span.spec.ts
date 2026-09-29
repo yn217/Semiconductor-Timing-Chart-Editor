@@ -34,8 +34,10 @@ test("Marker's Vertical span is editable in the Bottom Panel, dispatching the ex
   // Rows mode requires both endpoints before it's a valid command --
   // Apply stays disabled until both are picked.
   await expect(applyBtn).toBeDisabled();
-  await page.getByLabel("Marker vertical span start row").selectOption({ label: "CLOCK" });
-  await page.getByLabel("Marker vertical span end row").selectOption({ label: "READY" });
+  await page.getByLabel("Marker vertical span start row").fill("CLOCK");
+  await page.getByRole("option", { name: "CLOCK", exact: true }).click();
+  await page.getByLabel("Marker vertical span end row").fill("READY");
+  await page.getByRole("option", { name: "READY", exact: true }).click();
   await expect(applyBtn).toBeEnabled();
 
   await applyBtn.click();

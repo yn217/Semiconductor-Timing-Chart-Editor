@@ -13,6 +13,8 @@ async function readState(page: import("@playwright/test").Page) {
       signalLookups: minimap.dataset.overviewSignalLookups,
       overviewReuseSignalComparisons: minimap.dataset.overviewReuseSignalComparisons,
       overviewRows: minimap.querySelectorAll(".minimap-rows > span").length,
+      viewportLeft: minimap.dataset.viewportLeft,
+      viewportTop: minimap.dataset.viewportTop,
       session: JSON.parse(host.dataset.sessionCounters ?? "null") as Record<string, number>,
       render: JSON.parse(surface.dataset.renderCounters ?? "null") as Record<string, number>,
       revision: host.dataset.canonicalRevision,
@@ -56,7 +58,8 @@ test("MiniMap viewport updates do not rebuild the static overview", async ({ pag
     element.scrollLeft = Math.max(1, element.scrollWidth - element.clientWidth);
     element.dispatchEvent(new Event("scroll"));
   });
-  await page.waitForTimeout(100);
+  await expect.poll(() => minimap.getAttribute("data-viewport-left")).not.toBe(before.viewportLeft);
+  await expect.poll(() => minimap.getAttribute("data-viewport-top")).not.toBe(before.viewportTop);
   const afterScroll = await readState(page);
   expect(afterScroll.overviewBuilds).toBe(before.overviewBuilds);
   expect(afterScroll.signalLookups).toBe(before.signalLookups);
@@ -65,7 +68,8 @@ test("MiniMap viewport updates do not rebuild the static overview", async ({ pag
   const box = await minimap.boundingBox();
   expect(box).not.toBeNull();
   await page.mouse.click(box!.x + box!.width * 0.5, box!.y + box!.height * 0.5);
-  await page.waitForTimeout(50);
+  await expect.poll(() => minimap.getAttribute("data-viewport-left")).not.toBe(afterScroll.viewportLeft);
+  await expect.poll(() => minimap.getAttribute("data-viewport-top")).not.toBe(afterScroll.viewportTop);
   const afterPan = await readState(page);
   expect(afterPan.overviewBuilds).toBe(before.overviewBuilds);
   expect(afterPan.signalLookups).toBe(before.signalLookups);
@@ -74,8 +78,10 @@ test("MiniMap viewport updates do not rebuild the static overview", async ({ pag
   for (const key of ["validationRuns", "commits", "commandAttempts", "committedActions", "undoOperations", "redoOperations"]) {
     expect(afterPan.session[key]).toBe(before.session[key]);
   }
-  expect(afterPan.render.waveDromRenders).toBe(before.render.waveDromRenders);
-  expect(afterPan.render.localGeometryBuilds).toBe(before.render.localGeometryBuilds);
+  // Direct scrolling above can legitimately window/remount waveform content.
+  // The MiniMap pan itself must not trigger another render beyond that settled scroll.
+  expect(afterPan.render.waveDromRenders).toBe(afterScroll.render.waveDromRenders);
+  expect(afterPan.render.localGeometryBuilds).toBe(afterScroll.render.localGeometryBuilds);
   expect(afterPan.history).toBe(before.history);
   expect(afterPan.dirty).toBe(before.dirty);
 });

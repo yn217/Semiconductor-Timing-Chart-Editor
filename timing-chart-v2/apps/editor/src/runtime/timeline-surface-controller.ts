@@ -21,6 +21,7 @@ import { resolveTransactionSnapCycle } from "./interaction-controller.js";
 import { scheduleInitialTimelineRefresh } from "./document-lifecycle-controller.js";
 import { refreshRendererForReason } from "./render-coordinator.js";
 import { createWaveformSurfaceProvider } from "./waveform-surface-provider.js";
+import { refreshWaveCanvasViewport } from "./canvas-wave-painter.js";
 import { initialWaveSignalIds, mountInitialTimelineProjection, projectViewportWindow, projectionForInitialWaveBootstrap } from "./viewport-projection.js";
 import { fixedColumnsOutsideTimeline, timelineScrollOwner } from "./timeline-scroll-owner.js";
 import { refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRulerAndGridIfNeeded, refreshTimelinePresentation, syncPresentationScale, syncRulerScroll } from "./timeline-presentation-refresh.js";
@@ -199,6 +200,28 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     let transactionExtentSource: CanonicalDocument["transactions"] | undefined;
     let transactionExtent: Readonly<{ start: number; end: number }> | undefined;
     let publishState: () => void = () => undefined;
+    let pendingOpenDiagnosticPublish = false;
+    let diagnosticPublishFrame = 0;
+    const requestDiagnosticPublish = (): void => {
+      if (!active) return;
+      if (primaryPresentationOpening) {
+        pendingOpenDiagnosticPublish = true;
+        return;
+      }
+      if (diagnosticPublishFrame !== 0) return;
+      const publish = () => {
+        diagnosticPublishFrame = 0;
+        if (!active || !rendererHost.isConnected) return;
+        publishState();
+      };
+      if (typeof globalThis.requestAnimationFrame === "function") diagnosticPublishFrame = globalThis.requestAnimationFrame(publish);
+      else diagnosticPublishFrame = globalThis.setTimeout(publish, 0) as unknown as number;
+    };
+    const flushOpenDiagnosticPublish = (): void => {
+      if (!pendingOpenDiagnosticPublish) return;
+      pendingOpenDiagnosticPublish = false;
+      requestDiagnosticPublish();
+    };
     const timelineGeometry = new TimelineGeometryOwner({
       mappingCache,
       geometryMaps,
@@ -218,6 +241,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       geometryRegistry,
       markOpenPhase,
       recordOpenWaveBatch: openPhaseTracker.recordWaveBatch,
+      isPresentationReady: () => {
+        const readiness = rendererHost.dataset.openReadiness;
+        return readiness === "presentation-ready" || readiness === "visible-waveforms-ready" || readiness === "idle";
+      },
       isPrimaryPresentationOpening: () => primaryPresentationOpening,
       getWaveWidthPxPerDisplayCycle: () => timelineGeometry.waveWidthPxPerDisplayCycle,
       getWaveOriginPx: () => timelineGeometry.waveOriginPx,
@@ -308,20 +335,17 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     markOpenPhase("renderer-updated");
     requestAnimationFrame(() => { if (active) markOpenPhase("row-shell-painted"); });
     const initialPresentationGeneration = primaryPresentationGeneration;
-    void renderer.whenIdle().then(() => {
-      if (active && primaryPresentationGeneration === initialPresentationGeneration) {
-        markOpenPhase("visible-waveforms-ready");
-        markOpenPhase("all-visible-idle");
-        primaryPresentationOpening = false;
-      }
-    });
     // Signal Split View (#200): lets the signalSplitEnabled effect force
     // Upper to reproject/re-render immediately after flipping
     // `projectionCoordinator.setPane()`, using the CURRENT document (not a
     // change -- Split toggling itself is view-only, so this must never
     // touch history/dirty/canonical state).
     const surfaceViewMode = () => rendererHost.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode;
-    let lastReprojectViewMode = surfaceViewMode();
+    const surfacePresentation = () => {
+      const surface = rendererHost.closest<HTMLElement>("[data-view-mode]");
+      return `${surface?.dataset.viewMode ?? ""}:${surface?.dataset.signalSplit ?? "false"}`;
+    };
+    let lastReprojectPresentation = surfacePresentation();
     forceUpperReprojectRef.current = () => {
       if (!active) return;
       // Transaction mode defers every non-reference waveform (see
@@ -329,8 +353,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // they stay blank until an unrelated edit: the renderer only paints
       // dirty/new owners, and the deferred batch already cleared their dirty flag.
       const viewMode = surfaceViewMode();
-      const leavingDeferredMode = lastReprojectViewMode === "Transaction" && viewMode !== "Transaction";
-      lastReprojectViewMode = viewMode;
+      const previousMode = lastReprojectPresentation.split(":", 1)[0];
+      const currentPresentation = surfacePresentation();
+      const reprojectModeChanged = lastReprojectPresentation !== currentPresentation;
+      const leavingDeferredMode = previousMode === "Transaction" && viewMode !== "Transaction";
+      lastReprojectPresentation = currentPresentation;
       // The Cycle viewport has zero height while another mode is active, so a
       // window built then hides every row/annotation candidate; rebuild it now.
       if (leavingDeferredMode) window = buildViewportWindow(viewportElement, sessionController.snapshot().document.timeline.referenceClock, input.presentation.getPinnedSignalIds());
@@ -347,6 +374,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       const unpaintedSignalIds = leavingDeferredMode ? reprojectSnapshot.document.signals.map((signal) => signal.id).filter((id) => !paintedSignalIds.has(id)) : [];
       projection = projectionCoordinator.project({ snapshot: reprojectSnapshot, changeSet: unpaintedSignalIds.length > 0 ? { waveSemantics: unpaintedSignalIds } : {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);
+      if (reprojectModeChanged) {
+        for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-role='wave-owner'][data-wave-renderer='canvas']")) {
+          refreshWaveCanvasViewport(owner);
+        }
+      }
       // Horizontal scroll re-publishes the previous projection; do not carry the
       // one-shot wave invalidation into every later scroll frame.
       if (projection.waveSignalIds.length > 0) projection = { ...projection, waveSignalIds: [] };
@@ -527,8 +559,6 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       cycleBoundaryAtX,
       cycleBoundaryAtLocalX: (localX, zoom, snapEnabled) => timelineGeometry.cycleBoundaryAtLocalX(localX, zoom, snapEnabled),
     });
-    publishState();
-
     const initialDocumentEpoch = documentEpoch.current();
     scheduleInitialTimelineRefresh(renderer, rendererHost, {
       ruler: () => { if (active) timelineRuntime.refreshRuler(); },
@@ -540,6 +570,15 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       transactionPresentation: requestTransactionPresentationRefresh,
       collectErrors: () => { if (active) collectWaveErrors(); },
       publish: () => { if (active) publishState(); },
+      onPresentationReady: () => {
+        if (!active || primaryPresentationGeneration !== initialPresentationGeneration) return;
+        markOpenPhase("visible-waveforms-ready");
+        markOpenPhase("all-visible-idle");
+        primaryPresentationOpening = false;
+        // scheduleInitialTimelineRefresh already queues one diagnostic
+        // publication after this visual-ready boundary.
+        pendingOpenDiagnosticPublish = false;
+      },
     }, { isCurrent: () => active && documentEpoch.isCurrent(initialDocumentEpoch) });
 
     const collectWaveErrors = () => {
@@ -606,10 +645,9 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         // perform another DOM pass for an unchanged range.
         return range.start === start && range.end === end ? range : { start, end };
       });
-      publishState();
+      requestDiagnosticPublish();
       void renderer.whenIdle().then(() => {
         if (!active || !rendererHost.isConnected) return;
-        markOpenPhase("visible-waveforms-ready");
         // Accepted timeline-semantic changes must rebuild the ruler even after
         // its first paint.  The previous guard only refreshed during the
         // initialisation window, leaving Time Group collapse/expand controls
@@ -622,10 +660,12 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         if (refreshGridNow) timelineRuntime.refreshGrid();
         timelineRuntime.setZoom(timelineNavigation.getZoom());
         if (refreshOverlaysNow) timelineRuntime.refreshOverlays();
-        collectWaveErrors();
-        publishState();
+        markOpenPhase("visible-waveforms-ready");
         markOpenPhase("all-visible-idle");
         if (openingGenerationForCompletion !== undefined && primaryPresentationGeneration === openingGenerationForCompletion) primaryPresentationOpening = false;
+        flushOpenDiagnosticPublish();
+        collectWaveErrors();
+        requestDiagnosticPublish();
         requestAnimationFrame(() => {
           if (!active || !rendererHost.isConnected || commandGeneration !== acceptedCommandGeneration) return;
           const idleAt = globalThis.performance.now();
@@ -698,7 +738,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       markOpenPhase("renderer-updated");
       requestAnimationFrame(() => { if (active) markOpenPhase("row-shell-painted"); });
       rulerElement.replaceChildren();
-      publishState();
+      requestDiagnosticPublish();
       void renderer.whenIdle().then(() => {
         if (!active || !rendererHost.isConnected) return;
         // The reference-geometry callback may already have built the ruler
@@ -708,11 +748,12 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         timelineRuntime.refreshPlayhead();
         timelineRuntime.setZoom(timelineNavigation.getZoom());
         timelineRuntime.refreshOverlays();
-        collectWaveErrors();
-        publishState();
         markOpenPhase("visible-waveforms-ready");
         markOpenPhase("all-visible-idle");
         if (primaryPresentationGeneration === openingGeneration) primaryPresentationOpening = false;
+        flushOpenDiagnosticPublish();
+        collectWaveErrors();
+        requestDiagnosticPublish();
       });
       },
     });

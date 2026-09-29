@@ -1,5 +1,5 @@
 import { cyclesToTc, tcFieldLabel, tcToCycles } from "./transaction-tc.js";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import type { HistoryState } from "@timing-chart-v2/history";
 import type { CanonicalDocument, SignalId, Transaction, TransactionGroup, TransactionId, TransactionPhase } from "@timing-chart-v2/schema";
@@ -93,13 +93,13 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   const [applyError, setApplyError] = useState("");
   useEffect(() => setApplyError(""), [transaction?.id]);
   const [expandedPhaseTransactionIds, setExpandedPhaseTransactionIds] = useState<ReadonlySet<TransactionId>>(new Set());
-  const groupNameById = new Map(document.transactionGroups?.map((group) => [group.id, group.name]) ?? []);
+  const groupNameById = useMemo(() => new Map(document.transactionGroups?.map((group) => [group.id, group.name]) ?? []), [document.transactionGroups]);
   const needle = search.trim().toLocaleLowerCase();
-  const filteredTransactions = needle.length === 0 ? document.transactions : document.transactions.filter((item) => item.name.toLocaleLowerCase().includes(needle) || (item.groupId !== undefined && (groupNameById.get(item.groupId) ?? "").toLocaleLowerCase().includes(needle)));
-  const visibleTransactions = sortKey === "document" ? filteredTransactions : [...filteredTransactions].sort((left, right) => {
+  const filteredTransactions = useMemo(() => needle.length === 0 ? document.transactions : document.transactions.filter((item) => item.name.toLocaleLowerCase().includes(needle) || (item.groupId !== undefined && (groupNameById.get(item.groupId) ?? "").toLocaleLowerCase().includes(needle))), [document.transactions, groupNameById, needle]);
+  const visibleTransactions = useMemo(() => sortKey === "document" ? filteredTransactions : [...filteredTransactions].sort((left, right) => {
     const order = sortKey === "start" ? left.start - right.start || left.end - right.end : sortKey === "end" ? left.end - right.end || left.start - right.start : left.name.localeCompare(right.name);
     return sortDescending ? -order : order;
-  });
+  }), [filteredTransactions, sortKey, sortDescending]);
   // #770 Policy A (visible-scope selection): narrowing the filter must not leave a destructive bulk action operating on rows the user can
   // no longer see. Pruning the shared selection to what the filter currently shows is itself view-only (Canonical/History/Dirty delta 0).
   useEffect(() => {
@@ -110,10 +110,10 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on the filter text only; re-derives current selection/visibility from this render's closures.
   }, [needle]);
   type TransactionListEntry = Readonly<{ kind: "transaction"; item: Transaction } | { kind: "phase"; transaction: Transaction; phase: TransactionPhase; index: number }>;
-  const listEntries: readonly TransactionListEntry[] = visibleTransactions.flatMap((item) => [
+  const listEntries: readonly TransactionListEntry[] = useMemo(() => visibleTransactions.flatMap((item) => [
     { kind: "transaction" as const, item },
     ...(expandedPhaseTransactionIds.has(item.id) ? (item.phases ?? []).map((phase, index) => ({ kind: "phase" as const, transaction: item, phase, index })) : []),
-  ]);
+  ]), [visibleTransactions, expandedPhaseTransactionIds]);
   const transactionRowHeight = 30;
   const shouldVirtualizeTransactions = listEntries.length > 200;
   const transactionListViewportRef = useRef<HTMLDivElement>(null);

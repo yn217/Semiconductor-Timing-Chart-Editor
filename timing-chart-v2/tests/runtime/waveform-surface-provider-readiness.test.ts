@@ -81,6 +81,42 @@ describe("waveform provider primary geometry readiness", () => {
     expect(invalidateSnapIndex).toHaveBeenCalledTimes(priorSnapInvalidations + 1);
   });
 
+  it("cooperatively yields between over-budget viewport rows after initial Open readiness", async () => {
+    const document = generatePerformanceDocument({ signalCount: 3, cycleCount: 10 });
+    const referenceSignalId = document.timeline.referenceClock!;
+    let now = 0;
+    vi.spyOn(globalThis.performance, "now").mockImplementation(() => { now += 40; return now; });
+    const yieldToNextTask = vi.fn(async () => undefined);
+    vi.stubGlobal("scheduler", { yield: yieldToNextTask });
+    const adapter: WaveDromAdapter = {
+      toWaveJson: (source) => toWaveJson(source),
+      renderWave: vi.fn(async (signalId, waveJson) => ({ signalId, ownerKey: signalId, svg: {} as SVGSVGElement, renderIndex: 0, waveJson })),
+      extractLocalGeometry: vi.fn(() => { throw new Error("SVG extraction is not used in analytic mode."); }),
+      geometryMetrics: () => ({ last: undefined, totalDurationMs: 0, totalUsesVisited: 0, totalGeometryEntriesEmitted: 0, totalDuplicateKeyChecks: 0, totalDuplicateKeyCollisions: 0, totalTransitionBrickLookups: 0, totalSkinPathParses: 0, totalMatrixReads: 0 }),
+      dispose: vi.fn(),
+      metrics: () => ({ renderCalls: 0, waveJsonDurationMs: 0, renderDurationMs: 0, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 }),
+    };
+    const owner = () => ({ style: { removeProperty: vi.fn() }, dataset: {}, isConnected: true }) as unknown as HTMLElement;
+    const provider = createWaveformSurfaceProvider({
+      sessionController: { snapshot: () => ({ document, revision: 0 }) },
+      getDocumentEpoch: () => 1,
+      mappingCache: new DisplayTimeMappingCache(),
+      adapter,
+      geometryRegistry: new GeometryRegistry(),
+      markOpenPhase: vi.fn(),
+      isPrimaryPresentationOpening: () => false,
+      invalidateSnapIndex: vi.fn(),
+      getViewMode: () => "Cycle",
+    });
+
+    await provider.mountWaveBatch!([
+      ...document.signals.map((signal) => ({ signalId: signal.id, owner: owner(), documentEpoch: 1 })),
+    ]);
+
+    expect(adapter.renderWave).toHaveBeenCalledTimes(3);
+    expect(yieldToNextTask).toHaveBeenCalled();
+  });
+
   it("installs the reference wave first and commits the other prepared owners after the batch", async () => {
     const document = generatePerformanceDocument({ signalCount: 3, cycleCount: 10 });
     const referenceSignalId = document.timeline.referenceClock!;
@@ -90,10 +126,12 @@ describe("waveform provider primary geometry readiness", () => {
     const invalidateSnapIndex = vi.fn();
     const svgBySignal = new Map<string, SVGSVGElement>();
     const sourceCyclesBySignal = new Map<string, readonly number[] | undefined>();
-    const decode = deferred<void>();
+    const referenceDecode = deferred<void>();
+    const secondaryDecode = deferred<void>();
     let referencePrepareStarted = false;
     let nonReferencePreparedDuringDecode = false;
     let referenceDecodeResolved = false;
+    let batchCompleted = false;
     const mappingCache = new DisplayTimeMappingCache();
     const remapValueChanges = mappingCache.remapValueChanges.bind(mappingCache);
     vi.spyOn(mappingCache, "remapValueChanges").mockImplementation((changes, mapping) => {
@@ -109,7 +147,7 @@ describe("waveform provider primary geometry readiness", () => {
         sourceCyclesBySignal.set(signalId, waveJson.geometrySourceCycles);
         const svg = {} as SVGSVGElement;
         svgBySignal.set(signalId, svg);
-        return { signalId, ownerKey: signalId, svg, renderIndex: 0, waveJson, ...(signalId === referenceSignalId ? { svgImageReady: decode.promise } : {}) };
+        return { signalId, ownerKey: signalId, svg, renderIndex: 0, waveJson, svgImageReady: signalId === referenceSignalId ? referenceDecode.promise : secondaryDecode.promise };
       }),
       installWave: vi.fn((rendered, _mount) => {
         lifecycle.push(`install:${rendered.signalId}`);
@@ -138,10 +176,15 @@ describe("waveform provider primary geometry readiness", () => {
       { signalId: nonReferenceSignalIds[0]!, owner: owner(), documentEpoch: 1, sourceWindow: { start: 1, end: 9 } },
       { signalId: nonReferenceSignalIds[1]!, owner: owner(), documentEpoch: 1, sourceWindow: { start: 1, end: 9 } },
       { signalId: referenceSignalId, owner: owner(), documentEpoch: 1, sourceWindow: { start: 1, end: 9 } },
-    ]);
+    ]).then(() => { batchCompleted = true; });
     await vi.waitFor(() => expect(nonReferencePreparedDuringDecode).toBe(true));
     referenceDecodeResolved = true;
-    decode.resolve();
+    referenceDecode.resolve();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(lifecycle).not.toContain(`install:${nonReferenceSignalIds[0]}`);
+    expect(lifecycle).not.toContain(`install:${nonReferenceSignalIds[1]}`);
+    expect(batchCompleted).toBe(false);
+    secondaryDecode.resolve();
     await batch;
 
     expect(lifecycle).toEqual([
@@ -224,8 +267,10 @@ describe("waveform provider primary geometry readiness", () => {
     const referenceSignalId = document.timeline.referenceClock!;
     const nonReferenceSignalId = document.signals.find((signal) => signal.id !== referenceSignalId)!.id;
     const prepared = deferred<RenderedWave>();
+    const imageDecode = deferred<void>();
     const nonReferencePrepareStarted = deferred<void>();
     let nonReferenceIsFresh = true;
+    const geometryRegistry = new GeometryRegistry();
     const adapter: WaveDromAdapter = {
       toWaveJson: (source) => toWaveJson(source),
       renderWave: vi.fn(async () => { throw new Error("Detached prepare/install should be used."); }),
@@ -247,8 +292,9 @@ describe("waveform provider primary geometry readiness", () => {
       getDocumentEpoch: () => 1,
       mappingCache: new DisplayTimeMappingCache(),
       adapter,
-      geometryRegistry: new GeometryRegistry(),
+      geometryRegistry,
       markOpenPhase: vi.fn(),
+      isPrimaryPresentationOpening: () => true,
       invalidateSnapIndex: vi.fn(),
       getViewMode: () => "Cycle",
     };
@@ -260,13 +306,16 @@ describe("waveform provider primary geometry readiness", () => {
     ]);
 
     await nonReferencePrepareStarted.promise;
+    prepared.resolve({ signalId: nonReferenceSignalId, ownerKey: nonReferenceSignalId, svg: {} as SVGSVGElement, renderIndex: 1, waveJson: { wave: "01" }, svgImageReady: imageDecode.promise });
+    await vi.waitFor(() => expect(geometryRegistry.maps.has(nonReferenceSignalId)).toBe(true));
     nonReferenceIsFresh = false;
-    prepared.resolve({ signalId: nonReferenceSignalId, ownerKey: nonReferenceSignalId, svg: {} as SVGSVGElement, renderIndex: 1, waveJson: { wave: "01" } });
+    imageDecode.resolve();
     const results = await batch;
 
     expect(adapter.installWave).toHaveBeenCalledTimes(1);
     expect(adapter.installWave).toHaveBeenCalledWith(expect.objectContaining({ signalId: referenceSignalId }), expect.anything());
     expect(results.find((item) => item.signalId === nonReferenceSignalId)).toMatchObject({ stale: true });
+    expect(geometryRegistry.maps.has(nonReferenceSignalId)).toBe(false);
   });
 
   it("reuses the Signal index across unrelated document revisions with the same Signal collection", async () => {

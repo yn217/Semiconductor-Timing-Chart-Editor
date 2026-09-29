@@ -47,6 +47,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   // bulk actions below.
   const [storedCheckedKeys, setCheckedKeys] = useState<ReadonlySet<string>>(new Set());
   const [eventScrollTop, setEventScrollTop] = useState(0);
+  const [eventViewportHeight, setEventViewportHeight] = useState(300);
   const eventViewportRef = useRef<HTMLDivElement>(null);
   const [importStatus, setImportStatus] = useState("Import signal events");
   const fileInput = useRef<HTMLInputElement>(null);
@@ -59,17 +60,27 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
     return () => { importMounted.current = false; importRequestId.current += 1; };
   }, []);
   const indexed = useMemo(() => buildEventTableIndex(signal.values, cycleCount), [signal.values, cycleCount]);
+  useEffect(() => {
+    const viewport = eventViewportRef.current;
+    if (!viewport) return;
+    const updateHeight = () => setEventViewportHeight(viewport.clientHeight);
+    updateHeight();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
   const enumDefinition: EnumDefinition | undefined = signal.type === "state" && signal.enumId !== undefined ? enumDefinitions?.find((definition) => definition.id === signal.enumId) : undefined;
   const validKeys = useMemo(() => new Set(signal.values.map(transitionIdentity)), [signal.values]);
   const checkedKeys = useMemo(() => pruneExternalSelection(storedCheckedKeys, validKeys), [storedCheckedKeys, validKeys]);
   useEffect(() => {
     setCheckedKeys((current) => pruneExternalSelection(current, validKeys));
   }, [validKeys]);
-  // #856: identity -> ordered position, rebuilt only when the data changes (not on scroll), so selection/reveal lookups are O(1).
-  const orderedIndexByKey = useMemo(() => new Map(indexed.ordered.map((change, index) => [transitionIdentity(change), index] as const)), [indexed]);
-  const selected = selectedKey === undefined ? undefined : indexed.ordered[orderedIndexByKey.get(selectedKey) ?? -1];
+  const selectedIndex = selectedKey === undefined ? undefined : indexed.indexByIdentity.get(selectedKey);
+  const selected = selectedIndex === undefined ? undefined : indexed.ordered[selectedIndex];
   const selectTransition = (startValue: number) => {
-    const change = indexed.ordered[indexed.indexByStart.get(startValue) ?? -1];
+    const index = indexed.indexByStart.get(startValue);
+    const change = index === undefined ? undefined : indexed.ordered[index];
     setSelectedKey(change === undefined ? undefined : transitionIdentity(change));
   };
   const nextStart = indexed.firstFree() ?? Math.max(0, cycleCount - 1);
@@ -165,7 +176,6 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   };
   const moveBy = (delta: -1 | 1) => {
     const ordered = [...indexed.ordered];
-    const selectedIndexes = ordered.map((change, index) => checkedKeys.has(transitionIdentity(change)) ? index : -1).filter((index) => index >= 0);
     if (selectedIndexes.length === 0) return;
     const first = selectedIndexes[0]!;
     const last = selectedIndexes[selectedIndexes.length - 1]!;
@@ -178,7 +188,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
     if (commandResult.ok) setCheckedKeys(new Set(result.values.slice(result.firstIndex, result.firstIndex + result.blockSize).map(transitionIdentity)));
   };
   const orderedStarts = indexed.ordered;
-  const selectedIndexes = orderedStarts.map((change, index) => checkedKeys.has(transitionIdentity(change)) ? index : -1).filter((index) => index >= 0);
+  const selectedIndexes = useMemo(() => [...checkedKeys].map((key) => indexed.indexByIdentity.get(key)).filter((index): index is number => index !== undefined).sort((left, right) => left - right), [checkedKeys, indexed.indexByIdentity]);
   const isContiguous = selectedIndexes.length > 0 && selectedIndexes.length === selectedIndexes.at(-1)! - selectedIndexes[0]! + 1;
   const canMoveUp = isContiguous && selectedIndexes[0]! > 0;
   const canMoveDown = isContiguous && selectedIndexes.at(-1)! < orderedStarts.length - 1;
@@ -195,7 +205,7 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
     if (activeDragStarts === undefined || target === undefined || activeDragStarts.has(transitionIdentity(target))) return;
     const ordered = [...indexed.ordered];
     // #856: positions come from the dragged keys via the identity index (O(dragged)), not a map/filter over every transition.
-    const selectedIndexes = [...activeDragStarts].map((key) => orderedIndexByKey.get(key) ?? -1).filter((index) => index >= 0).sort((left, right) => left - right);
+    const selectedIndexes = [...activeDragStarts].map((key) => indexed.indexByIdentity.get(key) ?? -1).filter((index) => index >= 0).sort((left, right) => left - right);
     const from = selectedIndexes[0] ?? -1;
     const last = selectedIndexes.at(-1) ?? -1;
     const to = indexed.indexByStart.get(targetStart) ?? -1;
@@ -216,18 +226,18 @@ export function EventTable({ signal, documentEpoch, revision, onImportDiagnostic
   useEffect(() => { if (selectAllRef.current) selectAllRef.current.indeterminate = checkedCount > 0 && !allChecked; }, [checkedCount, allChecked]);
   const toggleAll = () => setCheckedKeys(allChecked ? new Set() : new Set(signal.values.map(transitionIdentity)));
   const eventFirst = Math.max(0, Math.floor(eventScrollTop / EVENT_ROW_HEIGHT) - EVENT_OVERSCAN);
-  const eventLast = Math.min(indexed.ordered.length, Math.ceil((eventScrollTop + (eventViewportRef.current?.clientHeight ?? 300)) / EVENT_ROW_HEIGHT) + EVENT_OVERSCAN);
+  const eventLast = Math.min(indexed.ordered.length, Math.ceil((eventScrollTop + eventViewportHeight) / EVENT_ROW_HEIGHT) + EVENT_OVERSCAN);
   const renderedEvents = indexed.ordered.slice(eventFirst, eventLast);
   useEffect(() => {
     if (selectedKey === undefined || !eventViewportRef.current) return;
-    const index = orderedIndexByKey.get(selectedKey) ?? -1;
-    if (index < 0) return;
+    const index = indexed.indexByIdentity.get(selectedKey);
+    if (index === undefined) return;
     const top = index * EVENT_ROW_HEIGHT;
     const bottom = top + EVENT_ROW_HEIGHT;
     const viewport = eventViewportRef.current;
     if (top < viewport.scrollTop) viewport.scrollTop = top;
     else if (bottom > viewport.scrollTop + viewport.clientHeight) viewport.scrollTop = bottom - viewport.clientHeight;
-  }, [indexed.ordered, selectedKey]);
+  }, [indexed.indexByIdentity, selectedKey]);
   return <div className="event-editor">
     {/* Bottom Panel Visual Reference pass: Add/Edit Transition, Value
         Helper and (for a binary Signal) Generate Waveform render side by

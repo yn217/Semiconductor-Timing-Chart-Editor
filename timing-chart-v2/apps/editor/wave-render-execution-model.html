@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Wave Render Execution Model</title>
+    <style>
+      body { font: 14px/1.45 system-ui, sans-serif; margin: 24px; color: #16202e; }
+      pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+      #sink { position: fixed; left: -10000px; top: 0; width: 1200px; height: 800px; overflow: hidden; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Wave render execution model</h1>
+      <p>Same deterministic 100×500 Open fixture, 20 initial visible Signal jobs, WaveDrom 3.6.2.</p>
+      <output id="result" aria-live="polite">Preparing…</output>
+      <div id="sink" aria-hidden="true"></div>
+    </main>
+    <script type="module">
+      import { generatePerformanceDocument } from "@timing-chart-v2/testing";
+      import { assertSafeWaveDromSvg, renderWaveJsonMarkupWithMetrics, toWaveJson, WAVEDROM_VERSION } from "@timing-chart-v2/wavedrom-adapter";
+
+      const output = document.querySelector("#result");
+      const sink = document.querySelector("#sink");
+      window.addEventListener("error", (event) => { output.textContent = `FAIL: ${event.message}`; output.dataset.result = "fail"; });
+      window.addEventListener("unhandledrejection", (event) => { output.textContent = `FAIL: ${String(event.reason)}`; output.dataset.result = "fail"; });
+      const trialCount = 5;
+      const visibleOwnerCount = 20;
+      const fixtureStartedAt = performance.now();
+      const canonical = generatePerformanceDocument({ signalCount: 100, cycleCount: 500 });
+      const jobs = canonical.signals.slice(0, visibleOwnerCount).map((signal, renderIndex) => {
+        const waveJson = toWaveJson({ signal, cycleCount: 500 });
+        const semanticValues = "values" in signal ? signal.values.map((change) => String(change.value)) : [];
+        return { signalId: signal.id, waveJson, renderIndex, semanticValues };
+      });
+      const preparationMs = performance.now() - fixtureStartedAt;
+      output.textContent = `Prepared ${jobs.length} WaveJSON jobs; warming main-thread path…`;
+      const inputBytes = jobs.reduce((total, job) => total + new TextEncoder().encode(JSON.stringify({ waveJson: job.waveJson, renderIndex: job.renderIndex, semanticValues: job.semanticValues })).byteLength, 0);
+      const longTasks = [];
+      const longTaskObserver = typeof PerformanceObserver === "undefined" ? undefined : new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) longTasks.push({ startTime: entry.startTime, duration: entry.duration });
+      });
+      try { longTaskObserver?.observe({ type: "longtask", buffered: true }); } catch { /* Long Task API may be unavailable. */ }
+
+      function installMarkup(markup, job) {
+        const startedAt = performance.now();
+        const template = document.createElement("template");
+        template.innerHTML = markup.trim();
+        const svg = template.content.firstElementChild;
+        if (!svg || svg.namespaceURI !== "http://www.w3.org/2000/svg" || svg.localName !== "svg") throw new Error("Worker/main returned an invalid SVG root.");
+        const parseMs = performance.now() - startedAt;
+        const safetyStartedAt = performance.now();
+        assertSafeWaveDromSvg(svg);
+        const safetyMs = performance.now() - safetyStartedAt;
+        const installStartedAt = performance.now();
+        const owner = document.createElement("div");
+        owner.dataset.waveOwner = job.signalId;
+        svg.setAttribute("data-wave-owner", job.signalId);
+        svg.setAttribute("data-wave-render-index", String(job.renderIndex));
+        svg.setAttribute("preserveAspectRatio", "none");
+        owner.replaceChildren(svg);
+        sink.append(owner);
+        return { parseMs, safetyMs, installMs: performance.now() - installStartedAt };
+      }
+
+      function summarize(values) {
+        const sorted = [...values].sort((a, b) => a - b);
+        const at = (percentile) => sorted[Math.max(0, Math.ceil(percentile * sorted.length) - 1)] ?? 0;
+        return { median: at(0.5), p95: at(0.95), max: sorted.at(-1) ?? 0 };
+      }
+
+      async function flushLongTasks() {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        longTaskObserver?.takeRecords().forEach((entry) => longTasks.push({ startTime: entry.startTime, duration: entry.duration }));
+      }
+
+      let baselineMarkup = [];
+
+      async function runMain(budgetMs) {
+        let markupBytes = 0, renderAnyMs = 0, stringifyMs = 0, labelMs = 0, safetyStringMs = 0;
+        let parseMs = 0, safetyDomMs = 0, installMs = 0, yields = 0, yieldWaitMs = 0;
+        const startedAt = performance.now();
+        let sliceStartedAt = startedAt;
+        const outputs = [];
+        for (const job of jobs) {
+          const generated = renderWaveJsonMarkupWithMetrics(job.waveJson, job.renderIndex, job.semanticValues);
+          outputs.push(generated.markup);
+          renderAnyMs += generated.metrics.waveDromRenderAnyMs;
+          stringifyMs += generated.metrics.onmlStringifyMs;
+          labelMs += generated.metrics.valueLabelLayoutMs;
+          safetyStringMs += generated.metrics.markupSafetyMs;
+          markupBytes += generated.metrics.svgMarkupBytes;
+          const installed = installMarkup(generated.markup, job);
+          parseMs += installed.parseMs; safetyDomMs += installed.safetyMs; installMs += installed.installMs;
+          if (budgetMs !== undefined && performance.now() - sliceStartedAt >= budgetMs && job !== jobs.at(-1)) {
+            const yieldStartedAt = performance.now();
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            yieldWaitMs += performance.now() - yieldStartedAt;
+            yields += 1;
+            sliceStartedAt = performance.now();
+          }
+        }
+        return { wallMs: performance.now() - startedAt, workerCpuMs: 0, markupBytes, renderAnyMs, stringifyMs, labelMs, safetyStringMs, parseMs, safetyDomMs, installMs, yields, yieldWaitMs, outputs };
+      }
+
+      async function createPool(size) {
+        const workers = Array.from({ length: size }, () => new Worker(new URL("./wave-markup-feasibility.worker.ts", import.meta.url), { type: "module" }));
+        const startedAt = performance.now();
+        await Promise.all(workers.map((worker) => new Promise((resolve, reject) => {
+          const onMessage = ({ data }) => { if (data.kind === "ready") { worker.removeEventListener("message", onMessage); resolve(); } };
+          worker.addEventListener("message", onMessage);
+          worker.addEventListener("error", reject, { once: true });
+          worker.postMessage({ kind: "ready" });
+        })));
+        return { workers, startupMs: performance.now() - startedAt };
+      }
+
+      async function runWorkers(pool) {
+        let workerCpuMs = 0, markupBytes = 0, parseMs = 0, safetyDomMs = 0, installMs = 0, roundTripOverheadMs = 0;
+        const outputs = new Array(jobs.length);
+        let nextJob = 0, completed = 0;
+        const startedAt = performance.now();
+        await new Promise((resolve, reject) => {
+          const workerState = new Map();
+          const fail = (error) => reject(error);
+          pool.workers.forEach((worker, workerIndex) => {
+            workerState.set(worker, { workerIndex, busy: false });
+            worker.addEventListener("error", fail, { once: true });
+            worker.addEventListener("message", ({ data }) => {
+              if (data.kind !== "rendered") return;
+              const state = workerState.get(worker);
+              const jobIndex = state.jobIndex;
+              const job = jobs[jobIndex];
+              workerCpuMs += data.durationMs;
+              markupBytes += new TextEncoder().encode(data.markup).byteLength;
+              roundTripOverheadMs += Math.max(0, performance.now() - state.postedAt - data.durationMs);
+              outputs[jobIndex] = data.markup;
+              const installed = installMarkup(data.markup, job);
+              parseMs += installed.parseMs; safetyDomMs += installed.safetyMs; installMs += installed.installMs;
+              completed += 1;
+              state.busy = false;
+              if (completed === jobs.length) { resolve(); return; }
+              dispatch(worker, state);
+            });
+            dispatch(worker, workerState.get(worker));
+          });
+          function dispatch(worker, state) {
+            if (nextJob >= jobs.length) return;
+            const jobIndex = nextJob++;
+            const job = jobs[jobIndex];
+            state.busy = true; state.jobIndex = jobIndex; state.postedAt = performance.now();
+            worker.postMessage({ kind: "render", jobId: jobIndex, waveJson: job.waveJson, renderIndex: job.renderIndex, semanticValues: job.semanticValues });
+          }
+        });
+        return { wallMs: performance.now() - startedAt, workerCpuMs, markupBytes, parseMs, safetyDomMs, installMs, roundTripOverheadMs, outputs };
+      }
+
+      function summarizeTrials(samples) {
+        const fields = ["wallMs", "workerCpuMs", "renderAnyMs", "stringifyMs", "labelMs", "safetyStringMs", "parseMs", "safetyDomMs", "installMs", "yieldWaitMs", "roundTripOverheadMs"];
+        return Object.fromEntries(fields.filter((field) => samples.some((sample) => Number.isFinite(sample[field]))).map((field) => [field, summarize(samples.map((sample) => sample[field] ?? 0))]));
+      }
+
+      async function measure(name, runner) {
+        const samples = [];
+        for (let index = 0; index < trialCount; index += 1) {
+          output.textContent = `Running ${name}, trial ${index + 1}/${trialCount}…`;
+          sink.replaceChildren();
+          const startedAt = performance.now();
+          const sample = await runner();
+          const endedAt = performance.now();
+          const actualLongTasks = longTasks.filter((entry) => entry.startTime >= startedAt && entry.startTime < endedAt);
+          samples.push({ ...sample, longTaskCount: actualLongTasks.length, maxLongTaskMs: Math.max(0, ...actualLongTasks.map((entry) => entry.duration)), outputEqual: sample.outputs.length === jobs.length && sample.outputs.every((markup, jobIndex) => markup === baselineMarkup[jobIndex]) });
+          await flushLongTasks();
+        }
+        return { name, trials: trialCount, summary: summarizeTrials(samples), longTasks: { maxCountPerTrial: Math.max(...samples.map((sample) => sample.longTaskCount)), maxDurationMs: Math.max(...samples.map((sample) => sample.maxLongTaskMs)) }, outputEqual: samples.every((sample) => sample.outputEqual), yieldsPerTrial: samples.map((sample) => sample.yields ?? 0), markupBytes: samples[0]?.markupBytes ?? 0 };
+      }
+
+      async function runBenchmark() {
+        try {
+          const warmup = await runMain(undefined);
+          baselineMarkup = warmup.outputs;
+          const results = [];
+          results.push(await measure("main-sequential", () => runMain(undefined)));
+          for (const budgetMs of [6, 8, 12]) results.push(await measure(`main-time-sliced-${budgetMs}ms`, () => runMain(budgetMs)));
+          for (const workerCount of [1, 2, 4, 6]) {
+            output.textContent = `Starting ${workerCount}-Worker pool…`;
+            const pool = await createPool(workerCount);
+            const measured = await measure(`worker-${workerCount}`, () => runWorkers(pool));
+            for (const worker of pool.workers) worker.terminate();
+            results.push({ ...measured, workerStartupMs: pool.startupMs });
+          }
+          output.textContent = JSON.stringify({ status: results.every((item) => item.outputEqual) ? "PASS" : "FAIL", fixture: "100x500-standard", visibleOwnerCount, trialCount, waveDromVersion: WAVEDROM_VERSION, fixturePreparationMs: preparationMs, workerInputBytesPerBatch: inputBytes, results }, null, 2);
+          output.dataset.result = results.every((item) => item.outputEqual) ? "pass" : "fail";
+        } catch (error) {
+          output.textContent = `FAIL: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`;
+          output.dataset.result = "fail";
+        } finally {
+          longTaskObserver?.disconnect();
+        }
+      }
+      runBenchmark();
+    </script>
+  </body>
+</html>

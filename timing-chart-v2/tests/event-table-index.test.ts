@@ -10,8 +10,17 @@ describe("EventTable indexed transition model", () => {
     expect(index.ordered.map((value) => value.start)).toEqual([0, Math.floor(cycleCount / 2), cycleCount - 1]);
     expect(index.occupied.has(Math.floor(cycleCount / 2))).toBe(true);
     expect(index.firstFree()).toBe(1);
+    expect(index.firstFree(1)).toBe(2);
     expect(index.nextEnd(Math.floor(cycleCount / 2))).toBe(cycleCount - 1);
     expect(index.nextEnd(1)).toBe(Math.floor(cycleCount / 2));
     expect(buildMs).toBeLessThan(100);
+  });
+
+  it("resolves transition identity and row position without rescanning ordered changes", () => {
+    const values = [{ id: "stable-a", start: 0 }, { id: "stable-b", start: 12 }, { start: 24 }];
+    const index = buildEventTableIndex(values, 30);
+    expect(index.indexByIdentity.get("stable-b")).toBe(1);
+    expect(index.indexByIdentity.get("24")).toBe(2);
+    expect(index.indexByStart.get(12)).toBe(1);
   });
 });

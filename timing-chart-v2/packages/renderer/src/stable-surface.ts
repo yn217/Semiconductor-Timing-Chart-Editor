@@ -306,6 +306,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         place(owner, row);
         const waveformStyle = parseWaveformStyle(row.displayStyle);
         applyWaveformStyle(owner, waveformStyle);
+        setCanvasWaveformColor(owner, waveformStyle.color);
         // #472: `mountWave`/`mountWaveBatch` replace `owner`'s children with
         // a freshly-generated SVG, wiping the override applied above --
         // stash the resolved color so it can be reapplied once that mount
@@ -346,7 +347,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       const row = rows.get(signalId);
       if (!owner || !row) continue;
       owner.dataset.pinnedRow = String(row.pinned === true);
-      applyWaveformStyle(owner, parseWaveformStyle(row.displayStyle));
+      const waveformStyle = parseWaveformStyle(row.displayStyle);
+      applyWaveformStyle(owner, waveformStyle);
+      setCanvasWaveformColor(owner, waveformStyle.color);
     }
     this.#rowLayoutSource = projection.rowLayout;
     this.#rowIndex = new Map(rows);
@@ -528,6 +531,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     const pending = this.#wavePending.get(signalId);
     if (pending?.owner === owner && pending.version === version && pending.documentEpoch === documentEpoch) return;
     const request = { owner, version, documentEpoch };
+    owner.dataset.waveState = "pending";
     this.#wavePending.set(signalId, request);
     this.#waveQueue.set(signalId, request);
     this.#scheduleWaveBatch();
@@ -669,6 +673,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         if ((this.#waveVersions.get(request.signalId) ?? 0) === request.version) this.#dirtyWaves.delete(request.signalId);
       } else {
         request.owner.replaceChildren();
+        delete request.owner.dataset.waveRenderer;
         request.owner.dataset.waveState = "error";
         request.owner.dataset.waveError = item?.error instanceof Error ? item.error.message : "Unknown waveform render failure";
       }
@@ -1366,6 +1371,14 @@ function parseWaveformStyle(style: Record<string, unknown> | undefined): { reado
   const source = style ?? {};
   return { color: typeof source.waveformColor === "string" && /^#[0-9a-f]{3,8}$/i.test(source.waveformColor) ? source.waveformColor : undefined };
 }
+
+function setCanvasWaveformColor(owner: HTMLElement, color: string | undefined): void {
+  const previous = owner.dataset.waveformStyleColor;
+  if (color) owner.dataset.waveformStyleColor = color;
+  else delete owner.dataset.waveformStyleColor;
+  if (previous !== color) owner.dispatchEvent(new Event("waveform-style-change"));
+}
+
 const WAVEFORM_DEFAULT_STROKE = "#000";
 const waveformImageStyleStates = new WeakMap<SVGImageElement, { color: string | undefined; revision: number }>();
 const waveformUseStyleStates = new WeakMap<SVGSVGElement, { color: string; defs: SVGDefsElement; originalHrefByUse: Map<SVGUseElement, string> }>();

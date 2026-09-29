@@ -350,15 +350,18 @@ export type EditorStatusBarProps = {
   // textual indicator, not the CSS border alone. `undefined` outside
   // Split mode.
   readonly activePaneStatus: string | undefined;
+  /** Existing Open phase/renderer metrics, read only when developer diagnostics are expanded. */
+  readonly openPerformanceData?: () => string;
 };
 
 /** The editor's bottom status bar. Purely a display of values already
  * computed by their owners (Application/History, Selection, Timeline
  * Geometry/Navigation, Workspace UI State) -- no state or logic of its own. */
-export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, annotationCount, rangeStatus, selectedCycle, zoom, snapEnabled, viewMode, statusContext, hideRevisionDetail, revision, undoDepth, redoDepth, timeAxisStatus, dirty, problemsCount, problemsPending, waveDromHasError, cursorStatus, activePaneStatus }: EditorStatusBarProps) {
+export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, annotationCount, rangeStatus, selectedCycle, zoom, snapEnabled, viewMode, statusContext, hideRevisionDetail, revision, undoDepth, redoDepth, timeAxisStatus, dirty, problemsCount, problemsPending, waveDromHasError, cursorStatus, activePaneStatus, openPerformanceData }: EditorStatusBarProps) {
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
   const gestureHint = useSyncExternalStore(subscribeGestureHint, getGestureHint);
   const diagnosticClass = hideRevisionDetail ? "status-detail-hidden" : diagnosticsOpen ? undefined : "visually-hidden";
+  const openPerformanceDetails = diagnosticsOpen ? openPerformanceData?.() : undefined;
   return <footer className="status-bar" aria-label="Editor status">
     <span data-testid="tool-status">{gestureHint ?? toolStatus}</span>
     <button type="button" className="status-diagnostics-toggle" data-testid="status-diagnostics-toggle" aria-pressed={diagnosticsOpen} title="Show developer diagnostics (Canonical revision, History counters, renderer state)" onClick={() => setDiagnosticsOpen((open) => !open)}>Diagnostics</button>
@@ -369,6 +372,7 @@ export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, anno
     <span className="status-context" data-testid="status-context">{statusContext}</span>
     <span className={diagnosticClass} data-testid="revision-status">Canonical revision {revision}</span>
     <span className={diagnosticClass} data-testid="history-status">History {undoDepth} / Redo {redoDepth}</span>
+    {openPerformanceDetails !== undefined && <span className="visually-hidden" data-testid="open-performance-diagnostics" role="note">Open performance diagnostics: {openPerformanceDetails}</span>}
     <span data-testid="time-axis-status">{timeAxisStatus}</span><span data-testid="dirty-status">{dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">{problemsPending ? "Problems: Checking…" : `Problems: ${problemsCount}`}</span><span className={waveDromHasError ? undefined : diagnosticClass} data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
   </footer>;
 }

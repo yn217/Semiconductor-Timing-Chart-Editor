@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { timelineOwner } from "./timeline-scroll.js";
+import { hoverTimelineArea, timelineOwner } from "./timeline-scroll.js";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 
@@ -12,7 +12,21 @@ async function openLarge(page: Page, query = "/") {
   await page.goto(query);
   const surface = page.getByTestId("cycle-surface");
   await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
-  const document = generatePerformanceDocument({ signalCount: 30, cycleCount: 10_000, profile: "transaction-heavy" });
+  const generated = generatePerformanceDocument({ signalCount: 30, cycleCount: 10_000, profile: "transaction-heavy" });
+  // Keep this DOM-budget acceptance on the exact WaveJSON subset that Canvas
+  // currently represents. Period clocks and interval-valued buses have their
+  // own correctness fallback contract and are covered separately.
+  const document = {
+    ...generated,
+    signals: generated.signals.map((signal) => {
+      if (signal.type === "clock") return { ...signal, generator: { ...signal.generator, period: 1, phase: 0 } };
+      if (signal.type === "bus") {
+        const { width: _width, displayFormat: _displayFormat, ...binarySignal } = signal;
+        return { ...binarySignal, type: "binary" as const, values: signal.values.map((change) => ({ ...change, value: Number.parseInt(String(change.value), 16) % 2 })) };
+      }
+      return signal;
+    }),
+  };
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "p755-accept.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 90_000 });
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
@@ -21,7 +35,9 @@ async function openLarge(page: Page, query = "/") {
 }
 const viewportOf = (page: Page) => timelineOwner(page);
 const scrollTo = async (page: Page, left: number) => {
-  await viewportOf(page).evaluate((element, target) => { element.scrollLeft = target; element.dispatchEvent(new Event("scroll", { bubbles: true })); }, left);
+  const before = await viewportOf(page).evaluate((element) => element.scrollLeft);
+  await hoverTimelineArea(page);
+  await page.mouse.wheel(left - before, 0);
   await expect.poll(() => viewportOf(page).evaluate((element) => element.scrollLeft)).toBe(left);
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
 };
@@ -73,10 +89,11 @@ test("selection, hit-test, zoom, resize and sustained drag on the Canvas path ke
   await page.setViewportSize({ width: 1280, height: 720 });
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
   expect(await page.locator("[data-role='wave-owner'] canvas[data-wave-canvas]").count()).toBeGreaterThan(0);
-  // Sustained horizontal drag: many small scroll steps never blank the canvases or leave DOM growth behind.
+  // Sustained real horizontal wheel input never blanks Canvas owners or grows the DOM.
   const domBefore = await page.evaluate(() => document.querySelectorAll("*").length);
+  await hoverTimelineArea(page);
   for (let step = 0; step < 60; step += 1) {
-    await viewportOf(page).evaluate((element, index) => { element.scrollLeft = 20_000 + index * 970; element.dispatchEvent(new Event("scroll", { bubbles: true })); }, step);
+    await page.mouse.wheel(970, 0);
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
   }
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });

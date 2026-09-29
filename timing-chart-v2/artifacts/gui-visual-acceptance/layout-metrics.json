@@ -1,9 +1,9 @@
 {
   "provenance": {
-    "testedCommit": "c7e69061069d33440bc51ad52472be3c0c7d3855",
-    "sourceFingerprint": "78d5666dc949b1c7fc770b8410c93a675ef3b5f7d5775298baae850c6bf50a4f",
-    "generatedAt": "2026-09-20T23:27:28.290Z",
-    "goldenSha256": "BB1FEDCE244912084B75DE4672A369B8D3841AD7C8365FCC2714DA41F3F84090"
+    "testedCommit": "830432de6fe6db021289651ecccd29046618a6b5",
+    "sourceFingerprint": "5804e6a38b74e5853738d485c1dc1a53347d25354ad85c8f695a91299dfa4871",
+    "generatedAt": "2026-09-16T10:50:50.431Z",
+    "goldenSha256": "AD1FD459F24E3E24473FD06B16740B08F6DA07C88BBB9F3897A6EE12DA84A078"
   },
   "capture": {
     "browser": "chromium",
@@ -125,14 +125,14 @@
         "left": 0
       },
       "bottom": {
-        "x": 265,
+        "x": 0,
         "y": 676,
-        "width": 1110,
+        "width": 1375,
         "height": 240,
         "top": 676,
         "right": 1375,
         "bottom": 916,
-        "left": 265
+        "left": 0
       },
       "inspector": {
         "x": 1375,
@@ -204,9 +204,9 @@
         "height": 0
       },
       "bottom": {
-        "x": 0,
+        "x": 265,
         "y": 0,
-        "width": 0,
+        "width": 265,
         "height": 0
       },
       "inspector": {
@@ -239,15 +239,15 @@
       "scrollWidth": 1672
     }
   },
-  "geometryPass": true,
+  "geometryPass": false,
   "maskContractPass": true,
   "ribbonNoHorizontalScroll": true,
   "visualDiff": {
-    "changedPixels": 0,
+    "changedPixels": 138990,
     "comparedPixels": 1573352,
-    "diffPercent": 0,
+    "diffPercent": 0.0883400535925845,
     "threshold": 0.05,
-    "pass": true,
+    "pass": false,
     "pixelDeltaThreshold": 24,
     "mask": {
       "left": 0,
@@ -256,7 +256,7 @@
       "bottom": 0
     }
   },
-  "acceptance": "PASS",
+  "acceptance": "FAIL",
   "artifacts": [
     "reference.png",
     "dut.png",

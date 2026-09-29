@@ -841,6 +841,30 @@ export function MinimalCycleView() {
     // #407: textual counterpart to the CSS border indicator -- only
     // meaningful in Split (Cycle/Transaction each have exactly one pane).
     activePaneStatus: viewMode === "Split" ? `Active Pane: ${activePane === "transaction" ? "Transaction" : "Signal"}` : undefined,
+    // Surface Open metrics are already published by the runtime. Read them
+    // on demand so the in-app browser can expose measurements without adding
+    // another collector or any work to the Open hot path.
+    openPerformanceData: () => {
+      const surface = host.current;
+      if (!surface) return "Cycle surface is not mounted.";
+      const fields = ["openReadiness", "openPhaseMarks", "openPhaseDurations", "openWaveBatchMetrics", "sessionCounters"] as const;
+      const phaseMarks = JSON.parse(surface.dataset.openPhaseMarks ?? "{}") as Record<string, number>;
+      const durations = JSON.parse(surface.dataset.openPhaseDurations ?? "{}") as Record<string, number>;
+      const waveMetrics = JSON.parse(surface.dataset.openWaveBatchMetrics ?? "{}") as Record<string, number>;
+      const sessionCounters = JSON.parse(surface.dataset.sessionCounters ?? "{}") as { viewMetrics?: { viewportWidth?: number }; mountedWaveOwners?: number };
+      const openStart = phaseMarks["open-command-start"] ?? phaseMarks["open-start"] ?? 0;
+      const openEnd = performance.now();
+      const longTasks = performance.getEntriesByType("longtask").filter((entry) => entry.startTime >= openStart && entry.startTime < openEnd);
+      return JSON.stringify({
+        ...Object.fromEntries(fields.map((field) => [field, surface.dataset[field] ?? null])),
+        openTotalWallMs: durations.idle,
+        openOutsideWaveBatchMs: typeof durations.idle === "number" && typeof waveMetrics.batchWallMs === "number" ? Math.max(0, durations.idle - waveMetrics.batchWallMs) : null,
+        viewportWidth: sessionCounters.viewMetrics?.viewportWidth ?? null,
+        mountedWaveOwners: sessionCounters.mountedWaveOwners ?? null,
+        nativeSchedulerYieldAvailable: typeof (globalThis as typeof globalThis & { scheduler?: { yield?: unknown } }).scheduler?.yield === "function",
+        longTasks: { count: longTasks.length, maxDurationMs: Math.max(0, ...longTasks.map((entry) => entry.duration)) },
+      });
+    },
   };
   return <EditorShellView
     viewModel={{

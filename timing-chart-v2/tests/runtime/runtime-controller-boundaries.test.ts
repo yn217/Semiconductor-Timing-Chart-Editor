@@ -71,8 +71,11 @@ describe("runtime controller boundaries", () => {
 
   it("publishes the initial refresh only for the current document lifecycle", async () => {
     const host = { isConnected: true, dataset: {} } as unknown as HTMLElement;
+    const order: string[] = [];
     const refresh = {
-      ruler: vi.fn(), range: vi.fn(), playhead: vi.fn(), grid: vi.fn(), zoom: vi.fn(), overlays: vi.fn(), collectErrors: vi.fn(), publish: vi.fn(),
+      ruler: vi.fn(() => { order.push("ruler"); }), range: vi.fn(), playhead: vi.fn(), grid: vi.fn(), zoom: vi.fn(), overlays: vi.fn(),
+      collectErrors: vi.fn(() => { order.push("collect-errors"); }), publish: vi.fn(() => { order.push("publish"); }),
+      onPresentationReady: vi.fn(() => { order.push("presentation-ready"); }),
     };
 
     scheduleInitialTimelineRefresh({ whenIdle: async () => undefined }, host, refresh, { isCurrent: () => true });
@@ -83,6 +86,8 @@ describe("runtime controller boundaries", () => {
     expect(refresh.publish).toHaveBeenCalledOnce();
     // editorIdle is owned by the staged readiness model; the initial refresh publishes the view-ready flag.
     expect(host.dataset.cycleViewReady).toBe("true");
+    expect(order.indexOf("presentation-ready")).toBeLessThan(order.indexOf("collect-errors"));
+    expect(order.indexOf("presentation-ready")).toBeLessThan(order.indexOf("publish"));
   });
 
   it("drops an initial refresh for an obsolete document epoch", async () => {
