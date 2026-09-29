@@ -1146,6 +1146,29 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     return;
   }
   const document = shell.ownerDocument;
+  // #900: a Spacer is vertical spacing, not a Signal. No role badge / empty name / visibility eye; the Left Tree keeps a muted label
+  // and the row actions (select, drag, delete) so the spacing stays editable, the Frozen and Timing surfaces stay blank.
+  if (row.kind === "spacer") {
+    shell.dataset.rowKind = "spacer";
+    if (surface !== "left") { shell.replaceChildren(); return; }
+    const branch = document.createElement("span");
+    branch.dataset.role = "tree-branch";
+    branch.dataset.groupId = row.groupId;
+    branch.draggable = groupStart;
+    branch.textContent = "";
+    const label = document.createElement("span");
+    label.dataset.role = "tree-spacer-label";
+    label.textContent = "Spacer";
+    label.title = `Spacer · ${row.height}px`;
+    const more = document.createElement("button");
+    more.type = "button";
+    more.dataset.role = "tree-more";
+    more.dataset.treeSignalId = row.rowId;
+    more.setAttribute("aria-label", "More actions for spacer");
+    more.append(createLeftTreeIcon(document, "more", "surface-icon more-icon"));
+    shell.replaceChildren(label, more, branch);
+    return;
+  }
   if (surface === "left") {
     const branch = document.createElement("span");
     branch.dataset.role = "tree-branch";
