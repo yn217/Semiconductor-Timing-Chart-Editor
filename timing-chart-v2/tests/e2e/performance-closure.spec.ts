@@ -141,7 +141,7 @@ async function openFixture(page: Page, spec: PerformanceFixtureSpec) {
   for (let attempt = 0; attempt < 60 && stable < 5; attempt += 1) {
     const current = (await counters(page)).waveDromRenders;
     // Also require every mounted wave owner to have its rendered SVG, so a queued (not yet rendered) owner cannot land mid-measurement.
-    const pending = await page.evaluate(() => Array.from(document.querySelectorAll("[data-role='wave-owner']")).filter((owner) => owner.querySelector("svg") === null).length);
+    const pending = await page.evaluate(() => Array.from(document.querySelectorAll("[data-role='wave-owner']")).filter((owner) => (owner as HTMLElement).dataset.waveState !== "ready").length);
     stable = current === previous && pending === 0 ? stable + 1 : 0; previous = current;
     await page.waitForTimeout(100);
   }

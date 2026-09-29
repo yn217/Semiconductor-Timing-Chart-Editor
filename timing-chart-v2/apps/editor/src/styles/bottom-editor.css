@@ -613,3 +613,7 @@
 .event-derived-column { font-style: italic; cursor: help; }
 .event-row output[data-testid^="event-row-end-"], .event-row output[data-testid^="event-row-duration-"] { color: #5c687c; }
 .event-selected-status { align-self: center; margin-right: 8px; color: #43536a; font-size: 11px; font-weight: 600; }
+
+/* #440 Bottom target mode chip */
+.bottom-target-mode { margin-left: auto; align-self: center; padding: 1px 8px; border-radius: 9px; font-size: 11px; color: #43516a; background: #eef2f7; }
+.bottom-target-mode[data-mode="pinned"] { color: #7a4b00; background: #fff1d6; font-weight: 600; }
