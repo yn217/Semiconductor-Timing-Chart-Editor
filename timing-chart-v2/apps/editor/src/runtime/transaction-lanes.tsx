@@ -5,11 +5,55 @@ import { EditorIcon } from "../editor-icon.js";
 import type { TransactionLaneCommandActions } from "../application/editor-surface-command-controller.js";
 import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
+import { buildSourceIntervalIndex, querySourceIntervalIndex, sourceCycleWindowForXRange, type SourceIntervalIndex } from "./transaction-viewport-index.js";
 
 const LANE_ROW_HEIGHT = 40;
 const GROUP_HEADER_HEIGHT = 24;
 let transactionLanesMountSerial = 0;
 const EMPTY_TRANSACTION_GROUPS: NonNullable<CanonicalDocument["transactionGroups"]> = [];
+const transactionIntervalIndexes = new WeakMap<readonly Transaction[], SourceIntervalIndex<Transaction>>();
+const bookmarkOrderIndexes = new WeakMap<readonly Bookmark[], readonly Bookmark[]>();
+const treeOrderIndexes = new WeakMap<readonly Transaction[], readonly Transaction[]>();
+
+function transactionIntervalIndex(items: readonly Transaction[]): SourceIntervalIndex<Transaction> {
+  let index = transactionIntervalIndexes.get(items);
+  if (!index) {
+    index = buildSourceIntervalIndex(items);
+    transactionIntervalIndexes.set(items, index);
+  }
+  return index;
+}
+
+function visibleBookmarks(items: readonly Bookmark[], start: number, end: number): readonly Bookmark[] {
+  let sorted = bookmarkOrderIndexes.get(items);
+  if (!sorted) {
+    sorted = [...items].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+    bookmarkOrderIndexes.set(items, sorted);
+  }
+  let low = 0;
+  let high = sorted.length;
+  while (low < high) {
+    const middle = low + Math.floor((high - low) / 2);
+    if (sorted[middle]!.start < start) low = middle + 1;
+    else high = middle;
+  }
+  const result: Bookmark[] = [];
+  for (let index = low; index < sorted.length && sorted[index]!.start < end; index += 1) result.push(sorted[index]!);
+  return result;
+}
+
+function treeOrder(items: readonly Transaction[]): readonly Transaction[] {
+  let sorted = treeOrderIndexes.get(items);
+  if (!sorted) {
+    sorted = [...items].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+    treeOrderIndexes.set(items, sorted);
+  }
+  return sorted;
+}
+
+function visibleTreeRows(items: readonly Transaction[], startRow: number, endRow: number): readonly Transaction[] {
+  return treeOrder(items).slice(Math.max(0, startRow), Math.max(0, endRow));
+}
 
 // #452: within one lane, Transactions whose [start,end) ranges overlap must
 // stack into separate rows rather than fully occluding each other -- a
@@ -356,16 +400,15 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   // #767: zoom re-lays the geometry out (X scaled here) instead of CSS-scaling the whole track, which stretched every glyph horizontally.
   const zoomFactor = Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
   const getScaledBoundaryX = useCallback((cycle: number) => { const px = getBoundaryX(cycle); return px === undefined ? undefined : px * zoomFactor; }, [getBoundaryX, zoomFactor]);
-  const { cycleXs, boundaryXByCycle } = useMemo(() => {
-    const foldBoundaryCycles = (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).flatMap((group) => [group.start, group.end]);
-    const relevantCycles = [...new Set([...document.transactions.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).flatMap(phase => [phase.start, phase.end])]), ...bookmarks.map((bookmark) => bookmark.start), ...foldBoundaryCycles])].sort((left, right) => left - right);
-    const cycleXs = relevantCycles.flatMap((cycle) => { const x = getScaledBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
-    return { cycleXs, boundaryXByCycle: new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const)) };
-  }, [bookmarks, document.transactions, getScaledBoundaryX, presentationRevision]);
-  const x = (cycle: number) => boundaryXByCycle.get(cycle);
   const foldRanges = useMemo<readonly (readonly [number, number])[]>(() => {
     const ranges = (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const).sort((left, right) => left[0] - right[0] || left[1] - right[1]);
-    return ranges.reduce<readonly (readonly [number, number])[]>((merged, range) => { const previous = merged.at(-1); if (!previous || range[0] > previous[1]) return [...merged, range]; return [...merged.slice(0, -1), [previous[0], Math.max(previous[1], range[1])] as const]; }, []);
+    const merged: Array<readonly [number, number]> = [];
+    for (const range of ranges) {
+      const previous = merged.at(-1);
+      if (!previous || range[0] > previous[1]) merged.push(range);
+      else merged[merged.length - 1] = [previous[0], Math.max(previous[1], range[1])];
+    }
+    return merged;
   }, [rawDocument.timeGroups]);
 
   // #452: Group headers only appear once real Groups are in use -- a
@@ -509,7 +552,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       // room, so neither the bars nor the Tree rows ever overlap.
       let treeRowOf = treeRowsCache.current.get(laneTransactions);
       if (!treeRowOf) {
-        treeRowOf = new Map([...laneTransactions].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)).map((transaction, index) => [transaction.id, index] as const));
+        treeRowOf = new Map(treeOrder(laneTransactions).map((transaction, index) => [transaction.id, index] as const));
         treeRowBuilds.current += 1;
         treeRowsCache.current.set(laneTransactions, treeRowOf);
       }
@@ -526,7 +569,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     }
     return { groupHeaders, laneBands, totalHeight: Math.max(labelCursor, trackCursor, LANE_ROW_HEIGHT) };
   }, [collapsedGroups, laneTransactionsByKey, sections, transactionCountByGroup]);
-  const [virtualWindow, setVirtualWindow] = useState({ top: 0, height: 900 });
+  const [virtualWindow, setVirtualWindow] = useState({ top: 0, height: 900, left: 0, width: 1200 });
   useEffect(() => {
     const laneRoot = owner.current;
     // Combined mode owns a nested vertical scroller for the transaction pane;
@@ -539,12 +582,15 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       ?? laneRoot?.closest<HTMLElement>(".cycle-viewport")
       ?? panel?.querySelector<HTMLElement>(".transaction-left-tree");
     if (!viewport) return;
-    const update = () => setVirtualWindow({ top: viewport.scrollTop, height: viewport.clientHeight || 900 });
+    const horizontalViewport = laneRoot?.closest<HTMLElement>(".cycle-viewport") ?? viewport;
+    const update = () => setVirtualWindow({ top: viewport.scrollTop, height: viewport.clientHeight || 900, left: horizontalViewport.scrollLeft, width: horizontalViewport.clientWidth || 1200 });
     update();
     viewport.addEventListener("scroll", update, { passive: true });
+    if (horizontalViewport !== viewport) horizontalViewport.addEventListener("scroll", update, { passive: true });
     window.addEventListener("resize", update);
     return () => {
       viewport.removeEventListener("scroll", update);
+      if (horizontalViewport !== viewport) horizontalViewport.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
     };
   }, [documentEpoch, totalHeight, document.transactions.length, filter, viewMode]);
@@ -557,13 +603,47 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const virtualBottom = Math.min(totalHeight, virtualWindow.top + virtualWindow.height + virtualOverscan);
   const isVisible = (top: number, height: number) => top < virtualBottom && top + height > virtualTop;
   const visibleGroupHeaders = groupHeaders.filter((header) => isVisible(header.labelTop, GROUP_HEADER_HEIGHT));
-  const bandContainsSelected = (band: LaneBand) => selectedId !== undefined && (laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).some((transaction) => transaction.id === selectedId);
+  const selectedTransaction = selectedId === undefined ? undefined : laneTransactionCache.current?.get(selectedId);
+  const bandContainsSelected = (band: LaneBand) => selectedTransaction !== undefined
+    && selectedTransaction.laneId === band.laneId
+    && selectedTransaction.groupId === band.groupId;
   const visibleLaneBands = laneBands.filter((band) => isVisible(band.labelTop, band.labelHeight) || isVisible(band.trackTop, band.trackHeight) || bandContainsSelected(band));
-  const isTreeTransactionVisible = (band: LaneBand, transaction: Transaction) => {
-    if (isTransactionSelected(transaction.id)) return true;
-    const row = band.treeRowOf.get(transaction.id) ?? 0;
-    return isVisible(band.labelTop + 4 + row * LANE_ROW_HEIGHT, LANE_ROW_HEIGHT);
-  };
+  const sourceWindow = useMemo(() => sourceCycleWindowForXRange(
+    getScaledBoundaryX,
+    document.timeline.cycleCount,
+    Math.max(0, virtualWindow.left - 120),
+    virtualWindow.left + virtualWindow.width + 120,
+    2,
+  ) ?? { start: 0, end: document.timeline.cycleCount }, [document.timeline.cycleCount, getScaledBoundaryX, presentationRevision, virtualWindow.left, virtualWindow.width]);
+  const horizontalTransactionCandidates = useMemo(() => {
+    const candidates = new Set<Transaction>();
+    for (const band of visibleLaneBands) {
+      const laneTransactions = laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? [];
+      for (const transaction of querySourceIntervalIndex(transactionIntervalIndex(laneTransactions), sourceWindow.start, sourceWindow.end)) {
+        if (transaction.visible !== false) candidates.add(transaction);
+      }
+    }
+    if (selectedTransaction) candidates.add(selectedTransaction);
+    return candidates;
+  }, [laneTransactionsByKey, selectedTransaction, sourceWindow.end, sourceWindow.start, visibleLaneBands]);
+  const { cycleXs, boundaryXByCycle } = useMemo(() => {
+    const relevantCycles = new Set<number>([sourceWindow.start, sourceWindow.end]);
+    for (const transaction of horizontalTransactionCandidates) {
+      relevantCycles.add(transaction.start);
+      relevantCycles.add(transaction.end);
+      for (const phase of transaction.phases ?? []) { relevantCycles.add(phase.start); relevantCycles.add(phase.end); }
+    }
+    for (const bookmark of visibleBookmarks(bookmarks, sourceWindow.start, sourceWindow.end)) relevantCycles.add(bookmark.start);
+    for (const [start, end] of foldRanges) {
+      if (start < sourceWindow.end && end > sourceWindow.start) { relevantCycles.add(start); relevantCycles.add(end); }
+    }
+    const cycleXs = [...relevantCycles].sort((left, right) => left - right).flatMap((cycle) => {
+      const position = getScaledBoundaryX(cycle);
+      return position === undefined ? [] : [{ cycle, x: position }];
+    });
+    return { cycleXs, boundaryXByCycle: new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const)) };
+  }, [bookmarks, foldRanges, getScaledBoundaryX, horizontalTransactionCandidates, sourceWindow.end, sourceWindow.start]);
+  const x = (cycle: number) => boundaryXByCycle.get(cycle) ?? getScaledBoundaryX(cycle);
   const isTrackTransactionVisible = (band: LaneBand, transaction: Transaction) => {
     if (isTransactionSelected(transaction.id)) return true;
     const row = band.rowOf.get(transaction.id) ?? 0;
@@ -583,7 +663,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   // scrolling .cycle-viewport that drives virtualWindow. Keep its normal CSS
   // top (34px); applying -virtualWindow.top here would subtract the scroll
   // offset a second time and make offscreen lanes unreachable.
-  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-tree-row-builds={treeRowBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
+  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-tree-row-builds={treeRowBuilds.current} data-total-transactions={document.transactions.length} data-horizontal-candidate-transactions={horizontalTransactionCandidates.size} data-visible-source-start={sourceWindow.start} data-visible-source-end={sourceWindow.end} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
@@ -620,16 +700,19 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
               once it was cut off. `title` is the same native-tooltip
               affordance the rest of the app already uses for truncated
               text, not a new pattern. */}
-          {laneTransactions.filter((transaction) => transaction.visible !== false && isTreeTransactionVisible(band, transaction)).map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(isTransactionSelected(transaction.id))} title={transaction.name} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
+          {[...new Set([
+            ...visibleTreeRows(laneTransactions, Math.floor((virtualTop - band.labelTop - 4) / LANE_ROW_HEIGHT), Math.ceil((virtualBottom - band.labelTop - 4) / LANE_ROW_HEIGHT)),
+            ...(selectedTransaction && selectedTransaction.groupId === band.groupId && (selectedTransaction.laneId ?? "lane_0") === band.laneId ? [selectedTransaction] : []),
+          ])].filter((transaction) => transaction.visible !== false).map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(isTransactionSelected(transaction.id))} title={transaction.name} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
         </span>;
       })}
     </div>
       <div className="transaction-track" data-transaction-track="true" style={{ height: totalHeight }}>
       <div className="transaction-geometry-guides" aria-hidden="true">{cycleXs.map((value) => <i className="transaction-geometry-line" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}</div>
-      <div className="transaction-bookmark-markers" aria-label="Transaction bookmarks">{bookmarks.map((bookmark) => { const left = x(bookmark.start); return left === undefined ? null : <button type="button" key={bookmark.id} data-bookmark-id={bookmark.id} data-source-cycle={bookmark.start} aria-label={`Go to bookmark ${bookmark.name}`} title={`${bookmark.name}: ${bookmark.start}`} style={{ left }} onClick={() => onNavigateBookmark?.(bookmark.start, bookmark.id)} />; })}</div>
+      <div className="transaction-bookmark-markers" aria-label="Transaction bookmarks">{visibleBookmarks(bookmarks, sourceWindow.start, sourceWindow.end).map((bookmark) => { const left = x(bookmark.start); return left === undefined ? null : <button type="button" key={bookmark.id} data-bookmark-id={bookmark.id} data-source-cycle={bookmark.start} aria-label={`Go to bookmark ${bookmark.name}`} title={`${bookmark.name}: ${bookmark.start}`} style={{ left }} onClick={() => onNavigateBookmark?.(bookmark.start, bookmark.id)} />; })}</div>
       {visibleGroupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.trackTop, height: GROUP_HEADER_HEIGHT }} />)}
       {visibleLaneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.trackTop, height: band.trackHeight }}>
-        {(laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).filter((transaction) => transaction.visible !== false && isTrackTransactionVisible(band, transaction)).map((transaction) => {
+        {[...horizontalTransactionCandidates].filter((transaction) => transaction.groupId === band.groupId && (transaction.laneId ?? "lane_0") === band.laneId && transaction.visible !== false && isTrackTransactionVisible(band, transaction)).map((transaction) => {
           const startX = x(transaction.start);
           const endX = x(transaction.end);
           if (startX === undefined || endX === undefined) return null;

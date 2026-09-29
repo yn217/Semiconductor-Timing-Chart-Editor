@@ -52,6 +52,67 @@ test("10k Transaction fixture keeps mounted lane DOM viewport-bounded", async ({
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
+test("Transaction bars, guides, and Bookmarks follow the shared horizontal source window", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const base = generatePerformanceDocument({ signalCount: 4, cycleCount: 5_000, profile: "transaction-heavy" });
+  const document = {
+    ...base,
+    transactions: Array.from({ length: 1_000 }, (_, index) => ({
+      id: `txn_horizontal_${index}`,
+      name: `Transaction ${index}`,
+      start: index * 4,
+      end: index * 4 + 2,
+      laneId: "lane_0",
+    })),
+    bookmarks: Array.from({ length: 1_000 }, (_, index) => ({
+      id: `bookmark_horizontal_${index}`,
+      name: `Bookmark ${index}`,
+      start: index * 4,
+    })),
+  };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-horizontal-window.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "1000", { timeout: 60_000 });
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  const viewport = page.getByTestId("cycle-viewport");
+  const lanes = page.getByTestId("transaction-lanes");
+  await expect(lanes).toBeVisible();
+  const initialStart = Number(await lanes.getAttribute("data-visible-source-start"));
+  const initialCounts = await lanes.evaluate((element) => ({
+    candidates: Number(element.getAttribute("data-horizontal-candidate-transactions")),
+    bars: element.querySelectorAll("[data-transaction-id]").length,
+    guides: element.querySelectorAll(".transaction-geometry-line").length,
+    bookmarks: element.querySelectorAll("[data-bookmark-id]").length,
+  }));
+  expect(initialCounts.candidates).toBeLessThan(250);
+  expect(initialCounts.bars).toBeLessThan(250);
+  expect(initialCounts.guides).toBeLessThan(600);
+  expect(initialCounts.bookmarks).toBeLessThan(250);
+
+  const before = {
+    revision: await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+  };
+  await viewport.evaluate((element) => { element.scrollLeft = element.scrollWidth; element.dispatchEvent(new Event("scroll")); });
+  await expect.poll(() => lanes.getAttribute("data-visible-source-start")).not.toBe(String(initialStart));
+  expect(Number(await lanes.getAttribute("data-visible-source-start"))).toBeGreaterThan(initialStart);
+  const farCounts = await lanes.evaluate((element) => ({
+    candidates: Number(element.getAttribute("data-horizontal-candidate-transactions")),
+    bars: element.querySelectorAll("[data-transaction-id]").length,
+    guides: element.querySelectorAll(".transaction-geometry-line").length,
+    bookmarks: element.querySelectorAll("[data-bookmark-id]").length,
+  }));
+  expect(farCounts.candidates).toBeLessThan(250);
+  expect(farCounts.bars).toBeLessThan(250);
+  expect(farCounts.guides).toBeLessThan(600);
+  expect(farCounts.bookmarks).toBeLessThan(250);
+  expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
+});
+
 test("standalone Transaction cycle viewport scroll advances the virtualized lane window", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
