@@ -5,6 +5,8 @@ import { startInCycleSample } from "./cycle-startup.js";
 import { annotationOwnerById, snapshotAnnotationIds, waitForCreatedAnnotationId } from "./annotation-identity.js";
 import { generatePerformanceDocument, summarizePerformance, type BrowserPerformanceSample, type PerformanceFixtureSpec } from "@timing-chart-v2/testing";
 import { evaluateOpenPerformanceGate, summarizeOpenPresentation, type OpenPerformanceBaseline } from "../performance/open-performance-gate.js";
+import { toWaveJson } from "@timing-chart-v2/wavedrom-adapter";
+import type { ValueSignal } from "@timing-chart-v2/schema";
 
 startInCycleSample(test);
 
@@ -185,14 +187,22 @@ test("fixed 100x500 Open renders the full source span for every mounted owner", 
   expect(waveWindows.filter((window) => window.start === "0" && window.end === "500")).toHaveLength(100);
   const evidence = await host.evaluate((surface) => {
     const durations = JSON.parse(surface.getAttribute("data-open-phase-durations") ?? "{}") as Record<string, number>;
+    const phaseMarks = JSON.parse(surface.getAttribute("data-open-phase-marks") ?? "{}") as Record<string, number>;
     const counters = JSON.parse(surface.getAttribute("data-session-counters") ?? "{}") as Record<string, any>;
     const waveBatches = JSON.parse(surface.getAttribute("data-open-wave-batch-metrics") ?? "{}") as Record<string, number>;
-    return { openIdleMs: durations.idle, visibleWaveformsReadyMs: durations["visible-waveforms-ready"], rulerBuilds: counters.rulerBuilds, mountedWaveOwners: counters.mountedWaveOwners, waveBatches, title: document.querySelector(".app-titlebar h1")?.textContent };
+    return { openIdleMs: durations.idle, visibleWaveformsReadyMs: durations["visible-waveforms-ready"], phaseDurations: durations, phaseMarks, rulerBuilds: counters.rulerBuilds, mountedWaveOwners: counters.mountedWaveOwners, waveBatches, title: document.querySelector(".app-titlebar h1")?.textContent };
   });
   const browserDelta = Object.fromEntries(["TaskDuration", "ScriptDuration", "LayoutDuration", "RecalcStyleDuration", "PaintDuration"].map((name) => [name, ((browserAfter[name] ?? 0) - (browserBefore[name] ?? 0)) * 1_000]));
   expect(evidence.title).toBe(document.document.title);
   expect(evidence.waveBatches.requestedCount).toBe(evidence.mountedWaveOwners + 1);
   expect(evidence.waveBatches.renderCount).toBe(evidence.mountedWaveOwners);
+  expect(evidence.waveBatches.markupCacheMissCount).toBeLessThanOrEqual(3);
+  const sharedBusLabels = await host.locator("[data-role='wave-owner'][data-wave-owner='sig_perf_5'] > svg > text[data-value-label-index] > tspan").allTextContents();
+  const busSignal = document.signals[5] as ValueSignal;
+  const expectedBusLabels = toWaveJson({ signal: busSignal, cycleCount: document.timeline.cycleCount }).data;
+  expect(sharedBusLabels).toEqual(expectedBusLabels);
+  const sharedBusAccessibleValues = await host.locator("[data-role='wave-owner'][data-wave-owner='sig_perf_5'] > svg > text[data-value-label-index]").evaluateAll((labels) => labels.map((label) => label.getAttribute("aria-label")));
+  expect(sharedBusAccessibleValues).toEqual(busSignal.values.map((change) => String(change.value)));
   await testInfo.attach("fixed-100x500-open.json", { body: Buffer.from(JSON.stringify({ fixture: "generated-100x500", zoom: "50%", viewport: { width: 13_000, height: 6_000 }, waveWindows, evidence, browserDelta, rulerBuildDelta: after.rulerBuilds - before.rulerBuilds }, null, 2)), contentType: "application/json" });
   console.log(`[fixed-100x500-open] ${JSON.stringify({ ...evidence, zoom: "50%", viewport: "13000x6000", fullSpanOwners: waveWindows.length, browserDelta, rulerBuildDelta: after.rulerBuilds - before.rulerBuilds })}`);
 });

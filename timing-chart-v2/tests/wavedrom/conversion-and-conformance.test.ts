@@ -6,6 +6,7 @@ import {
   WAVEDROM_UNSUPPORTED_CAPABILITIES,
   WAVEDROM_VERSION,
   assertSafeWaveDromMarkup,
+  canShareValueLabelGeometry,
   renderWaveJsonMarkup,
   renderWaveJsonMarkupWithMetrics,
   toWaveJson,
@@ -107,6 +108,17 @@ function createMarkupMount(ownerDocument: Document): Element {
 }
 
 describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
+  it("shares large data-label geometry only when the normal label is unmodified", () => {
+    const waveJson: WaveJsonSignal = {
+      wave: `=${".".repeat(249)}=${".".repeat(249)}`,
+      data: ["00000005", "00000006"],
+    };
+
+    expect(canShareValueLabelGeometry(waveJson, waveJson.data!)).toBe(true);
+    expect(canShareValueLabelGeometry(waveJson, ["first", "second"])).toBe(true);
+    expect(canShareValueLabelGeometry({ wave: "=...=...", data: ["A", "B"] }, ["A", "B"])).toBe(false);
+  });
+
   it("materializes mandatory binary and bus continuation", () => {
     const binary = logicSignal([{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 7, value: 0 }]);
     expect(toWaveJson({ signal: binary, cycleCount: 10 })).toEqual({ wave: "0..1...0.." });
@@ -326,9 +338,10 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(replaceChildren).toHaveBeenCalledWith(svg);
     expect(adapter.metrics()).toMatchObject({ mounts: 1, activeOwners: 1 });
     expect(installed.renderStages?.domInstallMs).toEqual(expect.any(Number));
+    expect(installed.renderStages?.svgSafetyDomWalkMs).toBe(0);
   });
 
-  it("reuses identical markup across document release without changing WaveDrom IDs", async () => {
+  it("reuses identical validated markup across document release without changing WaveDrom IDs", async () => {
     const adapter = new ProductionWaveDromAdapter();
     const id = signalId("sig_reopen_cache");
     const waveJson: WaveJsonSignal = { wave: "01.." };
@@ -404,7 +417,7 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     const differentDocumentMount = createMount({ createElement: ownerDocument.createElement });
     const differentDocument = await adapter.renderWave(id, waveJson, differentDocumentMount);
     expect(differentDocument.markupCacheHit).toBe(true);
-    expect(differentDocument.svgSafetyCacheHit).toBe(false);
+    expect(differentDocument.svgSafetyCacheHit).toBe(true);
     expect(templatesCreated).toBe(2);
     expect(adapter.metrics()).toMatchObject({ cacheHits: 3, cacheMisses: 1, activeOwners: 1 });
   });
@@ -559,11 +572,24 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
   });
 
   it("rejects executable SVG markup without stripping ordinary engineering text", () => {
-    expect(() => assertSafeWaveDromMarkup('<svg><text>DATA&lt;7:0&gt; &amp; \'clk\'</text><script>alert(1)</script></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
+    for (const tag of ["script", "foreignObject", "iframe", "object", "embed", "img"]) {
+      expect(() => assertSafeWaveDromMarkup(`<svg><${tag}></${tag}></svg>`)).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
+    }
     expect(assertSafeWaveDromMarkup('<svg><text>DATA&lt;7:0&gt; &amp; \'clk\'</text></svg>')).toContain("DATA&lt;7:0&gt;");
-    expect(() => assertSafeWaveDromMarkup('<svg><a href="javascript:alert(1)">x</a></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
-    expect(() => assertSafeWaveDromMarkup('<svg><a href="https://example.com/x.svg">x</a></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
+    for (const href of ['"javascript:alert(1)"', "'https://example.com/x.svg'", '""', "#local", '"  #local  "']) {
+      const markup = `<svg><a href=${href}>x</a></svg>`;
+      if (href.startsWith("#") || href.startsWith('"  #')) expect(assertSafeWaveDromMarkup(markup)).toBe(markup);
+      else expect(() => assertSafeWaveDromMarkup(markup)).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
+    }
+    expect(assertSafeWaveDromMarkup('<svg><a href=#remote>x</a></svg>')).toContain("href=#remote");
+    expect(() => assertSafeWaveDromMarkup('<svg><a href>x</a></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
+    expect(assertSafeWaveDromMarkup('<svg><a xlink:href="#local">x</a></svg>')).toContain('xlink:href="#local"');
+    expect(() => assertSafeWaveDromMarkup('<svg><a xlink:href="data:image/svg+xml;base64,AA">x</a></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
     expect(() => assertSafeWaveDromMarkup('<svg><text onload="alert(1)">x</text></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
+    expect(() => assertSafeWaveDromMarkup('<svg><text onload>x</text></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
+    expect(() => assertSafeWaveDromMarkup('<svg><text on>x</text></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
+    expect(() => assertSafeWaveDromMarkup('<svg><text ONcustom:event = "alert(1)">x</text></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
+    expect(assertSafeWaveDromMarkup('<svg><text data-href="engineering">x</text></svg>')).toContain('data-href="engineering"');
     const rendered = renderWaveJsonMarkup({ wave: "=", data: ["<DATA&7:0>"] });
     expect(rendered).not.toMatch(/<script|onerror\s*=/i);
     expect(rendered).toContain("&lt;DATA&amp;7:0&gt;");

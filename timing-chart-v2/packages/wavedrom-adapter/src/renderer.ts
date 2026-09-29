@@ -3,7 +3,7 @@ import type { SignalId } from "@timing-chart-v2/schema";
 import WaveDrom from "wavedrom";
 import { toWaveJson } from "./conversion.js";
 import { extractLocalGeometry } from "./geometry-extractor.js";
-import { applyValueLabelLayout } from "./value-label-layout.js";
+import { applyValueLabelLayout, canShareValueLabelGeometry } from "./value-label-layout.js";
 import {
   WAVEDROM_VERSION,
   WaveDromAdapterError,
@@ -71,11 +71,23 @@ export function renderWaveJsonMarkup(waveJson: WaveJsonSignal, renderIndex = 0, 
  * instead of silently stripping user-visible engineering text.
  */
 export function assertSafeWaveDromMarkup(markup: string): string {
-  const executableElement = /<\s*(?:script|foreignObject|iframe|object|embed|img)\b/i;
-  const eventHandler = /<[^>]*\bon[a-z][\w:-]*\s*=/i;
-  const unsafeUrl = /(?:href|xlink:href)\s*=\s*["']\s*(?!#)[^"']+/i;
-  if (executableElement.test(markup) || eventHandler.test(markup) || unsafeUrl.test(markup)) {
-    throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced executable SVG markup.");
+  // This check runs on WaveDrom's serialized output immediately before it is
+  // parsed. Validate the serialized artifact once rather than walking every
+  // materialized SVG node again in prepareWave; cached SVG artifacts are
+  // derived only from this validated string.
+  const tags = markup.match(/<[^>]*>/g) ?? [];
+  for (const tag of tags) {
+    if (/^<\s*(?:script|foreignObject|iframe|object|embed|img)(?:\s|\/?>)/i.test(tag)
+      || /(?:^|\s)on[^\s=/>]*(?=\s|=|\/?>)/i.test(tag)) {
+      throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced executable SVG markup.");
+    }
+    const links = /(?:^|\s)(?:href|xlink:href)(?=\s|=|\/?>)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/ig;
+    for (const match of tag.matchAll(links)) {
+      const value = (match[1] ?? match[2] ?? match[3] ?? "").trim();
+      if (!value.startsWith("#")) {
+        throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced an unsafe SVG URL attribute.");
+      }
+    }
   }
   return markup;
 }
@@ -123,8 +135,8 @@ interface MarkupCacheEntry {
   readonly waveJsonBytes: number;
   readonly semanticValuesBytes: number;
   readonly svgMarkupBytes: number;
-  safetyDocument?: Document;
   parsedSvgByDocument?: WeakMap<Document, SVGElement>;
+  valueLabelTemplatesByDocument?: WeakMap<Document, readonly Readonly<{ template: SVGElement; segmentStart: number; segmentEnd: number }>[]>;
   svgImageUrlByDocument?: WeakMap<Document, string>;
   svgImageDecodeByDocument?: WeakMap<Document, Promise<void>>;
 }
@@ -211,7 +223,55 @@ function svgImageDecode(entry: MarkupCacheEntry, ownerDocument: Document, url: s
   return decoded;
 }
 
-function createWaveImageSvg(source: SVGElement, ownerDocument: Document, imageUrl: string, renderIndex: number): SVGElement {
+type ValueLabelTemplate = Readonly<{ template: SVGElement; segmentStart: number; segmentEnd: number }>;
+
+function valueLabelTemplates(entry: MarkupCacheEntry, source: SVGElement, ownerDocument: Document, wave: string, expectedCount: number): readonly ValueLabelTemplate[] | undefined {
+  const templatesByDocument = entry.valueLabelTemplatesByDocument ??= new WeakMap<Document, readonly ValueLabelTemplate[]>();
+  const cached = templatesByDocument.get(ownerDocument);
+  if (cached) return cached.length === expectedCount ? cached : undefined;
+  const nodes = source.querySelectorAll<SVGElement>('text[text-anchor="middle"]');
+  if (nodes.length !== expectedCount) return;
+  const slots = [...wave].flatMap((token, index) => token === "=" ? [index] : []);
+  if (slots.length !== expectedCount) return;
+  const grid = Array.from(source.querySelectorAll<SVGElement>('line[id^="gmark_"]'), (line) => Number(line.getAttribute("x1")));
+  if (grid.length < wave.length + 1 || grid.some((value) => !Number.isFinite(value))) return;
+  const templates = Object.freeze(Array.from(nodes, (node, index) => {
+    const slot = slots[index]!;
+    const endSlot = slots[index + 1] ?? wave.length;
+    return { template: node.cloneNode(true) as SVGElement, segmentStart: grid[slot]!, segmentEnd: grid[endSlot]! };
+  }));
+  if (templates.some(({ template }) => !template.querySelector("tspan"))) return;
+  templatesByDocument.set(ownerDocument, templates);
+  return templates;
+}
+
+function bindValueLabel(text: SVGElement, label: string, semanticValue: string, metadata: ValueLabelTemplate, index: number, ownerDocument: Document): void {
+  const tspan = text.querySelector("tspan");
+  if (!tspan) throw new WaveDromAdapterError("INVALID_WAVEDROM_LABELS", "WaveDrom data label template did not contain a tspan.");
+  tspan.textContent = label;
+  text.setAttribute("data-value-label-index", String(index));
+  text.setAttribute("data-value-label-mode", "normal");
+  text.setAttribute("data-value-label-segment-start", String(metadata.segmentStart));
+  text.setAttribute("data-value-label-segment-end", String(metadata.segmentEnd));
+  text.setAttribute("aria-label", semanticValue);
+  text.setAttribute("tabindex", "0");
+  // The SVG skin stylesheet is inside the image resource. These equivalent
+  // attributes keep overlaid text visually faithful in the containing SVG.
+  text.setAttribute("font-family", "Helvetica");
+  text.setAttribute("font-size", "11pt");
+  text.setAttribute("fill", "#000");
+  const title = ownerDocument.createElementNS("http://www.w3.org/2000/svg", "title");
+  title.textContent = semanticValue;
+  text.append(title);
+}
+
+function applyValueLabels(svg: SVGElement, labels: readonly string[], semanticValues: readonly string[], templates: readonly ValueLabelTemplate[], ownerDocument: Document): void {
+  const nodes = svg.querySelectorAll<SVGElement>('text[text-anchor="middle"]');
+  if (nodes.length !== labels.length || templates.length !== labels.length) throw new WaveDromAdapterError("INVALID_WAVEDROM_LABELS", "WaveDrom data label nodes do not match the WaveJSON data slots.");
+  Array.from(nodes).forEach((node, index) => bindValueLabel(node, labels[index]!, semanticValues[index]!, templates[index]!, index, ownerDocument));
+}
+
+function createWaveImageSvg(source: SVGElement, ownerDocument: Document, imageUrl: string, renderIndex: number, labels: readonly string[] = [], semanticValues: readonly string[] = [], labelTemplates: readonly ValueLabelTemplate[] = []): SVGElement {
   const svg = ownerDocument.createElementNS("http://www.w3.org/2000/svg", "svg");
   for (let index = 0; index < source.attributes.length; index += 1) {
     const attribute = source.attributes.item(index);
@@ -229,6 +289,13 @@ function createWaveImageSvg(source: SVGElement, ownerDocument: Document, imageUr
   image.setAttribute("data-wave-svg-source", imageUrl);
   image.setAttribute("href", imageUrl);
   svg.append(image);
+  for (let index = 0; index < labels.length; index += 1) {
+    const metadata = labelTemplates[index];
+    if (!metadata) throw new WaveDromAdapterError("INVALID_WAVEDROM_LABELS", "A shared WaveDrom data-label template is unavailable.");
+    const label = metadata.template.cloneNode(true) as SVGElement;
+    bindValueLabel(label, labels[index]!, semanticValues[index]!, metadata, index, ownerDocument);
+    svg.append(label);
+  }
   return svg;
 }
 
@@ -359,7 +426,12 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     this.#renderCallsBySignal.set(signalId, (this.#renderCallsBySignal.get(signalId) ?? 0) + 1);
     const serializedWaveJson = JSON.stringify(waveJson);
     const serializedSemanticValues = JSON.stringify(semanticValues);
-    const cacheKey = `${WAVEDROM_VERSION}\u0000${serializedWaveJson}\u0000${serializedSemanticValues}`;
+    const shareLabels = canShareValueLabelGeometry(waveJson, semanticValues);
+    const artifactWaveJson = shareLabels ? { ...waveJson, data: waveJson.data!.map(() => " ") } : waveJson;
+    const artifactSemanticValues = shareLabels ? waveJson.data!.map(() => " ") : semanticValues;
+    const serializedArtifactWaveJson = shareLabels ? JSON.stringify(artifactWaveJson) : serializedWaveJson;
+    const serializedArtifactSemanticValues = shareLabels ? JSON.stringify(artifactSemanticValues) : serializedSemanticValues;
+    const cacheKey = `${WAVEDROM_VERSION}\u0000${serializedArtifactWaveJson}\u0000${serializedArtifactSemanticValues}`;
     stages.cacheKeySerializeMs = now() - stageStartedAt;
     let renderIndex = this.#renderIndices.get(signalId);
     let cached = this.#markupCache.get(signalId);
@@ -395,7 +467,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       // Render a canonical owner-zero artifact once. The owner-specific IDs
       // are rebound on the detached SVG clone below, avoiding a full
       // WaveDrom layout/stringify pass for semantically identical signals.
-      const generated = renderWaveJsonMarkupWithMetrics(waveJson, 0, semanticValues);
+      const generated = renderWaveJsonMarkupWithMetrics(artifactWaveJson, 0, artifactSemanticValues);
       markup = generated.markup;
       stages.waveDromRenderAnyMs = generated.metrics.waveDromRenderAnyMs;
       stages.onmlStringifyMs = generated.metrics.onmlStringifyMs;
@@ -441,31 +513,38 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       throw new WaveDromAdapterError("INVALID_WAVEDROM_SVG", "WaveDrom did not return an SVG root.");
     }
     const safetyCacheEntry = cacheEntry;
-    const svgSafetyCacheHit = Boolean(cachedSvg) || safetyCacheEntry.safetyDocument === ownerDocument;
-    if (svgSafetyCacheHit) {
-      stages.svgSafetyDomWalkMs = 0;
-    } else {
-      stageStartedAt = now();
-      assertSafeWaveDromSvg(svg);
-      stages.svgSafetyDomWalkMs = now() - stageStartedAt;
-      safetyCacheEntry.safetyDocument = ownerDocument;
-    }
+    // Every cached markup entry passed assertSafeWaveDromMarkup before it was
+    // parsed. Re-walking its full SVG subtree here duplicates that trust-boundary
+    // check for no additional input: the parsed tree is made from this exact
+    // internally generated, already validated markup.
+    const svgSafetyCacheHit = markupCacheHit || Boolean(cachedSvg);
+    stages.svgSafetyDomWalkMs = 0;
     const parsedSvg = cachedSvg ?? svg as SVGElement;
     if (!cachedSvg) {
       const parsedSvgByDocument = safetyCacheEntry.parsedSvgByDocument ??= new WeakMap<Document, SVGElement>();
-      parsedSvgByDocument.set(ownerDocument, parsedSvg.cloneNode(true) as SVGElement);
+      // On the production image path parsedSvg stays detached and immutable;
+      // owners receive separate image wrappers, so retain it directly instead
+      // of cloning the full SVG on cold Open. The inline/debug path mutates its
+      // parsed node while binding labels, so it still needs a private template.
+      parsedSvgByDocument.set(ownerDocument, useSharedSvgImage ? parsedSvg as SVGElement : parsedSvg.cloneNode(true) as SVGElement);
     }
+    const labelTemplates = shareLabels ? valueLabelTemplates(safetyCacheEntry, parsedSvg, ownerDocument, waveJson.wave, waveJson.data!.length) : undefined;
+    if (shareLabels && !labelTemplates) {
+      throw new WaveDromAdapterError("INVALID_WAVEDROM_LABELS", "WaveDrom did not expose the expected data-label templates for a shareable artifact.");
+    }
+    if (shareLabels && !useSharedSvgImage) applyValueLabels(svg as SVGElement, waveJson.data!, semanticValues, labelTemplates!, ownerDocument);
     let svgImageReady: Promise<void> | undefined;
     if (useSharedSvgImage) {
       const imageUrl = svgImageUrl(safetyCacheEntry, ownerDocument);
       if (imageUrl) {
-        const imageOwnerSvg = createWaveImageSvg(parsedSvg, ownerDocument, imageUrl, renderIndex);
+        const imageOwnerSvg = createWaveImageSvg(parsedSvg, ownerDocument, imageUrl, renderIndex, shareLabels ? waveJson.data : [], shareLabels ? semanticValues : [], labelTemplates ?? []);
         svg = imageOwnerSvg;
         // Start decoding now, but don't serialize independent owner decodes
         // behind WaveRenderScheduler's per-owner preparation jobs. The batch
         // waits for all image-ready promises together before publishing ready.
         svgImageReady = svgImageDecode(safetyCacheEntry, ownerDocument, imageUrl).catch(() => {
           const fallbackSvg = parsedSvg.cloneNode(true) as SVGElement;
+          if (shareLabels) applyValueLabels(fallbackSvg, waveJson.data!, semanticValues, labelTemplates!, ownerDocument);
           if (renderIndex > 0) bindWaveDromRenderIndex(fallbackSvg, renderIndex);
           imageOwnerSvg.replaceChildren(...Array.from(fallbackSvg.childNodes));
         });
