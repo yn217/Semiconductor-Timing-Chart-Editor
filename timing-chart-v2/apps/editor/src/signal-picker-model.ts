@@ -43,6 +43,13 @@ export function signalPickerIndex(signals: readonly Signal[]): SignalPickerIndex
 
 export const SIGNAL_PICKER_RESULT_LIMIT = 50;
 
+/** Minimal vertical scroll needed to keep the keyboard-active option visible. */
+export function signalPickerScrollAdjustment(containerTop: number, containerBottom: number, optionTop: number, optionBottom: number): number {
+  if (optionTop < containerTop) return optionTop - containerTop;
+  if (optionBottom > containerBottom) return optionBottom - containerBottom;
+  return 0;
+}
+
 export function searchSignalPicker(index: SignalPickerIndex, query: string, limit = SIGNAL_PICKER_RESULT_LIMIT): readonly SignalPickerEntry[] {
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const results: SignalPickerEntry[] = [];

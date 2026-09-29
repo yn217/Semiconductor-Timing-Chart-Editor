@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SignalId } from "@timing-chart-v2/schema";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
-import { searchSignalPicker, SIGNAL_PICKER_RESULT_LIMIT, signalPickerIndex } from "../../apps/editor/src/signal-picker-model.js";
+import { searchSignalPicker, SIGNAL_PICKER_RESULT_LIMIT, signalPickerIndex, signalPickerScrollAdjustment } from "../../apps/editor/src/signal-picker-model.js";
 
 describe("shared Signal picker index", () => {
   it("reuses the stable-ID index for one immutable collection and invalidates by collection identity", () => {
@@ -21,5 +21,11 @@ describe("shared Signal picker index", () => {
     expect(searchSignalPicker(index, "")).toHaveLength(SIGNAL_PICKER_RESULT_LIMIT);
     expect(searchSignalPicker(index, "sig_9999").map((entry) => entry.id)).toContain("sig_perf_9999");
     expect(searchSignalPicker(index, "SIG_", 7)).toHaveLength(7);
+  });
+
+  it("scrolls only enough to reveal a keyboard-active option", () => {
+    expect(signalPickerScrollAdjustment(100, 280, 80, 120)).toBe(-20);
+    expect(signalPickerScrollAdjustment(100, 280, 260, 300)).toBe(20);
+    expect(signalPickerScrollAdjustment(100, 280, 140, 170)).toBe(0);
   });
 });

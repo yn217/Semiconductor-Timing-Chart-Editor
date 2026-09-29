@@ -1,6 +1,6 @@
-import { useId, useMemo, useState } from "react";
+import { useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Signal, SignalId } from "@timing-chart-v2/schema";
-import { searchSignalPicker, SIGNAL_PICKER_RESULT_LIMIT, signalPickerIndex } from "./signal-picker-model.js";
+import { searchSignalPicker, SIGNAL_PICKER_RESULT_LIMIT, signalPickerIndex, signalPickerScrollAdjustment } from "./signal-picker-model.js";
 
 export function SignalPicker({ signals, value, onChange, ariaLabel, emptyLabel }: {
   readonly signals: readonly Signal[];
@@ -10,6 +10,8 @@ export function SignalPicker({ signals, value, onChange, ariaLabel, emptyLabel }
   readonly emptyLabel?: string;
 }) {
   const listboxId = useId();
+  const listboxRef = useRef<HTMLDivElement>(null);
+  const activeOptionRef = useRef<HTMLDivElement>(null);
   const index = signalPickerIndex(signals);
   const selected = value === undefined ? undefined : index.byId.get(value);
   const [query, setQuery] = useState("");
@@ -19,6 +21,15 @@ export function SignalPicker({ signals, value, onChange, ariaLabel, emptyLabel }
   const optionOffset = emptyLabel === undefined ? 0 : 1;
   const optionCount = results.length + optionOffset;
   const activeId = activeIndex < optionOffset ? `${listboxId}-empty` : results[activeIndex - optionOffset]?.id;
+
+  useLayoutEffect(() => {
+    const listbox = listboxRef.current;
+    const option = activeOptionRef.current;
+    if (!open || !listbox || !option) return;
+    const listboxRect = listbox.getBoundingClientRect();
+    const optionRect = option.getBoundingClientRect();
+    listbox.scrollTop += signalPickerScrollAdjustment(listboxRect.top, listboxRect.bottom, optionRect.top, optionRect.bottom);
+  }, [activeIndex, open, optionOffset, results]);
 
   const select = (signalId: SignalId | undefined) => {
     onChange(signalId);
@@ -54,12 +65,12 @@ export function SignalPicker({ signals, value, onChange, ariaLabel, emptyLabel }
         } else if (event.key === "Escape" && open) { event.preventDefault(); setQuery(""); setOpen(false); }
       }}
     />
-    {open && <div id={listboxId} role="listbox" aria-label={`${ariaLabel} results`} className="signal-picker-results">
-      {emptyLabel !== undefined && <div id={`${listboxId}-option-${listboxId}-empty`} role="option" aria-selected={value === undefined} data-active={String(activeIndex === 0)} onMouseDown={(event) => event.preventDefault()} onClick={() => select(undefined)}>{emptyLabel}</div>}
+    {open && <div ref={listboxRef} id={listboxId} role="listbox" aria-label={`${ariaLabel} results`} className="signal-picker-results">
+      {emptyLabel !== undefined && <div ref={activeIndex === 0 ? activeOptionRef : undefined} id={`${listboxId}-option-${listboxId}-empty`} role="option" aria-selected={value === undefined} data-active={String(activeIndex === 0)} onMouseDown={(event) => event.preventDefault()} onClick={() => select(undefined)}>{emptyLabel}</div>}
       {results.map((entry, resultIndex) => {
         const optionIndex = resultIndex + optionOffset;
         const optionId = `${listboxId}-option-${entry.id}`;
-        return <div id={optionId} role="option" aria-selected={value === entry.id} data-active={String(activeIndex === optionIndex)} key={entry.id} onMouseDown={(event) => event.preventDefault()} onClick={() => select(entry.id)}>
+        return <div ref={activeIndex === optionIndex ? activeOptionRef : undefined} id={optionId} role="option" aria-selected={value === entry.id} data-active={String(activeIndex === optionIndex)} key={entry.id} onMouseDown={(event) => event.preventDefault()} onClick={() => select(entry.id)}>
           <span>{entry.label}</span>{entry.fullPath && entry.fullPath !== entry.label && <small>{entry.fullPath}</small>}
         </div>;
       })}
