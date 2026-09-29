@@ -1,6 +1,6 @@
 import { resolveTransactionColor } from "./transaction-color.js";
 import { type TransactionDisclosure } from "./workspace/use-transaction-disclosure.js";
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import type {
@@ -13,6 +13,7 @@ import { EditorIcon } from "./editor-icon.js";
 import { InlineNameInput } from "./inline-name-input.js";
 import { computeViewportSafePosition, currentViewportBounds } from "./viewport-safe-position.js";
 import { usePeerMenuSurface } from "./runtime/peer-menu-surface.js";
+import { buildGroupedTransactionTreeModel } from "./transaction-tree-model.js";
 
 type TransactionTreeMenu = Readonly<
   | { kind: "group"; id: string }
@@ -209,6 +210,36 @@ export function TransactionTree({
     () => new Map(groups.map((group) => [group.id, group])),
     [groups],
   );
+  const matches = useCallback((transaction: Transaction) => {
+    if (filterMode === "grouped" && transaction.groupId === undefined)
+      return false;
+    if (filterMode === "ungrouped" && transaction.groupId !== undefined)
+      return false;
+    if (filterMode === "phases" && (transaction.phases?.length ?? 0) === 0)
+      return false;
+    if (
+      filterMode === "linked" &&
+      (transaction.linkedSignals?.length ?? 0) === 0
+    )
+      return false;
+    if (filterMode === "visible" && transaction.visible === false) return false;
+    if (filterMode === "hidden" && transaction.visible !== false) return false;
+    if (filterMode === "no-phases" && (transaction.phases?.length ?? 0) > 0)
+      return false;
+    if (needle.length === 0) return true;
+    const groupName = transaction.groupId === undefined
+      ? ""
+      : (groupById.get(transaction.groupId)?.name ?? "");
+    return transaction.name.toLocaleLowerCase().includes(needle) || groupName.toLocaleLowerCase().includes(needle);
+  }, [filterMode, groupById, needle]);
+  const groupedTransactionModel = useMemo(
+    () => buildGroupedTransactionTreeModel(document.transactions, groups, matches),
+    [document.transactions, groups, matches],
+  );
+  const groupTransactions = useCallback(
+    (groupId: TransactionGroup["id"] | undefined) => groupedTransactionModel.transactionsByGroup.get(groupId) ?? [],
+    [groupedTransactionModel],
+  );
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (
@@ -362,33 +393,7 @@ export function TransactionTree({
       globalThis.document.removeEventListener("keydown", onArrow);
       globalThis.document.removeEventListener("click", onGroupMultiSelect);
     };
-  }, [collapsed, document, groups, onDelete, onRenameTransaction, onSelect]);
-  const matches = (transaction: Transaction) => {
-    if (filterMode === "grouped" && transaction.groupId === undefined)
-      return false;
-    if (filterMode === "ungrouped" && transaction.groupId !== undefined)
-      return false;
-    if (filterMode === "phases" && (transaction.phases?.length ?? 0) === 0)
-      return false;
-    if (
-      filterMode === "linked" &&
-      (transaction.linkedSignals?.length ?? 0) === 0
-    )
-      return false;
-    if (filterMode === "visible" && transaction.visible === false) return false;
-    if (filterMode === "hidden" && transaction.visible !== false) return false;
-    if (filterMode === "no-phases" && (transaction.phases?.length ?? 0) > 0)
-      return false;
-    if (needle.length === 0) return true;
-    const groupName =
-      transaction.groupId === undefined
-        ? ""
-        : (groupById.get(transaction.groupId)?.name ?? "");
-    return (
-      transaction.name.toLocaleLowerCase().includes(needle) ||
-      groupName.toLocaleLowerCase().includes(needle)
-    );
-  };
+  }, [collapsed, document, groupTransactions, groups, matches, onDelete, onRenameTransaction, onSelect]);
   const rowId = (transaction: Transaction) => transaction.id;
   // #769: recomputes whenever ANY Group's collapse state changes -- passed to every WindowedTreeRows instance so a Group collapsing/
   // expanding above another (unchanged) Group invalidates that Group's stale scroll-relative window too.
@@ -426,20 +431,10 @@ export function TransactionTree({
     if (selectedId !== undefined) setPendingFocusId(selectedId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collapsedSignature]);
-  const groupTransactions = (groupId: TransactionGroup["id"] | undefined) =>
-    document.transactions
-      .filter(
-        (transaction) =>
-          transaction.groupId === groupId && matches(transaction),
-      )
-      .sort(
-        (left, right) =>
-          left.start - right.start || left.id.localeCompare(right.id),
-      );
   // #771: virtualization is decided by the TOTAL visible Transaction count across every Group, not each Group's own count -- 100 Groups
   // of 100 (10,000 total) must window just as much as one Group of 10,000; a distribution across many small/medium Groups must not
   // bypass it.
-  const totalVisibleCount = groups.reduce((sum, group) => sum + groupTransactions(group.id).length, groupTransactions(undefined).length);
+  const totalVisibleCount = groupedTransactionModel.totalVisibleCount;
   const globalWindowingEnabled = totalVisibleCount > TREE_WINDOWING_THRESHOLD;
   const closeMenu = (restoreFocus = false) => {
     const trigger = menuTriggerRef.current;
@@ -642,7 +637,7 @@ export function TransactionTree({
         <strong>All Transactions</strong>
         <span>({document.transactions.length})</span>
       </div>
-      {document.transactions.length > 0 && (needle.length > 0 || filterMode !== "all") && !document.transactions.some(matches) && (
+      {document.transactions.length > 0 && (needle.length > 0 || filterMode !== "all") && totalVisibleCount === 0 && (
         <p className="inspector-note" role="status" data-testid="transaction-tree-no-match">No transactions match the active tree filter{needle.length > 0 ? ` “${filter.trim()}”` : ""}{filterMode !== "all" ? ` (${filterMode})` : ""}. Clear the search / choose All to see them.</p>
       )}
       {!collapsed.has("__all__") && (
