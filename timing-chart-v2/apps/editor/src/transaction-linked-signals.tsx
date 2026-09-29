@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { CanonicalDocument } from "@timing-chart-v2/schema";
 import type { Signal, SignalId, Transaction } from "@timing-chart-v2/schema";
 import { signalPickerIndex } from "./signal-picker-model.js";
@@ -24,10 +24,10 @@ export function TransactionLinkedSignals({ transaction, document, onToggle, rend
   const pickerOpen = pickerOpenState;
   const [query, setQuery] = useState("");
   const [linkedFilter, setLinkedFilter] = useState("");
-  const linkedIds = new Set(transaction.linkedSignals ?? []);
-  const searchableSignals = signalPickerIndex(document.signals).entries;
-  const signals = searchableSignals.map((item) => item.signal);
-  const linked = signals.filter((signal) => linkedIds.has(signal.id));
+  const linkedIds = useMemo(() => new Set(transaction.linkedSignals ?? []), [transaction.linkedSignals]);
+  const searchableSignals = useMemo(() => signalPickerIndex(document.signals).entries, [document.signals]);
+  const signals = useMemo(() => searchableSignals.map((item) => item.signal), [searchableSignals]);
+  const linked = useMemo(() => signals.filter((signal) => linkedIds.has(signal.id)), [signals, linkedIds]);
   const normalizedLinkedFilter = linkedFilter.trim().toLocaleLowerCase();
   const linkedVisible = searchableSignals.filter((item) => linkedIds.has(item.signal.id) && (!normalizedLinkedFilter || item.normalizedSearchText.includes(normalizedLinkedFilter))).slice(0, 50).map((item) => item.signal);
   const normalizedQuery = query.trim().toLocaleLowerCase();
