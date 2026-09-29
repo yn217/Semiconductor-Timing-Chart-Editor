@@ -31,13 +31,17 @@ export function useEditorPresentationState(input: { readonly hostRef: MutableRef
       ...(previous?.signalIds ?? []), ...(next.signalIds ?? []),
       ...(previous?.spacerId ? [previous.spacerId] : []), ...(next.spacerId ? [next.spacerId] : []),
     ]);
-    for (const id of affectedSignalIds) for (const row of rendererHost.querySelectorAll<HTMLElement>(`[data-row-id="${CSS.escape(id)}"], [data-signal-id="${CSS.escape(id)}"]`)) {
+    // #857: iterate the mounted rows once and test membership, instead of one selector query per affected id (selected ids can be
+    // thousands while the virtualized DOM holds tens of rows).
+    if (affectedSignalIds.size > 0) for (const row of rendererHost.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]")) {
+      const id = row.dataset.rowId ?? row.dataset.signalId;
+      if (id === undefined || !affectedSignalIds.has(id)) continue;
       const isSelected = next.signalIds.has(id as SignalId) || id === next.spacerId;
       row.dataset.selected = String(isSelected);
       row.setAttribute("aria-selected", String(isSelected));
     }
     const affectedAnnotationIds = new Set([...(previous?.annotationIds ?? []), ...next.annotationIds]);
-    for (const id of affectedAnnotationIds) for (const owner of rendererHost.querySelectorAll<HTMLElement>(`[data-annotation-id="${CSS.escape(String(id))}"]`)) owner.dataset.selected = String(next.annotationIds.has(id));
+    if (affectedAnnotationIds.size > 0) for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-annotation-id]")) { const id = owner.dataset.annotationId as unknown as (typeof next.annotationIds extends ReadonlySet<infer T> ? T : never); if (affectedAnnotationIds.has(id)) owner.dataset.selected = String(next.annotationIds.has(id)); }
     const affectedGroupIds = new Set([previous?.groupId, next.groupId].filter(Boolean));
     for (const id of affectedGroupIds) for (const treeItem of rendererHost.querySelectorAll<HTMLElement>(`[role="treeitem"][data-row-id="${CSS.escape(String(id))}:header"]`)) treeItem.setAttribute("aria-selected", String(id === next.groupId));
     const legend = rendererHost.querySelector<HTMLElement>("[data-testid='editor-legend']");
