@@ -347,6 +347,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
 
   async renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues: readonly string[] = []): Promise<RenderedWave> {
     const prepared = await this.prepareWave(signalId, waveJson, mount.ownerDocument, semanticValues);
+    await prepared.svgImageReady;
     return this.installWave(prepared, mount);
   }
 
@@ -454,11 +455,20 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       const parsedSvgByDocument = safetyCacheEntry.parsedSvgByDocument ??= new WeakMap<Document, SVGElement>();
       parsedSvgByDocument.set(ownerDocument, parsedSvg.cloneNode(true) as SVGElement);
     }
+    let svgImageReady: Promise<void> | undefined;
     if (useSharedSvgImage) {
       const imageUrl = svgImageUrl(safetyCacheEntry, ownerDocument);
       if (imageUrl) {
-        await svgImageDecode(safetyCacheEntry, ownerDocument, imageUrl);
-        svg = createWaveImageSvg(parsedSvg, ownerDocument, imageUrl, renderIndex);
+        const imageOwnerSvg = createWaveImageSvg(parsedSvg, ownerDocument, imageUrl, renderIndex);
+        svg = imageOwnerSvg;
+        // Start decoding now, but don't serialize independent owner decodes
+        // behind WaveRenderScheduler's per-owner preparation jobs. The batch
+        // waits for all image-ready promises together before publishing ready.
+        svgImageReady = svgImageDecode(safetyCacheEntry, ownerDocument, imageUrl).catch(() => {
+          const fallbackSvg = parsedSvg.cloneNode(true) as SVGElement;
+          if (renderIndex > 0) bindWaveDromRenderIndex(fallbackSvg, renderIndex);
+          imageOwnerSvg.replaceChildren(...Array.from(fallbackSvg.childNodes));
+        });
       } else {
         svg = parsedSvg.cloneNode(true) as SVGElement;
       }
@@ -470,6 +480,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const rendered: RenderedWave = {
       signalId, ownerKey: signalId, svg: svg as SVGElement,
       ...(isImageOwner ? { geometrySvg: parsedSvg } : {}),
+      ...(svgImageReady ? { svgImageReady } : {}),
       renderIndex, waveJson, markupCacheHit, svgSafetyCacheHit, renderStages,
     };
     if (sharedDefinitions) this.#preparedDefinitions.set(rendered, sharedDefinitions);

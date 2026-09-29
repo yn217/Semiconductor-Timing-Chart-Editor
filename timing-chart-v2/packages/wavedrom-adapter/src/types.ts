@@ -48,6 +48,8 @@ export interface RenderedWave {
   readonly svg: SVGElement;
   /** Validated canonical SVG template backing an exact shared SVG image owner. */
   readonly geometrySvg?: SVGElement;
+  /** Resolves when an image-backed SVG is decoded or its validated inline fallback is installed. */
+  readonly svgImageReady?: Promise<void>;
   readonly renderIndex: number;
   readonly waveJson: WaveJsonSignal;
   /** Whether cached serialized WaveDrom markup was reused (SVG parse/install is still required). */

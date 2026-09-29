@@ -378,10 +378,6 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             // renderWave installs the SVG into this owner before resolving.
             // Publish the first-artifact milestone here rather than after
             // every later owner in the batch has also completed.
-            if (isCurrent(item.request) && item.request.owner.isConnected) {
-              context.markOpenPhase("first-visible-wave-painted");
-              markReferenceClockPaintedIfCurrent(item.request.signalId);
-            }
             return { ...item, rendered, installed: true };
           } catch (error: unknown) {
             return { ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) };
@@ -430,10 +426,6 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
               const installed = context.adapter.installWave!(value.rendered, value.request.owner);
               renderAwaitMs += Math.max(0, globalThis.performance.now() - installStartedAt);
               renderResults.push({ ...value, rendered: installed, installed: true });
-              if (isCurrent(value.request) && value.request.owner.isConnected) {
-                context.markOpenPhase("first-visible-wave-painted");
-                markReferenceClockPaintedIfCurrent(value.request.signalId);
-              }
             } catch (error: unknown) {
               renderResults.push({ ...value, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) });
             }
@@ -442,6 +434,22 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           }
           requiredNowCount += 1;
         }
+      }
+      const imageReady: Promise<void>[] = [];
+      for (const item of renderResults) {
+        if (!item.rendered || item.stale === true || !isCurrent(item.request) || !item.request.owner.isConnected) continue;
+        const markVisibleWaveReady = (): void => {
+          if (!isCurrent(item.request) || !item.request.owner.isConnected) return;
+          context.markOpenPhase("first-visible-wave-painted");
+          markReferenceClockPaintedIfCurrent(item.request.signalId);
+        };
+        if (item.rendered.svgImageReady) imageReady.push(item.rendered.svgImageReady.then(markVisibleWaveReady));
+        else markVisibleWaveReady();
+      }
+      if (imageReady.length > 0) {
+        const imageReadyStartedAt = globalThis.performance.now();
+        await Promise.all(imageReady);
+        renderAwaitMs += Math.max(0, globalThis.performance.now() - imageReadyStartedAt);
       }
       const renderedByRequest = new Map(renderResults.map((item) => [item.request, item] as const));
       const preparedByRequest = new Map(prepared.map((item) => [item.request, item] as const));
@@ -491,7 +499,6 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             : geometry;
           publishCycleBoundarySnapshotAccessor(item.request.owner, ownerGeometry);
           if (item.request.signalId === currentReferenceClock) { context.markOpenPhase("reference-geometry-ready"); referenceGeometryReady = true; }
-          context.markOpenPhase("first-visible-wave-painted");
           return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
         } catch (error: unknown) {
           context.geometryRegistry.svgs.delete(item.request.signalId);
