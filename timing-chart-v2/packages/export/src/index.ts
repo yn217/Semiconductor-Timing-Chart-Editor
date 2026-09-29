@@ -129,13 +129,18 @@ function waveTokenAt(wave: string, period: number, cycle: number): string {
   return wave[0] ?? "0";
 }
 
-function clockEnabledAt(changes: ClockSignal["enable"], cycle: number): boolean {
+/** #858: monotonic enable cursor for increasing cycles (O(edges + enableChanges) instead of a rescan from the first change per edge). */
+function createClockEnabledCursor(changes: ClockSignal["enable"]): (cycle: number) => boolean {
+  const list = changes ?? [];
+  let position = 0;
   let value: string | number = 1;
-  for (const change of changes ?? []) {
-    if (change.start > cycle) break;
-    value = change.value;
-  }
-  return ["1", "true", "high"].includes(String(value).toLowerCase());
+  let lastCycle = Number.NEGATIVE_INFINITY;
+  return (cycle) => {
+    if (cycle < lastCycle) { position = 0; value = 1; }
+    lastCycle = cycle;
+    while (position < list.length && list[position]!.start <= cycle) { value = list[position]!.value; position += 1; }
+    return ["1", "true", "high"].includes(String(value).toLowerCase());
+  };
 }
 
 function traceYForWaveToken(token: string, row: number, height: number): number {
@@ -182,6 +187,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   const signals = document.signalGroups.flatMap((group) => group.rows.map((id) => signalById.get(id))).filter((signal): signal is Signal => signal !== undefined && signal.display.visible !== false);
   const waveSignals = signals.filter((signal): signal is Exclude<Signal, { readonly type: "commentRow" }> => signal.type !== "commentRow");
   const lanes = [...new Set(document.transactions.map((transaction) => transaction.laneId ?? "lane_0"))].sort();
+  const laneIndex = new Map(lanes.map((lane, index) => [lane, index] as const));
   const transactionTop = headerHeight + 14;
   const waveTop = transactionTop + lanes.length * TRANSACTION_HEIGHT + 34;
   const renderedWaves = waveSignals.map((signal, index) => {
@@ -216,10 +222,11 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const start = Math.max(0, signal.generator.start + signal.generator.phase);
     const oppositeOffset = period * signal.generator.duty;
     const suppressed = new Set(signal.generator.suppressedPeriods ?? []);
+    const enabledAt = createClockEnabledCursor(signal.enable);
     const edges: Array<{ kind: "rising" | "falling"; cycle: number }> = [];
     for (let cycle = start; cycle < document.timeline.cycleCount; cycle += period) {
       const slot = Math.round((cycle - signal.generator.start) / period);
-      if (!clockEnabledAt(signal.enable, cycle) || suppressed.has(slot)) continue;
+      if (!enabledAt(cycle) || suppressed.has(slot)) continue;
       const activeKind = signal.generator.polarity === "positive" ? "rising" : "falling";
       const oppositeKind = activeKind === "rising" ? "falling" : "rising";
       edges.push({ kind: activeKind, cycle });
@@ -297,7 +304,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const displayEnd = Math.max(displayStart + 1, toDisplayCycle(mapping, transaction.end, "ceil"));
     if (displayEnd <= range.start || displayStart >= range.end) return undefined;
     const x = LABEL_WIDTH + (Math.max(range.start, displayStart) - range.start) * cycleWidth;
-    return { id: transaction.id, name: transaction.name, laneId, x, y: transactionTop + lanes.indexOf(laneId) * TRANSACTION_HEIGHT, width: (Math.min(range.end, displayEnd) - Math.max(range.start, displayStart)) * cycleWidth, linkedSignals: transaction.linkedSignals ?? [] };
+    return { id: transaction.id, name: transaction.name, laneId, x, y: transactionTop + laneIndex.get(laneId)! * TRANSACTION_HEIGHT, width: (Math.min(range.end, displayEnd) - Math.max(range.start, displayStart)) * cycleWidth, linkedSignals: transaction.linkedSignals ?? [] };
   }).filter((transaction): transaction is ExportTransaction => transaction !== undefined);
   const measurementLaneById = allocateMeasurementLanes(document.annotations.flatMap((annotation) => {
     if (annotation.type !== "measurement" || !annotation.start || !annotation.end) return [];
@@ -311,7 +318,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const first = anchorPoint(annotation, annotation.anchor ? "anchor" : annotation.start ? "start" : "from", document, rowY, mapping, range.start, cycleWidth);
     const second = anchorPoint(annotation, annotation.end ? "end" : annotation.to ? "to" : annotation.anchor ? "anchor" : "from", document, rowY, mapping, range.start, cycleWidth);
     if (!first || !second) return undefined;
-    const sourceWave = annotation.type === "ghostTrace" && annotation.sourceSignalId ? renderedWaves.find((item) => item.signal.id === annotation.sourceSignalId) : undefined;
+    const sourceWave = annotation.type === "ghostTrace" && annotation.sourceSignalId ? renderedWaveById.get(annotation.sourceSignalId) : undefined;
     const tracePoints = sourceWave && firstAnchor && lastAnchor ? (() => {
       const offset = annotation.traceOffsetCycles ?? 0;
       const startCycle = Math.max(0, Math.floor(Math.min(firstAnchor.cycle, lastAnchor.cycle)));
