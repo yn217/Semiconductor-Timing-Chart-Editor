@@ -646,7 +646,7 @@ export function MinimalCycleView() {
   const canRenameSelection = capabilities.canRename;
   const canShowSelection = capabilities.canShow;
   const canHideSelection = capabilities.canHide;
-  const selectedSignalsPinned = selectedSignalIds.size > 0 && [...selectedSignalIds].every((id) => pinnedSignalIds.includes(id));
+  const selectedSignalsPinned = selectedSignalIds.size > 0 && ((pinned) => [...selectedSignalIds].every((id) => pinned.has(id)))(new Set(pinnedSignalIds));
   const togglePinnedSignals = () => {
     const selected = [...selectedSignalIds];
     if (selected.length === 0) return;
