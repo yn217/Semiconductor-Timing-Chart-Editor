@@ -5,6 +5,7 @@ export interface DisplayTimeMapping {
   readonly displayCycleCount: number;
   readonly isIdentity: boolean;
   readonly collapsedRanges: readonly (readonly [start: number, end: number])[];
+  readonly collapsedGroupAtSource: (sourceCycle: number) => TimeGroup | undefined;
   readonly displayAtSource: (sourceCycle: number) => number | undefined;
   readonly sourceAtDisplay: (displayCycle: number) => number | undefined;
   readonly labelFor: (displayCycle: number) => number;
@@ -71,6 +72,74 @@ function collapsedRangeContaining(ranges: DisplayTimeMapping["collapsedRanges"],
   return candidate && sourceCycle < candidate[1] ? candidate : undefined;
 }
 
+function buildCollapsedGroupLookup(groups: readonly TimeGroup[]): (sourceCycle: number) => TimeGroup | undefined {
+  const collapsed = groups.flatMap((group) => group.presentation?.collapsed ? [group] : []);
+  if (collapsed.length === 0) return () => undefined;
+  const events = collapsed.flatMap((group, index) => [
+    { cycle: group.start, starts: true, index },
+    { cycle: group.end, starts: false, index },
+  ]).sort((left, right) => left.cycle - right.cycle || Number(left.starts) - Number(right.starts));
+  const active = new Uint8Array(collapsed.length);
+  const heap: number[] = [];
+  const push = (value: number) => {
+    let index = heap.length;
+    heap.push(value);
+    while (index > 0) {
+      const parent = (index - 1) >>> 1;
+      if (heap[parent]! <= value) break;
+      heap[index] = heap[parent]!;
+      index = parent;
+    }
+    heap[index] = value;
+  };
+  const pop = () => {
+    const first = heap[0]!;
+    const last = heap.pop()!;
+    if (heap.length > 0) {
+      let index = 0;
+      while (true) {
+        const left = index * 2 + 1;
+        if (left >= heap.length) break;
+        const right = left + 1;
+        const child = right < heap.length && heap[right]! < heap[left]! ? right : left;
+        if (heap[child]! >= last) break;
+        heap[index] = heap[child]!;
+        index = child;
+      }
+      heap[index] = last;
+    }
+    return first;
+  };
+  const segments: { start: number; end: number; group: TimeGroup }[] = [];
+  for (let eventIndex = 0; eventIndex < events.length;) {
+    const cycle = events[eventIndex]!.cycle;
+    while (eventIndex < events.length && events[eventIndex]!.cycle === cycle && !events[eventIndex]!.starts) {
+      active[events[eventIndex]!.index] = 0;
+      eventIndex += 1;
+    }
+    while (eventIndex < events.length && events[eventIndex]!.cycle === cycle) {
+      const event = events[eventIndex]!;
+      active[event.index] = 1;
+      push(event.index);
+      eventIndex += 1;
+    }
+    while (heap.length > 0 && active[heap[0]!] === 0) pop();
+    const nextCycle = events[eventIndex]?.cycle ?? cycle;
+    const group = heap.length > 0 ? collapsed[heap[0]!] : undefined;
+    if (group && nextCycle > cycle) {
+      const previous = segments.at(-1);
+      if (previous?.end === cycle && previous.group.id === group.id) previous.end = nextCycle;
+      else segments.push({ start: cycle, end: nextCycle, group });
+    }
+  }
+  return (sourceCycle) => {
+    let low = 0, high = segments.length;
+    while (low < high) { const middle = (low + high) >>> 1; if (segments[middle]!.start <= sourceCycle) low = middle + 1; else high = middle; }
+    const segment = segments[low - 1];
+    return segment && sourceCycle < segment.end ? segment.group : undefined;
+  };
+}
+
 // #862: sorted anchors are cached per labelAnchors array identity and looked up by binary search (was: copy + sort on every label).
 const sortedAnchorsByArray = new WeakMap<Timeline["labelAnchors"], Timeline["labelAnchors"]>();
 function labelForSourceCycle(timeline: Pick<Timeline, "labelAnchors">, sourceCycle: number): number {
@@ -88,6 +157,7 @@ const identityMapping = (timeline: Pick<Timeline, "cycleCount" | "labelAnchors">
     displayCycleCount: timeline.cycleCount,
     isIdentity: true,
     collapsedRanges: [],
+    collapsedGroupAtSource: () => undefined,
     displayAtSource: (sourceCycle) => Number.isInteger(sourceCycle) && sourceCycle >= 0 && sourceCycle < timeline.cycleCount ? sourceCycle : undefined,
     sourceAtDisplay: (displayCycle) => Number.isInteger(displayCycle) && displayCycle >= 0 && displayCycle < timeline.cycleCount ? displayCycle : undefined,
     labelFor: (displayCycle) => labelForSourceCycle(timeline, displayCycle),
@@ -137,6 +207,7 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
     displayCycleCount: display,
     isIdentity: false,
     collapsedRanges,
+    collapsedGroupAtSource: buildCollapsedGroupLookup(timeGroups),
     // The exclusive terminal boundary is not a rendered cycle slot and is
     // therefore absent from sourceAtDisplay. It must still retain the
     // canonical half-open timeline end label after a fold; never fall back to

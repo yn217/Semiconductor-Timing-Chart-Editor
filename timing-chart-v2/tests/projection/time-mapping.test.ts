@@ -90,6 +90,16 @@ describe("buildDisplayTimeMapping", () => {
     expect(mapping.sourceAtDisplay(4)).toBe(14);
   });
 
+  it("preserves canonical first-match fold identity with indexed Bookmark lookup", () => {
+    const inner = collapsedGroup("inner-first", 4, 6);
+    const outer = collapsedGroup("outer-second", 2, 8);
+    const mapping = buildDisplayTimeMapping(timeline(12), [inner, outer]);
+
+    expect(mapping.collapsedGroupAtSource(3)?.id).toBe(outer.id);
+    expect(mapping.collapsedGroupAtSource(5)?.id).toBe(inner.id);
+    expect(mapping.collapsedGroupAtSource(8)).toBeUndefined();
+  });
+
   it("uses source as the canonical anchor position and display as its ruler label", () => {
     const mapping = buildDisplayTimeMapping(timeline(20, [{ id: "la1" as never, source: 15, display: 1000 }]), [collapsedGroup("g1", 5, 15)]);
     expect(mapping.labelFor(5)).toBe(1000);
