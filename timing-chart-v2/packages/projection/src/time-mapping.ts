@@ -5,6 +5,7 @@ export interface DisplayTimeMapping {
   readonly isIdentity: boolean;
   readonly sourceToDisplay: readonly (number | undefined)[];
   readonly displayToSource: readonly number[];
+  readonly collapsedRanges: readonly (readonly [start: number, end: number])[];
   readonly labelFor: (displayCycle: number) => number;
 }
 
@@ -48,9 +49,22 @@ export function resolveSourcePosition(mapping: DisplayTimeMapping, sourceCycle: 
     if (lower !== undefined) return lower;
     if (upper !== undefined) return upper;
   }
-  if (policy === "floor") for (let cycle = Math.min(index, mapping.sourceToDisplay.length - 1); cycle >= 0; cycle -= 1) if (mapping.sourceToDisplay[cycle] !== undefined) return mapping.sourceToDisplay[cycle];
-  if (policy === "ceil") for (let cycle = Math.max(0, index); cycle < mapping.sourceToDisplay.length; cycle += 1) if (mapping.sourceToDisplay[cycle] !== undefined) return mapping.sourceToDisplay[cycle];
+  const folded = collapsedRangeContaining(mapping.collapsedRanges, clamped);
+  if (folded && policy === "floor") return folded[0] > 0 ? mapping.sourceToDisplay[folded[0] - 1] : undefined;
+  if (folded && policy === "ceil") return folded[1] < mapping.sourceToDisplay.length ? mapping.sourceToDisplay[folded[1]] : undefined;
   return undefined;
+}
+
+function collapsedRangeContaining(ranges: DisplayTimeMapping["collapsedRanges"], sourceCycle: number): DisplayTimeMapping["collapsedRanges"][number] | undefined {
+  let low = 0;
+  let high = ranges.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (ranges[middle]![0] <= sourceCycle) low = middle + 1;
+    else high = middle;
+  }
+  const candidate = ranges[low - 1];
+  return candidate && sourceCycle < candidate[1] ? candidate : undefined;
 }
 
 // #862: sorted anchors are cached per labelAnchors array identity and looked up by binary search (was: copy + sort on every label).
@@ -66,7 +80,7 @@ function labelForSourceCycle(timeline: Pick<Timeline, "labelAnchors">, sourceCyc
 
 const identityMapping = (timeline: Pick<Timeline, "cycleCount" | "labelAnchors">): DisplayTimeMapping => {
   const displayToSource = Array.from({ length: timeline.cycleCount }, (_, index) => index);
-  return { displayCycleCount: timeline.cycleCount, isIdentity: true, sourceToDisplay: displayToSource, displayToSource, labelFor: (displayCycle) => labelForSourceCycle(timeline, displayCycle) };
+  return { displayCycleCount: timeline.cycleCount, isIdentity: true, sourceToDisplay: displayToSource, displayToSource, collapsedRanges: [], labelFor: (displayCycle) => labelForSourceCycle(timeline, displayCycle) };
 };
 
 export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): DisplayTimeMapping {
@@ -102,6 +116,7 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
     isIdentity: false,
     sourceToDisplay,
     displayToSource,
+    collapsedRanges,
     // The exclusive terminal boundary is not a rendered cycle slot and is
     // therefore absent from displayToSource. It must still retain the
     // canonical half-open timeline end label after a fold; never fall back to
@@ -203,16 +218,25 @@ export function remapValueChangesToDisplay(values: readonly SignalValueChange[],
   if (mapping.isIdentity) return values;
   const result: SignalValueChange[] = [];
   let lastValue: SignalValueChange["value"] | undefined;
-  let cursor = 0;
-  for (let display = 0; display < mapping.displayCycleCount; display += 1) {
-    const source = mapping.displayToSource[display]!;
-    while (cursor + 1 < values.length && values[cursor + 1]!.start <= source) cursor += 1;
-    const active = values[cursor]?.value;
-    if (active === undefined) continue;
-    if (active !== lastValue) {
-      const sourceChange = values[cursor];
-      if (sourceChange) result.push({ ...sourceChange, start: display });
-      lastValue = active;
+  let valueIndex = 0;
+  let foldIndex = 0;
+  let activeChange: SignalValueChange | undefined;
+  while (true) {
+    const nextValueCycle = values[valueIndex]?.start ?? Infinity;
+    const nextFoldEnd = mapping.collapsedRanges[foldIndex]?.[1] ?? Infinity;
+    const sourceCycle = Math.min(nextValueCycle, nextFoldEnd);
+    if (sourceCycle >= mapping.sourceToDisplay.length) break;
+
+    while (valueIndex < values.length && values[valueIndex]!.start <= sourceCycle) {
+      activeChange = values[valueIndex]!;
+      valueIndex += 1;
+    }
+    while (foldIndex < mapping.collapsedRanges.length && mapping.collapsedRanges[foldIndex]![1] <= sourceCycle) foldIndex += 1;
+
+    const displayCycle = mapping.sourceToDisplay[sourceCycle];
+    if (displayCycle !== undefined && activeChange && activeChange.value !== lastValue) {
+      result.push({ ...activeChange, start: displayCycle });
+      lastValue = activeChange.value;
     }
   }
   return result;

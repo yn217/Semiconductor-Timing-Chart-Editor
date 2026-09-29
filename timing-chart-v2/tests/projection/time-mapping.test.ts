@@ -21,6 +21,32 @@ describe("buildDisplayTimeMapping", () => {
     expect(resolveSourcePosition(mapping, 3.5, "interpolate")).toBe(3.5);
     expect(resolveSourcePosition(mapping, 10.5, "interpolate")).toBe(5.5);
   });
+
+  it("resolves floor/ceil across a wide fold from the shared interval index", () => {
+    let numericReads = 0;
+    const sourceToDisplay = new Proxy([0, 1, ...Array.from({ length: 99_997 }, () => undefined), 2] as (number | undefined)[], {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\\d+$/.test(property)) {
+          numericReads += 1;
+          if (numericReads > 2) throw new Error("wide folded hole must not be linearly scanned");
+        }
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const mapping = {
+      displayCycleCount: 3,
+      isIdentity: false,
+      sourceToDisplay,
+      displayToSource: [0, 1, 99_999],
+      collapsedRanges: [[2, 99_999]] as const,
+      labelFor: (cycle: number) => cycle,
+    };
+
+    expect(resolveSourcePosition(mapping, 50_000, "floor")).toBe(1);
+    numericReads = 0;
+    expect(resolveSourcePosition(mapping, 50_000, "ceil")).toBe(2);
+  });
+
   it("is the identity mapping when there are no collapsed TimeGroups", () => {
     const mapping = buildDisplayTimeMapping(timeline(10), []);
     expect(mapping.displayCycleCount).toBe(10);
@@ -166,6 +192,30 @@ describe("remapValueChangesToDisplay", () => {
     // active value at source 4 is "1" (from start:3); active value at source 10/11 is "0" (from start:7, hidden inside the collapse)
     const remapped = remapValueChangesToDisplay(values, mapping);
     expect(remapped).toEqual([{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 5, value: 0 }]);
+  });
+
+  it("remaps sparse changes without iterating the display-cycle domain", () => {
+    const displayToSource = new Proxy([] as number[], {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\\d+$/.test(property)) throw new Error("display-cycle scan is forbidden");
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const mapping = {
+      displayCycleCount: 1_000_000,
+      isIdentity: false,
+      sourceToDisplay: [0, 1, undefined, undefined, undefined, undefined, 2, 3],
+      displayToSource,
+      collapsedRanges: [[2, 6]] as const,
+      labelFor: (cycle: number) => cycle,
+    };
+    const values = [{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 7, value: 0 }];
+
+    expect(remapValueChangesToDisplay(values, mapping)).toEqual([
+      { start: 0, value: 0 },
+      { start: 2, value: 1 },
+      { start: 3, value: 0 },
+    ]);
   });
 
   it("drops redundant consecutive display entries with the same active value", () => {
