@@ -8,8 +8,10 @@ import { WAVEDROM_CYCLE_WIDTH, WAVEDROM_ORIGIN_X } from "@timing-chart-v2/geomet
  * Geometry is NOT read back from pixels; see uniformCycleBoundaryEntries.
  */
 const ROW_HEIGHT = 30;
-const HIGH = 6;
-const LOW = 24;
+// WaveDrom brick frame: lane draw origin y = 5.5, brick height 20.
+const DRAW_Y = 5.5;
+const HIGH = DRAW_Y;
+const LOW = DRAW_Y + 20;
 
 /**
  * Wave renderer selection (#755). `?wave=svg` / `?wave=canvas` force one; `?canvas755` is the legacy spelling of canvas. Without a
@@ -40,20 +42,22 @@ function canvasSupported(): boolean {
  * scroll. Painting the whole window (tiles or one big canvas) just moves the cost into canvas backing stores.
  */
 const MARGIN_PX = 512;
-const painted = new WeakMap<HTMLElement, { wave: WaveJsonSignal; canvas: HTMLCanvasElement; viewport: HTMLElement | null; raf: number; onScroll: () => void }>();
+const painted = new WeakMap<HTMLElement, { wave: WaveJsonSignal; canvas: HTMLCanvasElement; viewport: HTMLElement | null; raf: number; onScroll: () => void; onRestyle: () => void }>();
 
 export function paintWaveCanvas(owner: HTMLElement, wave: WaveJsonSignal): void {
   let state = painted.get(owner);
   if (!state || !owner.contains(state.canvas)) {
-    if (state) { state.viewport?.removeEventListener("scroll", state.onScroll); cancelAnimationFrame(state.raf); }
+    if (state) { state.viewport?.removeEventListener("scroll", state.onScroll); owner.removeEventListener(WAVE_CANVAS_RESTYLE_EVENT, state.onRestyle); cancelAnimationFrame(state.raf); }
     const canvas = owner.ownerDocument.createElement("canvas");
     canvas.setAttribute("data-wave-canvas", "");
     canvas.style.cssText = `display:block;position:absolute;top:0;height:${ROW_HEIGHT}px;`;
     owner.replaceChildren(canvas);
     const viewport = owner.closest<HTMLElement>(".cycle-viewport");
-    const created = { wave, canvas, viewport, raf: 0, onScroll: () => undefined as void };
+    const created = { wave, canvas, viewport, raf: 0, onScroll: () => undefined as void, onRestyle: () => undefined as void };
     created.onScroll = () => { cancelAnimationFrame(created.raf); created.raf = requestAnimationFrame(() => drawVisible(owner, created.wave, created.canvas, created.viewport)); };
+    created.onRestyle = () => drawVisible(owner, created.wave, created.canvas, created.viewport);
     viewport?.addEventListener("scroll", created.onScroll, { passive: true });
+    owner.addEventListener(WAVE_CANVAS_RESTYLE_EVENT, created.onRestyle);
     painted.set(owner, created);
     state = created;
   }
@@ -61,8 +65,19 @@ export function paintWaveCanvas(owner: HTMLElement, wave: WaveJsonSignal): void 
   drawVisible(owner, wave, state.canvas, state.viewport);
 }
 
+// Built lazily: Path2D does not exist in non-canvas (jsdom) environments that merely import this module.
+let gapPaths: { mask: Path2D; lines: Path2D[] } | undefined;
+const gapSymbol = () => gapPaths ??= { mask: new Path2D("m7,-2 -4,0 c -5,0 -5,24 -10,24 l 4,0 C 2,22 2,-2 7,-2 z"), lines: [new Path2D("M-7,22 C -2,22 -2,-2 3,-2"), new Path2D("M-3,22 C 2,22 2,-2 7,-2")] };
+/** WaveDrom's default stroke; per-Signal `waveformColor` (published by the renderer as data-waveform-style-color) overrides it. */
+const WAVEFORM_DEFAULT_STROKE = "#000";
+export const WAVE_CANVAS_RESTYLE_EVENT = "wave-canvas-restyle";
+
 function drawVisible(owner: HTMLElement, wave: WaveJsonSignal, canvas: HTMLCanvasElement, viewport: HTMLElement | null): void {
-  const cycles = wave.geometrySourceCycles !== undefined ? wave.geometrySourceCycles.length - 1 : wave.wave.length;
+  // WaveDrom semantics: each wave character spans `period` cycles and the whole lane shifts left by `phase` cycles.
+  const period = wave.period ?? 1;
+  const phase = wave.phase ?? 0;
+  const slotWidth = period * WAVEDROM_CYCLE_WIDTH;
+  const cycles = wave.geometrySourceCycles !== undefined ? wave.geometrySourceCycles.length - 1 : wave.wave.length * period;
   const totalWidth = WAVEDROM_ORIGIN_X * 2 + cycles * WAVEDROM_CYCLE_WIDTH;
   const ownerRect = owner.getBoundingClientRect();
   const viewRect = viewport?.getBoundingClientRect();
@@ -76,42 +91,59 @@ function drawVisible(owner: HTMLElement, wave: WaveJsonSignal, canvas: HTMLCanva
   canvas.style.left = `${visibleStart}px`;
   const context = canvas.getContext("2d");
   if (!context) return;
+  const color = owner.dataset.waveformStyleColor || WAVEFORM_DEFAULT_STROKE;
   context.clearRect(0, 0, width, ROW_HEIGHT);
   context.translate(-visibleStart, 0);
+  // WaveDrom drops the phase-shifted head of the lane; nothing is drawn left of the origin.
+  context.beginPath();
+  context.rect(WAVEDROM_ORIGIN_X, 0, cycles * WAVEDROM_CYCLE_WIDTH, ROW_HEIGHT);
+  context.clip();
   context.lineWidth = 1;
-  context.strokeStyle = "#1a1a1a";
-  context.fillStyle = "#1a1a1a";
+  context.strokeStyle = color;
+  context.fillStyle = color;
   context.font = "11px sans-serif";
   context.textBaseline = "middle";
   context.textAlign = "center";
-  const firstCycle = Math.max(0, Math.floor((visibleStart - WAVEDROM_ORIGIN_X) / WAVEDROM_CYCLE_WIDTH));
-  const lastCycle = Math.min(cycles, Math.ceil((visibleEnd - WAVEDROM_ORIGIN_X) / WAVEDROM_CYCLE_WIDTH) + 1);
-  // Resolve the token in effect at firstCycle (dots repeat the previous value) and its data index.
+  const slotStart = (slot: number): number => WAVEDROM_ORIGIN_X + (slot * period - phase) * WAVEDROM_CYCLE_WIDTH;
+  const firstSlot = Math.max(0, Math.floor((visibleStart - WAVEDROM_ORIGIN_X) / slotWidth + phase / period) - 1);
+  const lastSlot = Math.min(wave.wave.length, Math.ceil((visibleEnd - WAVEDROM_ORIGIN_X) / slotWidth + phase / period) + 1);
+  // Resolve the token in effect at firstSlot (dots repeat the previous value) and its data index.
   let previous = ".";
   let dataIndex = 0;
-  for (let cycle = 0; cycle < firstCycle; cycle += 1) {
-    const raw = wave.wave[cycle] ?? ".";
+  for (let slot = 0; slot < firstSlot; slot += 1) {
+    const raw = wave.wave[slot] ?? ".";
     if (raw !== "." && raw !== "|") { previous = raw; if (raw === "=" || (raw >= "2" && raw <= "9")) dataIndex += 1; }
   }
   const data = wave.data ?? [];
+  const gaps: number[] = [];
   context.beginPath();
-  for (let cycle = firstCycle; cycle < lastCycle; cycle += 1) {
-    const raw = wave.wave[cycle] ?? ".";
+  for (let slot = firstSlot; slot < lastSlot; slot += 1) {
+    const raw = wave.wave[slot] ?? ".";
     const token = raw === "." || raw === "|" ? previous : raw;
-    const x0 = WAVEDROM_ORIGIN_X + cycle * WAVEDROM_CYCLE_WIDTH;
-    const x1 = x0 + WAVEDROM_CYCLE_WIDTH;
+    const x0 = slotStart(slot);
+    const x1 = x0 + slotWidth;
     const mid = (x0 + x1) / 2;
+    if (raw === "|") gaps.push(mid);
     if (token === "p") { context.moveTo(x0, LOW); context.lineTo(x0, HIGH); context.lineTo(mid, HIGH); context.lineTo(mid, LOW); context.lineTo(x1, LOW); }
     else if (token === "n") { context.moveTo(x0, HIGH); context.lineTo(x0, LOW); context.lineTo(mid, LOW); context.lineTo(mid, HIGH); context.lineTo(x1, HIGH); }
     else if (token === "1") { context.moveTo(x0, HIGH); context.lineTo(x1, HIGH); }
     else if (token === "0") { context.moveTo(x0, LOW); context.lineTo(x1, LOW); }
     else if (token === "z") { context.moveTo(x0, (HIGH + LOW) / 2); context.lineTo(x1, (HIGH + LOW) / 2); }
-    else if (token === "x") { context.rect(x0 + 1, HIGH, WAVEDROM_CYCLE_WIDTH - 2, LOW - HIGH); }
+    else if (token === "x") { context.rect(x0 + 1, HIGH, slotWidth - 2, LOW - HIGH); }
     else {
       context.moveTo(x0 + 3, HIGH); context.lineTo(x1 - 3, HIGH); context.lineTo(x1, (HIGH + LOW) / 2); context.lineTo(x1 - 3, LOW); context.lineTo(x0 + 3, LOW); context.lineTo(x0, (HIGH + LOW) / 2); context.closePath();
-      if (raw !== "." && raw !== "|") { const label = data[dataIndex]; dataIndex += 1; if (label !== undefined) context.fillText(label, mid, (HIGH + LOW) / 2, WAVEDROM_CYCLE_WIDTH - 6); }
+      if (raw !== "." && raw !== "|") { const label = data[dataIndex]; dataIndex += 1; if (label !== undefined) context.fillText(label, mid, (HIGH + LOW) / 2, slotWidth - 6); }
     }
     previous = token;
   }
   context.stroke();
+  // WaveDrom's `gap` symbol: a white break mask with two slanted strokes at the middle of the `|` slot.
+  for (const x of gaps) {
+    context.save();
+    context.translate(x, DRAW_Y);
+    context.fillStyle = "#fff";
+    context.fill(gapSymbol().mask);
+    for (const line of gapSymbol().lines) context.stroke(line);
+    context.restore();
+  }
 }

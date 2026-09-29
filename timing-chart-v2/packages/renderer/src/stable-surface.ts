@@ -1396,6 +1396,14 @@ function applySharedSymbolWaveformColor(svg: SVGSVGElement, color: string | unde
 }
 
 function applyWaveformStyle(owner: HTMLElement, parsed: ReturnType<typeof parseWaveformStyle>): void {
+  // Canvas-painted owner (no SVG): the painter reads the color from the owner and repaints on this event.
+  if (owner.querySelector("canvas[data-wave-canvas]")) {
+    if ((owner.dataset.waveformStyleColor ?? "") !== (parsed.color ?? "")) {
+      if (parsed.color) owner.dataset.waveformStyleColor = parsed.color; else delete owner.dataset.waveformStyleColor;
+      owner.dispatchEvent(new Event("wave-canvas-restyle"));
+    }
+    return;
+  }
   const image = owner.querySelector<SVGImageElement>("svg > image[data-wave-svg-image]");
   if (image) {
     const source = image.dataset.waveSvgSource;

@@ -416,7 +416,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           if (item.error || !item.waveJson) return { ...item, rendered: undefined };
           if (canvasPrototype) {
             paintWaveCanvas(item.request.owner, item.waveJson);
-            const sourceCycles = item.waveJson.geometrySourceCycles ?? Array.from({ length: item.waveJson.wave.length + 1 }, (_, index) => (item.waveJson?.sourceWindow?.start ?? 0) + index);
+            const sourceCycles = item.waveJson.geometrySourceCycles ?? Array.from({ length: item.waveJson.wave.length * (item.waveJson.period ?? 1) + 1 }, (_, index) => (item.waveJson?.sourceWindow?.start ?? 0) + index);
             const canvasGeometry = new LazyAnalyticGeometryMap(item.request.signalId, item.waveJson, sourceCycles);
             publishCycleBoundarySnapshotAccessor(item.request.owner, canvasGeometry);
             context.geometryRegistry.maps.set(item.request.signalId, absoluteWindowGeometry(canvasGeometry, item.rendererStart));
