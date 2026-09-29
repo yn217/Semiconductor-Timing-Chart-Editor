@@ -125,7 +125,7 @@ export function useClipboardActions({ application, selection }: { application: E
     }
     if (value.transactions.length > 0 && value.signals.length === 0 && !value.annotation) {
       setClipboard({ transactions: value.transactions });
-      const result = application.executeBatch(nextCommandId("cut_transactions"), value.transactions.map((transaction) => ({ id: nextCommandId("cut_transaction"), type: "transaction.delete" as const, transactionId: transaction.id })));
+      const result = application.execute({ id: nextCommandId("cut_transactions"), type: "transaction.bulkDelete", transactionIds: value.transactions.map((transaction) => transaction.id) });
       if (result.ok) { selection.clear(); setStatus(`Cut ${value.transactions.length} transaction${value.transactions.length === 1 ? "" : "s"}`); }
       return;
     }
@@ -225,7 +225,7 @@ export function useClipboardActions({ application, selection }: { application: E
       const transaction: Transaction = { ...source, id: allocateId("transaction") as TransactionId, name: `${source.name} ${operation === "paste" ? "Paste" : "Copy"}` };
       created.push(transaction);
     }
-    const result = application.executeBatch(nextCommandId(`${operation}_transactions`), created.map((transaction) => ({ id: nextCommandId(`${operation}_transaction`), type: "transaction.create" as const, transaction })));
+    const result = application.execute({ id: nextCommandId(`${operation}_transactions`), type: "transaction.bulkCreate", transactions: created });
     if (result.ok) { const ids = created.map((transaction) => transaction.id); selection.selectTransactions(new Set(ids), ids[0]); setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${created.length} transaction${created.length === 1 ? "" : "s"}`); }
   };
   const createSpacer = (input: SpacerClipboardItem, operation: "paste" | "duplicate") => {
@@ -259,7 +259,7 @@ export function useClipboardActions({ application, selection }: { application: E
   };
   const deleteSelection = () => {
     const value = selected();
-    const result = value.transactions.length > 1 ? application.executeBatch(nextCommandId("route_delete_transactions"), value.transactions.map((transaction) => ({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete" as const, transactionId: transaction.id })))
+    const result = value.transactions.length > 1 ? application.execute({ id: nextCommandId("route_delete_transactions"), type: "transaction.bulkDelete", transactionIds: value.transactions.map((transaction) => transaction.id) })
       : value.transaction ? application.execute({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId: value.transaction.id })
       : value.annotation ? application.execute({ id: nextCommandId("route_delete_annotation"), type: "annotation.delete", annotationId: value.annotation.id })
       : value.signals.length > 1 ? application.execute({ id: nextCommandId("route_delete_selection"), type: "signal.bulkDelete", signalIds: value.signals.map(({ signal }) => signal.id) })

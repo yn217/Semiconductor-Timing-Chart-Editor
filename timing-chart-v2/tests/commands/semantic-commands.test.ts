@@ -770,6 +770,23 @@ describe("command execution and atomic history", () => {
     expect(rejected.historyState().undoDepth).toBe(0);
   });
 
+  it("bulk-creates and bulk-deletes large Transaction selections as one history action", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const transactions = Array.from({ length: 1_000 }, (_, index) => ({ id: `transaction_bulk_${index}` as TransactionId, name: `Transaction ${index}`, start: 0, end: 1 }));
+    expect(session.execute({ id: commandId("cmd_bulk_create_transactions"), type: "transaction.bulkCreate", transactions })).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document.transactions).toHaveLength(1_000);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo()).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document.transactions).toHaveLength(0);
+
+    expect(session.execute({ id: commandId("cmd_bulk_create_transactions_again"), type: "transaction.bulkCreate", transactions })).toMatchObject({ ok: true });
+    expect(session.execute({ id: commandId("cmd_bulk_delete_transactions"), type: "transaction.bulkDelete", transactionIds: transactions.map((item) => item.id) })).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document.transactions).toHaveLength(0);
+    expect(session.historyState().undoDepth).toBe(2);
+    expect(session.undo()).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document.transactions).toHaveLength(1_000);
+  });
+
   it("supports Group lifecycle without implicitly moving rows", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const group = { id: "grp_empty" as GroupId, name: "Empty", rows: [] };

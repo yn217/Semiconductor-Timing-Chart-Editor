@@ -166,10 +166,10 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
     if (selectedIds.size > 1) {
       const sources = document.transactions.filter((item) => selectedIds.has(item.id));
       const allocateId = createEntityIdAllocator(document);
-      const items = sources.map((item) => ({ transactionId: item.id, newTransactionId: allocateId("transaction") as TransactionId, name: `${item.name} Copy` }));
+      const items = sources.map((item) => ({ ...item, id: allocateId("transaction") as TransactionId, name: `${item.name} Copy` }));
       const batch = commands.bulkDuplicateTransactions(items);
       const last = items[items.length - 1];
-      if (batch.ok && last) onSelect(last.newTransactionId);
+      if (batch.ok && last) onSelect(last.id);
       return;
     }
     if (!transaction || selectedIds.size !== 1) return;

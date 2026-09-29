@@ -14,6 +14,7 @@ import type {
   SemanticAnchor,
   TimeGroup,
   Transaction,
+  TransactionId,
   TransactionPhase,
   TransactionGroupId,
   ValueSignal,
@@ -1169,6 +1170,26 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions: [...document.transactions, transaction] }, changeSet, inverseChangeSet: changeSet };
     }
+    case "transaction.bulkCreate": {
+      if (command.transactions.length === 0) return fail("no-op", "NO_OP", "$.transactions", "Bulk creation requires at least one Transaction.");
+      const ids = new Set(document.transactions.map((item) => item.id));
+      const signalIds = new Set(document.signals.map((signal) => signal.id));
+      const groupIds = new Set((document.transactionGroups ?? []).map((group) => group.id));
+      for (const transaction of command.transactions) {
+        if (!isStableId(transaction.id)) return fail("invalid", "INVALID_STABLE_ID", "$.transactions", "Transaction ID must be stable.");
+        if (ids.has(transaction.id)) return fail("invalid", "DUPLICATE_ID", "$.transactions", `Transaction '${transaction.id}' already exists.`);
+        ids.add(transaction.id);
+        if (!transaction.name.trim()) return fail("invalid", "INVALID_NAME", "$.transactions", "Transaction name cannot be empty.");
+        if (!Number.isInteger(transaction.start) || !Number.isInteger(transaction.end) || transaction.start < 0 || transaction.start >= transaction.end || transaction.end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.transactions", "Transaction must use a half-open source-time range.");
+        const phaseProblem = transaction.phases ? transactionPhasesProblem(transaction.phases, transaction.start, transaction.end) : undefined;
+        if (phaseProblem) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.transactions", phaseProblem);
+        if (transaction.linkedSignals?.some((id) => !signalIds.has(id))) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.transactions", "Transaction links must target existing Signals.");
+        if (transaction.groupId !== undefined && !groupIds.has(transaction.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.transactions", "Transaction Group does not exist.");
+      }
+      const transactionIds = command.transactions.map((transaction) => transaction.id);
+      const changeSet: ChangeSet = { transactionSemantics: transactionIds, minimapOverview: true };
+      return { ok: true, document: { ...document, transactions: [...document.transactions, ...command.transactions] }, changeSet, inverseChangeSet: changeSet };
+    }
     case "transaction.duplicate": {
       const source = document.transactions.find((item) => item.id === command.transactionId);
       if (!source) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
@@ -1185,6 +1206,19 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!transaction) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions: document.transactions.filter((item) => item.id !== transaction.id) }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "transaction.bulkDelete": {
+      if (command.transactionIds.length === 0) return fail("no-op", "NO_OP", "$.transactionIds", "Bulk delete requires at least one Transaction.");
+      const requestedIds = new Set<TransactionId>();
+      for (const id of command.transactionIds) {
+        if (requestedIds.has(id)) return fail("invalid", "DUPLICATE_ID", "$.transactionIds", `Transaction '${id}' appears more than once.`);
+        requestedIds.add(id);
+      }
+      const foundIds = new Set(document.transactions.filter((transaction) => requestedIds.has(transaction.id)).map((transaction) => transaction.id));
+      for (const id of requestedIds) if (!foundIds.has(id)) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionIds", `Transaction '${id}' does not exist.`);
+      const transactions = document.transactions.filter((transaction) => !requestedIds.has(transaction.id));
+      const changeSet: ChangeSet = { transactionSemantics: command.transactionIds, minimapOverview: true };
+      return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
     }
     case "transaction.rename": {
       const index = document.transactions.findIndex((item) => item.id === command.transactionId);
