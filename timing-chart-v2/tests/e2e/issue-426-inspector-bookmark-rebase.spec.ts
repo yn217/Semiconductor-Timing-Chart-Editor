@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+startInCycleSample(test);
 
 // #426: the Inspector Bookmark draft must follow the shared external-update contract (Legend/Annotation): a same-Bookmark Canonical
 // update rebases clean fields and preserves a dirty unrelated local draft; the same field edited locally AND externally is an

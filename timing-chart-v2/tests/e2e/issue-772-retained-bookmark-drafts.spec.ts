@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { startInCycleSample } from "./cycle-startup.js";
+
+// Written against the plain Cycle sample (no demo Bookmarks); the product default document is the Transaction demo.
+startInCycleSample(test);
 
 // #772 Failure B: an unapplied Bookmark Name/Cycle/Comment draft must not be silently destroyed by selecting another Bookmark row --
 // it is kept under the original stable Bookmark ID and announced, mirroring #763's Transaction Phase draft policy.
