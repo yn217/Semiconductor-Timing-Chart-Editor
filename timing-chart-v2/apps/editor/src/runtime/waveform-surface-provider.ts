@@ -351,10 +351,24 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       });
       const itemByRequest = new Map(runnableItems.map((item) => [item.request, item] as const));
       const supportsDetachedWaveInstall = context.adapter.prepareWave !== undefined && context.adapter.installWave !== undefined;
+      // Image-backed SVG artifacts decode asynchronously and are shared by
+      // exact WaveJSON/semantic-value identity. Start one decode for every
+      // distinct artifact early, before spending scheduler slices preparing
+      // additional owners that can only reuse those artifacts. This keeps
+      // the same complete owner work and cooperative budget while overlapping
+      // independent browser decode with the remaining owner preparation.
+      const seenArtifactKeys = new Set<string>();
       const progressiveSignalId = referenceClockId ?? runnableItems[0]?.request.signalId;
       const scheduled = await waveRenderScheduler.runBatch(runnableItems.map((item) => ({
         key: item.request,
-        priority: item.request.signalId === referenceClockId ? 1 : 0,
+        priority: (() => {
+          if (item.request.signalId === referenceClockId) return 2;
+          if (!primaryOpenBatch || !supportsDetachedWaveInstall || !item.waveJson) return 0;
+          const artifactKey = JSON.stringify([item.waveJson, item.semanticValues]);
+          if (seenArtifactKeys.has(artifactKey)) return 0;
+          seenArtifactKeys.add(artifactKey);
+          return 1;
+        })(),
         isCurrent: () => isCurrent(item.request),
         run: async () => {
           if (item.error || !item.waveJson) return { ...item, rendered: undefined };

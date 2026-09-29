@@ -151,6 +151,55 @@ describe("waveform provider primary geometry readiness", () => {
     expect(geometryRegistry.maps.get(nonReferenceSignalIds[1]!)).toBeInstanceOf(LazyAnalyticGeometryMap);
   });
 
+  it("starts each distinct Open waveform artifact before preparing duplicate owners", async () => {
+    const document = generatePerformanceDocument({ signalCount: 6, cycleCount: 20 });
+    const referenceSignalId = document.timeline.referenceClock!;
+    const repeatedBinaryIds = document.signals.slice(1, 5).map((signal) => signal.id);
+    const distinctBusId = document.signals[5]!.id;
+    const prepareOrder: string[] = [];
+    const adapter: WaveDromAdapter = {
+      toWaveJson: (source) => toWaveJson(source),
+      renderWave: vi.fn(async () => { throw new Error("Detached prepare/install should be used."); }),
+      prepareWave: vi.fn(async (signalId, waveJson) => {
+        prepareOrder.push(signalId);
+        return { signalId, ownerKey: signalId, svg: {} as SVGSVGElement, renderIndex: 0, waveJson };
+      }),
+      installWave: vi.fn((rendered) => rendered),
+      extractLocalGeometry: vi.fn(() => { throw new Error("SVG extraction is not used in analytic mode."); }),
+      geometryMetrics: () => ({ last: undefined, totalDurationMs: 0, totalUsesVisited: 0, totalGeometryEntriesEmitted: 0, totalDuplicateKeyChecks: 0, totalDuplicateKeyCollisions: 0, totalTransitionBrickLookups: 0, totalSkinPathParses: 0, totalMatrixReads: 0 }),
+      dispose: vi.fn(),
+      metrics: () => ({ renderCalls: 0, waveJsonDurationMs: 0, renderDurationMs: 0, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 }),
+    };
+    const context: WaveformProviderContext = {
+      sessionController: { snapshot: () => ({ document, revision: 0 }) },
+      getDocumentEpoch: () => 1,
+      mappingCache: new DisplayTimeMappingCache(),
+      adapter,
+      geometryRegistry: new GeometryRegistry(),
+      markOpenPhase: vi.fn(),
+      isPrimaryPresentationOpening: () => true,
+      invalidateSnapIndex: vi.fn(),
+      getViewMode: () => "Cycle",
+    };
+    const owner = () => ({ style: { removeProperty: vi.fn() }, dataset: {}, ownerDocument: {} as Document, isConnected: true }) as unknown as HTMLElement;
+    const provider = createWaveformSurfaceProvider(context);
+
+    await provider.mountWaveBatch!([
+      ...repeatedBinaryIds.slice(0, 2).map((signalId) => ({ signalId, owner: owner(), documentEpoch: 1 })),
+      { signalId: distinctBusId, owner: owner(), documentEpoch: 1 },
+      ...repeatedBinaryIds.slice(2).map((signalId) => ({ signalId, owner: owner(), documentEpoch: 1 })),
+      { signalId: referenceSignalId, owner: owner(), documentEpoch: 1 },
+    ]);
+
+    expect(prepareOrder).toEqual([
+      referenceSignalId,
+      repeatedBinaryIds[0],
+      distinctBusId,
+      ...repeatedBinaryIds.slice(1),
+    ]);
+    expect(adapter.installWave).toHaveBeenCalledTimes(document.signals.length);
+  });
+
   it("does not install a prepared waveform after its request becomes stale", async () => {
     const document = generatePerformanceDocument({ signalCount: 2, cycleCount: 10 });
     const referenceSignalId = document.timeline.referenceClock!;
