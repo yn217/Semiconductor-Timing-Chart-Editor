@@ -10,6 +10,23 @@ export type EventTableIndex<T extends EventTableChange> = Readonly<{
   nextEnd: (start: number) => number;
 }>;
 
+export type SelectedIndexRange = Readonly<{ count: number; first: number; last: number }>;
+
+/** Resolve a small selected-key set without scanning the full ordered table. */
+export function selectedIndexRange(indexByKey: ReadonlyMap<string, number>, selectedKeys: Iterable<string>): SelectedIndexRange {
+  let count = 0;
+  let first = Number.POSITIVE_INFINITY;
+  let last = -1;
+  for (const key of selectedKeys) {
+    const index = indexByKey.get(key);
+    if (index === undefined) continue;
+    count += 1;
+    first = Math.min(first, index);
+    last = Math.max(last, index);
+  }
+  return { count, first: count === 0 ? -1 : first, last };
+}
+
 export function buildEventTableIndex<T extends EventTableChange>(values: readonly T[], cycleCount: number): EventTableIndex<T> {
   const ordered = [...values].sort((left, right) => left.start - right.start);
   const occupied = new Set(ordered.map((change) => change.start));
