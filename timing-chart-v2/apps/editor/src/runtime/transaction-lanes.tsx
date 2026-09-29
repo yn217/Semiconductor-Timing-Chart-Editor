@@ -5,7 +5,7 @@ import { EditorIcon } from "../editor-icon.js";
 import type { TransactionLaneCommandActions } from "../application/editor-surface-command-controller.js";
 import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
-import { buildSourceIntervalIndex, querySourceIntervalIndex, sourceCycleWindowForXRange, type SourceIntervalIndex } from "./transaction-viewport-index.js";
+import { buildSourceIntervalIndex, queryFoldIntervals, querySourceIntervalIndex, sourceCycleWindowForXRange, type SourceIntervalIndex } from "./transaction-viewport-index.js";
 
 const LANE_ROW_HEIGHT = 40;
 const GROUP_HEADER_HEIGHT = 24;
@@ -175,9 +175,10 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   const dragSnapQueries = useRef(0);
   const dragThresholdCrossed = useRef(false);
   const current = preview ?? { start: transaction.start, end: transaction.end };
-  const containingFold = foldRanges.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.end <= toCycle);
-  const startHiddenFold = foldRanges.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.start < toCycle && transaction.end > toCycle);
-  const endHiddenFold = foldRanges.find(([fromCycle, toCycle]) => transaction.end > fromCycle && transaction.end <= toCycle && transaction.start < fromCycle);
+  const transactionFolds = queryFoldIntervals(foldRanges, current.start, current.end);
+  const containingFold = transactionFolds.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.end <= toCycle);
+  const startHiddenFold = transactionFolds.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.start < toCycle && transaction.end > toCycle);
+  const endHiddenFold = transactionFolds.find(([fromCycle, toCycle]) => transaction.end > fromCycle && transaction.end <= toCycle && transaction.start < fromCycle);
   const resolveCachedBoundaryX = (cycle: number) => {
     const cached = previewBoundaryCache.current.get(cycle);
     if (cached !== undefined) return cached;
@@ -309,7 +310,7 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
     else commands.resize(transaction.id, drag.edge, drag.edge === "start" ? final.start : final.end);
   };
 
-  const gaps = foldRanges.flatMap(([fromCycle, toCycle]) => {
+  const gaps = transactionFolds.flatMap(([fromCycle, toCycle]) => {
     if (fromCycle <= current.start || toCycle >= current.end) return [];
     const from = resolveVisibleBoundary(fromCycle, -1); const to = resolveVisibleBoundary(toCycle, 1);
     return from === undefined || to === undefined ? [] : [{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }];
@@ -318,7 +319,7 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   // undefined. Keep the canonical bar interaction as one owner, but expose
   // the visible source intervals explicitly so a folded transaction is
   // rendered as two segments around the axis break.
-  const visibleSegments = foldRanges.reduce<Array<{ start: number; end: number }>>((segments, [fromCycle, toCycle]) => {
+  const visibleSegments = transactionFolds.reduce<Array<{ start: number; end: number }>>((segments, [fromCycle, toCycle]) => {
     const next: Array<{ start: number; end: number }> = [];
     for (const segment of segments) {
       if (toCycle <= segment.start || fromCycle >= segment.end) next.push(segment);
@@ -330,8 +331,9 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
     return next;
   }, [{ start: current.start, end: current.end }]).filter((segment) => segment.end > segment.start);
   const phaseSegments = (phase: NonNullable<typeof phases>[number]) => {
-    const cuts = [phase.start, ...foldRanges.flatMap(([fromCycle, toCycle]) => phase.start < toCycle && phase.end > fromCycle ? [Math.max(phase.start, fromCycle), Math.min(phase.end, toCycle)] : []), phase.end];
-    return Array.from({ length: cuts.length - 1 }, (_, index) => ({ start: cuts[index]!, end: cuts[index + 1]! })).filter((segment) => segment.end > segment.start && !foldRanges.some(([fromCycle, toCycle]) => segment.start >= fromCycle && segment.end <= toCycle));
+    const phaseFolds = queryFoldIntervals(foldRanges, phase.start, phase.end);
+    const cuts = [phase.start, ...phaseFolds.flatMap(([fromCycle, toCycle]) => [Math.max(phase.start, fromCycle), Math.min(phase.end, toCycle)]), phase.end];
+    return Array.from({ length: cuts.length - 1 }, (_, index) => ({ start: cuts[index]!, end: cuts[index + 1]! })).filter((segment) => segment.end > segment.start && !phaseFolds.some(([fromCycle, toCycle]) => segment.start >= fromCycle && segment.end <= toCycle));
   };
   return <button ref={buttonRef} type="button" data-transaction-id={transaction.id} data-selected={String(selected)} data-drag-preview={String(preview !== undefined)} title={transaction.name} aria-label={transaction.name} style={{ left: startX, width: endX - startX, top: 4 + row * LANE_ROW_HEIGHT, ...(color ? { "--transaction-color": color } as CSSProperties : {}) }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)} onContextMenu={(event) => { event.preventDefault(); onSelect(transaction.id); onContextMenu?.(event, transaction.id); }} onPointerMove={updatePreview} onPointerUp={finish} onPointerCancel={cancel}><i data-edge="start" onPointerDown={(event) => begin(event, "start")} />{startHiddenFold && <i className="transaction-fold-affordance" data-fold-affordance="start-hidden" title="Transaction starts inside collapsed range" aria-label="Transaction start hidden in collapsed range" /> }<span onPointerDown={(event) => begin(event, "body")} data-label-compact={String(endX - startX < BAR_LABEL_MIN_PX)}>{endX - startX < BAR_LABEL_MIN_PX ? "" : transaction.name}</span>{visibleSegments.length > 1 && visibleSegments.map((segment, index) => { const from = resolveSegmentBoundary(segment.start, 1); const to = resolveSegmentBoundary(segment.end, -1); return from === undefined || to === undefined ? null : <i key={`segment-${index}`} className="transaction-axis-segment" data-transaction-segment="true" aria-hidden="true" style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }} />; })}{gaps.map((gap, index) => <i key={`axis-break-${index}`} className="transaction-axis-break-gap" style={gap} aria-hidden="true" />)}<div className="transaction-phases" aria-hidden="true">{phases?.flatMap((phase) => phaseSegments(phase).map((segment, index) => { const from = resolveSegmentBoundary(segment.start, 1); const to = resolveSegmentBoundary(segment.end, -1); if (from === undefined || to === undefined || endX <= startX) return null; return <small key={`${phase.start}:${phase.end}:${phase.name}:${index}`} data-phase-segment="true" title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }}>{to - from < PHASE_LABEL_MIN_PX ? "" : phase.name}</small>; }))}</div>{endHiddenFold && <i className="transaction-fold-affordance" data-fold-affordance="end-hidden" title="Transaction ends inside collapsed range" aria-label="Transaction end hidden in collapsed range" /> }<i data-edge="end" onPointerDown={(event) => begin(event, "end")} /></button>;
 }

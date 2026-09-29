@@ -1,5 +1,6 @@
 /** A start-sorted interval index for viewport queries in one Transaction lane. */
 export type SourceInterval = Readonly<{ id: string; start: number; end: number }>;
+export type FoldInterval = readonly [start: number, end: number];
 
 export type SourceIntervalIndex<T extends SourceInterval> = Readonly<{
   sorted: readonly T[];
@@ -40,6 +41,21 @@ export function querySourceIntervalIndex<T extends SourceInterval>(index: Source
     visit(node * 2 + 1, middle, rightBound);
   };
   visit(1, 0, index.leafBase);
+  return result;
+}
+
+/** Query the already-sorted, merged collapsed ranges intersecting [start, end). */
+export function queryFoldIntervals(ranges: readonly FoldInterval[], start: number, end: number): readonly FoldInterval[] {
+  if (end <= start || ranges.length === 0) return [];
+  let low = 0;
+  let high = ranges.length;
+  while (low < high) {
+    const middle = low + Math.floor((high - low) / 2);
+    if (ranges[middle]![1] <= start) low = middle + 1;
+    else high = middle;
+  }
+  const result: FoldInterval[] = [];
+  for (let index = low; index < ranges.length && ranges[index]![0] < end; index += 1) result.push(ranges[index]!);
   return result;
 }
 

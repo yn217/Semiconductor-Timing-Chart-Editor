@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildSourceIntervalIndex, querySourceIntervalIndex, sourceCycleWindowForXRange } from "../../apps/editor/src/runtime/transaction-viewport-index.js";
+import { buildSourceIntervalIndex, queryFoldIntervals, querySourceIntervalIndex, sourceCycleWindowForXRange } from "../../apps/editor/src/runtime/transaction-viewport-index.js";
 
 describe("Transaction viewport indexes", () => {
+  it("queries only collapsed fold intervals intersecting a source range", () => {
+    const ranges = Array.from({ length: 2_000 }, (_, index) => [index * 10, index * 10 + 5] as const);
+    expect(queryFoldIntervals(ranges, 10_004, 10_027)).toEqual([ranges[1000], ranges[1001], ranges[1002]]);
+    expect(queryFoldIntervals(ranges, 10_005, 10_010)).toEqual([]);
+    expect(queryFoldIntervals(ranges, 20_000, 20_001)).toEqual([]);
+  });
+
   it("queries only overlapping intervals while retaining a long interval that began before the viewport", () => {
     const transactions = [
       { id: "early-long", start: 0, end: 90 },
