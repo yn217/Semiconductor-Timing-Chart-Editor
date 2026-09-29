@@ -83,6 +83,16 @@ describe("buildDisplayTimeMapping", () => {
     ]), []);
     expect([3, 4, 6, 7, 8].map((cycle) => mapping.labelFor(cycle))).toEqual([100, 101, 103, 200, 201]);
   });
+
+  it("resolves repeated ruler labels from one cached sorted anchor index", () => {
+    const anchors = [
+      { id: "la_late" as never, source: 700, display: 2000 },
+      { id: "la_early" as never, source: 100, display: 500 },
+      { id: "la_middle" as never, source: 400, display: 1000 },
+    ];
+    const mapping = buildDisplayTimeMapping(timeline(1000, anchors), []);
+    expect(Array.from({ length: 5 }, (_, index) => mapping.labelFor([99, 100, 399, 400, 701][index]!))).toEqual([99, 500, 799, 1000, 2001]);
+  });
 });
 
 describe("DisplayTimeMappingCache", () => {
@@ -102,6 +112,17 @@ describe("DisplayTimeMappingCache", () => {
     expect(metrics.buildDurationP95Ms).toBe(metrics.buildDurationMs);
     expect(metrics.valueRemapPasses).toBe(0);
     expect(metrics.identityFastPathHits).toBe(0);
+  });
+
+  it("skips semantic key serialization for repeated immutable input identities", () => {
+    const cache = new DisplayTimeMappingCache();
+    const sourceTimeline = timeline(100_000, []);
+    const groups = [collapsedGroup("g1", 40, 80)];
+    const first = cache.get(sourceTimeline, groups);
+    const second = cache.get(sourceTimeline, groups);
+
+    expect(second).toBe(first);
+    expect(cache.metrics()).toMatchObject({ builds: 1, hits: 1, mappingKeyBuilds: 1 });
   });
 
   it("ignores unrelated TimeGroup fields while invalidating on fold geometry", () => {
