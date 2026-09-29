@@ -50,8 +50,17 @@ function initialState(signalId: SignalId | undefined): SelectionState {
  * Ribbon, overflow and context-menu surfaces consume this same result so an
  * enabled command always describes the command router's current target set.
  */
+// #857: stable-ID lookups go through an index keyed by the owning collection's identity instead of repeated whole-collection scans.
+const signalIndexByCollection = new WeakMap<CanonicalDocument["signals"], ReadonlyMap<SignalId, CanonicalDocument["signals"][number]>>();
+function signalIndexOf(signals: CanonicalDocument["signals"]) {
+  let index = signalIndexByCollection.get(signals);
+  if (!index) { index = new Map(signals.map((signal) => [signal.id, signal] as const)); signalIndexByCollection.set(signals, index); }
+  return index;
+}
+
 export function deriveSelectionCapabilities(document: CanonicalDocument, selection: SelectionState): SelectionCapabilities {
-  const selectedSignal = selection.signalId === undefined ? undefined : document.signals.find((signal) => signal.id === selection.signalId);
+  const signalsById = signalIndexOf(document.signals);
+  const selectedSignal = selection.signalId === undefined ? undefined : signalsById.get(selection.signalId);
   const selectedGroup = selection.groupId === undefined ? undefined : document.signalGroups.find((group) => group.id === selection.groupId);
   const selectedAnnotation = selection.annotationId === undefined ? undefined : document.annotations.find((annotation) => annotation.id === selection.annotationId);
   const selectedTransaction = selection.transactionId === undefined ? undefined : document.transactions.find((transaction) => transaction.id === selection.transactionId);
@@ -72,8 +81,8 @@ export function deriveSelectionCapabilities(document: CanonicalDocument, selecti
       ? (() => { const index = document.signalGroups.findIndex((group) => group.id === selectedGroup.id); return index >= 0 && index < document.signalGroups.length - 1; })()
       : false;
   const canRename = (selection.signalIds.size === 1 && selectedSignal !== undefined) || (selection.signalIds.size === 0 && selection.transactionIds.size <= 1 && (selectedGroup !== undefined || selectedTransaction !== undefined));
-  const canShow = (selection.signalIds.size > 0 && selectedSignal !== undefined && document.signals.some((signal) => selection.signalIds.has(signal.id) && signal.display.visible === false)) || selectedTransactions.some((transaction) => transaction.visible === false);
-  const canHide = (selection.signalIds.size > 0 && selectedSignal !== undefined && document.signals.some((signal) => selection.signalIds.has(signal.id) && signal.display.visible !== false)) || selectedTransactions.some((transaction) => transaction.visible !== false);
+  const canShow = (selection.signalIds.size > 0 && selectedSignal !== undefined && [...selection.signalIds].some((id) => signalsById.get(id)?.display.visible === false)) || selectedTransactions.some((transaction) => transaction.visible === false);
+  const canHide = (selection.signalIds.size > 0 && selectedSignal !== undefined && [...selection.signalIds].some((id) => { const signal = signalsById.get(id); return signal !== undefined && signal.display.visible !== false; })) || selectedTransactions.some((transaction) => transaction.visible !== false);
   return { hasSelectedSignal, hasSelectedEntity, hasSelectedClipboard, hasDeletableSelection, canRename, canMoveUp, canMoveDown, canShow, canHide };
 }
 
