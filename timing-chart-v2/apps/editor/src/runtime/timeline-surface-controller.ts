@@ -105,6 +105,7 @@ export interface TimelineSurfaceStatePort {
   readonly setRenameDialogOpen: Setter<boolean>;
   readonly setCollapsedGroups: (next: ReadonlySet<GroupId>) => void;
   readonly resetCollapsedGroups: () => void;
+  readonly resetForDocument: (cycleCount: number) => void;
   readonly toggleCollapsedGroup: (id: GroupId) => void;
   readonly closeContextMenu: () => void;
 }
@@ -144,7 +145,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
   const { application, documentLifecycle, selection, navigation: timelineNavigation, commandRegistry, executeBatch } = input;
   const { host, viewport, ruler, gridLayer, viewportLower, rulerLower, hostLower, gridLayerLower, signalSplitRuntimeRef } = input.dom;
   const { collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef } = input.presentation;
-  const { setRuntimeDiagnostics, setProblem, setTreePresentationRevision, setTransactionPresentationRevision, setRangePresentationRevision, setPlayheadPresentationRevision, setTimelineRange, setRangeSelectionActive, setSelectedCycle, setBottomPinned, setPinnedBottomSelection, setPinnedSignalIds, setTreeFilter, setTreeTypeFilter, setTreeAddMenuOpen, setTreeMoreMenuOpen, setContextMenu, setArrowPickStatus, setRenameDialogOpen, resetCollapsedGroups, toggleCollapsedGroup, closeContextMenu } = input.state;
+  const { setRuntimeDiagnostics, setProblem, setTreePresentationRevision, setTransactionPresentationRevision, setRangePresentationRevision, setPlayheadPresentationRevision, setTimelineRange, setRangeSelectionActive, setSelectedCycle, setBottomPinned, setPinnedBottomSelection, setPinnedSignalIds, setTreeFilter, setTreeTypeFilter, setTreeAddMenuOpen, setTreeMoreMenuOpen, setContextMenu, setArrowPickStatus, setRenameDialogOpen, resetForDocument, toggleCollapsedGroup, closeContextMenu } = input.state;
   const viewMetricsOwner = input.viewMetricsOwner;
   const signalSplitEnabled = input.signalSplitEnabled;
   const signalSplitRatio = input.signalSplitRatio;
@@ -169,7 +170,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     const geometrySvgs = geometryRegistry.svgs;
     const geometryMaps = geometryRegistry.maps;
     let markOpenPhase: (phase: string, timestamp?: number) => void = () => undefined;
-    const openPhaseTracker = createOpenPhaseTracker(rendererHost, () => {
+    const openPhaseTracker = createOpenPhaseTracker(rendererHost, undefined, () => {
       input.application.runPendingTimingDiagnostics(() => markOpenPhase("diagnostics-ready"));
     });
     markOpenPhase = openPhaseTracker.mark;
@@ -664,16 +665,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       delete rendererHost.dataset.cycleViewReady;
       setBottomPinned(false);
       setPinnedBottomSelection(undefined);
-      setRangeSelectionActive(false);
-      rangeSelectionActiveRef.current = false;
-      const replacementRange = { start: 0, end: Math.min(1, canonicalDocument.timeline.cycleCount) };
-      timelineRangeRef.current = replacementRange;
-      setTimelineRange(replacementRange);
-      selectedCycleRef.current = 0;
-      setSelectedCycle(0);
-      selectedEdgeRef.current = undefined;
+      resetForDocument(canonicalDocument.timeline.cycleCount);
       selection.clear();
-      resetCollapsedGroups();
       setTreeFilter("");
       setTreeTypeFilter("all");
       setTreeAddMenuOpen(false);

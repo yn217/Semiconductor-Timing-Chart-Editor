@@ -53,7 +53,7 @@ type OpenReadiness = "opening" | "document-ready" | "presentation-ready" | "visi
 const OPEN_READINESS_ORDER: readonly OpenReadiness[] = ["opening", "document-ready", "presentation-ready", "visible-waveforms-ready", "idle"];
 
 /** Owns open/first-paint instrumentation for the editor runtime bridge. */
-export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentationReady?: () => void): OpenPhaseTracker {
+export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentationReady?: () => void, onVisibleWaveformsReady?: () => void): OpenPhaseTracker {
   const marks: Record<string, number> = {};
   let active = false;
   let rowShellPainted = false;
@@ -62,6 +62,7 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentation
   let readiness: OpenReadiness = "opening";
   let readinessIndex = 0;
   let presentationReadyNotified = false;
+  let visibleWaveformsReadyNotified = false;
   let visibleWaveformsCompletedAt: number | undefined;
   let idleCompletedAt: number | undefined;
   let diagnosticsCompletedAt: number | undefined;
@@ -109,6 +110,10 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentation
     globalThis.performance.mark(`timing-chart-v2:${next}`);
     rendererHost.dataset.openReadiness = readiness;
     if (next === "presentation-ready") rendererHost.dataset.cycleViewReady = "true";
+    if (next === "visible-waveforms-ready" && !visibleWaveformsReadyNotified) {
+      visibleWaveformsReadyNotified = true;
+      onVisibleWaveformsReady?.();
+    }
     if (next === "idle") rendererHost.dataset.editorIdle = "true";
   };
   const mark = (phase: string, phaseTimestamp = globalThis.performance.now()): void => {
@@ -191,6 +196,7 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentation
       readiness = "opening";
       readinessIndex = OPEN_READINESS_ORDER.indexOf(readiness);
       presentationReadyNotified = false;
+      visibleWaveformsReadyNotified = false;
       visibleWaveformsCompletedAt = undefined;
       idleCompletedAt = undefined;
       diagnosticsCompletedAt = undefined;
