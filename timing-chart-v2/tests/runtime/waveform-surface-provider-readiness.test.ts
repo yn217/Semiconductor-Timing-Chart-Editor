@@ -361,6 +361,51 @@ describe("waveform provider primary geometry readiness", () => {
     expect(ready).toHaveBeenCalledTimes(1);
   });
 
+  it("publishes analytic owner geometry while shared SVG image decoding is pending", async () => {
+    const document = generatePerformanceDocument({ signalCount: 2, cycleCount: 10 });
+    const referenceSignalId = document.timeline.referenceClock!;
+    const nonReferenceSignalId = document.signals.find((signal) => signal.id !== referenceSignalId)!.id;
+    const decode = deferred<void>();
+    const geometryRegistry = new GeometryRegistry();
+    const adapter: WaveDromAdapter = {
+      toWaveJson: (source) => toWaveJson(source),
+      renderWave: vi.fn(async () => { throw new Error("Detached prepare/install should be used."); }),
+      prepareWave: vi.fn(async (signalId, waveJson) => ({
+        signalId, ownerKey: signalId, svg: {} as SVGSVGElement, renderIndex: 0, waveJson,
+        svgImageReady: decode.promise,
+      })),
+      installWave: vi.fn((rendered) => rendered),
+      extractLocalGeometry: vi.fn(() => { throw new Error("SVG extraction is not used in analytic mode."); }),
+      geometryMetrics: () => ({ last: undefined, totalDurationMs: 0, totalUsesVisited: 0, totalGeometryEntriesEmitted: 0, totalDuplicateKeyChecks: 0, duplicateKeyCollisions: 0, transitionBrickLookups: 0, skinPathParses: 0, matrixReads: 0 }),
+      dispose: vi.fn(),
+      metrics: () => ({ renderCalls: 0, waveJsonDurationMs: 0, renderDurationMs: 0, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 }),
+    };
+    const markOpenPhase = vi.fn();
+    const provider = createWaveformSurfaceProvider({
+      sessionController: { snapshot: () => ({ document, revision: 0 }) },
+      getDocumentEpoch: () => 1,
+      mappingCache: new DisplayTimeMappingCache(),
+      adapter,
+      geometryRegistry,
+      markOpenPhase,
+      isPrimaryPresentationOpening: () => true,
+      invalidateSnapIndex: vi.fn(),
+      getViewMode: () => "Cycle",
+    });
+    const owner = () => ({ style: { removeProperty: vi.fn() }, dataset: {}, isConnected: true }) as unknown as HTMLElement;
+
+    const batch = provider.mountWaveBatch!([
+      { signalId: referenceSignalId, owner: owner(), documentEpoch: 1 },
+      { signalId: nonReferenceSignalId, owner: owner(), documentEpoch: 1 },
+    ]);
+    await vi.waitFor(() => expect(geometryRegistry.maps.has(nonReferenceSignalId)).toBe(true));
+    expect(markOpenPhase).not.toHaveBeenCalledWith("first-visible-wave-painted");
+
+    decode.resolve();
+    await batch;
+    expect(markOpenPhase).toHaveBeenCalledWith("first-visible-wave-painted");
+  });
+
   it("marks the first visible WaveDrom artifact when it mounts, without waiting for later owners", async () => {
     const document = generatePerformanceDocument({ signalCount: 2, cycleCount: 10 });
     const referenceSignalId = document.timeline.referenceClock!;

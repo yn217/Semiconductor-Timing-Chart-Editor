@@ -472,11 +472,6 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         if (!item.rendered || item.stale === true) continue;
         registerVisibleWaveReady(item.request, item.rendered);
       }
-      if (imageReady.length > 0) {
-        const imageReadyStartedAt = globalThis.performance.now();
-        await Promise.all(imageReady);
-        renderAwaitMs += Math.max(0, globalThis.performance.now() - imageReadyStartedAt);
-      }
       const renderedByRequest = new Map(renderResults.map((item) => [item.request, item] as const));
       const preparedByRequest = new Map(prepared.map((item) => [item.request, item] as const));
       const results = requests.map((request) => {
@@ -541,6 +536,14 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       // query while the remaining owners were still being accepted.
       if (geometryRegistryChanged) context.invalidateSnapIndex();
       if (referenceGeometryReady && !referenceGeometryNotified) context.onReferenceGeometryReady?.();
+      // Geometry is derived from validated WaveJSON, not decoded image pixels.
+      // Publish it while asynchronous SVG image decodes are still in flight
+      // instead of serializing registry work behind the final paint dependency.
+      if (imageReady.length > 0) {
+        const imageReadyStartedAt = globalThis.performance.now();
+        await Promise.all(imageReady);
+        renderAwaitMs += Math.max(0, globalThis.performance.now() - imageReadyStartedAt);
+      }
       if (primaryOpenBatch) {
         const openStageTotals = stageTotals!;
         for (const result of renderResults) {
