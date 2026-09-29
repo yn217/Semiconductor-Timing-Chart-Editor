@@ -342,7 +342,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       const reprojectSnapshot = sessionController.snapshot();
       // Only owners that never received an SVG (deferred while Transaction mode was active) need a paint;
       // already-painted waves must not re-render on every mode round trip.
-      const paintedSignalIds = new Set(leavingDeferredMode ? [...rendererHost.querySelectorAll<HTMLElement>("[data-role='wave-owner'][data-signal-id]")].filter((owner) => owner.querySelector("svg") !== null).map((owner) => owner.dataset.signalId as SignalId) : []);
+      const paintedSignalIds = new Set(leavingDeferredMode ? [...rendererHost.querySelectorAll<HTMLElement>("[data-role='wave-owner'][data-signal-id]")].filter((owner) => owner.querySelector("svg, canvas[data-wave-canvas]") !== null).map((owner) => owner.dataset.signalId as SignalId) : []);
       const unpaintedSignalIds = leavingDeferredMode ? reprojectSnapshot.document.signals.map((signal) => signal.id).filter((id) => !paintedSignalIds.has(id)) : [];
       projection = projectionCoordinator.project({ snapshot: reprojectSnapshot, changeSet: unpaintedSignalIds.length > 0 ? { waveSemantics: unpaintedSignalIds } : {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);

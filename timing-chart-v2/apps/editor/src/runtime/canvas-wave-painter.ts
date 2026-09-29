@@ -40,31 +40,107 @@ function canvasSupported(): boolean {
 /**
  * Viewport-bounded painting: one canvas per owner, only as wide as the visible slice plus a margin, repainted on
  * scroll. Painting the whole window (tiles or one big canvas) just moves the cost into canvas backing stores.
+ *
+ * #787: repaint scheduling is owned per `.cycle-viewport`, not per row. One scheduler listens on the scroll elements that can
+ * actually scroll the time domain (the `.cycle-viewport` itself, and in Cycle Mode the `[data-role="timeline-viewport"]`
+ * wrapper -- native scroll does not bubble, so listening on an ancestor would miss it), coalesces to a single RAF, and repaints
+ * every registered owner. Vertical-only scroll leaves every scrollLeft unchanged and repaints nothing. Owners that left the DOM
+ * (renderer eviction / document replacement) are released on the next paint or flush, and a scheduler with no owners removes
+ * its listeners.
  */
 const MARGIN_PX = 512;
-const painted = new WeakMap<HTMLElement, { wave: WaveJsonSignal; canvas: HTMLCanvasElement; viewport: HTMLElement | null; raf: number; onScroll: () => void; onRestyle: () => void }>();
+interface CanvasOwnerState { wave: WaveJsonSignal; readonly canvas: HTMLCanvasElement; readonly scheduler: ViewportScheduler | undefined; readonly onRestyle: () => void }
+const painted = new WeakMap<HTMLElement, CanvasOwnerState>();
+
+class ViewportScheduler {
+  readonly owners = new Set<HTMLElement>();
+  readonly #listened = new Map<HTMLElement, number>();
+  #raf = 0;
+  flushCount = 0;
+  readonly #onScroll = (event: Event): void => {
+    const source = event.currentTarget as HTMLElement;
+    if (this.#listened.get(source) === source.scrollLeft) return; // vertical-only scroll: nothing horizontal moved
+    this.#listened.set(source, source.scrollLeft);
+    if (this.#raf === 0) this.#raf = requestAnimationFrame(() => { this.#raf = 0; this.flush(); });
+  };
+  constructor(private readonly viewport: HTMLElement) {}
+  /** Attach to every element that can scroll the time domain for `owner`. */
+  attach(owner: HTMLElement): void {
+    for (const element of [this.viewport, owner.closest<HTMLElement>("[data-role='timeline-viewport']")]) {
+      if (!element || this.#listened.has(element)) continue;
+      this.#listened.set(element, element.scrollLeft);
+      element.addEventListener("scroll", this.#onScroll, { passive: true });
+    }
+  }
+  flush(): void {
+    this.flushCount += 1;
+    for (const owner of [...this.owners]) {
+      const state = painted.get(owner);
+      if (!state || !owner.isConnected || !owner.contains(state.canvas)) { this.release(owner); continue; }
+      drawVisible(owner, state.wave, state.canvas, this.viewport);
+    }
+    if (this.owners.size === 0) this.dispose();
+  }
+  release(owner: HTMLElement): void {
+    const state = painted.get(owner);
+    if (state) owner.removeEventListener(WAVE_CANVAS_RESTYLE_EVENT, state.onRestyle);
+    painted.delete(owner);
+    this.owners.delete(owner);
+  }
+  dispose(): void {
+    if (this.#raf !== 0) cancelAnimationFrame(this.#raf);
+    this.#raf = 0;
+    for (const element of this.#listened.keys()) element.removeEventListener("scroll", this.#onScroll);
+    this.#listened.clear();
+    schedulers.delete(this.viewport);
+  }
+  get listenerCount(): number { return this.#listened.size; }
+}
+const schedulers = new WeakMap<HTMLElement, ViewportScheduler>();
+
+/** Release one owner's Canvas registration (renderer eviction). Safe to call for owners that were never painted. */
+export function disposeWaveCanvas(owner: HTMLElement): void {
+  const state = painted.get(owner);
+  if (!state) return;
+  const scheduler = state.scheduler;
+  if (!scheduler) { painted.delete(owner); owner.removeEventListener(WAVE_CANVAS_RESTYLE_EVENT, state.onRestyle); return; }
+  scheduler.release(owner);
+  if (scheduler.owners.size === 0) scheduler.dispose();
+}
 
 export function paintWaveCanvas(owner: HTMLElement, wave: WaveJsonSignal): void {
   let state = painted.get(owner);
   if (!state || !owner.contains(state.canvas)) {
-    if (state) { state.viewport?.removeEventListener("scroll", state.onScroll); owner.removeEventListener(WAVE_CANVAS_RESTYLE_EVENT, state.onRestyle); cancelAnimationFrame(state.raf); }
+    if (state) disposeWaveCanvas(owner);
     const canvas = owner.ownerDocument.createElement("canvas");
     canvas.setAttribute("data-wave-canvas", "");
     canvas.style.cssText = `display:block;position:absolute;top:0;height:${ROW_HEIGHT}px;`;
     owner.replaceChildren(canvas);
+    owner.dataset.waveRenderer = "canvas";
     const viewport = owner.closest<HTMLElement>(".cycle-viewport");
-    const created = { wave, canvas, viewport, raf: 0, onScroll: () => undefined as void, onRestyle: () => undefined as void };
-    created.onScroll = () => { cancelAnimationFrame(created.raf); created.raf = requestAnimationFrame(() => drawVisible(owner, created.wave, created.canvas, created.viewport)); };
-    created.onRestyle = () => drawVisible(owner, created.wave, created.canvas, created.viewport);
-    viewport?.addEventListener("scroll", created.onScroll, { passive: true });
-    owner.addEventListener(WAVE_CANVAS_RESTYLE_EVENT, created.onRestyle);
+    let scheduler = viewport ? schedulers.get(viewport) : undefined;
+    if (viewport && !scheduler) { scheduler = new ViewportScheduler(viewport); schedulers.set(viewport, scheduler); }
+    const onRestyle = () => { const current = painted.get(owner); if (current) drawVisible(owner, current.wave, current.canvas, scheduler ? viewport ?? null : null); };
+    const created: CanvasOwnerState = { wave, canvas, scheduler, onRestyle };
+    owner.addEventListener(WAVE_CANVAS_RESTYLE_EVENT, onRestyle);
     painted.set(owner, created);
+    scheduler?.owners.add(owner);
+    scheduler?.attach(owner);
     state = created;
+    // Owners of a replaced document/eviction left the DOM: release them now so listeners cannot accumulate across churn.
+    if (scheduler) for (const other of [...scheduler.owners]) if (!other.isConnected) scheduler.release(other);
   }
   state.wave = wave;
-  drawVisible(owner, wave, state.canvas, state.viewport);
+  drawVisible(owner, wave, state.canvas, owner.closest<HTMLElement>(".cycle-viewport"));
 }
 
+/** Diagnostics for tests: scheduler-driven (scroll) repaint frames on `viewport`. */
+export function canvasSchedulerFlushCount(viewport: HTMLElement): number { return schedulers.get(viewport)?.flushCount ?? 0; }
+
+/** Diagnostics for tests: how many scroll listeners the Canvas painter holds on `viewport` (0 when no scheduler exists). */
+export function canvasSchedulerListenerCount(viewport: HTMLElement): number { return schedulers.get(viewport)?.listenerCount ?? 0; }
+
+const paintedKeys = new WeakMap<HTMLCanvasElement, string>();
 // Built lazily: Path2D does not exist in non-canvas (jsdom) environments that merely import this module.
 let gapPaths: { mask: Path2D; lines: Path2D[] } | undefined;
 const gapSymbol = () => gapPaths ??= { mask: new Path2D("m7,-2 -4,0 c -5,0 -5,24 -10,24 l 4,0 C 2,22 2,-2 7,-2 z"), lines: [new Path2D("M-7,22 C -2,22 -2,-2 3,-2"), new Path2D("M-3,22 C 2,22 2,-2 7,-2")] };
@@ -85,13 +161,21 @@ function drawVisible(owner: HTMLElement, wave: WaveJsonSignal, canvas: HTMLCanva
   const visibleEnd = viewRect ? Math.min(totalWidth, viewRect.right - ownerRect.left + MARGIN_PX) : Math.min(totalWidth, 2048);
   const width = Math.max(1, Math.ceil(visibleEnd - visibleStart));
   // Owner css width maps local units 1:1 only when its width equals totalWidth; the prototype keeps that scale.
-  canvas.width = width;
-  canvas.height = ROW_HEIGHT;
+  // Identical inputs produce identical pixels: skip the repaint (a vertical scroll or a re-publication of an unchanged wave
+  // re-enters here with the same wave content, slice and color).
+  const color = owner.dataset.waveformStyleColor || WAVEFORM_DEFAULT_STROKE;
+  const paintKey = `${visibleStart}|${width}|${color}|${wave.wave}|${wave.period ?? 1}|${wave.phase ?? 0}|${cycles}|${(wave.data ?? []).join("")}`;
+  if (paintedKeys.get(canvas) === paintKey) return;
+  paintedKeys.set(canvas, paintKey);
+  // Resetting width/height reallocates the backing store: only do it when the dimensions actually changed (#787).
+  if (canvas.width !== width) canvas.width = width;
+  if (canvas.height !== ROW_HEIGHT) canvas.height = ROW_HEIGHT;
   canvas.style.width = `${width}px`;
   canvas.style.left = `${visibleStart}px`;
   const context = canvas.getContext("2d");
   if (!context) return;
-  const color = owner.dataset.waveformStyleColor || WAVEFORM_DEFAULT_STROKE;
+  context.save();
+  context.setTransform(1, 0, 0, 1, 0, 0);
   context.clearRect(0, 0, width, ROW_HEIGHT);
   context.translate(-visibleStart, 0);
   // WaveDrom drops the phase-shifted head of the lane; nothing is drawn left of the origin.
@@ -146,4 +230,5 @@ function drawVisible(owner: HTMLElement, wave: WaveJsonSignal, canvas: HTMLCanva
     for (const line of gapSymbol().lines) context.stroke(line);
     context.restore();
   }
+  context.restore();
 }
