@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canonicalReferences, referencesTo, referencesToSignal, referencesToTimeGroup, validateCanonicalDocument } from "@timing-chart-v2/schema";
+import { canonicalReferences, getCanonicalReferenceMetrics, referencesTo, referencesToSignal, referencesToTargets, referencesToTimeGroup, resetCanonicalReferenceMetrics, validateCanonicalDocument } from "@timing-chart-v2/schema";
 import type { AnnotationId, BookmarkId, CanonicalDocument, LabelAnchorId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -31,6 +31,28 @@ describe("canonical stable-ID reference registry", () => {
     };
 
     expect(referencesToSignal(nextSnapshot, signalId)).toBe(originalBucket);
+  });
+
+  it("queries many targets from one indexed pass and reports bounded work", () => {
+    const document = canonicalFixture();
+    const authoritative = canonicalReferences(document);
+    const targetIds = [document.signals[0]!.id, document.signals[1]!.id, document.signals[0]!.id];
+    const uniqueTargetIds = new Set(targetIds);
+    const expected = authoritative.filter((reference) => reference.targetType === "signal" && uniqueTargetIds.has(reference.targetId as SignalId));
+
+    resetCanonicalReferenceMetrics();
+    const actual = referencesToTargets(document, "signal", targetIds);
+    const metrics = getCanonicalReferenceMetrics();
+
+    expect(actual).toEqual(expected);
+    expect(metrics).toEqual({
+      indexBuilds: 1,
+      canonicalReferenceScans: 1,
+      canonicalReferencesEnumerated: authoritative.length,
+      targetQueries: 1,
+      referencesVisited: expected.length,
+      affectedSignalCount: uniqueTargetIds.size,
+    });
   });
 
   it("rebuilds document-owned references when the stable document identity changes", () => {

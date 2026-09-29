@@ -24,10 +24,41 @@ export interface CanonicalReference {
   readonly path: string;
 }
 
-type CanonicalReferenceIndex = ReadonlyMap<
-  CanonicalReferenceTarget,
-  ReadonlyMap<string, readonly CanonicalReference[]>
->;
+type CanonicalReferenceIndex = Readonly<{
+  byTarget: ReadonlyMap<CanonicalReferenceTarget, ReadonlyMap<string, readonly CanonicalReference[]>>;
+  order: ReadonlyMap<CanonicalReference, number>;
+}>;
+
+export interface CanonicalReferenceMetrics {
+  readonly indexBuilds: number;
+  readonly canonicalReferenceScans: number;
+  readonly canonicalReferencesEnumerated: number;
+  readonly targetQueries: number;
+  readonly referencesVisited: number;
+  readonly affectedSignalCount: number;
+}
+
+const referenceMetrics = {
+  indexBuilds: 0,
+  canonicalReferenceScans: 0,
+  canonicalReferencesEnumerated: 0,
+  targetQueries: 0,
+  referencesVisited: 0,
+  affectedSignalCount: 0,
+};
+
+export function getCanonicalReferenceMetrics(): CanonicalReferenceMetrics {
+  return Object.freeze({ ...referenceMetrics });
+}
+
+export function resetCanonicalReferenceMetrics(): void {
+  referenceMetrics.indexBuilds = 0;
+  referenceMetrics.canonicalReferenceScans = 0;
+  referenceMetrics.canonicalReferencesEnumerated = 0;
+  referenceMetrics.targetQueries = 0;
+  referenceMetrics.referencesVisited = 0;
+  referenceMetrics.affectedSignalCount = 0;
+}
 
 // Reference results are owned by these immutable collections, not by the root
 // document wrapper. The document ID is stored at the leaf because it supplies
@@ -43,6 +74,7 @@ const referenceIndexes: ReferenceIndexCacheNode = new WeakMap();
  * individual object shapes.
  */
 export function canonicalReferences(document: CanonicalDocument): readonly CanonicalReference[] {
+  referenceMetrics.canonicalReferenceScans += 1;
   const references: CanonicalReference[] = [];
   document.signals.forEach((signal, index) => {
     if (signal.type !== "clock" && signal.type !== "commentRow" && signal.enumId !== undefined) references.push({ kind: "signal.enum", ownerId: signal.id, targetId: signal.enumId, targetType: "enum", path: `$.signals[${index}].enumId` });
@@ -139,6 +171,7 @@ export function canonicalReferences(document: CanonicalDocument): readonly Canon
       path: `$.signalGroups[${groupIndex}].spacers[${spacerIndex}]`,
     }));
   });
+  referenceMetrics.canonicalReferencesEnumerated += references.length;
   return references;
 }
 
@@ -166,7 +199,11 @@ function canonicalReferenceIndex(document: CanonicalDocument): CanonicalReferenc
   if (cached !== undefined && !(cached instanceof WeakMap) && cached.documentId === document.document.id) return cached.index;
 
   const mutable = new Map<CanonicalReferenceTarget, Map<string, CanonicalReference[]>>();
-  for (const reference of canonicalReferences(document)) {
+  const orderedReferences = canonicalReferences(document);
+  const order = new Map<CanonicalReference, number>();
+  referenceMetrics.indexBuilds += 1;
+  for (const [index, reference] of orderedReferences.entries()) {
+    order.set(reference, index);
     let byId = mutable.get(reference.targetType);
     if (byId === undefined) {
       byId = new Map();
@@ -180,13 +217,41 @@ function canonicalReferenceIndex(document: CanonicalDocument): CanonicalReferenc
   for (const byId of mutable.values()) {
     for (const bucket of byId.values()) Object.freeze(bucket);
   }
-  const index: CanonicalReferenceIndex = mutable;
+  const index: CanonicalReferenceIndex = { byTarget: mutable, order };
   node.set(leafOwner, { documentId: document.document.id, index });
   return index;
 }
 
 export function referencesTo(document: CanonicalDocument, targetType: CanonicalReferenceTarget, targetId: string): readonly CanonicalReference[] {
-  return canonicalReferenceIndex(document).get(targetType)?.get(targetId) ?? EMPTY_REFERENCES;
+  return referencesToTargets(document, targetType, [targetId]);
+}
+
+/** Query several target buckets from one immutable reference index lookup. */
+export function referencesToTargets(
+  document: CanonicalDocument,
+  targetType: CanonicalReferenceTarget,
+  targetIds: Iterable<string>,
+): readonly CanonicalReference[] {
+  const uniqueTargetIds = [...new Set(targetIds)];
+  referenceMetrics.targetQueries += 1;
+  if (targetType === "signal") referenceMetrics.affectedSignalCount += uniqueTargetIds.length;
+  if (uniqueTargetIds.length === 0) return EMPTY_REFERENCES;
+
+  const index = canonicalReferenceIndex(document);
+  const byId = index.byTarget.get(targetType);
+  if (uniqueTargetIds.length === 1) {
+    const bucket = byId?.get(uniqueTargetIds[0]!) ?? EMPTY_REFERENCES;
+    referenceMetrics.referencesVisited += bucket.length;
+    return bucket;
+  }
+  const references: CanonicalReference[] = [];
+  for (const targetId of uniqueTargetIds) {
+    const bucket = byId?.get(targetId);
+    if (bucket !== undefined) references.push(...bucket);
+  }
+  references.sort((left, right) => index.order.get(left)! - index.order.get(right)!);
+  referenceMetrics.referencesVisited += references.length;
+  return references.length === 0 ? EMPTY_REFERENCES : Object.freeze(references);
 }
 
 const EMPTY_REFERENCES: readonly CanonicalReference[] = Object.freeze([]);
