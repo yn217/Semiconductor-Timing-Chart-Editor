@@ -17,7 +17,7 @@ export function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometry
   const semanticDisplayCycleCount = geometry.cycleBoundaryEntries?.().at(-1)?.cycle ?? mapping.displayCycleCount;
   const gridTickBudget = semanticDisplayCycleCount > 4096 ? 512 : Infinity;
   for (const displayCycle of presentationCycles(semanticDisplayCycleCount, pixelsPerCycle, gridTickBudget, tcStride)) {
-    const sourceCycle = displayCycle === mapping.displayCycleCount ? mapping.displayToSource[displayCycle] ?? mapping.displayCycleCount : (mapping.displayToSource[displayCycle] ?? displayCycle);
+    const sourceCycle = displayCycle === mapping.displayCycleCount ? mapping.sourceCycleCount : (mapping.sourceAtDisplay(displayCycle) ?? displayCycle);
     const anchor = geometry.find({ signalId: axisOwnerSignalId, cycle: sourceCycle, point: "cycle-start" });
     if (!anchor) continue;
     const line = element.ownerDocument.createElement("span");

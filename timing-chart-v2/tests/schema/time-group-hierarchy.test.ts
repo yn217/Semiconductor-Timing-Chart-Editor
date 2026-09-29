@@ -15,9 +15,11 @@ it("keeps old flat documents as roots and preserves nested Save/Open exactly", (
   expect(restored.ok).toBe(true);
   if (restored.ok) expect(restored.document).toEqual(nested);
   const hierarchy = buildTimeGroupHierarchy(nested.timeGroups);
+  expect(buildTimeGroupHierarchy(nested.timeGroups)).toBe(hierarchy);
   expect(hierarchy.maxDepth).toBe(3);
   expect(hierarchy.depthById.get("d" as TimeGroupId)).toBe(3);
   expect(hierarchy.roots.map(g => g.id)).toEqual(["a", "e"]);
+  expect(hierarchy.groupsByDepth.map(level => level.map(g => g.id))).toEqual([["a", "e"], ["b"], ["c"], ["d"]]);
   expect(buildTimeGroupHierarchy([...nested.timeGroups].reverse())).toEqual(hierarchy);
 });
 

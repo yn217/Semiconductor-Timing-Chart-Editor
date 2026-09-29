@@ -34,11 +34,16 @@ export interface TimeGroupHierarchy {
   readonly childrenByParent: ReadonlyMap<TimeGroupId, readonly TimeGroup[]>;
   /** Roots have depth 0; an empty forest has maxDepth 0. */
   readonly depthById: ReadonlyMap<TimeGroupId, number>;
+  readonly groupsByDepth: readonly (readonly TimeGroup[])[];
   readonly maxDepth: number;
 }
 
+const hierarchyByCollection = new WeakMap<readonly TimeGroup[], TimeGroupHierarchy>();
+
 /** Temporal order, then opaque ID tie-break; independent of canonical array order. */
 export function buildTimeGroupHierarchy(groups: readonly TimeGroup[]): TimeGroupHierarchy {
+  const cached = hierarchyByCollection.get(groups);
+  if (cached) return cached;
   const problems = validateTimeGroupHierarchy(groups);
   if (problems.length) throw Object.assign(new Error("Invalid TimeGroup hierarchy."), { problems });
   const ordered = [...groups].sort((a, b) => a.start - b.start || b.end - a.end || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
@@ -61,5 +66,9 @@ export function buildTimeGroupHierarchy(groups: readonly TimeGroup[]): TimeGroup
     maxDepth = Math.max(maxDepth, depth);
     for (const child of childrenByParent.get(group.id) ?? []) pending.push({ group: child, depth: depth + 1 });
   }
-  return { roots, childrenByParent, depthById, maxDepth };
+  const groupsByDepth: TimeGroup[][] = Array.from({ length: maxDepth + 1 }, () => []);
+  for (const group of ordered) groupsByDepth[depthById.get(group.id) ?? 0]!.push(group);
+  const hierarchy = { roots, childrenByParent, depthById, groupsByDepth, maxDepth };
+  hierarchyByCollection.set(groups, hierarchy);
+  return hierarchy;
 }
