@@ -120,13 +120,16 @@ function toDisplayPosition(mapping: DisplayTimeMapping, sourceCycle: number): nu
   return resolveSourcePosition(mapping, sourceCycle, "omit") ?? resolveSourcePosition(mapping, sourceCycle, "floor") ?? resolveSourcePosition(mapping, sourceCycle, "ceil") ?? mapping.displayCycleCount;
 }
 
-function waveTokenAt(wave: string, period: number, cycle: number): string {
-  const slot = Math.max(0, Math.min(wave.length - 1, Math.floor(cycle / Math.max(1, period))));
-  for (let index = slot; index >= 0; index -= 1) {
-    const token = wave[index];
-    if (token && token !== "." && token !== "|") return token;
+/** #858: effective semantic token per wave slot, computed in one forward pass (was a backwards walk over `.`/`|` runs per sampled cycle). */
+function effectiveWaveTokens(wave: string): readonly string[] {
+  const tokens: string[] = [];
+  let current = wave[0] ?? "0";
+  for (let index = 0; index < wave.length; index += 1) {
+    const token = wave[index]!;
+    if (token !== "." && token !== "|") current = token;
+    tokens.push(current);
   }
-  return wave[0] ?? "0";
+  return tokens;
 }
 
 /** #858: monotonic enable cursor for increasing cycles (O(edges + enableChanges) instead of a rescan from the first change per edge). */
@@ -324,12 +327,14 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
       const startCycle = Math.max(0, Math.floor(Math.min(firstAnchor.cycle, lastAnchor.cycle)));
       const endCycle = Math.min(document.timeline.cycleCount, Math.ceil(Math.max(firstAnchor.cycle, lastAnchor.cycle)));
       const points: ExportPoint[] = [];
+      const traceTokens = effectiveWaveTokens(sourceWave.waveJson.wave);
+      const tracePeriod = Math.max(1, sourceWave.waveJson.period ?? 1);
       for (let cycle = startCycle; cycle <= endCycle; cycle += 1) {
         const sourceCycle = cycle + offset;
         if (sourceCycle < 0 || sourceCycle > document.timeline.cycleCount) continue;
         const displayCycle = toDisplayPosition(mapping, sourceCycle);
         if (displayCycle < range.start || displayCycle > range.end) continue;
-        points.push({ x: LABEL_WIDTH + (displayCycle - range.start) * cycleWidth, y: traceYForWaveToken(waveTokenAt(sourceWave.waveJson.wave, sourceWave.waveJson.period ?? 1, sourceCycle), rowY.get(sourceWave.signal.id) ?? first.y, sourceWave.height) });
+        points.push({ x: LABEL_WIDTH + (displayCycle - range.start) * cycleWidth, y: traceYForWaveToken((traceTokens[Math.max(0, Math.min(traceTokens.length - 1, Math.floor(sourceCycle / tracePeriod)))] ?? "0"), rowY.get(sourceWave.signal.id) ?? first.y, sourceWave.height) });
       }
       return points.length > 1 ? points : undefined;
     })() : undefined;
