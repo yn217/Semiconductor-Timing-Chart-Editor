@@ -53,13 +53,14 @@ export function resolveSourcePosition(mapping: DisplayTimeMapping, sourceCycle: 
   return undefined;
 }
 
+// #862: sorted anchors are cached per labelAnchors array identity and looked up by binary search (was: copy + sort on every label).
+const sortedAnchorsByArray = new WeakMap<Timeline["labelAnchors"], Timeline["labelAnchors"]>();
 function labelForSourceCycle(timeline: Pick<Timeline, "labelAnchors">, sourceCycle: number): number {
-  const anchors = [...timeline.labelAnchors].sort((left, right) => left.source - right.source);
-  let active = undefined as (typeof anchors)[number] | undefined;
-  for (const anchor of anchors) {
-    if (anchor.source > sourceCycle) break;
-    active = anchor;
-  }
+  let anchors = sortedAnchorsByArray.get(timeline.labelAnchors);
+  if (!anchors) { anchors = [...timeline.labelAnchors].sort((left, right) => left.source - right.source); sortedAnchorsByArray.set(timeline.labelAnchors, anchors); }
+  let low = 0, high = anchors.length; // first anchor with source > sourceCycle
+  while (low < high) { const mid = (low + high) >>> 1; if (anchors[mid]!.source > sourceCycle) high = mid; else low = mid + 1; }
+  const active = low === 0 ? undefined : anchors[low - 1];
   return active === undefined ? sourceCycle : active.display + (sourceCycle - active.source);
 }
 
