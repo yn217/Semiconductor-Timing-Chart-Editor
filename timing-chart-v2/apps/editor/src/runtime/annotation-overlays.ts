@@ -3,7 +3,7 @@ import type { Annotation, CanonicalDocument, SignalId } from "@timing-chart-v2/s
 import { allocateMeasurementLanes, type LocalGeometryMap, type Point } from "@timing-chart-v2/geometry";
 import type { DisplayTimeMapping, DisplayTimeViewport, RenderProjection } from "@timing-chart-v2/projection";
 import type { AnnotationOverlayPrimitive } from "@timing-chart-v2/renderer";
-import { resolveAnchorPoint } from "../resolve-anchor-point.js";
+import { resolveAnchorPoint, rowLayoutIndex } from "../resolve-anchor-point.js";
 
 export const annotationFields = ["anchor", "start", "end", "from", "to"] as const;
 
@@ -86,7 +86,7 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
     const tracePoints = annotation.type === "ghostTrace" && annotation.sourceSignalId && firstAnchor && lastAnchor
       ? (() => {
         const sourceMap = maps.get(annotation.sourceSignalId);
-        const sourceRow = projection.rowLayout.find((row) => row.rowId === annotation.sourceSignalId);
+        const sourceRow = rowLayoutIndex(projection.rowLayout).get(annotation.sourceSignalId);
         if (!sourceMap || !sourceRow?.visible) return [];
         const sourceRowY = sourceRow.y;
         const offset = annotation.traceOffsetCycles ?? 0;
@@ -113,8 +113,8 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
     const markerExtent = annotation.type === "marker" && annotation.verticalSpan
       ? (() => {
         if (annotation.verticalSpan.mode === "rows") {
-          const start = projection.rowLayout.find((row) => row.rowId === annotation.verticalSpan?.startRowId);
-          const end = projection.rowLayout.find((row) => row.rowId === annotation.verticalSpan?.endRowId);
+          const start = rowLayoutIndex(projection.rowLayout).get(annotation.verticalSpan?.startRowId ?? "");
+          const end = rowLayoutIndex(projection.rowLayout).get(annotation.verticalSpan?.endRowId ?? "");
           return start && end ? { top: Math.min(start.y, end.y), bottom: Math.max(start.y + start.height, end.y + end.height) } : undefined;
         }
         const anchorPoint = anchors.find((item) => item.field === "anchor");
