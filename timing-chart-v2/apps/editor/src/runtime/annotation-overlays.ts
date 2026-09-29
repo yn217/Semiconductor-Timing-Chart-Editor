@@ -7,6 +7,37 @@ import { resolveAnchorPoint } from "../resolve-anchor-point.js";
 
 export const annotationFields = ["anchor", "start", "end", "from", "to"] as const;
 
+/** #863: time-bucket index over the Annotation collection (keyed by array identity) so a viewport projection visits only the
+ * Annotations whose anchor cycles can intersect the viewport, instead of all (up to 20k). Order is restored to document order. */
+const BUCKET_CYCLES = 256;
+const WIDE_BUCKETS = 16;
+const INDEX_THRESHOLD = 256;
+interface AnnotationTimeIndex { readonly buckets: ReadonlyMap<number, readonly number[]>; readonly wide: readonly number[] }
+const annotationTimeIndexes = new WeakMap<readonly Annotation[], AnnotationTimeIndex>();
+function annotationTimeIndex(annotations: readonly Annotation[]): AnnotationTimeIndex {
+  let index = annotationTimeIndexes.get(annotations);
+  if (index) return index;
+  const buckets = new Map<number, number[]>();
+  const wide: number[] = [];
+  annotations.forEach((annotation, position) => {
+    let min = Number.POSITIVE_INFINITY, max = Number.NEGATIVE_INFINITY;
+    for (const field of annotationFields) { const anchor = annotation[field]; if (anchor) { min = Math.min(min, anchor.cycle); max = Math.max(max, anchor.cycle); } }
+    if (min > max) return; // no anchors: never a time hit
+    const first = Math.floor(min / BUCKET_CYCLES), last = Math.floor(max / BUCKET_CYCLES);
+    if (last - first >= WIDE_BUCKETS) { wide.push(position); return; }
+    for (let bucket = first; bucket <= last; bucket += 1) { const list = buckets.get(bucket); if (list) list.push(position); else buckets.set(bucket, [position]); }
+  });
+  index = { buckets, wide };
+  annotationTimeIndexes.set(annotations, index);
+  return index;
+}
+export function annotationsNearViewport(annotations: readonly Annotation[], sourceStart: number, sourceEnd: number): readonly Annotation[] {
+  const index = annotationTimeIndex(annotations);
+  const positions = new Set<number>(index.wide);
+  for (let bucket = Math.floor(sourceStart / BUCKET_CYCLES); bucket <= Math.floor(sourceEnd / BUCKET_CYCLES); bucket += 1) for (const position of index.buckets.get(bucket) ?? []) positions.add(position);
+  return [...positions].sort((left, right) => left - right).map((position) => annotations[position]!);
+}
+
 function measurementAnchorLabel(annotation: Pick<Annotation, "label" | "measurement" | "start" | "end">): string {
   if (!annotation.start || !annotation.end) return annotation.label;
   const start = anchorTransitionFraction(annotation.start);
@@ -31,7 +62,9 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
     const rowHit = anchors.some((anchor) => anchor.signalId !== undefined && rowIds.has(anchor.signalId)) || (annotation.sourceSignalId !== undefined && rowIds.has(annotation.sourceSignalId));
     return timeHit && rowHit;
   };
-  const candidates = document.annotations.filter(candidate);
+  // Pinned Annotations are always candidates and may lie outside the time window, so the time index only narrows the rest.
+  const pool = viewport && document.annotations.length > INDEX_THRESHOLD && pinned.size === 0 ? annotationsNearViewport(document.annotations, viewport.sourceStart, viewport.sourceEnd) : document.annotations;
+  const candidates = pool.filter(candidate);
   const measurementSpans = candidates.flatMap((annotation) => {
     if (annotation.type !== "measurement" || !annotation.start || !annotation.end) return [];
     const continuous = annotation.positionMode === "free";
