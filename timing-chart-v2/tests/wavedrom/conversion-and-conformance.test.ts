@@ -310,6 +310,32 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     }
   });
 
+  it("reuses the scheduler's precomputed artifact identity during owner preparation", async () => {
+    const adapter = new ProductionWaveDromAdapter();
+    const ownerDocument = createMarkupDocument();
+    const firstWaveJson: WaveJsonSignal = { wave: `0${".".repeat(31)}` };
+    const secondWaveJson: WaveJsonSignal = { wave: `0${".".repeat(31)}` };
+    const renderSpy = vi.spyOn(WaveDrom, "renderAny");
+    const stringifySpy = vi.spyOn(JSON, "stringify");
+    try {
+      const first = await adapter.prepareWave(signalId("sig_identity_first"), firstWaveJson, ownerDocument);
+      expect(first.markupCacheHit).toBe(false);
+
+      const artifactKey = adapter.waveMarkupArtifactKey(secondWaveJson);
+      expect(adapter.waveMarkupArtifactKey({ wave: `1${".".repeat(31)}` })).not.toBe(artifactKey);
+      const stringifyCallsAfterIdentity = stringifySpy.mock.calls.length;
+      const second = await adapter.prepareWave(signalId("sig_identity_second"), secondWaveJson, ownerDocument);
+
+      expect(second.markupCacheHit).toBe(true);
+      expect(second.renderIndex).not.toBe(first.renderIndex);
+      expect(stringifySpy.mock.calls).toHaveLength(stringifyCallsAfterIdentity);
+      expect(renderSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      stringifySpy.mockRestore();
+      renderSpy.mockRestore();
+    }
+  });
+
   it("keeps prepared SVG detached until the owner is explicitly installed", async () => {
     const adapter = new ProductionWaveDromAdapter();
     const id = signalId("sig_detached_prepare");

@@ -157,8 +157,10 @@ describe("waveform provider primary geometry readiness", () => {
     const repeatedBinaryIds = document.signals.slice(1, 5).map((signal) => signal.id);
     const distinctBusId = document.signals[5]!.id;
     const prepareOrder: string[] = [];
+    const waveMarkupArtifactKey = vi.fn((waveJson: WaveJsonSignal, semanticValues: readonly string[] = []) => JSON.stringify([waveJson, semanticValues]));
     const adapter: WaveDromAdapter = {
       toWaveJson: (source) => toWaveJson(source),
+      waveMarkupArtifactKey,
       renderWave: vi.fn(async () => { throw new Error("Detached prepare/install should be used."); }),
       prepareWave: vi.fn(async (signalId, waveJson) => {
         prepareOrder.push(signalId);
@@ -198,6 +200,7 @@ describe("waveform provider primary geometry readiness", () => {
       ...repeatedBinaryIds.slice(1),
     ]);
     expect(adapter.installWave).toHaveBeenCalledTimes(document.signals.length);
+    expect(waveMarkupArtifactKey).toHaveBeenCalledTimes(document.signals.length - 1);
   });
 
   it("does not install a prepared waveform after its request becomes stale", async () => {

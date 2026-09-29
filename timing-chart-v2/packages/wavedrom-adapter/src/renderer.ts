@@ -147,6 +147,31 @@ interface SignalMarkupBinding {
   readonly artifact: MarkupCacheEntry;
 }
 
+const EMPTY_SEMANTIC_VALUES: readonly string[] = Object.freeze([]);
+
+interface WaveMarkupArtifactIdentity {
+  readonly semanticValues: readonly string[];
+  readonly key: string;
+  readonly shareLabels: boolean;
+  readonly artifactWaveJson: WaveJsonSignal;
+  readonly artifactSemanticValues: readonly string[];
+  readonly serializedWaveJson?: string;
+  readonly serializedSemanticValues?: string;
+}
+
+function createWaveMarkupArtifactIdentity(waveJson: WaveJsonSignal, semanticValues: readonly string[]): WaveMarkupArtifactIdentity {
+  const shareLabels = canShareValueLabelGeometry(waveJson, semanticValues);
+  const artifactWaveJson = shareLabels ? { ...waveJson, data: waveJson.data!.map(() => " ") } : waveJson;
+  const artifactSemanticValues = shareLabels ? waveJson.data!.map(() => " ") : semanticValues;
+  const serializedArtifactWaveJson = JSON.stringify(artifactWaveJson);
+  const serializedArtifactSemanticValues = JSON.stringify(artifactSemanticValues);
+  const key = `${WAVEDROM_VERSION}\u0000${serializedArtifactWaveJson}\u0000${serializedArtifactSemanticValues}`;
+  return {
+    semanticValues, key, shareLabels, artifactWaveJson, artifactSemanticValues,
+    ...(!shareLabels ? { serializedWaveJson: serializedArtifactWaveJson, serializedSemanticValues: serializedArtifactSemanticValues } : {}),
+  };
+}
+
 const RETAINED_MARKUP_CACHE_LIMIT = 64;
 const SHARED_MARKUP_CACHE_LIMIT = 64;
 const sharedDefinitionSprites = new WeakMap<Document, SVGSVGElement>();
@@ -366,6 +391,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   readonly #renderCallsBySignal = new Map<SignalId, number>();
   readonly #preparedDurationMs = new WeakMap<RenderedWave, number>();
   readonly #preparedDefinitions = new WeakMap<RenderedWave, SVGElement>();
+  readonly #waveMarkupArtifactIdentities = new WeakMap<WaveJsonSignal, WaveMarkupArtifactIdentity>();
   #nextRenderIndex = 0;
   #renderCalls = 0;
   #waveJsonDurationMs = 0;
@@ -412,26 +438,30 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     return result;
   }
 
+  waveMarkupArtifactKey(waveJson: WaveJsonSignal, semanticValues: readonly string[] = EMPTY_SEMANTIC_VALUES): string {
+    const identity = createWaveMarkupArtifactIdentity(waveJson, semanticValues);
+    this.#waveMarkupArtifactIdentities.set(waveJson, identity);
+    return identity.key;
+  }
+
   async renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues: readonly string[] = []): Promise<RenderedWave> {
     const prepared = await this.prepareWave(signalId, waveJson, mount.ownerDocument, semanticValues);
     await prepared.svgImageReady;
     return this.installWave(prepared, mount);
   }
 
-  async prepareWave(signalId: SignalId, waveJson: WaveJsonSignal, ownerDocument: Document, semanticValues: readonly string[] = []): Promise<RenderedWave> {
+  async prepareWave(signalId: SignalId, waveJson: WaveJsonSignal, ownerDocument: Document, semanticValues: readonly string[] = EMPTY_SEMANTIC_VALUES): Promise<RenderedWave> {
     const startedAt = now();
     const stages = Object.fromEntries(Object.keys(this.#renderStageTotals).map((key) => [key, 0])) as Record<string, number>;
     let stageStartedAt = now();
     this.#renderCalls += 1;
     this.#renderCallsBySignal.set(signalId, (this.#renderCallsBySignal.get(signalId) ?? 0) + 1);
-    const serializedWaveJson = JSON.stringify(waveJson);
-    const serializedSemanticValues = JSON.stringify(semanticValues);
-    const shareLabels = canShareValueLabelGeometry(waveJson, semanticValues);
-    const artifactWaveJson = shareLabels ? { ...waveJson, data: waveJson.data!.map(() => " ") } : waveJson;
-    const artifactSemanticValues = shareLabels ? waveJson.data!.map(() => " ") : semanticValues;
-    const serializedArtifactWaveJson = shareLabels ? JSON.stringify(artifactWaveJson) : serializedWaveJson;
-    const serializedArtifactSemanticValues = shareLabels ? JSON.stringify(artifactSemanticValues) : serializedSemanticValues;
-    const cacheKey = `${WAVEDROM_VERSION}\u0000${serializedArtifactWaveJson}\u0000${serializedArtifactSemanticValues}`;
+    const precomputedIdentity = this.#waveMarkupArtifactIdentities.get(waveJson);
+    const identity = precomputedIdentity?.semanticValues === semanticValues
+      ? precomputedIdentity
+      : createWaveMarkupArtifactIdentity(waveJson, semanticValues);
+    this.#waveMarkupArtifactIdentities.delete(waveJson);
+    const { key: cacheKey, shareLabels, artifactWaveJson, artifactSemanticValues } = identity;
     stages.cacheKeySerializeMs = now() - stageStartedAt;
     let renderIndex = this.#renderIndices.get(signalId);
     let cached = this.#markupCache.get(signalId);
@@ -461,6 +491,8 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       this.#cacheHits += 1;
     } else {
       stageStartedAt = now();
+      const serializedWaveJson = identity.serializedWaveJson ?? JSON.stringify(waveJson);
+      const serializedSemanticValues = identity.serializedSemanticValues ?? JSON.stringify(semanticValues);
       stages.waveJsonBytes = utf8Encoder.encode(serializedWaveJson).byteLength;
       stages.semanticValuesBytes = utf8Encoder.encode(serializedSemanticValues).byteLength;
       stages.metricCollectionOverheadMs = (stages.metricCollectionOverheadMs ?? 0) + now() - stageStartedAt;

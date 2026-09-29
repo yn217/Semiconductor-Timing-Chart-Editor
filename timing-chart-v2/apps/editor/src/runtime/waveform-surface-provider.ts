@@ -364,7 +364,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         priority: (() => {
           if (item.request.signalId === referenceClockId) return 2;
           if (!primaryOpenBatch || !supportsDetachedWaveInstall || !item.waveJson) return 0;
-          const artifactKey = JSON.stringify([item.waveJson, item.semanticValues]);
+          const artifactKey = context.adapter.waveMarkupArtifactKey?.(item.waveJson, item.semanticValues)
+            ?? JSON.stringify([item.waveJson, item.semanticValues]);
           if (seenArtifactKeys.has(artifactKey)) return 0;
           seenArtifactKeys.add(artifactKey);
           return 1;

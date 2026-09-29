@@ -93,6 +93,8 @@ export interface WaveDromAdapterMetrics {
 
 export interface WaveDromAdapter {
   toWaveJson(source: CanonicalSignalSource): WaveJsonSignal;
+  /** Resolve the exact immutable markup-cache identity before scheduling, so priority selection and preparation share one serialization. */
+  waveMarkupArtifactKey?(waveJson: WaveJsonSignal, semanticValues?: readonly string[]): string;
   renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues?: readonly string[]): Promise<RenderedWave>;
   /** Prepare and safety-check an SVG without mutating the live surface. */
   prepareWave?(signalId: SignalId, waveJson: WaveJsonSignal, ownerDocument: Document, semanticValues?: readonly string[]): Promise<RenderedWave>;
