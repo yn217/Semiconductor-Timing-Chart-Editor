@@ -242,7 +242,9 @@ export function useEditorSecondarySurfaces(
   const inspectorGroup = !inspectorLegendSelected && inspectorContext === "Signal" ? selected.group : undefined;
   const inspectorAnnotation = !inspectorLegendSelected && inspectorContext === "Signal" ? selected.annotation : undefined;
   const inspectorTransaction = !inspectorLegendSelected && inspectorContext === "Transaction" ? selected.transaction : undefined;
-  const inspectorBookmark = inspectorLegendSelected ? undefined : selected.bookmark;
+  // Bookmarks live on the Cycle/Signal timeline domain: like Signal/Annotation they must not stay an implicit Inspector target while the
+  // visible workspace is the Transaction domain (stale Bookmark + Delete in Transaction mode, #440). Selection itself is preserved.
+  const inspectorBookmark = inspectorLegendSelected || inspectorContext !== "Signal" ? undefined : selected.bookmark;
   const inspectorSelectionKey = inspectorSignalIds.size > 1
     ? `multi:${inspectorSignalIds.size}`
     : inspectorLegendSelected ? "legend" : inspectorSignal?.id ?? inspectorGroup?.id ?? inspectorAnnotation?.id ?? inspectorTransaction?.id ?? inspectorBookmark?.id ?? "none";
