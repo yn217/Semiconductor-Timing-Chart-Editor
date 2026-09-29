@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { isStableId } from "@timing-chart-v2/schema";
-import type { Annotation, AnnotationGroupId, AnnotationId, BookmarkId, ClockSignal, CommandId, LabelAnchorId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationGroupId, AnnotationId, BookmarkId, ClockSignal, CommandId, LabelAnchorId, SignalId, TimeGroupId, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (id: string) => id as CommandId;
@@ -304,6 +304,125 @@ describe("timeline ripple commands", () => {
     expect(document.bookmarks).toContainEqual(expect.objectContaining({ id: "bookmark_data", start: 7 }));
     expect(session.historyState().undoDepth).toBe(1);
   });
+
+  it("matches dense state semantics for sparse duplicate and move ranges", () => {
+    const originalChanges = [
+      { start: 0, value: "00" },
+      { start: 2, value: "A5", comment: "first" },
+      { start: 5, value: "3C" },
+      { start: 7, value: "00", comment: "last" },
+    ];
+    const dense = (changes: typeof originalChanges, count: number) => Array.from({ length: count }, (_, cycle) => {
+      let state: typeof originalChanges[number] | undefined;
+      for (const change of changes) { if (change.start > cycle) break; state = change; }
+      return state;
+    });
+    const compact = (states: ReturnType<typeof dense>) => {
+      const changes: Array<{ start: number; value: string; comment?: string }> = [];
+      let previous: typeof states[number];
+      states.forEach((state, start) => {
+        if (state && (state.value !== previous?.value || state.comment !== previous?.comment)) changes.push({ start, value: state.value, ...(state.comment === undefined ? {} : { comment: state.comment }) });
+        previous = state;
+      });
+      return changes;
+    };
+    const moveExpectedCycle = (cycle: number, start: number, end: number, to: number) => {
+      const length = end - start;
+      if (to < start) {
+        if (cycle >= start && cycle < end) return to + cycle - start;
+        if (cycle >= to && cycle < start) return cycle + length;
+        return cycle;
+      }
+      if (cycle >= start && cycle < end) return to + cycle - start;
+      if (cycle >= end && cycle < to + length) return cycle - length;
+      return cycle;
+    };
+    const cases = [
+      { kind: "duplicate" as const, start: 1, end: 6, at: 0 },
+      { kind: "duplicate" as const, start: 2, end: 7, at: 4 },
+      { kind: "duplicate" as const, start: 0, end: 3, at: 8 },
+      { kind: "move" as const, start: 1, end: 4, to: 0 },
+      { kind: "move" as const, start: 1, end: 4, to: 4 },
+      { kind: "move" as const, start: 4, end: 7, to: 0 },
+      { kind: "move" as const, start: 4, end: 7, to: 3 },
+    ];
+
+    for (const [index, operation] of cases.entries()) {
+      const sourceStates = dense(originalChanges, 8);
+      let expected: ReturnType<typeof dense>;
+      let command;
+      if (operation.kind === "duplicate") {
+        expected = [...sourceStates];
+        expected.splice(operation.at, 0, ...sourceStates.slice(operation.start, operation.end));
+        command = { id: commandId(`cmd_sparse_duplicate_${index}`), type: "timeline.duplicateRange" as const, start: operation.start, end: operation.end, at: operation.at };
+      } else {
+        expected = Array<ReturnType<typeof dense>[number]>(8);
+        sourceStates.forEach((state, cycle) => { expected[moveExpectedCycle(cycle, operation.start, operation.end, operation.to)] = state; });
+        command = { id: commandId(`cmd_sparse_move_${index}`), type: "timeline.moveRange" as const, start: operation.start, end: operation.end, to: operation.to };
+      }
+      const source = canonicalFixture();
+      const signal = source.signals[1]!;
+      if (signal.type === "clock" || signal.type === "commentRow") throw new Error("Fixture data signal must carry values.");
+      source.signals[1] = { ...signal, values: originalChanges };
+      const session = new CommandHistorySession(source);
+      expect(session.execute(command).ok).toBe(true);
+      expect(session.historyState().undoDepth).toBe(1);
+      const resultSignal = session.getSnapshot().document.signals.find((item) => item.id === "sig_data");
+      expect(resultSignal?.type === "clock" || resultSignal?.type === "commentRow" ? [] : resultSignal?.values).toEqual(compact(expected));
+      const transformed = session.getSnapshot().document;
+      expect(session.undo().ok).toBe(true);
+      expect(session.getSnapshot().document).toEqual(source);
+      expect(session.redo().ok).toBe(true);
+      expect(session.getSnapshot().document).toEqual(transformed);
+    }
+  });
+
+  it("restarts value compression after an uninitialized sparse interval", () => {
+    const source = canonicalFixture();
+    const signal = source.signals[1]!;
+    if (signal.type === "clock" || signal.type === "commentRow") throw new Error("Fixture data signal must carry values.");
+    source.signals[1] = { ...signal, values: [{ start: 2, value: "00" }, { start: 5, value: "01" }] };
+    const session = new CommandHistorySession(source);
+    expect(session.execute({ id: commandId("cmd_sparse_uninitialized"), type: "timeline.duplicateRange", start: 2, end: 6, at: 0 }).ok).toBe(true);
+    const resultSignal = session.getSnapshot().document.signals.find((item) => item.id === "sig_data");
+    expect(resultSignal?.type === "clock" || resultSignal?.type === "commentRow" ? [] : resultSignal?.values).toEqual([
+      { start: 0, value: "00" },
+      { start: 3, value: "01" },
+      { start: 6, value: "00" },
+      { start: 9, value: "01" },
+    ]);
+  });
+
+  it("keeps range transforms bounded by sparse changes on a large multi-signal timeline", () => {
+    const cycleCount = 99_990;
+    const source = canonicalFixture();
+    source.timeline = { ...source.timeline, end: cycleCount, cycleCount };
+    const template = source.signals[1] as ValueSignal;
+    const extraSignals = Array.from({ length: 98 }, (_, index): ValueSignal => {
+      const id = `sparse_signal_${index}` as SignalId;
+      return { ...template, id, name: id, source: { ...template.source, signalName: id }, display: { ...template.display, name: id } };
+    });
+    const values = Array.from({ length: 256 }, (_, index) => ({ start: Math.floor(index * cycleCount / 256), value: index % 2 === 0 ? "00" : "01" }));
+    source.signals = [source.signals[0]!, { ...template, values }, ...extraSignals.map((signal) => ({ ...signal, values }))];
+    const group = source.signalGroups[0]!;
+    source.signalGroups = [{ ...group, rows: source.signals.map((signal) => signal.id) }];
+
+    const duplicateSession = new CommandHistorySession(source);
+    const duplicateStartedAt = performance.now();
+    const duplicate = duplicateSession.execute({ id: commandId("cmd_sparse_large_duplicate"), type: "timeline.duplicateRange", start: 10_000, end: 10_010, at: 30_000 });
+    const duplicateDurationMs = performance.now() - duplicateStartedAt;
+    expect(duplicate.ok).toBe(true);
+    expect(duplicateSession.getSnapshot().document.timeline.cycleCount).toBe(100_000);
+    expect(duplicateDurationMs).toBeLessThan(2_000);
+
+    const moveSession = new CommandHistorySession(source);
+    const moveStartedAt = performance.now();
+    const move = moveSession.execute({ id: commandId("cmd_sparse_large_move"), type: "timeline.moveRange", start: 10_000, end: 20_000, to: 30_000 });
+    const moveDurationMs = performance.now() - moveStartedAt;
+    expect(move.ok).toBe(true);
+    expect(moveSession.getSnapshot().document.timeline.cycleCount).toBe(cycleCount);
+    expect(moveDurationMs).toBeLessThan(2_000);
+  }, 10_000);
 
   it("clones a boundary-owned Time Group resume anchor with its group", () => {
     const source = canonicalFixture();

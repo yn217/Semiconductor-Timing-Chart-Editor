@@ -1,8 +1,8 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { allocateMeasurementLanes } from "@timing-chart-v2/geometry";
 import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, resolveSourcePosition, type DisplayTimeMapping } from "@timing-chart-v2/projection";
-import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, MAX_MEASUREMENT_LANE, anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, valueSignalWaveDomain, wrapAnnotationLabel, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId } from "@timing-chart-v2/schema";
-import { renderWaveJsonMarkup, toWaveJson, WAVEDROM_VERSION } from "@timing-chart-v2/wavedrom-adapter";
+import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, MAX_MEASUREMENT_LANE, anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, valueSignalWaveDomain, wrapAnnotationLabel, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId, type ValueSignal } from "@timing-chart-v2/schema";
+import { renderWaveJsonMarkup, toWaveJson, toWaveJsonWindow, WAVEDROM_VERSION, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 
 export interface ExportSettings {
   readonly format: "svg" | "png" | "pdf";
@@ -106,6 +106,43 @@ function svgDimensions(markup: string): { width: number; height: number } {
   return { width, height };
 }
 
+function valueChangesForWindow(signal: ValueSignal, start: number, end: number): ValueSignal["values"] {
+  let low = 0;
+  let high = signal.values.length;
+  while (low < high) {
+    const middle = low + ((high - low) >>> 1);
+    if (signal.values[middle]!.start <= start) low = middle + 1;
+    else high = middle;
+  }
+  const active = low > 0 ? signal.values[low - 1] : undefined;
+  const changes: ValueSignal["values"][number][] = active === undefined
+    ? []
+    : [{ start: 0, value: active.value, ...(active.displayLabel === undefined ? {} : { displayLabel: active.displayLabel }) }];
+  for (let index = low; index < signal.values.length; index += 1) {
+    const change = signal.values[index]!;
+    if (change.start >= end) break;
+    changes.push({ start: change.start - start, value: change.value, ...(change.displayLabel === undefined ? {} : { displayLabel: change.displayLabel }) });
+  }
+  return changes;
+}
+
+function boundedWaveJson(signal: Exclude<Signal, { readonly type: "commentRow" }>, cycleCount: number, range: Readonly<{ start: number; end: number }>, enumDefinitions: CanonicalDocument["enumDefinitions"]): Readonly<{ waveJson: WaveJsonSignal; semanticValues: readonly string[]; windowStart: number; renderedCycleCount: number }> | undefined {
+  if (signal.type === "clock") {
+    const period = signal.generator.period;
+    if (!Number.isInteger(period) || period < 1) return undefined;
+    const windowStart = Math.floor(range.start / period) * period;
+    const windowEnd = Math.ceil(range.end / period) * period;
+    if (windowEnd <= windowStart || windowEnd > cycleCount) return undefined;
+    const waveJson = toWaveJsonWindow({ signal, cycleCount, enumDefinitions }, windowStart, windowEnd);
+    return { waveJson, semanticValues: [], windowStart, renderedCycleCount: windowEnd - windowStart };
+  }
+  const windowLength = range.end - range.start;
+  const localSignal = { ...signal, values: valueChangesForWindow(signal, range.start, range.end) };
+  const waveJson = toWaveJson({ signal: localSignal, cycleCount: windowLength, enumDefinitions });
+  const semanticValues = valueSignalWaveDomain(signal.type) === "data" ? localSignal.values.map((change) => String(change.value)) : [];
+  return { waveJson, semanticValues, windowStart: range.start, renderedCycleCount: windowLength };
+}
+
 function anchorPoint(annotation: Annotation, field: "anchor" | "start" | "end" | "from" | "to", document: CanonicalDocument, rowY: ReadonlyMap<SignalId, number>, mapping: DisplayTimeMapping, start: number, cycleWidth: number): { x: number; y: number } | undefined {
   const anchor = annotation[field];
   if (!anchor) return undefined;
@@ -132,18 +169,35 @@ function effectiveWaveTokens(wave: string): readonly string[] {
   return tokens;
 }
 
-/** #858: monotonic enable cursor for increasing cycles (O(edges + enableChanges) instead of a rescan from the first change per edge). */
-function createClockEnabledCursor(changes: ClockSignal["enable"]): (cycle: number) => boolean {
-  const list = changes ?? [];
-  let position = 0;
-  let value: string | number = 1;
-  let lastCycle = Number.NEGATIVE_INFINITY;
-  return (cycle) => {
-    if (cycle < lastCycle) { position = 0; value = 1; }
-    lastCycle = cycle;
-    while (position < list.length && list[position]!.start <= cycle) { value = list[position]!.value; position += 1; }
-    return ["1", "true", "high"].includes(String(value).toLowerCase());
-  };
+function countPeriodicPoints(start: number, period: number, low: number, high: number): number {
+  if (!(high > low)) return 0;
+  const first = Math.max(0, Math.ceil((low - start) / period));
+  const end = Math.max(0, Math.ceil((high - start) / period));
+  return Math.max(0, end - first);
+}
+
+function simpleClockEdgeIndexBefore(signal: ClockSignal, cycleCount: number, mode: ClockSignal["edgeCounter"]["mode"], countFrom: number, edgeCycle: number): number {
+  const { generator } = signal;
+  const pulseStart = Math.max(0, generator.start + generator.phase);
+  const oppositeOffset = generator.period * generator.duty;
+  const primaryKind = generator.polarity === "positive" ? "rising" : "falling";
+  const primarySelected = mode === "both" || mode === primaryKind;
+  const oppositeSelected = mode === "both" || mode !== primaryKind;
+  const lower = Math.max(pulseStart, countFrom);
+  let count = primarySelected ? countPeriodicPoints(pulseStart, generator.period, lower, edgeCycle) : 0;
+  if (oppositeSelected) {
+    count += countPeriodicPoints(pulseStart, generator.period, Math.max(pulseStart, countFrom - oppositeOffset), Math.min(edgeCycle - oppositeOffset, cycleCount - oppositeOffset));
+  }
+  return count;
+}
+
+function clockEnabledAt(changes: ClockSignal["enable"], cycle: number): boolean {
+  let enabled: string | number = 1;
+  for (const change of changes ?? []) {
+    if (change.start > cycle) break;
+    enabled = change.value;
+  }
+  return ["1", "true", "high"].includes(String(enabled).toLowerCase());
 }
 
 function traceYForWaveToken(token: string, row: number, height: number): number {
@@ -193,17 +247,25 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   const laneIndex = new Map(lanes.map((lane, index) => [lane, index] as const));
   const transactionTop = headerHeight + 14;
   const waveTop = transactionTop + lanes.length * TRANSACTION_HEIGHT + 34;
+  // Ghost traces sample their source wave outside the exported interval when
+  // their offset/anchors require it. Keep those source waves whole until a
+  // trace-specific source window can be calculated safely.
+  const ghostTraceSourceIds = new Set(document.annotations.flatMap((annotation) => annotation.type === "ghostTrace" && annotation.sourceSignalId ? [annotation.sourceSignalId] : []));
+  const canBoundWaveforms = settings.scope === "selected-range" && mapping.isIdentity;
   const renderedWaves = waveSignals.map((signal, index) => {
+    const bounded = canBoundWaveforms && !ghostTraceSourceIds.has(signal.id)
+      ? boundedWaveJson(signal, document.timeline.cycleCount, range, document.enumDefinitions)
+      : undefined;
     const displayValues = signal.type === "clock" ? undefined : remapValueChangesToDisplay(signal.values, mapping);
     const displaySignal = signal.type === "clock"
       ? { ...signal, ...(signal.enable ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
       : { ...signal, values: displayValues! };
-    const waveJson = toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions });
-    const semanticValues = signal.type !== "clock" && valueSignalWaveDomain(signal.type) === "data" ? displayValues!.map((change) => String(change.value)) : undefined;
+    const waveJson = bounded?.waveJson ?? toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions });
+    const semanticValues = bounded?.semanticValues ?? (signal.type !== "clock" && valueSignalWaveDomain(signal.type) === "data" ? displayValues!.map((change) => String(change.value)) : undefined);
     const svgMarkup = renderWaveJsonMarkup(waveJson, index, semanticValues);
-    return { signal, waveJson, svgMarkup, ...svgDimensions(svgMarkup) };
+    return { signal, waveJson, svgMarkup, windowStart: bounded?.windowStart ?? 0, renderedCycleCount: bounded?.renderedCycleCount ?? mapping.displayCycleCount, ...svgDimensions(svgMarkup) };
   });
-  const cycleWidth = (renderedWaves[0]?.width ?? mapping.displayCycleCount * 20) / mapping.displayCycleCount;
+  const cycleWidth = (renderedWaves[0]?.width ?? mapping.displayCycleCount * 20) / (renderedWaves[0]?.renderedCycleCount ?? mapping.displayCycleCount);
   const rowHeight = Math.max(ROW_HEIGHT, (renderedWaves[0]?.height ?? 30) + 4);
   const rowLayout = calculateRowLayout(document, new Set(), { includeHidden: false });
   const totalRowHeight = rowLayout.totalHeight;
@@ -216,7 +278,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   const renderedWaveById = new Map(renderedWaves.map((rendered) => [rendered.signal.id, rendered]));
   const waveforms: ExportWave[] = wavePositions.map(({ signal, y }): ExportWave => {
     const rendered = renderedWaveById.get(signal.id)!;
-    return { signalId: signal.id, name: signal.display.name, role: signal.role, y, svgMarkup: rendered.svgMarkup, sourceWidth: rendered.width, sourceHeight: rendered.height, cropX: range.start * cycleWidth, width: (range.end - range.start) * cycleWidth, waveJson: JSON.stringify(rendered.waveJson) };
+    return { signalId: signal.id, name: signal.display.name, role: signal.role, y, svgMarkup: rendered.svgMarkup, sourceWidth: rendered.width, sourceHeight: rendered.height, cropX: (range.start - rendered.windowStart) * cycleWidth, width: (range.end - range.start) * cycleWidth, waveJson: JSON.stringify(rendered.waveJson) };
   });
   const edgeCounters: ExportEdgeCounter[] = [];
   for (const { signal } of renderedWaves) {
@@ -225,26 +287,45 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const start = Math.max(0, signal.generator.start + signal.generator.phase);
     const oppositeOffset = period * signal.generator.duty;
     const suppressed = new Set(signal.generator.suppressedPeriods ?? []);
-    const enabledAt = createClockEnabledCursor(signal.enable);
-    const edges: Array<{ kind: "rising" | "falling"; cycle: number }> = [];
-    for (let cycle = start; cycle < document.timeline.cycleCount; cycle += period) {
-      const slot = Math.round((cycle - signal.generator.start) / period);
-      if (!enabledAt(cycle) || suppressed.has(slot)) continue;
-      const activeKind = signal.generator.polarity === "positive" ? "rising" : "falling";
-      const oppositeKind = activeKind === "rising" ? "falling" : "rising";
-      edges.push({ kind: activeKind, cycle });
-      if (cycle + oppositeOffset < document.timeline.cycleCount) edges.push({ kind: oppositeKind, cycle: cycle + oppositeOffset });
-    }
-    const selected = edges.filter((edge) => signal.edgeCounter.mode === "both" || signal.edgeCounter.mode === edge.kind);
-    selected.sort((left, right) => left.cycle - right.cycle || left.kind.localeCompare(right.kind));
     const marker = resolveEdgeCounterMarker(document, signal.edgeCounter);
     const countFromDisplay = signal.edgeCounter.countFrom === "visible-range-start" || signal.edgeCounter.countFrom === "selected-edge" ? range.start
       : signal.edgeCounter.countFrom === "marker" ? (marker === undefined ? Number.POSITIVE_INFINITY : toDisplayPosition(mapping, marker.start))
         : Number.NEGATIVE_INFINITY;
-    selected.filter((edge) => toDisplayPosition(mapping, edge.cycle) >= countFromDisplay).forEach((edge, index) => {
+    const canBoundEdges = settings.scope === "selected-range" && mapping.isIdentity && (signal.enable?.length ?? 0) === 0 && suppressed.size === 0 && signal.generator.duty > 0 && signal.generator.duty < 1;
+    const activeKind: "rising" | "falling" = signal.generator.polarity === "positive" ? "rising" : "falling";
+    const oppositeKind: "rising" | "falling" = activeKind === "rising" ? "falling" : "rising";
+    const selected: Array<{ kind: "rising" | "falling"; cycle: number; ordinal: number }> = [];
+    if (canBoundEdges) {
+      const candidateStart = Math.max(start, range.start - oppositeOffset);
+      const firstCandidate = Math.max(0, Math.ceil((candidateStart - start) / period));
+      for (let cycle = start + firstCandidate * period; cycle < Math.min(document.timeline.cycleCount, range.end); cycle += period) {
+        const candidates: Array<{ kind: "rising" | "falling"; cycle: number }> = [];
+        if (signal.edgeCounter.mode === "both" || signal.edgeCounter.mode === activeKind) candidates.push({ kind: activeKind, cycle });
+        if (signal.edgeCounter.mode === "both" || signal.edgeCounter.mode === oppositeKind) candidates.push({ kind: oppositeKind, cycle: cycle + oppositeOffset });
+        for (const edge of candidates) {
+          if (edge.cycle < countFromDisplay || edge.cycle < range.start || edge.cycle >= range.end || edge.cycle >= document.timeline.cycleCount) continue;
+          selected.push({ ...edge, ordinal: simpleClockEdgeIndexBefore(signal, document.timeline.cycleCount, signal.edgeCounter.mode, countFromDisplay, edge.cycle) });
+        }
+      }
+    } else {
+      const edges: Array<{ kind: "rising" | "falling"; cycle: number }> = [];
+      for (let cycle = start; cycle < document.timeline.cycleCount; cycle += period) {
+        const slot = Math.round((cycle - signal.generator.start) / period);
+        if (!clockEnabledAt(signal.enable, cycle) || suppressed.has(slot)) continue;
+        edges.push({ kind: activeKind, cycle });
+        if (cycle + oppositeOffset < document.timeline.cycleCount) edges.push({ kind: oppositeKind, cycle: cycle + oppositeOffset });
+      }
+      edges.filter((edge) => signal.edgeCounter.mode === "both" || signal.edgeCounter.mode === edge.kind)
+        .sort((left, right) => left.cycle - right.cycle || left.kind.localeCompare(right.kind))
+        .filter((edge) => toDisplayPosition(mapping, edge.cycle) >= countFromDisplay)
+        .forEach((edge, ordinal) => selected.push({ ...edge, ordinal }));
+    }
+    selected.sort((left, right) => left.cycle - right.cycle || left.kind.localeCompare(right.kind));
+    selected.forEach((edge) => {
+      const index = edge.ordinal;
       if (index % Math.max(1, signal.edgeCounter.labelEvery) !== 0) return;
       const displayCycle = toDisplayPosition(mapping, edge.cycle);
-      if (displayCycle < range.start || displayCycle >= range.end) return;
+      if (!canBoundEdges && (displayCycle < range.start || displayCycle >= range.end)) return;
       const row = rowY.get(signal.id) ?? waveTop;
       edgeCounters.push({ id: `edge:${signal.id}:${edge.kind}:${edge.cycle}`, signalId: signal.id, kind: edge.kind, cycle: edge.cycle, x: LABEL_WIDTH + (displayCycle - range.start) * cycleWidth + signal.edgeCounter.offset.x, y: row + signal.edgeCounter.offset.y + (signal.edgeCounter.position === "above" ? -6 : 10), label: String(signal.edgeCounter.startNumber + index) });
     });
@@ -324,8 +405,16 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const sourceWave = annotation.type === "ghostTrace" && annotation.sourceSignalId ? renderedWaveById.get(annotation.sourceSignalId) : undefined;
     const tracePoints = sourceWave && firstAnchor && lastAnchor ? (() => {
       const offset = annotation.traceOffsetCycles ?? 0;
-      const startCycle = Math.max(0, Math.floor(Math.min(firstAnchor.cycle, lastAnchor.cycle)));
-      const endCycle = Math.min(document.timeline.cycleCount, Math.ceil(Math.max(firstAnchor.cycle, lastAnchor.cycle)));
+      let startCycle = Math.max(0, Math.floor(Math.min(firstAnchor.cycle, lastAnchor.cycle)));
+      let endCycle = Math.min(document.timeline.cycleCount, Math.ceil(Math.max(firstAnchor.cycle, lastAnchor.cycle)));
+      if (canBoundWaveforms) {
+        // In identity time, a trace point is retained only when its sampled
+        // source cycle (cycle + offset) intersects the selected display range.
+        // Intersect that interval before iterating instead of walking a long
+        // annotation span and discarding almost every point afterward.
+        startCycle = Math.max(startCycle, Math.ceil(range.start - offset));
+        endCycle = Math.min(endCycle, Math.floor(range.end - offset));
+      }
       const points: ExportPoint[] = [];
       const traceTokens = effectiveWaveTokens(sourceWave.waveJson.wave);
       const tracePeriod = Math.max(1, sourceWave.waveJson.period ?? 1);

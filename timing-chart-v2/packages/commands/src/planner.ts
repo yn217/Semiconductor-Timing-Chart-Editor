@@ -225,9 +225,14 @@ function mapDeleteBoundary(value: number, start: number, end: number): number {
 }
 
 function valueAt(changes: readonly SignalValueChange[], at: number): SignalValueChange | undefined {
-  let result: SignalValueChange | undefined;
-  for (const change of changes) if (change.start <= at) result = change; else break;
-  return result;
+  let low = 0;
+  let high = changes.length;
+  while (low < high) {
+    const middle = low + ((high - low) >>> 1);
+    if (changes[middle]!.start <= at) low = middle + 1;
+    else high = middle;
+  }
+  return low > 0 ? changes[low - 1] : undefined;
 }
 
 function deleteChanges(changes: readonly SignalValueChange[], start: number, end: number, nextCycleCount: number): SignalValueChange[] {

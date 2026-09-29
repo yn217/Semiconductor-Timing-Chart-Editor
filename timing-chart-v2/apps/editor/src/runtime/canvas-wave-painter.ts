@@ -21,6 +21,17 @@ const LOW = DRAW_Y + 20;
  */
 export const CANVAS_WAVE_AUTO_BUDGET = 250_000;
 
+/** Keep SVG authoritative for WaveJson shapes this painter cannot faithfully represent. */
+export function supportsCanvasWaveJson(wave: WaveJsonSignal): boolean {
+  if ((wave.period ?? 1) !== 1 || (wave.phase ?? 0) !== 0 || wave.clock?.expanded === true || wave.wave.includes("|")) return false;
+  if (wave.geometrySourceCycles !== undefined && (
+    wave.geometrySourceCycles.length !== wave.wave.length + 1
+    || wave.geometrySourceCycles.some((cycle, index, cycles) => index > 0 && cycle !== cycles[index - 1]! + 1)
+  )) return false;
+  if (wave.wave.includes("=")) return false;
+  return [...wave.wave].every((token) => "01xzpn.".includes(token));
+}
+
 export function isCanvasWaveRendererSelected(document: { readonly signals: readonly unknown[]; readonly timeline: { readonly cycleCount: number } }): boolean {
   try {
     if (typeof location !== "undefined") {
@@ -103,9 +114,28 @@ export function disposeWaveCanvas(owner: HTMLElement): void {
   const state = painted.get(owner);
   if (!state) return;
   const scheduler = state.scheduler;
-  if (!scheduler) { painted.delete(owner); owner.removeEventListener(WAVE_CANVAS_RESTYLE_EVENT, state.onRestyle); return; }
+  if (!scheduler) {
+    painted.delete(owner);
+    owner.removeEventListener(WAVE_CANVAS_RESTYLE_EVENT, state.onRestyle);
+    delete owner.dataset.waveRenderer;
+    delete owner.dataset.waveState;
+    return;
+  }
   scheduler.release(owner);
   if (scheduler.owners.size === 0) scheduler.dispose();
+  delete owner.dataset.waveRenderer;
+  delete owner.dataset.waveState;
+}
+
+/** Repaint an existing canvas after a presentation/mode change without rebuilding its WaveJson. */
+export function refreshWaveCanvasViewport(owner: HTMLElement): void {
+  const state = painted.get(owner);
+  if (!state || !owner.isConnected || !owner.contains(state.canvas)) return;
+  const viewport = owner.closest<HTMLElement>(".cycle-viewport");
+  if (state.scheduler) state.scheduler.attach(owner);
+  drawVisible(owner, state.wave, state.canvas, viewport);
+  owner.dataset.waveRenderer = "canvas";
+  owner.dataset.waveState = "ready";
 }
 
 export function paintWaveCanvas(owner: HTMLElement, wave: WaveJsonSignal): void {
@@ -132,6 +162,8 @@ export function paintWaveCanvas(owner: HTMLElement, wave: WaveJsonSignal): void 
   }
   state.wave = wave;
   drawVisible(owner, wave, state.canvas, owner.closest<HTMLElement>(".cycle-viewport"));
+  owner.dataset.waveRenderer = "canvas";
+  owner.dataset.waveState = "ready";
 }
 
 /** Diagnostics for tests: scheduler-driven (scroll) repaint frames on `viewport`. */

@@ -1,4 +1,4 @@
-export type EventTableChange = Readonly<{ readonly start: number }>;
+export type EventTableChange = Readonly<{ readonly start: number; readonly id?: string }>;
 
 export type EventTableIndex<T extends EventTableChange> = Readonly<{
   ordered: readonly T[];
@@ -6,6 +6,7 @@ export type EventTableIndex<T extends EventTableChange> = Readonly<{
   endByStart: ReadonlyMap<number, number>;
   /** start cycle -> position in `ordered` (#856: no repeated linear find). */
   indexByStart: ReadonlyMap<number, number>;
+  indexByIdentity: ReadonlyMap<string, number>;
   firstFree: (extra?: number) => number | undefined;
   nextEnd: (start: number) => number;
 }>;
@@ -13,17 +14,19 @@ export type EventTableIndex<T extends EventTableChange> = Readonly<{
 export function buildEventTableIndex<T extends EventTableChange>(values: readonly T[], cycleCount: number): EventTableIndex<T> {
   const ordered = [...values].sort((left, right) => left.start - right.start);
   const occupied = new Set(ordered.map((change) => change.start));
-  const indexByStart = new Map(ordered.map((change, index) => [change.start, index] as const));
   const endByStart = new Map(ordered.map((change, index) => [change.start, ordered[index + 1]?.start ?? cycleCount]));
+  const indexByStart = new Map(ordered.map((change, index) => [change.start, index]));
+  const indexByIdentity = new Map(ordered.map((change, index) => [change.id ?? String(change.start), index]));
+  let firstAvailable = 0;
+  for (const change of ordered) {
+    if (change.start < firstAvailable) continue;
+    if (change.start > firstAvailable) break;
+    firstAvailable += 1;
+  }
   const firstFree = (extra?: number) => {
-    let candidate = 0;
-    for (const change of ordered) {
-      while (candidate === extra) candidate += 1;
-      if (change.start < candidate) continue;
-      if (change.start > candidate) break;
-      candidate += 1;
-    }
-    while (candidate === extra) candidate += 1;
+    if (extra === undefined) return firstAvailable < cycleCount ? firstAvailable : undefined;
+    let candidate = firstAvailable;
+    while (candidate === extra || occupied.has(candidate)) candidate += 1;
     return candidate < cycleCount ? candidate : undefined;
   };
   const nextEnd = (start: number) => {
@@ -33,5 +36,5 @@ export function buildEventTableIndex<T extends EventTableChange>(values: readonl
     while (low < high) { const middle = (low + high) >>> 1; if (ordered[middle]!.start <= start) low = middle + 1; else high = middle; }
     return ordered[low]?.start ?? cycleCount;
   };
-  return { ordered, occupied, endByStart, indexByStart, firstFree, nextEnd };
+  return { ordered, occupied, endByStart, indexByStart, indexByIdentity, firstFree, nextEnd };
 }

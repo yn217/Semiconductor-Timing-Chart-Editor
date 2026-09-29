@@ -123,6 +123,7 @@ export interface DisplayTimeMappingCacheMetrics {
   readonly buildDurationP95Ms: number;
   readonly valueRemapPasses: number;
   readonly identityFastPathHits: number;
+  readonly mappingKeyBuilds: number;
 }
 
 /** Owns the derived display-time mapping for one projection consumer. */
@@ -137,9 +138,21 @@ export class DisplayTimeMappingCache {
   private buildDurationsMs: number[] = [];
   private valueRemapPasses = 0;
   private identityFastPathHits = 0;
+  private mappingKeyBuilds = 0;
+  private lastCycleCount: number | undefined;
+  private lastLabelAnchors: Timeline["labelAnchors"] | undefined;
+  private lastTimeGroups: readonly TimeGroup[] | undefined;
 
   get(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): DisplayTimeMapping {
+    if (this.mapping !== undefined && this.lastCycleCount === timeline.cycleCount && this.lastLabelAnchors === timeline.labelAnchors && this.lastTimeGroups === timeGroups) {
+      this.hits += 1;
+      return this.mapping;
+    }
+    this.mappingKeyBuilds += 1;
     const nextKey = displayTimeMappingKey(timeline, timeGroups);
+    this.lastCycleCount = timeline.cycleCount;
+    this.lastLabelAnchors = timeline.labelAnchors;
+    this.lastTimeGroups = timeGroups;
     if (this.mapping !== undefined && this.key === nextKey) {
       this.hits += 1;
       return this.mapping;
@@ -167,6 +180,7 @@ export class DisplayTimeMappingCache {
       buildDurationP95Ms: percentile(this.buildDurationsMs, 0.95),
       valueRemapPasses: this.valueRemapPasses,
       identityFastPathHits: this.identityFastPathHits,
+      mappingKeyBuilds: this.mappingKeyBuilds,
     };
   }
 
@@ -179,6 +193,9 @@ export class DisplayTimeMappingCache {
   clear(): void {
     this.key = undefined;
     this.mapping = undefined;
+    this.lastCycleCount = undefined;
+    this.lastLabelAnchors = undefined;
+    this.lastTimeGroups = undefined;
   }
 }
 

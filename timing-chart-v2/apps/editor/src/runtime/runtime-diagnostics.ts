@@ -79,6 +79,8 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentation
     deferredCount: 0,
     skippedStaleBeforeRunCount: 0,
     staleAfterRunCount: 0,
+    artifactInstallsBeforePresentationReady: 0,
+    staleProgressiveInstallPreventedCount: 0,
     duplicateOwnerRequestCount: 0,
     reusedMarkupCount: 0,
     markupCacheMissCount: 0,
@@ -174,6 +176,8 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentation
       waveBatchMetrics.deferredCount += metrics.deferredCount;
       waveBatchMetrics.skippedStaleBeforeRunCount += metrics.skippedStaleBeforeRunCount;
       waveBatchMetrics.staleAfterRunCount += metrics.staleAfterRunCount;
+      waveBatchMetrics.artifactInstallsBeforePresentationReady += metrics.artifactInstallsBeforePresentationReady;
+      waveBatchMetrics.staleProgressiveInstallPreventedCount += metrics.staleProgressiveInstallPreventedCount;
       waveBatchMetrics.duplicateOwnerRequestCount += metrics.duplicateOwnerRequestCount;
       waveBatchMetrics.reusedMarkupCount += metrics.reusedMarkupCount;
       waveBatchMetrics.markupCacheMissCount += metrics.markupCacheMissCount;
@@ -212,6 +216,8 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentation
       waveBatchMetrics.deferredCount = 0;
       waveBatchMetrics.skippedStaleBeforeRunCount = 0;
       waveBatchMetrics.staleAfterRunCount = 0;
+      waveBatchMetrics.artifactInstallsBeforePresentationReady = 0;
+      waveBatchMetrics.staleProgressiveInstallPreventedCount = 0;
       waveBatchMetrics.duplicateOwnerRequestCount = 0;
       waveBatchMetrics.reusedMarkupCount = 0;
       waveBatchMetrics.markupCacheMissCount = 0;

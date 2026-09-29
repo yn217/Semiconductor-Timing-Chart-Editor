@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildHardwareHierarchyEntries, buildHardwareHierarchyRowIndex, deriveHardwareHierarchyEntries, filterHardwareHierarchyEntries, hardwareHierarchyScopes, hardwareHierarchyScopeBreadcrumbs, DefaultProjectionService, calculateRowLayout } from "@timing-chart-v2/projection";
+import { buildHardwareHierarchyEntries, buildHardwareHierarchyRowIndex, deriveHardwareHierarchyEntries, filterHardwareHierarchyEntries, hardwareHierarchyScopes, hardwareHierarchyScopeBreadcrumbs, DefaultProjectionService, calculateRowLayout, getRowLayoutSourceIndex } from "@timing-chart-v2/projection";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { BookmarkId, CanonicalDocument, GroupId, RowId, SignalId, SpacerId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -104,6 +104,9 @@ describe("RowLayout and projection invariants", () => {
     expect(canonicalRowEnumerations).toBe(1);
     expect(upperProjection.diagnostics().rowLayoutSourceIndexBuilds).toBe(1);
     expect(lowerProjection.diagnostics().rowLayoutSourceIndexBuilds).toBe(0);
+    const sharedIndex = getRowLayoutSourceIndex(document).index;
+    expect(getRowLayoutSourceIndex({ ...document, signals: [...signals] }).index).not.toBe(sharedIndex);
+    expect(getRowLayoutSourceIndex({ ...document, signalGroups: [...signalGroups] }).index).not.toBe(sharedIndex);
   });
 
   it("derives stable hierarchy entries without changing group placement semantics", () => {

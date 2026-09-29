@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-26T16:45:20.679Z",
+  "generatedAt": "2026-09-26T22:06:22.578Z",
   "source": "Playwright test --list --reporter=json; no tests were executed",
   "playwrightVersion": "1.62.1",
   "baseline": {
@@ -11,14 +11,14 @@
     "runtimeNote": "No successful hosted run or approved local browser-run evidence was available at baseline capture; do not infer measured runtimes from timeout settings.",
     "retryAndFlakySummary": null
   },
-  "specFileCount": 340,
-  "caseCount": 993,
+  "specFileCount": 344,
+  "caseCount": 1001,
   "reviewedCaseCount": 958,
   "curatedProfileCounts": {
     "integration": 487,
     "nightly": 194,
     "performance": 54,
-    "pr": 269,
+    "pr": 270,
     "visual": 174
   },
   "reviewPolicy": "UNREVIEWED entries are not acceptance-complete classifications. Curated records live in qa/test-suite-review.json and are joined by file + exact title; set reviewStatus to REVIEWED only after reading the test and mapping its invariant.",
@@ -7459,7 +7459,7 @@
     {
       "file": "gui-reference-v8.spec.ts",
       "suitePath": [],
-      "line": 136,
+      "line": 137,
       "title": "applies the v8 Signal Inspector style controls as one semantic operation",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -7485,7 +7485,7 @@
     {
       "file": "gui-reference-v8.spec.ts",
       "suitePath": [],
-      "line": 174,
+      "line": 175,
       "title": "V8 Home secondary actions stay connected to real navigation and semantic commands",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -9460,6 +9460,28 @@
         "visual"
       ],
       "contractId": "inspector-resize-visual-view-only"
+    },
+    {
+      "file": "issue-426-event-selection-scope.spec.ts",
+      "suitePath": [],
+      "line": 6,
+      "title": "Bottom transition bulk selection is scoped to its stable Signal ID",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
     },
     {
       "file": "issue-426-external-bottom-draft-update.spec.ts",
@@ -11849,6 +11871,50 @@
       "suitePath": [],
       "line": 68,
       "title": "TC-scale and zoom keep ruler hit mapping aligned through horizontal scroll at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
+    },
+    {
+      "file": "issue-738-native-thumb-ruler-hit.spec.ts",
+      "suitePath": [],
+      "line": 11,
+      "title": "ruler whitespace remains source-cycle accurate after native thumb scroll at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
+    },
+    {
+      "file": "issue-738-native-thumb-ruler-hit.spec.ts",
+      "suitePath": [],
+      "line": 11,
+      "title": "ruler whitespace remains source-cycle accurate after native thumb scroll at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -14373,6 +14439,50 @@
       "contractId": "current-v2-sample-pack-acceptance"
     },
     {
+      "file": "issue-798-menu-exclusivity.spec.ts",
+      "suitePath": [],
+      "line": 11,
+      "title": "peer menus replace each other at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
+    },
+    {
+      "file": "issue-798-menu-exclusivity.spec.ts",
+      "suitePath": [],
+      "line": 11,
+      "title": "peer menus replace each other at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
+    },
+    {
       "file": "issue-799-orphan-divider.spec.ts",
       "suitePath": [],
       "line": 12,
@@ -14859,6 +14969,50 @@
       "suitePath": [],
       "line": 5,
       "title": "Large Feature Showcase remains renderable at 1672x941",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
+    },
+    {
+      "file": "issue-840-stale-cycle-context.spec.ts",
+      "suitePath": [],
+      "line": 5,
+      "title": "Cycle range and cursor status remain truthful after switching to the Transaction time axis at 1280x720",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
+    },
+    {
+      "file": "issue-840-stale-cycle-context.spec.ts",
+      "suitePath": [],
+      "line": 5,
+      "title": "Cycle range and cursor status remain truthful after switching to the Transaction time axis at 1672x941",
       "project": "chromium",
       "timeoutMs": 30000,
       "tags": [],
@@ -16379,7 +16533,29 @@
     {
       "file": "minimap-overview-performance.spec.ts",
       "suitePath": [],
-      "line": 24,
+      "line": 27,
+      "title": "Bookmark-only document commits do not compare the unchanged MiniMap Signal collection",
+      "project": "chromium",
+      "timeoutMs": 30000,
+      "tags": [],
+      "annotations": [],
+      "domain": null,
+      "originIssue": null,
+      "type": null,
+      "costClass": null,
+      "measuredRuntimeMs": null,
+      "primaryContract": null,
+      "duplicateGroup": null,
+      "executionTier": null,
+      "decision": "UNREVIEWED",
+      "reason": "Inventory record generated from Playwright collection; classify from the test's protected product invariant before changing coverage.",
+      "replacementTest": null,
+      "reviewStatus": "UNREVIEWED"
+    },
+    {
+      "file": "minimap-overview-performance.spec.ts",
+      "suitePath": [],
+      "line": 45,
       "title": "MiniMap viewport updates do not rebuild the static overview",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16406,7 +16582,7 @@
     {
       "file": "minimap-overview-performance.spec.ts",
       "suitePath": [],
-      "line": 64,
+      "line": 89,
       "title": "non-overview Signal property commits reuse the static MiniMap overview",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -16726,7 +16902,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 11,
+      "line": 14,
       "title": "View-only operations keep canonical validation and render counters unchanged",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -16752,7 +16928,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 57,
+      "line": 60,
       "title": "SnapIndex cache survives a non-geometric Signal rename",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -16778,7 +16954,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 83,
+      "line": 86,
       "title": "retargets the SnapIndex after a vertical viewport jump",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -16805,7 +16981,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 159,
+      "line": 162,
       "title": "heavy renderer diagnostics are pull-based and absent from hot-path DOM counters",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -16831,7 +17007,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 178,
+      "line": 181,
       "title": "PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants with browser median/p95",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -16857,7 +17033,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 276,
+      "line": 279,
       "title": "1000x1000 virtualization mounts viewport-scale rows and avoids duplicate bindings",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -16884,7 +17060,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 297,
+      "line": 300,
       "title": "large valid fixture records Open/Save browser profile evidence",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -16911,7 +17087,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 319,
+      "line": 322,
       "title": "viewport-only projection remains bounded at 1k, 5k, and 10k rows",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -16938,7 +17114,7 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 348,
+      "line": 351,
       "title": "repeated Open A/B/A releases old owners and does not stack handlers",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -16965,34 +17141,35 @@
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 365,
-      "title": "Open first-correct-paint has median and p95 evidence across scale fixtures",
+      "line": 368,
+      "title": "PR Open gate: browser presentation-ready stays under 1s and within approved-main regression budget",
       "project": "chromium",
       "timeoutMs": 120000,
       "tags": [],
       "annotations": [],
-      "domain": "open-first-correct-paint-scale",
-      "originIssue": 174,
+      "domain": "open-presentation-ready-regression-gate",
+      "originIssue": 854,
       "type": "PERFORMANCE",
-      "costClass": "VERY_HEAVY",
+      "costClass": "HEAVY",
       "measuredRuntimeMs": null,
-      "primaryContract": "First correct render after Open has reported median/p95 measurements across small, representative, and long-cycle documents.",
-      "duplicateGroup": "large-document-open-lifecycle",
-      "executionTier": "TIER_4_HEAVY_INTEGRATION",
+      "primaryContract": "Production File Open publishes browser-internal presentation-ready marks for the checked-in Large Feature Showcase (48×128) and generated 50×100 fixtures; five-run nearest-rank p50/p95 must satisfy the absolute <1000ms SLO and approved-main relative regression budgets.",
+      "duplicateGroup": "open-presentation-latency-gate",
+      "executionTier": "TIER_3_PR_PERFORMANCE_GATE",
       "decision": "KEEP",
-      "reason": "Runs repeated Opens across multiple fixtures to produce scale-specific timing distributions; this is a benchmark, not a correctness smoke.",
+      "reason": "This is the merge-blocking Open presentation-latency gate required by #854. It measures the production browser phase mark (not Playwright RPC time), waits for each Open to settle before the next sample, and is restricted to two representative fixtures to keep ordinary PR cost bounded.",
       "replacementTest": null,
       "reviewStatus": "REVIEWED",
       "profiles": [
+        "pr",
         "performance",
         "nightly"
       ],
-      "contractId": "open-first-correct-paint-scale"
+      "contractId": "open-presentation-ready-regression-gate"
     },
     {
       "file": "performance-closure.spec.ts",
       "suitePath": [],
-      "line": 391,
+      "line": 428,
       "title": "nightly/manual 500/1000 heavy profiles",
       "project": "chromium",
       "timeoutMs": 120000,
@@ -21282,7 +21459,7 @@
     {
       "file": "timeline-range-100k.spec.ts",
       "suitePath": [],
-      "line": 107,
+      "line": 111,
       "title": "reveals offscreen 50k and 99k cycles through the production bookmark path",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -21309,7 +21486,7 @@
     {
       "file": "timeline-range-100k.spec.ts",
       "suitePath": [],
-      "line": 133,
+      "line": 142,
       "title": "re-evaluates mounted waveform source windows after horizontal scroll",
       "project": "chromium",
       "timeoutMs": 30000,
@@ -26953,6 +27130,15 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "issue-426-event-selection-scope.spec.ts",
+      "caseCount": 1,
+      "reviewedCaseCount": 0,
+      "originIssue": "426",
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
+      "semanticReviewStatus": "UNREVIEWED"
+    },
+    {
       "file": "issue-426-external-bottom-draft-update.spec.ts",
       "caseCount": 3,
       "reviewedCaseCount": 3,
@@ -27476,6 +27662,18 @@
       "semanticReviewStatus": "UNREVIEWED"
     },
     {
+      "file": "issue-738-native-thumb-ruler-hit.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 0,
+      "originIssue": "738",
+      "declaredTimeoutMs": 90,
+      "candidateSignals": [
+        "dataset",
+        "geometryRead"
+      ],
+      "semanticReviewStatus": "UNREVIEWED"
+    },
+    {
       "file": "issue-738-ruler-hit-area.spec.ts",
       "caseCount": 3,
       "reviewedCaseCount": 2,
@@ -27964,6 +28162,15 @@
       "semanticReviewStatus": "REVIEWED"
     },
     {
+      "file": "issue-798-menu-exclusivity.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 0,
+      "originIssue": "798",
+      "declaredTimeoutMs": 60000,
+      "candidateSignals": [],
+      "semanticReviewStatus": "UNREVIEWED"
+    },
+    {
       "file": "issue-799-orphan-divider.spec.ts",
       "caseCount": 7,
       "reviewedCaseCount": 0,
@@ -28021,6 +28228,15 @@
       "candidateSignals": [
         "querySelector"
       ],
+      "semanticReviewStatus": "UNREVIEWED"
+    },
+    {
+      "file": "issue-840-stale-cycle-context.spec.ts",
+      "caseCount": 2,
+      "reviewedCaseCount": 0,
+      "originIssue": "840",
+      "declaredTimeoutMs": null,
+      "candidateSignals": [],
       "semanticReviewStatus": "UNREVIEWED"
     },
     {
@@ -28305,16 +28521,15 @@
     },
     {
       "file": "minimap-overview-performance.spec.ts",
-      "caseCount": 2,
+      "caseCount": 3,
       "reviewedCaseCount": 2,
       "originIssue": null,
       "declaredTimeoutMs": null,
       "candidateSignals": [
         "querySelector",
-        "dataset",
-        "explicitWait"
+        "dataset"
       ],
-      "semanticReviewStatus": "REVIEWED"
+      "semanticReviewStatus": "PARTIAL"
     },
     {
       "file": "minimap-viewport-closure.spec.ts",

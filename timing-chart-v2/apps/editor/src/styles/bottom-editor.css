@@ -122,7 +122,14 @@
    field this Annotation actually has. */
 .annotation-anchor-mini { display: flex; align-items: center; gap: 5px; margin: 2px 0; }
 .annotation-anchor-mini-label { flex: 0 0 34px; color: #5c687c; font-size: 10px; font-weight: 650; }
-.annotation-anchor-mini select { flex: 1 1 auto; min-width: 0; height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; padding: 2px 5px; font-size: 10px; }
+.annotation-anchor-mini > .signal-id-picker { flex: 1 1 auto; min-width: 0; }
+.signal-id-picker { position: relative; min-width: 0; }
+.signal-id-picker > input[role="combobox"] { box-sizing: border-box; width: 100%; min-width: 0; height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; padding: 2px 5px; font: inherit; }
+.signal-id-picker-results { position: absolute; z-index: 40; top: calc(100% + 2px); left: 0; right: 0; max-height: 180px; overflow: auto; border: 1px solid #9eacbd; border-radius: 3px; background: #fff; box-shadow: 0 4px 12px rgb(19 39 64 / 18%); }
+.signal-id-picker-option, .signal-id-picker-count, .signal-id-picker-empty { padding: 4px 7px; font-size: 12px; }
+.signal-id-picker-option { cursor: pointer; }
+.signal-id-picker-option:hover, .signal-id-picker-option[data-active="true"] { background: #e8f1fc; }
+.signal-id-picker-count, .signal-id-picker-empty { color: #64748b; }
 .annotation-anchor-mini input { flex: 0 0 52px; height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; padding: 2px 5px; font-size: 10px; }
 .annotation-anchor-mini button { flex: 0 0 auto; height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 2px 8px; font-size: 10px; }
 .annotation-anchor-mini button:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; }
