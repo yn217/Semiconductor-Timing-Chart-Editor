@@ -1,4 +1,5 @@
 import { startTransition } from "react";
+import { flushSync } from "react-dom";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { RenderProjection, VirtualizationWindow } from "@timing-chart-v2/projection";
@@ -786,7 +787,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         active.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2, view: globalThis.window }));
       }
     };
-    const onSelect = (event: MouseEvent) => {
+    const onSelect = (event: MouseEvent, options?: { readonly synchronous?: boolean }) => {
       const closestFromEvent = <T extends Element>(selector: string): T | null => {
         const target = event.target instanceof Element ? event.target.closest<T>(selector) : null;
         if (target) return target;
@@ -884,7 +885,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       }
       const signal = sessionController.snapshot().document.signals.find((candidate) => candidate.id === id);
       if (!signal) return;
-      startTransition(() => selection.selectSignal(signal.id, event.ctrlKey || event.metaKey));
+      const commitSelection = () => selection.selectSignal(signal.id, event.ctrlKey || event.metaKey);
+      if (options?.synchronous === true) flushSync(commitSelection); else startTransition(commitSelection);
       const primary = selection.refs.signalId.current;
       if (primary) rendererHost.dataset.selectedSignalId = primary;
       focusTreeItem(target);

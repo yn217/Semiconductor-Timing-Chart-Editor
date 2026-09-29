@@ -41,7 +41,7 @@ export interface TimelineSurfaceInteractionInput {
   readonly getPendingArrow: () => "armed" | SemanticAnchor | undefined;
   readonly clearPendingArrow: () => void;
   readonly applyCanvasCycleSelection: (cycle: number, extend: boolean) => boolean;
-  readonly onSelect: (event: MouseEvent) => void;
+  readonly onSelect: (event: MouseEvent, options?: { readonly synchronous?: boolean }) => void;
   readonly onTreeKeyDown: (event: KeyboardEvent) => void;
   readonly onScroll: () => void;
   readonly onViewportKeyDown: (event: KeyboardEvent) => void;
@@ -285,7 +285,8 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     const rowId = target?.dataset.rowId;
     const annotationId = target?.dataset.annotationId;
     const alreadySelected = (rowId !== undefined && selection.refs.signalIds.current.has(rowId as SignalId)) || (annotationId !== undefined && selection.refs.annotationIds.current.has(annotationId as AnnotationId));
-    if (!alreadySelected) onSelect(event);
+    // #897: the menu derives its command capabilities from the committed selection, so the invoking row must be selected before the menu publishes.
+    if (!alreadySelected) onSelect(event, { synchronous: true });
     setContextMenu({ x: event.clientX, y: event.clientY, target: target?.dataset.annotationId ? "annotation" : target?.closest("[data-role='tree-group-more']") ? "group" : "signal" });
   };
   const onCanvasClick = (event: MouseEvent) => {
