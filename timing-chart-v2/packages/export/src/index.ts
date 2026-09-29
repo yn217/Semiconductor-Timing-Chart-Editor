@@ -388,7 +388,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const displayEnd = Math.max(displayStart + 1, toDisplayCycle(mapping, transaction.end, "ceil"));
     if (displayEnd <= range.start || displayStart >= range.end) return undefined;
     const x = LABEL_WIDTH + (Math.max(range.start, displayStart) - range.start) * cycleWidth;
-    return { id: transaction.id, name: transaction.name, laneId, x, y: transactionTop + laneIndex * TRANSACTION_HEIGHT, width: (Math.min(range.end, displayEnd) - Math.max(range.start, displayStart)) * cycleWidth, linkedSignals: transaction.linkedSignals ?? [] };
+    return { id: transaction.id, name: transaction.name, laneId, x, y: transactionTop + laneIndex.get(laneId)! * TRANSACTION_HEIGHT, width: (Math.min(range.end, displayEnd) - Math.max(range.start, displayStart)) * cycleWidth, linkedSignals: transaction.linkedSignals ?? [] };
   }).filter((transaction): transaction is ExportTransaction => transaction !== undefined);
   const measurementLaneById = allocateMeasurementLanes(document.annotations.flatMap((annotation) => {
     if (annotation.type !== "measurement" || !annotation.start || !annotation.end) return [];

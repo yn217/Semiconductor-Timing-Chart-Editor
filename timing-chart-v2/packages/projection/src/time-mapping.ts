@@ -66,7 +66,7 @@ function labelForSourceCycle(timeline: Pick<Timeline, "labelAnchors">, sourceCyc
 
 const identityMapping = (timeline: Pick<Timeline, "cycleCount" | "labelAnchors">): DisplayTimeMapping => {
   const displayToSource = Array.from({ length: timeline.cycleCount }, (_, index) => index);
-  return { displayCycleCount: timeline.cycleCount, isIdentity: true, sourceToDisplay: displayToSource, displayToSource, labelFor: (displayCycle) => labelForSourceCycle(timeline.labelAnchors, displayCycle) };
+  return { displayCycleCount: timeline.cycleCount, isIdentity: true, sourceToDisplay: displayToSource, displayToSource, labelFor: (displayCycle) => labelForSourceCycle(timeline, displayCycle) };
 };
 
 export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): DisplayTimeMapping {
@@ -108,7 +108,7 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
     // the last visible source cycle (or an arbitrary display index).
     labelFor: (displayCycle) => {
       const sourceCycle = displayCycle === display ? timeline.cycleCount : displayToSource[displayCycle];
-      return sourceCycle === undefined ? displayCycle : labelForSourceCycle(timeline.labelAnchors, sourceCycle);
+      return sourceCycle === undefined ? displayCycle : labelForSourceCycle(timeline, sourceCycle);
     },
   };
 }
