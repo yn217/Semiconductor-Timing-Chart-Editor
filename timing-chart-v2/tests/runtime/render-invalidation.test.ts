@@ -22,4 +22,14 @@ describe("render invalidation owner", () => {
       refreshOverlays: false,
     });
   });
+
+  it("reprojects Annotation/Dependency overlays for any rowPresentation change (Signal Show/Hide, #898)", () => {
+    expect(deriveRenderInvalidation({ rowPresentation: ["sig_a"] } as ChangeSet, "signal_clk" as never)).toEqual({
+      snapDependenciesChanged: false,
+      referenceWaveChanged: false,
+      refreshRuler: false,
+      refreshGrid: false,
+      refreshOverlays: true,
+    });
+  });
 });
