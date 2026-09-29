@@ -29,11 +29,25 @@ function valueSegments(values: readonly SignalValueChange[], cycleCount: number)
   }));
 }
 
-function segmentsForSignal(signal: Signal | undefined, cycleCount: number): readonly MiniMapSegment[] {
-  if (!signal || signal.type === "commentRow") return [{ start: 0, end: cycleCount, tone: "comment" }];
-  if (signal.type === "clock") return [{ start: 0, end: cycleCount, tone: "clock" }];
-  return valueSegments(signal.values, cycleCount);
+const constantSegmentCache = new Map<string, readonly MiniMapSegment[]>();
+function constantSegments(tone: "comment" | "clock", cycleCount: number): readonly MiniMapSegment[] {
+  const key = `${tone}:${cycleCount}`;
+  let segments = constantSegmentCache.get(key);
+  if (!segments) { segments = [{ start: 0, end: cycleCount, tone }]; if (constantSegmentCache.size > 64) constantSegmentCache.clear(); constantSegmentCache.set(key, segments); }
+  return segments;
 }
+
+function segmentsForSignal(signal: Signal | undefined, cycleCount: number): readonly MiniMapSegment[] {
+  if (!signal || signal.type === "commentRow") return constantSegments("comment", cycleCount);
+  if (signal.type === "clock") return constantSegments("clock", cycleCount);
+  // #869: segments depend only on the (immutable) values array and cycleCount, so an edit to one Signal recomputes only that Signal.
+  const cached = valueSegmentCache.get(signal.values);
+  if (cached && cached.cycleCount === cycleCount) return cached.segments;
+  const segments = valueSegments(signal.values, cycleCount);
+  valueSegmentCache.set(signal.values, { cycleCount, segments });
+  return segments;
+}
+const valueSegmentCache = new WeakMap<object, { readonly cycleCount: number; readonly segments: readonly MiniMapSegment[] }>();
 
 /**
  * Derive the static MiniMap overview from CanonicalDocument once per document
