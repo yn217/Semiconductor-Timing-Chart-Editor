@@ -166,7 +166,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       // rendered was itself a clock) keeps that shared ratio intact
       // regardless of which signal happens to need period-aligned WaveDrom
       // clock encoding.
-      const referenceClockSignal = document.timeline.referenceClock === undefined ? undefined : signalIndex.byId.get(document.timeline.referenceClock);
+      // #896: the effective reference Clock (explicit, else the first Clock) aligns every bounded window, exactly like Transaction geometry/readiness.
+      const referenceClockSignal = referenceClockId === undefined ? undefined : signalIndex.byId.get(referenceClockId);
       const referenceClockPeriod = referenceClockSignal?.type === "clock" ? referenceClockSignal.generator.period : undefined;
       type PreparedItem = {
         readonly request: (typeof requests)[number];
