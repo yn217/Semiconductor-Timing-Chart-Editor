@@ -12,7 +12,7 @@ async function readRecentRecord(page: import("@playwright/test").Page) {
       request.onerror = () => reject(request.error);
     });
     try {
-      return await new Promise<{ text: string; filename: string } | undefined>((resolve, reject) => {
+      return await new Promise<{ text: string; filename: string; documentId?: string; generation?: string; savedAt: number; size?: number } | undefined>((resolve, reject) => {
         const request = database.transaction("recent-documents", "readonly").objectStore("recent-documents").get("recent");
         request.onsuccess = () => resolve(request.result as { text: string; filename: string } | undefined);
         request.onerror = () => reject(request.error);
@@ -55,6 +55,7 @@ test("Save and Open Recent round-trip a large document without a localStorage pa
   await downloaded;
   const withRecentPersistenceMs = await page.evaluate(() => (window as Window & { __issue789SaveHandlerMs?: number }).__issue789SaveHandlerMs ?? null);
   await expect(page.getByTestId("dirty-status")).not.toHaveText("Modified");
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem("timing-chart-v2.recent-meta") ?? "null")?.contentKept)).toBe(true);
   const stored = await page.evaluate(() => ({ recent: localStorage.getItem("timing-chart-v2.recent"), meta: JSON.parse(localStorage.getItem("timing-chart-v2.recent-meta") ?? "null") }));
   expect(stored.recent, "no full-document copy in synchronous localStorage").toBeNull();
   expect(stored.meta).toMatchObject({ filename: expect.stringContaining("tcd"), contentKept: true, storageVersion: 2 });
@@ -104,6 +105,51 @@ test("IndexedDB failure does not invalidate a successful download or change docu
   const bottom = page.getByTestId("bottom-editor");
   await bottom.getByRole("tab", { name: "Problems", exact: true }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("SAVE_RECENT_FAILED");
+});
+
+test("failed newer Recent write preserves only the last committed generation", async ({ page }) => {
+  await page.goto("/");
+  const surface = page.getByTestId("cycle-surface");
+  await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+
+  const baseA = generatePerformanceDocument({ signalCount: 8, cycleCount: 24 });
+  const baseB = generatePerformanceDocument({ signalCount: 9, cycleCount: 24 });
+  const documentA = { ...baseA, document: { ...baseA.document, id: "issue789-committed-A", title: "Committed A" } };
+  const documentB = { ...baseB, document: { ...baseB.document, id: "issue789-failed-B", title: "Failed B" } };
+  const openFixture = async (name: string, value: typeof documentA) => {
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
+    await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
+  };
+  const saveDownload = async () => {
+    const download = page.waitForEvent("download");
+    await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+    await download;
+  };
+
+  await openFixture("committed-A.tcd", documentA);
+  await saveDownload();
+  await expect.poll(async () => (await readRecentRecord(page))?.documentId ?? "").toBe("issue789-committed-A");
+  const committedMetadata = await page.evaluate(() => JSON.parse(localStorage.getItem("timing-chart-v2.recent-meta") ?? "null"));
+  const committedRecord = await readRecentRecord(page);
+  expect(committedMetadata).toMatchObject({ documentId: "issue789-committed-A", contentKept: true, generation: committedRecord?.generation, savedAt: committedRecord?.savedAt, size: committedRecord?.size });
+
+  await openFixture("failed-B.tcd", documentB);
+  await page.evaluate(() => Object.defineProperty(window, "indexedDB", { configurable: true, get: () => undefined }));
+  await saveDownload();
+  await page.getByTestId("bottom-editor").getByRole("tab", { name: "Problems", exact: true }).click();
+  await expect(page.getByTestId("problems-panel")).toContainText("SAVE_RECENT_FAILED");
+  const metadataAfterFailedB = await page.evaluate(() => JSON.parse(localStorage.getItem("timing-chart-v2.recent-meta") ?? "null"));
+  expect(metadataAfterFailedB).toEqual(committedMetadata);
+
+  await page.reload();
+  await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByRole("button", { name: "File", exact: true }).click();
+  await page.getByRole("button", { name: "Recent", exact: true }).click();
+  await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
+  await page.getByTestId("bottom-editor").getByRole("tab", { name: "JSON", exact: true }).click();
+  await expect(page.getByTestId("json-panel").locator("pre")).toContainText('"id": "issue789-committed-A"');
+  await expect(page.getByTestId("json-panel").locator("pre")).not.toContainText('"id": "issue789-failed-B"');
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
 });
 
 test("Open Recent migrates a legacy localStorage document to IndexedDB", async ({ page }) => {

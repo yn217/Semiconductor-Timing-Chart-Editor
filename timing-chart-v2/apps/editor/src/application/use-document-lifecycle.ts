@@ -4,11 +4,40 @@ import type { CommandHistorySession } from "@timing-chart-v2/history";
 import { validateDocumentResourceBudget, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import { commitDocumentReplacement } from "./document-replacement.js";
-import { isLegacyRecentDocument, loadRecentDocument, saveRecentDocument } from "./recent-document-storage.js";
+import { documentIdFromRecentText, isLegacyRecentDocument, loadRecentDocument, recentRecordMatches, saveRecentDocument, type RecentDocumentIdentity, type RecentDocumentMetadata, type RecentDocumentRecord } from "./recent-document-storage.js";
 import { canonicalDocumentOf, createNewDocumentFromProductTemplate, decodeOpenDocumentBytes, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "../file-document-controller.js";
 
 const RECENT_KEY = "timing-chart-v2.recent";
 const RECENT_META_KEY = "timing-chart-v2.recent-meta";
+let recentGenerationSequence = 0;
+
+type RecentMetadata = {
+  contentKept?: boolean;
+  filename?: string;
+  title?: string;
+  documentId?: string;
+  generation?: string;
+  savedAt?: number;
+  size?: number;
+  storageVersion?: number;
+  [key: string]: unknown;
+};
+
+function createRecentIdentity(filename: string, documentId: string, size: number): RecentDocumentIdentity {
+  const savedAt = Date.now();
+  const generation = globalThis.crypto?.randomUUID?.() ?? `${savedAt}-${++recentGenerationSequence}`;
+  return { filename, documentId, generation, savedAt, size };
+}
+
+function publishRecentMetadata(identity: RecentDocumentIdentity, title: string): void {
+  let previousStorageVersion: unknown;
+  try {
+    const previous: unknown = JSON.parse(localStorage.getItem(RECENT_META_KEY) ?? "null");
+    if (typeof previous === "object" && previous !== null) previousStorageVersion = (previous as { storageVersion?: unknown }).storageVersion;
+  } catch { /* Missing/corrupt metadata requires one-time legacy cleanup. */ }
+  localStorage.setItem(RECENT_META_KEY, JSON.stringify({ ...identity, title, contentKept: true, storageVersion: 2 }));
+  if (previousStorageVersion !== 2) localStorage.removeItem(RECENT_KEY);
+}
 
 export type PendingDocumentAction = Readonly<{ kind: "new" | "open"; requestId: number; text?: string }>;
 export type CompatibilityPreview = Readonly<{ sourceFormatVersion: number; sourceText: string; readOnly: boolean }>;
@@ -232,17 +261,19 @@ export function useDocumentLifecycle({
 
   const save = useCallback((filename: string) => {
     const session = application.runtime.session.current();
+    const saveSnapshot = session.getSnapshot();
+    const savedDocument = saveSnapshot.document;
     let text: string;
     const serializeStartedAt = performance.now();
     try {
-      text = serializeSaveDocument(session.getSnapshot().document);
+      text = serializeSaveDocument(savedDocument);
       recordSaveMeasure("timing-chart-v2.save.serialize", serializeStartedAt, { characters: text.length });
     } catch (error) {
       recordSaveMeasure("timing-chart-v2.save.serialize", serializeStartedAt);
       reportSaveFailure(error, "serialize");
       return false;
     }
-    const persistedRevision = session.getSnapshot().revision;
+    const persistedRevision = saveSnapshot.revision;
     const downloadStartedAt = performance.now();
     try { persistText(text, filename); }
     catch (error) {
@@ -254,30 +285,18 @@ export function useDocumentLifecycle({
     if (session.getSnapshot().revision === persistedRevision) session.markClean();
     application.publishHistory();
     application.setRuntimeDiagnostics((current) => current.filter((item) => !isSaveDiagnostic(item)));
-    const recentMetadataStartedAt = performance.now();
-    try {
-      const document = session.getSnapshot().document;
-      let previousStorageVersion: unknown;
-      try {
-        const previous: unknown = JSON.parse(localStorage.getItem(RECENT_META_KEY) ?? "null");
-        if (typeof previous === "object" && previous !== null) previousStorageVersion = (previous as { storageVersion?: unknown }).storageVersion;
-      } catch { /* Missing/corrupt metadata requires one-time legacy cleanup. */ }
-      localStorage.setItem(RECENT_META_KEY, JSON.stringify({ filename, title: document.document.title, documentId: document.document.id, size: text.length, savedAt: Date.now(), contentKept: true, storageVersion: 2 }));
-      if (previousStorageVersion !== 2) {
-        // Clear a pre-migration payload once; later Saves never synchronously
-        // touch the legacy document key. The version marker prevents stale fallback.
-        localStorage.removeItem(RECENT_KEY);
-      }
-      application.setProblem("");
-    } catch (error) {
-      const diagnostic = recentSaveWarning(error);
-      application.setRuntimeDiagnostics((current) => [...current, diagnostic]);
-      application.setProblem(`Saved successfully. ${diagnostic.message}`);
-    } finally {
-      recordSaveMeasure("timing-chart-v2.save.recent-metadata", recentMetadataStartedAt, { characters: text.length });
-    }
     const recentWriteStartedAt = performance.now();
-    const recentWrite = recentWriteRef.current.catch(() => undefined).then(() => saveRecentDocument(text, filename));
+    const identity = createRecentIdentity(filename, savedDocument.document.id, text.length);
+    const recentWrite = recentWriteRef.current.catch(() => undefined).then(async () => {
+      await saveRecentDocument(text, identity);
+      const recentMetadataStartedAt = performance.now();
+      try {
+        publishRecentMetadata(identity, savedDocument.document.title);
+        application.setProblem("");
+      } finally {
+        recordSaveMeasure("timing-chart-v2.save.recent-metadata", recentMetadataStartedAt, { characters: text.length });
+      }
+    });
     recentWriteRef.current = recentWrite.catch((error: unknown) => {
       const diagnostic = recentSaveWarning(error);
       application.setRuntimeDiagnostics((current) => [...current.filter((item) => item.code !== "SAVE_RECENT_FAILED"), diagnostic]);
@@ -297,55 +316,77 @@ export function useDocumentLifecycle({
     return true;
   }, [pendingAction, performAction, save]);
   const openRecent = useCallback(async () => {
-    let storedText: string | null;
-    let metadata: { contentKept?: boolean; filename?: string; [key: string]: unknown } | null = null;
+    const queueRecentMigration = (text: string, metadata: RecentMetadata | null) => {
+      const documentId = documentIdFromRecentText(text);
+      if (!documentId) return;
+      const filename = typeof metadata?.filename === "string" ? metadata.filename : "Recent document";
+      const title = typeof metadata?.title === "string" ? metadata.title : "Recent document";
+      const identity = createRecentIdentity(filename, documentId, text.length);
+      recentWriteRef.current = recentWriteRef.current.catch(() => undefined).then(async () => {
+        await saveRecentDocument(text, identity);
+        publishRecentMetadata(identity, title);
+      }).catch(() => undefined);
+    };
     try {
-      storedText = localStorage.getItem(RECENT_KEY);
+      // A Save publishes metadata only after its IndexedDB transaction commits.
+      // Wait first so this read observes the matching committed generation.
+      await recentWriteRef.current;
+      const storedText = localStorage.getItem(RECENT_KEY);
+      let metadata: (RecentMetadata & RecentDocumentMetadata) | null = null;
       const parsedMetadata: unknown = JSON.parse(localStorage.getItem(RECENT_META_KEY) ?? "null");
       if (typeof parsedMetadata === "object" && parsedMetadata !== null && !Array.isArray(parsedMetadata)) {
-        metadata = parsedMetadata as { contentKept?: boolean; filename?: string; [key: string]: unknown };
+        metadata = parsedMetadata as RecentMetadata;
       }
-    }
-    catch (error) {
-      const diagnostic = recentOpenFailure(error);
-      application.setProblem(diagnostic.message);
-      application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
-      return false;
-    }
-    let legacyText: string | undefined;
-    if (metadata?.storageVersion !== 2 && storedText) {
-      try { if (isLegacyRecentDocument(JSON.parse(storedText))) legacyText = storedText; }
-      catch { /* Invalid legacy storage is not a recoverable document. */ }
-    }
-    try {
-      await recentWriteRef.current;
-      const record = await loadRecentDocument();
-      const text = record?.text ?? legacyText;
-      if (text) {
-        requestOpenText(text);
-        if (!record) {
-          const filename = typeof metadata?.filename === "string" ? metadata.filename : "Recent document";
-          recentWriteRef.current = saveRecentDocument(text, filename).then(() => {
-            localStorage.removeItem(RECENT_KEY);
-            localStorage.setItem(RECENT_META_KEY, JSON.stringify({ ...metadata, filename, savedAt: Date.now(), size: text.length, contentKept: true, storageVersion: 2 }));
-          }).catch(() => undefined);
-        }
+      let legacyText: string | undefined;
+      if (metadata?.storageVersion !== 2 && storedText) {
+        try { if (isLegacyRecentDocument(JSON.parse(storedText))) legacyText = storedText; }
+        catch { /* Invalid legacy storage is not a recoverable document. */ }
+      }
+      let record: RecentDocumentRecord | undefined;
+      try { record = await loadRecentDocument(); }
+      catch (error) {
+        if (!legacyText) throw error;
+        requestOpenText(legacyText);
+        queueRecentMigration(legacyText, metadata);
         return true;
+      }
+
+      if (metadata?.storageVersion === 2) {
+        if (!recentRecordMatches(record, metadata)) {
+          const diagnostic = recentOpenFailure(new Error("The stored Recent content does not match its committed metadata."));
+          application.setProblem("The latest Recent copy is unavailable or does not match its saved metadata. Use Open to reload the saved file.");
+          application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
+          return false;
+        }
+        requestOpenText(record.text);
+        return true;
+      }
+
+      if (legacyText) {
+        requestOpenText(legacyText);
+        queueRecentMigration(legacyText, metadata);
+        return true;
+      }
+
+      // Older IDB records can be reopened only when their old metadata proves
+      // the same filename, timestamp, size, and canonical document identity.
+      if (recentRecordMatches(record, metadata ?? {})) {
+        requestOpenText(record.text);
+        if (!record.generation || !record.documentId) queueRecentMigration(record.text, metadata);
+        return true;
+      }
+
+      if (record && metadata?.contentKept === true) {
+        const diagnostic = recentOpenFailure(new Error("The stored Recent content does not match its committed metadata."));
+        application.setProblem("The latest Recent copy is unavailable or does not match its saved metadata. Use Open to reload the saved file.");
+        application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
+        return false;
       }
       application.setProblem(metadata?.contentKept === false
         ? "The last saved document's Recent copy is unavailable. Use Open to reload the saved file."
         : "No recent document is available.");
       return false;
     } catch (error) {
-      if (legacyText) {
-        requestOpenText(legacyText);
-        const filename = typeof metadata?.filename === "string" ? metadata.filename : "Recent document";
-        recentWriteRef.current = saveRecentDocument(legacyText, filename).then(() => {
-          localStorage.removeItem(RECENT_KEY);
-          localStorage.setItem(RECENT_META_KEY, JSON.stringify({ ...metadata, filename, savedAt: Date.now(), size: legacyText.length, contentKept: true, storageVersion: 2 }));
-        }).catch(() => undefined);
-        return true;
-      }
       const diagnostic = recentOpenFailure(error);
       application.setProblem(diagnostic.message);
       application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
