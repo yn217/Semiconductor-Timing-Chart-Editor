@@ -559,9 +559,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       return axisOwner === undefined ? undefined : projection.rowLayout.find((row) => row.rowId === axisOwner)?.y;
     })();
     snapTransactionCycle.current = (clientX, surfaceLeft, horizontalScroll = 0) => resolveTransactionSnapCycle({
-      clientX,
-      surfaceLeft,
-      horizontalScroll,
+      clientX, surfaceLeft, horizontalScroll,
       snapAxisRowY: transactionSnapAxisY,
       timeAxis: timelineGeometry.timeAxis,
       screenGeometry: timelineGeometry.screen,
