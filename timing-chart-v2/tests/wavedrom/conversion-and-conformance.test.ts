@@ -231,6 +231,62 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(() => toWaveJson({ signal: badEnableAlign, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNALIGNED_CLOCK_ENABLE" }));
   });
 
+  it("uses WaveDrom continuation for held levels in expanded-duty clock windows", () => {
+    const base = canonicalFixture().signals[0] as ClockSignal;
+    const cases = [
+      {
+        name: "25% positive",
+        signal: { ...base, generator: { ...base.generator, period: 2, duty: 0.25 } } as ClockSignal,
+        full: "p0p0p0p0",
+        window: "p0p0",
+        windowStart: 2,
+      },
+      {
+        name: "75% positive",
+        signal: { ...base, generator: { ...base.generator, period: 2, duty: 0.75 } } as ClockSignal,
+        full: "1p1p1p1p",
+        window: "1p1p",
+        windowStart: 2,
+      },
+      {
+        name: "25% negative",
+        signal: { ...base, generator: { ...base.generator, period: 2, duty: 0.25, initial: 1 as const, polarity: "negative" as const } } as ClockSignal,
+        full: "n1n1n1n1",
+        window: "n1n1",
+        windowStart: 2,
+      },
+      {
+        name: "consecutive disabled periods",
+        signal: { ...base, enable: [{ start: 0, value: 1 }, { start: 2, value: 0 }, { start: 8, value: 1 }], generator: { ...base.generator, period: 2, duty: 0.25 } } as ClockSignal,
+        full: "p0......p0p0",
+        window: "0...p0",
+        windowStart: 4,
+      },
+      {
+        name: "consecutive suppressed periods",
+        signal: { ...base, generator: { ...base.generator, period: 2, duty: 0.25, suppressedPeriods: [1, 2, 3] } } as ClockSignal,
+        full: "p0......p0p0",
+        window: "0.p0p0",
+        windowStart: 6,
+      },
+    ];
+
+    for (const testCase of cases) {
+      const fullWave = toWaveJson({ signal: testCase.signal, cycleCount: testCase.full.length });
+      const boundedWave = toWaveJsonWindow(
+        { signal: testCase.signal, cycleCount: testCase.full.length },
+        testCase.windowStart,
+        testCase.windowStart + testCase.window.length,
+      );
+      const expandedClock = { expanded: true, polarity: testCase.signal.generator.polarity, initial: testCase.signal.generator.initial };
+
+      expect(fullWave.wave, `${testCase.name} full conversion`).toBe(testCase.full);
+      expect(boundedWave.wave, `${testCase.name} bounded conversion`).toBe(testCase.window);
+      expect(renderWaveJsonMarkup(fullWave), `${testCase.name} pinned full render`).toBe(referenceMarkup({ wave: testCase.full, clock: expandedClock }));
+      expect(renderWaveJsonMarkup(boundedWave), `${testCase.name} pinned bounded render`).toBe(referenceMarkup({ wave: testCase.window, clock: expandedClock }));
+    }
+  });
+
   it("pins the production and test renderer to one WaveDrom version", () => {
     expect(WaveDrom.version).toBe(WAVEDROM_VERSION);
     expect(new ProductionWaveDromAdapter().metrics()).toMatchObject({ renderCalls: 0, waveJsonDurationMs: 0, renderDurationMs: 0, renderStages: { last: undefined, totals: { sourcePreparationMs: 0, metricCollectionOverheadMs: 0, cacheKeySerializeMs: 0, waveDromRenderAnyMs: 0, onmlStringifyMs: 0, valueLabelLayoutMs: 0, markupSafetyMs: 0, templateParseMs: 0, svgSafetyDomWalkMs: 0, domInstallMs: 0, totalSignalWallMs: 0, waveJsonBytes: 0, semanticValuesBytes: 0, svgMarkupBytes: 0 } }, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 });

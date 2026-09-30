@@ -120,12 +120,31 @@ function expandedClockToWaveJson(signal: ClockSignal, cycleCount: number, gaps: 
   const timelineSlotCount = Math.ceil(cycleCount / generator.period);
   const wave: string[] = [];
   const enabled = createEnableReader(signal.enable);
+  let heldLevel: string | undefined;
   for (let slot = 0; slot < timelineSlotCount; slot += 1) {
     const cycle = slot * generator.period;
     const pulseSlot = cycle < generator.start ? -1 : Math.round((cycle - generator.start) / generator.period);
     const active = cycle >= generator.start && enabled(cycle) && !(generator.suppressedPeriods ?? []).includes(pulseSlot);
-    const slotWave = active ? pattern : staticToken.repeat(generator.period);
-    wave.push(...slotWave.slice(0, Math.min(generator.period, cycleCount - wave.length)).split(""));
+    const slotLength = Math.min(generator.period, cycleCount - wave.length);
+    if (active) {
+      const slotWave = pattern.slice(0, slotLength);
+      for (const token of slotWave) {
+        wave.push(token);
+        if (token === "0" || token === "1") heldLevel = token;
+        else if (token === "p") heldLevel = "1";
+        else if (token === "n") heldLevel = "0";
+      }
+      continue;
+    }
+
+    // A disabled/suppressed clock holds its current level. Emit a value only
+    // when that level actually changes; WaveDrom continuation dots preserve
+    // the held state without inventing repeated value boundaries.
+    for (let offset = 0; offset < slotLength; offset += 1) {
+      const token = heldLevel === staticToken ? "." : staticToken;
+      wave.push(token);
+      heldLevel = staticToken;
+    }
   }
   for (const cycle of gaps ?? []) {
     if (cycle % generator.period !== 0) throw new WaveDromAdapterError("UNALIGNED_CLOCK_GAP", "Clock gaps must align to the WaveDrom period.");
