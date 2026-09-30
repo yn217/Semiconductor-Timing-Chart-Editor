@@ -21,6 +21,7 @@ export function useClipboardActions({ application, selection }: { application: E
   const transactionsRef = useRef<readonly Transaction[]>([]);
   const spacerRef = useRef<SpacerClipboardItem | undefined>(undefined);
   const cutSignalsRef = useRef(false);
+  const cutSignalLinksRef = useRef<readonly Readonly<{ transactionId: TransactionId; signalId: SignalId }>[]>([]);
   const sourceDocumentEpochRef = useRef<number | undefined>(undefined);
   const signalIndexRef = useRef<Readonly<{ signals: readonly Signal[]; groups: readonly SignalGroup[]; byId: ReadonlyMap<SignalId, Signal>; order: ReadonlyMap<SignalId, number>; owner: ReadonlyMap<SignalId, { groupId: GroupId; index: number }>; groupsById: ReadonlyMap<GroupId, SignalGroup> }> | undefined>(undefined);
   const transactionIndexRef = useRef<Readonly<{ transactions: readonly Transaction[]; byId: ReadonlyMap<TransactionId, Transaction>; order: ReadonlyMap<TransactionId, number> }> | undefined>(undefined);
@@ -67,13 +68,14 @@ export function useClipboardActions({ application, selection }: { application: E
       signals: signalsIndex === undefined ? [] : [...state.signalIds].flatMap((id) => { const signal = signalsIndex.byId.get(id); const owner = signalsIndex.owner.get(id); return signal && owner ? [{ signal, ...owner }] : []; }).sort((left, right) => signalsIndex.order.get(left.signal.id)! - signalsIndex.order.get(right.signal.id)!),
     };
   };
-  const setClipboard = ({ signals = [], group, annotation, transactions = [], spacer, cutSignals = false }: { signals?: readonly SignalClipboardItem[]; group?: GroupClipboardItem; annotation?: Annotation; transactions?: readonly Transaction[]; spacer?: SpacerClipboardItem; cutSignals?: boolean }) => {
+  const setClipboard = ({ signals = [], group, annotation, transactions = [], spacer, cutSignals = false, signalLinks = [] }: { signals?: readonly SignalClipboardItem[]; group?: GroupClipboardItem; annotation?: Annotation; transactions?: readonly Transaction[]; spacer?: SpacerClipboardItem; cutSignals?: boolean; signalLinks?: readonly Readonly<{ transactionId: TransactionId; signalId: SignalId }>[] }) => {
     signalsRef.current = signals;
     groupRef.current = group;
     annotationRef.current = annotation;
     transactionsRef.current = transactions;
     spacerRef.current = spacer;
     cutSignalsRef.current = cutSignals;
+    cutSignalLinksRef.current = signalLinks;
     sourceDocumentEpochRef.current = application.runtime.documentEpoch.current();
     setAvailable(true);
   };
@@ -119,6 +121,13 @@ export function useClipboardActions({ application, selection }: { application: E
 
   const cut = () => {
     const value = selected();
+    const cutSignalIds = !value.spacer && value.group
+      ? value.group.rows.filter((rowId) => value.signalById?.has(rowId as SignalId)) as SignalId[]
+      : value.signals.map(({ signal }) => signal.id);
+    if (value.document.timeline.referenceClock && cutSignalIds.includes(value.document.timeline.referenceClock)) {
+      setStatus("Reference Clock cannot be cut; change the reference clock first");
+      return;
+    }
     if (value.spacer && value.group) {
       setClipboard({ spacer: { spacer: value.spacer, groupId: value.group.id, index: value.group.rows.indexOf(value.spacer.id) } });
       const result = application.execute({ id: nextCommandId("cut_spacer"), type: "spacer.delete", spacerId: value.spacer.id });
@@ -150,7 +159,11 @@ export function useClipboardActions({ application, selection }: { application: E
       return;
     }
     if (value.signals.length === 0) { setStatus("Select a signal, Comment Row, Annotation, or Transaction to cut"); return; }
-    setClipboard({ signals: value.signals, cutSignals: true });
+    const selectedIds = new Set(cutSignalIds);
+    const signalLinks = value.document.transactions.flatMap((transaction) => (transaction.linkedSignals ?? [])
+      .filter((signalId) => selectedIds.has(signalId))
+      .map((signalId) => ({ transactionId: transaction.id, signalId })));
+    setClipboard({ signals: value.signals, cutSignals: true, signalLinks });
     const result = application.execute({ id: nextCommandId("cut"), type: "signal.bulkDelete", signalIds: value.signals.map(({ signal }) => signal.id) });
     if (result.ok) { selection.clear(); setStatus(value.signals.length === 1 ? `Cut ${value.signals[0]!.signal.display.name}` : `Cut ${value.signals.length} signals`); }
   };
@@ -162,8 +175,12 @@ export function useClipboardActions({ application, selection }: { application: E
     const selectedGroupId = selection.refs.state.current.groupId;
     const target = current.signalGroups.find((group) => group.id === selectedGroupId) ?? current.signalGroups.find((group) => selectedSignalId !== undefined && group.rows.includes(selectedSignalId)) ?? current.signalGroups.find((group) => group.id === input[0]?.groupId) ?? current.signalGroups.at(-1);
     if (!target || input.length === 0) return;
-    const result = application.execute({ id: nextCommandId("cut_paste_move"), type: "signal.bulkCreate", signals: input.map(({ signal }) => signal), targetGroupId: target.id, index: target.rows.length });
-    if (result.ok) { cutSignalsRef.current = false; selection.selectSignals(new Set(input.map(({ signal }) => signal.id)), input[0]!.signal.id); setStatus(`Moved ${input.length} signal${input.length === 1 ? "" : "s"}`); }
+    const commands: SemanticCommand[] = [
+      { id: nextCommandId("cut_paste_move_signals"), type: "signal.bulkCreate", signals: input.map(({ signal }) => signal), targetGroupId: target.id, index: target.rows.length },
+      ...cutSignalLinksRef.current.map(({ transactionId, signalId }) => ({ id: nextCommandId("cut_paste_restore_link"), type: "transaction.linkSignal" as const, transactionId, signalId })),
+    ];
+    const result = application.executeBatch(nextCommandId("cut_paste_move"), commands);
+    if (result.ok) { cutSignalsRef.current = false; cutSignalLinksRef.current = []; selection.selectSignals(new Set(input.map(({ signal }) => signal.id)), input[0]!.signal.id); setStatus(`Moved ${input.length} signal${input.length === 1 ? "" : "s"}`); }
   };
 
   const createSignals = (input: readonly SignalClipboardItem[], operation: "paste" | "duplicate", placement: "current-selection" | "source-group" = "current-selection") => {
