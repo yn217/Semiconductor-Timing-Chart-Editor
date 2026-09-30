@@ -14,12 +14,13 @@ import type {
   SemanticAnchor,
   TimeGroup,
   Transaction,
+  TransactionId,
   TransactionPhase,
   TransactionGroupId,
   ValueSignal,
   EnumDefinition,
 } from "@timing-chart-v2/schema";
-import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, canonicalDocumentsEqual, canonicalEntityIds, canonicalReferences, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -668,17 +669,35 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
     }
     case "signal.bulkCreate": {
       if (command.signals.length === 0) return fail("no-op", "NO_OP", "$.signals", "Bulk registration requires at least one signal.");
-      let candidate = document;
-      const forward: ChangeSet[] = [];
-      const inverse: ChangeSet[] = [];
-      for (const [offset, signal] of command.signals.entries()) {
-        const plan = planCommand(candidate, { id: `${command.id}_item_${offset}` as CommandId, type: "signal.create", signal, targetGroupId: command.targetGroupId, index: command.index + offset });
-        if (!plan.ok) return plan;
-        candidate = plan.document;
-        forward.push(plan.changeSet);
-        inverse.unshift(plan.inverseChangeSet);
+      const groupIndex = document.signalGroups.findIndex((group) => group.id === command.targetGroupId);
+      const group = document.signalGroups[groupIndex];
+      if (!group) return fail("invalid", "GROUP_NOT_FOUND", "$.targetGroupId", `Group '${command.targetGroupId}' does not exist.`);
+      if (!Number.isInteger(command.index) || command.index < 0 || command.index > group.rows.length) return fail("invalid", "INDEX_OUT_OF_RANGE", "$.index", "Signal insertion index is outside the group rows.");
+
+      // Preflight the complete batch before constructing any replacement arrays.
+      const signalIds = new Set(document.signals.map((signal) => signal.id));
+      for (const signal of command.signals) {
+        if (signalIds.has(signal.id)) return fail("invalid", "DUPLICATE_ID", "$.signal.id", `Signal '${signal.id}' already exists.`);
+        signalIds.add(signal.id);
       }
-      return { ok: true, document: candidate, changeSet: mergeChangeSets(forward), inverseChangeSet: mergeChangeSets(inverse) };
+
+      const insertedIds = command.signals.map((signal) => signal.id);
+      const rows = [...group.rows.slice(0, command.index), ...insertedIds, ...group.rows.slice(command.index)];
+      const signalGroups = [...document.signalGroups];
+      signalGroups[groupIndex] = { ...group, rows };
+      const changeSets = command.signals.map((signal): ChangeSet => ({
+        addedSignals: [signal.id],
+        rowOrder: [signal.id],
+        ...(signal.type === "commentRow" ? {} : { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenY: [signal.id] }),
+        minimapOverview: true,
+      }));
+      const inverseChangeSets = command.signals.map((signal): ChangeSet => ({ removedSignals: [signal.id], rowOrder: [signal.id], minimapOverview: true }));
+      return {
+        ok: true,
+        document: { ...document, signals: [...document.signals, ...command.signals], signalGroups },
+        changeSet: mergeChangeSets(changeSets),
+        inverseChangeSet: mergeChangeSets(inverseChangeSets),
+      };
     }
     case "signal.delete": {
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
@@ -704,6 +723,57 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const nextDocument = { ...document, timeline: nextTimeline, signals: document.signals.filter((item) => item.id !== command.signalId), signalGroups: groups, transactions };
       const changeSet: ChangeSet = { removedSignals: [command.signalId], rowOrder: [command.signalId], transactionSemantics: linkedTransactions.map((transaction) => transaction.id), minimapOverview: true, ...(referenceDeleted ? { timelineSemantics: true, geometryScreenX: true } : {}) };
       const inverseChangeSet: ChangeSet = { addedSignals: [command.signalId], rowOrder: [command.signalId], waveSemantics: signal.type === "commentRow" ? [] : [command.signalId], geometryLocal: signal.type === "commentRow" ? [] : [command.signalId], transactionSemantics: linkedTransactions.map((transaction) => transaction.id), minimapOverview: true, ...(referenceDeleted ? { timelineSemantics: true, geometryScreenX: true } : {}) };
+      return { ok: true, document: nextDocument, changeSet, inverseChangeSet };
+    }
+    case "signal.bulkDelete": {
+      if (command.signalIds.length === 0) return fail("no-op", "NO_OP", "$.signalIds", "Bulk delete requires at least one Signal.");
+      const requestedIds = new Set<SignalId>();
+      for (const signalId of command.signalIds) {
+        if (requestedIds.has(signalId)) return fail("invalid", "DUPLICATE_ID", "$.signalIds", `Signal '${signalId}' appears more than once.`);
+        requestedIds.add(signalId);
+      }
+      const signalsById = new Map(document.signals.map((signal) => [signal.id, signal] as const));
+      for (const signalId of requestedIds) {
+        if (!signalsById.has(signalId)) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalIds", `Signal '${signalId}' does not exist.`);
+      }
+
+      // Build the canonical reference inventory once, then classify all selected targets.
+      const references = canonicalReferences(document);
+      const annotationDependentsBySignal = new Map<SignalId, string[]>();
+      const linkedTransactionIds = new Set<string>();
+      for (const reference of references) {
+        if (!requestedIds.has(reference.targetId as SignalId)) continue;
+        if (reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource" || reference.kind === "annotation.markerSpanStart" || reference.kind === "annotation.markerSpanEnd") {
+          const dependents = annotationDependentsBySignal.get(reference.targetId as SignalId) ?? [];
+          dependents.push(reference.ownerId);
+          annotationDependentsBySignal.set(reference.targetId as SignalId, dependents);
+        }
+        if (reference.kind === "transaction.linkedSignal") linkedTransactionIds.add(reference.ownerId);
+      }
+      for (const signalId of requestedIds) {
+        const dependentIds = annotationDependentsBySignal.get(signalId);
+        if (dependentIds && dependentIds.length > 0) return fail("invalid", "SIGNAL_HAS_DEPENDENTS", "$.signalIds", `Signal has annotation dependents: ${[...new Set(dependentIds)].join(", ")}.`);
+      }
+
+      const removedSignals = command.signalIds;
+      const linkedTransactions = document.transactions.filter((transaction) => linkedTransactionIds.has(transaction.id));
+      const transactions = linkedTransactions.length === 0 ? document.transactions : document.transactions.map((transaction) => {
+        if (!linkedTransactionIds.has(transaction.id) || transaction.linkedSignals === undefined) return transaction;
+        const linkedSignals = transaction.linkedSignals.filter((signalId) => !requestedIds.has(signalId));
+        return linkedSignals.length === transaction.linkedSignals.length ? transaction : { ...transaction, linkedSignals };
+      });
+      const groups = document.signalGroups.map((group) => {
+        const rows = group.rows.filter((row) => !requestedIds.has(row as SignalId));
+        return rows.length === group.rows.length ? group : { ...group, rows };
+      });
+      const referenceDeleted = document.timeline.referenceClock !== undefined && requestedIds.has(document.timeline.referenceClock);
+      const timeline = referenceDeleted ? (() => { const { referenceClock: _removed, ...rest } = document.timeline; return rest; })() : document.timeline;
+      const removedIds = new Set(removedSignals);
+      const remainingSignals = document.signals.filter((signal) => !removedIds.has(signal.id));
+      const nextDocument = { ...document, timeline, signals: remainingSignals, signalGroups: groups, transactions };
+      const linkedIds = linkedTransactions.map((transaction) => transaction.id);
+      const changeSet: ChangeSet = { removedSignals, rowOrder: removedSignals, transactionSemantics: linkedIds, minimapOverview: true, ...(referenceDeleted ? { timelineSemantics: true, geometryScreenX: true } : {}) };
+      const inverseChangeSet: ChangeSet = { addedSignals: removedSignals, rowOrder: removedSignals, waveSemantics: command.signalIds.filter((id) => signalsById.get(id)?.type !== "commentRow"), geometryLocal: command.signalIds.filter((id) => signalsById.get(id)?.type !== "commentRow"), transactionSemantics: linkedIds, minimapOverview: true, ...(referenceDeleted ? { timelineSemantics: true, geometryScreenX: true } : {}) };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet };
     }
     case "signal.rename": {
@@ -1105,6 +1175,26 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions: [...document.transactions, transaction] }, changeSet, inverseChangeSet: changeSet };
     }
+    case "transaction.bulkCreate": {
+      if (command.transactions.length === 0) return fail("no-op", "NO_OP", "$.transactions", "Bulk creation requires at least one Transaction.");
+      const ids = new Set(document.transactions.map((item) => item.id));
+      const signalIds = new Set(document.signals.map((signal) => signal.id));
+      const groupIds = new Set((document.transactionGroups ?? []).map((group) => group.id));
+      for (const transaction of command.transactions) {
+        if (!isStableId(transaction.id)) return fail("invalid", "INVALID_STABLE_ID", "$.transactions", "Transaction ID must be stable.");
+        if (ids.has(transaction.id)) return fail("invalid", "DUPLICATE_ID", "$.transactions", `Transaction '${transaction.id}' already exists.`);
+        ids.add(transaction.id);
+        if (!transaction.name.trim()) return fail("invalid", "INVALID_NAME", "$.transactions", "Transaction name cannot be empty.");
+        if (!Number.isInteger(transaction.start) || !Number.isInteger(transaction.end) || transaction.start < 0 || transaction.start >= transaction.end || transaction.end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.transactions", "Transaction must use a half-open source-time range.");
+        const phaseProblem = transaction.phases ? transactionPhasesProblem(transaction.phases, transaction.start, transaction.end) : undefined;
+        if (phaseProblem) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.transactions", phaseProblem);
+        if (transaction.linkedSignals?.some((id) => !signalIds.has(id))) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.transactions", "Transaction links must target existing Signals.");
+        if (transaction.groupId !== undefined && !groupIds.has(transaction.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.transactions", "Transaction Group does not exist.");
+      }
+      const transactionIds = command.transactions.map((transaction) => transaction.id);
+      const changeSet: ChangeSet = { transactionSemantics: transactionIds, minimapOverview: true };
+      return { ok: true, document: { ...document, transactions: [...document.transactions, ...command.transactions] }, changeSet, inverseChangeSet: changeSet };
+    }
     case "transaction.duplicate": {
       const source = document.transactions.find((item) => item.id === command.transactionId);
       if (!source) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
@@ -1121,6 +1211,19 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!transaction) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions: document.transactions.filter((item) => item.id !== transaction.id) }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "transaction.bulkDelete": {
+      if (command.transactionIds.length === 0) return fail("no-op", "NO_OP", "$.transactionIds", "Bulk delete requires at least one Transaction.");
+      const requestedIds = new Set<TransactionId>();
+      for (const id of command.transactionIds) {
+        if (requestedIds.has(id)) return fail("invalid", "DUPLICATE_ID", "$.transactionIds", `Transaction '${id}' appears more than once.`);
+        requestedIds.add(id);
+      }
+      const foundIds = new Set(document.transactions.filter((transaction) => requestedIds.has(transaction.id)).map((transaction) => transaction.id));
+      for (const id of requestedIds) if (!foundIds.has(id)) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionIds", `Transaction '${id}' does not exist.`);
+      const transactions = document.transactions.filter((transaction) => !requestedIds.has(transaction.id));
+      const changeSet: ChangeSet = { transactionSemantics: command.transactionIds, minimapOverview: true };
+      return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
     }
     case "transaction.rename": {
       const index = document.transactions.findIndex((item) => item.id === command.transactionId);

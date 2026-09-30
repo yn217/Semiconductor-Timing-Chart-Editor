@@ -730,8 +730,61 @@ describe("command execution and atomic history", () => {
     expect(session.metrics()).toEqual({ validationRuns: before.validationRuns + 1, commits: before.commits + 1 });
     expect(session.historyState().undoDepth).toBe(1);
     expect(session.getSnapshot().document.signals.find((signal) => signal.id === second.id)?.source.instancePath).toEqual(["dut", "core"]);
+    expect(session.getSnapshot().document.signalGroups[0]?.rows.slice(2, 4)).toEqual([first.id, second.id]);
     expect(session.undo()).toMatchObject({ ok: true });
     expect(session.getSnapshot().document.signals.some((signal) => signal.id === first.id)).toBe(false);
+  });
+
+  it("preflights bulk Signal IDs atomically before rebuilding the target row collection", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const before = session.getSnapshot();
+    const metrics = session.metrics();
+    const rejected = session.execute({ id: commandId("cmd_bulk_duplicate_id"), type: "signal.bulkCreate", signals: [extraSignal("sig_bulk_fresh"), extraSignal("sig_data")], targetGroupId: "grp_main" as GroupId, index: 0 });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "DUPLICATE_ID" }] });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.metrics()).toEqual(metrics);
+    expect(session.historyState().undoDepth).toBe(0);
+  });
+
+  it("bulk-deletes Signals with one atomic history action while preserving reference cleanup and rollback", () => {
+    const source = canonicalFixture();
+    const document = { ...source, transactions: [{ id: "txn_link" as TransactionId, name: "Linked", start: 1, end: 3, linkedSignals: ["sig_data" as SignalId] }] };
+    const session = new CommandHistorySession(document);
+    const command = { id: commandId("cmd_bulk_delete_signals"), type: "signal.bulkDelete" as const, signalIds: ["sig_clk", "sig_data"] as SignalId[] };
+
+    expect(session.execute(command)).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document.signals).toEqual([]);
+    expect(session.getSnapshot().document.signalGroups[0]?.rows).toEqual([]);
+    expect(session.getSnapshot().document.timeline).not.toHaveProperty("referenceClock");
+    expect(session.getSnapshot().document.transactions[0]?.linkedSignals).toEqual([]);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo()).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document).toEqual(document);
+    expect(session.redo()).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document.signals).toEqual([]);
+
+    const rejected = new CommandHistorySession(source);
+    const before = rejected.getSnapshot();
+    expect(rejected.execute({ id: commandId("cmd_bulk_delete_duplicate"), type: "signal.bulkDelete", signalIds: ["sig_data", "sig_data"] as SignalId[] })).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "DUPLICATE_ID" }] });
+    expect(rejected.getSnapshot()).toBe(before);
+    expect(rejected.historyState().undoDepth).toBe(0);
+  });
+
+  it("bulk-creates and bulk-deletes large Transaction selections as one history action", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const transactions = Array.from({ length: 1_000 }, (_, index) => ({ id: `transaction_bulk_${index}` as TransactionId, name: `Transaction ${index}`, start: 0, end: 1 }));
+    expect(session.execute({ id: commandId("cmd_bulk_create_transactions"), type: "transaction.bulkCreate", transactions })).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document.transactions).toHaveLength(1_000);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo()).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document.transactions).toHaveLength(0);
+
+    expect(session.execute({ id: commandId("cmd_bulk_create_transactions_again"), type: "transaction.bulkCreate", transactions })).toMatchObject({ ok: true });
+    expect(session.execute({ id: commandId("cmd_bulk_delete_transactions"), type: "transaction.bulkDelete", transactionIds: transactions.map((item) => item.id) })).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document.transactions).toHaveLength(0);
+    expect(session.historyState().undoDepth).toBe(2);
+    expect(session.undo()).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document.transactions).toHaveLength(1_000);
   });
 
   it("supports Group lifecycle without implicitly moving rows", () => {

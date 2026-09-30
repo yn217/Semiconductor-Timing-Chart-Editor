@@ -54,6 +54,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "signal.create"; signal: Signal; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "signal.bulkCreate"; signals: readonly Signal[]; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "signal.delete"; signalId: SignalId }>
+  | Readonly<{ id: CommandId; type: "signal.bulkDelete"; signalIds: readonly SignalId[] }>
   | Readonly<{ id: CommandId; type: "signal.rename"; signalId: SignalId; name: string }>
   | Readonly<{ id: CommandId; type: "signal.move"; signalId: SignalId; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "signal.setVisibility"; signalId: SignalId; visible: boolean }>
@@ -104,8 +105,10 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "timeGroup.updatePresentation"; timeGroupId: TimeGroupId; presentation: TimeGroup["presentation"] }>
   | Readonly<{ id: CommandId; type: "timeGroup.delete"; timeGroupId: TimeGroupId }>
   | Readonly<{ id: CommandId; type: "transaction.create"; transaction: Transaction }>
+  | Readonly<{ id: CommandId; type: "transaction.bulkCreate"; transactions: readonly Transaction[] }>
   | Readonly<{ id: CommandId; type: "transaction.duplicate"; transactionId: TransactionId; newTransactionId: TransactionId; name?: string }>
   | Readonly<{ id: CommandId; type: "transaction.delete"; transactionId: TransactionId }>
+  | Readonly<{ id: CommandId; type: "transaction.bulkDelete"; transactionIds: readonly TransactionId[] }>
   | Readonly<{ id: CommandId; type: "transaction.rename"; transactionId: TransactionId; name: string }>
   | Readonly<{ id: CommandId; type: "transaction.update"; transactionId: TransactionId; name: string; start: number; end: number; laneId?: string; phases?: readonly TransactionPhase[]; groupId?: TransactionGroup["id"]; color?: string; description?: string; visible?: boolean; clearLaneId?: boolean; clearPhases?: boolean; clearGroupId?: boolean; clearColor?: boolean; clearDescription?: boolean; clearVisible?: boolean }>
   | Readonly<{ id: CommandId; type: "transaction.phaseAdd"; transactionId: TransactionId; phase: TransactionPhase }>
