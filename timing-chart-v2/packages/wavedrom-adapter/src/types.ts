@@ -89,6 +89,9 @@ export interface WaveDromAdapterMetrics {
   readonly geometryMatrixReads: number;
   readonly activeOwners: number;
   readonly allocatedRenderIndices: number;
+  readonly imageObjectUrlsCreated?: number;
+  readonly imageObjectUrlsRevoked?: number;
+  readonly imageObjectUrlsRetained?: number;
 }
 
 export interface WaveDromAdapter {
@@ -115,6 +118,8 @@ export interface WaveDromAdapter {
   dispose(signalId: SignalId): void;
   /** Release the mounted owner while retaining a bounded, identity-safe artifact for a possible document reopen. */
   retainArtifact?(signalId: SignalId): void;
+  /** Release all DOM, retained artifacts, caches, and document-backed resources when this adapter owner is disposed. */
+  disposeAll?(): void;
   metrics(): WaveDromAdapterMetrics;
 }
 

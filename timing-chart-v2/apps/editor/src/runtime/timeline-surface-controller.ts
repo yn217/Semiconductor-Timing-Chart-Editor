@@ -973,6 +973,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       armArrowPick.current = () => undefined;
       snapTransactionCycle.current = () => undefined;
       renderCoordinator.dispose();
+      adapter.disposeAll();
     };
     },
   };

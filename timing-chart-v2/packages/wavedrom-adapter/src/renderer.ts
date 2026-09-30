@@ -133,6 +133,14 @@ export function assertSafeWaveDromSvg(svg: Element): void {
 interface ActiveOwner {
   readonly mount: Element;
   readonly rendered: RenderedWave;
+  readonly artifact: MarkupCacheEntry;
+}
+
+interface SvgImageResource {
+  readonly url: string;
+  decoded?: Promise<void>;
+  decodePending?: boolean;
+  releasePending?: boolean;
 }
 
 interface MarkupCacheEntry {
@@ -141,10 +149,10 @@ interface MarkupCacheEntry {
   readonly waveJsonBytes: number;
   readonly semanticValuesBytes: number;
   readonly svgMarkupBytes: number;
+  references: number;
   parsedSvgByDocument?: WeakMap<Document, SVGElement>;
   valueLabelTemplatesByDocument?: WeakMap<Document, readonly Readonly<{ template: SVGElement; segmentStart: number; segmentEnd: number }>[]>;
-  svgImageUrlByDocument?: WeakMap<Document, string>;
-  svgImageDecodeByDocument?: WeakMap<Document, Promise<void>>;
+  svgImageResourcesByDocument?: Map<Document, SvgImageResource>;
 }
 
 interface SignalMarkupBinding {
@@ -223,35 +231,6 @@ function installSharedWaveDromDefinitions(ownerDocument: Document, definitions: 
   }
   sharedDefinitionSprites.set(ownerDocument, sprite);
   if (!sprite.querySelector("defs")) sprite.append(definitions.cloneNode(true));
-}
-
-function svgImageUrl(entry: MarkupCacheEntry, ownerDocument: Document): string | undefined {
-  if (typeof URL.createObjectURL !== "function" || typeof Blob !== "function") return;
-  const urls = entry.svgImageUrlByDocument ??= new WeakMap<Document, string>();
-  const cached = urls.get(ownerDocument);
-  if (cached) return cached;
-  const url = URL.createObjectURL(new Blob([entry.markup], { type: "image/svg+xml;charset=utf-8" }));
-  urls.set(ownerDocument, url);
-  return url;
-}
-
-function svgImageDecode(entry: MarkupCacheEntry, ownerDocument: Document, url: string): Promise<void> {
-  const decodes = entry.svgImageDecodeByDocument ??= new WeakMap<Document, Promise<void>>();
-  let decoded = decodes.get(ownerDocument);
-  if (!decoded) {
-    const ImageConstructor = ownerDocument.defaultView?.Image;
-    if (!ImageConstructor) return Promise.resolve();
-    const image = new ImageConstructor();
-    image.src = url;
-    decoded = typeof image.decode === "function"
-      ? image.decode().then(() => undefined)
-      : new Promise<void>((resolve, reject) => {
-          image.onload = () => resolve();
-          image.onerror = () => reject(new WaveDromAdapterError("WAVEDROM_IMAGE_DECODE_FAILED", "The validated WaveDrom SVG image could not be decoded."));
-        });
-    decodes.set(ownerDocument, decoded);
-  }
-  return decoded;
 }
 
 function parseWaveDromSvgMarkup(ownerDocument: Document, markup: string): SVGElement {
@@ -405,6 +384,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   readonly #sharedMarkupCache = new Map<string, MarkupCacheEntry>();
   readonly #renderCallsBySignal = new Map<SignalId, number>();
   readonly #preparedDurationMs = new WeakMap<RenderedWave, number>();
+  readonly #preparedArtifact = new WeakMap<RenderedWave, MarkupCacheEntry>();
   readonly #preparedDefinitions = new WeakMap<RenderedWave, SVGElement>();
   readonly #waveMarkupArtifactIdentities = new WeakMap<WaveJsonSignal, WaveMarkupArtifactIdentity>();
   #nextRenderIndex = 0;
@@ -443,6 +423,8 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   #transitionBrickLookups = 0;
   #skinPathParses = 0;
   #matrixReads = 0;
+  #imageObjectUrlsCreated = 0;
+  #imageObjectUrlsRevoked = 0;
 
   toWaveJson(source: CanonicalSignalSource): WaveJsonSignal {
     const startedAt = now();
@@ -485,9 +467,9 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       if (retained?.key === cacheKey) {
         renderIndex = retained.renderIndex;
         cached = retained;
-        this.#retainedMarkupCache.delete(signalId);
+        this.#deleteBinding(this.#retainedMarkupCache, signalId);
       } else {
-        this.#retainedMarkupCache.delete(signalId);
+        this.#deleteBinding(this.#retainedMarkupCache, signalId);
       }
       if (renderIndex === undefined) renderIndex = this.#nextRenderIndex++;
       this.#renderIndices.set(signalId, renderIndex);
@@ -528,22 +510,26 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
         waveJsonBytes: stages.waveJsonBytes,
         semanticValuesBytes: stages.semanticValuesBytes,
         svgMarkupBytes: stages.svgMarkupBytes,
+        references: 0,
       };
       this.#sharedMarkupCache.set(cacheKey, cacheEntry);
+      this.#retainArtifact(cacheEntry);
       while (this.#sharedMarkupCache.size > SHARED_MARKUP_CACHE_LIMIT) {
         const oldestKey = this.#sharedMarkupCache.keys().next().value as string | undefined;
         if (oldestKey === undefined) break;
+        const evicted = this.#sharedMarkupCache.get(oldestKey);
         this.#sharedMarkupCache.delete(oldestKey);
+        if (evicted) this.#releaseArtifact(evicted);
       }
     }
     const binding: SignalMarkupBinding = { key: cacheKey, renderIndex, artifact: cacheEntry };
-    this.#markupCache.set(signalId, binding);
+    this.#setBinding(this.#markupCache, signalId, binding);
     const cachedSvg = cacheEntry.parsedSvgByDocument?.get(ownerDocument);
     // Keep each validated WaveDrom payload out of the parent document's DOM.
     // The canonical parsed SVG remains available for geometry extraction.
     const useSharedSvgImage = !isSvgGeometryDebugMode()
       && typeof ownerDocument.createElementNS === "function";
-    const imageUrl = useSharedSvgImage ? svgImageUrl(cacheEntry, ownerDocument) : undefined;
+    const imageUrl = useSharedSvgImage ? this.#svgImageUrl(cacheEntry, ownerDocument) : undefined;
     const canUseImageWithoutParsedTree = imageUrl !== undefined && !shareLabels;
     let svg: Element | null;
     let parsedSvg: SVGElement | undefined;
@@ -600,7 +586,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
         // Start decoding now, but don't serialize independent owner decodes
         // behind WaveRenderScheduler's per-owner preparation jobs. The batch
         // waits for all image-ready promises together before publishing ready.
-        svgImageReady = svgImageDecode(safetyCacheEntry, ownerDocument, imageUrl).catch(() => {
+        svgImageReady = this.#svgImageDecode(safetyCacheEntry, ownerDocument, imageUrl).catch(() => {
           const fallbackSvg = (parsedSvg?.cloneNode(true) as SVGElement | undefined)
             ?? parseWaveDromSvgMarkup(ownerDocument, markup);
           if (!parsedSvg) {
@@ -627,6 +613,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     };
     if (sharedDefinitions) this.#preparedDefinitions.set(rendered, sharedDefinitions);
     this.#preparedDurationMs.set(rendered, now() - startedAt);
+    this.#preparedArtifact.set(rendered, cacheEntry);
     return rendered;
   }
 
@@ -634,8 +621,15 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const preparedDurationMs = this.#preparedDurationMs.get(prepared);
     if (preparedDurationMs === undefined) throw new WaveDromAdapterError("INVALID_PREPARED_WAVE", "WaveDrom SVG must be prepared by this adapter before installation.");
     this.#preparedDurationMs.delete(prepared);
+    const artifact = this.#preparedArtifact.get(prepared) ?? this.#markupCache.get(prepared.signalId)?.artifact;
+    if (!artifact) throw new WaveDromAdapterError("INVALID_PREPARED_WAVE", "Prepared WaveDrom artifact ownership was released before installation.");
+    this.#preparedArtifact.delete(prepared);
+    this.#retainArtifact(artifact);
     const existing = this.#active.get(prepared.signalId);
-    if (existing && existing.mount !== mount) this.#clearOwner(existing);
+    if (existing) {
+      if (existing.mount !== mount) this.#clearOwner(existing);
+      else this.#releaseArtifact(existing.artifact);
+    }
     const stageStartedAt = now();
     const shared = this.#preparedDefinitions.get(prepared);
     const localDefinitions = typeof prepared.svg.querySelector === "function" ? prepared.svg.querySelector("defs") : null;
@@ -657,7 +651,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const domInstallMs = now() - stageStartedAt;
     const renderStages = Object.freeze({ ...prepared.renderStages, domInstallMs, totalSignalWallMs: preparedDurationMs + domInstallMs });
     const rendered: RenderedWave = { ...prepared, renderStages };
-    this.#active.set(prepared.signalId, { mount, rendered });
+    this.#active.set(prepared.signalId, { mount, rendered, artifact });
     this.#lastRenderStages = renderStages;
     const stageTotals = this.#renderStageTotals as Record<string, number>;
     for (const [key, value] of Object.entries(renderStages)) stageTotals[key] = (stageTotals[key] ?? 0) + value;
@@ -713,8 +707,8 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     if (owner) this.#clearOwner(owner);
     this.#active.delete(signalId);
     this.#renderIndices.delete(signalId);
-    this.#markupCache.delete(signalId);
-    this.#retainedMarkupCache.delete(signalId);
+    this.#deleteBinding(this.#markupCache, signalId);
+    this.#deleteBinding(this.#retainedMarkupCache, signalId);
     this.#renderCallsBySignal.delete(signalId);
   }
 
@@ -727,22 +721,101 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     this.#renderIndices.delete(signalId);
     this.#renderCallsBySignal.delete(signalId);
     if (!cached) return;
-    this.#retainedMarkupCache.delete(signalId);
+    this.#deleteBinding(this.#retainedMarkupCache, signalId);
     this.#retainedMarkupCache.set(signalId, cached);
     while (this.#retainedMarkupCache.size > RETAINED_MARKUP_CACHE_LIMIT) {
       const oldestSignalId = this.#retainedMarkupCache.keys().next().value as SignalId | undefined;
       if (oldestSignalId === undefined) break;
-      this.#retainedMarkupCache.delete(oldestSignalId);
+      this.#deleteBinding(this.#retainedMarkupCache, oldestSignalId);
     }
   }
 
+  disposeAll(): void {
+    for (const owner of this.#active.values()) this.#clearOwner(owner);
+    this.#active.clear();
+    for (const signalId of this.#markupCache.keys()) this.#deleteBinding(this.#markupCache, signalId);
+    for (const signalId of this.#retainedMarkupCache.keys()) this.#deleteBinding(this.#retainedMarkupCache, signalId);
+    for (const entry of this.#sharedMarkupCache.values()) this.#releaseArtifact(entry);
+    this.#sharedMarkupCache.clear();
+    this.#renderIndices.clear();
+    this.#renderCallsBySignal.clear();
+  }
+
   metrics(): WaveDromAdapterMetrics {
-    return { renderCalls: this.#renderCalls, waveJsonDurationMs: this.#waveJsonDurationMs, renderDurationMs: this.#renderDurationMs, renderStages: Object.freeze({ last: this.#lastRenderStages, totals: Object.freeze({ ...this.#renderStageTotals }) }), renderCallsBySignal: Object.fromEntries(this.#renderCallsBySignal), cacheHits: this.#cacheHits, cacheMisses: this.#cacheMisses, mounts: this.#mounts, disposals: this.#disposals, geometryBuilds: this.#geometryBuilds, geometryMatrixReads: this.#geometryMatrixReads, activeOwners: this.#active.size, allocatedRenderIndices: this.#renderIndices.size };
+    return { renderCalls: this.#renderCalls, waveJsonDurationMs: this.#waveJsonDurationMs, renderDurationMs: this.#renderDurationMs, renderStages: Object.freeze({ last: this.#lastRenderStages, totals: Object.freeze({ ...this.#renderStageTotals }) }), renderCallsBySignal: Object.fromEntries(this.#renderCallsBySignal), cacheHits: this.#cacheHits, cacheMisses: this.#cacheMisses, mounts: this.#mounts, disposals: this.#disposals, geometryBuilds: this.#geometryBuilds, geometryMatrixReads: this.#geometryMatrixReads, activeOwners: this.#active.size, allocatedRenderIndices: this.#renderIndices.size, imageObjectUrlsCreated: this.#imageObjectUrlsCreated, imageObjectUrlsRevoked: this.#imageObjectUrlsRevoked, imageObjectUrlsRetained: this.#imageObjectUrlsCreated - this.#imageObjectUrlsRevoked };
   }
 
   #clearOwner(owner: ActiveOwner): void {
     this.#disposals += 1;
     if (owner.rendered.svg.parentElement === owner.mount) owner.rendered.svg.remove();
     if (owner.mount.getAttribute("data-wave-owner") === owner.rendered.signalId) owner.mount.removeAttribute("data-wave-owner");
+    this.#releaseArtifact(owner.artifact);
+  }
+
+  #setBinding(cache: Map<SignalId, SignalMarkupBinding>, signalId: SignalId, binding: SignalMarkupBinding): void {
+    const previous = cache.get(signalId);
+    if (previous) this.#releaseArtifact(previous.artifact);
+    this.#retainArtifact(binding.artifact);
+    cache.set(signalId, binding);
+  }
+
+  #deleteBinding(cache: Map<SignalId, SignalMarkupBinding>, signalId: SignalId): void {
+    const binding = cache.get(signalId);
+    if (!binding) return;
+    cache.delete(signalId);
+    this.#releaseArtifact(binding.artifact);
+  }
+
+  #retainArtifact(entry: MarkupCacheEntry): void {
+    entry.references += 1;
+  }
+
+  #releaseArtifact(entry: MarkupCacheEntry): void {
+    entry.references = Math.max(0, entry.references - 1);
+    if (entry.references > 0) return;
+    for (const [ownerDocument, resource] of entry.svgImageResourcesByDocument ?? []) {
+      resource.releasePending = true;
+      this.#revokeImageResourceWhenIdle(entry, ownerDocument, resource);
+    }
+  }
+
+  #svgImageUrl(entry: MarkupCacheEntry, ownerDocument: Document): string | undefined {
+    if (typeof URL.createObjectURL !== "function" || typeof Blob !== "function") return;
+    const resources = entry.svgImageResourcesByDocument ??= new Map<Document, SvgImageResource>();
+    const cached = resources.get(ownerDocument);
+    if (cached) return cached.url;
+    const resource = { url: URL.createObjectURL(new Blob([entry.markup], { type: "image/svg+xml;charset=utf-8" })) };
+    resources.set(ownerDocument, resource);
+    this.#imageObjectUrlsCreated += 1;
+    return resource.url;
+  }
+
+  #svgImageDecode(entry: MarkupCacheEntry, ownerDocument: Document, url: string): Promise<void> {
+    const resource = entry.svgImageResourcesByDocument?.get(ownerDocument);
+    if (!resource || resource.url !== url) return Promise.reject(new WaveDromAdapterError("WAVEDROM_IMAGE_RESOURCE_MISSING", "The WaveDrom SVG image resource was released before decode."));
+    if (resource.decoded) return resource.decoded;
+    const ImageConstructor = ownerDocument.defaultView?.Image;
+    if (!ImageConstructor) return Promise.resolve();
+    const image = new ImageConstructor();
+    image.src = url;
+    const decode = typeof image.decode === "function"
+      ? image.decode().then(() => undefined)
+      : new Promise<void>((resolve, reject) => {
+          image.onload = () => resolve();
+          image.onerror = () => reject(new WaveDromAdapterError("WAVEDROM_IMAGE_DECODE_FAILED", "The validated WaveDrom SVG image could not be decoded."));
+        });
+    resource.decodePending = true;
+    resource.decoded = decode.then(
+      () => { resource.decodePending = false; this.#revokeImageResourceWhenIdle(entry, ownerDocument, resource); },
+      (error: unknown) => { resource.decodePending = false; this.#revokeImageResourceWhenIdle(entry, ownerDocument, resource); throw error; },
+    );
+    return resource.decoded;
+  }
+
+  #revokeImageResourceWhenIdle(entry: MarkupCacheEntry, ownerDocument: Document, resource: SvgImageResource): void {
+    if (!resource.releasePending || entry.references > 0 || resource.decodePending) return;
+    if (!entry.svgImageResourcesByDocument?.delete(ownerDocument)) return;
+    URL.revokeObjectURL(resource.url);
+    this.#imageObjectUrlsRevoked += 1;
   }
 }

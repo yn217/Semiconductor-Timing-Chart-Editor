@@ -486,6 +486,102 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     }
   });
 
+  it("releases Blob URLs only after cache, retained, active, and document owners release them", async () => {
+    const adapter = new ProductionWaveDromAdapter();
+    let nextUrl = 0;
+    const createUrl = vi.spyOn(URL, "createObjectURL").mockImplementation(() => `blob:wave-${++nextUrl}`);
+    const revokeUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    const createSvgNode = (localName: string) => {
+      const attributes = new Map<string, string>();
+      const children: ReturnType<typeof createSvgNode>[] = [];
+      const node = {
+        localName,
+        namespaceURI: "http://www.w3.org/2000/svg",
+        ownerDocument: undefined as Document | undefined,
+        parentElement: null as Element | null,
+        setAttribute: (name: string, value: string) => { attributes.set(name, value); },
+        getAttribute: (name: string) => attributes.get(name) ?? null,
+        append: (child: ReturnType<typeof createSvgNode>) => { children.push(child); child.parentElement = node as unknown as Element; },
+        querySelector: (selector: string) => selector === "image[data-wave-svg-image]" ? children.find((child) => child.localName === "image" && child.getAttribute("data-wave-svg-image") !== null) ?? null : null,
+        querySelectorAll: () => [],
+        replaceChildren: (...next: ReturnType<typeof createSvgNode>[]) => { children.splice(0, children.length, ...next); },
+        cloneNode: () => node,
+        remove: () => { node.parentElement = null; },
+        get childNodes() { return children; },
+      };
+      return node;
+    };
+    const ownerDocument = {
+      ...createMarkupDocument(),
+      createElementNS: (_namespace: string, localName: string) => {
+        const node = createSvgNode(localName);
+        node.ownerDocument = ownerDocument as unknown as Document;
+        return node;
+      },
+      defaultView: { Image: class { set src(_url: string) {} decode() { return Promise.resolve(); } } },
+    } as unknown as Document;
+    const firstId = signalId("sig_blob_lifetime_first");
+    try {
+      await adapter.renderWave(firstId, { wave: "0" }, createMarkupMount(ownerDocument));
+      for (let index = 1; index < 65; index += 1) {
+        await adapter.renderWave(signalId(`sig_blob_lifetime_${index}`), { wave: "0".repeat(index + 1) }, createMarkupMount(ownerDocument));
+      }
+      // The shared LRU has evicted the first entry, but its active owner still
+      // uses the URL. Retaining the artifact transfers protection to reopen.
+      expect(adapter.metrics()).toMatchObject({ imageObjectUrlsCreated: 65, imageObjectUrlsRevoked: 0, imageObjectUrlsRetained: 65 });
+      adapter.retainArtifact(firstId);
+      expect(adapter.metrics().imageObjectUrlsRevoked).toBe(0);
+      adapter.dispose(firstId);
+      expect(adapter.metrics()).toMatchObject({ imageObjectUrlsRevoked: 1, imageObjectUrlsRetained: 64 });
+
+      adapter.disposeAll();
+      expect(adapter.metrics()).toMatchObject({ imageObjectUrlsCreated: 65, imageObjectUrlsRevoked: 65, imageObjectUrlsRetained: 0 });
+      expect(revokeUrl).toHaveBeenCalledTimes(65);
+    } finally {
+      adapter.disposeAll();
+      createUrl.mockRestore();
+      revokeUrl.mockRestore();
+    }
+  });
+
+  it("defers Blob URL revocation until an in-flight image decode settles", async () => {
+    const adapter = new ProductionWaveDromAdapter();
+    const createUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:pending-wave");
+    const revokeUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    let finishDecode!: () => void;
+    const createSvgNode = (localName: string) => {
+      const attrs = new Map<string, string>();
+      const children: ReturnType<typeof createSvgNode>[] = [];
+      const node = {
+        localName, namespaceURI: "http://www.w3.org/2000/svg", parentElement: null as Element | null,
+        setAttribute: (name: string, value: string) => { attrs.set(name, value); }, getAttribute: (name: string) => attrs.get(name) ?? null,
+        append: (child: ReturnType<typeof createSvgNode>) => { children.push(child); child.parentElement = node as unknown as Element; },
+        querySelector: (selector: string) => selector === "image[data-wave-svg-image]" ? children.find((child) => child.localName === "image") ?? null : null,
+        querySelectorAll: () => [], replaceChildren: (...next: ReturnType<typeof createSvgNode>[]) => { children.splice(0, children.length, ...next); },
+        cloneNode: () => node, remove: () => { node.parentElement = null; }, get childNodes() { return children; },
+      };
+      return node;
+    };
+    const ownerDocument = {
+      ...createMarkupDocument(),
+      createElementNS: (_namespace: string, localName: string) => createSvgNode(localName),
+      defaultView: { Image: class { set src(_url: string) {} decode() { return new Promise<void>((resolve) => { finishDecode = resolve; }); } } },
+    } as unknown as Document;
+    try {
+      const prepared = await adapter.prepareWave(signalId("sig_blob_decode_pending"), { wave: "0" }, ownerDocument);
+      expect(adapter.metrics().imageObjectUrlsRetained).toBe(1);
+      adapter.disposeAll();
+      expect(revokeUrl).not.toHaveBeenCalled();
+      finishDecode();
+      await prepared.svgImageReady;
+      expect(adapter.metrics()).toMatchObject({ imageObjectUrlsRevoked: 1, imageObjectUrlsRetained: 0 });
+    } finally {
+      adapter.disposeAll();
+      createUrl.mockRestore();
+      revokeUrl.mockRestore();
+    }
+  });
+
   it("reuses identical validated markup across document release without changing WaveDrom IDs", async () => {
     const adapter = new ProductionWaveDromAdapter();
     const id = signalId("sig_reopen_cache");
