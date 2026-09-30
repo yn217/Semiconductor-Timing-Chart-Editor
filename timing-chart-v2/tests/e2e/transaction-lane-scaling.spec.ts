@@ -75,6 +75,45 @@ test("standalone Transaction cycle viewport scroll advances the virtualized lane
   await expect(lanes.locator("[data-transaction-id]")).not.toHaveCount(0);
 });
 
+test("selected Transaction drag survives a horizontal virtualization window change", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const base = generatePerformanceDocument({ signalCount: 50, cycleCount: 1_000, profile: "transaction-heavy" });
+  const transaction = { id: "txn_drag_window", name: "Window crossing", start: 20, end: 40, laneId: "lane_0", linkedSignals: [base.signals[0]!.id] };
+  const document = { ...base, transactions: [transaction] };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-drag-window.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "1", { timeout: 60_000 });
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  const viewport = page.getByTestId("cycle-viewport");
+  const bar = page.locator("[data-transaction-id='txn_drag_window']");
+  await expect(bar).toBeVisible();
+  const before = await bar.boundingBox();
+  expect(before).not.toBeNull();
+  const startX = before!.x + before!.width - 2;
+  const y = before!.y + before!.height / 2;
+  await page.mouse.move(startX, y);
+  await page.mouse.down();
+  await page.mouse.move(startX + 12, y, { steps: 2 });
+  await viewport.evaluate((element) => {
+    const node = element as HTMLElement;
+    node.scrollLeft = Math.max(0, node.scrollWidth - node.clientWidth);
+    node.dispatchEvent(new Event("scroll"));
+  });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await expect(bar).toHaveAttribute("data-selected", "true");
+  const targetTick = page.locator(".cycle-ruler .cycle-tick[data-source-cycle='900']");
+  await expect(targetTick).toBeAttached();
+  const target = await targetTick.boundingBox();
+  expect(target).not.toBeNull();
+  await page.mouse.move(target!.x + 1, y, { steps: 4 });
+  await expect(bar).toHaveAttribute("data-drag-preview", "true");
+  await page.mouse.up();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  // Transaction Inspector displays TC units (10 system cycles per TC).
+  await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("90");
+});
+
 test("Transaction Fit All and Fit Selection remain view-only", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");

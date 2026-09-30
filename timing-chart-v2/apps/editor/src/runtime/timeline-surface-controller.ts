@@ -68,7 +68,7 @@ export interface TimelineSurfacePresentationPort {
   readonly lowerCanvasClickRef: MutableRefObject<(event: MouseEvent, targetHost: HTMLElement, targetViewport: HTMLElement) => void>;
   readonly timelineRuntimeRef: MutableRefObject<TimelineViewportRuntime | null>;
   readonly armArrowPick: MutableRefObject<(annotationType: "arrow" | "dependency") => void>;
-  readonly snapTransactionCycle: MutableRefObject<(clientX: number, surfaceLeft?: number) => number | undefined>;
+  readonly snapTransactionCycle: MutableRefObject<(clientX: number, surfaceLeft?: number, horizontalScroll?: number) => number | undefined>;
   readonly transactionBoundaryX: MutableRefObject<(cycle: number) => number | undefined>;
   readonly transactionSourceWindow: MutableRefObject<(viewport: HTMLElement) => Readonly<{ start: number; end: number }> | undefined>;
   readonly refreshPlayhead: MutableRefObject<() => void>;
@@ -558,9 +558,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       const axisOwner = timelineGeometry.timeAxis.ownerSignalId;
       return axisOwner === undefined ? undefined : projection.rowLayout.find((row) => row.rowId === axisOwner)?.y;
     })();
-    snapTransactionCycle.current = (clientX, surfaceLeft) => resolveTransactionSnapCycle({
+    snapTransactionCycle.current = (clientX, surfaceLeft, horizontalScroll = 0) => resolveTransactionSnapCycle({
       clientX,
       surfaceLeft,
+      horizontalScroll,
       snapAxisRowY: transactionSnapAxisY,
       timeAxis: timelineGeometry.timeAxis,
       screenGeometry: timelineGeometry.screen,

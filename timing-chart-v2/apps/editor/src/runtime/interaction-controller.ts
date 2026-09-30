@@ -24,6 +24,8 @@ export function attachMenuKeyboardNavigation(doc: Document, closeContextMenu: ()
 export function resolveTransactionSnapCycle(context: {
   readonly clientX: number;
   readonly surfaceLeft: number | undefined;
+  /** Current scroll offset in rendered CSS pixels for the shared time viewport. */
+  readonly horizontalScroll: number;
   readonly snapAxisRowY: number | undefined;
   readonly timeAxis: TimeAxisGeometry;
   readonly screenGeometry: ScreenGeometryProjector;
@@ -39,7 +41,7 @@ export function resolveTransactionSnapCycle(context: {
     return context.surfaceLeft === undefined
       ? context.cycleBoundaryAtX(context.clientX)
       : context.cycleBoundaryAtLocalX(
-        context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: 0, scrollY: 0, zoom: context.zoom }).x,
+        context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: context.horizontalScroll / context.zoom, scrollY: 0, zoom: context.zoom }).x,
         context.zoom,
         false,
       );
@@ -48,12 +50,12 @@ export function resolveTransactionSnapCycle(context: {
   if (context.surfaceLeft === undefined) return context.cycleBoundaryAtPointerX(context.clientX);
   if (!axisOwner || context.snapAxisRowY === undefined) {
     return context.cycleBoundaryAtLocalX(
-      context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: 0, scrollY: 0, zoom: context.zoom }).x,
+      context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: context.horizontalScroll / context.zoom, scrollY: 0, zoom: context.zoom }).x,
       context.zoom,
       true,
     );
   }
-  const localPointer = context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: 0, scrollY: 0, zoom: context.zoom });
+  const localPointer = context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: context.horizontalScroll / context.zoom, scrollY: 0, zoom: context.zoom });
   const snap = context.currentSnapIndex().nearest({ x: localPointer.x, y: context.snapAxisRowY + context.document.layout.rowHeight / 2 }, 14 / context.zoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
   return snap?.anchor.cycle ?? context.cycleBoundaryAtLocalX(localPointer.x, context.zoom, true);
 }

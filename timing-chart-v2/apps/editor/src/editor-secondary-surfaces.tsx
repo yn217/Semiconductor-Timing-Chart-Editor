@@ -94,7 +94,7 @@ export interface EditorSecondarySurfacesInput {
       (viewport: HTMLElement) => Readonly<{ start: number; end: number }> | undefined
     >;
     readonly snapTransactionCycle: MutableRefObject<
-      (clientX: number, surfaceLeft?: number) => number | undefined
+      (clientX: number, surfaceLeft?: number, horizontalScroll?: number) => number | undefined
     >;
   };
   readonly command: {
@@ -501,8 +501,8 @@ export function useEditorSecondarySurfaces(
         getBoundaryX={transactionBoundaryX}
         getVisibleSourceWindow={transactionVisibleSourceWindow}
         onSelect={input.actions.selectTransaction}
-        onSnap={(clientX, surfaceLeft) =>
-          refs.snapTransactionCycle.current(clientX, surfaceLeft)
+        onSnap={(clientX, surfaceLeft, horizontalScroll) =>
+          refs.snapTransactionCycle.current(clientX, surfaceLeft, horizontalScroll)
         }
         commands={surfaceCommands}
         onContextMenu={openTransactionContextMenu}
