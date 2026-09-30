@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import type { HistoryState } from "@timing-chart-v2/history";
 import type { CanonicalDocument, SignalId, Transaction, TransactionGroup, TransactionId, TransactionPhase } from "@timing-chart-v2/schema";
-import { nextEntityId } from "./entity-id.js";
+import { createEntityIdAllocator, nextEntityId } from "./entity-id.js";
 import type { TransactionEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { EditorIconButton } from "./editor-icon.js";
 import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
@@ -165,7 +165,8 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   const duplicateSelected = () => {
     if (selectedIds.size > 1) {
       const sources = document.transactions.filter((item) => selectedIds.has(item.id));
-      const items = sources.map((item) => ({ transactionId: item.id, newTransactionId: nextEntityId("transaction", document) as TransactionId, name: `${item.name} Copy` }));
+      const allocateId = createEntityIdAllocator(document);
+      const items = sources.map((item) => ({ transactionId: item.id, newTransactionId: allocateId("transaction") as TransactionId, name: `${item.name} Copy` }));
       const batch = commands.bulkDuplicateTransactions(items);
       const last = items[items.length - 1];
       if (batch.ok && last) onSelect(last.newTransactionId);
