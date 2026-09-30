@@ -143,19 +143,24 @@ export interface MiniMapTransactionRow {
 export interface MiniMapTransactionOverview {
   readonly cycleCount: number;
   readonly rows: readonly MiniMapTransactionRow[];
+  readonly transactionsVisited: number;
+  readonly laneBucketsRebuilt: number;
 }
 
 type TransactionLaneBucket = { readonly groupId: Transaction["groupId"]; readonly laneId: string; readonly transactions: Transaction[] };
-type TransactionIndex = Readonly<{ byId: ReadonlyMap<Transaction["id"], Transaction>; byLane: ReadonlyMap<string, TransactionLaneBucket> }>;
+type TransactionIndex = Readonly<{ byId?: ReadonlyMap<Transaction["id"], Transaction>; indexById: ReadonlyMap<Transaction["id"], number>; byLane: ReadonlyMap<string, TransactionLaneBucket> }>;
 const transactionIndexes = new WeakMap<readonly Transaction[], TransactionIndex>();
+const transactionOverviewRowIndexes = new WeakMap<MiniMapTransactionOverview, ReadonlyMap<string, number>>();
 
 function transactionIndex(transactions: readonly Transaction[]): TransactionIndex {
   const cached = transactionIndexes.get(transactions);
-  if (cached) return cached;
+  if (cached?.byId) return cached;
   const byId = new Map<Transaction["id"], Transaction>();
+  const indexById = new Map<Transaction["id"], number>();
   const byLane = new Map<string, TransactionLaneBucket>();
-  for (const transaction of transactions) {
+  for (const [index, transaction] of transactions.entries()) {
     byId.set(transaction.id, transaction);
+    indexById.set(transaction.id, index);
     if (transaction.visible === false) continue;
     const laneId = transaction.laneId ?? "lane_0";
     const key = transactionLaneIdentityKey(transaction.groupId, laneId);
@@ -163,7 +168,7 @@ function transactionIndex(transactions: readonly Transaction[]): TransactionInde
     if (bucket) bucket.transactions.push(transaction);
     else byLane.set(key, { groupId: transaction.groupId, laneId, transactions: [transaction] });
   }
-  const index = { byId, byLane };
+  const index = { byId, indexById, byLane };
   transactionIndexes.set(transactions, index);
   return index;
 }
@@ -206,7 +211,9 @@ export function buildMiniMapTransactionOverview(document: Pick<CanonicalDocument
       .sort(sortTransactionSegments);
     return { key: transactionLaneIdentityKey(bucket.groupId, bucket.laneId), groupId: bucket.groupId, laneId: bucket.laneId, rowIndex, segments };
   });
-  return Object.freeze({ cycleCount, rows: Object.freeze(rows) });
+  const overview = Object.freeze({ cycleCount, rows: Object.freeze(rows), transactionsVisited: document.transactions.length, laneBucketsRebuilt: rows.length });
+  transactionOverviewRowIndexes.set(overview, new Map(rows.map((row, index) => [row.key, index] as const)));
+  return overview;
 }
 
 /**
@@ -214,11 +221,75 @@ export function buildMiniMapTransactionOverview(document: Pick<CanonicalDocument
  * lanes. The caller must retain the previous transaction array and group
  * array; structural changes fall back to the canonical full builder.
  */
-export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOverview, previousTransactions: readonly Transaction[], previousGroups: CanonicalDocument["transactionGroups"], document: Pick<CanonicalDocument, "transactions" | "transactionGroups" | "timeline">): MiniMapTransactionOverview {
+export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOverview, previousTransactions: readonly Transaction[], previousGroups: CanonicalDocument["transactionGroups"], document: Pick<CanonicalDocument, "transactions" | "transactionGroups" | "timeline">, changedTransactionIds?: readonly Transaction["id"][]): MiniMapTransactionOverview {
   if (previous.cycleCount !== Math.max(1, document.timeline.cycleCount) || previousGroups !== document.transactionGroups) return buildMiniMapTransactionOverview(document);
   const laneKey = (transaction: Transaction) => transactionLaneIdentityKey(transaction.groupId, transaction.laneId ?? "lane_0");
+  if (changedTransactionIds !== undefined) {
+    if (document.transactions.length !== previousTransactions.length) return buildMiniMapTransactionOverview(document);
+    const previousIndex = transactionIndexes.get(previousTransactions) ?? transactionIndex(previousTransactions);
+    const rowIndexes = transactionOverviewRowIndexes.get(previous);
+    if (!rowIndexes) return buildMiniMapTransactionOverview(document);
+    const changedIds = [...new Set(changedTransactionIds)];
+    const changes: { before: Transaction; after: Transaction }[] = [];
+    const affectedLaneIds = new Map<string, Set<Transaction["id"]>>();
+    const movedInByLane = new Map<string, Transaction[]>();
+    const laneCountDelta = new Map<string, number>();
+    const addLaneChange = (key: string, id: Transaction["id"], delta: number) => {
+      const ids = affectedLaneIds.get(key) ?? new Set<Transaction["id"]>();
+      ids.add(id);
+      affectedLaneIds.set(key, ids);
+      laneCountDelta.set(key, (laneCountDelta.get(key) ?? 0) + delta);
+    };
+    for (const id of changedIds) {
+      const position = previousIndex.indexById.get(id);
+      if (position === undefined) return buildMiniMapTransactionOverview(document);
+      const before = previousTransactions[position];
+      const after = document.transactions[position];
+      if (!before || !after || after.id !== id) return buildMiniMapTransactionOverview(document);
+      changes.push({ before, after });
+      if (before.visible !== false) addLaneChange(laneKey(before), id, -1);
+      if (after.visible !== false) {
+        const key = laneKey(after);
+        addLaneChange(key, id, 1);
+        const movedIn = movedInByLane.get(key) ?? [];
+        movedIn.push(after);
+        movedInByLane.set(key, movedIn);
+      }
+    }
+    if (changes.length === 0) return previous;
+    for (const [key, delta] of laneCountDelta) {
+      const oldCount = previousIndex.byLane.get(key)?.transactions.length ?? 0;
+      const nextCount = oldCount + delta;
+      // Creating/removing a lane changes the row topology and its ordering;
+      // retain the canonical full builder for that uncommon structural case.
+      if (nextCount <= 0 || oldCount === 0) return buildMiniMapTransactionOverview(document);
+    }
+    const nextBuckets = new Map(previousIndex.byLane);
+    const rows = [...previous.rows];
+    let transactionsVisited = changes.length;
+    for (const [key, ids] of affectedLaneIds) {
+      const oldBucket = previousIndex.byLane.get(key);
+      if (!oldBucket) return buildMiniMapTransactionOverview(document);
+      const retained = oldBucket.transactions.filter((transaction) => !ids.has(transaction.id));
+      const movedIn = movedInByLane.get(key) ?? [];
+      const bucketTransactions = [...retained, ...movedIn];
+      transactionsVisited += oldBucket.transactions.length + bucketTransactions.length;
+      const bucket: TransactionLaneBucket = { groupId: oldBucket.groupId, laneId: oldBucket.laneId, transactions: bucketTransactions };
+      nextBuckets.set(key, bucket);
+      const rowIndex = rowIndexes.get(key);
+      if (rowIndex === undefined) return buildMiniMapTransactionOverview(document);
+      const group = bucket.groupId ? document.transactionGroups?.find((item) => item.id === bucket.groupId) : undefined;
+      const segments = bucketTransactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? group?.color ?? DEFAULT_TRANSACTION_COLOR })).sort(sortTransactionSegments);
+      rows[rowIndex] = { key, groupId: bucket.groupId, laneId: bucket.laneId, rowIndex, segments };
+    }
+    const overview = Object.freeze({ cycleCount: previous.cycleCount, rows: Object.freeze(rows), transactionsVisited, laneBucketsRebuilt: affectedLaneIds.size });
+    transactionOverviewRowIndexes.set(overview, rowIndexes);
+    transactionIndexes.set(document.transactions, { indexById: previousIndex.indexById, byLane: nextBuckets });
+    return overview;
+  }
   const previousIndex = transactionIndex(previousTransactions);
   const nextIndex = transactionIndex(document.transactions);
+  if (!previousIndex.byId || !nextIndex.byId) return buildMiniMapTransactionOverview(document);
   const changedLanes = new Set<string>();
   for (const [id, before] of previousIndex.byId) {
     const next = nextIndex.byId.get(id);
@@ -251,5 +322,7 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
     const rightOrder = right.groupId === undefined ? Number.MAX_SAFE_INTEGER : orderByGroupId.get(right.groupId) ?? Number.MAX_SAFE_INTEGER;
     return leftOrder - rightOrder || left.laneId.localeCompare(right.laneId);
   }).map((row, rowIndex) => row.rowIndex === rowIndex ? row : ({ ...row, rowIndex }));
-  return Object.freeze({ cycleCount: previous.cycleCount, rows: Object.freeze(rows) });
+  const overview = Object.freeze({ cycleCount: previous.cycleCount, rows: Object.freeze(rows), transactionsVisited: previousTransactions.length + document.transactions.length, laneBucketsRebuilt: changedLanes.size });
+  transactionOverviewRowIndexes.set(overview, new Map(rows.map((row, index) => [row.key, index] as const)));
+  return overview;
 }

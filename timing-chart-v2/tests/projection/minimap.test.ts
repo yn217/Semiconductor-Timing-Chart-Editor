@@ -34,10 +34,18 @@ describe("MiniMap overview derivation", () => {
     const before = { ...source, transactions };
     const previous = buildMiniMapTransactionOverview(before);
     const next = { ...before, transactions: [{ ...transactions[0]!, start: 2, end: 5 }, transactions[1]!] };
-    const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next);
+    const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next, [transactions[0]!.id as never]);
     expect(updated).not.toBe(previous);
     expect(updated.rows.find((row) => row.groupId === undefined && row.laneId === "lane_0")?.segments[0]).toEqual({ start: 2, end: 5, color: "#8895a7" });
     expect(updated.rows.find((row) => row.groupId === undefined && row.laneId === "lane_1")).toBe(previous.rows.find((row) => row.groupId === undefined && row.laneId === "lane_1"));
+    expect(updated.transactionsVisited).toBe(3);
+    expect(updated.laneBucketsRebuilt).toBe(1);
+    expect(updated.rows).toEqual(buildMiniMapTransactionOverview(next).rows);
+
+    const editedAgain = { ...next, transactions: [next.transactions[0]!, { ...next.transactions[1]!, start: 6, end: 9 }] };
+    const updatedAgain = updateMiniMapTransactionOverview(updated, next.transactions, next.transactionGroups, editedAgain, [transactions[1]!.id as never]);
+    expect(updatedAgain.transactionsVisited).toBe(3);
+    expect(updatedAgain.rows).toEqual(buildMiniMapTransactionOverview(editedAgain).rows);
   });
 
   it("falls back to a full overview when a new lane is introduced", () => {
@@ -60,7 +68,7 @@ describe("MiniMap overview derivation", () => {
     const before = { ...source, transactions };
     const previous = buildMiniMapTransactionOverview(before);
     const next = { ...before, transactions: [{ ...transactions[0]!, laneId: "lane_1" }, transactions[1]!, transactions[2]!] };
-    const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next);
+    const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next, [transactions[0]!.id as never]);
     expect(updated.rows.find((row) => row.groupId === undefined && row.laneId === "lane_0")?.segments).toEqual([
       { start: 9, end: 10, color: "#8895a7" },
     ]);
@@ -70,6 +78,8 @@ describe("MiniMap overview derivation", () => {
     ]);
     expect(updated.rows).toHaveLength(2);
     expect(updated.rows.map((row) => [row.groupId, row.laneId])).toEqual([[undefined, "lane_0"], [undefined, "lane_1"]]);
+    expect(updated.transactionsVisited).toBe(7);
+    expect(updated.laneBucketsRebuilt).toBe(2);
   });
 
   it("rebuilds exact rows when the last Transaction is deleted", () => {
@@ -162,7 +172,7 @@ describe("MiniMap overview derivation", () => {
     const nextTransactions = transactions.map((transaction) => transaction.id === "txn_colon_right" ? { ...transaction, laneId: "c", groupId: "a:b" } : transaction);
     const next = { ...before, transactions: nextTransactions };
     const incrementallyUpdated = updateMiniMapTransactionOverview(overview, transactions, transactionGroups, next);
-    expect(incrementallyUpdated).toEqual(buildMiniMapTransactionOverview(next));
+    expect(incrementallyUpdated.rows).toEqual(buildMiniMapTransactionOverview(next).rows);
     expect(incrementallyUpdated.rows.find((row) => row.groupId === "a:b" && row.laneId === "c")?.segments).toHaveLength(2);
     expect(incrementallyUpdated.rows.find((row) => row.groupId === "a" && row.laneId === "b:c")).toBeUndefined();
   });
