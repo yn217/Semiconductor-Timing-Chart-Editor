@@ -1,5 +1,31 @@
 import { describe, expect, it } from "vitest";
-import { transactionRowsInWindow } from "../../apps/editor/src/runtime/transaction-virtual-index.js";
+import { bookmarksInSourceWindow, indexTransactionIntervals, transactionIntervalsInWindow, transactionRowsInWindow } from "../../apps/editor/src/runtime/transaction-virtual-index.js";
+
+describe("Transaction horizontal interval window", () => {
+  it("queries a narrow viewport from a 10k sequential lane without visiting the bucket", () => {
+    const transactions = Array.from({ length: 10_000 }, (_, index) => ({ id: `tx-${index}`, start: index * 10, end: index * 10 + 5 }));
+    const index = indexTransactionIntervals(transactions);
+    const result = transactionIntervalsInWindow(index, 50_000, 50_040);
+    expect(result.items.map((item) => item.id)).toEqual(["tx-5000", "tx-5001", "tx-5002", "tx-5003"]);
+    expect(result.visitedNodes).toBeLessThan(64);
+  });
+
+  it("retains long intervals crossing the viewport and pins an offscreen selected item", () => {
+    const index = indexTransactionIntervals([
+      { id: "long", start: 0, end: 100 },
+      { id: "left", start: 1, end: 2 },
+      { id: "visible", start: 20, end: 30 },
+      { id: "right", start: 40, end: 50 },
+    ]);
+    expect(transactionIntervalsInWindow(index, 25, 26).items.map((item) => item.id)).toEqual(["long", "visible"]);
+    expect(transactionIntervalsInWindow(index, 25, 26, new Set(["right"])).items.map((item) => item.id)).toEqual(["long", "visible", "right"]);
+  });
+
+  it("slices sorted Bookmark markers to the source-time window", () => {
+    const bookmarks = Array.from({ length: 10_000 }, (_, index) => ({ id: `mark-${index}`, start: index * 10 }));
+    expect(bookmarksInSourceWindow(bookmarks, 50_000, 50_030).map((item) => item.id)).toEqual(["mark-5000", "mark-5001", "mark-5002", "mark-5003"]);
+  });
+});
 
 describe("Transaction vertical row window", () => {
   it("slices a 10k row lane to only the requested viewport rows", () => {

@@ -89,6 +89,9 @@ export interface EditorSecondarySurfacesInput {
     readonly transactionBoundaryX: MutableRefObject<
       (cycle: number) => number | undefined
     >;
+    readonly transactionSourceWindow: MutableRefObject<
+      (viewport: HTMLElement) => Readonly<{ start: number; end: number }> | undefined
+    >;
     readonly snapTransactionCycle: MutableRefObject<
       (clientX: number, surfaceLeft?: number) => number | undefined
     >;
@@ -480,6 +483,10 @@ export function useEditorSecondarySurfaces(
     (cycle: number) => refs.transactionBoundaryX.current(cycle),
     [refs.transactionBoundaryX],
   );
+  const transactionVisibleSourceWindow = useCallback(
+    (viewport: HTMLElement) => refs.transactionSourceWindow.current(viewport),
+    [refs.transactionSourceWindow],
+  );
   // #759: one Group disclosure owner for the Left Tree and the center Group headers.
   const disclosure = useTransactionDisclosure(input.document, input.documentEpoch);
   // #748/#774: Tree menu Show All / Hide All -- explicit target IDs (one History unit), never Selection: routing bulk visibility
@@ -505,6 +512,7 @@ export function useEditorSecondarySurfaces(
             : ""
         }
         getBoundaryX={transactionBoundaryX}
+        getVisibleSourceWindow={transactionVisibleSourceWindow}
         onSelect={input.actions.selectTransaction}
         onSnap={(clientX, surfaceLeft) =>
           refs.snapTransactionCycle.current(clientX, surfaceLeft)

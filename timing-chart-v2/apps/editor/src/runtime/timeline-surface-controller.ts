@@ -69,6 +69,7 @@ export interface TimelineSurfacePresentationPort {
   readonly armArrowPick: MutableRefObject<(annotationType: "arrow" | "dependency") => void>;
   readonly snapTransactionCycle: MutableRefObject<(clientX: number, surfaceLeft?: number) => number | undefined>;
   readonly transactionBoundaryX: MutableRefObject<(cycle: number) => number | undefined>;
+  readonly transactionSourceWindow: MutableRefObject<(viewport: HTMLElement) => Readonly<{ start: number; end: number }> | undefined>;
   readonly refreshPlayhead: MutableRefObject<() => void>;
   readonly refreshRangeSelectionBand: MutableRefObject<() => void>;
   readonly publishStateRef: MutableRefObject<() => void>;
@@ -146,7 +147,7 @@ export interface TimelineSurfaceController {
 export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInput): TimelineSurfaceController {
   const { application, documentLifecycle, selection, navigation: timelineNavigation, commandRegistry, executeBatch } = input;
   const { host, viewport, ruler, gridLayer, viewportLower, rulerLower, hostLower, gridLayerLower, signalSplitRuntimeRef } = input.dom;
-  const { collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef } = input.presentation;
+  const { collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, transactionSourceWindow, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef, transactionCyclesPerTcRef } = input.presentation;
   const { setRuntimeDiagnostics, setProblem, setTreePresentationRevision, setTransactionPresentationRevision, setRangePresentationRevision, setPlayheadPresentationRevision, setTimelineRange, setRangeSelectionActive, setSelectedCycle, setBottomPinned, setPinnedBottomSelection, setPinnedSignalIds, setTreeFilter, setTreeTypeFilter, setTreeAddMenuOpen, setTreeMoreMenuOpen, setContextMenu, setArrowPickStatus, setRenameDialogOpen, resetForDocument, toggleCollapsedGroup, closeContextMenu } = input.state;
   const viewMetricsOwner = input.viewMetricsOwner;
   const signalSplitEnabled = input.signalSplitEnabled;
@@ -514,6 +515,17 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     };
     timelineRuntime.attach();
     transactionBoundaryX.current = (cycle) => timelineGeometry.sourceBoundaryToLocalX(sessionController.snapshot().document, cycle);
+    transactionSourceWindow.current = (sourceViewport) => {
+      const document = sessionController.snapshot().document;
+      const localScale = timelineGeometry.presentationScale * timelineNavigation.getZoom();
+      if (!Number.isFinite(localScale) || localScale <= 0 || sourceViewport.clientWidth <= 0) return undefined;
+      const sharedViewport = timelineScrollOwner(sourceViewport);
+      return timelineGeometry.sourceWindowForLocalRange(
+        document,
+        sharedViewport.scrollLeft / localScale,
+        (sharedViewport.scrollLeft + sharedViewport.clientWidth) / localScale,
+      );
+    };
     const currentViewMetrics = () => {
       viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth, zoom: timelineNavigation.getZoom() });
       return viewMetricsOwner.snapshot();
