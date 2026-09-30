@@ -19,7 +19,7 @@ import type {
   ValueSignal,
   EnumDefinition,
 } from "@timing-chart-v2/schema";
-import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { ANNOTATION_LABEL_MAX_WIDTH, ANNOTATION_LABEL_PLACEMENTS, MAX_MEASUREMENT_LANE, annotationsForReferences, canonicalDocumentsEqual, canonicalEntityIds, clockSlotCount, isStableId, opaqueDerivedId, referencesToAny, referencesToSignal, validateEnumDefinition, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -33,6 +33,11 @@ export type CommandPlanResult =
 const fail = (reason: "invalid" | "no-op", code: CommandPolicyCode, path: string, message: string): CommandPlanResult => ({ ok: false, reason, problems: [{ code, path, message }] });
 const timingSignalIds = (document: CanonicalDocument) => document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
 const annotationIds = (document: CanonicalDocument) => document.annotations.map((annotation) => annotation.id);
+const plannerMetrics = { calls: 0, durationMs: 0, affectedSignalCount: 0 };
+
+export function commandPlannerMetrics(): Readonly<typeof plannerMetrics> {
+  return Object.freeze({ ...plannerMetrics });
+}
 
 // Command no-op checks must compare semantic data, not serialization order.
 // Keeping this local avoids making routine metadata/layout reads pay a full
@@ -95,13 +100,10 @@ function changedPositions<T extends string>(before: readonly T[], after: readonl
 
 function annotationsForSignals(document: CanonicalDocument, signalIds: SignalId | readonly SignalId[]) {
   const affected = new Set(Array.isArray(signalIds) ? signalIds : [signalIds]);
-  const annotationIds = new Set<string>();
-  for (const signalId of affected) {
-    for (const reference of referencesToSignal(document, signalId)) {
-      if (reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource") annotationIds.add(reference.ownerId);
-    }
-  }
-  return document.annotations.filter((annotation) => annotationIds.has(annotation.id)).map((annotation) => annotation.id);
+  plannerMetrics.affectedSignalCount += affected.size;
+  const references = referencesToAny(document, "signal", affected)
+    .filter((reference) => reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource");
+  return annotationsForReferences(document, references).map((annotation) => annotation.id);
 }
 
 function replaceSignal(document: CanonicalDocument, index: number, signal: Signal): CanonicalDocument {
@@ -111,10 +113,9 @@ function replaceSignal(document: CanonicalDocument, index: number, signal: Signa
 }
 
 function dependentAnnotations(document: CanonicalDocument, signalId: SignalId): Annotation[] {
-  const annotationIds = new Set(referencesToSignal(document, signalId)
-    .filter((reference) => reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource" || reference.kind === "annotation.markerSpanStart" || reference.kind === "annotation.markerSpanEnd")
-    .map((reference) => reference.ownerId));
-  return document.annotations.filter((annotation) => annotationIds.has(annotation.id));
+  const references = referencesToSignal(document, signalId)
+    .filter((reference) => reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource" || reference.kind === "annotation.markerSpanStart" || reference.kind === "annotation.markerSpanEnd");
+  return [...annotationsForReferences(document, references)];
 }
 
 function moveSignal(document: CanonicalDocument, command: Extract<SemanticCommand, { type: "signal.move" }>): CommandPlanResult {
@@ -587,7 +588,7 @@ function moveTimelineRange(document: CanonicalDocument, start: number, end: numb
   };
 }
 
-export function planCommand(document: CanonicalDocument, command: SemanticCommand): CommandPlanResult {
+function planCommandInternal(document: CanonicalDocument, command: SemanticCommand): CommandPlanResult {
   if (!isStableId(command.id)) return fail("invalid", "INVALID_COMMAND_ID", "$.id", "Command ID must be a stable ID.");
   switch (command.type) {
     case "document.replace": {
@@ -635,7 +636,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       return { ok: true, document: { ...document, legend: command.legend }, changeSet: {}, inverseChangeSet: {} };
     }
     case "commentRow.create":
-      return planCommand(document, { id: command.id, type: "signal.create", signal: command.commentRow, targetGroupId: command.targetGroupId, index: command.index });
+      return planCommandInternal(document, { id: command.id, type: "signal.create", signal: command.commentRow, targetGroupId: command.targetGroupId, index: command.index });
     case "commentRow.update": {
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
       const row = document.signals[index];
@@ -653,7 +654,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       return { ok: true, document: replaceSignal(document, index, next), changeSet, inverseChangeSet: changeSet };
     }
     case "commentRow.delete":
-      return planCommand(document, { id: command.id, type: "signal.delete", signalId: command.signalId });
+      return planCommandInternal(document, { id: command.id, type: "signal.delete", signalId: command.signalId });
     case "signal.create": {
       if (document.signals.some((signal) => signal.id === command.signal.id)) return fail("invalid", "DUPLICATE_ID", "$.signal.id", `Signal '${command.signal.id}' already exists.`);
       const groupIndex = document.signalGroups.findIndex((group) => group.id === command.targetGroupId);
@@ -672,7 +673,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const forward: ChangeSet[] = [];
       const inverse: ChangeSet[] = [];
       for (const [offset, signal] of command.signals.entries()) {
-        const plan = planCommand(candidate, { id: `${command.id}_item_${offset}` as CommandId, type: "signal.create", signal, targetGroupId: command.targetGroupId, index: command.index + offset });
+        const plan = planCommandInternal(candidate, { id: `${command.id}_item_${offset}` as CommandId, type: "signal.create", signal, targetGroupId: command.targetGroupId, index: command.index + offset });
         if (!plan.ok) return plan;
         candidate = plan.document;
         forward.push(plan.changeSet);
@@ -1768,4 +1769,13 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
   }
+}
+
+export function planCommand(document: CanonicalDocument, command: SemanticCommand): CommandPlanResult {
+  const now = () => (globalThis as typeof globalThis & { performance?: { now(): number } }).performance?.now() ?? Date.now();
+  const start = now();
+  const result = planCommandInternal(document, command);
+  plannerMetrics.calls += 1;
+  plannerMetrics.durationMs += now() - start;
+  return result;
 }

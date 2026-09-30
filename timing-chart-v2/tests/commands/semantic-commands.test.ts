@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
+import { commandPlannerMetrics, commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-chart-v2/core";
 import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
@@ -15,6 +15,18 @@ function extraSignal(id = "sig_extra"): Signal {
 }
 
 describe("pure Semantic Command planning", () => {
+  it("reports planner duration and multi-row reference invalidation counts", () => {
+    const document = canonicalFixture();
+    const before = commandPlannerMetrics();
+    const result = planCommand(document, { id: commandId("cmd_metric_move"), type: "signal.move", signalId: "sig_data" as SignalId, targetGroupId: "grp_main" as GroupId, index: 0 });
+    const after = commandPlannerMetrics();
+
+    expect(result.ok).toBe(true);
+    expect(after.calls - before.calls).toBe(1);
+    expect(after.durationMs).toBeGreaterThanOrEqual(before.durationMs);
+    expect(after.affectedSignalCount - before.affectedSignalCount).toBeGreaterThanOrEqual(2);
+  });
+
   it("owns Transaction Groups and preserves group/color/description semantics atomically", () => {
     const document = canonicalFixture();
     const groupId = "txn_group_main" as TransactionGroupId;

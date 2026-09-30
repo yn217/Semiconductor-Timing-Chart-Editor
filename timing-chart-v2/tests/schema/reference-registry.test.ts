@@ -1,9 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { canonicalReferences, referencesTo, referencesToSignal, referencesToTimeGroup, validateCanonicalDocument } from "@timing-chart-v2/schema";
+import { annotationsForReferences, canonicalReferenceMetrics, canonicalReferences, referencesTo, referencesToAny, referencesToSignal, referencesToTimeGroup, validateCanonicalDocument } from "@timing-chart-v2/schema";
 import type { AnnotationId, BookmarkId, CanonicalDocument, LabelAnchorId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("canonical stable-ID reference registry", () => {
+  it("queries multiple target buckets once and resolves annotation owners without scanning canonical annotations", () => {
+    const base = canonicalFixture();
+    const first = base.signals[0]!;
+    const second = base.signals[1]!;
+    const document: CanonicalDocument = {
+      ...base,
+      annotations: [
+        { id: "ann_second" as AnnotationId, type: "text", label: "Second", visible: true, anchor: { signalId: second.id, cycle: 2, point: "cycle-start" } },
+        { id: "ann_first" as AnnotationId, type: "ghostTrace", label: "First", visible: true, sourceSignalId: first.id, start: { signalId: first.id, cycle: 1, point: "cycle-start" }, end: { signalId: first.id, cycle: 3, point: "cycle-end" } },
+      ],
+    };
+    const expected = canonicalReferences(document).filter((reference) => reference.targetType === "signal" && (reference.targetId === first.id || reference.targetId === second.id));
+    const before = canonicalReferenceMetrics();
+
+    const references = referencesToAny(document, "signal", [second.id, first.id, second.id]);
+    expect([...references].sort((a, b) => a.path.localeCompare(b.path))).toEqual([...expected].sort((a, b) => a.path.localeCompare(b.path)));
+    expect(new Set(references.map((reference) => reference.path)).size).toBe(references.length);
+    expect(annotationsForReferences(document, references).map((annotation) => annotation.id)).toEqual(["ann_second", "ann_first"]);
+
+    const after = canonicalReferenceMetrics();
+    expect(after.indexBuilds - before.indexBuilds).toBe(1);
+    expect(after.referencesEnumerated - before.referencesEnumerated).toBe(canonicalReferences(document).length);
+    expect(after.targetQueries - before.targetQueries).toBe(1);
+    expect(after.referencesVisited - before.referencesVisited).toBe(references.length);
+  });
+
   it("builds one target index per immutable document snapshot and matches authoritative enumeration", () => {
     const document = canonicalFixture();
     const allReferences = canonicalReferences(document);
