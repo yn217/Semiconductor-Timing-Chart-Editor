@@ -6,6 +6,7 @@ import type { TransactionLaneCommandActions } from "../application/editor-surfac
 import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
 import { mergeTransactionFoldRanges, transactionFoldRangesIntersecting, type TransactionFoldRange } from "./transaction-fold-index.js";
+import { transactionRowsInWindow } from "./transaction-virtual-index.js";
 
 const LANE_ROW_HEIGHT = 40;
 const GROUP_HEADER_HEIGHT = 24;
@@ -68,7 +69,7 @@ function assignStackRows(transactions: readonly Transaction[]): { readonly rowOf
   return { rowOf, rowCount: Math.max(1, rowCount) };
 }
 
-type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly labelTop: number; readonly trackTop: number; readonly labelHeight: number; readonly trackHeight: number; readonly rowOf: ReadonlyMap<TransactionId, number>; readonly treeRowOf: ReadonlyMap<TransactionId, number> };
+type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly labelTop: number; readonly trackTop: number; readonly labelHeight: number; readonly trackHeight: number; readonly rowOf: ReadonlyMap<TransactionId, number>; readonly treeRowOf: ReadonlyMap<TransactionId, number>; readonly treeRows: readonly Transaction[] };
 type GroupHeaderBand = { readonly key: string; readonly labelTop: number; readonly trackTop: number; readonly label: string; readonly color: string | undefined; readonly count: number; readonly groupId: string | undefined; readonly collapsed: boolean };
 
 type TransactionDragEdge = "body" | "start" | "end";
@@ -302,7 +303,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const stackRowBuilds = useRef(0);
   const treeRowBuilds = useRef(0);
   const stackRowsCache = useRef(new WeakMap<readonly Transaction[], ReturnType<typeof assignStackRows>>());
-  const treeRowsCache = useRef(new WeakMap<readonly Transaction[], ReadonlyMap<TransactionId, number>>());
+  const treeRowsCache = useRef(new WeakMap<readonly Transaction[], Readonly<{ rowOf: ReadonlyMap<TransactionId, number>; ordered: readonly Transaction[] }>>());
   const laneArrayCache = useRef<ReadonlyMap<string, readonly Transaction[]> | undefined>(undefined);
   const laneTransactionCache = useRef<ReadonlyMap<TransactionId, Transaction> | undefined>(undefined);
   const laneKeyCache = useRef<ReadonlyMap<TransactionId, string> | undefined>(undefined);
@@ -381,7 +382,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   // "Memory / Lane 0" vs "CPU / Lane 1" structure.
   const groups = document.transactionGroups ?? EMPTY_TRANSACTION_GROUPS;
   const laneKey = (groupId: string | undefined, laneId: string) => `${groupId ?? "ungrouped"}\u0000${laneId}`;
-  const { laneTransactionsByKey, transactionCountByGroup } = useMemo(() => {
+  const { laneTransactionsByKey, transactionCountByGroup, currentKeys } = useMemo(() => {
     laneIndexBuilds.current += 1;
     const previous = laneArrayCache.current;
     const previousTransactions = laneTransactionCache.current;
@@ -441,7 +442,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     laneTransactionCache.current = currentTransactions;
     laneKeyCache.current = currentKeys;
     laneOrderCache.current = currentOrder;
-    return { laneTransactionsByKey, transactionCountByGroup };
+    return { laneTransactionsByKey, transactionCountByGroup, currentKeys };
   }, [document.transactions]);
   // Transaction Mode GUI realignment: this used to also require "at least
   // one Transaction already references a Group" -- a freshly-created,
@@ -510,11 +511,12 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       // always-one-row-per-Transaction sequence (stable start-then-id
       // order), and the lane's height is whichever of the two needs more
       // room, so neither the bars nor the Tree rows ever overlap.
-      let treeRowOf = treeRowsCache.current.get(laneTransactions);
-      if (!treeRowOf) {
-        treeRowOf = new Map([...laneTransactions].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)).map((transaction, index) => [transaction.id, index] as const));
+      let treeRows = treeRowsCache.current.get(laneTransactions);
+      if (!treeRows) {
+        const ordered = [...laneTransactions].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+        treeRows = { ordered, rowOf: new Map(ordered.map((transaction, index) => [transaction.id, index] as const)) };
         treeRowBuilds.current += 1;
-        treeRowsCache.current.set(laneTransactions, treeRowOf);
+        treeRowsCache.current.set(laneTransactions, treeRows);
       }
       // Transaction Mode's center label column represents the Lane only;
       // Transaction names live in the bar header, as in the approved
@@ -522,7 +524,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       // several non-overlapping Transactions share that lane.
       const labelHeight = LANE_ROW_HEIGHT;
       const trackHeight = Math.max(rowCount, 1) * LANE_ROW_HEIGHT;
-      laneBands.push({ key: `lane:${section.groupId ?? "ungrouped"}:${laneId}`, laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf, treeRowOf });
+      laneBands.push({ key: `lane:${section.groupId ?? "ungrouped"}:${laneId}`, laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf, treeRowOf: treeRows.rowOf, treeRows: treeRows.ordered });
       labelCursor += labelHeight;
       trackCursor += trackHeight;
     }
@@ -560,7 +562,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const virtualBottom = Math.min(totalHeight, virtualWindow.top + virtualWindow.height + virtualOverscan);
   const isVisible = (top: number, height: number) => top < virtualBottom && top + height > virtualTop;
   const visibleGroupHeaders = groupHeaders.filter((header) => isVisible(header.labelTop, GROUP_HEADER_HEIGHT));
-  const bandContainsSelected = (band: LaneBand) => selectedId !== undefined && (laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).some((transaction) => transaction.id === selectedId);
+  const bandContainsSelected = (band: LaneBand) => selectedId !== undefined && currentKeys.get(selectedId) === laneKey(band.groupId, band.laneId);
   const visibleLaneBands = laneBands.filter((band) => isVisible(band.labelTop, band.labelHeight) || isVisible(band.trackTop, band.trackHeight) || bandContainsSelected(band));
   const isTreeTransactionVisible = (band: LaneBand, transaction: Transaction) => {
     if (isTransactionSelected(transaction.id)) return true;
@@ -614,6 +616,11 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
         // reading one shared `document.transactions` + `selectedId`/
         // `onSelect`, not a second selection-owning tree.
         const laneTransactions = laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? [];
+        const rowStart = (virtualTop - band.labelTop - 4) / LANE_ROW_HEIGHT;
+        const rowEnd = (virtualBottom - band.labelTop - 4) / LANE_ROW_HEIGHT;
+        const selectedRow = selectedId === undefined ? undefined : band.treeRowOf.get(selectedId);
+        const pinned = selectedRow === undefined ? undefined : band.treeRows[selectedRow];
+        const treeCandidates = transactionRowsInWindow(band.treeRows, rowStart, rowEnd, pinned);
         return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" data-lane-id={band.laneId} data-transaction-group-id={band.groupId ?? "ungrouped"} style={{ top: band.labelTop, height: band.labelHeight }}>
           <em className="transaction-lane-label-name">{band.laneId.replace(/^lane_(\d+)$/i, "Lane $1")}</em>
           {/* Transaction Mode GUI realignment ("長い名前は ellipsis +
@@ -623,7 +630,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
               once it was cut off. `title` is the same native-tooltip
               affordance the rest of the app already uses for truncated
               text, not a new pattern. */}
-          {laneTransactions.filter((transaction) => transaction.visible !== false && isTreeTransactionVisible(band, transaction)).map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(isTransactionSelected(transaction.id))} title={transaction.name} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
+          {treeCandidates.filter((transaction) => transaction.visible !== false && isTreeTransactionVisible(band, transaction)).map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(isTransactionSelected(transaction.id))} title={transaction.name} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
         </span>;
       })}
     </div>
