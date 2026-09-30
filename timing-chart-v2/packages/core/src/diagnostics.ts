@@ -521,9 +521,98 @@ export function deriveTimingDiagnosticsIfInputsChanged(
         reusedUnknownValues.push(...signalValueDiagnostics(signal, index).map((diagnostic) => withRuleMetadata(diagnostic, "timing.unknown-value")));
       }
     });
-    const remainingCategories = [...enabled].filter((category) => category !== "unknown-value");
-    const otherDiagnostics = deriveTimingDiagnostics(nextDocument, { enabledCategories: remainingCategories });
-    return { diagnostics: [...otherDiagnostics, ...reusedUnknownValues].sort(diagnosticOrder), recomputed: true };
+    const previousSignalIndexes = new Map(previousDocument.signals.map((signal, index) => [signal.id, { signal, index }] as const));
+    const changedSignalIds = new Set<SignalId>();
+    nextDocument.signals.forEach((signal, index) => {
+      const previous = previousSignalIndexes.get(signal.id);
+      const sameValues = signal.type === "clock" || signal.type === "commentRow"
+        ? previous?.signal.type === signal.type
+        : previous !== undefined && previous.signal.type !== "clock" && previous.signal.type !== "commentRow" && previous.signal.values === signal.values;
+      if (!previous || previous.index !== index || previous.signal.name !== signal.name || previous.signal.type !== signal.type || !sameValues) changedSignalIds.add(signal.id);
+      previousSignalIndexes.delete(signal.id);
+    });
+    for (const deletedId of previousSignalIndexes.keys()) changedSignalIds.add(deletedId);
+
+    const invalidatedConstraintIds = new Set<string>();
+    const constraintIdsBySignal = new Map<SignalId, string[]>();
+    if (enabled.has("protocol")) {
+      nextDocument.constraints.forEach((constraint) => {
+        for (const signalId of constraintSignalDependencies(constraint)) {
+          const ids = constraintIdsBySignal.get(signalId);
+          if (ids) ids.push(constraint.id);
+          else constraintIdsBySignal.set(signalId, [constraint.id]);
+        }
+      });
+      for (const signalId of changedSignalIds) {
+        for (const constraintId of constraintIdsBySignal.get(signalId) ?? []) invalidatedConstraintIds.add(constraintId);
+      }
+    }
+
+    const affectedStableSignalIds = new Set<SignalId>();
+    const stabilityRefreshConstraintIds = new Set<string>();
+    if (enabled.has("stability") && invalidatedConstraintIds.size > 0) {
+      for (const constraint of nextDocument.constraints) {
+        if (invalidatedConstraintIds.has(constraint.id) && constraint.type.toLowerCase() === "handshake") {
+          for (const id of handshakeStableSignalDependencies(constraint)) affectedStableSignalIds.add(id);
+        }
+      }
+      if (affectedStableSignalIds.size > 0) {
+        for (const constraint of nextDocument.constraints) {
+          if (constraint.type.toLowerCase() !== "handshake") continue;
+          if (!handshakeStableSignalDependencies(constraint).some((id) => affectedStableSignalIds.has(id))) continue;
+          stabilityRefreshConstraintIds.add(constraint.id);
+        }
+      }
+    }
+    const constraintsToReevaluate = new Set([...invalidatedConstraintIds, ...stabilityRefreshConstraintIds]);
+
+    const retainedConstraintDiagnostics = previousDiagnostics.filter((diagnostic) => diagnostic.category !== "unknown-value"
+      && !(diagnostic.category === "protocol" && diagnostic.objectId !== undefined && invalidatedConstraintIds.has(diagnostic.objectId))
+      && !(diagnostic.category === "stability" && diagnostic.entityId !== undefined && affectedStableSignalIds.has(diagnostic.entityId as SignalId)));
+    const incrementalConstraintDiagnostics: TimingDiagnostic[] = [];
+    if (constraintsToReevaluate.size > 0) {
+      const indexes = buildTimingDiagnosticIndexes(nextDocument, enabled);
+      nextDocument.constraints.forEach((constraint, constraintIndex) => {
+        if (!constraintsToReevaluate.has(constraint.id)) return;
+        const stabilityOnly = !invalidatedConstraintIds.has(constraint.id);
+        const singleConstraintDocument = { ...nextDocument, constraints: [constraint] };
+        const evaluate = (diagnostics: readonly TimingDiagnostic[], ruleId: string) => {
+          for (const diagnostic of diagnostics) {
+            if (stabilityOnly && diagnostic.category !== "stability") continue;
+            const path = diagnostic.path.replace("$.constraints[0]", `$.constraints[${constraintIndex}]`);
+            incrementalConstraintDiagnostics.push(withRuleMetadata({ ...diagnostic, path }, ruleId));
+          }
+        };
+        const type = constraint.type.toLowerCase();
+        if (type === "handshake" && enabled.has("protocol")) evaluate(handshakeDiagnostics(singleConstraintDocument, enabled, indexes), "timing.handshake");
+        else if (type === "latency-range" && enabled.has("protocol")) evaluate(latencyRangeDiagnostics(singleConstraintDocument, enabled, indexes), "timing.latency-range");
+        else if (type === "latency" && enabled.has("protocol")) evaluate(latencyDiagnostics(singleConstraintDocument, enabled, indexes), "timing.latency");
+      });
+    }
+    return { diagnostics: [...retainedConstraintDiagnostics, ...incrementalConstraintDiagnostics, ...reusedUnknownValues].sort(diagnosticOrder), recomputed: true };
   }
   return { diagnostics: deriveTimingDiagnostics(nextDocument), recomputed: true };
+}
+
+function constraintSignalDependencies(constraint: CanonicalDocument["constraints"][number]): readonly SignalId[] {
+  const data = constraintData(constraint.data);
+  switch (constraint.type.toLowerCase()) {
+    case "handshake":
+      return [
+        textFrom(data, ["requestSignalId", "request", "reqSignalId", "req"]),
+        textFrom(data, ["acknowledgeSignalId", "ackSignalId", "acknowledge", "ack"]),
+        ...textListFrom(data, ["stableSignalIds", "dataSignalIds", "stableSignals", "dataSignals"]),
+      ].filter((id): id is string => id !== undefined) as SignalId[];
+    case "latency-range":
+      return [textFrom(data, ["requestSignalId"]), textFrom(data, ["acknowledgeSignalId"])].filter((id): id is string => id !== undefined) as SignalId[];
+    case "latency":
+      return [textFrom(data, ["triggerSignalId"]), textFrom(data, ["responseSignalId"])].filter((id): id is string => id !== undefined) as SignalId[];
+    default:
+      return [];
+  }
+}
+
+function handshakeStableSignalDependencies(constraint: CanonicalDocument["constraints"][number]): readonly SignalId[] {
+  if (constraint.type.toLowerCase() !== "handshake") return [];
+  return textListFrom(constraintData(constraint.data), ["stableSignalIds", "dataSignalIds", "stableSignals", "dataSignals"]) as SignalId[];
 }

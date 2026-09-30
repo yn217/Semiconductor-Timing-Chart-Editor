@@ -36,6 +36,44 @@ describe("derived timing diagnostics", () => {
     expect(incremental.diagnostics.find((diagnostic) => diagnostic.entityId === source.signals[1]!.id)).toMatchObject({ code: "UNKNOWN_SIGNAL_VALUE", path: "$.signals[1].values[0].value" });
   });
 
+  it("re-evaluates only protocol constraints that depend on changed Signals", () => {
+    const source = canonicalFixture();
+    const template = source.signals[1]!;
+    const requestChanged = { ...template, id: "sig_req_changed" as SignalId, name: "REQ_CHANGED", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    const acknowledgeChanged = { ...template, id: "sig_ack_changed" as SignalId, name: "ACK_CHANGED", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 5, value: 1 }] };
+    const changedPayload = { ...template, id: "sig_data_changed" as SignalId, values: [{ start: 0, value: "00" }, { start: 3, value: "01" }] };
+    const requestShared = { ...template, id: "sig_req_shared" as SignalId, name: "REQ_SHARED", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    const acknowledgeShared = { ...template, id: "sig_ack_shared" as SignalId, name: "ACK_SHARED", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 5, value: 1 }] };
+    const requestUnchanged = { ...template, id: "sig_req_unchanged" as SignalId, name: "REQ_UNCHANGED", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    const acknowledgeUnchangedBase = { ...template, id: "sig_ack_unchanged" as SignalId, name: "ACK_UNCHANGED", type: "binary" as const, values: [{ start: 0, value: 0 }] };
+    let unrelatedValueReads = 0;
+    const unrelatedValues = new Proxy([{ start: 0, value: 0 }], {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator || property === "forEach" || (typeof property === "string" && /^\\d+$/.test(property))) unrelatedValueReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const acknowledgeUnchanged = { ...acknowledgeUnchangedBase, values: unrelatedValues };
+    const unchangedPayload = { ...template, id: "sig_data_unchanged" as SignalId, values: [{ start: 0, value: "00" }, { start: 3, value: "01" }] };
+    const changedConstraint: Constraint = { id: "constraint_changed", type: "handshake", data: { requestSignalId: requestChanged.id, acknowledgeSignalId: acknowledgeChanged.id, stableSignalIds: [changedPayload.id] } };
+    const sharedConstraint: Constraint = { id: "constraint_changed_shared", type: "handshake", data: { requestSignalId: requestShared.id, acknowledgeSignalId: acknowledgeShared.id, stableSignalIds: [changedPayload.id] } };
+    const latencyRangeConstraint: Constraint = { id: "constraint_latency_range_changed", type: "latency-range", data: { requestSignalId: requestChanged.id, acknowledgeSignalId: acknowledgeChanged.id, minCycles: 1, maxCycles: 3 } };
+    const latencyConstraint: Constraint = { id: "constraint_latency_changed", type: "latency", data: { triggerSignalId: requestChanged.id, triggerEdge: "rising", responseSignalId: acknowledgeChanged.id, responseEdge: "rising", minCycles: 1, maxCycles: 3 } };
+    const unchangedConstraint: Constraint = { id: "constraint_unchanged", type: "handshake", data: { requestSignalId: requestUnchanged.id, acknowledgeSignalId: acknowledgeUnchanged.id, stableSignalIds: [unchangedPayload.id] } };
+    const constraints = [changedConstraint, sharedConstraint, latencyRangeConstraint, latencyConstraint, unchangedConstraint];
+    const initial = withSignals(source, [source.signals[0]!, requestChanged, acknowledgeChanged, changedPayload, requestShared, acknowledgeShared, requestUnchanged, acknowledgeUnchanged, unchangedPayload], constraints);
+    const previous = { ...initial, checkSettings: { ...initial.checkSettings, enabledCategories: ["protocol", "stability"] as const } };
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    expect(previousDiagnostics.some((item) => item.code === "HANDSHAKE_NO_ACK" && item.objectId === unchangedConstraint.id)).toBe(true);
+    unrelatedValueReads = 0;
+
+    const next = withSignals(previous, [previous.signals[0]!, { ...requestChanged, values: [{ start: 0, value: 0 }, { start: 4, value: 1 }] }, acknowledgeChanged, changedPayload, requestShared, acknowledgeShared, requestUnchanged, acknowledgeUnchanged, unchangedPayload], constraints);
+    const incremental = deriveTimingDiagnosticsIfInputsChanged(previous, next, previousDiagnostics);
+    expect(unrelatedValueReads).toBe(0);
+    expect(incremental.diagnostics).toEqual(deriveTimingDiagnostics(next));
+    expect(incremental.diagnostics.filter((item) => item.code === "HANDSHAKE_DATA_UNSTABLE" && item.entityId === changedPayload.id)).toHaveLength(1);
+  });
+
   it("reuses derived Problems for unrelated immutable edits and invalidates every diagnostic input", () => {
     const source = canonicalFixture();
     const current = withSignals(source, [source.signals[0]!, { ...source.signals[1]!, values: [{ start: 1, value: "X" }] }]);
