@@ -35,4 +35,19 @@ describe("MiniMap overview segment reuse", () => {
     expect(after.rowsReused).toBe(after.rows.length - 1);
     expect(after.valueChangesVisited).toBe(edited.signals[index]!.type === "bus" ? edited.signals[index]!.values.length : -1);
   });
+
+  it("uses changed stable Signal IDs to visit and rebuild only the edited overview row", () => {
+    const base = canonicalFixture();
+    const before = buildMiniMapOverview(base);
+    const index = base.signals.findIndex((signal) => signal.type === "bus");
+    const editedSignal = base.signals[index]!;
+    const edited = { ...base, signals: base.signals.map((signal, position) => position === index && signal.type === "bus" ? { ...signal, values: [...signal.values, { start: base.timeline.cycleCount - 1, value: "0x7F" }] } : signal) };
+
+    const after = updateMiniMapOverview(before, edited as never, [editedSignal.id]);
+
+    expect(after.signalLookups).toBe(1);
+    expect(after.rowsRebuilt).toBe(1);
+    expect(after.rowsReused).toBe(after.rows.length - 1);
+    expect(after.valueChangesVisited).toBe(edited.signals[index]!.type === "bus" ? edited.signals[index]!.values.length : -1);
+  });
 });

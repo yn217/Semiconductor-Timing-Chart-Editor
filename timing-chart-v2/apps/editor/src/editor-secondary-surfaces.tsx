@@ -10,7 +10,7 @@ import type {
   RefObject,
   SetStateAction,
 } from "react";
-import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
+import type { ChangeSet, CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { HistoryState } from "@timing-chart-v2/history";
 import type {
   Annotation,
@@ -75,6 +75,7 @@ type Ref<T> = RefObject<T | null>;
 export interface EditorSecondarySurfacesInput {
   readonly setBottomVisible: (visible: boolean) => void;
   readonly document: CanonicalDocument;
+  readonly changeSet: ChangeSet;
   readonly validationDiagnostics: readonly DocumentProblem[];
   readonly validationPending: boolean;
   readonly documentEpoch: number;
@@ -667,6 +668,7 @@ export function useEditorSecondarySurfaces(
       }
       registry={input.command.registry.current}
       document={input.document}
+      changeSet={input.changeSet}
       cyclesPerTc={workspace.cyclesPerTc}
       viewport={refs.viewport}
       commands={surfaceCommands}

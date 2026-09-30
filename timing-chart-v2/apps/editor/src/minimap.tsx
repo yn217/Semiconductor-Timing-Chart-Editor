@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
-import type { CanonicalDocument, Signal } from "@timing-chart-v2/schema";
+import type { ChangeSet } from "@timing-chart-v2/commands";
+import type { CanonicalDocument } from "@timing-chart-v2/schema";
 import { buildMiniMapOverview, buildMiniMapTransactionOverview, updateMiniMapOverview, updateMiniMapTransactionOverview } from "@timing-chart-v2/projection";
 import { calculateMiniMapViewportMetrics } from "./runtime/minimap-viewport.js";
 import { timelineScrollOwner } from "./runtime/timeline-scroll-owner.js";
@@ -8,37 +9,19 @@ import { MiniMapOverviewRows, MiniMapTransactionOverviewRows } from "./minimap-o
 
 type MiniMapSource = Pick<CanonicalDocument, "signalGroups" | "signals" | "timeline">;
 type MiniMapOverview = ReturnType<typeof buildMiniMapOverview>;
-type SignalOverviewFingerprint = Readonly<{
-  id: Signal["id"];
-  type: Signal["type"];
-  values: readonly unknown[] | undefined;
-}>;
 type MiniMapOverviewCache = Readonly<{
   signalGroups: MiniMapSource["signalGroups"];
   signalCollection: MiniMapSource["signals"];
   cycleCount: number;
-  signals: readonly SignalOverviewFingerprint[];
   overview: MiniMapOverview;
 }>;
 type TransactionOverviewCache = Readonly<{ transactions: CanonicalDocument["transactions"]; groups: CanonicalDocument["transactionGroups"]; cycleCount: number; overview: ReturnType<typeof buildMiniMapTransactionOverview> }>;
 
-function overviewValues(signal: Signal): readonly unknown[] | undefined {
-  return signal.type === "clock" || signal.type === "commentRow" ? undefined : signal.values;
-}
-
-function fingerprintSignals(signals: readonly Signal[]): readonly SignalOverviewFingerprint[] {
-  return signals.map((signal) => ({ id: signal.id, type: signal.type, values: overviewValues(signal) }));
-}
-
-function canReuseOverview(cache: MiniMapOverviewCache, document: MiniMapSource, cycleCount: number, onSignalCompared?: () => void): boolean {
-  if (cache.signalGroups !== document.signalGroups || cache.cycleCount !== cycleCount) return false;
-  if (cache.signalCollection === document.signals) return true;
-  if (cache.signals.length !== document.signals.length) return false;
-  return document.signals.every((signal, index) => {
-    onSignalCompared?.();
-    const previous = cache.signals[index];
-    return previous?.id === signal.id && previous.type === signal.type && previous.values === overviewValues(signal);
-  });
+function hasSignalOverviewTopologyChange(changeSet: ChangeSet): boolean {
+  return changeSet.fullDocumentReplace === true || changeSet.rowOrder !== undefined
+    || changeSet.addedSignals !== undefined || changeSet.removedSignals !== undefined
+    || changeSet.addedGroups !== undefined || changeSet.removedGroups !== undefined
+    || changeSet.timelineSemantics === true;
 }
 
 export function pointerRatio(client: number, start: number, size: number): number {
@@ -56,7 +39,7 @@ export function keyboardScrollDelta(key: string, viewportSize: number): { readon
 }
 
 
-export function MiniMap({ document, viewport, mode = "signal" }: { readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly mode?: "signal" | "transaction" }) {
+export function MiniMap({ document, changeSet, viewport, mode = "signal" }: { readonly document: Readonly<CanonicalDocument>; readonly changeSet?: ChangeSet; readonly viewport: RefObject<HTMLDivElement | null>; readonly mode?: "signal" | "transaction" }) {
   const [metrics, setMetrics] = useState({ top: 0, ratio: 1, left: 0, width: 1 });
   const [overviewState, setOverviewState] = useState<Readonly<{
     document: Readonly<CanonicalDocument>;
@@ -84,13 +67,18 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
       if (mode === "signal") {
         const cycleCount = Math.max(1, document.timeline.cycleCount);
         const cached = overviewCache.current;
-        if (cached && canReuseOverview(cached, document, cycleCount, () => { overviewReuseSignalComparisons.current += 1; })) {
-          if (cached.signalCollection !== document.signals) overviewCache.current = { ...cached, signalCollection: document.signals };
+        if (cached && cached.signalGroups === document.signalGroups && cached.cycleCount === cycleCount && cached.signalCollection === document.signals) {
           overview = cached.overview;
         } else {
-          overview = cached ? updateMiniMapOverview(cached.overview, document) : buildMiniMapOverview(document);
-          overviewBuilds.current += 1;
-          overviewCache.current = { signalGroups: document.signalGroups, signalCollection: document.signals, cycleCount, signals: fingerprintSignals(document.signals), overview };
+          const canIncrement = changeSet !== undefined && cached !== undefined && cached.signalGroups === document.signalGroups && cached.cycleCount === cycleCount && !hasSignalOverviewTopologyChange(changeSet);
+          const changedSignalIds = canIncrement ? changeSet.waveSemantics : undefined;
+          if (canIncrement && (changedSignalIds === undefined || changedSignalIds.length === 0)) {
+            overview = cached.overview;
+          } else {
+            overview = cached ? updateMiniMapOverview(cached.overview, document, canIncrement ? changedSignalIds : undefined) : buildMiniMapOverview(document);
+            overviewBuilds.current += 1;
+          }
+          overviewCache.current = { signalGroups: document.signalGroups, signalCollection: document.signals, cycleCount, overview };
         }
       } else {
         const cached = transactionOverviewCache.current;
@@ -139,7 +127,7 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
       if (scheduledBuildKind === "idle" && typeof globalThis.cancelIdleCallback === "function") globalThis.cancelIdleCallback(scheduledBuild);
       else if (scheduledBuildKind === "timer") globalThis.clearTimeout(scheduledBuild);
     };
-  }, [document, mode, viewport]);
+  }, [document, changeSet, mode, viewport]);
   const currentOverview = overviewState?.document === document && overviewState.mode === mode ? overviewState : undefined;
   const overview = currentOverview?.overview;
   const transactionOverview = currentOverview?.transactionOverview;

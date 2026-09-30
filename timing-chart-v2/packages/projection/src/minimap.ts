@@ -1,4 +1,4 @@
-import type { CanonicalDocument, RowId, Signal, SignalValueChange, Transaction } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, RowId, Signal, SignalId, SignalValueChange, Transaction } from "@timing-chart-v2/schema";
 import { transactionLaneIdentityKey } from "./transaction-lane-identity.js";
 
 export type MiniMapTone = "low" | "high" | "clock" | "comment";
@@ -53,6 +53,15 @@ function segmentsForSignal(signal: Signal | undefined, cycleCount: number, work:
   return segments;
 }
 const valueSegmentCache = new WeakMap<object, { readonly cycleCount: number; readonly segments: readonly MiniMapSegment[] }>();
+const signalOverviewIndexes = new WeakMap<MiniMapOverview, Readonly<{ groups: CanonicalDocument["signalGroups"]; rowBySignalId: ReadonlyMap<SignalId, number>; signalIndexById: ReadonlyMap<SignalId, number> }>>();
+
+function indexSignalOverview(overview: MiniMapOverview, document: Pick<CanonicalDocument, "signalGroups" | "signals">): void {
+  const rowBySignalId = new Map<SignalId, number>();
+  overview.rows.forEach((row, index) => rowBySignalId.set(row.rowId as SignalId, index));
+  const signalIndexById = new Map<SignalId, number>();
+  document.signals.forEach((signal, index) => signalIndexById.set(signal.id, index));
+  signalOverviewIndexes.set(overview, { groups: document.signalGroups, rowBySignalId, signalIndexById });
+}
 
 /**
  * Derive the static MiniMap overview from CanonicalDocument once per document
@@ -68,13 +77,35 @@ export function buildMiniMapOverview(document: Pick<CanonicalDocument, "signalGr
     rowIndex,
     segments: segmentsForSignal(signalById.get(rowId), cycleCount, work),
   }));
-  return Object.freeze({ cycleCount, rows: Object.freeze(rows), signalLookups: rowIds.length, rowsRebuilt: rows.length, rowsReused: 0, valueChangesVisited: work.valueChangesVisited });
+  const overview = Object.freeze({ cycleCount, rows: Object.freeze(rows), signalLookups: rowIds.length, rowsRebuilt: rows.length, rowsReused: 0, valueChangesVisited: work.valueChangesVisited });
+  indexSignalOverview(overview, document);
+  return overview;
 }
 
 /** Reuse unchanged MiniMap row models when an immutable Signal collection changes. */
-export function updateMiniMapOverview(previous: MiniMapOverview, document: Pick<CanonicalDocument, "signalGroups" | "signals" | "timeline">): MiniMapOverview {
+export function updateMiniMapOverview(previous: MiniMapOverview, document: Pick<CanonicalDocument, "signalGroups" | "signals" | "timeline">, changedSignalIds?: readonly SignalId[]): MiniMapOverview {
   const cycleCount = Math.max(1, document.timeline.cycleCount);
   if (previous.cycleCount !== cycleCount) return buildMiniMapOverview(document);
+  if (changedSignalIds !== undefined) {
+    const index = signalOverviewIndexes.get(previous);
+    if (!index || index.groups !== document.signalGroups) return buildMiniMapOverview(document);
+    const rows = [...previous.rows];
+    const work = { valueChangesVisited: 0 };
+    let rowsRebuilt = 0;
+    for (const id of new Set(changedSignalIds)) {
+      const rowIndex = index.rowBySignalId.get(id);
+      const signalIndex = index.signalIndexById.get(id);
+      if (rowIndex === undefined || signalIndex === undefined || document.signals[signalIndex]?.id !== id) return buildMiniMapOverview(document);
+      const signal = document.signals[signalIndex];
+      const segments = segmentsForSignal(signal, cycleCount, work);
+      if (rows[rowIndex]?.segments === segments) continue;
+      rows[rowIndex] = { rowId: id, rowIndex, segments };
+      rowsRebuilt += 1;
+    }
+    const overview = Object.freeze({ cycleCount, rows: Object.freeze(rows), signalLookups: new Set(changedSignalIds).size, rowsRebuilt, rowsReused: rows.length - rowsRebuilt, valueChangesVisited: work.valueChangesVisited });
+    signalOverviewIndexes.set(overview, index);
+    return overview;
+  }
   const signalById = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
   const rowIds = document.signalGroups.flatMap((group) => group.rows);
   const work = { valueChangesVisited: 0 };
@@ -90,7 +121,9 @@ export function updateMiniMapOverview(previous: MiniMapOverview, document: Pick<
     rowsRebuilt += 1;
     return { rowId, rowIndex, segments };
   });
-  return Object.freeze({ cycleCount, rows: Object.freeze(rows), signalLookups: rowIds.length, rowsRebuilt, rowsReused, valueChangesVisited: work.valueChangesVisited });
+  const overview = Object.freeze({ cycleCount, rows: Object.freeze(rows), signalLookups: rowIds.length, rowsRebuilt, rowsReused, valueChangesVisited: work.valueChangesVisited });
+  indexSignalOverview(overview, document);
+  return overview;
 }
 
 export interface MiniMapTransactionSegment {
