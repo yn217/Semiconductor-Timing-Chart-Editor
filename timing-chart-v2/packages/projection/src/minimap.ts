@@ -19,6 +19,9 @@ export interface MiniMapOverview {
   readonly rows: readonly MiniMapOverviewRow[];
   /** Number of stable row-to-signal lookups performed while deriving this model. */
   readonly signalLookups: number;
+  readonly rowsRebuilt: number;
+  readonly rowsReused: number;
+  readonly valueChangesVisited: number;
 }
 
 function valueSegments(values: readonly SignalValueChange[], cycleCount: number): readonly MiniMapSegment[] {
@@ -37,12 +40,13 @@ function constantSegments(tone: "comment" | "clock", cycleCount: number): readon
   return segments;
 }
 
-function segmentsForSignal(signal: Signal | undefined, cycleCount: number): readonly MiniMapSegment[] {
+function segmentsForSignal(signal: Signal | undefined, cycleCount: number, work: { valueChangesVisited: number }): readonly MiniMapSegment[] {
   if (!signal || signal.type === "commentRow") return constantSegments("comment", cycleCount);
   if (signal.type === "clock") return constantSegments("clock", cycleCount);
   // #869: segments depend only on the (immutable) values array and cycleCount, so an edit to one Signal recomputes only that Signal.
   const cached = valueSegmentCache.get(signal.values);
   if (cached && cached.cycleCount === cycleCount) return cached.segments;
+  work.valueChangesVisited += signal.values.length;
   const segments = valueSegments(signal.values, cycleCount);
   valueSegmentCache.set(signal.values, { cycleCount, segments });
   return segments;
@@ -57,12 +61,35 @@ export function buildMiniMapOverview(document: Pick<CanonicalDocument, "signalGr
   const cycleCount = Math.max(1, document.timeline.cycleCount);
   const signalById = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
   const rowIds = document.signalGroups.flatMap((group) => group.rows);
+  const work = { valueChangesVisited: 0 };
   const rows = rowIds.map((rowId, rowIndex) => ({
     rowId,
     rowIndex,
-    segments: segmentsForSignal(signalById.get(rowId), cycleCount),
+    segments: segmentsForSignal(signalById.get(rowId), cycleCount, work),
   }));
-  return Object.freeze({ cycleCount, rows: Object.freeze(rows), signalLookups: rowIds.length });
+  return Object.freeze({ cycleCount, rows: Object.freeze(rows), signalLookups: rowIds.length, rowsRebuilt: rows.length, rowsReused: 0, valueChangesVisited: work.valueChangesVisited });
+}
+
+/** Reuse unchanged MiniMap row models when an immutable Signal collection changes. */
+export function updateMiniMapOverview(previous: MiniMapOverview, document: Pick<CanonicalDocument, "signalGroups" | "signals" | "timeline">): MiniMapOverview {
+  const cycleCount = Math.max(1, document.timeline.cycleCount);
+  if (previous.cycleCount !== cycleCount) return buildMiniMapOverview(document);
+  const signalById = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
+  const rowIds = document.signalGroups.flatMap((group) => group.rows);
+  const work = { valueChangesVisited: 0 };
+  let rowsRebuilt = 0;
+  let rowsReused = 0;
+  const rows = rowIds.map((rowId, rowIndex) => {
+    const segments = segmentsForSignal(signalById.get(rowId), cycleCount, work);
+    const oldRow = previous.rows[rowIndex];
+    if (oldRow?.rowId === rowId && oldRow.segments === segments) {
+      rowsReused += 1;
+      return oldRow;
+    }
+    rowsRebuilt += 1;
+    return { rowId, rowIndex, segments };
+  });
+  return Object.freeze({ cycleCount, rows: Object.freeze(rows), signalLookups: rowIds.length, rowsRebuilt, rowsReused, valueChangesVisited: work.valueChangesVisited });
 }
 
 export interface MiniMapTransactionSegment {
