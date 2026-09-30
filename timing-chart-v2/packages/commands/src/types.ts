@@ -105,6 +105,9 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "timeGroup.updatePresentation"; timeGroupId: TimeGroupId; presentation: TimeGroup["presentation"] }>
   | Readonly<{ id: CommandId; type: "timeGroup.delete"; timeGroupId: TimeGroupId }>
   | Readonly<{ id: CommandId; type: "transaction.create"; transaction: Transaction }>
+  | Readonly<{ id: CommandId; type: "transaction.bulkCreate"; transactions: readonly Transaction[] }>
+  | Readonly<{ id: CommandId; type: "transaction.bulkDuplicate"; items: readonly Readonly<{ transactionId: TransactionId; newTransactionId: TransactionId; name?: string }>[] }>
+  | Readonly<{ id: CommandId; type: "transaction.bulkDelete"; transactionIds: readonly TransactionId[] }>
   | Readonly<{ id: CommandId; type: "transaction.duplicate"; transactionId: TransactionId; newTransactionId: TransactionId; name?: string }>
   | Readonly<{ id: CommandId; type: "transaction.delete"; transactionId: TransactionId }>
   | Readonly<{ id: CommandId; type: "transaction.rename"; transactionId: TransactionId; name: string }>

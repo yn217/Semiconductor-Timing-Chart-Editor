@@ -809,6 +809,34 @@ describe("command execution and atomic history", () => {
     expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
   });
 
+  it("bulk-creates, duplicates, and deletes Transactions with one planner/history action each", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const items = [
+      { id: "txn_bulk_a" as TransactionId, name: "A", start: 1, end: 3, laneId: "lane_0" },
+      { id: "txn_bulk_b" as TransactionId, name: "B", start: 4, end: 7, laneId: "lane_1" },
+    ];
+    const beforeCreate = commandPlannerMetrics().internalPlans;
+    expect(session.execute({ id: commandId("cmd_txn_bulk_create"), type: "transaction.bulkCreate", transactions: items }).ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforeCreate).toBe(1);
+    expect(session.historyState().undoDepth).toBe(1);
+
+    const beforeDuplicate = commandPlannerMetrics().internalPlans;
+    expect(session.execute({ id: commandId("cmd_txn_bulk_duplicate"), type: "transaction.bulkDuplicate", items: [
+      { transactionId: items[0]!.id, newTransactionId: "txn_bulk_a_copy" as TransactionId },
+      { transactionId: items[1]!.id, newTransactionId: "txn_bulk_b_copy" as TransactionId },
+    ] }).ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforeDuplicate).toBe(1);
+    expect(session.historyState().undoDepth).toBe(2);
+
+    const beforeDelete = commandPlannerMetrics().internalPlans;
+    expect(session.execute({ id: commandId("cmd_txn_bulk_delete"), type: "transaction.bulkDelete", transactionIds: [items[0]!.id, items[1]!.id] }).ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforeDelete).toBe(1);
+    expect(session.getSnapshot().document.transactions.map((item) => item.id)).toEqual(["txn_bulk_a_copy", "txn_bulk_b_copy"]);
+    expect(session.historyState().undoDepth).toBe(3);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions).toHaveLength(4);
+  });
+
   it("supports Group lifecycle without implicitly moving rows", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const group = { id: "grp_empty" as GroupId, name: "Empty", rows: [] };

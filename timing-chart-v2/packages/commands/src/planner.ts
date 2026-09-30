@@ -1138,6 +1138,55 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions: [...document.transactions, transaction] }, changeSet, inverseChangeSet: changeSet };
     }
+    case "transaction.bulkCreate": {
+      if (command.transactions.length === 0) return fail("no-op", "NO_OP", "$.transactions", "Bulk Transaction creation requires at least one item.");
+      const ids = new Set(document.transactions.map((item) => item.id));
+      const signalIds = new Set(document.signals.map((item) => item.id));
+      const groupIds = new Set((document.transactionGroups ?? []).map((item) => item.id));
+      for (const [index, transaction] of command.transactions.entries()) {
+        if (!isStableId(transaction.id)) return fail("invalid", "INVALID_STABLE_ID", `$.transactions[${index}].id`, "Transaction ID must be stable.");
+        if (ids.has(transaction.id)) return fail("invalid", "DUPLICATE_ID", `$.transactions[${index}].id`, `Transaction '${transaction.id}' already exists or is duplicated in this batch.`);
+        if (!transaction.name.trim()) return fail("invalid", "INVALID_NAME", `$.transactions[${index}].name`, "Transaction name cannot be empty.");
+        if (!Number.isInteger(transaction.start) || !Number.isInteger(transaction.end) || transaction.start < 0 || transaction.start >= transaction.end || transaction.end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", `$.transactions[${index}]`, "Transaction must use a half-open source-time range.");
+        const phaseProblem = transaction.phases && transactionPhasesProblem(transaction.phases, transaction.start, transaction.end);
+        if (phaseProblem) return fail("invalid", "INVALID_TRANSACTION_PHASE", `$.transactions[${index}].phases`, phaseProblem);
+        if (transaction.linkedSignals?.some((id) => !signalIds.has(id))) return fail("invalid", "MISSING_CROSS_REFERENCE", `$.transactions[${index}].linkedSignals`, "Transaction links must target existing Signals.");
+        if (transaction.groupId !== undefined && !groupIds.has(transaction.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", `$.transactions[${index}].groupId`, "Transaction Group does not exist.");
+        ids.add(transaction.id);
+      }
+      const transactionSemantics = command.transactions.map((item) => item.id);
+      const changeSet: ChangeSet = { transactionSemantics, minimapOverview: true };
+      return { ok: true, document: { ...document, transactions: [...document.transactions, ...command.transactions] }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "transaction.bulkDelete": {
+      if (command.transactionIds.length === 0) return fail("no-op", "NO_OP", "$.transactionIds", "No Transactions were selected for deletion.");
+      const selectedIds = new Set(command.transactionIds);
+      if (selectedIds.size !== command.transactionIds.length) return fail("invalid", "DUPLICATE_ID", "$.transactionIds", "Bulk Transaction deletion contains duplicate IDs.");
+      const existingIds = new Set(document.transactions.map((item) => item.id));
+      const missing = command.transactionIds.find((id) => !existingIds.has(id));
+      if (missing !== undefined) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionIds", `Transaction '${missing}' does not exist.`);
+      const changeSet: ChangeSet = { transactionSemantics: command.transactionIds, minimapOverview: true };
+      return { ok: true, document: { ...document, transactions: document.transactions.filter((item) => !selectedIds.has(item.id)) }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "transaction.bulkDuplicate": {
+      if (command.items.length === 0) return fail("no-op", "NO_OP", "$.items", "Bulk Transaction duplication requires at least one item.");
+      const sourceById = new Map(document.transactions.map((item) => [item.id, item]));
+      const allocatedIds = new Set(sourceById.keys());
+      const duplicates: Transaction[] = [];
+      for (const [index, item] of command.items.entries()) {
+        const source = sourceById.get(item.transactionId);
+        if (!source) return fail("invalid", "TRANSACTION_NOT_FOUND", `$.items[${index}].transactionId`, `Transaction '${item.transactionId}' does not exist.`);
+        if (!isStableId(item.newTransactionId)) return fail("invalid", "INVALID_STABLE_ID", `$.items[${index}].newTransactionId`, "Transaction ID must be stable.");
+        if (allocatedIds.has(item.newTransactionId)) return fail("invalid", "DUPLICATE_ID", `$.items[${index}].newTransactionId`, "Duplicate Transaction ID.");
+        const name = item.name === undefined ? source.name : item.name.trim();
+        if (!name) return fail("invalid", "INVALID_NAME", `$.items[${index}].name`, "Transaction name cannot be empty.");
+        allocatedIds.add(item.newTransactionId);
+        duplicates.push({ ...source, id: item.newTransactionId, name });
+      }
+      const transactionSemantics = duplicates.map((item) => item.id);
+      const changeSet: ChangeSet = { transactionSemantics, minimapOverview: true };
+      return { ok: true, document: { ...document, transactions: [...document.transactions, ...duplicates] }, changeSet, inverseChangeSet: changeSet };
+    }
     case "transaction.duplicate": {
       const source = document.transactions.find((item) => item.id === command.transactionId);
       if (!source) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);

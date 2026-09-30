@@ -106,6 +106,7 @@ describe("editor surface command controller", () => {
     controller.moveTransactionToGroup("transaction_1" as never, "group_1" as never);
     controller.bulkMoveTransactionsToGroup([{ transactionId: "transaction_1" as never }, { transactionId: "transaction_2" as never, groupId: "group_1" as never }]);
     controller.bulkUpdateTransactions([{ transactionId: "transaction_1" as never, name: "Read", start: 2, end: 4, color: "#123456" }]);
+    controller.bulkDuplicateTransactions([{ transactionId: "transaction_1" as never, newTransactionId: "transaction_3" as never, name: "Read Copy" }]);
     controller.bulkDeleteTransactions(["transaction_1" as never, "transaction_2" as never]);
 
     expect(execute.mock.calls.map(([command]) => command as SemanticCommand)).toEqual([
@@ -113,10 +114,11 @@ describe("editor surface command controller", () => {
       expect.objectContaining({ id: "test_bottom_transaction_duplicate", type: "transaction.duplicate" }),
       expect.objectContaining({ id: "test_bottom_transaction_update", type: "transaction.update" }),
       expect.objectContaining({ id: "test_bottom_transaction_group", type: "transaction.moveToGroup" }),
+      expect.objectContaining({ id: "test_bottom_transaction_bulk_duplicate", type: "transaction.bulkDuplicate" }),
+      expect.objectContaining({ id: "test_bottom_transaction_bulk_delete", type: "transaction.bulkDelete" }),
     ]);
     expect(executeBatch).toHaveBeenNthCalledWith(1, "test_bottom_transaction_bulk", [expect.objectContaining({ id: "test_bottom_transaction_bulk_group", type: "transaction.moveToGroup" }), expect.objectContaining({ id: "test_bottom_transaction_bulk_group", type: "transaction.moveToGroup" })]);
     expect(executeBatch).toHaveBeenNthCalledWith(2, "test_bottom_transaction_bulk", [expect.objectContaining({ id: "test_bottom_transaction_bulk_color", type: "transaction.update" })]);
-    expect(executeBatch).toHaveBeenNthCalledWith(3, "test_bottom_transaction_bulk", [expect.objectContaining({ id: "test_bottom_transaction_bulk_delete", type: "transaction.delete" }), expect.objectContaining({ id: "test_bottom_transaction_bulk_delete", type: "transaction.delete" })]);
   });
 
   it("owns Timeline command construction and keeps range edits batched", () => {
