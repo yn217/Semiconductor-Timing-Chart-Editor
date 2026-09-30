@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
+import { referencesToAny } from "@timing-chart-v2/schema";
 import type { Annotation, AnnotationId, GroupId, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { nextCommandId } from "../command-id.js";
 import { createEntityIdAllocator, nextEntityId } from "../entity-id.js";
@@ -160,9 +161,9 @@ export function useClipboardActions({ application, selection }: { application: E
     }
     if (value.signals.length === 0) { setStatus("Select a signal, Comment Row, Annotation, or Transaction to cut"); return; }
     const selectedIds = new Set(cutSignalIds);
-    const signalLinks = value.document.transactions.flatMap((transaction) => (transaction.linkedSignals ?? [])
-      .filter((signalId) => selectedIds.has(signalId))
-      .map((signalId) => ({ transactionId: transaction.id, signalId })));
+    const signalLinks = referencesToAny(value.document, "signal", selectedIds)
+      .filter((reference) => reference.kind === "transaction.linkedSignal")
+      .map((reference) => ({ transactionId: reference.ownerId as TransactionId, signalId: reference.targetId as SignalId }));
     setClipboard({ signals: value.signals, cutSignals: true, signalLinks });
     const result = application.execute({ id: nextCommandId("cut"), type: "signal.bulkDelete", signalIds: value.signals.map(({ signal }) => signal.id) });
     if (result.ok) { selection.clear(); setStatus(value.signals.length === 1 ? `Cut ${value.signals[0]!.signal.display.name}` : `Cut ${value.signals.length} signals`); }
