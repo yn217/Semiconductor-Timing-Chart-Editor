@@ -837,6 +837,23 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.transactions).toHaveLength(4);
   });
 
+  it("creates a copied Group and its Signal/Spacer rows in one atomic planner action", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const signal = extraSignal("sig_group_copy_row");
+    const spacer = { id: "spacer_group_copy_row" as SpacerId, height: 32 };
+    const group = { id: "grp_group_copy" as GroupId, name: "Copied", rows: [signal.id, spacer.id], spacers: [spacer] };
+    const beforePlans = commandPlannerMetrics().internalPlans;
+    const result = session.execute({ id: commandId("cmd_group_create_with_contents"), type: "group.createWithContents", group, signals: [signal], index: 1 });
+    expect(result).toMatchObject({ ok: true });
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    expect(session.getSnapshot().document.signalGroups[1]).toMatchObject(group);
+    expect(session.getSnapshot().document.signals.some((item) => item.id === signal.id)).toBe(true);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signalGroups.some((item) => item.id === group.id)).toBe(false);
+    expect(session.getSnapshot().document.signals.some((item) => item.id === signal.id)).toBe(false);
+  });
+
   it("supports Group lifecycle without implicitly moving rows", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const group = { id: "grp_empty" as GroupId, name: "Empty", rows: [] };

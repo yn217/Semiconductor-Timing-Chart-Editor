@@ -76,6 +76,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "spacer.update"; spacerId: SpacerId; height: number }>
   | Readonly<{ id: CommandId; type: "spacer.delete"; spacerId: SpacerId }>
   | Readonly<{ id: CommandId; type: "group.create"; group: SignalGroup; index: number }>
+  | Readonly<{ id: CommandId; type: "group.createWithContents"; group: SignalGroup; signals: readonly Signal[]; index: number }>
   | Readonly<{ id: CommandId; type: "group.delete"; groupId: GroupId }>
   | Readonly<{ id: CommandId; type: "group.rename"; groupId: GroupId; name: string }>
   | Readonly<{ id: CommandId; type: "group.move"; groupId: GroupId; index: number }>

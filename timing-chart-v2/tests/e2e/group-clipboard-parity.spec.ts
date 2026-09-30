@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 import { startInCycleSample } from "./cycle-startup.js";
 
 startInCycleSample(test);
@@ -44,9 +45,9 @@ test("copies, pastes, and duplicates a group as one semantic batch", async ({ pa
 
   const download = page.waitForEvent("download");
   await ribbon.getByRole("button", { name: "Save", exact: true }).click();
-  await download;
+  const savedFile = await download;
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
-  const savedDocument = await page.evaluate(() => JSON.parse(localStorage.getItem("timing-chart-v2.recent") ?? "null"));
+  const savedDocument = JSON.parse(await readFile((await savedFile.path())!, "utf8"));
   expect(savedDocument.signalGroups).toHaveLength(5);
   const originalGroup = savedDocument.signalGroups.find((group: { id: string }) => group.id === "grp_cycle_control");
   const copiedGroups = savedDocument.signalGroups.filter((group: { name: string }) => group.name === originalGroup.name);
@@ -86,8 +87,8 @@ test("cuts and pastes a group with its rows as one semantic batch", async ({ pag
   await expect(page.getByTestId("selection-status")).toHaveText("Payload");
   const download = page.waitForEvent("download");
   await ribbon.getByRole("button", { name: "Save", exact: true }).click();
-  await download;
-  const savedDocument = await page.evaluate(() => JSON.parse(localStorage.getItem("timing-chart-v2.recent") ?? "null"));
+  const savedFile = await download;
+  const savedDocument = JSON.parse(await readFile((await savedFile.path())!, "utf8"));
   const groups = savedDocument.signalGroups.filter((group: { name: string }) => group.name === "Payload");
   expect(groups).toHaveLength(1);
   expect(groups[0].id).not.toBe("grp_cycle_payload");

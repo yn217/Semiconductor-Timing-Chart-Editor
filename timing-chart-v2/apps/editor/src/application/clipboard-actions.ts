@@ -192,26 +192,39 @@ export function useClipboardActions({ application, selection }: { application: E
     const current = document();
     const allocateId = createEntityIdAllocator(current);
     const newGroupId = groupId(allocateId("group"));
-    const group: SignalGroup = { ...input.group, id: newGroupId, rows: [], ...(input.group.spacers === undefined ? {} : { spacers: [] }) };
-    const commands: SemanticCommand[] = [{ id: nextCommandId(`${operation}_group`), type: "group.create", group, index: Math.min(current.signalGroups.length, input.sourceIndex + 1) }];
-    const createdSignals: Signal[] = [];
     const sourceSignalsById = new Map(input.rows.map((signal) => [signal.id, signal]));
     const sourceSpacers = new Map<string, SpacerRow>((input.group.spacers ?? []).map((item) => [item.id, item]));
+    const newIdByOldId = new Map<string, string>();
+    const createdSignals: Signal[] = [];
+    const createdSpacers: SpacerRow[] = [];
     for (const rowId of input.group.rows) {
       const source = sourceSignalsById.get(rowId as SignalId);
       if (source) {
         const id = signalId(allocateId(source.type === "commentRow" ? "commentRow" : "signal"));
         const signal: Signal = { ...source, id };
         createdSignals.push(signal);
-        commands.push({ id: nextCommandId(`${operation}_group_item`), type: signal.type === "commentRow" ? "commentRow.create" : "signal.create", ...(signal.type === "commentRow" ? { commentRow: signal } : { signal }), targetGroupId: newGroupId, index: commands.length - 1 } as SemanticCommand);
+        newIdByOldId.set(rowId, id);
       } else {
         const sourceSpacer = sourceSpacers.get(rowId);
-        if (!sourceSpacer) continue;
+        if (!sourceSpacer) { setStatus(`Cannot ${operation} Group: a source row is missing.`); return; }
         const id = spacerId(allocateId("spacer"));
-        commands.push({ id: nextCommandId(`${operation}_group_spacer`), type: "spacer.create", spacer: { ...sourceSpacer, id }, targetGroupId: newGroupId, index: commands.length - 1 });
+        createdSpacers.push({ ...sourceSpacer, id });
+        newIdByOldId.set(rowId, id);
       }
     }
-    const result = application.executeBatch(nextCommandId(`${operation}_group_batch`), commands);
+    const group: SignalGroup = {
+      ...input.group,
+      id: newGroupId,
+      rows: input.group.rows.map((rowId) => newIdByOldId.get(rowId) as SignalGroup["rows"][number]),
+      ...(input.group.spacers === undefined ? {} : { spacers: createdSpacers }),
+    };
+    const result = application.execute({
+      id: nextCommandId(`${operation}_group`),
+      type: "group.createWithContents",
+      group,
+      signals: createdSignals,
+      index: Math.min(current.signalGroups.length, input.sourceIndex + 1),
+    });
     if (result.ok) { selection.selectGroup(newGroupId); setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${input.group.name} group`); }
   };
   const createAnnotation = (source: Annotation, operation: "paste" | "duplicate") => {

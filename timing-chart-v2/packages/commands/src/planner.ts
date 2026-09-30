@@ -1063,6 +1063,44 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const changeSet: ChangeSet = { addedGroups: [command.group.id], rowOrder: [], minimapOverview: true };
       return { ok: true, document: { ...document, signalGroups: groups }, changeSet, inverseChangeSet: { removedGroups: [command.group.id], rowOrder: [], minimapOverview: true } };
     }
+    case "group.createWithContents": {
+      if (!isStableId(command.group.id)) return fail("invalid", "INVALID_STABLE_ID", "$.group.id", "Group ID must be stable.");
+      if (!Number.isInteger(command.index) || command.index < 0 || command.index > document.signalGroups.length) return fail("invalid", "INDEX_OUT_OF_RANGE", "$.index", "Group insertion index is outside the Group list.");
+      const existingIds = new Set(canonicalEntityIds(document));
+      const incomingIds = new Set<string>();
+      const reserve = (id: string, path: string): CommandPlanResult | undefined => {
+        if (!isStableId(id)) return fail("invalid", "INVALID_STABLE_ID", path, "Contained entity ID must be stable.");
+        if (existingIds.has(id) || incomingIds.has(id)) return fail("invalid", "DUPLICATE_ID", path, `Entity ID '${id}' already exists or is duplicated in this Group import.`);
+        incomingIds.add(id);
+        return undefined;
+      };
+      const groupIdProblem = reserve(command.group.id, "$.group.id");
+      if (groupIdProblem) return groupIdProblem;
+      for (const [index, signal] of command.signals.entries()) {
+        const problem = reserve(signal.id, `$.signals[${index}].id`);
+        if (problem) return problem;
+      }
+      for (const [index, spacer] of (command.group.spacers ?? []).entries()) {
+        const problem = reserve(spacer.id, `$.group.spacers[${index}].id`);
+        if (problem) return problem;
+      }
+      const signalIds = new Set<string>(command.signals.map((signal) => signal.id));
+      const spacerIds = new Set<string>((command.group.spacers ?? []).map((spacer) => spacer.id));
+      const rows = new Set<string>(command.group.rows);
+      if (rows.size !== command.group.rows.length
+        || command.group.rows.some((id) => !signalIds.has(id as SignalId) && !spacerIds.has(id))
+        || command.signals.some((signal) => !rows.has(signal.id))
+        || (command.group.spacers ?? []).some((spacer) => !rows.has(spacer.id))) {
+        return fail("invalid", "MISSING_CROSS_REFERENCE", "$.group.rows", "Group rows must reference each contained Signal or Spacer exactly once.");
+      }
+      const groups = [...document.signalGroups];
+      groups.splice(command.index, 0, command.group);
+      const addedSignals = command.signals.map((signal) => signal.id);
+      const timingSignals = command.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
+      const changeSet: ChangeSet = { addedGroups: [command.group.id], addedSignals, rowOrder: command.group.rows, waveSemantics: timingSignals, geometryLocal: timingSignals, geometryScreenY: timingSignals, minimapOverview: true };
+      const inverseChangeSet: ChangeSet = { removedGroups: [command.group.id], removedSignals: addedSignals, rowOrder: command.group.rows, minimapOverview: true };
+      return { ok: true, document: { ...document, signalGroups: groups, signals: [...document.signals, ...command.signals] }, changeSet, inverseChangeSet };
+    }
     case "group.delete": {
       const index = document.signalGroups.findIndex((group) => group.id === command.groupId);
       const group = document.signalGroups[index];
