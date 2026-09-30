@@ -30,4 +30,14 @@ describe("canonical clock phase validation", () => {
     const input = await readFile(new URL("../../samples/showcase/21_large_feature_showcase.tcd.json", import.meta.url), "utf8");
     expect(parseDocument(input)).toMatchObject({ ok: true });
   });
+
+  it("uses a conventional 50% duty cycle for the showcase AXI clock", async () => {
+    const input = await readFile(new URL("../../samples/showcase/21_large_feature_showcase.tcd.json", import.meta.url), "utf8");
+    const parsed = parseDocument(input);
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const axiClock = parsed.document.signals.find((signal) => signal.id === "s.axiclk");
+    expect(axiClock).toMatchObject({ type: "clock", generator: { duty: 0.5 } });
+  });
 });
