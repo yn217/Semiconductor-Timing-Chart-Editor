@@ -74,6 +74,12 @@ describe("#777 current-v2 sample pack drift guard", () => {
     for (const type of ALL_ANNOTATION_TYPES) expect(present.has(type), `01_cycle_reference is missing annotation type ${type} -- every current AnnotationType must be represented so this fixture proves the full enum loads without validation/runtime errors`).toBe(true);
   });
 
+  it("uses a conventional 50% duty cycle for the current-v2 AXI reference clock", () => {
+    const document = loadFixture("01_cycle_reference.tcd.json");
+    const axiClock = document.signals.find((signal) => signal.id === "s.axiclk");
+    expect(axiClock).toMatchObject({ type: "clock", generator: { duty: 0.5 } });
+  });
+
   it("02_transaction_reference exercises every required current Transaction feature", () => {
     const document = loadFixture("02_transaction_reference.tcd.json");
     expect(document.transactionGroups?.length ?? 0, "must have at least one Transaction Group").toBeGreaterThan(0);
