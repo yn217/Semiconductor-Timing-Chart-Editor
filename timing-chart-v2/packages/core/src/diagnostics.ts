@@ -433,7 +433,10 @@ function diagnosticOrder(left: TimingDiagnostic, right: TimingDiagnostic): numbe
 
 export interface TimingDiagnosticRule {
   readonly id: string;
+  /** Primary category retained for compatibility with existing rule consumers. */
   readonly category: TimingDiagnosticCategory;
+  /** Categories that can be emitted by this evaluator. */
+  readonly categories?: readonly TimingDiagnosticCategory[];
   /** `indexes` is optional to preserve direct rule evaluation compatibility. */
   readonly evaluate: (document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>, indexes?: TimingDiagnosticIndexes) => readonly TimingDiagnostic[];
 }
@@ -458,7 +461,7 @@ function buildTimingDiagnosticIndexes(document: CanonicalDocument, enabled: Read
 /** Shared derived-rule registry. Results remain outside CanonicalDocument. */
 export const TIMING_DIAGNOSTIC_RULES: readonly TimingDiagnosticRule[] = [
   { id: "timing.unknown-value", category: "unknown-value", evaluate: valueDiagnostics },
-  { id: "timing.handshake", category: "protocol", evaluate: handshakeDiagnostics },
+  { id: "timing.handshake", category: "protocol", categories: ["protocol", "stability"], evaluate: handshakeDiagnostics },
   { id: "timing.latency-range", category: "protocol", evaluate: latencyRangeDiagnostics },
   { id: "timing.latency", category: "protocol", evaluate: latencyDiagnostics },
 ];
@@ -472,7 +475,7 @@ function enabledDiagnosticCategories(document: CanonicalDocument): ReadonlySet<T
 export function deriveTimingDiagnostics(document: CanonicalDocument, options: TimingDiagnosticOptions = {}): readonly TimingDiagnostic[] {
   const enabled = options.enabledCategories === undefined ? enabledDiagnosticCategories(document) : new Set<TimingDiagnosticCategory>(options.enabledCategories.filter((category): category is TimingDiagnosticCategory => TIMING_DIAGNOSTIC_CATEGORIES.some((known) => known === category)));
   const indexes = buildTimingDiagnosticIndexes(document, enabled);
-  return TIMING_DIAGNOSTIC_RULES.filter((rule) => enabled.has(rule.category))
+  return TIMING_DIAGNOSTIC_RULES.filter((rule) => (rule.categories ?? [rule.category]).some((category) => enabled.has(category)))
     .flatMap((rule) => rule.evaluate(document, enabled, indexes)
     .map((diagnostic) => withRuleMetadata(diagnostic, rule.id)))
     .sort(diagnosticOrder);
@@ -535,8 +538,9 @@ export function deriveTimingDiagnosticsIfInputsChanged(
 
     const invalidatedConstraintIds = new Set<string>();
     const constraintIdsBySignal = new Map<SignalId, string[]>();
-    if (enabled.has("protocol")) {
+    if (enabled.has("protocol") || enabled.has("stability")) {
       nextDocument.constraints.forEach((constraint) => {
+        if (!enabled.has("protocol") && constraint.type.toLowerCase() !== "handshake") return;
         for (const signalId of constraintSignalDependencies(constraint)) {
           const ids = constraintIdsBySignal.get(signalId);
           if (ids) ids.push(constraint.id);
@@ -584,7 +588,7 @@ export function deriveTimingDiagnosticsIfInputsChanged(
           }
         };
         const type = constraint.type.toLowerCase();
-        if (type === "handshake" && enabled.has("protocol")) evaluate(handshakeDiagnostics(singleConstraintDocument, enabled, indexes), "timing.handshake");
+        if (type === "handshake" && (enabled.has("protocol") || enabled.has("stability"))) evaluate(handshakeDiagnostics(singleConstraintDocument, enabled, indexes), "timing.handshake");
         else if (type === "latency-range" && enabled.has("protocol")) evaluate(latencyRangeDiagnostics(singleConstraintDocument, enabled, indexes), "timing.latency-range");
         else if (type === "latency" && enabled.has("protocol")) evaluate(latencyDiagnostics(singleConstraintDocument, enabled, indexes), "timing.latency");
       });

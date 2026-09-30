@@ -172,6 +172,45 @@ describe("derived timing diagnostics", () => {
     expect(deriveTimingDiagnostics({ ...document, signals: document.signals.map((signal) => signal.id === acknowledge.id ? { ...signal, values: [{ start: 0, value: 0 }] } : signal) })).toEqual(expect.arrayContaining([expect.objectContaining({ code: "HANDSHAKE_NO_ACK", objectId: constraint.id })]));
   });
 
+  it("evaluates Handshake protocol and stability categories independently in full and incremental paths", () => {
+    const source = canonicalFixture();
+    const template = source.signals[1]!;
+    const request = { ...template, id: "sig_req_stability" as SignalId, name: "REQ", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    const acknowledge = { ...template, id: "sig_ack_stability" as SignalId, name: "ACK", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 5, value: 1 }] };
+    const requestWithoutAck = { ...template, id: "sig_req_no_ack" as SignalId, name: "REQ_NO_ACK", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 6, value: 1 }] };
+    const payload = { ...template, id: "sig_payload_stability" as SignalId, name: "PAYLOAD", values: [{ start: 0, value: "00" }] };
+    const stableConstraint: Constraint = { id: "constraint_stability", type: "handshake", data: { requestSignalId: request.id, acknowledgeSignalId: acknowledge.id, stableSignalIds: [payload.id] } };
+    const missingAckConstraint: Constraint = { id: "constraint_no_ack", type: "handshake", data: { requestSignalId: requestWithoutAck.id, acknowledgeSignalId: acknowledge.id } };
+    const baseDocument = withSignals(source, [source.signals[0]!, request, acknowledge, requestWithoutAck, payload], [stableConstraint, missingAckConstraint]);
+    const base = { ...baseDocument, checkSettings: { ...baseDocument.checkSettings, enabledCategories: ["stability"] as const } };
+
+    const stabilityOnly = deriveTimingDiagnostics(base, { enabledCategories: ["stability"] });
+    expect(stabilityOnly).toEqual([]);
+    const changedPayload = { ...payload, values: [{ start: 0, value: "00" }, { start: 3, value: "01" }] };
+    const next = withSignals(base, [base.signals[0]!, request, acknowledge, requestWithoutAck, changedPayload], [stableConstraint, missingAckConstraint]);
+    const incremental = deriveTimingDiagnosticsIfInputsChanged(base, next, stabilityOnly);
+    expect(incremental.recomputed).toBe(true);
+    expect(incremental.diagnostics).toEqual(deriveTimingDiagnostics(next));
+    expect(incremental.diagnostics).toMatchObject([{ code: "HANDSHAKE_DATA_UNSTABLE", category: "stability", entityId: payload.id }]);
+    expect(incremental.diagnostics.some((item) => item.category === "protocol")).toBe(false);
+
+    const protocolOnly = deriveTimingDiagnostics(next, { enabledCategories: ["protocol"] });
+    expect(protocolOnly.some((item) => item.code === "HANDSHAKE_NO_ACK" && item.objectId === missingAckConstraint.id)).toBe(true);
+    expect(protocolOnly.some((item) => item.category === "stability")).toBe(false);
+
+    const both = deriveTimingDiagnostics(next, { enabledCategories: ["protocol", "stability"] });
+    expect(both.some((item) => item.code === "HANDSHAKE_NO_ACK" && item.objectId === missingAckConstraint.id)).toBe(true);
+    expect(both.some((item) => item.code === "HANDSHAKE_DATA_UNSTABLE" && item.entityId === payload.id)).toBe(true);
+
+    for (const categories of [["stability"], ["protocol"], ["protocol", "stability"]] as const) {
+      const configuredBase = { ...baseDocument, checkSettings: { ...baseDocument.checkSettings, enabledCategories: categories } };
+      const configuredNext = withSignals(configuredBase, [configuredBase.signals[0]!, request, acknowledge, requestWithoutAck, changedPayload], [stableConstraint, missingAckConstraint]);
+      const previousFindings = deriveTimingDiagnostics(configuredBase);
+      const incrementalFindings = deriveTimingDiagnosticsIfInputsChanged(configuredBase, configuredNext, previousFindings).diagnostics;
+      expect(incrementalFindings).toEqual(deriveTimingDiagnostics(configuredNext));
+    }
+  });
+
   it("uses indexed acknowledge and stable-change windows without changing overlapping-request findings", () => {
     const source = canonicalFixture();
     const request = { ...source.signals[1]!, id: "sig_req_overlap" as SignalId, name: "REQ", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }, { start: 4, value: 0 }, { start: 6, value: 1 }] };
