@@ -1,4 +1,4 @@
-import { buildTimeGroupHierarchy, type CanonicalDocument, type GroupId, type RowId, type Signal, type SpacerRow } from "@timing-chart-v2/schema";
+import { cachedTimeGroupHierarchy, type CanonicalDocument, type GroupId, type RowId, type Signal, type SpacerRow } from "@timing-chart-v2/schema";
 import type { GroupHeaderLayoutEntry, RowLayoutEntry } from "./types.js";
 
 export interface RowLayoutResult {
@@ -57,7 +57,7 @@ export function buildRowLayoutSourceIndex(document: CanonicalDocument): RowLayou
  * frame (build-ruler) and the row-Y origin below both use it, so rows never start under the taller ruler (#901). */
 export function timeGroupOutlineHeight(document: Pick<CanonicalDocument, "timeGroups">): number {
   if (document.timeGroups.length === 0) return 0;
-  return (buildTimeGroupHierarchy(document.timeGroups).maxDepth + 1) * 20;
+  return (cachedTimeGroupHierarchy(document.timeGroups).maxDepth + 1) * 20;
 }
 
 export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean; readonly reserveHiddenSpace?: boolean; readonly pane?: "upper" | "lower"; readonly sourceIndex?: RowLayoutSourceIndex } = {}): RowLayoutResult {

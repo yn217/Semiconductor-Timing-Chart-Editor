@@ -1,6 +1,6 @@
 import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
 import { waveDomainPaddingPx, waveOwnerPlacement } from "./wave-owner-placement.js";
-import { buildTimeGroupHierarchy, type CanonicalDocument, type SignalId } from "@timing-chart-v2/schema";
+import { cachedTimeGroupHierarchy, type CanonicalDocument, type SignalId } from "@timing-chart-v2/schema";
 import { timeGroupOutlineHeight, type DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { presentationCycles } from "../presentation-cycles.js";
@@ -22,7 +22,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   rangeBand.dataset.testid = "range-preview";
   rangeBand.setAttribute("aria-hidden", "true");
   rangeBand.hidden = true;
-  const hierarchy = buildTimeGroupHierarchy(document.timeGroups);
+  const hierarchy = cachedTimeGroupHierarchy(document.timeGroups);
   const outlineHeight = timeGroupOutlineHeight(document);
   const rulerFrame = element.parentElement;
   if (rulerFrame) {
@@ -59,7 +59,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
       });
       row.append(levelButton);
     }
-    for (const group of document.timeGroups.filter((item) => hierarchy.depthById.get(item.id) === depth)) {
+    for (const group of hierarchy.groupsByDepth[depth] ?? []) {
       // A collapsed group removes its interior source cycles from the
       // display mapping. Keep the Outline item visible by anchoring its
       // start to the preceding visible boundary when the exact start is

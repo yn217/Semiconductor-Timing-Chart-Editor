@@ -34,6 +34,8 @@ export interface TimeGroupHierarchy {
   readonly childrenByParent: ReadonlyMap<TimeGroupId, readonly TimeGroup[]>;
   /** Roots have depth 0; an empty forest has maxDepth 0. */
   readonly depthById: ReadonlyMap<TimeGroupId, number>;
+  /** Groups prebucketed once so presentation can traverse outlines in O(groups). */
+  readonly groupsByDepth: readonly (readonly TimeGroup[])[];
   readonly maxDepth: number;
 }
 
@@ -53,13 +55,26 @@ export function buildTimeGroupHierarchy(groups: readonly TimeGroup[]): TimeGroup
     }
   }
   const depthById = new Map<TimeGroupId, number>();
+  const groupsByDepth: TimeGroup[][] = [];
   const pending = roots.map(group => ({ group, depth: 0 }));
   let maxDepth = 0;
   for (let index = 0; index < pending.length; index++) {
     const { group, depth } = pending[index]!;
     depthById.set(group.id, depth);
     maxDepth = Math.max(maxDepth, depth);
+    (groupsByDepth[depth] ??= []).push(group);
     for (const child of childrenByParent.get(group.id) ?? []) pending.push({ group: child, depth: depth + 1 });
   }
-  return { roots, childrenByParent, depthById, maxDepth };
+  return { roots, childrenByParent, depthById, groupsByDepth, maxDepth };
+}
+
+const hierarchyByCollection = new WeakMap<readonly TimeGroup[], TimeGroupHierarchy>();
+
+/** Reuse derived hierarchy for immutable canonical TimeGroup collections in presentation paths. */
+export function cachedTimeGroupHierarchy(groups: readonly TimeGroup[]): TimeGroupHierarchy {
+  const cached = hierarchyByCollection.get(groups);
+  if (cached) return cached;
+  const hierarchy = buildTimeGroupHierarchy(groups);
+  hierarchyByCollection.set(groups, hierarchy);
+  return hierarchy;
 }

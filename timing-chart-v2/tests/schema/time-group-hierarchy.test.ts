@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { buildTimeGroupHierarchy, parseDocument, serializeCanonicalDocument, validateCanonicalDocument, type TimeGroup, type TimeGroupId } from "@timing-chart-v2/schema";
+import { buildTimeGroupHierarchy, cachedTimeGroupHierarchy, parseDocument, serializeCanonicalDocument, validateCanonicalDocument, type TimeGroup, type TimeGroupId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const group = (id: string, start: number, end: number, parentId?: string): TimeGroup => ({ id: id as TimeGroupId, name: id, start, end, ...(parentId === undefined ? {} : { parentId: parentId as TimeGroupId }) });
@@ -39,4 +39,18 @@ it("allows shared parent boundaries and equal-range explicit chains without recu
   expect(validateCanonicalDocument(document(groups))).toEqual([]);
   const hierarchy = buildTimeGroupHierarchy([...groups].reverse());
   expect(hierarchy.maxDepth).toBe(9999);
+  expect(hierarchy.groupsByDepth).toHaveLength(10000);
+  expect(hierarchy.groupsByDepth.flat().map((item) => item.id).sort()).toEqual(groups.map((item) => item.id).sort());
+});
+
+it("reuses the hierarchy for an immutable collection and rebuilds for a replacement collection", () => {
+  const groups = [group("root", 0, 8), group("child", 1, 4, "root")];
+  const first = cachedTimeGroupHierarchy(groups);
+  expect(cachedTimeGroupHierarchy(groups)).toBe(first);
+  expect(first.groupsByDepth.map((depth) => depth.map((item) => item.id))).toEqual([["root"], ["child"]]);
+
+  const replacement = groups.map((item) => item.id === "root" ? { ...item, name: "renamed" } : item);
+  const refreshed = cachedTimeGroupHierarchy(replacement);
+  expect(refreshed).not.toBe(first);
+  expect(refreshed.groupsByDepth[0]?.[0]?.name).toBe("renamed");
 });
