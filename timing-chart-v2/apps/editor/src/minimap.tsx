@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
-import type { CanonicalDocument, Signal, Transaction } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, Signal } from "@timing-chart-v2/schema";
 import { buildMiniMapOverview, buildMiniMapTransactionOverview, updateMiniMapOverview, updateMiniMapTransactionOverview } from "@timing-chart-v2/projection";
 import { calculateMiniMapViewportMetrics } from "./runtime/minimap-viewport.js";
 import { timelineScrollOwner } from "./runtime/timeline-scroll-owner.js";
@@ -20,18 +20,7 @@ type MiniMapOverviewCache = Readonly<{
   signals: readonly SignalOverviewFingerprint[];
   overview: MiniMapOverview;
 }>;
-type TransactionOverviewCache = Readonly<{ fingerprint: string; transactions: CanonicalDocument["transactions"]; groups: CanonicalDocument["transactionGroups"]; overview: ReturnType<typeof buildMiniMapTransactionOverview>; builds: number }>;
-
-function transactionLaneKeys(transactions: readonly CanonicalDocument["transactions"][number][]): readonly string[] {
-  return [...new Set(transactions.map((transaction) => transaction.laneId ?? "lane_0"))].sort();
-}
-
-function canIncrementallyUpdateTransactionOverview(cache: TransactionOverviewCache | undefined, document: CanonicalDocument): boolean {
-  if (!cache || cache.groups !== document.transactionGroups || cache.overview.cycleCount !== Math.max(1, document.timeline.cycleCount)) return false;
-  const previousKeys = transactionLaneKeys(cache.transactions);
-  const nextKeys = transactionLaneKeys(document.transactions);
-  return previousKeys.length === nextKeys.length && previousKeys.every((key, index) => key === nextKeys[index]);
-}
+type TransactionOverviewCache = Readonly<{ transactions: CanonicalDocument["transactions"]; groups: CanonicalDocument["transactionGroups"]; cycleCount: number; overview: ReturnType<typeof buildMiniMapTransactionOverview> }>;
 
 function overviewValues(signal: Signal): readonly unknown[] | undefined {
   return signal.type === "clock" || signal.type === "commentRow" ? undefined : signal.values;
@@ -83,8 +72,6 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
   const transactionOverviewIncrementalUpdates = useRef(0);
   const overviewCache = useRef<MiniMapOverviewCache | undefined>(undefined);
   const transactionOverviewCache = useRef<TransactionOverviewCache | undefined>(undefined);
-  const transactionFingerprintCache = useRef(new WeakMap<readonly Transaction[], string>());
-  const transactionGroupFingerprintCache = useRef(new WeakMap<NonNullable<CanonicalDocument["transactionGroups"]>, string>());
   useEffect(() => {
     let active = true;
     let pollFrame = 0;
@@ -106,30 +93,17 @@ export function MiniMap({ document, viewport, mode = "signal" }: { readonly docu
           overviewCache.current = { signalGroups: document.signalGroups, signalCollection: document.signals, cycleCount, signals: fingerprintSignals(document.signals), overview };
         }
       } else {
-        // Keep the Transaction overview's sorted/bucketed model alive across
-        // unrelated Canonical replacements, but never build it in React render.
-        let transactionFingerprint = transactionFingerprintCache.current.get(document.transactions);
-        if (transactionFingerprint === undefined) {
-          transactionFingerprint = document.transactions.map((transaction) => `${transaction.id}:${transaction.start}:${transaction.end}:${transaction.laneId ?? ""}:${transaction.groupId ?? ""}:${transaction.color ?? ""}`).join("|");
-          transactionFingerprintCache.current.set(document.transactions, transactionFingerprint);
-        }
-        const groups = document.transactionGroups ?? [];
-        let groupFingerprint = transactionGroupFingerprintCache.current.get(groups);
-        if (groupFingerprint === undefined) {
-          groupFingerprint = groups.map((group) => `${group.id}:${group.order}:${group.color ?? ""}`).join("|");
-          transactionGroupFingerprintCache.current.set(groups, groupFingerprint);
-        }
-        const fingerprint = [`cycle:${document.timeline.cycleCount}`, `groups:${groupFingerprint}`, `transactions:${transactionFingerprint}`].join(";");
         const cached = transactionOverviewCache.current;
-        if (cached?.fingerprint === fingerprint) transactionOverview = cached.overview;
+        const cycleCount = Math.max(1, document.timeline.cycleCount);
+        if (cached?.transactions === document.transactions && cached.groups === document.transactionGroups && cached.cycleCount === cycleCount) transactionOverview = cached.overview;
         else {
-          const incremental = canIncrementallyUpdateTransactionOverview(cached, document);
+          const incremental = cached !== undefined && cached.groups === document.transactionGroups && cached.cycleCount === cycleCount;
           transactionOverview = cached ? updateMiniMapTransactionOverview(cached.overview, cached.transactions, cached.groups, document) : buildMiniMapTransactionOverview(document);
           if (!cached) transactionOverviewFullBuilds.current += 1;
           else if (incremental) transactionOverviewIncrementalUpdates.current += 1;
           else transactionOverviewFullBuilds.current += 1;
           if (transactionOverview !== cached?.overview) transactionOverviewBuilds.current += 1;
-          transactionOverviewCache.current = { fingerprint, transactions: document.transactions, groups: document.transactionGroups, overview: transactionOverview, builds: transactionOverviewBuilds.current };
+          transactionOverviewCache.current = { transactions: document.transactions, groups: document.transactionGroups, cycleCount, overview: transactionOverview };
         }
       }
       setOverviewState({ document, mode, ...(overview ? { overview } : {}), ...(transactionOverview ? { transactionOverview } : {}) });

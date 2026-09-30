@@ -109,6 +109,29 @@ export interface MiniMapTransactionOverview {
   readonly rows: readonly MiniMapTransactionRow[];
 }
 
+type TransactionLaneBucket = { readonly groupId: Transaction["groupId"]; readonly laneId: string; readonly transactions: Transaction[] };
+type TransactionIndex = Readonly<{ byId: ReadonlyMap<Transaction["id"], Transaction>; byLane: ReadonlyMap<string, TransactionLaneBucket> }>;
+const transactionIndexes = new WeakMap<readonly Transaction[], TransactionIndex>();
+
+function transactionIndex(transactions: readonly Transaction[]): TransactionIndex {
+  const cached = transactionIndexes.get(transactions);
+  if (cached) return cached;
+  const byId = new Map<Transaction["id"], Transaction>();
+  const byLane = new Map<string, TransactionLaneBucket>();
+  for (const transaction of transactions) {
+    byId.set(transaction.id, transaction);
+    if (transaction.visible === false) continue;
+    const laneId = transaction.laneId ?? "lane_0";
+    const key = `${transaction.groupId ?? "ungrouped"}:${laneId}`;
+    const bucket = byLane.get(key);
+    if (bucket) bucket.transactions.push(transaction);
+    else byLane.set(key, { groupId: transaction.groupId, laneId, transactions: [transaction] });
+  }
+  const index = { byId, byLane };
+  transactionIndexes.set(transactions, index);
+  return index;
+}
+
 const DEFAULT_TRANSACTION_COLOR = "#8895a7";
 
 function sortTransactionSegments(left: MiniMapTransactionSegment, right: MiniMapTransactionSegment): number {
@@ -133,19 +156,7 @@ export function buildMiniMapTransactionOverview(document: Pick<CanonicalDocument
   const groups = document.transactionGroups ?? [];
   const colorByGroupId = new Map(groups.map((group) => [group.id, group.color ?? DEFAULT_TRANSACTION_COLOR]));
   const orderByGroupId = new Map(groups.map((group) => [group.id, group.order]));
-  type LaneBucket = { readonly groupId: Transaction["groupId"]; readonly laneId: string; readonly transactions: Transaction[] };
-  const byLane = new Map<string, LaneBucket>();
-  for (const transaction of document.transactions) {
-    if (transaction.visible === false) continue;
-    const laneId = transaction.laneId ?? "lane_0";
-    // Keep the builder's row identity identical to the incremental updater.
-    // A mismatch here makes every first incremental update reconstruct rows
-    // under keys that do not exist in the initial overview.
-    const key = `${transaction.groupId ?? "ungrouped"}:${laneId}`;
-    const bucket = byLane.get(key);
-    if (bucket) bucket.transactions.push(transaction);
-    else byLane.set(key, { groupId: transaction.groupId, laneId, transactions: [transaction] });
-  }
+  const byLane = transactionIndex(document.transactions).byLane;
   const orderedBuckets = [...byLane.values()].sort((left, right) => {
     const leftOrder = left.groupId ? orderByGroupId.get(left.groupId) ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
     const rightOrder = right.groupId ? orderByGroupId.get(right.groupId) ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
@@ -170,39 +181,28 @@ export function buildMiniMapTransactionOverview(document: Pick<CanonicalDocument
 export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOverview, previousTransactions: readonly Transaction[], previousGroups: CanonicalDocument["transactionGroups"], document: Pick<CanonicalDocument, "transactions" | "transactionGroups" | "timeline">): MiniMapTransactionOverview {
   if (previous.cycleCount !== Math.max(1, document.timeline.cycleCount) || previousGroups !== document.transactionGroups) return buildMiniMapTransactionOverview(document);
   const laneKey = (transaction: Transaction) => `${transaction.groupId ?? "ungrouped"}:${transaction.laneId ?? "lane_0"}`;
-  const previousById = new Map(previousTransactions.map((transaction) => [transaction.id, transaction] as const));
-  const nextById = new Map(document.transactions.filter((transaction) => transaction.visible !== false).map((transaction) => [transaction.id, transaction] as const));
+  const previousIndex = transactionIndex(previousTransactions);
+  const nextIndex = transactionIndex(document.transactions);
   const changedLanes = new Set<string>();
-  for (const transaction of previousTransactions) {
-    const next = nextById.get(transaction.id);
-    if (!next) changedLanes.add(laneKey(transaction));
-  }
-  for (const transaction of document.transactions) {
-    if (transaction.visible === false) continue;
-    const before = previousById.get(transaction.id);
-    if (before !== transaction) {
-      // A move invalidates both buckets: the old bucket must lose the
-      // segment, while the new bucket must gain it.
-      if (before) changedLanes.add(laneKey(before));
-      changedLanes.add(laneKey(transaction));
+  for (const [id, before] of previousIndex.byId) {
+    const next = nextIndex.byId.get(id);
+    if (next !== before) {
+      if (before.visible !== false) changedLanes.add(laneKey(before));
+      if (next?.visible !== false && next) changedLanes.add(laneKey(next));
     }
+  }
+  for (const [id, next] of nextIndex.byId) {
+    if (!previousIndex.byId.has(id) && next.visible !== false) changedLanes.add(laneKey(next));
   }
   if (changedLanes.size === 0) return previous;
   const colorByGroupId = new Map((document.transactionGroups ?? []).map((group) => [group.id, group.color ?? DEFAULT_TRANSACTION_COLOR]));
-  const transactionsByLane = new Map<string, Transaction[]>();
-  for (const transaction of document.transactions) {
-    if (transaction.visible === false) continue;
-    const key = laneKey(transaction);
-    const lane = transactionsByLane.get(key);
-    if (lane) lane.push(transaction);
-    else transactionsByLane.set(key, [transaction]);
-  }
   const buildRow = (key: string, rowIndex: number) => {
     const [, groupId, laneId] = key.match(/^([^:]+):(.*)$/) ?? [];
-    const transactions = transactionsByLane.get(key) ?? [];
-    if (transactions.length === 0) return undefined;
-    const groupColor = groupId === "ungrouped" ? undefined : colorByGroupId.get(groupId as NonNullable<CanonicalDocument["transactionGroups"]>[number]["id"]);
-    return { key, rowIndex, segments: transactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR })).sort(sortTransactionSegments) };
+    const bucket = nextIndex.byLane.get(key);
+    if (!bucket || bucket.transactions.length === 0) return undefined;
+    const resolvedGroupId = bucket.groupId;
+    const groupColor = resolvedGroupId ? colorByGroupId.get(resolvedGroupId) : undefined;
+    return { key: `${resolvedGroupId ?? "ungrouped"}:${laneId}`, rowIndex, segments: bucket.transactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR })).sort(sortTransactionSegments) };
   };
   const rowsByKey = new Map(previous.rows.map((row) => [row.key, row] as const));
   for (const key of changedLanes) {
