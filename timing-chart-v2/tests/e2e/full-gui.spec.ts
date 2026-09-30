@@ -1030,6 +1030,7 @@ test("Bus Decimal/Signed/Unsigned formats stay consistent in Bottom and survive 
   const bottomTabs = page.getByTestId("bottom-tabs");
   await bottomTabs.locator("[data-bottom-tab='Signal']").click();
   const formattedA5 = page.getByTestId("event-row-value-3");
+  const busOwner = host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_data']");
 
   for (const [format, expectedValue, historyCount] of [
     ["decimal", "165", 1],
@@ -1041,7 +1042,10 @@ test("Bus Decimal/Signed/Unsigned formats stay consistent in Bottom and survive 
     await expect(host).toHaveAttribute("data-editor-idle", "true");
     await expect(inspector.getByLabel("Inspector bus format")).toHaveValue(format);
     await expect(formattedA5).toHaveText(expectedValue);
-    await expect(host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: expectedValue })).toHaveCount(1);
+    await expect.poll(async () => busOwner.locator("image[data-wave-svg-image]").evaluate(async (image) => {
+      const source = image.getAttribute("data-wave-svg-source");
+      return source ? await (await fetch(source)).text() : "";
+    })).toContain(expectedValue);
     await expect(page.getByTestId("history-status")).toHaveText(`History ${historyCount} / Redo 0`);
   }
 
@@ -1050,7 +1054,10 @@ test("Bus Decimal/Signed/Unsigned formats stay consistent in Bottom and survive 
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 1");
   await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("signed");
   await expect(formattedA5).toHaveText("-91");
-  await expect(host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: "-91" })).toHaveCount(1);
+  await expect.poll(async () => busOwner.locator("image[data-wave-svg-image]").evaluate(async (image) => {
+    const source = image.getAttribute("data-wave-svg-source");
+    return source ? await (await fetch(source)).text() : "";
+  })).toContain("-91");
   await ribbon.getByRole("button", { name: "Redo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
   await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("unsigned");
@@ -1068,7 +1075,10 @@ test("Bus Decimal/Signed/Unsigned formats stay consistent in Bottom and survive 
   await bottomTabs.locator("[data-bottom-tab='Signal']").click();
   await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("unsigned");
   await expect(page.getByTestId("event-row-value-3")).toHaveText("165");
-  await expect(host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: "165" })).toHaveCount(1);
+  await expect.poll(async () => busOwner.locator("image[data-wave-svg-image]").evaluate(async (image) => {
+    const source = image.getAttribute("data-wave-svg-source");
+    return source ? await (await fetch(source)).text() : "";
+  })).toContain("165");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 

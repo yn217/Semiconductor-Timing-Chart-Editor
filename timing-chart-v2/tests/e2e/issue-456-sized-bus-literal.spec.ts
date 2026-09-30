@@ -29,7 +29,12 @@ test("uses HDL sized-literal truncation consistently through edit, Undo/Redo and
   const value0 = page.getByTestId("event-row-value-0");
   await expect(value0).toHaveText("0xF");
   await expect(page.getByTestId("event-row-value-4")).toHaveText("0xF");
-  await expect(host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: "0xF" })).toHaveCount(2);
+  const dataOwner = host.locator("[data-role='wave-owner'][data-signal-id='sig_data']");
+  await expect.poll(async () => dataOwner.locator("image[data-wave-svg-image]").evaluate(async (image) => {
+    const source = image.getAttribute("data-wave-svg-source");
+    const markup = source ? await (await fetch(source)).text() : "";
+    return (markup.match(/>0xF</g) ?? []).length;
+  })).toBe(2);
 
   const eventRow = page.locator("form.event-row[data-event-start='0']");
   await eventRow.getByRole("button", { name: "Edit transition at cycle 0" }).click();
