@@ -22,4 +22,22 @@ describe("UI interaction ownership", () => {
     }, { entityId: "sig_b", objectType: "signal" });
     expect(target).toEqual({ kind: "signal", id: "sig_b" });
   });
+
+  it("resolves runtime renderer diagnostics whose path is keyed by stable Signal ID", () => {
+    const diagnostic = {
+      code: "WAVE_RENDER_ERROR",
+      path: "$.signals[sig_runtime_owner]",
+      message: "Waveform render failed.",
+      objectType: "signal",
+      objectId: "sig_runtime_owner",
+    };
+    const document = {
+      signals: [{ id: "sig_other" }, { id: "sig_runtime_owner" }],
+      signalGroups: [],
+      annotations: [],
+    };
+
+    expect(resolveProblemTarget(diagnostic.path, document, diagnostic)).toEqual({ kind: "signal", id: "sig_runtime_owner" });
+    expect(resolveProblemTarget(diagnostic.path, document)).toEqual({ kind: "timeline" });
+  });
 });

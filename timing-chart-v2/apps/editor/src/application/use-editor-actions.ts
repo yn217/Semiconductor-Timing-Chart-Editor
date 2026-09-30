@@ -87,7 +87,7 @@ export interface EditorActions {
   readonly revealBookmark: (start: number) => void;
   readonly deleteBottomBookmark: (bookmarkId?: BookmarkId) => void;
   readonly navigateToBookmark: (cycle: number, bookmarkId?: BookmarkId) => void;
-  readonly navigateProblem: (path: string) => void;
+  readonly navigateProblem: (path: string, problem?: DocumentProblem) => void;
   readonly createSelectedAnnotation: (annotation: Annotation) => void;
   readonly createSelectedAnnotationForType: (type: AnnotationType) => void;
   readonly replaceDocument: (document: CanonicalDocument) => CommandResult;
@@ -414,8 +414,8 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     };
   }, []);
 
-  const navigateProblem = (path: string) => {
-    const problem = diagnostics.find((item) => item.path === path);
+  const navigateProblem = (path: string, problem?: DocumentProblem) => {
+    problem ??= diagnostics.find((item) => item.path === path);
     const target = resolveProblemTarget(path, snapshot.document, problem);
     const targetSignal = target.kind === "signal" ? snapshot.document.signals.find((signal) => signal.id === target.id) : undefined;
     const valueIndex = /^\$\.signals\[\d+\]\.values\[(\d+)\]/.exec(path)?.[1];

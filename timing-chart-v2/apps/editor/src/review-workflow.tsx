@@ -23,7 +23,7 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
   readonly document: CanonicalDocument;
   readonly selectedSignalId: SignalId | undefined;
   readonly selectedGroupId: GroupId | undefined;
-  readonly onNavigate: (path: string) => void;
+  readonly onNavigate: (path: string, problem?: DocumentProblem) => void;
   readonly onShowProblems: () => void;
   readonly onRefreshChecks: () => void;
   readonly onToggleCheckCategory?: (category: TimingDiagnosticCategory, enabled: boolean) => void;
@@ -53,7 +53,7 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
     if (visible.length === 0) return;
     const nextIndex = (currentIndex + offset + visible.length) % visible.length;
     setCurrentIndex(nextIndex);
-    onNavigate(visible[nextIndex]!.path);
+    onNavigate(visible[nextIndex]!.path, visible[nextIndex]);
   };
   const errorCount = scopedDiagnostics.filter((item) => (item.severity ?? "error") === "error").length;
   const warningCount = scopedDiagnostics.filter((item) => item.severity === "warning").length;

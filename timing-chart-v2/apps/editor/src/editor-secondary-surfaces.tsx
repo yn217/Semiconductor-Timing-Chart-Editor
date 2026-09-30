@@ -187,7 +187,7 @@ export interface EditorSecondarySurfacesInput {
   readonly editActions: ClipboardActions;
   readonly actions: EditorActions;
   readonly setRuntimeDiagnostics: EditorApplicationOwner["setRuntimeDiagnostics"];
-  readonly navigateProblem: (path: string) => void;
+  readonly navigateProblem: (path: string, problem?: DocumentProblem) => void;
   readonly ai: { readonly getZoom: () => number; readonly fitAll: () => void; readonly fitSelection: () => void; readonly fitSourceRange: (startCycle: number, endCycle: number) => boolean };
 }
 
