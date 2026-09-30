@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DefaultScreenGeometryProjector, ImmutableLocalGeometryMap, ImmutableSnapIndex, resolveTimeAxisGeometry, SemanticSnapCandidateService, createTransactionTimeTransform } from "@timing-chart-v2/geometry";
+import { DefaultScreenGeometryProjector, ImmutableLocalGeometryMap, ImmutableSnapIndex, resolveTimeAxisGeometry, SemanticSnapCandidateService, UniformCycleLocalGeometryMap, createTransactionTimeTransform } from "@timing-chart-v2/geometry";
 import type { AnnotationId, SignalId, TimeGroupId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -184,6 +184,33 @@ describe("Screen Geometry and snapping", () => {
 
     expect(index.entries().filter((candidate) => candidate.kind === "cycle-boundary").map((candidate) => candidate.anchor.cycle)).toEqual([0, 5_000, 10_000]);
     expect(findCalls).toBeLessThan(32);
+  });
+
+  it("resolves regular cycle snap candidates on demand instead of materializing a full grid", () => {
+    const source = canonicalFixture();
+    const signal = source.signals.find((item) => item.type !== "commentRow")!;
+    const document = {
+      ...source,
+      signals: [signal],
+      bookmarks: [],
+      annotations: [],
+      timeline: { ...source.timeline, referenceClock: signal.id, cycleCount: 10_000 },
+    };
+    const map = new UniformCycleLocalGeometryMap(signal.id, {
+      sourceCycles: Array.from({ length: 10_001 }, (_, cycle) => cycle),
+      originX: 20,
+      cycleWidth: 40,
+      rowY: 0,
+    });
+    const service = new SemanticSnapCandidateService();
+    const index = service.build({ document, geometryMaps: new Map([[signal.id, map]]), rowY: new Map([[signal.id, 0]]) });
+
+    expect(index.entries().filter((candidate) => candidate.kind === "cycle-boundary")).toHaveLength(0);
+    expect(service.metrics().candidateCount).toBeLessThan(10);
+    expect(index.nearest({ x: 20 + 5_000 * 40, y: 0 }, 1, ["cycle-boundary"]))
+      .toMatchObject({ kind: "cycle-boundary", anchor: { cycle: 5_000, point: "cycle-start" } });
+    expect(index.nearest({ x: 20 + 5_000.5 * 40, y: 0 }, 1, ["cycle-center"]))
+      .toMatchObject({ kind: "cycle-center", anchor: { cycle: 5_000, point: "cycle-center" } });
   });
 
   it("does not reintroduce hidden annotation targets as snap candidates", () => {

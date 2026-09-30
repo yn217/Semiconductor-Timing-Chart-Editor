@@ -292,14 +292,21 @@ export interface SnapCandidate {
 
 export interface SnapResult extends SnapCandidate { readonly distance: number }
 
+/** Lazily supplies regular-grid candidates near a query without materializing the full retained grid. */
+export interface SnapCandidateSource {
+  candidatesNear(point: Point, tolerance: number): readonly SnapCandidate[];
+}
+
 export class ImmutableSnapIndex {
   static readonly #cellSize = 32;
   readonly #candidates: readonly SnapCandidate[];
   readonly #buckets: ReadonlyMap<string, readonly number[]>;
   #queries = 0;
   #candidatesVisited = 0;
+  readonly #sources: readonly SnapCandidateSource[];
 
-  constructor(candidates: readonly SnapCandidate[]) {
+  constructor(candidates: readonly SnapCandidate[], sources: readonly SnapCandidateSource[] = []) {
+    this.#sources = sources;
     this.#candidates = Object.freeze(candidates.map((candidate) => Object.freeze({ ...candidate, anchor: Object.freeze({ ...candidate.anchor }), point: Object.freeze({ ...candidate.point }) })));
     const buckets = new Map<string, number[]>();
     this.#candidates.forEach((candidate, index) => {
@@ -317,8 +324,9 @@ export class ImmutableSnapIndex {
     this.#queries += 1;
     const allowed = kinds ? new Set(kinds) : undefined;
     let result: SnapResult | undefined;
-    for (const index of this.#candidateIndexesNear(point, tolerance)) {
-      const candidate = this.#candidates[index]!;
+    const nearby = this.#candidateIndexesNear(point, tolerance).map((index) => this.#candidates[index]!);
+    for (const source of this.#sources) nearby.push(...source.candidatesNear(point, tolerance));
+    for (const candidate of nearby) {
       this.#candidatesVisited += 1;
       if (allowed && !allowed.has(candidate.kind)) continue;
       const distance = Math.hypot(candidate.point.x - point.x, candidate.point.y - point.y);
@@ -390,6 +398,7 @@ export class SemanticSnapCandidateService {
 
   build(input: SemanticSnapGeometryInput): ImmutableSnapIndex {
     const candidates: SnapCandidate[] = [];
+    const sources: SnapCandidateSource[] = [];
     const renderedCycleCount = input.renderedCycleCount ?? input.document.timeline.cycleCount;
     const sourceCycleForRenderedCycle = input.sourceCycleForRenderedCycle ?? ((cycle: number) => cycle);
     const renderedCycleForSourceCycle = input.renderedCycleForSourceCycle ?? ((cycle: number) => cycle);
@@ -419,6 +428,9 @@ export class SemanticSnapCandidateService {
       // Keep the display-range fallback for third-party maps that do not yet
       // expose their bounded boundary index.
       const boundaryEntries = map.cycleBoundaryEntries?.();
+      const regularSource = boundaryEntries && createRegularCycleSnapSource(signal.id, signal.type, y, map, boundaryEntries, input.document.timeline.cycleCount);
+      if (regularSource) sources.push(regularSource);
+      if (regularSource) continue;
       const sourceCycles = boundaryEntries === undefined || boundaryEntries.length === 0
         ? Array.from({ length: renderedCycleCount + 1 }, (_, renderedCycle) => sourceCycleForRenderedCycle(renderedCycle))
         : boundaryEntries.map((entry) => entry.cycle);
@@ -440,7 +452,7 @@ export class SemanticSnapCandidateService {
     this.#appendOwners(candidates, input.document.bookmarks, input.document.annotations, resolve);
     this.#builds += 1;
     this.#candidateCount = candidates.length;
-    return new ImmutableSnapIndex(candidates);
+    return new ImmutableSnapIndex(candidates, sources);
   }
 
   metrics(): Readonly<{ builds: number; candidateCount: number }> {
@@ -459,6 +471,48 @@ export class SemanticSnapCandidateService {
       if (anchor && point) candidates.push({ kind: "annotation", anchor, point, ownerId: annotation.id });
     }
   }
+}
+
+function createRegularCycleSnapSource(signalId: SignalId, signalType: string, rowY: number, map: LocalGeometryMap, entries: readonly LocalGeometryEntry[], terminalCycle: number): SnapCandidateSource | undefined {
+  if (entries.length < 2) return undefined;
+  const step = entries[1]!.position.x - entries[0]!.position.x;
+  if (!Number.isFinite(step) || step <= 0 || entries[1]!.cycle !== entries[0]!.cycle + 1) return undefined;
+  for (let index = 2; index < entries.length; index += 1) {
+    if (entries[index]!.cycle !== entries[index - 1]!.cycle + 1 || Math.abs((entries[index]!.position.x - entries[index - 1]!.position.x) - step) > 1e-6) return undefined;
+  }
+  const lowerBound = (x: number): number => {
+    let low = 0;
+    let high = entries.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (entries[middle]!.position.x < x) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  };
+  return {
+    candidatesNear(point, tolerance) {
+      const first = Math.max(0, lowerBound(point.x - tolerance) - 1);
+      const last = Math.min(entries.length - 1, lowerBound(point.x + tolerance));
+      const result: SnapCandidate[] = [];
+      for (let index = first; index <= last; index += 1) {
+        const boundary = entries[index]!;
+        const terminal = boundary.cycle === terminalCycle;
+        const points: readonly { readonly point: AnchorPoint; readonly kind: SnapKind }[] = [
+          { point: "cycle-start", kind: "cycle-boundary" },
+          ...(terminal ? [] : [{ point: "cycle-center" as const, kind: "cycle-center" as const }]),
+          ...(terminal ? [] : [{ point: "transition-center" as const, kind: signalType === "bus" || signalType === "state" ? "bus-transition" as const : "signal-transition" as const }]),
+          ...(terminal ? [] : [{ point: "value-start" as const, kind: "value-boundary" as const }, { point: "value-center" as const, kind: "value-boundary" as const }, { point: "row-center" as const, kind: "signal-row" as const }, ...(signalType === "clock" ? [{ point: "rising-edge" as const, kind: "clock-edge" as const }, { point: "falling-edge" as const, kind: "clock-edge" as const }] : [])]),
+        ];
+        for (const item of points) {
+          const anchor: SemanticAnchor = { signalId, cycle: boundary.cycle, point: item.point };
+          const local = map.find(anchor);
+          if (local && Math.abs(local.point.x - point.x) <= tolerance) result.push({ kind: item.kind, anchor, point: { x: local.point.x, y: rowY + local.point.y }, ownerId: signalId });
+        }
+      }
+      return result;
+    },
+  };
 }
 export * from "./uniform-cycle-geometry.js";
 
