@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildMiniMapOverview, buildMiniMapTransactionOverview, updateMiniMapTransactionOverview } from "@timing-chart-v2/projection";
+import { buildMiniMapOverview, buildMiniMapTransactionOverview, transactionLaneIdentityKey, updateMiniMapTransactionOverview } from "@timing-chart-v2/projection";
 import type { SignalId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -36,8 +36,8 @@ describe("MiniMap overview derivation", () => {
     const next = { ...before, transactions: [{ ...transactions[0]!, start: 2, end: 5 }, transactions[1]!] };
     const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next);
     expect(updated).not.toBe(previous);
-    expect(updated.rows.find((row) => row.key === "ungrouped:lane_0")?.segments[0]).toEqual({ start: 2, end: 5, color: "#8895a7" });
-    expect(updated.rows.find((row) => row.key === "ungrouped:lane_1")).toBe(previous.rows.find((row) => row.key === "ungrouped:lane_1"));
+    expect(updated.rows.find((row) => row.groupId === undefined && row.laneId === "lane_0")?.segments[0]).toEqual({ start: 2, end: 5, color: "#8895a7" });
+    expect(updated.rows.find((row) => row.groupId === undefined && row.laneId === "lane_1")).toBe(previous.rows.find((row) => row.groupId === undefined && row.laneId === "lane_1"));
   });
 
   it("falls back to a full overview when a new lane is introduced", () => {
@@ -61,15 +61,15 @@ describe("MiniMap overview derivation", () => {
     const previous = buildMiniMapTransactionOverview(before);
     const next = { ...before, transactions: [{ ...transactions[0]!, laneId: "lane_1" }, transactions[1]!, transactions[2]!] };
     const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next);
-    expect(updated.rows.find((row) => row.key === "ungrouped:lane_0")?.segments).toEqual([
+    expect(updated.rows.find((row) => row.groupId === undefined && row.laneId === "lane_0")?.segments).toEqual([
       { start: 9, end: 10, color: "#8895a7" },
     ]);
-    expect(updated.rows.find((row) => row.key === "ungrouped:lane_1")?.segments).toEqual([
+    expect(updated.rows.find((row) => row.groupId === undefined && row.laneId === "lane_1")?.segments).toEqual([
       { start: 1, end: 4, color: "#8895a7" },
       { start: 5, end: 8, color: "#8895a7" },
     ]);
     expect(updated.rows).toHaveLength(2);
-    expect(updated.rows.map((row) => row.key)).toEqual(["ungrouped:lane_0", "ungrouped:lane_1"]);
+    expect(updated.rows.map((row) => [row.groupId, row.laneId])).toEqual([[undefined, "lane_0"], [undefined, "lane_1"]]);
   });
 
   it("rebuilds exact rows when the last Transaction is deleted", () => {
@@ -131,7 +131,39 @@ describe("MiniMap overview derivation", () => {
     const previous = buildMiniMapTransactionOverview(before);
     const next = { ...before, transactionGroups: [{ ...groups[1]!, order: 0, color: "#bbbbbb" }, { ...groups[0]!, order: 1 }] };
     const updated = updateMiniMapTransactionOverview(previous, before.transactions, before.transactionGroups, next);
-    expect(updated.rows.map((row) => row.key)).toEqual(["group_b:lane_0", "group_a:lane_0"]);
+    expect(updated.rows.map((row) => [row.groupId, row.laneId])).toEqual([["group_b", "lane_0"], ["group_a", "lane_0"]]);
     expect(updated.rows[0]?.segments[0]?.color).toBe("#bbbbbb");
+  });
+
+  it("keeps synthetic ungrouped and delimiter-bearing Group/Lane tuples distinct in full and incremental MiniMap paths", () => {
+    const source = canonicalFixture();
+    const transactionGroups = [
+      { id: "ungrouped", name: "Real ungrouped", order: 0, color: "#111111", transactionIds: [] },
+      { id: "a:b", name: "A:B", order: 1, color: "#222222", transactionIds: [] },
+      { id: "a", name: "A", order: 2, color: "#333333", transactionIds: [] },
+    ];
+    const transactions = [
+      { id: "txn_synthetic", name: "Synthetic", start: 1, end: 2, laneId: "lane_0", linkedSignals: [] },
+      { id: "txn_real", name: "Real", start: 2, end: 3, laneId: "lane_0", groupId: "ungrouped", linkedSignals: [] },
+      { id: "txn_colon_left", name: "Left", start: 3, end: 4, laneId: "c", groupId: "a:b", linkedSignals: [] },
+      { id: "txn_colon_right", name: "Right", start: 4, end: 5, laneId: "b:c", groupId: "a", linkedSignals: [] },
+    ];
+    const before = { ...source, transactionGroups, transactions };
+    const overview = buildMiniMapTransactionOverview(before);
+    expect(overview.rows).toHaveLength(4);
+    expect(new Set(overview.rows.map((row) => row.key)).size).toBe(4);
+    expect(overview.rows.map((row) => [row.groupId, row.laneId])).toEqual([
+      ["ungrouped", "lane_0"], ["a:b", "c"], ["a", "b:c"], [undefined, "lane_0"],
+    ]);
+    expect(overview.rows.map((row) => row.segments[0]?.color)).toEqual(["#111111", "#222222", "#333333", "#8895a7"]);
+    expect(transactionLaneIdentityKey(undefined, "lane_0")).not.toBe(transactionLaneIdentityKey("ungrouped", "lane_0"));
+    expect(transactionLaneIdentityKey("a:b", "c")).not.toBe(transactionLaneIdentityKey("a", "b:c"));
+
+    const nextTransactions = transactions.map((transaction) => transaction.id === "txn_colon_right" ? { ...transaction, laneId: "c", groupId: "a:b" } : transaction);
+    const next = { ...before, transactions: nextTransactions };
+    const incrementallyUpdated = updateMiniMapTransactionOverview(overview, transactions, transactionGroups, next);
+    expect(incrementallyUpdated).toEqual(buildMiniMapTransactionOverview(next));
+    expect(incrementallyUpdated.rows.find((row) => row.groupId === "a:b" && row.laneId === "c")?.segments).toHaveLength(2);
+    expect(incrementallyUpdated.rows.find((row) => row.groupId === "a" && row.laneId === "b:c")).toBeUndefined();
   });
 });

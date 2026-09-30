@@ -1,6 +1,7 @@
 import { UNGROUPED_DISCLOSURE_KEY, type TransactionDisclosure } from "../workspace/use-transaction-disclosure.js";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { Bookmark, BookmarkId, CanonicalDocument, Transaction, TransactionId } from "@timing-chart-v2/schema";
+import { transactionLaneIdentityKey } from "@timing-chart-v2/projection";
 import { EditorIcon } from "../editor-icon.js";
 import type { TransactionLaneCommandActions } from "../application/editor-surface-command-controller.js";
 import { InlineNameInput } from "../inline-name-input.js";
@@ -427,7 +428,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   // tracks, not one shared one), matching the approved reference's
   // "Memory / Lane 0" vs "CPU / Lane 1" structure.
   const groups = document.transactionGroups ?? EMPTY_TRANSACTION_GROUPS;
-  const laneKey = (groupId: string | undefined, laneId: string) => `${groupId ?? "ungrouped"}\u0000${laneId}`;
+  const laneKey = transactionLaneIdentityKey;
   const { laneTransactionsByKey, transactionCountByGroup, currentKeys } = useMemo(() => {
     laneIndexBuilds.current += 1;
     const previous = laneArrayCache.current;
@@ -580,7 +581,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       // several non-overlapping Transactions share that lane.
       const labelHeight = LANE_ROW_HEIGHT;
       const trackHeight = Math.max(rowCount, 1) * LANE_ROW_HEIGHT;
-      laneBands.push({ key: `lane:${section.groupId ?? "ungrouped"}:${laneId}`, laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf, treeRowOf: treeRows.rowOf, treeRows: treeRows.ordered });
+      laneBands.push({ key: transactionLaneIdentityKey(section.groupId, laneId), laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf, treeRowOf: treeRows.rowOf, treeRows: treeRows.ordered });
       labelCursor += labelHeight;
       trackCursor += trackHeight;
     }
@@ -648,7 +649,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     <div className="transaction-lane-labels">
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
-        return <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" data-transaction-group-id={header.groupId ?? "ungrouped"} data-collapsed={String(header.collapsed)} style={{ top: header.labelTop, height: GROUP_HEADER_HEIGHT }}>
+        return <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" data-transaction-group-id={header.groupId} data-ungrouped={String(header.groupId === undefined)} data-collapsed={String(header.collapsed)} style={{ top: header.labelTop, height: GROUP_HEADER_HEIGHT }}>
           {/* #764: label/controls are a sticky context layer pinned to the Timeline viewport's left edge, so horizontal scrolling never leaves half-cut glyphs. */}
           <div className="transaction-group-header-context">
           <button type="button" className="transaction-group-header-chevron" aria-label={header.collapsed ? `Expand ${header.label}` : `Collapse ${header.label}`} aria-expanded={!header.collapsed} onClick={() => toggleGroupCollapsed(header.groupId ?? UNGROUPED_DISCLOSURE_KEY)}><EditorIcon name={header.collapsed ? "right" : "down"} /></button>
@@ -677,7 +678,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
         const selectedRow = selectedId === undefined ? undefined : band.treeRowOf.get(selectedId);
         const pinned = selectedRow === undefined ? undefined : band.treeRows[selectedRow];
         const treeCandidates = transactionRowsInWindow(band.treeRows, rowStart, rowEnd, pinned);
-        return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" data-lane-id={band.laneId} data-transaction-group-id={band.groupId ?? "ungrouped"} style={{ top: band.labelTop, height: band.labelHeight }}>
+        return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" data-lane-id={band.laneId} data-transaction-group-id={band.groupId} data-ungrouped={String(band.groupId === undefined)} style={{ top: band.labelTop, height: band.labelHeight }}>
           <em className="transaction-lane-label-name">{band.laneId.replace(/^lane_(\d+)$/i, "Lane $1")}</em>
           {/* Transaction Mode GUI realignment ("長い名前は ellipsis +
               tooltip"): the CSS already truncates a long name with

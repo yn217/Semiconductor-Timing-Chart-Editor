@@ -7,3 +7,4 @@ export * from "./hardware-hierarchy.js";
 export * from "./minimap.js";
 export * from "./signal-split.js";
 export * from "./pinned-rows.js";
+export * from "./transaction-lane-identity.js";

@@ -1,4 +1,5 @@
 import type { CanonicalDocument, RowId, Signal, SignalValueChange, Transaction } from "@timing-chart-v2/schema";
+import { transactionLaneIdentityKey } from "./transaction-lane-identity.js";
 
 export type MiniMapTone = "low" | "high" | "clock" | "comment";
 
@@ -100,6 +101,8 @@ export interface MiniMapTransactionSegment {
 
 export interface MiniMapTransactionRow {
   readonly key: string;
+  readonly groupId: Transaction["groupId"];
+  readonly laneId: string;
   readonly rowIndex: number;
   readonly segments: readonly MiniMapTransactionSegment[];
 }
@@ -122,7 +125,7 @@ function transactionIndex(transactions: readonly Transaction[]): TransactionInde
     byId.set(transaction.id, transaction);
     if (transaction.visible === false) continue;
     const laneId = transaction.laneId ?? "lane_0";
-    const key = `${transaction.groupId ?? "ungrouped"}:${laneId}`;
+    const key = transactionLaneIdentityKey(transaction.groupId, laneId);
     const bucket = byLane.get(key);
     if (bucket) bucket.transactions.push(transaction);
     else byLane.set(key, { groupId: transaction.groupId, laneId, transactions: [transaction] });
@@ -168,7 +171,7 @@ export function buildMiniMapTransactionOverview(document: Pick<CanonicalDocument
     const segments = bucket.transactions
       .map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR }))
       .sort(sortTransactionSegments);
-    return { key: `${bucket.groupId ?? "ungrouped"}:${bucket.laneId}`, rowIndex, segments };
+    return { key: transactionLaneIdentityKey(bucket.groupId, bucket.laneId), groupId: bucket.groupId, laneId: bucket.laneId, rowIndex, segments };
   });
   return Object.freeze({ cycleCount, rows: Object.freeze(rows) });
 }
@@ -180,7 +183,7 @@ export function buildMiniMapTransactionOverview(document: Pick<CanonicalDocument
  */
 export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOverview, previousTransactions: readonly Transaction[], previousGroups: CanonicalDocument["transactionGroups"], document: Pick<CanonicalDocument, "transactions" | "transactionGroups" | "timeline">): MiniMapTransactionOverview {
   if (previous.cycleCount !== Math.max(1, document.timeline.cycleCount) || previousGroups !== document.transactionGroups) return buildMiniMapTransactionOverview(document);
-  const laneKey = (transaction: Transaction) => `${transaction.groupId ?? "ungrouped"}:${transaction.laneId ?? "lane_0"}`;
+  const laneKey = (transaction: Transaction) => transactionLaneIdentityKey(transaction.groupId, transaction.laneId ?? "lane_0");
   const previousIndex = transactionIndex(previousTransactions);
   const nextIndex = transactionIndex(document.transactions);
   const changedLanes = new Set<string>();
@@ -197,12 +200,11 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
   if (changedLanes.size === 0) return previous;
   const colorByGroupId = new Map((document.transactionGroups ?? []).map((group) => [group.id, group.color ?? DEFAULT_TRANSACTION_COLOR]));
   const buildRow = (key: string, rowIndex: number) => {
-    const [, groupId, laneId] = key.match(/^([^:]+):(.*)$/) ?? [];
     const bucket = nextIndex.byLane.get(key);
     if (!bucket || bucket.transactions.length === 0) return undefined;
     const resolvedGroupId = bucket.groupId;
     const groupColor = resolvedGroupId ? colorByGroupId.get(resolvedGroupId) : undefined;
-    return { key: `${resolvedGroupId ?? "ungrouped"}:${laneId}`, rowIndex, segments: bucket.transactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR })).sort(sortTransactionSegments) };
+    return { key: transactionLaneIdentityKey(resolvedGroupId, bucket.laneId), groupId: resolvedGroupId, laneId: bucket.laneId, rowIndex, segments: bucket.transactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR })).sort(sortTransactionSegments) };
   };
   const rowsByKey = new Map(previous.rows.map((row) => [row.key, row] as const));
   for (const key of changedLanes) {
@@ -212,11 +214,9 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
   }
   const orderByGroupId = new Map((document.transactionGroups ?? []).map((group) => [group.id, group.order]));
   const rows = [...rowsByKey.values()].sort((left, right) => {
-    const [, leftGroup, leftLane] = left.key.match(/^([^:]+):(.*)$/) ?? [];
-    const [, rightGroup, rightLane] = right.key.match(/^([^:]+):(.*)$/) ?? [];
-    const leftOrder = leftGroup === "ungrouped" ? Number.MAX_SAFE_INTEGER : orderByGroupId.get(leftGroup! as NonNullable<CanonicalDocument["transactionGroups"]>[number]["id"]) ?? Number.MAX_SAFE_INTEGER;
-    const rightOrder = rightGroup === "ungrouped" ? Number.MAX_SAFE_INTEGER : orderByGroupId.get(rightGroup! as NonNullable<CanonicalDocument["transactionGroups"]>[number]["id"]) ?? Number.MAX_SAFE_INTEGER;
-    return leftOrder - rightOrder || leftLane!.localeCompare(rightLane!);
+    const leftOrder = left.groupId === undefined ? Number.MAX_SAFE_INTEGER : orderByGroupId.get(left.groupId) ?? Number.MAX_SAFE_INTEGER;
+    const rightOrder = right.groupId === undefined ? Number.MAX_SAFE_INTEGER : orderByGroupId.get(right.groupId) ?? Number.MAX_SAFE_INTEGER;
+    return leftOrder - rightOrder || left.laneId.localeCompare(right.laneId);
   }).map((row, rowIndex) => row.rowIndex === rowIndex ? row : ({ ...row, rowIndex }));
   return Object.freeze({ cycleCount: previous.cycleCount, rows: Object.freeze(rows) });
 }
