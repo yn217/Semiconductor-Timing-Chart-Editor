@@ -5,11 +5,12 @@ import type { Annotation, AnnotationId, GroupId, Signal, SignalGroup, SignalId, 
 import { nextCommandId } from "../command-id.js";
 import { createEntityIdAllocator, nextEntityId } from "../entity-id.js";
 import { groupId, signalId } from "../minimal-cycle-view-fixture-helpers.js";
+import { captureGroupTransactionLinks, remapGroupTransactionLinks, type GroupTransactionSignalLink } from "./group-clipboard-links.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
 
 type SignalClipboardItem = Readonly<{ signal: Signal; groupId: GroupId; index: number }>;
-type GroupClipboardItem = Readonly<{ group: SignalGroup; rows: readonly Signal[]; sourceIndex: number }>;
+type GroupClipboardItem = Readonly<{ group: SignalGroup; rows: readonly Signal[]; sourceIndex: number; cutLinks?: readonly GroupTransactionSignalLink[] }>;
 type SpacerClipboardItem = Readonly<{ spacer: SpacerRow; groupId: GroupId; index: number }>;
 const spacerId = (value: string) => value as SpacerId;
 
@@ -22,7 +23,7 @@ export function useClipboardActions({ application, selection }: { application: E
   const transactionsRef = useRef<readonly Transaction[]>([]);
   const spacerRef = useRef<SpacerClipboardItem | undefined>(undefined);
   const cutSignalsRef = useRef(false);
-  const cutSignalLinksRef = useRef<readonly Readonly<{ transactionId: TransactionId; signalId: SignalId }>[]>([]);
+  const cutSignalLinksRef = useRef<readonly GroupTransactionSignalLink[]>([]);
   const sourceDocumentEpochRef = useRef<number | undefined>(undefined);
   const signalIndexRef = useRef<Readonly<{ signals: readonly Signal[]; groups: readonly SignalGroup[]; byId: ReadonlyMap<SignalId, Signal>; order: ReadonlyMap<SignalId, number>; owner: ReadonlyMap<SignalId, { groupId: GroupId; index: number }>; groupsById: ReadonlyMap<GroupId, SignalGroup> }> | undefined>(undefined);
   const transactionIndexRef = useRef<Readonly<{ transactions: readonly Transaction[]; byId: ReadonlyMap<TransactionId, Transaction>; order: ReadonlyMap<TransactionId, number> }> | undefined>(undefined);
@@ -138,13 +139,18 @@ export function useClipboardActions({ application, selection }: { application: E
     if (value.group) {
       const signalsById = new Map(value.document.signals.map((signal) => [signal.id, signal]));
       const rows = value.group.rows.flatMap((rowId) => signalsById.has(rowId as SignalId) ? [signalsById.get(rowId as SignalId)!] : []);
-      setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group) } });
       const groupSignalIds = value.group.rows.filter((rowId) => signalsById.has(rowId as SignalId)) as SignalId[];
+      const groupSignalIdSet = new Set(groupSignalIds);
+      const cutLinks = captureGroupTransactionLinks(value.document.transactions, groupSignalIdSet);
       const commands: SemanticCommand[] = groupSignalIds.length === 0 ? [] : [{ id: nextCommandId("cut_group_signals"), type: "signal.bulkDelete", signalIds: groupSignalIds }];
       commands.push(...value.group.rows.filter((rowId) => !signalsById.has(rowId as SignalId)).map((rowId) => ({ id: nextCommandId("cut_group_spacer"), type: "spacer.delete" as const, spacerId: rowId as SpacerId })));
       commands.push({ id: nextCommandId("cut_group_delete"), type: "group.delete", groupId: value.group.id });
       const result = application.executeBatch(nextCommandId("cut_group"), commands);
-      if (result.ok) { selection.clear(); setStatus(`Cut ${value.group.name} group`); }
+      if (result.ok) {
+        setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group), cutLinks } });
+        selection.clear();
+        setStatus(`Cut ${value.group.name} group`);
+      } else setStatus("Cannot cut Group: one or more rows have dependent Annotations or protected references.");
       return;
     }
     if (value.transactions.length > 0 && value.signals.length === 0 && !value.annotation) {
@@ -226,6 +232,7 @@ export function useClipboardActions({ application, selection }: { application: E
     const sourceSignalsById = new Map(input.rows.map((signal) => [signal.id, signal]));
     const sourceSpacers = new Map<string, SpacerRow>((input.group.spacers ?? []).map((item) => [item.id, item]));
     const newIdByOldId = new Map<string, string>();
+    const newSignalIdByOldId = new Map<SignalId, SignalId>();
     const createdSignals: Signal[] = [];
     const createdSpacers: SpacerRow[] = [];
     for (const rowId of input.group.rows) {
@@ -235,6 +242,7 @@ export function useClipboardActions({ application, selection }: { application: E
         const signal: Signal = { ...source, id };
         createdSignals.push(signal);
         newIdByOldId.set(rowId, id);
+        newSignalIdByOldId.set(rowId as SignalId, id);
       } else {
         const sourceSpacer = sourceSpacers.get(rowId);
         if (!sourceSpacer) { setStatus(`Cannot ${operation} Group: a source row is missing.`); return; }
@@ -249,14 +257,28 @@ export function useClipboardActions({ application, selection }: { application: E
       rows: input.group.rows.map((rowId) => newIdByOldId.get(rowId) as SignalGroup["rows"][number]),
       ...(input.group.spacers === undefined ? {} : { spacers: createdSpacers }),
     };
-    const result = application.execute({
+    const groupCommand: SemanticCommand = {
       id: nextCommandId(`${operation}_group`),
       type: "group.createWithContents",
       group,
       signals: createdSignals,
       index: Math.min(current.signalGroups.length, input.sourceIndex + 1),
-    });
-    if (result.ok) { selection.selectGroup(newGroupId); setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${input.group.name} group`); }
+    };
+    const commands: SemanticCommand[] = [groupCommand];
+    if (operation === "paste" && input.cutLinks && input.cutLinks.length > 0) {
+      const mapped = remapGroupTransactionLinks(input.cutLinks, newSignalIdByOldId);
+      if (!mapped.ok) {
+        setStatus(`Cannot paste Group: a linked source row is missing (${mapped.missingSignalIds.join(", ")}).`);
+        return;
+      }
+      commands.push(...mapped.links.map(({ transactionId, signalId: targetSignalId }) => ({ id: nextCommandId("paste_group_restore_link"), type: "transaction.linkSignal" as const, transactionId, signalId: targetSignalId })));
+    }
+    const result = application.executeBatch(nextCommandId(`${operation}_group_batch`), commands);
+    if (result.ok) {
+      if (operation === "paste" && input.cutLinks?.length) groupRef.current = { ...input, cutLinks: [] };
+      selection.selectGroup(newGroupId);
+      setStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${input.group.name} group`);
+    } else setStatus(`Cannot ${operation} Group: its linked references could not be preserved.`);
   };
   const createAnnotation = (source: Annotation, operation: "paste" | "duplicate") => {
     const annotation = { ...source, id: nextEntityId("annotation", document()) as AnnotationId };
