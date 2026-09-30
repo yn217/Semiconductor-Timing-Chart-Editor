@@ -6,6 +6,40 @@ import { buildSnapIndex } from "../../apps/editor/src/runtime/snap-index.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("buildSnapIndex row lookup", () => {
+  it("preserves a sparse geometry boundary index instead of probing the full display timeline", () => {
+    const source = canonicalFixture();
+    const signal = source.signals.find((item) => item.type !== "commentRow")!;
+    const document = {
+      ...source,
+      signals: [signal],
+      bookmarks: [],
+      annotations: [],
+      timeline: { ...source.timeline, referenceClock: signal.id, cycleCount: 10_000 },
+    };
+    const boundaries = [0, 5_000, 10_000].map((cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle / 10, y: 0 } }));
+    let findCalls = 0;
+    let boundaryIndexReads = 0;
+    const boundedMap = {
+      signalId: signal.id,
+      cycleBoundaryEntries: () => { boundaryIndexReads += 1; return boundaries; },
+      find: (anchor: { cycle: number; point: string }) => {
+        findCalls += 1;
+        const entry = boundaries.find((candidate) => candidate.cycle === anchor.cycle && candidate.point === anchor.point);
+        return entry ? { signalId: signal.id, anchor: anchor as never, point: entry.position } : undefined;
+      },
+    };
+    const index = buildSnapIndex(
+      document,
+      { rowLayout: [{ rowId: signal.id, y: 12 }] } as never,
+      new Map([[signal.id, boundedMap]]),
+      new DisplayTimeMappingCache().get(document.timeline, document.timeGroups),
+    );
+
+    expect(boundaryIndexReads).toBeGreaterThan(0);
+    expect(index.entries().filter((candidate) => candidate.kind === "cycle-boundary").map((candidate) => candidate.anchor.cycle)).toEqual([0, 5_000, 10_000]);
+    expect(findCalls).toBeLessThan(64);
+  });
+
   it("keeps only canonical Signal rows while preserving their projected Y positions", () => {
     const document = canonicalFixture();
     const signal = document.signals.find((item) => item.type !== "commentRow")!;

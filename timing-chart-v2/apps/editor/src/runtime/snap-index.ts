@@ -1,5 +1,5 @@
 import type { CanonicalDocument, SemanticAnchor, SignalId } from "@timing-chart-v2/schema";
-import { resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap } from "@timing-chart-v2/geometry";
+import { resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryEntry, type LocalGeometryMap } from "@timing-chart-v2/geometry";
 import type { DisplayTimeMapping, RenderProjection } from "@timing-chart-v2/projection";
 
 export function buildSnapIndex(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, service = new SemanticSnapCandidateService(), xScale = 1): ImmutableSnapIndex {
@@ -15,6 +15,17 @@ export function buildSnapIndex(document: CanonicalDocument, projection: RenderPr
       const sharedBoundary = anchor.point === "cycle-start" ? referenceMap?.find({ ...anchor, ...(axisOwnerSignalId === undefined ? {} : { signalId: axisOwnerSignalId }) })?.point : undefined;
       return { ...local, point: { ...local.point, x: (sharedBoundary?.x ?? local.point.x) * xScale } };
     },
+    // Keep the source map's bounded semantic boundary index through the
+    // screen-coordinate adapter. Dropping this optional capability made the
+    // candidate service fall back to probing every display cycle on large
+    // documents, even though the underlying geometry was already windowed.
+    ...(map.cycleBoundaryEntries === undefined ? {} : {
+      cycleBoundaryEntries: (): readonly LocalGeometryEntry[] => map.cycleBoundaryEntries!().map((entry) => {
+        const sharedBoundary = referenceMap?.find({ cycle: entry.cycle, point: "cycle-start", ...(axisOwnerSignalId === undefined ? {} : { signalId: axisOwnerSignalId }) })?.point;
+        return { ...entry, position: { ...entry.position, x: (sharedBoundary?.x ?? entry.position.x) * xScale } };
+      }),
+    }),
+    ...(map.edgeEntries === undefined ? {} : { edgeEntries: () => map.edgeEntries!() }),
   }]));
   return service.build({
     document,
