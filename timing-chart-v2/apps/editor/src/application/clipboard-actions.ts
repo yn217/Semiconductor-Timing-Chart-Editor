@@ -159,9 +159,8 @@ export function useClipboardActions({ application, selection }: { application: E
     const allocateId = createEntityIdAllocator(current);
     const selectedSignalId = selection.refs.signalId.current;
     const selectedGroup = placement === "current-selection" ? current.signalGroups.find((item) => selectedSignalId !== undefined && item.rows.includes(selectedSignalId)) : undefined;
-    const commands: SemanticCommand[] = [];
+    const createdByGroup = new Map<GroupId, { target: SignalGroup; signals: Signal[] }>();
     const created: Signal[] = [];
-    const insertedByGroup = new Map<GroupId, number>();
     for (const source of input) {
       const target = selectedGroup ?? current.signalGroups.find((item) => item.id === source.groupId) ?? current.signalGroups.at(-1);
       if (!target) continue;
@@ -170,11 +169,18 @@ export function useClipboardActions({ application, selection }: { application: E
       const name = `${source.signal.display.name}_${operation === "duplicate" ? "duplicate" : "copy"}${input.length > 1 ? `_${copyOrdinal}` : ""}`;
       const signal: Signal = { ...source.signal, id, name, display: { ...source.signal.display, name } };
       created.push(signal);
-      const index = target.rows.length + (insertedByGroup.get(target.id) ?? 0);
-      insertedByGroup.set(target.id, (insertedByGroup.get(target.id) ?? 0) + 1);
-      commands.push({ id: nextCommandId(`${operation}_item`), type: signal.type === "commentRow" ? "commentRow.create" : "signal.create", ...(signal.type === "commentRow" ? { commentRow: signal } : { signal }), targetGroupId: target.id, index } as SemanticCommand);
+      const bucket = createdByGroup.get(target.id) ?? { target, signals: [] };
+      bucket.signals.push(signal);
+      createdByGroup.set(target.id, bucket);
     }
-    if (commands.length === 0) return;
+    if (created.length === 0) return;
+    const commands: SemanticCommand[] = [...createdByGroup.values()].map(({ target, signals }) => ({
+      id: nextCommandId(`${operation}_signals`),
+      type: "signal.bulkCreate",
+      signals,
+      targetGroupId: target.id,
+      index: target.rows.length,
+    }));
     const result = application.executeBatch(nextCommandId(operation), commands);
     if (result.ok) {
       const ids = created.map((signal) => signal.id);
