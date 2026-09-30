@@ -6,7 +6,7 @@ test("Bottom settings explain Follow Selection and Pin without a persistent stat
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const before = {
-    revision: await host.getAttribute("data-canonical-revision"),
+    revision: await page.getByTestId("revision-status").innerText(),
     history: await page.getByTestId("history-status").innerText(),
     dirty: await page.getByTestId("dirty-status").innerText(),
     tabs: await page.getByTestId("bottom-tabs").evaluate((element) => element.getBoundingClientRect().toJSON()),
@@ -16,6 +16,12 @@ test("Bottom settings explain Follow Selection and Pin without a persistent stat
   const gearBox = await gear.boundingBox();
   expect(gearBox?.width).toBeGreaterThanOrEqual(28);
   expect(gearBox?.height).toBeGreaterThanOrEqual(28);
+  const iconBox = await gear.locator("svg").boundingBox();
+  expect(iconBox?.width).toBeGreaterThanOrEqual(16);
+  expect(iconBox?.width).toBeLessThanOrEqual(18);
+  expect(iconBox?.height).toBeGreaterThanOrEqual(16);
+  expect(iconBox?.height).toBeLessThanOrEqual(18);
+  await expect(page.getByTestId("bottom-target-mode")).toHaveCount(0);
   await expect(page.getByTestId("bottom-follow-status")).toHaveCount(0);
   await expect(page.getByText("Following Selection", { exact: true })).toHaveCount(0);
   const popover = page.getByTestId("bottom-settings-popover");
@@ -41,7 +47,7 @@ test("Bottom settings explain Follow Selection and Pin without a persistent stat
   await page.keyboard.press("Escape");
   await expect(popover).toBeHidden();
   await expect(gear).toBeFocused();
-  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
-  await expect(page.getByTestId("history-status")).toHaveText(before.history);
-  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty);
+  expect(await page.getByTestId("revision-status").innerText()).toBe(before.revision);
+  expect(await page.getByTestId("history-status").innerText()).toBe(before.history);
+  expect(await page.getByTestId("dirty-status").innerText()).toBe(before.dirty);
 });
