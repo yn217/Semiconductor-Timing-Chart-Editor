@@ -728,6 +728,18 @@ describe("command execution and atomic history", () => {
     expect(session.historyState()).toEqual(historyBefore);
   });
 
+  it("atomically rejects radix-invalid bus literals even when they contain X/Z", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const before = session.getSnapshot();
+    const historyBefore = session.historyState();
+
+    const rejected = session.execute({ id: commandId("cmd_invalid_radix_unknown"), type: "signal.updateValue", signalId: "sig_data" as SignalId, start: 0, value: "4'b2X" });
+
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_BUS_LITERAL" }] });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState()).toEqual(historyBefore);
+  });
+
   it("keeps Event data values and Pulse logic values type-safe on atomic edits", () => {
     const source = canonicalFixture();
     const event: Signal = { id: "sig_event" as SignalId, name: "EVENT", type: "event", role: "internal", source: { instancePath: [], signalName: "EVENT" }, display: { name: "EVENT" }, values: [{ start: 0, value: "NONE" }] };
