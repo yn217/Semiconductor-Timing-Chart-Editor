@@ -51,3 +51,29 @@ test("Bottom settings explain Follow Selection and Pin without a persistent stat
   expect(await page.getByTestId("history-status").innerText()).toBe(before.history);
   expect(await page.getByTestId("dirty-status").innerText()).toBe(before.dirty);
 });
+
+test("Bottom settings gear remains right-aligned and layout-stable at supported viewports", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) {
+    await page.setViewportSize(viewport);
+    const nav = page.getByTestId("bottom-tabs");
+    const gear = page.getByTestId("bottom-settings");
+    await expect(page.getByTestId("bottom-target-mode")).toHaveCount(0);
+    await expect(gear).toBeVisible();
+    const before = {
+      nav: await nav.boundingBox(),
+      content: await page.locator(".bottom-content").boundingBox(),
+      gear: await gear.boundingBox(),
+    };
+    expect(before.gear?.width).toBeGreaterThanOrEqual(28);
+    expect(before.gear!.x + before.gear!.width).toBeLessThanOrEqual(viewport.width);
+    expect(before.nav!.x + before.nav!.width - (before.gear!.x + before.gear!.width)).toBeLessThanOrEqual(10);
+    await openBottomSettings(page);
+    await expect(page.getByTestId("bottom-settings-popover")).toBeVisible();
+    expect(await nav.boundingBox()).toEqual(before.nav);
+    expect(await page.locator(".bottom-content").boundingBox()).toEqual(before.content);
+    await page.keyboard.press("Escape");
+    await expect(gear).toBeFocused();
+  }
+});

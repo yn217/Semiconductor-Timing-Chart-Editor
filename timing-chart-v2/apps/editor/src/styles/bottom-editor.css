@@ -604,7 +604,7 @@
 .transaction-bottom-phase-coverage { margin: 0 0 6px; color: #2f6d4f; font-size: 11px; }
 .transaction-bottom-phase-coverage.is-warning { color: #a25a00; }
 .transaction-list-row-editor input[data-draft-dirty="true"] { background: #fff7e0; border-color: #d9a441; }
-.bottom-settings-anchor { position: relative; display: inline-flex; align-items: center; margin-left: auto; }
+.bottom-settings-anchor { position: relative; display: inline-flex; flex: 1 1 auto; align-items: center; justify-content: flex-end; margin-left: auto; }
 .bottom-settings-button { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; min-width: 28px; padding: 0; border: 1px solid #c3ceda; border-radius: 3px; background: #fff; color: #405c78; cursor: pointer; }
 .bottom-settings-button svg { width: 17px; height: 17px; flex: 0 0 17px; }
 .bottom-settings-button[aria-expanded="true"] { border-color: #3b82d0; background: #eef6ff; }
