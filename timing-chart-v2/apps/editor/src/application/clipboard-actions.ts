@@ -320,7 +320,7 @@ export function useClipboardActions({ application, selection }: { application: E
   const duplicate = () => {
     const value = selected();
     if (value.spacer && value.group) createSpacer({ spacer: value.spacer, groupId: value.group.id, index: value.group.rows.indexOf(value.spacer.id) }, "duplicate");
-    else if (value.group) createGroup({ group: value.group, rows: value.group.rows.flatMap((rowId) => value.document.signals.find((signal) => signal.id === rowId) ?? []), sourceIndex: value.document.signalGroups.indexOf(value.group) }, "duplicate");
+    else if (value.group) createGroup({ group: value.group, rows: value.group.rows.flatMap((rowId) => { const signal = value.signalById?.get(rowId as SignalId); return signal ? [signal] : []; }), sourceIndex: value.document.signalGroups.indexOf(value.group) }, "duplicate");
     else if (value.annotation) createAnnotation(value.annotation, "duplicate");
     else if (value.transactions.length > 0) createTransactions(value.transactions, "duplicate");
     else createSignals(value.signals, "duplicate");
