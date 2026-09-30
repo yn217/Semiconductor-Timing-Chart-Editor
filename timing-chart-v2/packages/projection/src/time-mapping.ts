@@ -359,9 +359,7 @@ export function remapValueChangesToDisplay(values: readonly SignalValueChange[],
   if (mapping.isIdentity) return values;
   const result: SignalValueChange[] = [];
   let lastValue: SignalValueChange["value"] | undefined;
-  const displayForSource = (sourceCycle: number): number => {
-    return firstDisplayAtOrAfterSource(mapping, sourceCycle);
-  };
+  const displayForSource = (sourceCycle: number): number => mapping.displayBoundaryAtOrAfterSource(sourceCycle);
 
   // Map sparse source changes directly to their visible display boundary.
   // Multiple changes inside one folded interval land on its first visible

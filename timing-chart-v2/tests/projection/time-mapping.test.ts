@@ -251,4 +251,17 @@ describe("remapValueChangesToDisplay", () => {
       { start: 11, value: "f" },
     ]);
   });
+
+  it("remaps sparse changes through the shared source-boundary API, without searching display cycles", () => {
+    const mapping = buildDisplayTimeMapping(timeline(100_000), [collapsedGroup("g1", 10, 99_990)]);
+    const boundaryOnly = {
+      ...mapping,
+      displayToSource: (_displayCycle: number): never => { throw new Error("sparse remap must not search display cycles"); },
+    };
+    expect(remapValueChangesToDisplay([{ start: 0, value: 0 }, { start: 50_000, value: 1 }, { start: 99_991, value: 0 }], boundaryOnly)).toEqual([
+      { start: 0, value: 0 },
+      { start: 10, value: 1 },
+      { start: 11, value: 0 },
+    ]);
+  });
 });
