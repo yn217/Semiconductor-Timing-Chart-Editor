@@ -27,4 +27,30 @@ test("10,000 Transactions across 100 small Groups still keeps mounted rows bound
   // 10,000 Transaction total the way it would if every row were also mounted (that would be well over 100,000 nodes).
   const totalDomNodes = await page.evaluate(() => document.querySelectorAll("*").length);
   expect(totalDomNodes).toBeLessThan(25_000);
+
+  // Scrolling must use the single tree viewport snapshot, not measure every group's window wrapper independently.
+  await page.evaluate(() => {
+    const reads = { group: 0, window: 0, groupsRoot: 0, header: 0 };
+    Object.defineProperty(window, "__issue771GeometryReads", { configurable: true, value: reads });
+    const original = Element.prototype.getBoundingClientRect;
+    Element.prototype.getBoundingClientRect = function () {
+      if (this.matches(".transaction-left-tree-group")) reads.group += 1;
+      if (this.matches("[data-tree-windowed='true']")) reads.window += 1;
+      if (this.matches(".transaction-left-tree-groups")) reads.groupsRoot += 1;
+      if (this.matches(".transaction-left-tree-group-header")) reads.header += 1;
+      return original.call(this);
+    };
+  });
+  const scrollEvidence = await page.evaluate(async () => {
+    const tree = document.querySelector<HTMLElement>(".transaction-left-tree")!;
+    tree.scrollTop = 900;
+    tree.dispatchEvent(new Event("scroll"));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    return { scrollTop: tree.scrollTop, reads: (window as typeof window & { __issue771GeometryReads: { group: number; window: number; groupsRoot: number; header: number } }).__issue771GeometryReads };
+  });
+  expect(scrollEvidence.scrollTop).toBeGreaterThan(0);
+  expect(scrollEvidence.reads.group, "scroll must not read geometry once per Group").toBe(0);
+  expect(scrollEvidence.reads.window, "scroll must not read geometry from each virtual row wrapper").toBe(0);
+  expect(scrollEvidence.reads.groupsRoot).toBeLessThanOrEqual(1);
+  expect(scrollEvidence.reads.header).toBeLessThanOrEqual(1);
 });
