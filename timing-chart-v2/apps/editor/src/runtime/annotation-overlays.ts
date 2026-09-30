@@ -12,30 +12,54 @@ export const annotationFields = ["anchor", "start", "end", "from", "to"] as cons
 const BUCKET_CYCLES = 256;
 const WIDE_BUCKETS = 16;
 const INDEX_THRESHOLD = 256;
-interface AnnotationTimeIndex { readonly buckets: ReadonlyMap<number, readonly number[]>; readonly wide: readonly number[] }
+interface AnnotationTimeIndex { readonly buckets: ReadonlyMap<number, readonly number[]>; readonly wide: readonly number[]; readonly byId: ReadonlyMap<string, number> }
 const annotationTimeIndexes = new WeakMap<readonly Annotation[], AnnotationTimeIndex>();
 function annotationTimeIndex(annotations: readonly Annotation[]): AnnotationTimeIndex {
   let index = annotationTimeIndexes.get(annotations);
   if (index) return index;
   const buckets = new Map<number, number[]>();
   const wide: number[] = [];
-  annotations.forEach((annotation, position) => {
-    let min = Number.POSITIVE_INFINITY, max = Number.NEGATIVE_INFINITY;
-    for (const field of annotationFields) { const anchor = annotation[field]; if (anchor) { min = Math.min(min, anchor.cycle); max = Math.max(max, anchor.cycle); } }
-    if (min > max) return; // no anchors: never a time hit
+  const byId = new Map<string, number>();
+  const addInterval = (position: number, min: number, max: number): void => {
+    if (min > max) return;
     const first = Math.floor(min / BUCKET_CYCLES), last = Math.floor(max / BUCKET_CYCLES);
     if (last - first >= WIDE_BUCKETS) { wide.push(position); return; }
     for (let bucket = first; bucket <= last; bucket += 1) { const list = buckets.get(bucket); if (list) list.push(position); else buckets.set(bucket, [position]); }
+  };
+  annotations.forEach((annotation, position) => {
+    byId.set(annotation.id, position);
+    let min = Number.POSITIVE_INFINITY, max = Number.NEGATIVE_INFINITY;
+    for (const field of annotationFields) { const anchor = annotation[field]; if (anchor) { min = Math.min(min, anchor.cycle); max = Math.max(max, anchor.cycle); } }
+    if (min > max) return; // no anchors: never a time hit
+    addInterval(position, min, max);
+    if (annotation.type === "ghostTrace" && annotation.start && annotation.end) {
+      const offset = annotation.traceOffsetCycles ?? 0;
+      addInterval(position, Math.min(annotation.start.cycle, annotation.end.cycle) + offset, Math.max(annotation.start.cycle, annotation.end.cycle) + offset);
+    }
   });
-  index = { buckets, wide };
+  index = { buckets, wide: [...new Set(wide)].sort((a, b) => a - b), byId };
   annotationTimeIndexes.set(annotations, index);
   return index;
 }
 export function annotationsNearViewport(annotations: readonly Annotation[], sourceStart: number, sourceEnd: number): readonly Annotation[] {
+  return indexedAnnotationsNearViewport(annotations, sourceStart, sourceEnd).items;
+}
+export function indexedAnnotationsNearViewport(annotations: readonly Annotation[], sourceStart: number, sourceEnd: number, pinnedIds: ReadonlySet<string> = new Set()): Readonly<{ items: readonly Annotation[]; indexEntriesVisited: number; pinnedInjectedCount: number }> {
   const index = annotationTimeIndex(annotations);
   const positions = new Set<number>(index.wide);
-  for (let bucket = Math.floor(sourceStart / BUCKET_CYCLES); bucket <= Math.floor(sourceEnd / BUCKET_CYCLES); bucket += 1) for (const position of index.buckets.get(bucket) ?? []) positions.add(position);
-  return [...positions].sort((left, right) => left - right).map((position) => annotations[position]!);
+  let indexEntriesVisited = index.wide.length;
+  for (let bucket = Math.floor(sourceStart / BUCKET_CYCLES); bucket <= Math.floor(sourceEnd / BUCKET_CYCLES); bucket += 1) {
+    const entries = index.buckets.get(bucket) ?? [];
+    indexEntriesVisited += entries.length;
+    for (const position of entries) positions.add(position);
+  }
+  let pinnedInjectedCount = 0;
+  for (const id of pinnedIds) {
+    const position = index.byId.get(id);
+    if (position !== undefined && !positions.has(position)) { positions.add(position); pinnedInjectedCount += 1; }
+  }
+  const ordered = [...positions].sort((left, right) => left - right);
+  return { items: ordered.map((position) => annotations[position]!), indexEntriesVisited, pinnedInjectedCount };
 }
 
 function measurementAnchorLabel(annotation: Pick<Annotation, "label" | "measurement" | "start" | "end">): string {
@@ -48,7 +72,7 @@ function measurementAnchorLabel(annotation: Pick<Annotation, "label" | "measurem
   return `${annotation.label} · ${range} · ${annotation.measurement?.anchorKind ?? "threshold"} · Δ ${Math.abs(annotation.end.cycle - annotation.start.cycle)} cycles`;
 }
 
-export type AnnotationOverlayProjectionMetrics = Readonly<{ canonicalCount: number; candidateCount: number; resolvedCount: number; durationMs: number }>;
+export type AnnotationOverlayProjectionMetrics = Readonly<{ canonicalCount: number; candidateCount: number; resolvedCount: number; durationMs: number; indexEntriesVisited: number; pinnedInjectedCount: number }>;
 
 export function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1, viewport?: DisplayTimeViewport, onMetrics?: (metrics: AnnotationOverlayProjectionMetrics) => void): AnnotationOverlayPrimitive[] {
   const startedAt = performance.now();
@@ -57,13 +81,21 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
   const candidate = (annotation: Annotation): boolean => {
     if (!viewport || pinned.has(annotation.id)) return true;
     const anchors = annotationFields.map((field) => annotation[field]).filter((anchor): anchor is NonNullable<typeof anchor> => Boolean(anchor));
-    const timeHit = anchors.some((anchor) => anchor.cycle >= viewport.sourceStart && anchor.cycle <= viewport.sourceEnd)
+    const rawTimeHit = anchors.some((anchor) => anchor.cycle >= viewport.sourceStart && anchor.cycle <= viewport.sourceEnd)
       || Boolean(annotation.start && annotation.end && Math.min(annotation.start.cycle, annotation.end.cycle) <= viewport.sourceEnd && Math.max(annotation.start.cycle, annotation.end.cycle) >= viewport.sourceStart);
+    const offset = annotation.type === "ghostTrace" ? annotation.traceOffsetCycles ?? 0 : 0;
+    const shiftedTraceHit = Boolean(annotation.type === "ghostTrace" && annotation.start && annotation.end
+      && Math.min(annotation.start.cycle, annotation.end.cycle) + offset <= viewport.sourceEnd
+      && Math.max(annotation.start.cycle, annotation.end.cycle) + offset >= viewport.sourceStart);
+    const timeHit = rawTimeHit || shiftedTraceHit;
     const rowHit = anchors.some((anchor) => anchor.signalId !== undefined && rowIds.has(anchor.signalId)) || (annotation.sourceSignalId !== undefined && rowIds.has(annotation.sourceSignalId));
     return timeHit && rowHit;
   };
   // Pinned Annotations are always candidates and may lie outside the time window, so the time index only narrows the rest.
-  const pool = viewport && document.annotations.length > INDEX_THRESHOLD && pinned.size === 0 ? annotationsNearViewport(document.annotations, viewport.sourceStart, viewport.sourceEnd) : document.annotations;
+  const indexed = viewport && document.annotations.length > INDEX_THRESHOLD
+    ? indexedAnnotationsNearViewport(document.annotations, viewport.sourceStart, viewport.sourceEnd, pinned)
+    : undefined;
+  const pool = indexed?.items ?? document.annotations;
   const candidates = pool.filter(candidate);
   const measurementSpans = candidates.flatMap((annotation) => {
     if (annotation.type !== "measurement" || !annotation.start || !annotation.end) return [];
@@ -152,6 +184,6 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
       surfaceHeight: projection.totalHeight,
     }];
   });
-  onMetrics?.({ canonicalCount: document.annotations.length, candidateCount: candidates.length, resolvedCount: overlays.length, durationMs: performance.now() - startedAt });
+  onMetrics?.({ canonicalCount: document.annotations.length, candidateCount: candidates.length, resolvedCount: overlays.length, durationMs: performance.now() - startedAt, indexEntriesVisited: indexed?.indexEntriesVisited ?? document.annotations.length, pinnedInjectedCount: indexed?.pinnedInjectedCount ?? 0 });
   return overlays;
 }

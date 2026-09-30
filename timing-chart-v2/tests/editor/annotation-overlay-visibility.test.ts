@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ImmutableLocalGeometryMap } from "@timing-chart-v2/geometry";
-import { buildDisplayTimeMapping, type RenderProjection } from "@timing-chart-v2/projection";
+import { buildDisplayTimeMapping, type DisplayTimeViewport, type RenderProjection } from "@timing-chart-v2/projection";
 import type { SignalId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { projectAnnotationOverlays } from "../../apps/editor/src/runtime/annotation-overlays.js";
@@ -127,5 +127,33 @@ describe("annotation visibility and semantic targets", () => {
       (firstDisplayCycle + index) * 10 + 5,
     ]).flat());
     expect(displayOverlays[0]?.tracePoints).toEqual(sourceOverlays[0]?.tracePoints);
+  });
+
+  it("keeps a shifted Ghost Trace in the viewport candidate set when raw anchors are offscreen", () => {
+    const source = canonicalFixture();
+    const signal = source.signals[1]!;
+    const ghost = {
+      id: "ghost-shifted" as never, type: "ghostTrace" as const, label: "Shifted", visible: true,
+      sourceSignalId: signal.id, traceOffsetCycles: -100,
+      start: { signalId: signal.id, cycle: 120, point: "cycle-start" as const },
+      end: { signalId: signal.id, cycle: 130, point: "cycle-start" as const },
+    };
+    const fillers = Array.from({ length: 300 }, (_, index) => ({ id: `f${index}` as never, type: "marker" as const, label: "f", visible: true }));
+    const document = { ...source, timeline: { ...source.timeline, cycleCount: 200, end: 200 }, annotations: [...fillers, ghost] };
+    const mapping = buildDisplayTimeMapping(document.timeline, []);
+    const entries = Array.from({ length: 201 }, (_, cycle) => [
+      { cycle, point: "cycle-start" as const, position: { x: cycle * 10, y: 0 } },
+      ...(cycle === 200 ? [] : [{ cycle, point: "transition-center" as const, position: { x: cycle * 10 + 5, y: 0 } }]),
+    ]).flat();
+    const map = new ImmutableLocalGeometryMap(signal.id, entries);
+    const metrics: { candidateCount?: number; indexEntriesVisited?: number } = {};
+    const viewport = { sourceStart: 20, sourceEnd: 31, displayStart: 20, displayEnd: 31, overscanCycles: 0, rowStart: 0, rowEnd: 200, generation: 1, pinnedIds: [] } satisfies DisplayTimeViewport;
+
+    const overlays = projectAnnotationOverlays(document, projectionFor(signal.id, true), new Map([[signal.id, map]]), mapping, 1, viewport, (next) => Object.assign(metrics, next));
+    expect(overlays).toHaveLength(1);
+    expect(overlays[0]?.id).toBe(ghost.id);
+    expect(overlays[0]?.tracePoints?.length).toBeGreaterThan(0);
+    expect(metrics.candidateCount).toBeLessThan(document.annotations.length);
+    expect(metrics.indexEntriesVisited).toBeLessThan(document.annotations.length / 10);
   });
 });

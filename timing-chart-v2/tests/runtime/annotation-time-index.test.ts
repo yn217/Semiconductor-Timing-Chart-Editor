@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Annotation } from "@timing-chart-v2/schema";
-import { annotationFields, annotationsNearViewport } from "../../apps/editor/src/runtime/annotation-overlays.js";
+import { annotationFields, annotationsNearViewport, indexedAnnotationsNearViewport } from "../../apps/editor/src/runtime/annotation-overlays.js";
 
 // #863: the time index must return a superset (in document order) of every Annotation that has a time hit in the viewport.
 const make = (count: number): Annotation[] => Array.from({ length: count }, (_, index) => {
@@ -23,5 +23,22 @@ describe("annotationsNearViewport", () => {
     const expected = annotations.filter((annotation) => timeHit(annotation, start, end));
     for (const annotation of expected) expect(near).toContain(annotation);
     expect(near.length).toBeLessThan(annotations.length); // actually narrows
+  });
+
+  it("injects pinned stable IDs without scanning the full collection and retains document order", () => {
+    const large = make(20_000);
+    const pinned = large[19_999]!;
+    const result = indexedAnnotationsNearViewport(large, 0, 20, new Set([pinned.id]));
+    expect(result.items).toContain(pinned);
+    expect(result.pinnedInjectedCount).toBe(1);
+    expect(result.indexEntriesVisited).toBeLessThan(large.length / 10);
+    const positions = result.items.map((item) => large.indexOf(item));
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+  });
+
+  it.each([[100, 0, 100, 110], [-100, 120, 20, 30]])("indexes Ghost Trace's shifted interval for offset %i", (offset, rawStart, viewStart, viewEnd) => {
+    const ghost = { id: "ghost", type: "ghostTrace", label: "g", visible: true, traceOffsetCycles: offset, start: { cycle: rawStart, point: "cycle-start" }, end: { cycle: rawStart + 10, point: "cycle-end" } } as unknown as Annotation;
+    const result = indexedAnnotationsNearViewport([ghost, ...make(1000)], viewStart, viewEnd);
+    expect(result.items).toContain(ghost);
   });
 });
