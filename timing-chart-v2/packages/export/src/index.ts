@@ -147,6 +147,36 @@ function boundedWaveJson(signal: Exclude<Signal, { readonly type: "commentRow" }
   return { waveJson, semanticValues, windowStart: range.start, renderedCycleCount: windowLength };
 }
 
+interface GhostTraceWindow {
+  readonly traceStart: number;
+  readonly traceEnd: number;
+  readonly sampleStart: number;
+  readonly sampleEnd: number;
+}
+
+function ghostTraceWindow(annotation: Annotation, cycleCount: number, range: Readonly<{ start: number; end: number }>): GhostTraceWindow | undefined {
+  if (annotation.type !== "ghostTrace") return undefined;
+  const firstAnchor = annotation.anchor ?? annotation.start ?? annotation.from;
+  const lastAnchor = annotation.anchor ?? annotation.end ?? annotation.to ?? firstAnchor;
+  if (!firstAnchor || !lastAnchor) return undefined;
+  const offset = annotation.traceOffsetCycles ?? 0;
+  const traceStart = Math.max(0, Math.floor(Math.min(firstAnchor.cycle, lastAnchor.cycle)), Math.ceil(range.start - offset));
+  const traceEnd = Math.min(cycleCount, Math.ceil(Math.max(firstAnchor.cycle, lastAnchor.cycle)), Math.floor(range.end - offset));
+  if (traceEnd < traceStart) return undefined;
+  const firstSample = traceStart + offset;
+  const lastSample = traceEnd + offset;
+  if (lastSample < 0 || firstSample > cycleCount) return undefined;
+  const sampleStart = Math.max(0, Math.floor(firstSample));
+  const sampleEnd = Math.min(cycleCount, Math.floor(Math.min(cycleCount, lastSample)) + 1);
+  // The trace samples an endpoint at cycleCount using the final rendered slot.
+  // Keep that sample representable by the last non-empty source interval.
+  return { traceStart, traceEnd, sampleStart: Math.min(sampleStart, Math.max(0, cycleCount - 1)), sampleEnd: Math.max(sampleEnd, Math.min(cycleCount, sampleStart + 1)) };
+}
+
+function mergeCycleRange(current: Readonly<{ start: number; end: number }> | undefined, next: Readonly<{ start: number; end: number }>): Readonly<{ start: number; end: number }> {
+  return current === undefined ? next : { start: Math.min(current.start, next.start), end: Math.max(current.end, next.end) };
+}
+
 function anchorPoint(annotation: Annotation, field: "anchor" | "start" | "end" | "from" | "to", document: CanonicalDocument, rowY: ReadonlyMap<SignalId, number>, mapping: DisplayTimeMapping, start: number, cycleWidth: number): { x: number; y: number } | undefined {
   const anchor = annotation[field];
   if (!anchor) return undefined;
@@ -251,14 +281,21 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   const laneIndex = new Map(lanes.map((lane, index) => [lane, index] as const));
   const transactionTop = headerHeight + 14;
   const waveTop = transactionTop + lanes.length * TRANSACTION_HEIGHT + 34;
-  // Ghost traces sample their source wave outside the exported interval when
-  // their offset/anchors require it. Keep those source waves whole until a
-  // trace-specific source window can be calculated safely.
-  const ghostTraceSourceIds = new Set(document.annotations.flatMap((annotation) => annotation.type === "ghostTrace" && annotation.sourceSignalId ? [annotation.sourceSignalId] : []));
   const canBoundWaveforms = settings.scope === "selected-range" && mapping.isIdentity;
+  const waveformRanges = new Map<SignalId, Readonly<{ start: number; end: number }>>();
+  if (canBoundWaveforms) {
+    for (const signal of waveSignals) waveformRanges.set(signal.id, range);
+    for (const annotation of document.annotations) {
+      const traceWindow = ghostTraceWindow(annotation, document.timeline.cycleCount, range);
+      if (traceWindow && annotation.sourceSignalId && waveformRanges.has(annotation.sourceSignalId)) {
+        waveformRanges.set(annotation.sourceSignalId, mergeCycleRange(waveformRanges.get(annotation.sourceSignalId), { start: traceWindow.sampleStart, end: traceWindow.sampleEnd }));
+      }
+    }
+  }
   const renderedWaves = waveSignals.map((signal, index) => {
-    const bounded = canBoundWaveforms && !ghostTraceSourceIds.has(signal.id)
-      ? boundedWaveJson(signal, document.timeline.cycleCount, range, document.enumDefinitions)
+    const boundedRange = waveformRanges.get(signal.id);
+    const bounded = canBoundWaveforms && boundedRange
+      ? boundedWaveJson(signal, document.timeline.cycleCount, boundedRange, document.enumDefinitions)
       : undefined;
     const displayValues = signal.type === "clock" || bounded !== undefined ? undefined : remapValueChangesToDisplay(signal.values, mapping);
     const displaySignal = signal.type === "clock"
@@ -409,15 +446,12 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const sourceWave = annotation.type === "ghostTrace" && annotation.sourceSignalId ? renderedWaveById.get(annotation.sourceSignalId) : undefined;
     const tracePoints = sourceWave && firstAnchor && lastAnchor ? (() => {
       const offset = annotation.traceOffsetCycles ?? 0;
+      const boundedTraceWindow = canBoundWaveforms ? ghostTraceWindow(annotation, document.timeline.cycleCount, range) : undefined;
       let startCycle = Math.max(0, Math.floor(Math.min(firstAnchor.cycle, lastAnchor.cycle)));
       let endCycle = Math.min(document.timeline.cycleCount, Math.ceil(Math.max(firstAnchor.cycle, lastAnchor.cycle)));
-      if (canBoundWaveforms) {
-        // In identity time, a trace point is retained only when its sampled
-        // source cycle (cycle + offset) intersects the selected display range.
-        // Intersect that interval before iterating instead of walking a long
-        // annotation span and discarding almost every point afterward.
-        startCycle = Math.max(startCycle, Math.ceil(range.start - offset));
-        endCycle = Math.min(endCycle, Math.floor(range.end - offset));
+      if (boundedTraceWindow) {
+        startCycle = Math.max(startCycle, boundedTraceWindow.traceStart);
+        endCycle = Math.min(endCycle, boundedTraceWindow.traceEnd);
       }
       const points: ExportPoint[] = [];
       const traceTokens = effectiveWaveTokens(sourceWave.waveJson.wave);
@@ -427,7 +461,8 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
         if (sourceCycle < 0 || sourceCycle > document.timeline.cycleCount) continue;
         const displayCycle = toDisplayPosition(mapping, sourceCycle);
         if (displayCycle < range.start || displayCycle > range.end) continue;
-        points.push({ x: LABEL_WIDTH + (displayCycle - range.start) * cycleWidth, y: traceYForWaveToken((traceTokens[Math.max(0, Math.min(traceTokens.length - 1, Math.floor(sourceCycle / tracePeriod)))] ?? "0"), rowY.get(sourceWave.signal.id) ?? first.y, sourceWave.height) });
+        const localSourceCycle = sourceCycle - sourceWave.windowStart;
+        points.push({ x: LABEL_WIDTH + (displayCycle - range.start) * cycleWidth, y: traceYForWaveToken((traceTokens[Math.max(0, Math.min(traceTokens.length - 1, Math.floor(localSourceCycle / tracePeriod)))] ?? "0"), rowY.get(sourceWave.signal.id) ?? first.y, sourceWave.height) });
       }
       return points.length > 1 ? points : undefined;
     })() : undefined;

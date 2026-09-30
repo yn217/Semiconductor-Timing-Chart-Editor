@@ -300,7 +300,7 @@ describe("deterministic document export", () => {
     expect(svg).toContain('stroke-dasharray="6 4"');
   });
 
-  it("bounds selected-range Ghost Trace point generation while retaining its full source waveform", () => {
+  it("bounds selected-range Ghost Trace source waveform to the selected and sampled intervals", () => {
     const base = canonicalFixture();
     const source = base.signals[1]!;
     const document = {
@@ -311,9 +311,13 @@ describe("deterministic document export", () => {
     };
     const scene = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 40, end: 45 } });
     const ghost = scene.annotations.find((annotation) => annotation.id === "ann_long_ghost");
+    const fullGhost = buildExportScene(document, { format: "svg", scope: "document" }).annotations.find((annotation) => annotation.id === "ann_long_ghost");
 
     expect(ghost?.tracePoints).toHaveLength(6);
-    expect(JSON.parse(scene.waveforms.find((wave) => wave.signalId === source.id)!.waveJson).wave).toHaveLength(100);
+    expect(ghost?.tracePoints?.map((point) => point.y)).toEqual(fullGhost?.tracePoints?.slice(40, 46).map((point) => point.y));
+    const ghostSource = scene.waveforms.find((wave) => wave.signalId === source.id)!;
+    expect(JSON.parse(ghostSource.waveJson).wave).toHaveLength(6);
+    expect(ghostSource.cropX).toBe(0);
     expect(JSON.parse(scene.waveforms.find((wave) => wave.signalId === base.signals[0]!.id)!.waveJson).wave).toHaveLength(5);
   });
 
