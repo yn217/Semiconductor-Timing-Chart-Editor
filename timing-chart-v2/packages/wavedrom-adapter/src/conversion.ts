@@ -188,7 +188,7 @@ function clockToWaveJson(signal: ClockSignal, cycleCount: number, gaps: readonly
 function clockToWaveJsonWindow(source: CanonicalSignalSource, start: number, end: number): WaveJsonSignal {
   const signal = source.signal as ClockSignal;
   const { generator } = signal;
-  if (start % generator.period !== 0 || end % generator.period !== 0) {
+  if (start % generator.period !== 0) {
     throw new WaveDromAdapterError("UNALIGNED_CLOCK_WINDOW", "Bounded clock windows must align to the clock period.");
   }
   const inactive = generator.polarity === "positive" ? 0 : 1;

@@ -20,12 +20,6 @@ test("engineering fixed-work 100x500 Open renders 100 full-span owners", async (
     sourceWindowOverrideCount += 1;
     await route.fulfill({ response, body: source.replace(limit, "FULL_DOCUMENT_WAVEFORM_SIGNAL_CYCLE_LIMIT = 1_000_000") });
   });
-  await page.addInitScript(() => {
-    (globalThis as typeof globalThis & { __fixedWorkLongTasks: number }).__fixedWorkLongTasks = 0;
-    new PerformanceObserver((entries) => {
-      (globalThis as typeof globalThis & { __fixedWorkLongTasks: number }).__fixedWorkLongTasks += entries.getEntries().length;
-    }).observe({ type: "longtask", buffered: true });
-  });
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -54,6 +48,8 @@ test("engineering fixed-work 100x500 Open renders 100 full-span owners", async (
     const marks = JSON.parse(surface.getAttribute("data-open-phase-marks") ?? "{}") as Record<string, number>;
     const counters = JSON.parse(surface.getAttribute("data-session-counters") ?? "{}") as Record<string, number>;
     const waveBatch = JSON.parse(surface.getAttribute("data-open-wave-batch-metrics") ?? "{}") as Record<string, number>;
+    const openStart = marks["open-command-start"] ?? marks["open-start"] ?? 0;
+    const longTaskDurations = performance.getEntriesByType("longtask").filter((entry) => entry.startTime >= openStart && entry.startTime <= performance.now()).map((entry) => entry.duration);
     return {
       presentationReadyMs: durations["presentation-ready"],
       firstVisibleWavePaintedMs: durations["first-visible-wave-painted"],
@@ -62,10 +58,10 @@ test("engineering fixed-work 100x500 Open renders 100 full-span owners", async (
       marks,
       mountedWaveOwners: counters.mountedWaveOwners,
       waveBatch,
+      longTasks: { count: longTaskDurations.length, maxDurationMs: Math.max(0, ...longTaskDurations), durationsMs: longTaskDurations },
     };
   });
   const browserDelta = Object.fromEntries(["TaskDuration", "ScriptDuration", "LayoutDuration", "RecalcStyleDuration", "PaintDuration"].map((name) => [name, ((browserAfter[name] ?? 0) - (browserBefore[name] ?? 0)) * 1_000]));
-  const longTasks = await page.evaluate(() => (globalThis as typeof globalThis & { __fixedWorkLongTasks: number }).__fixedWorkLongTasks);
 
   expect(waveWindows).toHaveLength(100);
   expect(waveWindows.filter((window) => window.start === "0" && window.end === "500")).toHaveLength(100);
@@ -85,12 +81,11 @@ test("engineering fixed-work 100x500 Open renders 100 full-span owners", async (
     renderedOwners: waveWindows,
     measurements,
     browserDelta,
-    longTasks,
     trace: "off",
     userAgent: await page.evaluate(() => navigator.userAgent),
   };
   await testInfo.attach("fixed-work-100x500-open.json", { body: Buffer.from(JSON.stringify(evidence, null, 2)), contentType: "application/json" });
-  console.log(`[fixed-work-100x500] ${JSON.stringify({ ...measurements, browserDelta, longTasks, owners: waveWindows.length, fullSpanOwners: waveWindows.filter((window) => window.start === "0" && window.end === "500").length, trace: "off" })}`);
+  console.log(`[fixed-work-100x500] ${JSON.stringify({ ...measurements, browserDelta, owners: waveWindows.length, fullSpanOwners: waveWindows.filter((window) => window.start === "0" && window.end === "500").length, trace: "off" })}`);
 });
 
 async function browserMetrics(cdp: CDPSession) {

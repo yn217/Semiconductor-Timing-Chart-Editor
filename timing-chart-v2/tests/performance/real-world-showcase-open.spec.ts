@@ -6,11 +6,14 @@ import { startInCycleSample } from "../e2e/cycle-startup.js";
 startInCycleSample(test);
 
 const showcaseFixtures = [
-  { id: 21, file: "21_large_feature_showcase.tcd.json", cycles: 128 },
-  { id: 24, file: "24_protocol_transaction_showcase.tcd.json", cycles: 192 },
+  { id: 21, file: "21_large_feature_showcase.tcd.json", cycles: 128, structure: { signals: 48, transactions: 6, annotations: 12, bookmarks: 8 }, visibleWaveformBudgetMs: 1_000 },
+  { id: 22, file: "22_clockless_annotation_showcase.tcd.json", cycles: 96, structure: { signals: 24, transactions: 2, annotations: 12, bookmarks: 3 } },
+  { id: 23, file: "23_multiclock_cdc_showcase.tcd.json", cycles: 160, structure: { signals: 28, transactions: 2, annotations: 6, bookmarks: 2 } },
+  { id: 24, file: "24_protocol_transaction_showcase.tcd.json", cycles: 192, structure: { signals: 32, transactions: 7, annotations: 5, bookmarks: 3 }, visibleWaveformBudgetMs: 1_000 },
+  { id: 25, file: "25_long_timeline_stress_showcase.tcd.json", cycles: 512, structure: { signals: 32, transactions: 2, annotations: 5, bookmarks: 4 } },
 ] as const;
 
-for (const fixture of showcaseFixtures) test(`real-world #${fixture.id} showcase reaches visible-waveform readiness within the 1s budget`, async ({ page }, testInfo) => {
+for (const fixture of showcaseFixtures) test(`real-world #${fixture.id} showcase opens with its complete feature composition`, async ({ page }, testInfo) => {
   test.setTimeout(60_000);
   await page.setViewportSize({ width: 1_672, height: 941 });
   await page.goto("/");
@@ -23,18 +26,24 @@ for (const fixture of showcaseFixtures) test(`real-world #${fixture.id} showcase
   const file = readFileSync(resolve(process.cwd(), `samples/showcase/${fixture.file}`));
   const document = JSON.parse(file.toString("utf8")) as { document?: { title?: string }; timeline?: { cycleCount?: number }; signals?: unknown[]; transactions?: unknown[]; annotations?: unknown[]; bookmarks?: unknown[] };
   const structure = { signals: document.signals?.length ?? 0, transactions: document.transactions?.length ?? 0, annotations: document.annotations?.length ?? 0, bookmarks: document.bookmarks?.length ?? 0 };
+  expect(document.timeline?.cycleCount).toBe(fixture.cycles);
+  expect(structure).toEqual(fixture.structure);
   const openStartedAt = await page.evaluate(() => performance.now());
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
     name: fixture.file,
     mimeType: "application/json",
     buffer: file,
   });
-  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 45_000 });
+  // Clockless documents may not publish shared idle/readiness flags. The
+  // cross-showcase gate waits for an actual production WaveDrom owner instead.
   await expect.poll(() => host.locator("[data-role='wave-owner']").evaluateAll((owners) => owners.filter((owner) => (owner as HTMLElement).dataset.waveState === "ready").length), { timeout: 45_000 }).toBeGreaterThan(0);
   if (document.document?.title) await expect(page.locator(".app-titlebar h1")).toHaveText(document.document.title);
   const after = await browserMetrics(cdp);
   const evidence = await host.evaluate((surface, input: { readonly start: number; readonly structure: typeof structure }) => {
     const durations = JSON.parse(surface.getAttribute("data-open-phase-durations") ?? "{}") as Record<string, number>;
+    const marks = JSON.parse(surface.getAttribute("data-open-phase-marks") ?? "{}") as Record<string, number>;
+    const openStart = marks["open-command-start"] ?? marks["open-start"] ?? input.start;
+    const longTasks = performance.getEntriesByType("longtask").filter((entry) => entry.startTime >= openStart && entry.startTime <= performance.now()).map((entry) => entry.duration);
     const counters = JSON.parse(surface.getAttribute("data-session-counters") ?? "{}") as Record<string, unknown>;
     const waveBatch = JSON.parse(surface.getAttribute("data-open-wave-batch-metrics") ?? "{}") as Record<string, number>;
     const owners = Array.from(surface.querySelectorAll<HTMLElement>("[data-role='wave-owner']"), (owner) => ({
@@ -42,12 +51,14 @@ for (const fixture of showcaseFixtures) test(`real-world #${fixture.id} showcase
       start: owner.dataset.renderedSourceWindowStart,
       end: owner.dataset.renderedSourceWindowEnd,
       state: owner.dataset.waveState,
+      error: owner.dataset.waveError,
       imageBacked: owner.querySelector("image[data-wave-svg-image]") !== null,
     }));
     return {
       elapsedMs: performance.now() - input.start,
       durations,
       structure: input.structure,
+      longTasks: { count: longTasks.length, maxDurationMs: Math.max(0, ...longTasks), durationsMs: longTasks },
       mountedWaveOwners: counters.mountedWaveOwners,
       projection: {
         calls: counters.projectionCalls,
@@ -78,6 +89,8 @@ for (const fixture of showcaseFixtures) test(`real-world #${fixture.id} showcase
     };
   }, { start: openStartedAt, structure });
   const browserDelta = Object.fromEntries(["TaskDuration", "ScriptDuration", "LayoutDuration", "RecalcStyleDuration", "PaintDuration"].map((name) => [name, ((after[name] ?? 0) - (before[name] ?? 0)) * 1_000]));
+  await testInfo.attach(`showcase-${fixture.id}-open.json`, { body: Buffer.from(JSON.stringify({ fixture: fixture.file, viewport: "1672x941", trace: "off", ...evidence, browserDelta }, null, 2)), contentType: "application/json" });
+  console.log(`[real-world-showcase-open] ${JSON.stringify({ fixture: fixture.file, ...evidence, browserDelta, trace: "off" })}`);
 
   expect(evidence.owners.length).toBeGreaterThan(0);
   expect(document.timeline?.cycleCount).toBe(fixture.cycles);
@@ -85,9 +98,7 @@ for (const fixture of showcaseFixtures) test(`real-world #${fixture.id} showcase
   if (fixture.id === 24) expect(evidence.owners.every((owner) => owner.start === "0" && owner.end === String(fixture.cycles))).toBe(true);
   expect(evidence.waveBatch.renderCount).toBeGreaterThan(0);
   expect(evidence.durations["visible-waveforms-ready"]).toBeGreaterThan(0);
-  expect(evidence.durations["visible-waveforms-ready"]).toBeLessThan(1_000);
-  await testInfo.attach(`showcase-${fixture.id}-open.json`, { body: Buffer.from(JSON.stringify({ fixture: fixture.file, viewport: "1672x941", trace: "off", ...evidence, browserDelta }, null, 2)), contentType: "application/json" });
-  console.log(`[real-world-showcase-open] ${JSON.stringify({ fixture: fixture.file, ...evidence, browserDelta, trace: "off" })}`);
+  if (fixture.visibleWaveformBudgetMs !== undefined) expect(evidence.durations["visible-waveforms-ready"]).toBeLessThan(fixture.visibleWaveformBudgetMs);
 });
 
 test("real-world #24 opens its full Transaction presentation through File > Open", async ({ page }, testInfo) => {
@@ -124,6 +135,9 @@ test("real-world #24 opens its full Transaction presentation through File > Open
   const after = await browserMetrics(cdp);
   const evidence = await host.evaluate((surface, input: { readonly start: number; readonly beforeOpen: typeof beforeOpen }) => {
     const durations = JSON.parse(surface.getAttribute("data-open-phase-durations") ?? "{}") as Record<string, number>;
+    const marks = JSON.parse(surface.getAttribute("data-open-phase-marks") ?? "{}") as Record<string, number>;
+    const openStart = marks["open-command-start"] ?? marks["open-start"] ?? input.start;
+    const longTasks = performance.getEntriesByType("longtask").filter((entry) => entry.startTime >= openStart && entry.startTime <= performance.now()).map((entry) => entry.duration);
     const counters = JSON.parse(surface.getAttribute("data-session-counters") ?? "{}") as Record<string, unknown>;
     const waveBatch = JSON.parse(surface.getAttribute("data-open-wave-batch-metrics") ?? "{}") as Record<string, number>;
     const bars = Array.from(document.querySelectorAll<HTMLElement>("[data-testid='transaction-lanes'] [data-transaction-id]"), (bar) => ({
@@ -134,6 +148,7 @@ test("real-world #24 opens its full Transaction presentation through File > Open
       elapsedUntilSevenBarsMs: performance.now() - input.start,
       mode: surface.closest<HTMLElement>(".cycle-panel")?.dataset.viewMode,
       durations,
+      longTasks: { count: longTasks.length, maxDurationMs: Math.max(0, ...longTasks), durationsMs: longTasks },
       barCount: bars.length,
       bars,
       projectionDelta: {
