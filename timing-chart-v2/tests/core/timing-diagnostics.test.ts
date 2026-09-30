@@ -14,6 +14,28 @@ function withSignals(document: CanonicalDocument, signals: CanonicalDocument["si
 }
 
 describe("derived timing diagnostics", () => {
+  it("recomputes unknown-value diagnostics only for Signals whose semantic inputs changed", () => {
+    const source = canonicalFixture();
+    let unchangedValueVisits = 0;
+    const unchangedValues = new Proxy([{ start: 0, value: "01" }], {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator || property === "forEach" || (typeof property === "string" && /^\\d+$/.test(property))) unchangedValueVisits += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const unchangedSignal = { ...source.signals[1]!, id: "sig_data_2" as SignalId, name: "DATA2", values: unchangedValues };
+    const previous = withSignals(source, [source.signals[0]!, source.signals[1]!, unchangedSignal]);
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    unchangedValueVisits = 0;
+    const next = withSignals(previous, [source.signals[0]!, { ...source.signals[1]!, values: [{ start: 0, value: "X" }] }, unchangedSignal]);
+
+    const incremental = deriveTimingDiagnosticsIfInputsChanged(previous, next, previousDiagnostics);
+    expect(unchangedValueVisits).toBe(0);
+    expect(incremental.recomputed).toBe(true);
+    expect(incremental.diagnostics).toEqual(deriveTimingDiagnostics(next));
+    expect(incremental.diagnostics.find((diagnostic) => diagnostic.entityId === source.signals[1]!.id)).toMatchObject({ code: "UNKNOWN_SIGNAL_VALUE", path: "$.signals[1].values[0].value" });
+  });
+
   it("reuses derived Problems for unrelated immutable edits and invalidates every diagnostic input", () => {
     const source = canonicalFixture();
     const current = withSignals(source, [source.signals[0]!, { ...source.signals[1]!, values: [{ start: 1, value: "X" }] }]);

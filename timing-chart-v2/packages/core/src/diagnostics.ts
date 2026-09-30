@@ -126,32 +126,46 @@ function valueDiagnostics(document: CanonicalDocument, enabled: ReadonlySet<Timi
   const problems: TimingDiagnostic[] = [];
   if (!enabled.has("unknown-value")) return problems;
   document.signals.forEach((signal, signalIndex) => {
-    if (signal.type === "clock" || signal.type === "commentRow") return;
-    const changes = signal.values;
-    if (changes[0] && changes[0].start > 0) {
-      problems.push(signalProblem(
-        "UNINITIALIZED_SIGNAL_VALUE",
-        "unknown-value",
-        signalValuePath(signalIndex, "values", 0, "start"),
-        `Signal '${signal.name}' is unknown before its first value at cycle ${changes[0].start}.`,
-        signal,
-        changes[0].start,
-      ));
-    }
-    changes.forEach((change, changeIndex) => {
-      const token = unknownToken(signal, change.value);
-      if (token === undefined) return;
-      problems.push(signalProblem(
-        "UNKNOWN_SIGNAL_VALUE",
-        "unknown-value",
-        signalValuePath(signalIndex, "values", changeIndex, "value"),
-        `Signal '${signal.name}' contains unknown value '${String(change.value)}' at cycle ${change.start}.`,
-        signal,
-        change.value,
-      ));
-    });
+    problems.push(...signalValueDiagnostics(signal, signalIndex));
   });
   return problems;
+}
+
+function signalValueDiagnostics(signal: Signal, signalIndex: number): TimingDiagnostic[] {
+  if (signal.type === "clock" || signal.type === "commentRow") return [];
+  const problems: TimingDiagnostic[] = [];
+  const changes = signal.values;
+  if (changes[0] && changes[0].start > 0) {
+    problems.push(signalProblem(
+      "UNINITIALIZED_SIGNAL_VALUE",
+      "unknown-value",
+      signalValuePath(signalIndex, "values", 0, "start"),
+      `Signal '${signal.name}' is unknown before its first value at cycle ${changes[0].start}.`,
+      signal,
+      changes[0].start,
+    ));
+  }
+  changes.forEach((change, changeIndex) => {
+    const token = unknownToken(signal, change.value);
+    if (token === undefined) return;
+    problems.push(signalProblem(
+      "UNKNOWN_SIGNAL_VALUE",
+      "unknown-value",
+      signalValuePath(signalIndex, "values", changeIndex, "value"),
+      `Signal '${signal.name}' contains unknown value '${String(change.value)}' at cycle ${change.start}.`,
+      signal,
+      change.value,
+    ));
+  });
+  return problems;
+}
+
+function withRuleMetadata(diagnostic: TimingDiagnostic, ruleId: string): TimingDiagnostic {
+  return {
+    ...diagnostic,
+    ruleId,
+    stableKey: `${ruleId}:${diagnostic.code}:${diagnostic.objectId ?? diagnostic.entityId ?? ""}:${diagnostic.path}${diagnostic.sourceCycle === undefined ? "" : `:cycle:${diagnostic.sourceCycle}`}`,
+  };
 }
 
 function level(value: string | number): "high" | "low" | "unknown" {
@@ -449,14 +463,18 @@ export const TIMING_DIAGNOSTIC_RULES: readonly TimingDiagnosticRule[] = [
   { id: "timing.latency", category: "protocol", evaluate: latencyDiagnostics },
 ];
 
+function enabledDiagnosticCategories(document: CanonicalDocument): ReadonlySet<TimingDiagnosticCategory> {
+  const configured = document.checkSettings.enabledCategories;
+  return new Set<TimingDiagnosticCategory>(configured === undefined ? TIMING_DIAGNOSTIC_CATEGORIES : configured.filter((category): category is TimingDiagnosticCategory => TIMING_DIAGNOSTIC_CATEGORIES.some((known) => known === category)));
+}
+
 /** Derive deterministic, non-persistent timing/protocol Problems from Canonical data. */
 export function deriveTimingDiagnostics(document: CanonicalDocument, options: TimingDiagnosticOptions = {}): readonly TimingDiagnostic[] {
-  const configured = options.enabledCategories ?? document.checkSettings.enabledCategories;
-  const enabled = new Set<TimingDiagnosticCategory>(configured === undefined ? TIMING_DIAGNOSTIC_CATEGORIES : configured.filter((category): category is TimingDiagnosticCategory => TIMING_DIAGNOSTIC_CATEGORIES.some((known) => known === category)));
+  const enabled = options.enabledCategories === undefined ? enabledDiagnosticCategories(document) : new Set<TimingDiagnosticCategory>(options.enabledCategories.filter((category): category is TimingDiagnosticCategory => TIMING_DIAGNOSTIC_CATEGORIES.some((known) => known === category)));
   const indexes = buildTimingDiagnosticIndexes(document, enabled);
   return TIMING_DIAGNOSTIC_RULES.filter((rule) => enabled.has(rule.category))
     .flatMap((rule) => rule.evaluate(document, enabled, indexes)
-    .map((diagnostic) => ({ ...diagnostic, ruleId: rule.id, stableKey: `${rule.id}:${diagnostic.code}:${diagnostic.objectId ?? diagnostic.entityId ?? ""}:${diagnostic.path}${diagnostic.sourceCycle === undefined ? "" : `:cycle:${diagnostic.sourceCycle}`}` })))
+    .map((diagnostic) => withRuleMetadata(diagnostic, rule.id)))
     .sort(diagnosticOrder);
 }
 
@@ -479,6 +497,33 @@ export function deriveTimingDiagnosticsIfInputsChanged(
   if (sharedRuleInputs && (previousDocument.signals === nextDocument.signals
     || (options.timingDiagnosticsUnchanged === true && previousDocument.signals.length === nextDocument.signals.length))) {
     return { diagnostics: previousDiagnostics, recomputed: false };
+  }
+  if (sharedRuleInputs && previousDocument.signals !== nextDocument.signals) {
+    const enabled = enabledDiagnosticCategories(nextDocument);
+    const reusedUnknownValues: TimingDiagnostic[] = [];
+    const previousById = new Map(previousDocument.signals.map((signal, index) => [signal.id, { signal, index }] as const));
+    const previousUnknownById = new Map<SignalId, TimingDiagnostic[]>();
+    for (const diagnostic of previousDiagnostics) {
+      if (diagnostic.category !== "unknown-value" || diagnostic.entityId === undefined) continue;
+      const signalId = diagnostic.entityId as SignalId;
+      const items = previousUnknownById.get(signalId);
+      if (items) items.push(diagnostic);
+      else previousUnknownById.set(signalId, [diagnostic]);
+    }
+    if (enabled.has("unknown-value")) nextDocument.signals.forEach((signal, index) => {
+      const previous = previousById.get(signal.id);
+      const sameValueArray = signal.type === "clock" || signal.type === "commentRow"
+        ? previous?.signal.type === signal.type
+        : previous !== undefined && previous.signal.type !== "clock" && previous.signal.type !== "commentRow" && previous.signal.values === signal.values;
+      if (previous && previous.index === index && previous.signal.name === signal.name && previous.signal.type === signal.type && sameValueArray) {
+        reusedUnknownValues.push(...(previousUnknownById.get(signal.id) ?? []));
+      } else {
+        reusedUnknownValues.push(...signalValueDiagnostics(signal, index).map((diagnostic) => withRuleMetadata(diagnostic, "timing.unknown-value")));
+      }
+    });
+    const remainingCategories = [...enabled].filter((category) => category !== "unknown-value");
+    const otherDiagnostics = deriveTimingDiagnostics(nextDocument, { enabledCategories: remainingCategories });
+    return { diagnostics: [...otherDiagnostics, ...reusedUnknownValues].sort(diagnosticOrder), recomputed: true };
   }
   return { diagnostics: deriveTimingDiagnostics(nextDocument), recomputed: true };
 }
