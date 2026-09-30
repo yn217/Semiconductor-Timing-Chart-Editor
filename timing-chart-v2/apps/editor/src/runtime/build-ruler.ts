@@ -193,7 +193,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   const overlays: HTMLElement[] = [];
   for (const bookmark of document.bookmarks) {
     const displayCycle = mapping.sourceToDisplay(bookmark.start);
-    const containingFold = displayCycle === undefined ? document.timeGroups.find((group) => group.presentation?.collapsed && bookmark.start >= group.start && bookmark.start < group.end) : undefined;
+    const containingFold = displayCycle === undefined ? mapping.collapsedGroupAtSource(bookmark.start) : undefined;
     const anchorCycle = containingFold === undefined ? displayCycle : (containingFold.end < document.timeline.cycleCount ? containingFold.end : Math.max(0, containingFold.start - 1));
     const anchorDisplay = anchorCycle === undefined ? undefined : mapping.sourceToDisplay(anchorCycle);
     if (anchorCycle === undefined || anchorDisplay === undefined) continue;

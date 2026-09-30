@@ -66,6 +66,19 @@ describe("buildDisplayTimeMapping", () => {
     expect(mapping.displayToSource(4)).toBe(14);
   });
 
+  it("resolves the canonical first collapsed group through an indexed half-open lookup", () => {
+    const parent = { ...collapsedGroup("parent", 4, 16), parentId: undefined };
+    const child = { ...collapsedGroup("child", 8, 12), parentId: "parent" as TimeGroupId };
+    const adjacent = collapsedGroup("adjacent", 16, 20);
+    const mapping = buildDisplayTimeMapping(timeline(24), [parent, child, adjacent]);
+
+    expect(mapping.collapsedGroupAtSource(3)).toBeUndefined();
+    expect(mapping.collapsedGroupAtSource(8)?.id).toBe("parent");
+    expect(mapping.collapsedGroupAtSource(15)?.id).toBe("parent");
+    expect(mapping.collapsedGroupAtSource(16)?.id).toBe("adjacent");
+    expect(mapping.collapsedGroupAtSource(20)).toBeUndefined();
+  });
+
   it("uses source as the canonical anchor position and display as its ruler label", () => {
     const mapping = buildDisplayTimeMapping(timeline(20, [{ id: "la1" as never, source: 15, display: 1000 }]), [collapsedGroup("g1", 5, 15)]);
     expect(mapping.labelFor(5)).toBe(1000);

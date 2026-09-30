@@ -10,6 +10,8 @@ export interface DisplayTimeMapping {
   readonly displayToSource: (displayCycle: number) => number | undefined;
   /** First visible display boundary whose source is at or after sourceCycle. */
   readonly displayBoundaryAtOrAfterSource: (sourceCycle: number) => number;
+  /** Canonical first collapsed TimeGroup containing a hidden source position, found through a prebuilt index. */
+  readonly collapsedGroupAtSource: (sourceCycle: number) => TimeGroup | undefined;
   readonly labelFor: (displayCycle: number) => number;
 }
 
@@ -18,6 +20,87 @@ interface FoldInterval {
   readonly end: number;
   readonly removedBefore: number;
   readonly displayStart: number;
+}
+
+interface FoldOwnerSegment {
+  readonly start: number;
+  readonly end: number;
+  readonly groupIndex: number;
+}
+
+function buildFoldOwnerSegments(timeGroups: readonly TimeGroup[]): readonly FoldOwnerSegment[] {
+  const events = new Map<number, { readonly starts: number[]; readonly ends: number[] }>();
+  timeGroups.forEach((group, groupIndex) => {
+    if (!group.presentation?.collapsed || group.end <= group.start) return;
+    const start = events.get(group.start) ?? { starts: [], ends: [] };
+    start.starts.push(groupIndex);
+    events.set(group.start, start);
+    const end = events.get(group.end) ?? { starts: [], ends: [] };
+    end.ends.push(groupIndex);
+    events.set(group.end, end);
+  });
+  if (events.size === 0) return [];
+
+  const points = [...events.keys()].sort((left, right) => left - right);
+  const active = new Uint8Array(timeGroups.length);
+  const heap: number[] = [];
+  const push = (value: number) => {
+    let index = heap.length;
+    heap.push(value);
+    while (index > 0) {
+      const parent = (index - 1) >>> 1;
+      if (heap[parent]! <= value) break;
+      heap[index] = heap[parent]!;
+      index = parent;
+    }
+    heap[index] = value;
+  };
+  const discardInactive = () => {
+    while (heap.length > 0 && active[heap[0]!] === 0) {
+      const tail = heap.pop()!;
+      if (heap.length === 0) break;
+      let index = 0;
+      while (true) {
+        const left = index * 2 + 1;
+        if (left >= heap.length) break;
+        const right = left + 1;
+        const child = right < heap.length && heap[right]! < heap[left]! ? right : left;
+        if (heap[child]! >= tail) break;
+        heap[index] = heap[child]!;
+        index = child;
+      }
+      heap[index] = tail;
+    }
+  };
+
+  const segments: FoldOwnerSegment[] = [];
+  for (let pointIndex = 0; pointIndex < points.length; pointIndex += 1) {
+    const point = points[pointIndex]!;
+    const nextPoint = points[pointIndex + 1];
+    const event = events.get(point)!;
+    for (const index of event.ends) active[index] = 0;
+    for (const index of event.starts) { active[index] = 1; push(index); }
+    discardInactive();
+    const owner = heap[0];
+    if (nextPoint !== undefined && point < nextPoint && owner !== undefined) {
+      const previous = segments[segments.length - 1];
+      if (previous?.end === point && previous.groupIndex === owner) segments[segments.length - 1] = { ...previous, end: nextPoint };
+      else segments.push({ start: point, end: nextPoint, groupIndex: owner });
+    }
+  }
+  return segments;
+}
+
+function foldOwnerAtSource(segments: readonly FoldOwnerSegment[], groups: readonly TimeGroup[], sourceCycle: number): TimeGroup | undefined {
+  let low = 0;
+  let high = segments.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (segments[middle]!.start <= sourceCycle) low = middle + 1;
+    else high = middle;
+  }
+  const segment = low > 0 ? segments[low - 1] : undefined;
+  return segment && sourceCycle < segment.end ? groups[segment.groupIndex] : undefined;
 }
 
 /** Shared viewport query result consumed by time-based projections.  Bounds
@@ -115,11 +198,13 @@ function identityMapping(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">
     sourceToDisplay,
     displayToSource,
     displayBoundaryAtOrAfterSource: (sourceCycle) => Math.min(timeline.cycleCount, Math.max(0, Math.ceil(sourceCycle))),
+    collapsedGroupAtSource: () => undefined,
     labelFor: (displayCycle) => labelForSourceCycle(timeline, displayCycle),
   };
 }
 
 export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): DisplayTimeMapping {
+  const foldOwnerSegments = buildFoldOwnerSegments(timeGroups);
   const collapsedRanges: [number, number][] = [];
   for (const group of timeGroups
     .filter((group) => group.presentation?.collapsed)
@@ -173,6 +258,7 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
     sourceToDisplay,
     displayToSource,
     displayBoundaryAtOrAfterSource,
+    collapsedGroupAtSource: (sourceCycle) => foldOwnerAtSource(foldOwnerSegments, timeGroups, sourceCycle),
     // The exclusive terminal boundary is not a rendered cycle slot and is
     // therefore absent from displayToSource. It must still retain the
     // canonical half-open timeline end label after a fold; never fall back to
