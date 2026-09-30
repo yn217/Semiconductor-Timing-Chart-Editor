@@ -189,4 +189,23 @@ describe("remapValueChangesToDisplay", () => {
     // display cycles: 0,1 -> source 0,1 (value 0); display 2,3 -> source 8,9 (value 1, since 3<=8)
     expect(remapValueChangesToDisplay(values, mapping)).toEqual([{ start: 0, value: 0 }, { start: 2, value: 1 }]);
   });
+
+  it("maps only sparse changes and keeps the last value hidden by a wide fold", () => {
+    const mapping = buildDisplayTimeMapping(timeline(100), [collapsedGroup("g1", 10, 90)]);
+    const values = [
+      { start: 0, value: "a" },
+      { start: 2, value: "b" },
+      { start: 20, value: "c" },
+      { start: 40, value: "d" },
+      { start: 89, value: "e" },
+      { start: 91, value: "f" },
+    ];
+
+    expect(remapValueChangesToDisplay(values, mapping)).toEqual([
+      { start: 0, value: "a" },
+      { start: 2, value: "b" },
+      { start: 10, value: "e" },
+      { start: 11, value: "f" },
+    ]);
+  });
 });

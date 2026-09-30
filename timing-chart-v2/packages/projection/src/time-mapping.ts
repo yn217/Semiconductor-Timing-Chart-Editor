@@ -222,17 +222,41 @@ export function remapValueChangesToDisplay(values: readonly SignalValueChange[],
   if (mapping.isIdentity) return values;
   const result: SignalValueChange[] = [];
   let lastValue: SignalValueChange["value"] | undefined;
-  let cursor = 0;
-  for (let display = 0; display < mapping.displayCycleCount; display += 1) {
-    const source = mapping.displayToSource[display]!;
-    while (cursor + 1 < values.length && values[cursor + 1]!.start <= source) cursor += 1;
-    const active = values[cursor]?.value;
-    if (active === undefined) continue;
-    if (active !== lastValue) {
-      const sourceChange = values[cursor];
-      if (sourceChange) result.push({ ...sourceChange, start: display });
-      lastValue = active;
+  const displayForSource = (sourceCycle: number): number => {
+    let low = 0;
+    let high = mapping.displayToSource.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (mapping.displayToSource[middle]! < sourceCycle) low = middle + 1;
+      else high = middle;
     }
+    return low;
+  };
+
+  // Map sparse source changes directly to their visible display boundary.
+  // Multiple changes inside one folded interval land on its first visible
+  // successor; only the last hidden value can be observed there.
+  let previousDisplay = -1;
+  let pendingAtDisplay: SignalValueChange | undefined;
+  const emitPending = (display: number): void => {
+    if (pendingAtDisplay && pendingAtDisplay.value !== lastValue) {
+      result.push({ ...pendingAtDisplay, start: display });
+      lastValue = pendingAtDisplay.value;
+    } else if (pendingAtDisplay) {
+      lastValue = pendingAtDisplay.value;
+    }
+    pendingAtDisplay = undefined;
+  };
+
+  for (const change of values) {
+    const display = displayForSource(change.start);
+    if (display >= mapping.displayCycleCount) continue;
+    if (display !== previousDisplay) {
+      if (previousDisplay >= 0) emitPending(previousDisplay);
+      previousDisplay = display;
+    }
+    pendingAtDisplay = change;
   }
+  if (previousDisplay >= 0) emitPending(previousDisplay);
   return result;
 }
