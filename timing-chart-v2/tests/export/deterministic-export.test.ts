@@ -228,6 +228,23 @@ describe("deterministic document export", () => {
     expect(JSON.parse(wholeDocument.waveforms[1]!.waveJson).wave).toHaveLength(100);
   });
 
+  it("keeps selected-range clock export bounded when the range ends in a partial final period", () => {
+    const base = canonicalFixture();
+    const sourceClock = base.signals[0] as ClockSignal;
+    const clock: ClockSignal = { ...sourceClock, generator: { ...sourceClock.generator, period: 6 } };
+    const document = { ...base, timeline: { ...base.timeline, end: 100, cycleCount: 100 }, signals: [clock, base.signals[1]!] };
+    const scene = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 97, end: 100 } });
+    const waveform = scene.waveforms.find((item) => item.signalId === clock.id)!;
+    const waveJson = JSON.parse(waveform.waveJson);
+
+    expect(waveJson.wave).toHaveLength(1);
+    expect(waveJson.sourceWindow).toEqual({ start: 96, end: 100 });
+    expect(waveJson.displayWindow).toEqual({ start: 96, end: 100 });
+    expect(waveform.cropX).toBeGreaterThan(0);
+    expect(waveform.width).toBeLessThan(waveform.sourceWidth);
+    expect(waveform.sourceWidth).toBeLessThan(100 * 20);
+  });
+
   it("applies page size, orientation, margin and fit through the shared ExportScene", () => {
     const document = scaleFixture(2);
     const page = { size: "A4" as const, orientation: "portrait" as const, margin: 32, fit: "page" as const };

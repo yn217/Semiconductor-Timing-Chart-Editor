@@ -131,10 +131,14 @@ function boundedWaveJson(signal: Exclude<Signal, { readonly type: "commentRow" }
     const period = signal.generator.period;
     if (!Number.isInteger(period) || period < 1) return undefined;
     const windowStart = Math.floor(range.start / period) * period;
-    const windowEnd = Math.ceil(range.end / period) * period;
-    if (windowEnd <= windowStart || windowEnd > cycleCount) return undefined;
+    const windowEnd = Math.min(Math.ceil(range.end / period) * period, cycleCount);
+    if (windowEnd <= windowStart) return undefined;
     const waveJson = toWaveJsonWindow({ signal, cycleCount, enumDefinitions }, windowStart, windowEnd);
-    return { waveJson, semanticValues: [], windowStart, renderedCycleCount: windowEnd - windowStart };
+    // WaveDrom expands the final partial slot to its full period. Keep the
+    // rendered cycle width aligned with that artifact while cropping to the
+    // real document range below.
+    const renderedCycleCount = Math.ceil((windowEnd - windowStart) / period) * period;
+    return { waveJson, semanticValues: [], windowStart, renderedCycleCount };
   }
   const windowLength = range.end - range.start;
   const localSignal = { ...signal, values: valueChangesForWindow(signal, range.start, range.end) };
@@ -256,10 +260,10 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const bounded = canBoundWaveforms && !ghostTraceSourceIds.has(signal.id)
       ? boundedWaveJson(signal, document.timeline.cycleCount, range, document.enumDefinitions)
       : undefined;
-    const displayValues = signal.type === "clock" ? undefined : remapValueChangesToDisplay(signal.values, mapping);
+    const displayValues = signal.type === "clock" || bounded !== undefined ? undefined : remapValueChangesToDisplay(signal.values, mapping);
     const displaySignal = signal.type === "clock"
       ? { ...signal, ...(signal.enable ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
-      : { ...signal, values: displayValues! };
+      : { ...signal, values: displayValues ?? signal.values };
     const waveJson = bounded?.waveJson ?? toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions });
     const semanticValues = bounded?.semanticValues ?? (signal.type !== "clock" && valueSignalWaveDomain(signal.type) === "data" ? displayValues!.map((change) => String(change.value)) : undefined);
     const svgMarkup = renderWaveJsonMarkup(waveJson, index, semanticValues);
