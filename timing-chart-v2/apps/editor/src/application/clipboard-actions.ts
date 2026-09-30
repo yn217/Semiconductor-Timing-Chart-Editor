@@ -101,11 +101,12 @@ export function useClipboardActions({ application, selection }: { application: E
       return;
     }
     if (value.group) {
-      const rows = value.group.rows.flatMap((rowId) => value.document.signals.find((signal) => signal.id === rowId) ?? []);
+      const signalsById = new Map(value.document.signals.map((signal) => [signal.id, signal]));
+      const rows = value.group.rows.flatMap((rowId) => signalsById.has(rowId as SignalId) ? [signalsById.get(rowId as SignalId)!] : []);
       setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group) } });
-      const commands: SemanticCommand[] = value.group.rows.map((rowId) => value.document.signals.some((signal) => signal.id === rowId)
-        ? { id: nextCommandId("cut_group_signal"), type: "signal.delete", signalId: rowId as SignalId }
-        : { id: nextCommandId("cut_group_spacer"), type: "spacer.delete", spacerId: rowId as SpacerId });
+      const groupSignalIds = value.group.rows.filter((rowId) => signalsById.has(rowId as SignalId)) as SignalId[];
+      const commands: SemanticCommand[] = groupSignalIds.length === 0 ? [] : [{ id: nextCommandId("cut_group_signals"), type: "signal.bulkDelete", signalIds: groupSignalIds }];
+      commands.push(...value.group.rows.filter((rowId) => !signalsById.has(rowId as SignalId)).map((rowId) => ({ id: nextCommandId("cut_group_spacer"), type: "spacer.delete" as const, spacerId: rowId as SpacerId })));
       commands.push({ id: nextCommandId("cut_group_delete"), type: "group.delete", groupId: value.group.id });
       const result = application.executeBatch(nextCommandId("cut_group"), commands);
       if (result.ok) { selection.clear(); setStatus(`Cut ${value.group.name} group`); }
@@ -125,7 +126,7 @@ export function useClipboardActions({ application, selection }: { application: E
     }
     if (value.signals.length === 0) { setStatus("Select a signal, Comment Row, Annotation, or Transaction to cut"); return; }
     setClipboard({ signals: value.signals, cutSignals: true });
-    const result = application.executeBatch(nextCommandId("cut"), value.signals.map(({ signal }) => ({ id: nextCommandId("cut_item"), type: "signal.delete" as const, signalId: signal.id })));
+    const result = application.execute({ id: nextCommandId("cut"), type: "signal.bulkDelete", signalIds: value.signals.map(({ signal }) => signal.id) });
     if (result.ok) { selection.clear(); setStatus(value.signals.length === 1 ? `Cut ${value.signals[0]!.signal.display.name}` : `Cut ${value.signals.length} signals`); }
   };
 
@@ -244,7 +245,7 @@ export function useClipboardActions({ application, selection }: { application: E
     const result = value.transactions.length > 1 ? application.executeBatch(nextCommandId("route_delete_transactions"), value.transactions.map((transaction) => ({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete" as const, transactionId: transaction.id })))
       : value.transaction ? application.execute({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId: value.transaction.id })
       : value.annotation ? application.execute({ id: nextCommandId("route_delete_annotation"), type: "annotation.delete", annotationId: value.annotation.id })
-      : value.signals.length > 1 ? application.executeBatch(nextCommandId("route_delete_selection"), value.signals.map(({ signal }) => ({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId: signal.id })))
+      : value.signals.length > 1 ? application.execute({ id: nextCommandId("route_delete_selection"), type: "signal.bulkDelete", signalIds: value.signals.map(({ signal }) => signal.id) })
       : value.signals[0] ? application.execute({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId: value.signals[0].signal.id })
       : value.spacer ? application.execute({ id: nextCommandId("route_delete_spacer"), type: "spacer.delete", spacerId: value.spacer.id })
       : value.group ? application.execute({ id: nextCommandId("route_delete_group"), type: "group.delete", groupId: value.group.id }) : undefined;

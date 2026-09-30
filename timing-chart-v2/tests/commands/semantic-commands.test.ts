@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { commandPlannerMetrics, commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_CATEGORIES } from "@timing-chart-v2/core";
-import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
+import { DEFAULT_MEASUREMENT_LAYOUT, MAX_MEASUREMENT_LANE, canonicalReferenceMetrics, parseDocument, serializeValidatedCanonicalDocument, type Annotation, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type GroupId, type Signal, type SignalId, type SpacerId, type TransactionGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { valueChangeIdAllocator } from "../../packages/commands/src/value-change-id-allocator.js";
 
@@ -416,6 +416,40 @@ describe("pure Semantic Command planning", () => {
     expect(session.redo().ok).toBe(true);
     expect(session.getSnapshot().document.timeline.referenceClock).toBeUndefined();
     expect(session.getSnapshot().document.signals.some((signal) => signal.id === "sig_clk")).toBe(false);
+  });
+
+  it("bulk-deletes Signals through one indexed dependency query and one exact History action", () => {
+    const source = { ...canonicalFixture(), transactions: [{ id: "txn_bulk_links" as TransactionId, name: "Linked", start: 1, end: 4, linkedSignals: ["sig_clk" as SignalId, "sig_data" as SignalId] }] };
+    const session = new CommandHistorySession(source);
+    const before = canonicalReferenceMetrics();
+    const result = session.execute({ id: commandId("cmd_bulk_signal_delete"), type: "signal.bulkDelete", signalIds: ["sig_data" as SignalId, "sig_clk" as SignalId] });
+    const after = canonicalReferenceMetrics();
+
+    expect(result).toMatchObject({ ok: true, changeSet: { removedSignals: ["sig_data", "sig_clk"], transactionSemantics: ["txn_bulk_links"], timelineSemantics: true } });
+    expect(session.getSnapshot().document.signals).toEqual([]);
+    expect(session.getSnapshot().document.signalGroups[0]?.rows).toEqual([]);
+    expect(session.getSnapshot().document.timeline).not.toHaveProperty("referenceClock");
+    expect(session.getSnapshot().document.transactions[0]?.linkedSignals).toEqual([]);
+    expect(after.targetQueries - before.targetQueries).toBe(1);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(source);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals).toEqual([]);
+  });
+
+  it("rejects bulk deletion atomically when any selected Signal has Annotation dependents", () => {
+    const source = {
+      ...canonicalFixture(),
+      annotations: [{ id: "ann_bulk_guard" as AnnotationId, type: "text" as const, label: "Keep", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 2, point: "cycle-start" as const } }],
+    };
+    const session = new CommandHistorySession(source);
+    const before = session.getSnapshot();
+    const result = session.execute({ id: commandId("cmd_bulk_signal_delete_rejected"), type: "signal.bulkDelete", signalIds: ["sig_clk" as SignalId, "sig_data" as SignalId] });
+
+    expect(result).toMatchObject({ ok: false, reason: "invalid", problems: [expect.objectContaining({ code: "SIGNAL_HAS_DEPENDENTS", path: "$.signalIds" })] });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 0, dirty: false });
   });
 
   it("keeps the reference Clock identity when moving it between Groups", () => {
