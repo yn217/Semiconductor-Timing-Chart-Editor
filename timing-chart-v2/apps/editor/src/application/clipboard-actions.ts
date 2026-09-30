@@ -22,32 +22,49 @@ export function useClipboardActions({ application, selection }: { application: E
   const spacerRef = useRef<SpacerClipboardItem | undefined>(undefined);
   const cutSignalsRef = useRef(false);
   const sourceDocumentEpochRef = useRef<number | undefined>(undefined);
+  const signalIndexRef = useRef<Readonly<{ signals: readonly Signal[]; groups: readonly SignalGroup[]; byId: ReadonlyMap<SignalId, Signal>; order: ReadonlyMap<SignalId, number>; owner: ReadonlyMap<SignalId, { groupId: GroupId; index: number }>; groupsById: ReadonlyMap<GroupId, SignalGroup> }> | undefined>(undefined);
+  const transactionIndexRef = useRef<Readonly<{ transactions: readonly Transaction[]; byId: ReadonlyMap<TransactionId, Transaction>; order: ReadonlyMap<TransactionId, number> }> | undefined>(undefined);
   const document = () => application.runtime.session.current().getSnapshot().document;
+
+  const signalIndexes = (current: ReturnType<typeof document>) => {
+    const cached = signalIndexRef.current;
+    if (cached?.signals === current.signals && cached.groups === current.signalGroups) return cached;
+    const byId = new Map(current.signals.map((signal, index) => [signal.id, signal] as const));
+    const order = new Map(current.signals.map((signal, index) => [signal.id, index] as const));
+    const owner = new Map<SignalId, { groupId: GroupId; index: number }>();
+    for (const group of current.signalGroups) group.rows.forEach((rowId, index) => { if (byId.has(rowId as SignalId)) owner.set(rowId as SignalId, { groupId: group.id, index }); });
+    const groupsById = new Map(current.signalGroups.map((group) => [group.id, group] as const));
+    const next = { signals: current.signals, groups: current.signalGroups, byId, order, owner, groupsById };
+    signalIndexRef.current = next;
+    return next;
+  };
+
+  const transactionIndexes = (current: ReturnType<typeof document>) => {
+    const cached = transactionIndexRef.current;
+    if (cached?.transactions === current.transactions) return cached;
+    const byId = new Map(current.transactions.map((transaction, index) => [transaction.id, transaction] as const));
+    const order = new Map(current.transactions.map((transaction, index) => [transaction.id, index] as const));
+    const next = { transactions: current.transactions, byId, order };
+    transactionIndexRef.current = next;
+    return next;
+  };
 
   const selected = () => {
     const current = document();
     const state = selection.refs.state.current;
-    const group = state.groupId === undefined ? undefined : current.signalGroups.find((item) => item.id === state.groupId);
-    const signalById = new Map(current.signals.map((signal) => [signal.id, signal]));
-    const rowOwnerById = new Map<SignalId, { groupId: GroupId; index: number }>();
-    for (const candidate of current.signalGroups) {
-      candidate.rows.forEach((rowId, index) => {
-        if (signalById.has(rowId as SignalId)) rowOwnerById.set(rowId as SignalId, { groupId: candidate.id, index });
-      });
-    }
+    const signalsIndex = state.signalIds.size > 0 || state.groupId !== undefined ? signalIndexes(current) : undefined;
+    const transactionsIndex = state.transactionIds.size > 0 || state.transactionId !== undefined ? transactionIndexes(current) : undefined;
+    const group = state.groupId === undefined ? undefined : signalsIndex?.groupsById.get(state.groupId);
     return {
       document: current,
       state,
       group,
+      signalById: signalsIndex?.byId,
       spacer: state.spacerId === undefined ? undefined : group?.spacers?.find((item) => item.id === state.spacerId),
       annotation: state.annotationId === undefined ? undefined : current.annotations.find((item) => item.id === state.annotationId),
-      transaction: state.transactionId === undefined ? undefined : current.transactions.find((item) => item.id === state.transactionId),
-      transactions: current.transactions.filter((item) => state.transactionIds.has(item.id)),
-      signals: current.signals.flatMap((signal) => {
-        if (!state.signalIds.has(signal.id)) return [];
-        const owner = rowOwnerById.get(signal.id);
-        return owner ? [{ signal, ...owner }] : [];
-      }),
+      transaction: state.transactionId === undefined ? undefined : transactionsIndex?.byId.get(state.transactionId) ?? current.transactions.find((item) => item.id === state.transactionId),
+      transactions: transactionsIndex === undefined ? [] : [...state.transactionIds].flatMap((id) => { const transaction = transactionsIndex.byId.get(id); return transaction ? [transaction] : []; }).sort((left, right) => transactionsIndex.order.get(left.id)! - transactionsIndex.order.get(right.id)!),
+      signals: signalsIndex === undefined ? [] : [...state.signalIds].flatMap((id) => { const signal = signalsIndex.byId.get(id); const owner = signalsIndex.owner.get(id); return signal && owner ? [{ signal, ...owner }] : []; }).sort((left, right) => signalsIndex.order.get(left.signal.id)! - signalsIndex.order.get(right.signal.id)!),
     };
   };
   const setClipboard = ({ signals = [], group, annotation, transactions = [], spacer, cutSignals = false }: { signals?: readonly SignalClipboardItem[]; group?: GroupClipboardItem; annotation?: Annotation; transactions?: readonly Transaction[]; spacer?: SpacerClipboardItem; cutSignals?: boolean }) => {
@@ -85,8 +102,7 @@ export function useClipboardActions({ application, selection }: { application: E
       setClipboard({ spacer: { spacer: value.spacer, groupId: value.group.id, index: value.group.rows.indexOf(value.spacer.id) } });
       setStatus(`Copied spacer ${value.spacer.id}`);
     } else if (value.group && !value.spacer) {
-      const signalById = new Map(value.document.signals.map((signal) => [signal.id, signal]));
-      const rows = value.group.rows.flatMap((rowId) => { const signal = signalById.get(rowId as SignalId); return signal ? [signal] : []; });
+      const rows = value.group.rows.flatMap((rowId) => { const signal = value.signalById?.get(rowId as SignalId); return signal ? [signal] : []; });
       setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group) } });
       setStatus(`Copied ${value.group.name} group`);
     } else if (value.transactions.length > 0 && value.signals.length === 0 && !value.annotation) {
