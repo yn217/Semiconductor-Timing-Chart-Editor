@@ -96,6 +96,23 @@ describe("derived timing diagnostics", () => {
     expect(previousMapPasses).toBe(1);
   });
 
+  it("reevaluates only changed non-Handshake constraints when Signals and settings are shared", () => {
+    const source = canonicalFixture();
+    const first: Constraint = { id: "constraint_incremental_first", type: "latency", data: {} };
+    const unchanged: Constraint = { id: "constraint_incremental_unchanged", type: "latency", data: {} };
+    const previous = { ...source, constraints: [first, unchanged] };
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    const changedFirst: Constraint = { ...first, data: { triggerSignalId: "missing" } };
+    const expected = { ...previous, constraints: [changedFirst, unchanged] };
+    const expectedDiagnostics = deriveTimingDiagnostics(expected);
+    Object.defineProperty(unchanged, "data", { get() { throw new Error("unchanged constraint must not be reevaluated"); } });
+
+    const incremental = deriveTimingDiagnosticsIfInputsChanged(previous, expected, previousDiagnostics);
+
+    expect(incremental.recomputed).toBe(true);
+    expect(incremental.diagnostics).toEqual(expectedDiagnostics);
+  });
+
   it("reuses derived Problems for unrelated immutable edits and invalidates every diagnostic input", () => {
     const source = canonicalFixture();
     const current = withSignals(source, [source.signals[0]!, { ...source.signals[1]!, values: [{ start: 1, value: "X" }] }]);

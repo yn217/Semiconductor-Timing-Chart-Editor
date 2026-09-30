@@ -481,6 +481,21 @@ export function deriveTimingDiagnostics(document: CanonicalDocument, options: Ti
     .sort(diagnosticOrder);
 }
 
+function evaluateSingleConstraintDiagnostics(document: CanonicalDocument, constraint: CanonicalDocument["constraints"][number], index: number, enabled: ReadonlySet<TimingDiagnosticCategory>, indexes: TimingDiagnosticIndexes): TimingDiagnostic[] {
+  const singleConstraintDocument = { ...document, constraints: [constraint] };
+  const output: TimingDiagnostic[] = [];
+  const append = (diagnostics: readonly TimingDiagnostic[], ruleId: string) => {
+    for (const diagnostic of diagnostics) {
+      const path = diagnostic.path.replace("$.constraints[0]", `$.constraints[${index}]`);
+      output.push(withRuleMetadata({ ...diagnostic, path }, ruleId));
+    }
+  };
+  const type = constraint.type.toLowerCase();
+  if (type === "latency-range" && enabled.has("protocol")) append(latencyRangeDiagnostics(singleConstraintDocument, enabled, indexes), "timing.latency-range");
+  else if (type === "latency" && enabled.has("protocol")) append(latencyDiagnostics(singleConstraintDocument, enabled, indexes), "timing.latency");
+  return output;
+}
+
 /**
  * Reuse a previous timing-diagnostic result when all of its canonical inputs
  * are structurally shared. These are the complete document dependencies of
@@ -500,6 +515,27 @@ export function deriveTimingDiagnosticsIfInputsChanged(
   if (sharedRuleInputs && (previousDocument.signals === nextDocument.signals
     || (options.timingDiagnosticsUnchanged === true && previousDocument.signals.length === nextDocument.signals.length))) {
     return { diagnostics: previousDiagnostics, recomputed: false };
+  }
+  if (previousDocument.signals === nextDocument.signals && previousDocument.checkSettings === nextDocument.checkSettings
+    && previousDocument.constraints !== nextDocument.constraints
+    && previousDocument.constraints.length === nextDocument.constraints.length
+    && previousDocument.constraints.every((constraint, index) => constraint.id === nextDocument.constraints[index]?.id)) {
+    const changedIndexes = nextDocument.constraints.flatMap((constraint, index) => previousDocument.constraints[index] === constraint ? [] : [index]);
+    if (changedIndexes.length === 0) return { diagnostics: deriveTimingDiagnostics(nextDocument), recomputed: true };
+    // Handshake edits can affect shared stable-signal findings from other
+    // Handshake rules. Keep those on the conservative path until the
+    // cross-constraint stability dependency owner can update them together.
+    const touchesHandshake = changedIndexes.some((index) => previousDocument.constraints[index]!.type.toLowerCase() === "handshake"
+      || nextDocument.constraints[index]!.type.toLowerCase() === "handshake");
+    if (!touchesHandshake) {
+      const changedIds = new Set<string>(changedIndexes.map((index) => nextDocument.constraints[index]!.id));
+      const retained = previousDiagnostics.filter((diagnostic) => !(diagnostic.category === "protocol" && diagnostic.objectId !== undefined && changedIds.has(diagnostic.objectId)));
+      if (!enabledDiagnosticCategories(nextDocument).has("protocol")) return { diagnostics: retained, recomputed: true };
+      const enabled = enabledDiagnosticCategories(nextDocument);
+      const indexes = buildTimingDiagnosticIndexes(nextDocument, enabled);
+      const updated = changedIndexes.flatMap((index) => evaluateSingleConstraintDiagnostics(nextDocument, nextDocument.constraints[index]!, index, enabled, indexes));
+      return { diagnostics: [...retained, ...updated].sort(diagnosticOrder), recomputed: true };
+    }
   }
   if (sharedRuleInputs && previousDocument.signals !== nextDocument.signals) {
     const enabled = enabledDiagnosticCategories(nextDocument);
@@ -583,17 +619,10 @@ export function deriveTimingDiagnosticsIfInputsChanged(
         if (!constraintsToReevaluate.has(constraint.id)) return;
         const stabilityOnly = !invalidatedConstraintIds.has(constraint.id);
         const singleConstraintDocument = { ...nextDocument, constraints: [constraint] };
-        const evaluate = (diagnostics: readonly TimingDiagnostic[], ruleId: string) => {
-          for (const diagnostic of diagnostics) {
-            if (stabilityOnly && diagnostic.category !== "stability") continue;
-            const path = diagnostic.path.replace("$.constraints[0]", `$.constraints[${constraintIndex}]`);
-            incrementalConstraintDiagnostics.push(withRuleMetadata({ ...diagnostic, path }, ruleId));
-          }
-        };
-        const type = constraint.type.toLowerCase();
-        if (type === "handshake" && (enabled.has("protocol") || enabled.has("stability"))) evaluate(handshakeDiagnostics(singleConstraintDocument, enabled, indexes), "timing.handshake");
-        else if (type === "latency-range" && enabled.has("protocol")) evaluate(latencyRangeDiagnostics(singleConstraintDocument, enabled, indexes), "timing.latency-range");
-        else if (type === "latency" && enabled.has("protocol")) evaluate(latencyDiagnostics(singleConstraintDocument, enabled, indexes), "timing.latency");
+        const diagnostics = constraint.type.toLowerCase() === "handshake"
+          ? handshakeDiagnostics(singleConstraintDocument, enabled, indexes).map((diagnostic) => withRuleMetadata(diagnostic, "timing.handshake"))
+          : evaluateSingleConstraintDiagnostics(nextDocument, constraint, constraintIndex, enabled, indexes);
+        for (const diagnostic of diagnostics) if (!stabilityOnly || diagnostic.category === "stability") incrementalConstraintDiagnostics.push(diagnostic);
       });
     }
     return { diagnostics: [...retainedConstraintDiagnostics, ...incrementalConstraintDiagnostics, ...reusedUnknownValues].sort(diagnosticOrder), recomputed: true };
