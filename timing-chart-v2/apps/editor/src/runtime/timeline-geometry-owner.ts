@@ -36,17 +36,6 @@ export type TimelineGeometryOwnerContext = Readonly<{
   onSnapIndexBuilt: () => void;
 }>;
 
-function firstPointAfter(candidates: readonly { readonly point: { readonly x: number } }[], x: number): number {
-  let low = 0;
-  let high = candidates.length;
-  while (low < high) {
-    const middle = low + Math.floor((high - low) / 2);
-    if (candidates[middle]!.point.x <= x) low = middle + 1;
-    else high = middle;
-  }
-  return low;
-}
-
 /** Read-only authority for semantic -> display -> local -> screen timeline geometry. */
 export class TimelineGeometryOwner {
   readonly mappingCache: DisplayTimeMappingCache;
@@ -58,7 +47,6 @@ export class TimelineGeometryOwner {
   #waveWidthPxPerDisplayCycle: number | undefined;
   #waveOriginPx: number | undefined;
   #snapIndex: ImmutableSnapIndex | undefined;
-  #cycleBoundaryCandidates: ReturnType<ImmutableSnapIndex["entries"]> = [];
   #viewportBoundaryCache: { readonly geometry: LocalGeometryMap; readonly mapping: DisplayTimeMapping; readonly entries: readonly { readonly cycle: number; readonly x: number }[] } | undefined;
   #sourceWindowCache: { readonly document: CanonicalDocument; readonly localStart: number; readonly localEnd: number; readonly overscan: number; readonly result: Readonly<{ start: number; end: number }> } | undefined;
   #requestedSourceCycle: number | undefined;
@@ -277,17 +265,14 @@ export class TimelineGeometryOwner {
 
   /** Resolve a cycle boundary without consulting any rendered Cycle surface. */
   cycleBoundaryAtLocalX(localX: number, zoom: number, snapEnabled: boolean): number | undefined {
-    this.currentSnapIndex();
-    const candidates = this.#cycleBoundaryCandidates;
+    const neighbors = this.currentSnapIndex().neighborsByX(localX, "cycle-boundary");
+    const { before, after } = neighbors;
     if (!snapEnabled) {
-      const terminal = candidates.at(-1);
+      const document = this.context.getDocument();
+      const terminal = after?.anchor.cycle === document.timeline.cycleCount ? after : before?.anchor.cycle === document.timeline.cycleCount ? before : undefined;
       if (terminal && localX >= terminal.point.x - 32 / zoom) return terminal.anchor.cycle;
-      const insertion = firstPointAfter(candidates, localX);
-      return candidates[Math.max(0, insertion - 1)]?.anchor.cycle;
+      return before?.anchor.cycle ?? after?.anchor.cycle;
     }
-    const insertion = firstPointAfter(candidates, localX);
-    const before = candidates[insertion - 1];
-    const after = candidates[insertion];
     if (!before) return after?.anchor.cycle;
     if (!after) return before.anchor.cycle;
     return Math.abs(before.point.x - localX) <= Math.abs(after.point.x - localX) ? before.anchor.cycle : after.anchor.cycle;
@@ -297,13 +282,12 @@ export class TimelineGeometryOwner {
     if (!this.#snapIndex) {
       const document = this.context.getDocument();
       this.#snapIndex = buildSnapIndex(document, this.context.getProjection(), this.geometryMaps, this.mappingCache.get(document.timeline, document.timeGroups), this.snapService, this.#presentationScale);
-      this.#cycleBoundaryCandidates = this.#snapIndex.entries().filter((candidate) => candidate.kind === "cycle-boundary").sort((left, right) => left.point.x - right.point.x);
       this.context.onSnapIndexBuilt();
     }
     return this.#snapIndex;
   }
 
-  invalidateSnapIndex(): void { this.#snapIndex = undefined; this.#cycleBoundaryCandidates = []; this.#viewportBoundaryCache = undefined; this.#sourceWindowCache = undefined; }
+  invalidateSnapIndex(): void { this.#snapIndex = undefined; this.#viewportBoundaryCache = undefined; this.#sourceWindowCache = undefined; }
 
   private viewportBoundaryEntries(owner: LocalGeometryMap, signalId: SignalId, mapping: DisplayTimeMapping, cycleCount: number): readonly { readonly cycle: number; readonly x: number }[] {
     const cached = this.#viewportBoundaryCache;

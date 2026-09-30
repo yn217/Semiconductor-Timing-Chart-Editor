@@ -92,6 +92,56 @@ describe("TimelineGeometryOwner", () => {
     expect(findCalls).toBe(0);
   });
 
+  it("resolves regular lazy cycle boundaries for hit testing without materializing the grid", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const cycleCount = 10_000;
+    const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: cycleCount + 1 }, (_, cycle) => ({
+      cycle,
+      point: "cycle-start" as const,
+      position: { x: 20 + cycle * 40, y: 0 },
+    })));
+    const document = { ...cycleDocument, timeline: { ...cycleDocument.timeline, cycleCount, end: cycleCount } };
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => document,
+      getProjection: () => ({ rowLayout: [{ rowId: clockId, kind: "timing", visible: true, y: 0 }] } as never),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
+
+    const snapIndex = owner.currentSnapIndex();
+    expect(snapIndex.entries().filter((candidate) => candidate.kind === "cycle-boundary")).toHaveLength(0);
+    expect(owner.cycleBoundaryAtLocalX(20 + 5_000 * 40, 1, true)).toBe(5_000);
+    expect(owner.cycleBoundaryAtLocalX(20 + 5_000.75 * 40, 1, false)).toBe(5_000);
+    expect(owner.cycleBoundaryAtLocalX(20 + cycleCount * 40 - 8, 1, false)).toBe(cycleCount);
+  });
+
+  it("limits lazy cycle hit testing to the retained window in a 100k-cycle document", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const retainedEnd = 2_048;
+    const cycleCount = 100_000;
+    const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: retainedEnd + 1 }, (_, cycle) => ({
+      cycle,
+      point: "cycle-start" as const,
+      position: { x: 20 + cycle * 40, y: 0 },
+    })));
+    const document = { ...cycleDocument, timeline: { ...cycleDocument.timeline, cycleCount, end: cycleCount } };
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => document,
+      getProjection: () => ({ rowLayout: [{ rowId: clockId, kind: "timing", visible: true, y: 0 }] } as never),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
+
+    const snapIndex = owner.currentSnapIndex();
+    expect(snapIndex.entries().filter((candidate) => candidate.kind === "cycle-boundary")).toHaveLength(0);
+    expect(owner.cycleBoundaryAtLocalX(20 + 1_024 * 40, 1, true)).toBe(1_024);
+    expect(owner.cycleBoundaryAtLocalX(20 + 50_000 * 40, 1, true)).toBe(retainedEnd);
+  });
+
   it("reuses an exact source-window query across mounted owners until geometry invalidation", () => {
     const clockId = signalId("sig_cycle_clock");
     const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 129 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle * 40, y: 0 } })));

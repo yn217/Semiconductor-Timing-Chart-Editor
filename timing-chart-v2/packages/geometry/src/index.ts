@@ -295,12 +295,14 @@ export interface SnapResult extends SnapCandidate { readonly distance: number }
 /** Lazily supplies regular-grid candidates near a query without materializing the full retained grid. */
 export interface SnapCandidateSource {
   candidatesNear(point: Point, tolerance: number): readonly SnapCandidate[];
+  neighborsByX?(x: number, kind: SnapKind): Readonly<{ before?: SnapCandidate; after?: SnapCandidate }>;
 }
 
 export class ImmutableSnapIndex {
   static readonly #cellSize = 32;
   readonly #candidates: readonly SnapCandidate[];
   readonly #buckets: ReadonlyMap<string, readonly number[]>;
+  readonly #cycleBoundariesByX: readonly SnapCandidate[];
   #queries = 0;
   #candidatesVisited = 0;
   readonly #sources: readonly SnapCandidateSource[];
@@ -308,6 +310,7 @@ export class ImmutableSnapIndex {
   constructor(candidates: readonly SnapCandidate[], sources: readonly SnapCandidateSource[] = []) {
     this.#sources = sources;
     this.#candidates = Object.freeze(candidates.map((candidate) => Object.freeze({ ...candidate, anchor: Object.freeze({ ...candidate.anchor }), point: Object.freeze({ ...candidate.point }) })));
+    this.#cycleBoundariesByX = Object.freeze(this.#candidates.filter((candidate) => candidate.kind === "cycle-boundary").slice().sort((left, right) => left.point.x - right.point.x));
     const buckets = new Map<string, number[]>();
     this.#candidates.forEach((candidate, index) => {
       if (!Number.isFinite(candidate.point.x) || !Number.isFinite(candidate.point.y)) return;
@@ -337,7 +340,34 @@ export class ImmutableSnapIndex {
   }
 
   entries(): readonly SnapCandidate[] {
+    // Lazy sources are queryable and intentionally omitted here. This API is
+    // the bounded, already-materialized owner set, not a grid expansion hook.
     return this.#candidates;
+  }
+
+  neighborsByX(x: number, kind: SnapKind): Readonly<{ before?: SnapCandidate; after?: SnapCandidate }> {
+    let before: SnapCandidate | undefined;
+    let after: SnapCandidate | undefined;
+    const update = (candidates: readonly SnapCandidate[]) => {
+      let low = 0;
+      let high = candidates.length;
+      while (low < high) {
+        const middle = low + Math.floor((high - low) / 2);
+        if (candidates[middle]!.point.x <= x) low = middle + 1;
+        else high = middle;
+      }
+      const prior = candidates[low - 1];
+      const next = candidates[low];
+      if (prior && (!before || prior.point.x >= before.point.x)) before = prior;
+      if (next && (!after || next.point.x <= after.point.x)) after = next;
+    };
+    if (kind === "cycle-boundary") update(this.#cycleBoundariesByX);
+    for (const source of this.#sources) {
+      const neighbors = source.neighborsByX?.(x, kind);
+      if (neighbors?.before && (!before || neighbors.before.point.x >= before.point.x)) before = neighbors.before;
+      if (neighbors?.after && (!after || neighbors.after.point.x <= after.point.x)) after = neighbors.after;
+    }
+    return Object.freeze({ ...(before ? { before } : {}), ...(after ? { after } : {}) });
   }
 
   metrics(): Readonly<{ queries: number; candidatesVisited: number }> {
@@ -428,7 +458,8 @@ export class SemanticSnapCandidateService {
       // Keep the display-range fallback for third-party maps that do not yet
       // expose their bounded boundary index.
       const boundaryEntries = map.cycleBoundaryEntries?.();
-      const regularSource = boundaryEntries && createRegularCycleSnapSource(signal.id, signal.type, y, map, boundaryEntries, input.document.timeline.cycleCount);
+      const eligibleBoundaryEntries = boundaryEntries?.filter((entry) => renderedCycleForSourceCycle(entry.cycle) !== undefined || entry.cycle === input.document.timeline.cycleCount);
+      const regularSource = eligibleBoundaryEntries && createRegularCycleSnapSource(signal.id, signal.type, y, map, eligibleBoundaryEntries, input.document.timeline.cycleCount);
       if (regularSource) sources.push(regularSource);
       if (regularSource) continue;
       const sourceCycles = boundaryEntries === undefined || boundaryEntries.length === 0
@@ -511,6 +542,34 @@ function createRegularCycleSnapSource(signalId: SignalId, signalType: string, ro
         }
       }
       return result;
+    },
+    neighborsByX(x, kind) {
+      if (kind !== "cycle-boundary") return Object.freeze({});
+      const atOrBefore = (value: number): number => {
+        let low = 0;
+        let high = entries.length;
+        while (low < high) {
+          const middle = (low + high) >>> 1;
+          if (entries[middle]!.position.x <= value) low = middle + 1;
+          else high = middle;
+        }
+        return low - 1;
+      };
+      const candidateAt = (index: number): SnapCandidate | undefined => {
+        const boundary = entries[index];
+        if (!boundary) return undefined;
+        const anchor: SemanticAnchor = { signalId, cycle: boundary.cycle, point: "cycle-start" };
+        const local = map.find(anchor);
+        return local ? { kind: "cycle-boundary", anchor, point: { x: local.point.x, y: rowY + local.point.y }, ownerId: signalId } : undefined;
+      };
+      const beforeIndex = atOrBefore(x);
+      const atOrAfterIndex = beforeIndex >= 0 && entries[beforeIndex]!.position.x === x ? beforeIndex : beforeIndex + 1;
+      const before = candidateAt(beforeIndex);
+      const after = candidateAt(atOrAfterIndex);
+      return Object.freeze({
+        ...(before ? { before } : {}),
+        ...(after ? { after } : {}),
+      });
     },
   };
 }
