@@ -67,6 +67,7 @@ import {
 } from "./runtime/presentation-preview.js";
 import type { ContextMenuState } from "./workspace/use-dialog-menu-state.js";
 import { cycleUnitWord } from "./transaction-tc.js";
+import { withStaleImportDiagnostic } from "./application/stale-import-diagnostics.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type Ref<T> = RefObject<T | null>;
@@ -213,21 +214,7 @@ export function useEditorSecondarySurfaces(
 ): EditorSecondarySurfacesOutput {
   const execute = input.command.execute;
   const surfaceCommands = createEditorSurfaceCommandController(input.command);
-  const reportStaleImport = (domain: "annotation" | "event", message: string) => {
-    const detail = `stale-import:${domain}`;
-    input.setRuntimeDiagnostics((current) => [...current.filter((item) => item.detail !== detail), {
-      code: domain === "annotation" ? "ANNOTATION_IMPORT_STALE" : "EVENT_IMPORT_STALE",
-      path: "$.import",
-      message,
-      severity: "warning",
-      operation: `${domain}.import`,
-      operationLabel: domain === "annotation" ? "Import annotations" : "Import Signal events",
-      source: "parser",
-      stage: "commit",
-      recommendation: "Retry the import after the current document and target are stable.",
-      detail,
-    }]);
-  };
+  const reportStaleImport = (domain: "annotation" | "event", message: string) => input.setRuntimeDiagnostics((current) => withStaleImportDiagnostic(current, domain, message));
   const undo = input.command.undo;
   const redo = input.command.redo;
   const { selected, bottom, workspace, dialog, refs } = input;

@@ -10,7 +10,7 @@ import { downloadText } from "./download-text.js";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { ContextMenuPanel, MinimalCycleViewTitleBar, RenameDialog, BulkRegistrationDialog } from "./minimal-cycle-view-panels.js";
-import { MinimalCycleViewRibbonTabs, refreshTreeCollapsedMetadata, refreshTreeFilterPresentation, refreshTreeRovingFocus } from "./minimal-cycle-view-ui.js";
+import { MinimalCycleViewRibbonTabs } from "./minimal-cycle-view-ui.js";
 import { cycleDocument, transactionDemoDocument, v1ReferenceDocument } from "./fixtures-cycle-reference-documents.js";
 import { signalId } from "./minimal-cycle-view-fixture-helpers.js";
 import { useEditorDialogRuntime } from "./application/use-editor-dialog-runtime.js";
@@ -42,11 +42,8 @@ import { createEditorExportController } from "./application/editor-export-contro
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
 import { attachMenuKeyboardNavigation } from "./runtime/interaction-controller.js";
 import { refreshRendererOverlays } from "./runtime/render-coordinator.js";
-import { applyRendererHostSizing } from "./runtime/renderer-host-sizing.js";
-import { refreshRulerRangeSelection, refreshTransactionLinkedRows } from "./runtime/editor-dom-bridge.js";
-function readStartupDocumentPreference(): string | null {
-  try { return window.localStorage.getItem("timing-chart-v2.startup-document"); } catch { return null; }
-}
+import { useEditorDomBridgeEffects } from "./runtime/use-editor-dom-bridge-effects.js";
+import { readStartupDocumentPreference } from "./workspace/startup-document-preference.js";
 
 export function MinimalCycleView() {
   const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : undefined;
@@ -413,27 +410,12 @@ export function MinimalCycleView() {
     if (!followSelection) setFollowSelection(true);
     setContextMenu(undefined);
   }, [documentEpoch]);
-  useEffect(() => {
-    refreshTreeFilterPresentation(host, treeFilter, treeTypeFilter);
-  }, [treePresentationRevision, treeFilter, treeTypeFilter, collapsedGroupIds]);
-  useEffect(() => {
-    refreshTreeCollapsedMetadata(host, collapsedGroupIds);
-  }, [treePresentationRevision, collapsedGroupIds]);
-  useEffect(() => {
-    refreshTreeRovingFocus(host, treeFocusRowIdRef);
-  }, [treePresentationRevision, treeFilter, collapsedGroupIds, selectedId, selectedGroupId]);
+  useEditorDomBridgeEffects({ host, ruler, viewport, timelineRuntimeRef, viewMetricsOwner, treeFilter, treeTypeFilter, treePresentationRevision, collapsedGroupIds, treeFocusRowIdRef, selectedSignalId: selectedId, selectedGroupId, rangeSelectionActive, timelineRange, rangePresentationRevision, cyclesPerTc, leftPaneWidth, frozenPaneWidth, inspectorWidth });
   const diagnostics = useMemo(() => [...validationDiagnostics, ...runtimeDiagnostics], [runtimeDiagnostics, validationDiagnostics]);
   const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
   const commandRouter = useEditorCommandRouter({ application, selection, editActions, selectAllRef });
   const commandRegistry = commandRouter.commandRegistry;
   const executeBatch = commandRouter.executeBatch;
-  useEffect(() => {
-    refreshRulerRangeSelection(ruler, rangeSelectionActive, timelineRange);
-  }, [rangeSelectionActive, timelineRange, rangePresentationRevision]);
-  useEffect(() => {
-    if (timelineRuntimeRef.current) timelineRuntimeRef.current.onViewportResize();
-    else applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() });
-  }, [viewMetricsOwner, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
   useTimelineSurfaceRuntime({
     application,
     documentLifecycle,
@@ -450,13 +432,6 @@ export function MinimalCycleView() {
     signalSplitRatio,
     viewMode,
   });
-  const previousCyclesPerTcRef = useRef(cyclesPerTc);
-  useEffect(() => {
-    if (previousCyclesPerTcRef.current === cyclesPerTc) return;
-    previousCyclesPerTcRef.current = cyclesPerTc;
-    timelineRuntimeRef.current?.refreshRuler();
-    timelineRuntimeRef.current?.refreshGrid();
-  }, [cyclesPerTc]);
   useViewModeTransition(viewMode, forceUpperReprojectRef, timelineRuntimeRef);
   useOverlayPresentationRefresh({
     refreshPlayhead, refreshRangeSelectionBand, host, selectedCycle, playheadPresentationRevision, rangePresentationRevision,

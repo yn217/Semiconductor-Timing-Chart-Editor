@@ -413,7 +413,7 @@ export class SemanticSnapCandidateService {
       const map = input.geometryMaps.get(signal.id);
       if (!map) continue;
       const y = input.rowY.get(signal.id) ?? 0;
-      // Geometry maps may retain only the current rendered/source window.
+      // Geometry maps may retain only the currently rendered source interval.
       // Enumerate those semantic boundaries directly instead of scanning the
       // entire document display range and probing `find()` for absent cycles.
       // Keep the display-range fallback for third-party maps that do not yet

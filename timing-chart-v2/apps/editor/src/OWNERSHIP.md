@@ -8,7 +8,7 @@ controllers are extracted incrementally.
 | Review scope, severity, navigation | `review-workflow.tsx` | parent `UiCommandRegistry` callback | extracted |
 | Problems presentation | `problems-panel.tsx` | parent `UiCommandRegistry` callback | extracted |
 | Viewport, timeline, ruler and grid lifecycle | `runtime/timeline-viewport-runtime.ts`, `runtime/timeline-geometry-owner.ts`, `runtime/view-metrics.ts` | parent `UiCommandRegistry` callback | explicit runtime owners; `minimal-cycle-view.tsx` integrates them |
-| Timeline surface input interactions | `runtime/timeline-surface-interactions.ts` | `UiCommandRegistry` / `EditorApplicationOwner` callbacks | explicit pointer, keyboard, context-menu, and tree-drag owner |
+| Timeline surface input interactions | `runtime/timeline-surface-interactions.ts`, `runtime/tree-keyboard-controller.ts` | `UiCommandRegistry` / `EditorApplicationOwner` callbacks | explicit pointer, viewport keyboard, tree roving focus, context-menu, and tree-drag owners |
 | File open/save/export lifecycle | `application/use-document-lifecycle.ts` | `CommandHistorySession` / SemanticCommand | explicit lifecycle owner; `minimal-cycle-view.tsx` integrates effects |
 | Canonical session and renderer bridge | `application/use-editor-application-owner.ts`, `runtime/editor-application-runtime.ts`, `runtime/waveform-surface-provider.ts`, `runtime/render-coordinator.ts` | `CommandHistorySession` | explicit application/renderer boundary |
 | Document replacement and async render generation | `runtime/document-epoch.ts`, `projection`, `renderer` | `DocumentEpoch` / current session | explicit epoch propagation; stale wave results are dropped |
@@ -73,6 +73,7 @@ controllers are extracted incrementally.
 | Runtime waveform provider | `runtime/waveform-surface-provider.ts` | WaveDrom adapter and geometry registry | PR6 helper split |
 | Runtime timeline presentation refresh | `runtime/timeline-presentation-refresh.ts` | view-only DOM/geometry presentation | PR6 helper split |
 | Runtime renderer host sizing | `runtime/renderer-host-sizing.ts` | view-only DOM sizing | PR6 helper split |
+| Editor DOM bridge effects | `runtime/use-editor-dom-bridge-effects.ts` | view-only React effect adapter over DOM presentation helpers | extracted from the composition shell; owns tree presentation, range-band, resize, and ruler refresh effects |
 | Runtime diagnostics publication | `runtime/runtime-diagnostics.ts` | runtime diagnostics dataset | PR6 helper split |
 
 ## Cycle / Transaction / Combined workspace ownership (#593)
