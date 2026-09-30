@@ -281,9 +281,11 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   const laneIndex = new Map(lanes.map((lane, index) => [lane, index] as const));
   const transactionTop = headerHeight + 14;
   const waveTop = transactionTop + lanes.length * TRANSACTION_HEIGHT + 34;
-  const canBoundWaveforms = settings.scope === "selected-range" && mapping.isIdentity;
+  const canBoundWaveforms = settings.scope === "selected-range";
+  const canBoundSourceWaveforms = canBoundWaveforms && mapping.isIdentity;
   const waveformRanges = new Map<SignalId, Readonly<{ start: number; end: number }>>();
-  if (canBoundWaveforms) {
+  const ghostSourceSignalIds = new Set(document.annotations.flatMap((annotation) => annotation.type === "ghostTrace" && annotation.sourceSignalId ? [annotation.sourceSignalId] : []));
+  if (canBoundSourceWaveforms) {
     for (const signal of waveSignals) waveformRanges.set(signal.id, range);
     for (const annotation of document.annotations) {
       const traceWindow = ghostTraceWindow(annotation, document.timeline.cycleCount, range);
@@ -294,13 +296,14 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   }
   const renderedWaves = waveSignals.map((signal, index) => {
     const boundedRange = waveformRanges.get(signal.id);
-    const bounded = canBoundWaveforms && boundedRange
-      ? boundedWaveJson(signal, document.timeline.cycleCount, boundedRange, document.enumDefinitions)
-      : undefined;
-    const displayValues = signal.type === "clock" || bounded !== undefined ? undefined : remapValueChangesToDisplay(signal.values, mapping);
+    const displayValues = signal.type === "clock" || (canBoundSourceWaveforms && boundedRange !== undefined) ? undefined : remapValueChangesToDisplay(signal.values, mapping);
     const displaySignal = signal.type === "clock"
       ? { ...signal, ...(signal.enable ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
       : { ...signal, values: displayValues ?? signal.values };
+    const foldedRangeIsSafe = mapping.isIdentity || (signal.type !== "clock" && !ghostSourceSignalIds.has(signal.id));
+    const bounded = canBoundWaveforms && foldedRangeIsSafe
+      ? boundedWaveJson(mapping.isIdentity ? signal : displaySignal, mapping.isIdentity ? document.timeline.cycleCount : mapping.displayCycleCount, boundedRange ?? range, document.enumDefinitions)
+      : undefined;
     const waveJson = bounded?.waveJson ?? toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions });
     const semanticValues = bounded?.semanticValues ?? (signal.type !== "clock" && valueSignalWaveDomain(signal.type) === "data" ? displayValues!.map((change) => String(change.value)) : undefined);
     const svgMarkup = renderWaveJsonMarkup(waveJson, index, semanticValues);

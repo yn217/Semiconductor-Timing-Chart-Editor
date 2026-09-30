@@ -484,6 +484,21 @@ describe("deterministic document export", () => {
     expect(document.signals[1]!.values).toHaveLength(4);
   });
 
+  it("bounds selected-range value waveforms after folded source values are remapped to display time", () => {
+    const document = foldedFixture();
+    const scene = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 2, end: 18 }, foldPolicy: "respect" });
+    const dataWave = scene.waveforms.find((wave) => wave.signalId === document.signals[1]!.id)!;
+    const waveJson = JSON.parse(dataWave.waveJson);
+
+    // Source [2,18) maps through [5,15) -> display [2,8), six slots rather than the ten-slot full display.
+    expect(scene.ruler).toMatchObject({ start: 2, end: 8 });
+    expect(waveJson.wave).toHaveLength(6);
+    expect(waveJson.data).toEqual(["0x00", "0xA5", "0xFF", "0x00"]);
+    expect(dataWave.cropX).toBe(0);
+    expect(dataWave.width).toBeCloseTo(scene.ruler.cycleWidth * 6, 5);
+    expect(dataWave.sourceWidth).toBeLessThan(scene.ruler.cycleWidth * 10);
+  });
+
   it("reflects a labelAnchor override in the exported ruler text instead of raw source cycle numbers", () => {
     const scene = buildExportScene(foldedFixture(), { format: "svg", scope: "document", foldPolicy: "respect" });
     const resumeTick = scene.ruler.ticks.find((tick) => tick.cycle === 5);
