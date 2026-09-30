@@ -19,4 +19,25 @@ describe("Signal picker index", () => {
     expect(renamed.byId.get(signals[0]!.id)?.label).toBe("Renamed Clock");
     expect(renamed.entries.find((entry) => entry.id === signals[0]!.id)?.searchText).toContain("renamed clock");
   });
+
+  it("preserves stable-ID lookup across rename, reorder, and group-only replacement", () => {
+    const source = canonicalFixture();
+    const selectedId = source.signals[1]!.id;
+    const renamed = source.signals.map((signal, index) => index === 1
+      ? { ...signal, display: { ...signal.display, name: "Renamed Data" } }
+      : signal);
+    const renamedIndex = signalPickerIndex(renamed);
+    expect(renamedIndex.byId.get(selectedId)?.id).toBe(selectedId);
+    expect(renamedIndex.byId.get(selectedId)?.label).toBe("Renamed Data");
+
+    const reordered = [...renamed].reverse();
+    const reorderedIndex = signalPickerIndex(reordered);
+    expect(reorderedIndex.byId.get(selectedId)?.id).toBe(selectedId);
+    expect(reorderedIndex.byId.get(selectedId)?.label).toBe("Renamed Data");
+    expect(reorderedIndex.entries[0]?.id).toBe(reordered.find((signal) => signal.type !== "commentRow")?.id);
+
+    // Group placement is outside the picker index domain; unchanged Signal collection identity reuses its index.
+    const movedGroupDocument = { ...source, signalGroups: [...source.signalGroups].reverse() };
+    expect(signalPickerIndex(movedGroupDocument.signals)).toBe(signalPickerIndex(source.signals));
+  });
 });
