@@ -117,8 +117,10 @@ describe("buildDisplayTimeMapping", () => {
 describe("DisplayTimeMappingCache", () => {
   it("reuses a mapping when mapping-relevant timeline and fold state are unchanged", () => {
     const cache = new DisplayTimeMappingCache();
-    const first = cache.get(timeline(12), [collapsedGroup("g1", 4, 8)]);
-    const second = cache.get(timeline(12), [collapsedGroup("g1", 4, 8)]);
+    const sourceTimeline = timeline(12);
+    const groups = [collapsedGroup("g1", 4, 8)];
+    const first = cache.get(sourceTimeline, groups);
+    const second = cache.get(sourceTimeline, groups);
 
     expect(second).toBe(first);
     const metrics = cache.metrics();
@@ -141,19 +143,24 @@ describe("DisplayTimeMappingCache", () => {
     const second = cache.get(sourceTimeline, groups);
 
     expect(second).toBe(first);
-    expect(cache.metrics()).toMatchObject({ builds: 1, hits: 1, mappingKeyBuilds: 1 });
+    expect(cache.metrics()).toMatchObject({ builds: 1, hits: 1, mappingKeyBuilds: 0 });
   });
 
-  it("ignores unrelated TimeGroup fields while invalidating on fold geometry", () => {
+  it("rebuilds for any replacement TimeGroup collection so group owner metadata cannot go stale", () => {
     const cache = new DisplayTimeMappingCache();
-    const first = cache.get(timeline(12), [{ ...collapsedGroup("g1", 4, 8), name: "Initial" }]);
-    const renamed = cache.get(timeline(12), [{ ...collapsedGroup("g1", 4, 8), name: "Renamed" }]);
-    const moved = cache.get(timeline(12), [{ ...collapsedGroup("g1", 5, 8), name: "Renamed" }]);
+    const sourceTimeline = timeline(12);
+    const initialGroups = [{ ...collapsedGroup("g1", 4, 8), name: "Initial" }];
+    const first = cache.get(sourceTimeline, initialGroups);
+    const renamedGroups = [{ ...collapsedGroup("g1", 4, 8), name: "Renamed" }];
+    const renamed = cache.get(sourceTimeline, renamedGroups);
+    const movedGroups = [{ ...collapsedGroup("g1", 5, 8), name: "Renamed" }];
+    const moved = cache.get(sourceTimeline, movedGroups);
 
-    expect(renamed).toBe(first);
+    expect(renamed).not.toBe(first);
     expect(moved).not.toBe(first);
-    expect(cache.metrics().builds).toBe(2);
-    expect(cache.metrics().hits).toBe(1);
+    expect(cache.metrics().builds).toBe(3);
+    expect(cache.metrics().hits).toBe(0);
+    expect(renamed.collapsedGroupAtSource(5)?.name).toBe("Renamed");
     expect(cache.metrics().sourceCyclesVisited).toBe(0);
   });
 

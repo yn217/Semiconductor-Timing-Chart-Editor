@@ -285,7 +285,6 @@ export interface DisplayTimeMappingCacheMetrics {
 
 /** Owns the derived display-time mapping for one projection consumer. */
 export class DisplayTimeMappingCache {
-  private key: string | undefined;
   private mapping: DisplayTimeMapping | undefined;
   private builds = 0;
   private hits = 0;
@@ -295,7 +294,6 @@ export class DisplayTimeMappingCache {
   private buildDurationsMs: number[] = [];
   private valueRemapPasses = 0;
   private identityFastPathHits = 0;
-  private mappingKeyBuilds = 0;
   private lastCycleCount: number | undefined;
   private lastLabelAnchors: Timeline["labelAnchors"] | undefined;
   private lastTimeGroups: readonly TimeGroup[] | undefined;
@@ -305,16 +303,9 @@ export class DisplayTimeMappingCache {
       this.hits += 1;
       return this.mapping;
     }
-    this.mappingKeyBuilds += 1;
-    const nextKey = displayTimeMappingKey(timeline, timeGroups);
     this.lastCycleCount = timeline.cycleCount;
     this.lastLabelAnchors = timeline.labelAnchors;
     this.lastTimeGroups = timeGroups;
-    if (this.mapping !== undefined && this.key === nextKey) {
-      this.hits += 1;
-      return this.mapping;
-    }
-    this.key = nextKey;
     const started = Date.now();
     this.mapping = buildDisplayTimeMapping(timeline, timeGroups);
     this.builds += 1;
@@ -338,7 +329,9 @@ export class DisplayTimeMappingCache {
       buildDurationP95Ms: percentile(this.buildDurationsMs, 0.95),
       valueRemapPasses: this.valueRemapPasses,
       identityFastPathHits: this.identityFastPathHits,
-      mappingKeyBuilds: this.mappingKeyBuilds,
+      // Kept as a zero-valued diagnostic field for existing consumers; cache
+      // validity is now strictly collection-identity based and builds no key.
+      mappingKeyBuilds: 0,
     };
   }
 
@@ -349,7 +342,6 @@ export class DisplayTimeMappingCache {
   }
 
   clear(): void {
-    this.key = undefined;
     this.mapping = undefined;
     this.lastCycleCount = undefined;
     this.lastLabelAnchors = undefined;
@@ -361,19 +353,6 @@ function percentile(samples: readonly number[], fraction: number): number {
   if (samples.length === 0) return 0;
   const ordered = [...samples].sort((left, right) => left - right);
   return ordered[Math.min(ordered.length - 1, Math.ceil(ordered.length * fraction) - 1)]!;
-}
-
-function displayTimeMappingKey(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): string {
-  const anchors = timeline.labelAnchors
-    .map((anchor) => `${anchor.source}:${anchor.display}`)
-    .sort()
-    .join(",");
-  const collapsedGroups = timeGroups
-    .filter((group) => group.presentation?.collapsed)
-    .map((group) => `${group.start}:${group.end}:${group.id}`)
-    .sort()
-    .join(",");
-  return `${timeline.cycleCount}|${anchors}|${collapsedGroups}`;
 }
 
 export function remapValueChangesToDisplay(values: readonly SignalValueChange[], mapping: DisplayTimeMapping): readonly SignalValueChange[] {
