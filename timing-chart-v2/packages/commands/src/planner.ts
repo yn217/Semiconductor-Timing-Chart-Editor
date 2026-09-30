@@ -33,7 +33,7 @@ export type CommandPlanResult =
 const fail = (reason: "invalid" | "no-op", code: CommandPolicyCode, path: string, message: string): CommandPlanResult => ({ ok: false, reason, problems: [{ code, path, message }] });
 const timingSignalIds = (document: CanonicalDocument) => document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
 const annotationIds = (document: CanonicalDocument) => document.annotations.map((annotation) => annotation.id);
-const plannerMetrics = { calls: 0, durationMs: 0, affectedSignalCount: 0 };
+const plannerMetrics = { calls: 0, internalPlans: 0, durationMs: 0, affectedSignalCount: 0 };
 
 export function commandPlannerMetrics(): Readonly<typeof plannerMetrics> {
   return Object.freeze({ ...plannerMetrics });
@@ -631,6 +631,7 @@ function moveTimelineRange(document: CanonicalDocument, start: number, end: numb
 }
 
 function planCommandInternal(document: CanonicalDocument, command: SemanticCommand): CommandPlanResult {
+  plannerMetrics.internalPlans += 1;
   if (!isStableId(command.id)) return fail("invalid", "INVALID_COMMAND_ID", "$.id", "Command ID must be a stable ID.");
   switch (command.type) {
     case "document.replace": {
@@ -711,17 +712,30 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
     }
     case "signal.bulkCreate": {
       if (command.signals.length === 0) return fail("no-op", "NO_OP", "$.signals", "Bulk registration requires at least one signal.");
-      let candidate = document;
-      const forward: ChangeSet[] = [];
-      const inverse: ChangeSet[] = [];
+      const groupIndex = document.signalGroups.findIndex((group) => group.id === command.targetGroupId);
+      const group = document.signalGroups[groupIndex];
+      if (!group) return fail("invalid", "GROUP_NOT_FOUND", "$.targetGroupId", `Group '${command.targetGroupId}' does not exist.`);
+      if (!Number.isInteger(command.index) || command.index < 0 || command.index > group.rows.length) return fail("invalid", "INDEX_OUT_OF_RANGE", "$.index", "Signal insertion index is outside the group rows.");
+
+      // Validate the complete batch before constructing replacement collections.
+      const existingIds = new Set(document.signals.map((signal) => signal.id));
+      const incomingIds = new Set<SignalId>();
       for (const [offset, signal] of command.signals.entries()) {
-        const plan = planCommandInternal(candidate, { id: `${command.id}_item_${offset}` as CommandId, type: "signal.create", signal, targetGroupId: command.targetGroupId, index: command.index + offset });
-        if (!plan.ok) return plan;
-        candidate = plan.document;
-        forward.push(plan.changeSet);
-        inverse.unshift(plan.inverseChangeSet);
+        if (existingIds.has(signal.id) || incomingIds.has(signal.id)) {
+          return fail("invalid", "DUPLICATE_ID", `$.signals[${offset}].id`, `Signal '${signal.id}' already exists or is duplicated in this batch.`);
+        }
+        incomingIds.add(signal.id);
       }
-      return { ok: true, document: candidate, changeSet: mergeChangeSets(forward), inverseChangeSet: mergeChangeSets(inverse) };
+
+      const addedSignals = command.signals.map((signal) => signal.id);
+      const rows = [...group.rows];
+      rows.splice(command.index, 0, ...addedSignals);
+      const signalGroups = [...document.signalGroups];
+      signalGroups[groupIndex] = { ...group, rows };
+      const timingSignals = command.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
+      const changeSet: ChangeSet = { addedSignals, rowOrder: addedSignals, waveSemantics: timingSignals, geometryLocal: timingSignals, geometryScreenY: timingSignals, minimapOverview: true };
+      const inverseChangeSet: ChangeSet = { removedSignals: addedSignals, rowOrder: addedSignals, minimapOverview: true };
+      return { ok: true, document: { ...document, signals: [...document.signals, ...command.signals], signalGroups }, changeSet, inverseChangeSet };
     }
     case "signal.delete": return deleteSignals(document, [command.signalId]);
     case "signal.bulkDelete": return deleteSignals(document, command.signalIds);

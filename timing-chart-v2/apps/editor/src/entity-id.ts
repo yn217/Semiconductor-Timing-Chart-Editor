@@ -4,12 +4,22 @@ import { canonicalEntityIds, type CanonicalDocument } from "@timing-chart-v2/sch
 // retained (#275: a module-global Set of every generated id grew without bound across create/delete/New/Open cycles).
 let entitySequence = 0;
 
-export function nextEntityId(scope: "bookmark" | "time" | "labelAnchor" | "annotation" | "annotationGroup" | "transaction" | "transactionGroup" | "signal" | "group" | "commentRow" | "spacer", document: CanonicalDocument): string {
+export type EntityIdScope = "bookmark" | "time" | "labelAnchor" | "annotation" | "annotationGroup" | "transaction" | "transactionGroup" | "signal" | "group" | "commentRow" | "spacer";
+
+/** Create an operation-scoped allocator so bulk actions scan Canonical IDs once. */
+export function createEntityIdAllocator(document: CanonicalDocument): (scope: EntityIdScope) => string {
   const used = new Set(canonicalEntityIds(document));
-  let candidate: string;
-  do {
-    entitySequence += 1;
-    candidate = `${scope}_phase9_${entitySequence}`;
-  } while (used.has(candidate));
-  return candidate;
+  return (scope) => {
+    let candidate: string;
+    do {
+      entitySequence += 1;
+      candidate = `${scope}_phase9_${entitySequence}`;
+    } while (used.has(candidate));
+    used.add(candidate);
+    return candidate;
+  };
+}
+
+export function nextEntityId(scope: EntityIdScope, document: CanonicalDocument): string {
+  return createEntityIdAllocator(document)(scope);
 }

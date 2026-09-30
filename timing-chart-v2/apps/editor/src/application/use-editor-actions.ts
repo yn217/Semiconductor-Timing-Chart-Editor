@@ -11,7 +11,7 @@ import type { AISelectionEntityType } from "../ai-bridge-client.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { DocumentLifecycleOwner } from "./use-document-lifecycle.js";
 import { groupId, signalId, valueSignal } from "../minimal-cycle-view-fixture-helpers.js";
-import { nextEntityId } from "../entity-id.js";
+import { createEntityIdAllocator, nextEntityId } from "../entity-id.js";
 import { resolveGroupInsertionIndex, resolveInsertionTarget } from "../insertion-target.js";
 import { parseBulkSignalDefinitions } from "../bulk-signal-parser.js";
 import { createAnnotation } from "../create-annotation.js";
@@ -353,8 +353,9 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
       return;
     }
     const signals: Signal[] = [];
+    const allocateId = createEntityIdAllocator(input.document);
     for (const [index, definition] of input.bulkRegistrationPreview.definitions.entries()) {
-      const id = signalId(`${nextEntityId("signal", input.document)}_bulk_${index}`);
+      const id = signalId(`${allocateId("signal")}_bulk_${index}`);
       if (definition.kind === "clock") {
         signals.push({ id, name: definition.signalName, type: "clock", role: "internal", source: { instancePath: definition.instancePath, signalName: definition.signalName }, display: { name: definition.signalName }, generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0, polarity: "positive" }, edgeCounter: { show: false, mode: "both", startNumber: 1, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: -6 } } });
       } else {

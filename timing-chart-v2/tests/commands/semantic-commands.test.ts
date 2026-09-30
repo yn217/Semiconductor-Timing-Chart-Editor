@@ -784,12 +784,29 @@ describe("command execution and atomic history", () => {
     const first = extraSignal("sig_bulk_status");
     const second = { ...extraSignal("sig_bulk_data"), source: { instancePath: ["dut", "core"], signalName: "data" } } as Signal;
     const before = session.metrics();
+    const beforePlanner = commandPlannerMetrics();
     expect(session.execute({ id: commandId("cmd_bulk_register"), type: "signal.bulkCreate", signals: [first, second], targetGroupId: "grp_main" as GroupId, index: 2 })).toMatchObject({ ok: true });
+    expect(commandPlannerMetrics().internalPlans - beforePlanner.internalPlans).toBe(1);
     expect(session.metrics()).toEqual({ validationRuns: before.validationRuns + 1, commits: before.commits + 1 });
     expect(session.historyState().undoDepth).toBe(1);
     expect(session.getSnapshot().document.signals.find((signal) => signal.id === second.id)?.source.instancePath).toEqual(["dut", "core"]);
     expect(session.undo()).toMatchObject({ ok: true });
     expect(session.getSnapshot().document.signals.some((signal) => signal.id === first.id)).toBe(false);
+  });
+
+  it("rejects a bulk registration with duplicate incoming IDs before changing the document", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const before = session.getSnapshot();
+    const result = session.execute({
+      id: commandId("cmd_bulk_register_duplicate"),
+      type: "signal.bulkCreate",
+      signals: [extraSignal("sig_bulk_duplicate"), extraSignal("sig_bulk_duplicate")],
+      targetGroupId: "grp_main" as GroupId,
+      index: 0,
+    });
+    expect(result).toMatchObject({ ok: false, reason: "invalid" });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
   });
 
   it("supports Group lifecycle without implicitly moving rows", () => {
