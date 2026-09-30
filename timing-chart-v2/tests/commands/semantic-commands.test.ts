@@ -854,6 +854,7 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.signals.some((item) => item.id === signal.id)).toBe(false);
   });
 
+
   it("supports Group lifecycle without implicitly moving rows", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const group = { id: "grp_empty" as GroupId, name: "Empty", rows: [] };

@@ -146,10 +146,7 @@ export function useClipboardActions({ application, selection }: { application: E
     const selectedGroupId = selection.refs.state.current.groupId;
     const target = current.signalGroups.find((group) => group.id === selectedGroupId) ?? current.signalGroups.find((group) => selectedSignalId !== undefined && group.rows.includes(selectedSignalId)) ?? current.signalGroups.find((group) => group.id === input[0]?.groupId) ?? current.signalGroups.at(-1);
     if (!target || input.length === 0) return;
-    const commands: SemanticCommand[] = input.map(({ signal }, offset) => (signal.type === "commentRow"
-      ? { id: nextCommandId("paste_cut_signal"), type: "commentRow.create" as const, commentRow: signal, targetGroupId: target.id, index: target.rows.length + offset }
-      : { id: nextCommandId("paste_cut_signal"), type: "signal.create" as const, signal, targetGroupId: target.id, index: target.rows.length + offset }));
-    const result = application.executeBatch(nextCommandId("cut_paste_move"), commands);
+    const result = application.execute({ id: nextCommandId("cut_paste_move"), type: "signal.bulkCreate", signals: input.map(({ signal }) => signal), targetGroupId: target.id, index: target.rows.length });
     if (result.ok) { cutSignalsRef.current = false; selection.selectSignals(new Set(input.map(({ signal }) => signal.id)), input[0]!.signal.id); setStatus(`Moved ${input.length} signal${input.length === 1 ? "" : "s"}`); }
   };
 
