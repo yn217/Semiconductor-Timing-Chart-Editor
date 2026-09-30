@@ -21,6 +21,12 @@ describe("buildDisplayTimeMapping", () => {
     expect(resolveSourcePosition(mapping, 3.5, "interpolate")).toBe(3.5);
     expect(resolveSourcePosition(mapping, 10.5, "interpolate")).toBe(5.5);
   });
+
+  it("resolves floor and ceil through a wide folded range without scanning its hidden cycles", () => {
+    const mapping = buildDisplayTimeMapping(timeline(100_000), [collapsedGroup("g1", 10, 99_990)]);
+    expect(resolveSourcePosition(mapping, 50_000, "floor")).toBe(9);
+    expect(resolveSourcePosition(mapping, 50_000, "ceil")).toBe(10);
+  });
   it("is the identity mapping when there are no collapsed TimeGroups", () => {
     const mapping = buildDisplayTimeMapping(timeline(10), []);
     expect(mapping.displayCycleCount).toBe(10);

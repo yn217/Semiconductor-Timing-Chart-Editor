@@ -33,6 +33,17 @@ export function createDisplayTimeViewport(mapping: DisplayTimeMapping, displaySt
 
 export type HiddenSourcePositionPolicy = "floor" | "ceil" | "interpolate" | "omit";
 
+function firstDisplayAtOrAfterSource(mapping: DisplayTimeMapping, sourceCycle: number): number {
+  let low = 0;
+  let high = mapping.displayToSource.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (mapping.displayToSource[middle]! < sourceCycle) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
 /** Resolve a source position without inventing display-cycle zero for folded input. */
 export function resolveSourcePosition(mapping: DisplayTimeMapping, sourceCycle: number, policy: HiddenSourcePositionPolicy = "omit"): number | undefined {
   if (!Number.isFinite(sourceCycle)) return undefined;
@@ -48,8 +59,14 @@ export function resolveSourcePosition(mapping: DisplayTimeMapping, sourceCycle: 
     if (lower !== undefined) return lower;
     if (upper !== undefined) return upper;
   }
-  if (policy === "floor") for (let cycle = Math.min(index, mapping.sourceToDisplay.length - 1); cycle >= 0; cycle -= 1) if (mapping.sourceToDisplay[cycle] !== undefined) return mapping.sourceToDisplay[cycle];
-  if (policy === "ceil") for (let cycle = Math.max(0, index); cycle < mapping.sourceToDisplay.length; cycle += 1) if (mapping.sourceToDisplay[cycle] !== undefined) return mapping.sourceToDisplay[cycle];
+  if (policy === "floor") {
+    const display = firstDisplayAtOrAfterSource(mapping, index + 1) - 1;
+    return display >= 0 ? display : undefined;
+  }
+  if (policy === "ceil") {
+    const display = firstDisplayAtOrAfterSource(mapping, Math.max(0, index));
+    return display < mapping.displayToSource.length ? display : undefined;
+  }
   return undefined;
 }
 
@@ -223,14 +240,7 @@ export function remapValueChangesToDisplay(values: readonly SignalValueChange[],
   const result: SignalValueChange[] = [];
   let lastValue: SignalValueChange["value"] | undefined;
   const displayForSource = (sourceCycle: number): number => {
-    let low = 0;
-    let high = mapping.displayToSource.length;
-    while (low < high) {
-      const middle = (low + high) >>> 1;
-      if (mapping.displayToSource[middle]! < sourceCycle) low = middle + 1;
-      else high = middle;
-    }
-    return low;
+    return firstDisplayAtOrAfterSource(mapping, sourceCycle);
   };
 
   // Map sparse source changes directly to their visible display boundary.
