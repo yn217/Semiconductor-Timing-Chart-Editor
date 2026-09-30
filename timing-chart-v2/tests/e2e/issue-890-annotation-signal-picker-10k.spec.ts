@@ -65,4 +65,20 @@ test("10k-signal Annotation Anchor and Marker row pickers keep DOM bounded and a
   await page.getByTestId("apply-marker-vertical-span").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
+
+  const savePromise = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedFile = await savePromise;
+  const savedPath = await savedFile.path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
+
+  const reopenedMarker = page.getByTestId("annotation-list").locator("[data-annotation-list-id='ann_marker_10k']");
+  await reopenedMarker.click();
+  const reopenedSpan = page.getByTestId("inspector").getByRole("region", { name: "Marker vertical span" });
+  await expect(reopenedSpan.getByRole("combobox", { name: "Marker vertical span start row" })).toHaveValue("SIG_9998");
+  await expect(reopenedSpan.getByRole("combobox", { name: "Marker vertical span end row" })).toHaveValue("SIG_9999");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
