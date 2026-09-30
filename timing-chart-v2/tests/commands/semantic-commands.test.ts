@@ -809,6 +809,29 @@ describe("command execution and atomic history", () => {
     expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
   });
 
+  it("plans a product-limit Signal registration with one indexed pass", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const template = extraSignal("sig_bulk_template");
+    const signals = Array.from({ length: 9_998 }, (_, index) => {
+      const name = `BULK_${index}`;
+      return {
+        ...template,
+        id: `sig_bulk_${index}` as SignalId,
+        name,
+        source: { ...template.source, signalName: name },
+        display: { ...template.display, name },
+      };
+    });
+    const beforePlans = commandPlannerMetrics().internalPlans;
+    expect(session.execute({ id: commandId("cmd_bulk_register_product_limit"), type: "signal.bulkCreate", signals, targetGroupId: "grp_main" as GroupId, index: 2 }).ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    expect(session.getSnapshot().document.signals).toHaveLength(10_000);
+    expect(session.getSnapshot().document.signalGroups[0]!.rows).toHaveLength(10_000);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals).toHaveLength(2);
+  });
+
   it("bulk-creates, duplicates, and deletes Transactions with one planner/history action each", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const items = [
