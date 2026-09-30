@@ -305,6 +305,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const laneIndexBuilds = useRef(0);
   const stackRowBuilds = useRef(0);
   const treeRowBuilds = useRef(0);
+  const transactionFilterBuilds = useRef(0);
   const stackRowsCache = useRef(new WeakMap<readonly Transaction[], ReturnType<typeof assignStackRows>>());
   const treeRowsCache = useRef(new WeakMap<readonly Transaction[], Readonly<{ rowOf: ReadonlyMap<TransactionId, number>; ordered: readonly Transaction[] }>>());
   const laneArrayCache = useRef<ReadonlyMap<string, readonly Transaction[]> | undefined>(undefined);
@@ -321,11 +322,24 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const needle = filter.trim().toLocaleLowerCase();
   const transactionGroupById = useMemo(() => new Map<string, NonNullable<CanonicalDocument["transactionGroups"]>[number]>((rawDocument.transactionGroups ?? []).map((group) => [group.id, group])), [rawDocument.transactionGroups]);
   const groupNameById = useMemo(() => new Map([...transactionGroupById].map(([id, group]) => [id, group.name])), [transactionGroupById]);
-  const document = useMemo<CanonicalDocument>(() => {
-    const visible = rawDocument.transactions.filter((transaction) => transaction.visible !== false);
-    if (needle.length === 0) return visible.length === rawDocument.transactions.length ? rawDocument : { ...rawDocument, transactions: visible };
-    return { ...rawDocument, transactions: visible.filter((transaction) => transaction.name.toLocaleLowerCase().includes(needle) || (transaction.groupId !== undefined && (groupNameById.get(transaction.groupId) ?? "").toLocaleLowerCase().includes(needle))) };
-  }, [groupNameById, needle, rawDocument, rawDocument.transactions, selectedId]);
+  const visibleTransactions = useMemo(() => {
+    transactionFilterBuilds.current += 1;
+    const visible: Transaction[] = [];
+    let hasHidden = false;
+    for (const transaction of rawDocument.transactions) {
+      if (transaction.visible === false) { hasHidden = true; continue; }
+      if (needle.length > 0 && !transaction.name.toLocaleLowerCase().includes(needle)
+        && !(transaction.groupId !== undefined && (groupNameById.get(transaction.groupId) ?? "").toLocaleLowerCase().includes(needle))) continue;
+      visible.push(transaction);
+    }
+    return needle.length === 0 && !hasHidden ? rawDocument.transactions : visible;
+  }, [groupNameById, needle, rawDocument.transactions]);
+  // Selection and unrelated document edits do not change the filtered list.
+  // Keep the canonical root current without rerunning the O(N) transaction scan.
+  const document = useMemo<CanonicalDocument>(
+    () => visibleTransactions === rawDocument.transactions ? rawDocument : { ...rawDocument, transactions: visibleTransactions },
+    [rawDocument, visibleTransactions],
+  );
   // #759: Group disclosure is a view-only presentation state owned once at the workspace level and shared with the Left Tree
   // (never persisted, never touches Canonical/History/Dirty).
   const collapsedGroups = disclosure.collapsed;
@@ -629,7 +643,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   // scrolling .cycle-viewport that drives virtualWindow. Keep its normal CSS
   // top (34px); applying -virtualWindow.top here would subtract the scroll
   // offset a second time and make offscreen lanes unreachable.
-  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-tree-row-builds={treeRowBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
+  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-tree-row-builds={treeRowBuilds.current} data-transaction-filter-builds={transactionFilterBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);

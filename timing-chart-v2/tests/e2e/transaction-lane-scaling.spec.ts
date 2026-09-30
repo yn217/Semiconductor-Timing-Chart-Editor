@@ -43,12 +43,17 @@ test("10k Transaction fixture keeps mounted lane DOM viewport-bounded", async ({
     totalHeight: Number.parseFloat((element as HTMLElement).style.height),
     mountedBars: element.querySelectorAll("[data-transaction-id]").length,
     mountedTreeRows: element.querySelectorAll("[data-testid^='transaction-tree-row-']").length,
+    filterBuilds: Number((element as HTMLElement).dataset.transactionFilterBuilds),
   }));
   // Transactions are packed into a bounded number of lanes; height is not a
   // proxy for transaction count. The layout must simply be present.
   expect(metrics.totalHeight).toBeGreaterThan(0);
   expect(metrics.mountedBars).toBeLessThan(1_000);
   expect(metrics.mountedTreeRows).toBeLessThan(1_000);
+  const firstVisibleBar = page.getByTestId("transaction-lanes").locator("[data-transaction-id]:visible").first();
+  await firstVisibleBar.click();
+  await expect(firstVisibleBar).toHaveAttribute("data-selected", "true");
+  await expect(page.getByTestId("transaction-lanes")).toHaveAttribute("data-transaction-filter-builds", String(metrics.filterBuilds));
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
