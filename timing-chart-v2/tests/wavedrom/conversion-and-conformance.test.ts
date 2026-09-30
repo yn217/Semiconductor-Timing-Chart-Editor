@@ -367,6 +367,69 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(installed.renderStages?.svgSafetyDomWalkMs).toBe(0);
   });
 
+  it("avoids parsing a second full SVG tree for image-backed waves without shared labels", async () => {
+    const adapter = new ProductionWaveDromAdapter();
+    const expectedRootAttributes = renderWaveJsonMarkupWithMetrics({ wave: "01.." }).rootAttributes;
+    const nodes: Array<{ localName: string; attrs: Map<string, string>; children: unknown[] }> = [];
+    let ownerDocument: Document;
+    const geometryRoot = {
+      localName: "svg",
+      namespaceURI: "http://www.w3.org/2000/svg",
+      ownerDocument: undefined as Document | undefined,
+      querySelectorAll: () => [],
+    };
+    const template = { content: { firstElementChild: geometryRoot }, set innerHTML(_markup: string) {} };
+    ownerDocument = {
+      createElement: vi.fn(() => template),
+      createElementNS: vi.fn((_namespace: string, localName: string) => {
+        const attrs = new Map<string, string>();
+        const children: unknown[] = [];
+        const node = {
+          localName,
+          namespaceURI: "http://www.w3.org/2000/svg",
+          ownerDocument,
+          attrs,
+          children,
+          getAttribute: (name: string) => attrs.get(name) ?? null,
+          setAttribute: (name: string, value: string) => { attrs.set(name, value); },
+          append: (child: unknown) => { children.push(child); },
+          querySelector: (selector: string) => selector === "image[data-wave-svg-image]" ? children[0] : null,
+          querySelectorAll: () => [],
+          cloneNode: () => node,
+          get childNodes() { return children; },
+        };
+        nodes.push(node);
+        return node;
+      }),
+      defaultView: {
+        Image: class {
+          set src(_value: string) {}
+          decode() { return Promise.resolve(); }
+        },
+      },
+    } as unknown as Document;
+    geometryRoot.ownerDocument = ownerDocument;
+    const createObjectUrl = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test-wave-svg");
+    try {
+      const prepared = await adapter.prepareWave(signalId("sig_image_fast_path"), { wave: "01.." }, ownerDocument);
+
+      expect(ownerDocument.createElement).not.toHaveBeenCalled();
+      expect(prepared.renderStages?.templateParseMs).toBe(0);
+      expect(prepared.geometrySvg).toBeUndefined();
+      expect(prepared.svg.localName).toBe("svg");
+      expect(prepared.svg.querySelector("image[data-wave-svg-image]")).not.toBeNull();
+      for (const [name, value] of Object.entries(expectedRootAttributes)) {
+        if (name === "id" || name === "xmlns" || name === "xmlns:xlink") continue;
+        expect(prepared.svg.getAttribute(name)).toBe(value);
+      }
+      await prepared.svgImageReady;
+      expect(() => adapter.extractLocalGeometry(prepared)).toThrow("Rendered SVG is missing 'lanes_0'.");
+      expect(ownerDocument.createElement).toHaveBeenCalledTimes(1);
+    } finally {
+      createObjectUrl.mockRestore();
+    }
+  });
+
   it("reuses identical validated markup across document release without changing WaveDrom IDs", async () => {
     const adapter = new ProductionWaveDromAdapter();
     const id = signalId("sig_reopen_cache");

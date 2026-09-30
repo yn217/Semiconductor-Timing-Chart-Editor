@@ -33,11 +33,16 @@ function now(): number {
 
 const utf8Encoder = new TextEncoder();
 
-export function renderWaveJsonMarkupWithMetrics(waveJson: WaveJsonSignal, renderIndex = 0, semanticValues: readonly string[] = []): Readonly<{ markup: string; metrics: WaveMarkupStageMetrics }> {
+export function renderWaveJsonMarkupWithMetrics(waveJson: WaveJsonSignal, renderIndex = 0, semanticValues: readonly string[] = []): Readonly<{ markup: string; rootAttributes: Readonly<Record<string, string>>; metrics: WaveMarkupStageMetrics }> {
   try {
     let startedAt = now();
-    const tree = WaveDrom.renderAny(renderIndex, { signal: [waveJson] }, WaveDrom.waveSkin);
+    const tree = WaveDrom.renderAny(renderIndex, { signal: [waveJson] }, WaveDrom.waveSkin) as [string, Record<string, unknown>, ...unknown[]];
     const waveDromRenderAnyMs = now() - startedAt;
+    const root = tree[1];
+    if (tree[0] !== "svg" || root === null || typeof root !== "object" || Array.isArray(root)) {
+      throw new WaveDromAdapterError("INVALID_WAVEDROM_SVG", "WaveDrom did not return SVG root attributes.");
+    }
+    const rootAttributes = Object.freeze(Object.fromEntries(Object.entries(root).map(([name, value]) => [name, String(value)])));
     startedAt = now();
     const serialized = WaveDrom.onml.stringify(tree);
     const onmlStringifyMs = now() - startedAt;
@@ -48,7 +53,7 @@ export function renderWaveJsonMarkupWithMetrics(waveJson: WaveJsonSignal, render
     const markup = assertSafeWaveDromMarkup(laidOut);
     const markupSafetyMs = now() - startedAt;
     const svgMarkupBytes = new TextEncoder().encode(markup).byteLength;
-    return { markup, metrics: { waveDromRenderAnyMs, onmlStringifyMs, valueLabelLayoutMs, markupSafetyMs, svgMarkupBytes } };
+    return { markup, rootAttributes, metrics: { waveDromRenderAnyMs, onmlStringifyMs, valueLabelLayoutMs, markupSafetyMs, svgMarkupBytes } };
   } catch (error) {
     if (error instanceof WaveDromAdapterError) throw error;
     throw new WaveDromAdapterError("WAVEDROM_RENDER_FAILED", "Pinned WaveDrom failed to render the generated WaveJSON.", { cause: error });
@@ -132,6 +137,7 @@ interface ActiveOwner {
 
 interface MarkupCacheEntry {
   readonly markup: string;
+  readonly rootAttributes: Readonly<Record<string, string>>;
   readonly waveJsonBytes: number;
   readonly semanticValuesBytes: number;
   readonly svgMarkupBytes: number;
@@ -248,6 +254,16 @@ function svgImageDecode(entry: MarkupCacheEntry, ownerDocument: Document, url: s
   return decoded;
 }
 
+function parseWaveDromSvgMarkup(ownerDocument: Document, markup: string): SVGElement {
+  const template = ownerDocument.createElement("template");
+  template.innerHTML = markup.trim();
+  const parsed = template.content.firstElementChild;
+  if (!parsed || parsed.namespaceURI !== "http://www.w3.org/2000/svg" || parsed.localName !== "svg") {
+    throw new WaveDromAdapterError("INVALID_WAVEDROM_SVG", "WaveDrom did not return an SVG root.");
+  }
+  return parsed as SVGElement;
+}
+
 type ValueLabelTemplate = Readonly<{ template: SVGElement; segmentStart: number; segmentEnd: number }>;
 
 function valueLabelTemplates(entry: MarkupCacheEntry, source: SVGElement, ownerDocument: Document, wave: string, expectedCount: number): readonly ValueLabelTemplate[] | undefined {
@@ -296,12 +312,11 @@ function applyValueLabels(svg: SVGElement, labels: readonly string[], semanticVa
   Array.from(nodes).forEach((node, index) => bindValueLabel(node, labels[index]!, semanticValues[index]!, templates[index]!, index, ownerDocument));
 }
 
-function createWaveImageSvg(source: SVGElement, ownerDocument: Document, imageUrl: string, renderIndex: number, labels: readonly string[] = [], semanticValues: readonly string[] = [], labelTemplates: readonly ValueLabelTemplate[] = []): SVGElement {
+function createWaveImageSvg(rootAttributes: Readonly<Record<string, string>>, ownerDocument: Document, imageUrl: string, renderIndex: number, labels: readonly string[] = [], semanticValues: readonly string[] = [], labelTemplates: readonly ValueLabelTemplate[] = []): SVGElement {
   const svg = ownerDocument.createElementNS("http://www.w3.org/2000/svg", "svg");
-  for (let index = 0; index < source.attributes.length; index += 1) {
-    const attribute = source.attributes.item(index);
-    if (!attribute || attribute.name === "id" || attribute.name === "xmlns" || attribute.name === "xmlns:xlink") continue;
-    svg.setAttribute(attribute.name, attribute.value);
+  for (const [name, value] of Object.entries(rootAttributes)) {
+    if (name === "id" || name === "xmlns" || name === "xmlns:xlink") continue;
+    svg.setAttribute(name, value);
   }
   svg.setAttribute("id", `svgcontent_${renderIndex}`);
   const image = ownerDocument.createElementNS("http://www.w3.org/2000/svg", "image");
@@ -509,6 +524,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       this.#cacheMisses += 1;
       cacheEntry = {
         markup,
+        rootAttributes: generated.rootAttributes,
         waveJsonBytes: stages.waveJsonBytes,
         semanticValuesBytes: stages.semanticValuesBytes,
         svgMarkupBytes: stages.svgMarkupBytes,
@@ -527,19 +543,29 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     // The canonical parsed SVG remains available for geometry extraction.
     const useSharedSvgImage = !isSvgGeometryDebugMode()
       && typeof ownerDocument.createElementNS === "function";
+    const imageUrl = useSharedSvgImage ? svgImageUrl(cacheEntry, ownerDocument) : undefined;
+    const canUseImageWithoutParsedTree = imageUrl !== undefined && !shareLabels;
     let svg: Element | null;
+    let parsedSvg: SVGElement | undefined;
     if (cachedSvg && useSharedSvgImage) {
       svg = cachedSvg;
+      parsedSvg = cachedSvg;
       stages.templateParseMs = 0;
     } else if (cachedSvg) {
       svg = cachedSvg.cloneNode(true) as SVGElement;
+      parsedSvg = svg as SVGElement;
+      stages.templateParseMs = 0;
+    } else if (canUseImageWithoutParsedTree) {
+      // The browser decodes this same markup as the image payload. Non-shared
+      // labels need no detached descendant tree, so use WaveDrom's root attrs
+      // and avoid parsing the full SVG a second time on the cold Open path.
+      svg = createWaveImageSvg(cacheEntry.rootAttributes, ownerDocument, imageUrl!, renderIndex);
       stages.templateParseMs = 0;
     } else {
-      const template = ownerDocument.createElement("template");
       stageStartedAt = now();
-      template.innerHTML = markup.trim();
-      svg = template.content.firstElementChild;
+      svg = parseWaveDromSvgMarkup(ownerDocument, markup);
       stages.templateParseMs = now() - stageStartedAt;
+      parsedSvg = svg as SVGElement;
     }
     if (!svg || svg.namespaceURI !== "http://www.w3.org/2000/svg" || svg.localName !== "svg") {
       throw new WaveDromAdapterError("INVALID_WAVEDROM_SVG", "WaveDrom did not return an SVG root.");
@@ -551,37 +577,42 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     // internally generated, already validated markup.
     const svgSafetyCacheHit = markupCacheHit || Boolean(cachedSvg);
     stages.svgSafetyDomWalkMs = 0;
-    const parsedSvg = cachedSvg ?? svg as SVGElement;
-    if (!cachedSvg) {
+    if (!cachedSvg && parsedSvg) {
       const parsedSvgByDocument = safetyCacheEntry.parsedSvgByDocument ??= new WeakMap<Document, SVGElement>();
       // On the production image path parsedSvg stays detached and immutable;
       // owners receive separate image wrappers, so retain it directly instead
       // of cloning the full SVG on cold Open. The inline/debug path mutates its
       // parsed node while binding labels, so it still needs a private template.
-      parsedSvgByDocument.set(ownerDocument, useSharedSvgImage ? parsedSvg as SVGElement : parsedSvg.cloneNode(true) as SVGElement);
+      parsedSvgByDocument.set(ownerDocument, useSharedSvgImage ? parsedSvg : parsedSvg.cloneNode(true) as SVGElement);
     }
-    const labelTemplates = shareLabels ? valueLabelTemplates(safetyCacheEntry, parsedSvg, ownerDocument, waveJson.wave, waveJson.data!.length) : undefined;
+    const labelTemplates = shareLabels ? valueLabelTemplates(safetyCacheEntry, parsedSvg!, ownerDocument, waveJson.wave, waveJson.data!.length) : undefined;
     if (shareLabels && !labelTemplates) {
       throw new WaveDromAdapterError("INVALID_WAVEDROM_LABELS", "WaveDrom did not expose the expected data-label templates for a shareable artifact.");
     }
     if (shareLabels && !useSharedSvgImage) applyValueLabels(svg as SVGElement, waveJson.data!, semanticValues, labelTemplates!, ownerDocument);
     let svgImageReady: Promise<void> | undefined;
     if (useSharedSvgImage) {
-      const imageUrl = svgImageUrl(safetyCacheEntry, ownerDocument);
       if (imageUrl) {
-        const imageOwnerSvg = createWaveImageSvg(parsedSvg, ownerDocument, imageUrl, renderIndex, shareLabels ? waveJson.data : [], shareLabels ? semanticValues : [], labelTemplates ?? []);
+        const imageOwnerSvg = canUseImageWithoutParsedTree
+          ? svg as SVGElement
+          : createWaveImageSvg(safetyCacheEntry.rootAttributes, ownerDocument, imageUrl, renderIndex, shareLabels ? waveJson.data : [], shareLabels ? semanticValues : [], labelTemplates ?? []);
         svg = imageOwnerSvg;
         // Start decoding now, but don't serialize independent owner decodes
         // behind WaveRenderScheduler's per-owner preparation jobs. The batch
         // waits for all image-ready promises together before publishing ready.
         svgImageReady = svgImageDecode(safetyCacheEntry, ownerDocument, imageUrl).catch(() => {
-          const fallbackSvg = parsedSvg.cloneNode(true) as SVGElement;
+          const fallbackSvg = (parsedSvg?.cloneNode(true) as SVGElement | undefined)
+            ?? parseWaveDromSvgMarkup(ownerDocument, markup);
+          if (!parsedSvg) {
+            const parsedSvgByDocument = safetyCacheEntry.parsedSvgByDocument ??= new WeakMap<Document, SVGElement>();
+            parsedSvgByDocument.set(ownerDocument, fallbackSvg.cloneNode(true) as SVGElement);
+          }
           if (shareLabels) applyValueLabels(fallbackSvg, waveJson.data!, semanticValues, labelTemplates!, ownerDocument);
           if (renderIndex > 0) bindWaveDromRenderIndex(fallbackSvg, renderIndex);
           imageOwnerSvg.replaceChildren(...Array.from(fallbackSvg.childNodes));
         });
       } else {
-        svg = parsedSvg.cloneNode(true) as SVGElement;
+        svg = (parsedSvg ?? parseWaveDromSvgMarkup(ownerDocument, markup)).cloneNode(true) as SVGElement;
       }
     }
     const isImageOwner = typeof svg?.querySelector === "function" && Boolean(svg.querySelector("image[data-wave-svg-image]"));
@@ -590,7 +621,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const renderStages = Object.freeze({ ...stages });
     const rendered: RenderedWave = {
       signalId, ownerKey: signalId, svg: svg as SVGElement,
-      ...(isImageOwner ? { geometrySvg: parsedSvg } : {}),
+      ...(isImageOwner && parsedSvg ? { geometrySvg: parsedSvg } : {}),
       ...(svgImageReady ? { svgImageReady } : {}),
       renderIndex, waveJson, markupCacheHit, svgSafetyCacheHit, renderStages,
     };
@@ -641,9 +672,23 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     // Geometry is identical for an exact markup-cache hit, so resolve those
     // IDs against owner zero instead of cloning/rebinding the entire SVG tree
     // for every image-backed owner.
-    const geometrySource = rendered.geometrySvg
+    let geometrySource = rendered.geometrySvg
       ? { ...rendered, svg: rendered.geometrySvg, renderIndex: 0 }
       : rendered;
+    if (!rendered.geometrySvg && rendered.svg.querySelector("image[data-wave-svg-image]")) {
+      const binding = this.#markupCache.get(rendered.signalId) ?? this.#retainedMarkupCache.get(rendered.signalId);
+      const artifact = binding?.artifact;
+      const ownerDocument = rendered.svg.ownerDocument;
+      if (artifact && ownerDocument) {
+        const parsedByDocument = artifact.parsedSvgByDocument ??= new WeakMap<Document, SVGElement>();
+        let geometrySvg = parsedByDocument.get(ownerDocument);
+        if (!geometrySvg) {
+          geometrySvg = parseWaveDromSvgMarkup(ownerDocument, artifact.markup);
+          parsedByDocument.set(ownerDocument, geometrySvg);
+        }
+        geometrySource = { ...rendered, svg: geometrySvg, renderIndex: 0 };
+      }
+    }
     const geometry = extractLocalGeometry(geometrySource, extractionMetrics);
     this.#geometryBuilds += 1;
     this.#geometryMatrixReads += 2;
