@@ -203,8 +203,8 @@ export class TimelineGeometryOwner {
     const lastEntry = entries.at(-1);
     // Outside the retained window the local x is a pixel-space value, not a display-cycle index (#757):
     // extrapolate with the retained geometry's own pitch (local units per display cycle).
-    const firstDisplay = firstEntry === undefined ? undefined : mapping.sourceToDisplay[firstEntry.cycle];
-    const lastDisplay = lastEntry === undefined ? undefined : mapping.sourceToDisplay[lastEntry.cycle];
+    const firstDisplay = firstEntry === undefined ? undefined : mapping.sourceToDisplay(firstEntry.cycle);
+    const lastDisplay = lastEntry === undefined ? undefined : mapping.sourceToDisplay(lastEntry.cycle);
     const pitch = firstEntry && lastEntry && firstDisplay !== undefined && lastDisplay !== undefined && lastDisplay > firstDisplay
       ? (lastEntry.x - firstEntry.x) / (lastDisplay - firstDisplay) : undefined;
     const sourceAtMappedBoundary = (localX: number, fallback: number): number => {
@@ -213,7 +213,7 @@ export class TimelineGeometryOwner {
         : localX;
       const displayCycle = Math.max(0, Math.min(mapping.displayCycleCount, Math.round(displayIndex)));
       if (displayCycle === mapping.displayCycleCount) return document.timeline.cycleCount;
-      return mapping.displayToSource[displayCycle] ?? fallback;
+      return mapping.displayToSource(displayCycle) ?? fallback;
     };
     let start = sourceAtMappedBoundary(localStart, firstEntry?.cycle ?? 0);
     let end = sourceAtMappedBoundary(localEnd, lastEntry?.cycle ?? document.timeline.cycleCount);
@@ -263,7 +263,7 @@ export class TimelineGeometryOwner {
     const sourceWindow = this.sourceWindowForLocalRange(document, localStart, localEnd, 2);
     const before = sourceWindow.start;
     const after = sourceWindow.end;
-    return createDisplayTimeViewport(mapping, mapping.sourceToDisplay[before] ?? 0, mapping.sourceToDisplay[after] ?? (after >= mapping.sourceToDisplay.length ? mapping.displayCycleCount : 0), 2, rowStart, rowEnd, generation, pinnedIds);
+    return createDisplayTimeViewport(mapping, mapping.sourceToDisplay(before) ?? 0, mapping.sourceToDisplay(after) ?? (after >= mapping.sourceCycleCount ? mapping.displayCycleCount : 0), 2, rowStart, rowEnd, generation, pinnedIds);
   }
 
   screenToLocal(point: Point, zoom: number, scrollX = 0, scrollY = 0): Point {
@@ -318,7 +318,7 @@ export class TimelineGeometryOwner {
     // retained entries through the shared mapping instead.
     for (const boundary of owner.cycleBoundaryEntries?.() ?? []) {
       const cycle = boundary.cycle;
-      if (cycle < 0 || cycle > cycleCount || mapping.sourceToDisplay[cycle] === undefined) continue;
+      if (cycle < 0 || cycle > cycleCount || mapping.sourceToDisplay(cycle) === undefined) continue;
       // Geometry boundaries are source-keyed even when the display mapping
       // compresses folded cycles. Do not feed a display cycle back into the
       // source geometry map: after a fold, source 60 would otherwise resolve

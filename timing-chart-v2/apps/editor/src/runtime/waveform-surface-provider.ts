@@ -147,7 +147,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         if (cached) return cached;
         const sourceCycles = Object.freeze(Array.from({ length: rendererEnd - rendererStart + 1 }, (_, index) => {
           const displayCycle = rendererStart + index;
-          return displayCycle === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[displayCycle] ?? sourceEnd);
+          return displayCycle === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource(displayCycle) ?? sourceEnd);
         }));
         geometrySourceCyclesByWindow.set(key, sourceCycles);
         return sourceCycles;
@@ -222,8 +222,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           const waveJson = sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
             ? context.adapter.toWaveJson(source)
             : toWaveJsonWindow(source, rendererStart, rendererEnd, sourceWindow, {
-              start: rendererStart === 0 ? 0 : (mapping.displayToSource[rendererStart] ?? sourceWindow.start),
-              end: rendererEnd === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource[rendererEnd] ?? sourceWindow.end),
+              start: rendererStart === 0 ? 0 : (mapping.displayToSource(rendererStart) ?? sourceWindow.start),
+              end: rendererEnd === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource(rendererEnd) ?? sourceWindow.end),
             });
           const mappedWaveJson = sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
             ? waveJson

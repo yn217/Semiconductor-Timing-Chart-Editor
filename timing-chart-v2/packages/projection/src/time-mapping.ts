@@ -1,11 +1,23 @@
 import type { SignalValueChange, Timeline, TimeGroup } from "@timing-chart-v2/schema";
 
 export interface DisplayTimeMapping {
+  readonly sourceCycleCount: number;
   readonly displayCycleCount: number;
   readonly isIdentity: boolean;
-  readonly sourceToDisplay: readonly (number | undefined)[];
-  readonly displayToSource: readonly number[];
+  /** O(1) for identity mappings; O(log foldCount) for folded mappings. */
+  readonly sourceToDisplay: (sourceCycle: number) => number | undefined;
+  /** O(1) for identity mappings; O(log foldCount) for folded mappings. */
+  readonly displayToSource: (displayCycle: number) => number | undefined;
+  /** First visible display boundary whose source is at or after sourceCycle. */
+  readonly displayBoundaryAtOrAfterSource: (sourceCycle: number) => number;
   readonly labelFor: (displayCycle: number) => number;
+}
+
+interface FoldInterval {
+  readonly start: number;
+  readonly end: number;
+  readonly removedBefore: number;
+  readonly displayStart: number;
 }
 
 /** Shared viewport query result consumed by time-based projections.  Bounds
@@ -27,18 +39,19 @@ export interface DisplayTimeViewport {
 export function createDisplayTimeViewport(mapping: DisplayTimeMapping, displayStart: number, displayEnd: number, overscanCycles: number, rowStart: number, rowEnd: number, generation: number, pinnedIds: readonly string[] = []): DisplayTimeViewport {
   const start = Math.max(0, Math.floor(displayStart - overscanCycles));
   const end = Math.min(mapping.displayCycleCount, Math.ceil(displayEnd + overscanCycles));
-  const sources = mapping.displayToSource.slice(start, end);
-  return { displayStart: start, displayEnd: end, sourceStart: sources[0] ?? 0, sourceEnd: (sources.at(-1) ?? 0) + 1, overscanCycles, rowStart, rowEnd, generation, pinnedIds: [...pinnedIds] };
+  const sourceStart = mapping.displayToSource(start) ?? 0;
+  const lastSource = mapping.displayToSource(end - 1) ?? sourceStart;
+  return { displayStart: start, displayEnd: end, sourceStart, sourceEnd: lastSource + 1, overscanCycles, rowStart, rowEnd, generation, pinnedIds: [...pinnedIds] };
 }
 
 export type HiddenSourcePositionPolicy = "floor" | "ceil" | "interpolate" | "omit";
 
 function firstDisplayAtOrAfterSource(mapping: DisplayTimeMapping, sourceCycle: number): number {
   let low = 0;
-  let high = mapping.displayToSource.length;
+  let high = mapping.displayCycleCount;
   while (low < high) {
     const middle = (low + high) >>> 1;
-    if (mapping.displayToSource[middle]! < sourceCycle) low = middle + 1;
+    if (mapping.displayToSource(middle)! < sourceCycle) low = middle + 1;
     else high = middle;
   }
   return low;
@@ -47,14 +60,14 @@ function firstDisplayAtOrAfterSource(mapping: DisplayTimeMapping, sourceCycle: n
 /** Resolve a source position without inventing display-cycle zero for folded input. */
 export function resolveSourcePosition(mapping: DisplayTimeMapping, sourceCycle: number, policy: HiddenSourcePositionPolicy = "omit"): number | undefined {
   if (!Number.isFinite(sourceCycle)) return undefined;
-  if (sourceCycle >= mapping.sourceToDisplay.length) return mapping.displayCycleCount;
+  if (sourceCycle >= mapping.sourceCycleCount) return mapping.displayCycleCount;
   const clamped = Math.max(0, sourceCycle);
-  if (Number.isInteger(clamped) && mapping.sourceToDisplay[clamped] !== undefined) return mapping.sourceToDisplay[clamped];
+  if (Number.isInteger(clamped) && mapping.sourceToDisplay(clamped) !== undefined) return mapping.sourceToDisplay(clamped);
   if (policy === "omit") return undefined;
   const index = Math.floor(clamped);
   if (policy === "interpolate") {
-    const lower = mapping.sourceToDisplay[index];
-    const upper = mapping.sourceToDisplay[index + 1];
+    const lower = mapping.sourceToDisplay(index);
+    const upper = mapping.sourceToDisplay(index + 1);
     if (lower !== undefined && upper !== undefined) return lower + (clamped - index) * (upper - lower);
     if (lower !== undefined) return lower;
     if (upper !== undefined) return upper;
@@ -65,7 +78,7 @@ export function resolveSourcePosition(mapping: DisplayTimeMapping, sourceCycle: 
   }
   if (policy === "ceil") {
     const display = firstDisplayAtOrAfterSource(mapping, Math.max(0, index));
-    return display < mapping.displayToSource.length ? display : undefined;
+    return display < mapping.displayCycleCount ? display : undefined;
   }
   return undefined;
 }
@@ -81,10 +94,30 @@ function labelForSourceCycle(timeline: Pick<Timeline, "labelAnchors">, sourceCyc
   return active === undefined ? sourceCycle : active.display + (sourceCycle - active.source);
 }
 
-const identityMapping = (timeline: Pick<Timeline, "cycleCount" | "labelAnchors">): DisplayTimeMapping => {
-  const displayToSource = Array.from({ length: timeline.cycleCount }, (_, index) => index);
-  return { displayCycleCount: timeline.cycleCount, isIdentity: true, sourceToDisplay: displayToSource, displayToSource, labelFor: (displayCycle) => labelForSourceCycle(timeline, displayCycle) };
-};
+function upperBound<T>(values: readonly T[], predicate: (value: T) => boolean): number {
+  let low = 0;
+  let high = values.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (predicate(values[middle]!)) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
+function identityMapping(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">): DisplayTimeMapping {
+  const sourceToDisplay = (sourceCycle: number) => Number.isInteger(sourceCycle) && sourceCycle >= 0 && sourceCycle < timeline.cycleCount ? sourceCycle : undefined;
+  const displayToSource = (displayCycle: number) => Number.isInteger(displayCycle) && displayCycle >= 0 && displayCycle < timeline.cycleCount ? displayCycle : undefined;
+  return {
+    sourceCycleCount: timeline.cycleCount,
+    displayCycleCount: timeline.cycleCount,
+    isIdentity: true,
+    sourceToDisplay,
+    displayToSource,
+    displayBoundaryAtOrAfterSource: (sourceCycle) => Math.min(timeline.cycleCount, Math.max(0, Math.ceil(sourceCycle))),
+    labelFor: (displayCycle) => labelForSourceCycle(timeline, displayCycle),
+  };
+}
 
 export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): DisplayTimeMapping {
   const collapsedRanges: [number, number][] = [];
@@ -98,33 +131,54 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
   }
   if (collapsedRanges.length === 0) return identityMapping(timeline);
 
-  const sourceToDisplay: (number | undefined)[] = [];
-  const displayToSource: number[] = [];
-  let display = 0;
-  let collapsedRangeIndex = 0;
-  for (let source = 0; source < timeline.cycleCount; source += 1) {
-    while (collapsedRangeIndex < collapsedRanges.length && source >= collapsedRanges[collapsedRangeIndex]![1]) collapsedRangeIndex += 1;
-    const currentRange = collapsedRanges[collapsedRangeIndex];
-    const insideCollapsedRange = currentRange !== undefined && source >= currentRange[0] && source < currentRange[1];
-    if (insideCollapsedRange) { sourceToDisplay[source] = undefined; continue; }
-    sourceToDisplay[source] = display;
-    displayToSource[display] = source;
-    display += 1;
+  const folds: FoldInterval[] = [];
+  let removed = 0;
+  for (const [start, end] of collapsedRanges) {
+    folds.push({ start, end, removedBefore: removed, displayStart: start - removed });
+    removed += end - start;
   }
+  const displayCycleCount = timeline.cycleCount - removed;
+  const sourceToDisplay = (sourceCycle: number): number | undefined => {
+    if (!Number.isInteger(sourceCycle) || sourceCycle < 0 || sourceCycle >= timeline.cycleCount) return undefined;
+    const preceding = upperBound(folds, (fold) => fold.start <= sourceCycle) - 1;
+    if (preceding >= 0) {
+      const fold = folds[preceding]!;
+      if (sourceCycle < fold.end) return undefined;
+      return sourceCycle - (fold.removedBefore + fold.end - fold.start);
+    }
+    return sourceCycle;
+  };
+  const displayToSource = (displayCycle: number): number | undefined => {
+    if (!Number.isInteger(displayCycle) || displayCycle < 0 || displayCycle >= displayCycleCount) return undefined;
+    const preceding = upperBound(folds, (fold) => fold.displayStart <= displayCycle) - 1;
+    return displayCycle + (preceding >= 0 ? folds[preceding]!.removedBefore + folds[preceding]!.end - folds[preceding]!.start : 0);
+  };
+  const displayBoundaryAtOrAfterSource = (sourceCycle: number): number => {
+    if (sourceCycle <= 0) return 0;
+    if (sourceCycle >= timeline.cycleCount) return displayCycleCount;
+    const preceding = upperBound(folds, (fold) => fold.start <= sourceCycle) - 1;
+    if (preceding >= 0) {
+      const fold = folds[preceding]!;
+      if (sourceCycle < fold.end) return fold.displayStart;
+    }
+    return sourceCycle - (preceding >= 0 ? folds[preceding]!.removedBefore + folds[preceding]!.end - folds[preceding]!.start : 0);
+  };
 
   // LabelAnchor.source is a source-timeline boundary; its display value is
   // the ruler label shown at the corresponding rendered boundary.
   return {
-    displayCycleCount: display,
+    sourceCycleCount: timeline.cycleCount,
+    displayCycleCount,
     isIdentity: false,
     sourceToDisplay,
     displayToSource,
+    displayBoundaryAtOrAfterSource,
     // The exclusive terminal boundary is not a rendered cycle slot and is
     // therefore absent from displayToSource. It must still retain the
     // canonical half-open timeline end label after a fold; never fall back to
     // the last visible source cycle (or an arbitrary display index).
     labelFor: (displayCycle) => {
-      const sourceCycle = displayCycle === display ? timeline.cycleCount : displayToSource[displayCycle];
+      const sourceCycle = displayCycle === displayCycleCount ? timeline.cycleCount : displayToSource(displayCycle);
       return sourceCycle === undefined ? displayCycle : labelForSourceCycle(timeline, sourceCycle);
     },
   };
@@ -178,7 +232,8 @@ export class DisplayTimeMappingCache {
     const started = Date.now();
     this.mapping = buildDisplayTimeMapping(timeline, timeGroups);
     this.builds += 1;
-    this.sourceCyclesVisited += timeline.cycleCount;
+    // Mapping construction visits only the collapsed intervals; no source
+    // cycle-sized table is allocated or traversed.
     this.foldRangesVisited += timeGroups.filter((group) => group.presentation?.collapsed).length;
     const durationMs = Date.now() - started;
     this.buildDurationMs += durationMs;

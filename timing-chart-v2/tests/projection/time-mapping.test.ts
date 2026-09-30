@@ -30,7 +30,7 @@ describe("buildDisplayTimeMapping", () => {
   it("is the identity mapping when there are no collapsed TimeGroups", () => {
     const mapping = buildDisplayTimeMapping(timeline(10), []);
     expect(mapping.displayCycleCount).toBe(10);
-    expect(mapping.displayToSource).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(Array.from({ length: mapping.displayCycleCount }, (_, display) => mapping.displayToSource(display))).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(mapping.labelFor(4)).toBe(4);
   });
 
@@ -38,32 +38,32 @@ describe("buildDisplayTimeMapping", () => {
     // source cycles 0..19; collapse [5, 15) — 10 hidden cycles
     const mapping = buildDisplayTimeMapping(timeline(20), [collapsedGroup("g1", 5, 15)]);
     expect(mapping.displayCycleCount).toBe(10); // 20 - 10 hidden
-    expect(mapping.sourceToDisplay[4]).toBe(4);
-    expect(mapping.sourceToDisplay[5]).toBeUndefined();
-    expect(mapping.sourceToDisplay[14]).toBeUndefined();
-    expect(mapping.sourceToDisplay[15]).toBe(5); // first cycle after the gap
-    expect(mapping.displayToSource[5]).toBe(15);
-    expect(mapping.displayToSource[9]).toBe(19);
+    expect(mapping.sourceToDisplay(4)).toBe(4);
+    expect(mapping.sourceToDisplay(5)).toBeUndefined();
+    expect(mapping.sourceToDisplay(14)).toBeUndefined();
+    expect(mapping.sourceToDisplay(15)).toBe(5); // first cycle after the gap
+    expect(mapping.displayToSource(5)).toBe(15);
+    expect(mapping.displayToSource(9)).toBe(19);
     expect(mapping.labelFor(mapping.displayCycleCount)).toBe(20);
   });
 
   it("handles multiple non-overlapping collapsed ranges", () => {
     const mapping = buildDisplayTimeMapping(timeline(30), [collapsedGroup("g1", 20, 25), collapsedGroup("g2", 5, 10)]);
     expect(mapping.displayCycleCount).toBe(30 - 5 - 5);
-    expect(mapping.sourceToDisplay[4]).toBe(4);
-    expect(mapping.sourceToDisplay[10]).toBe(5);
-    expect(mapping.sourceToDisplay[19]).toBe(14);
-    expect(mapping.sourceToDisplay[25]).toBe(15);
+    expect(mapping.sourceToDisplay(4)).toBe(4);
+    expect(mapping.sourceToDisplay(10)).toBe(5);
+    expect(mapping.sourceToDisplay(19)).toBe(14);
+    expect(mapping.sourceToDisplay(25)).toBe(15);
   });
 
   it("merges overlapping collapsed ranges while preserving the half-open mapping", () => {
     const mapping = buildDisplayTimeMapping(timeline(20), [collapsedGroup("g1", 4, 10), collapsedGroup("g2", 8, 14)]);
     expect(mapping.displayCycleCount).toBe(10);
-    expect(mapping.sourceToDisplay[3]).toBe(3);
-    expect(mapping.sourceToDisplay[4]).toBeUndefined();
-    expect(mapping.sourceToDisplay[13]).toBeUndefined();
-    expect(mapping.sourceToDisplay[14]).toBe(4);
-    expect(mapping.displayToSource[4]).toBe(14);
+    expect(mapping.sourceToDisplay(3)).toBe(3);
+    expect(mapping.sourceToDisplay(4)).toBeUndefined();
+    expect(mapping.sourceToDisplay(13)).toBeUndefined();
+    expect(mapping.sourceToDisplay(14)).toBe(4);
+    expect(mapping.displayToSource(4)).toBe(14);
   });
 
   it("uses source as the canonical anchor position and display as its ruler label", () => {
@@ -111,7 +111,7 @@ describe("DisplayTimeMappingCache", () => {
     const metrics = cache.metrics();
     expect(metrics.builds).toBe(1);
     expect(metrics.hits).toBe(1);
-    expect(metrics.sourceCyclesVisited).toBe(12);
+    expect(metrics.sourceCyclesVisited).toBe(0);
     expect(metrics.foldRangesVisited).toBe(1);
     expect(metrics.buildDurationMs).toBeGreaterThanOrEqual(0);
     expect(metrics.buildDurationMedianMs).toBe(metrics.buildDurationMs);
@@ -141,7 +141,7 @@ describe("DisplayTimeMappingCache", () => {
     expect(moved).not.toBe(first);
     expect(cache.metrics().builds).toBe(2);
     expect(cache.metrics().hits).toBe(1);
-    expect(cache.metrics().sourceCyclesVisited).toBe(24);
+    expect(cache.metrics().sourceCyclesVisited).toBe(0);
   });
 
   it("counts remap work separately from the identity fast path", () => {
@@ -164,10 +164,27 @@ describe("DisplayTimeMappingCache", () => {
     expect(identity.isIdentity).toBe(true);
     expect(mapping.displayCycleCount).toBe(99_000);
     expect(metrics.builds).toBe(2);
-    expect(metrics.sourceCyclesVisited).toBe(200_000);
+    expect(metrics.sourceCyclesVisited).toBe(0);
     expect(metrics.foldRangesVisited).toBe(1_000);
     expect(Number.isFinite(metrics.buildDurationMs)).toBe(true);
     expect(metrics.buildDurationP95Ms).toBeGreaterThanOrEqual(metrics.buildDurationMedianMs);
+  });
+
+  it("round-trips source/display conversion with interval work instead of cycle-sized storage", () => {
+    const cycleCount = 100_000;
+    const folds = [collapsedGroup("early", 100, 900), collapsedGroup("late", 70_000, 99_000)];
+    const mapping = buildDisplayTimeMapping(timeline(cycleCount), folds);
+
+    expect(mapping.sourceCycleCount).toBe(cycleCount);
+    expect(mapping.displayCycleCount).toBe(70_200);
+    for (const source of [0, 99, 900, 901, 69_999, 99_000, 99_999]) {
+      const display = mapping.sourceToDisplay(source);
+      expect(display).toBeDefined();
+      expect(mapping.displayToSource(display!)).toBe(source);
+    }
+    expect(mapping.sourceToDisplay(100)).toBeUndefined();
+    expect(mapping.displayBoundaryAtOrAfterSource(50_000)).toBe(49_200);
+    expect(mapping.displayBoundaryAtOrAfterSource(80_000)).toBe(69_200);
   });
 });
 

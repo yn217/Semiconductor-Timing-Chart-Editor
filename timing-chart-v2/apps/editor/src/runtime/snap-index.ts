@@ -22,7 +22,7 @@ export function buildSnapIndex(document: CanonicalDocument, projection: RenderPr
     ...(axisOwnerSignalId === undefined ? {} : { axisOwnerSignalId }),
     rowY: new Map(projection.rowLayout.flatMap((row) => signalIds.has(row.rowId as SignalId) ? [[row.rowId as SignalId, row.y] as const] : [])),
     renderedCycleCount: mapping.displayCycleCount,
-    sourceCycleForRenderedCycle: (renderedCycle) => renderedCycle === mapping.displayCycleCount ? document.timeline.cycleCount : mapping.displayToSource[renderedCycle],
-    renderedCycleForSourceCycle: (sourceCycle) => mapping.sourceToDisplay[sourceCycle],
+    sourceCycleForRenderedCycle: (renderedCycle) => renderedCycle === mapping.displayCycleCount ? document.timeline.cycleCount : mapping.displayToSource(renderedCycle),
+    renderedCycleForSourceCycle: (sourceCycle) => mapping.sourceToDisplay(sourceCycle),
   });
 }
