@@ -524,7 +524,10 @@ export function deriveTimingDiagnosticsIfInputsChanged(
         reusedUnknownValues.push(...signalValueDiagnostics(signal, index).map((diagnostic) => withRuleMetadata(diagnostic, "timing.unknown-value")));
       }
     });
-    const previousSignalIndexes = new Map(previousDocument.signals.map((signal, index) => [signal.id, { signal, index }] as const));
+    // Reuse the old-ID index built above for unknown-value reuse; rebuilding
+    // the same SignalId -> Signal/index map here adds another full pass on
+    // every Signal collection change.
+    const previousSignalIndexes = previousById;
     const changedSignalIds = new Set<SignalId>();
     nextDocument.signals.forEach((signal, index) => {
       const previous = previousSignalIndexes.get(signal.id);

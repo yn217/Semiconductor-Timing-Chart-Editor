@@ -74,6 +74,28 @@ describe("derived timing diagnostics", () => {
     expect(incremental.diagnostics.filter((item) => item.code === "HANDSHAKE_DATA_UNSTABLE" && item.entityId === changedPayload.id)).toHaveLength(1);
   });
 
+  it("builds the previous Signal ID/index map once during incremental diagnostics", () => {
+    const previous = canonicalFixture();
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    let previousMapPasses = 0;
+    const previousSignals = new Proxy(previous.signals, {
+      get(target, property, receiver) {
+        const value = Reflect.get(target, property, receiver);
+        if (property !== "map") return value;
+        return (...args: unknown[]) => {
+          previousMapPasses += 1;
+          return Reflect.apply(value as (...items: unknown[]) => unknown, target, args);
+        };
+      },
+    });
+    const next = { ...previous, signals: previous.signals.map((signal) => signal.id === previous.signals[1]!.id ? { ...signal, name: "RENAMED" } : signal) };
+
+    const incremental = deriveTimingDiagnosticsIfInputsChanged({ ...previous, signals: previousSignals }, next, previousDiagnostics);
+
+    expect(incremental.diagnostics).toEqual(deriveTimingDiagnostics(next));
+    expect(previousMapPasses).toBe(1);
+  });
+
   it("reuses derived Problems for unrelated immutable edits and invalidates every diagnostic input", () => {
     const source = canonicalFixture();
     const current = withSignals(source, [source.signals[0]!, { ...source.signals[1]!, values: [{ start: 1, value: "X" }] }]);
