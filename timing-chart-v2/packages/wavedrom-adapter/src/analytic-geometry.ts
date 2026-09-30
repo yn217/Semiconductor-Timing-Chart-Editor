@@ -231,5 +231,5 @@ export function analyticLocalGeometry(signalId: SignalId, waveJson: WaveJsonSign
     add(sourceCycle, "value-start", valueStart);
     previousToken = token;
   }
-  return new ImmutableLocalGeometryMap(signalId, accumulator.entries() as readonly LocalGeometryEntry[], resolvers);
+  return new ImmutableLocalGeometryMap(signalId, accumulator.entries() as readonly LocalGeometryEntry[], resolvers, waveJson.geometryCycleDomain ?? "source");
 }

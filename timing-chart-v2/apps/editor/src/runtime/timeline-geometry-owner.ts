@@ -1,4 +1,4 @@
-import { DefaultScreenGeometryProjector, resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
+import { DefaultScreenGeometryProjector, findSourceAnchorGeometry, resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { createDisplayTimeViewport, DisplayTimeMappingCache, type DisplayTimeMapping, type DisplayTimeViewport, type RenderProjection } from "@timing-chart-v2/projection";
 import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { displayBoundaryForSource } from "./display-boundary.js";
@@ -121,8 +121,7 @@ export class TimelineGeometryOwner {
     if (displayCycle === undefined) return undefined;
     // Bounded folded geometry is rebased with canonical source identities.
     // Keep the display-cycle lookup as the identity/no-fold fallback.
-    const point = axis.geometry.find({ signalId: axis.ownerSignalId, cycle, point: "cycle-start" })?.point
-      ?? axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
+    const point = findSourceAnchorGeometry(axis.geometry, { signalId: axis.ownerSignalId, cycle, point: "cycle-start" }, displayCycle)?.point;
     if (point !== undefined) return point.x * this.#presentationScale;
 
     // A bounded WaveDrom render intentionally retains detailed boundary

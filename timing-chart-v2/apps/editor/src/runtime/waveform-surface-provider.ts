@@ -226,8 +226,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
               end: rendererEnd === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource(rendererEnd) ?? sourceWindow.end),
             });
           const mappedWaveJson = sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
-            ? waveJson
-            : { ...waveJson, geometrySourceCycles: geometrySourceCyclesForWindow(rendererStart, rendererEnd, sourceWindow.start, sourceWindow.end) };
+            ? { ...waveJson, geometryCycleDomain: "display" as const }
+            : { ...waveJson, geometrySourceCycles: geometrySourceCyclesForWindow(rendererStart, rendererEnd, sourceWindow.start, sourceWindow.end), geometryCycleDomain: "source" as const };
           return { request, waveJson: mappedWaveJson, semanticValues, error: undefined, deferred: false, rendererStart, rendererEnd };
         } catch (error: unknown) {
           // Projection/conversion failures belong to one Signal only. Keep

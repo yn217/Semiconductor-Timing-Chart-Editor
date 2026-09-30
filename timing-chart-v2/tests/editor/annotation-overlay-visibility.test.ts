@@ -37,4 +37,95 @@ describe("annotation visibility and semantic targets", () => {
 
     expect(projectAnnotationOverlays(document, projectionFor(signal.id, false), new Map([[signal.id, map]]), buildDisplayTimeMapping(document.timeline, []))).toEqual([]);
   });
+
+  it("resolves folded anchors consistently for source-keyed and display-keyed geometry", () => {
+    const source = canonicalFixture();
+    const signal = source.signals[1]!;
+    const document = {
+      ...source,
+      timeGroups: [{ id: "fold" as never, name: "Fold", start: 2, end: 4, presentation: { collapsed: true, foldStyle: "axis-break" as const, foldLabel: "2 cycles" } }],
+    };
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    const sourceCycles = [0, 1, 4, 5, 6, 7, 8];
+    const sourceEntries = sourceCycles.flatMap((cycle) => {
+      const display = mapping.sourceToDisplay(cycle) ?? mapping.displayCycleCount;
+      return [
+        { cycle, point: "cycle-start" as const, position: { x: display * 10, y: 0 } },
+        ...(cycle === document.timeline.cycleCount ? [] : [
+          { cycle, point: "row-center" as const, position: { x: display * 10 + 5, y: 0 } },
+          { cycle, point: "transition-center" as const, position: { x: display * 10 + 5, y: 0 } },
+        ]),
+      ];
+    });
+    const displayEntries = Array.from({ length: mapping.displayCycleCount + 1 }, (_, cycle) => [
+      { cycle, point: "cycle-start" as const, position: { x: cycle * 10, y: 0 } },
+      ...(cycle === mapping.displayCycleCount ? [] : [
+        { cycle, point: "row-center" as const, position: { x: cycle * 10 + 5, y: 0 } },
+        { cycle, point: "transition-center" as const, position: { x: cycle * 10 + 5, y: 0 } },
+      ]),
+    ]).flat();
+    const sourceMap = new ImmutableLocalGeometryMap(signal.id, sourceEntries, [], "source");
+    const displayMap = new ImmutableLocalGeometryMap(signal.id, displayEntries, [], "display");
+    const projection = projectionFor(signal.id, true);
+    const anchor = { signalId: signal.id, cycle: 4, point: "cycle-start" as const };
+
+    expect(resolveAnchorPoint(anchor, document, projection, new Map([[signal.id, sourceMap]]), mapping)).toEqual({ x: 20, y: 120 });
+    expect(resolveAnchorPoint(anchor, document, projection, new Map([[signal.id, displayMap]]), mapping)).toEqual({ x: 20, y: 120 });
+    expect(resolveAnchorPoint({ ...anchor, cycle: 2 }, document, projection, new Map([[signal.id, sourceMap]]), mapping)).toBeUndefined();
+    expect(resolveAnchorPoint({ ...anchor, cycle: 8 }, document, projection, new Map([[signal.id, sourceMap]]), mapping)).toEqual({ x: 60, y: 120 });
+    expect(resolveAnchorPoint({ ...anchor, cycle: 8 }, document, projection, new Map([[signal.id, displayMap]]), mapping)).toEqual({ x: 60, y: 120 });
+    const wrongSourceFallback = new ImmutableLocalGeometryMap(signal.id, [
+      { cycle: 2, point: "cycle-start", position: { x: 999, y: 0 } },
+    ], [], "source");
+    expect(resolveAnchorPoint(anchor, document, projection, new Map([[signal.id, wrongSourceFallback]]), mapping)).toBeUndefined();
+  });
+
+  it.each([0, 1])("keeps Ghost Trace source samples aligned across full display and bounded source geometry after a fold (offset %i)", (offset) => {
+    const source = canonicalFixture();
+    const signal = source.signals[1]!;
+    const annotation = {
+      id: "ghost-folded" as never,
+      type: "ghostTrace" as const,
+      label: "Folded trace",
+      visible: true,
+      sourceSignalId: signal.id,
+      traceOffsetCycles: offset,
+      start: { signalId: signal.id, cycle: 4, point: "row-center" as const },
+      end: { signalId: signal.id, cycle: 6, point: "row-center" as const },
+    };
+    const document = {
+      ...source,
+      timeGroups: [{ id: "fold" as never, name: "Fold", start: 2, end: 4, presentation: { collapsed: true, foldStyle: "axis-break" as const, foldLabel: "2 cycles" } }],
+      annotations: [annotation],
+    };
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    const sourceCycles = [0, 1, 4, 5, 6, 7, 8];
+    const sourceEntries = sourceCycles.flatMap((cycle) => {
+      const display = mapping.sourceToDisplay(cycle) ?? mapping.displayCycleCount;
+      return [
+        { cycle, point: "cycle-start" as const, position: { x: display * 10, y: 0 } },
+        ...(cycle === document.timeline.cycleCount ? [] : [
+          { cycle, point: "row-center" as const, position: { x: display * 10 + 5, y: 0 } },
+          { cycle, point: "transition-center" as const, position: { x: display * 10 + 5, y: 0 } },
+        ]),
+      ];
+    });
+    const displayEntries = Array.from({ length: mapping.displayCycleCount + 1 }, (_, cycle) => [
+      { cycle, point: "cycle-start" as const, position: { x: cycle * 10, y: 0 } },
+      ...(cycle === mapping.displayCycleCount ? [] : [
+        { cycle, point: "row-center" as const, position: { x: cycle * 10 + 5, y: 0 } },
+        { cycle, point: "transition-center" as const, position: { x: cycle * 10 + 5, y: 0 } },
+      ]),
+    ]).flat();
+    const projection = projectionFor(signal.id, true);
+    const sourceOverlays = projectAnnotationOverlays(document, projection, new Map([[signal.id, new ImmutableLocalGeometryMap(signal.id, sourceEntries, [], "source")]]), mapping);
+    const displayOverlays = projectAnnotationOverlays(document, projection, new Map([[signal.id, new ImmutableLocalGeometryMap(signal.id, displayEntries, [], "display")]]), mapping);
+
+    const firstDisplayCycle = mapping.sourceToDisplay(4 + offset)!;
+    expect(sourceOverlays[0]?.tracePoints?.map((point) => point.x)).toEqual(Array.from({ length: 3 }, (_, index) => [
+      (firstDisplayCycle + index) * 10,
+      (firstDisplayCycle + index) * 10 + 5,
+    ]).flat());
+    expect(displayOverlays[0]?.tracePoints).toEqual(sourceOverlays[0]?.tracePoints);
+  });
 });

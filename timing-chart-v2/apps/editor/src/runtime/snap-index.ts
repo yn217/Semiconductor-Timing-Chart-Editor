@@ -9,6 +9,7 @@ export function buildSnapIndex(document: CanonicalDocument, projection: RenderPr
   const signalIds = new Set(document.signals.map((signal) => signal.id));
   const screenMaps = new Map<SignalId, LocalGeometryMap>([...maps.entries()].map(([id, map]) => [id, {
     signalId: map.signalId,
+    cycleKeyDomain: map.cycleKeyDomain,
     find: (anchor: SemanticAnchor) => {
       const local = map.find(anchor);
       if (!local) return undefined;

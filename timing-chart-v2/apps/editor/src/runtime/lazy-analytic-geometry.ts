@@ -11,12 +11,14 @@ const GRID_POINTS = new Set(["cycle-start", "cycle-center", "value-center", "row
 
 export class LazyAnalyticGeometryMap implements LocalGeometryMap {
   readonly signalId: SignalId;
+  readonly cycleKeyDomain: "source" | "display";
   readonly #grid: UniformCycleLocalGeometryMap;
   readonly #waveJson: WaveJsonSignal;
   #analytic: LocalGeometryMap | undefined;
 
   constructor(signalId: SignalId, waveJson: WaveJsonSignal, sourceCycles: readonly number[]) {
     this.signalId = signalId;
+    this.cycleKeyDomain = waveJson.geometryCycleDomain ?? "source";
     this.#waveJson = waveJson;
     this.#grid = new UniformCycleLocalGeometryMap(signalId, { sourceCycles, originX: WAVEDROM_ORIGIN_X, cycleWidth: WAVEDROM_CYCLE_WIDTH, rowY: WAVEDROM_ROW_Y });
   }

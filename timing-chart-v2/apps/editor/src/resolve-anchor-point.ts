@@ -1,4 +1,4 @@
-import type { LocalGeometryMap, Point } from "@timing-chart-v2/geometry";
+import { findSourceAnchorGeometry, type LocalGeometryMap, type Point } from "@timing-chart-v2/geometry";
 import { resolveSourcePosition, type DisplayTimeMapping, type RenderProjection } from "@timing-chart-v2/projection";
 import type { CanonicalDocument, SemanticAnchor, SignalId } from "@timing-chart-v2/schema";
 
@@ -17,7 +17,8 @@ export function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document:
   if (!signalId) return undefined;
   const renderedCycle = anchor.cycle === document.timeline.cycleCount ? mapping.displayCycleCount : resolveSourcePosition(mapping, anchor.cycle, continuous ? "interpolate" : "omit");
   if (renderedCycle === undefined) return undefined;
-  const local = maps.get(signalId)?.find({ ...anchor, signalId, cycle: renderedCycle });
+  const map = maps.get(signalId);
+  const local = map ? findSourceAnchorGeometry(map, { ...anchor, signalId }, renderedCycle) : undefined;
   if (!local) return undefined;
   const row = anchor.signalId ? rowLayoutIndex(projection.rowLayout).get(anchor.signalId) : undefined;
   // Navigation keeps hidden rows addressable for selection and stable layout
@@ -27,7 +28,10 @@ export function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document:
   if (anchor.signalId && (!row || !row.visible)) return undefined;
   const rowY = row?.y ?? 0;
   const sharedBoundary = anchor.point === "cycle-start" && axisOwnerSignalId !== undefined
-    ? maps.get(axisOwnerSignalId)?.find({ ...anchor, signalId: axisOwnerSignalId, cycle: renderedCycle })?.point
+    ? (() => {
+      const axisMap = maps.get(axisOwnerSignalId);
+      return axisMap ? findSourceAnchorGeometry(axisMap, { ...anchor, signalId: axisOwnerSignalId }, renderedCycle)?.point : undefined;
+    })()
     : undefined;
   return { x: (sharedBoundary?.x ?? local.point.x) * xScale, y: rowY + local.point.y };
 }

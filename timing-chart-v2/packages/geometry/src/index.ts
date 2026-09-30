@@ -127,6 +127,8 @@ export interface LocalAnchorGeometry {
 
 export interface LocalGeometryMap {
   readonly signalId: SignalId;
+  /** Cycle keys used by `find`: canonical source cycles or rendered display cycles. */
+  readonly cycleKeyDomain?: "source" | "display" | undefined;
   find(anchor: SemanticAnchor): LocalAnchorGeometry | undefined;
   /** Semantic cycle boundaries owned by this geometry map. */
   cycleBoundaryEntries?(): readonly LocalGeometryEntry[];
@@ -136,6 +138,17 @@ export interface LocalGeometryMap {
    * capability without probing every source cycle through `find()`.
    */
   edgeEntries?(): readonly LocalGeometryEntry[];
+}
+
+/** Resolve a canonical source anchor against a geometry map's declared cycle-key domain. */
+export function findSourceAnchorGeometry(map: LocalGeometryMap, anchor: SemanticAnchor, displayCycle: number): LocalAnchorGeometry | undefined {
+  const sourceCycle = anchor.cycle;
+  const findAt = (cycle: number) => map.find({ ...anchor, signalId: map.signalId, cycle });
+  if (map.cycleKeyDomain === "display") return findAt(displayCycle);
+  if (map.cycleKeyDomain === "source") return findAt(sourceCycle);
+  // Compatibility for older/custom maps without an explicit domain. New
+  // production owners always declare the key contract and never guess here.
+  return findAt(sourceCycle) ?? findAt(displayCycle);
 }
 
 /**
@@ -187,13 +200,15 @@ const keyOf = (cycle: number, point: AnchorPoint, threshold?: number): string =>
 
 export class ImmutableLocalGeometryMap implements LocalGeometryMap {
   readonly signalId: SignalId;
+  readonly cycleKeyDomain: "source" | "display";
   readonly #entries: ReadonlyMap<string, Point>;
   readonly #edgeEntries: readonly LocalGeometryEntry[];
   readonly #cycleBoundaryEntries: readonly LocalGeometryEntry[];
   readonly #transitionResolvers: ReadonlyMap<string, (fraction: number) => Point>;
 
-  constructor(signalId: SignalId, entries: readonly LocalGeometryEntry[], transitionResolvers: readonly TransitionGeometryResolver[] = []) {
+  constructor(signalId: SignalId, entries: readonly LocalGeometryEntry[], transitionResolvers: readonly TransitionGeometryResolver[] = [], cycleKeyDomain: "source" | "display" = "source") {
     this.signalId = signalId;
+    this.cycleKeyDomain = cycleKeyDomain;
     const frozenEntries = entries.map((entry) => Object.freeze({ ...entry, position: Object.freeze({ ...entry.position }) }));
     this.#entries = new Map(frozenEntries.map((entry) => [keyOf(entry.cycle, entry.point, entry.threshold), entry.position]));
     this.#edgeEntries = Object.freeze(frozenEntries.filter((entry) => entry.point === "rising-edge" || entry.point === "falling-edge"));
@@ -227,6 +242,7 @@ export class ImmutableLocalGeometryMap implements LocalGeometryMap {
  */
 export class OffsetLocalGeometryMap implements LocalGeometryMap {
   readonly signalId: SignalId;
+  readonly cycleKeyDomain: "source" | "display" | undefined;
   readonly #inner: LocalGeometryMap;
   readonly #dx: number;
   #boundaries: readonly LocalGeometryEntry[] | undefined;
@@ -234,6 +250,7 @@ export class OffsetLocalGeometryMap implements LocalGeometryMap {
 
   constructor(inner: LocalGeometryMap, dx: number) {
     this.signalId = inner.signalId;
+    this.cycleKeyDomain = inner.cycleKeyDomain;
     this.#inner = inner;
     this.#dx = dx;
   }

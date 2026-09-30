@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { DisplayTimeMappingCache } from "@timing-chart-v2/projection";
+import { buildDisplayTimeMapping, DisplayTimeMappingCache } from "@timing-chart-v2/projection";
+import { findSourceAnchorGeometry } from "@timing-chart-v2/geometry";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 import { toWaveJson } from "@timing-chart-v2/wavedrom-adapter";
 import type { BookmarkId } from "@timing-chart-v2/schema";
@@ -79,6 +80,50 @@ describe("waveform provider primary geometry readiness", () => {
     provider.retainWaveArtifact!(referenceSignalId);
     expect(retainArtifact).toHaveBeenCalledWith(referenceSignalId);
     expect(invalidateSnapIndex).toHaveBeenCalledTimes(priorSnapInvalidations + 1);
+  });
+
+  it("declares display keys for a full folded render and source keys for a bounded folded render", async () => {
+    const base = canonicalFixture();
+    const document = {
+      ...base,
+      timeGroups: [{ id: "fold" as never, name: "Fold", start: 2, end: 4, presentation: { collapsed: true, foldStyle: "axis-break" as const, foldLabel: "2 cycles" } }],
+    };
+    const dataSignalId = document.signals[1]!.id;
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    const adapterFactory = (): WaveDromAdapter => ({
+      toWaveJson: (source) => toWaveJson(source),
+      renderWave: vi.fn(async (signalId, waveJson) => ({ signalId, ownerKey: signalId, svg: {} as SVGSVGElement, renderIndex: 0, waveJson })),
+      extractLocalGeometry: vi.fn(() => { throw new Error("SVG extraction is not used in analytic mode."); }),
+      geometryMetrics: () => ({ last: undefined, totalDurationMs: 0, totalUsesVisited: 0, totalGeometryEntriesEmitted: 0, totalDuplicateKeyChecks: 0, totalDuplicateKeyCollisions: 0, totalTransitionBrickLookups: 0, totalSkinPathParses: 0, totalMatrixReads: 0 }),
+      dispose: vi.fn(),
+      metrics: () => ({ renderCalls: 1, waveJsonDurationMs: 0, renderDurationMs: 0, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 1, mounts: 1, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 1, allocatedRenderIndices: 1 }),
+    });
+    const mount = async (sourceWindow?: Readonly<{ start: number; end: number }>) => {
+      const geometryRegistry = new GeometryRegistry();
+      const provider = createWaveformSurfaceProvider({
+        sessionController: { snapshot: () => ({ document, revision: 0 }) },
+        getDocumentEpoch: () => 1,
+        mappingCache: new DisplayTimeMappingCache(),
+        adapter: adapterFactory(),
+        geometryRegistry,
+        markOpenPhase: vi.fn(),
+        invalidateSnapIndex: vi.fn(),
+        getViewMode: () => "Cycle",
+      });
+      await provider.mountWaveBatch!([{ signalId: dataSignalId, owner: { style: { removeProperty: vi.fn() }, dataset: {}, isConnected: true } as unknown as HTMLElement, documentEpoch: 1, ...(sourceWindow === undefined ? {} : { sourceWindow }) }]);
+      const map = geometryRegistry.maps.get(dataSignalId);
+      expect(map).toBeDefined();
+      return map!;
+    };
+    const sourceAnchor = { signalId: dataSignalId, cycle: 4, point: "cycle-start" as const };
+    const displayCycle = mapping.sourceToDisplay(sourceAnchor.cycle)!;
+    const fullMap = await mount();
+    const boundedMap = await mount({ start: 0, end: document.timeline.cycleCount });
+
+    expect(fullMap.cycleKeyDomain).toBe("display");
+    expect(boundedMap.cycleKeyDomain).toBe("source");
+    expect(findSourceAnchorGeometry(fullMap, sourceAnchor, displayCycle)?.point.x).toBe(100.5);
+    expect(findSourceAnchorGeometry(boundedMap, sourceAnchor, displayCycle)?.point.x).toBe(100.5);
   });
 
   it("cooperatively yields between over-budget viewport rows after initial Open readiness", async () => {

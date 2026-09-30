@@ -38,6 +38,8 @@ export interface WaveJsonSignal {
   readonly geometryWindow?: Readonly<{ readonly start: number; readonly end: number }>;
   /** Source identity for each local display boundary, supplied by the shared mapping. */
   readonly geometrySourceCycles?: readonly number[];
+  /** Explicit cycle-key domain of extracted geometry; full folded renders use display keys. */
+  readonly geometryCycleDomain?: "source" | "display";
   /** Display-domain interval actually handed to WaveDrom. */
   readonly displayWindow?: Readonly<{ readonly start: number; readonly end: number }>;
 }

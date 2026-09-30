@@ -374,5 +374,5 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
     metrics.signalId = rendered.signalId;
     metrics.durationMs = (globalThis.performance?.now() ?? Date.now()) - startedAt;
   }
-  return new ImmutableLocalGeometryMap(rendered.signalId, accumulator.entries(), transitionResolvers);
+  return new ImmutableLocalGeometryMap(rendered.signalId, accumulator.entries(), transitionResolvers, rendered.waveJson.geometryCycleDomain ?? "source");
 }

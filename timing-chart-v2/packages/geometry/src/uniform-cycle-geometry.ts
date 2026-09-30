@@ -46,6 +46,7 @@ export function uniformCycleBoundaryEntries(input: UniformCycleGridInput): reado
  */
 export class UniformCycleLocalGeometryMap implements LocalGeometryMap {
   readonly signalId: SignalId;
+  readonly cycleKeyDomain = "source" as const;
   readonly #input: UniformCycleGridInput;
   readonly #indexBySourceCycle: ReadonlyMap<number, number> | undefined;
   readonly #firstCycle: number;

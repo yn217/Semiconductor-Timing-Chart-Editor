@@ -1,6 +1,6 @@
 import { anchorTransitionFraction, anchorTransitionKind } from "@timing-chart-v2/schema";
 import type { Annotation, CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
-import { allocateMeasurementLanes, type LocalGeometryMap, type Point } from "@timing-chart-v2/geometry";
+import { allocateMeasurementLanes, findSourceAnchorGeometry, type LocalGeometryMap, type Point } from "@timing-chart-v2/geometry";
 import type { DisplayTimeMapping, DisplayTimeViewport, RenderProjection } from "@timing-chart-v2/projection";
 import type { AnnotationOverlayPrimitive } from "@timing-chart-v2/renderer";
 import { resolveAnchorPoint, rowLayoutIndex } from "../resolve-anchor-point.js";
@@ -99,7 +99,7 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
           const renderedCycle = mapping.sourceToDisplay(sourceCycle);
           if (renderedCycle === undefined) continue;
           for (const point of ["cycle-start", "transition-center"] as const) {
-            const local = sourceMap.find({ signalId: annotation.sourceSignalId, cycle: renderedCycle, point });
+            const local = findSourceAnchorGeometry(sourceMap, { signalId: annotation.sourceSignalId, cycle: sourceCycle, point }, renderedCycle);
             if (local) points.push({ x: local.point.x * xScale, y: sourceRowY + local.point.y });
           }
         }
