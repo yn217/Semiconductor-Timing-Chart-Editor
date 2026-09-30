@@ -860,6 +860,20 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.transactions).toHaveLength(4);
   });
 
+  it("rejects duplicate stable IDs within a Transaction bulk-create atomically", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const before = session.getSnapshot().document;
+    const duplicateId = "txn_bulk_duplicate_id" as TransactionId;
+    const result = session.execute({ id: commandId("cmd_txn_bulk_duplicate_id"), type: "transaction.bulkCreate", transactions: [
+      { id: duplicateId, name: "First", start: 1, end: 3, laneId: "lane_0" },
+      { id: duplicateId, name: "Second", start: 4, end: 6, laneId: "lane_1" },
+    ] });
+
+    expect(result).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "DUPLICATE_ID", path: "$.transactions[1].id" }] });
+    expect(session.getSnapshot().document).toBe(before);
+    expect(session.historyState().undoDepth).toBe(0);
+  });
+
   it("creates a copied Group and its Signal/Spacer rows in one atomic planner action", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const signal = extraSignal("sig_group_copy_row");
