@@ -154,6 +154,33 @@ describe("MiniMap overview derivation", () => {
     expect(updated.rows).toHaveLength(2);
   });
 
+  it("updates only old/new lane buckets when a 10k Transaction move removes and creates lanes", () => {
+    const source = canonicalFixture();
+    const transactions = Array.from({ length: 10_000 }, (_, index) => ({
+      id: `txn_lane_topology_${index}`,
+      name: `Transaction ${index}`,
+      start: index % 500,
+      end: (index % 500) + 2,
+      laneId: index === 0 ? "lane_rare" : `lane_${index % 100}`,
+      linkedSignals: [],
+    }));
+    const before = { ...source, transactions };
+    const previous = buildMiniMapTransactionOverview(before);
+    const movedIndex = 0;
+    const moved = { ...transactions[movedIndex]!, laneId: "lane_new" };
+    const nextTransactions = [...transactions];
+    nextTransactions[movedIndex] = moved;
+    const next = { ...before, transactions: nextTransactions };
+
+    const updated = updateMiniMapTransactionOverview(previous, transactions, before.transactionGroups, next, [moved.id as never]);
+
+    expect(updated.transactionsVisited).toBe(3);
+    expect(updated.laneBucketsRebuilt).toBe(2);
+    expect(updated.rows.some((row) => row.laneId === "lane_rare")).toBe(false);
+    expect(updated.rows.some((row) => row.laneId === "lane_new")).toBe(true);
+    expect(updated.rows).toEqual(buildMiniMapTransactionOverview(next).rows);
+  });
+
   it("refreshes both buckets when a Transaction moves between lanes", () => {
     const source = canonicalFixture();
     const transactions = [
