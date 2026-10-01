@@ -36,6 +36,20 @@ describe("annotationsNearViewport", () => {
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
   });
 
+  it("queries only overlapping wide intervals instead of visiting every long-range Annotation", () => {
+    const count = 2_000;
+    const wide = Array.from({ length: count }, (_, index) => {
+      const start = 10_000 + index * 10_000;
+      return { id: `wide${index}`, type: "range", label: "long", visible: true, start: { cycle: start, point: "cycle-start" }, end: { cycle: start + 5_000, point: "cycle-end" } } as unknown as Annotation;
+    });
+    const targetIndex = 1_234;
+    const target = wide[targetIndex]!;
+    const result = indexedAnnotationsNearViewport(wide, 10_000 + targetIndex * 10_000 + 100, 10_000 + targetIndex * 10_000 + 200);
+
+    expect(result.items).toEqual([target]);
+    expect(result.indexEntriesVisited).toBe(1);
+  });
+
   it.each([[100, 0, 100, 110], [-100, 120, 20, 30]])("indexes Ghost Trace's shifted interval for offset %i", (offset, rawStart, viewStart, viewEnd) => {
     const ghost = { id: "ghost", type: "ghostTrace", label: "g", visible: true, traceOffsetCycles: offset, start: { cycle: rawStart, point: "cycle-start" }, end: { cycle: rawStart + 10, point: "cycle-end" } } as unknown as Annotation;
     const result = indexedAnnotationsNearViewport([ghost, ...make(1000)], viewStart, viewEnd);

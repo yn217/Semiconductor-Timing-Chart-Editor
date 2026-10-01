@@ -12,18 +12,19 @@ export const annotationFields = ["anchor", "start", "end", "from", "to"] as cons
 const BUCKET_CYCLES = 256;
 const WIDE_BUCKETS = 16;
 const INDEX_THRESHOLD = 256;
-interface AnnotationTimeIndex { readonly buckets: ReadonlyMap<number, readonly number[]>; readonly wide: readonly number[]; readonly byId: ReadonlyMap<string, number> }
+interface WideAnnotationInterval { readonly position: number; readonly start: number; readonly end: number; readonly prefixMaxEnd: number }
+interface AnnotationTimeIndex { readonly buckets: ReadonlyMap<number, readonly number[]>; readonly wideIntervals: readonly WideAnnotationInterval[]; readonly byId: ReadonlyMap<string, number> }
 const annotationTimeIndexes = new WeakMap<readonly Annotation[], AnnotationTimeIndex>();
 function annotationTimeIndex(annotations: readonly Annotation[]): AnnotationTimeIndex {
   let index = annotationTimeIndexes.get(annotations);
   if (index) return index;
   const buckets = new Map<number, number[]>();
-  const wide: number[] = [];
+  const wide: Array<{ readonly position: number; readonly start: number; readonly end: number }> = [];
   const byId = new Map<string, number>();
   const addInterval = (position: number, min: number, max: number): void => {
     if (min > max) return;
     const first = Math.floor(min / BUCKET_CYCLES), last = Math.floor(max / BUCKET_CYCLES);
-    if (last - first >= WIDE_BUCKETS) { wide.push(position); return; }
+    if (last - first >= WIDE_BUCKETS) { wide.push({ position, start: min, end: max }); return; }
     for (let bucket = first; bucket <= last; bucket += 1) { const list = buckets.get(bucket); if (list) list.push(position); else buckets.set(bucket, [position]); }
   };
   annotations.forEach((annotation, position) => {
@@ -37,7 +38,13 @@ function annotationTimeIndex(annotations: readonly Annotation[]): AnnotationTime
       addInterval(position, Math.min(annotation.start.cycle, annotation.end.cycle) + offset, Math.max(annotation.start.cycle, annotation.end.cycle) + offset);
     }
   });
-  index = { buckets, wide: [...new Set(wide)].sort((a, b) => a - b), byId };
+  wide.sort((left, right) => left.start - right.start || left.end - right.end || left.position - right.position);
+  let prefixMaxEnd = Number.NEGATIVE_INFINITY;
+  const wideIntervals = wide.map((interval) => {
+    prefixMaxEnd = Math.max(prefixMaxEnd, interval.end);
+    return { ...interval, prefixMaxEnd };
+  });
+  index = { buckets, wideIntervals, byId };
   annotationTimeIndexes.set(annotations, index);
   return index;
 }
@@ -46,8 +53,30 @@ export function annotationsNearViewport(annotations: readonly Annotation[], sour
 }
 export function indexedAnnotationsNearViewport(annotations: readonly Annotation[], sourceStart: number, sourceEnd: number, pinnedIds: ReadonlySet<string> = new Set()): Readonly<{ items: readonly Annotation[]; indexEntriesVisited: number; pinnedInjectedCount: number }> {
   const index = annotationTimeIndex(annotations);
-  const positions = new Set<number>(index.wide);
-  let indexEntriesVisited = index.wide.length;
+  const positions = new Set<number>();
+  let indexEntriesVisited = 0;
+  // Wide intervals are sorted by start and carry a monotonic prefix maximum
+  // end. Find the first prefix that can overlap the viewport, then stop once
+  // interval starts pass its end; offscreen wide Annotations no longer make
+  // every scroll visit the entire wide-interval collection.
+  let low = 0, high = index.wideIntervals.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (index.wideIntervals[middle]!.prefixMaxEnd < sourceStart) low = middle + 1;
+    else high = middle;
+  }
+  const wideStart = low;
+  high = index.wideIntervals.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (index.wideIntervals[middle]!.start <= sourceEnd) low = middle + 1;
+    else high = middle;
+  }
+  for (let intervalIndex = wideStart; intervalIndex < low; intervalIndex += 1) {
+    const interval = index.wideIntervals[intervalIndex]!;
+    indexEntriesVisited += 1;
+    if (interval.end >= sourceStart) positions.add(interval.position);
+  }
   for (let bucket = Math.floor(sourceStart / BUCKET_CYCLES); bucket <= Math.floor(sourceEnd / BUCKET_CYCLES); bucket += 1) {
     const entries = index.buckets.get(bucket) ?? [];
     indexEntriesVisited += entries.length;
