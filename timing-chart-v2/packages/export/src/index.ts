@@ -198,6 +198,24 @@ function boundedWaveJson(signal: Exclude<Signal, { readonly type: "commentRow" }
   return { waveJson, semanticValues, windowStart: range.start, renderedCycleCount: windowLength };
 }
 
+/** Map a selected display interval back to one contiguous source interval.
+ * Clock windows can use the periodic source renderer only when the fold offset
+ * preserves the clock's period phase; ranges crossing a fold remain on the
+ * full-display path. */
+function foldedClockSourceWindow(mapping: DisplayTimeMapping, range: Readonly<{ start: number; end: number }>, period: number): Readonly<{ start: number; end: number }> | undefined {
+  if (mapping.isIdentity || !Number.isInteger(period) || period < 1 || range.start < 0 || range.end > mapping.displayCycleCount || range.end <= range.start) return undefined;
+  // WaveDrom's intrinsic width padding changes the exported cycle pitch for
+  // very short artifacts. Conservatively keep windows under five cycles on
+  // the full path, unless the document itself is shorter.
+  if (range.end - range.start < Math.min(5, mapping.displayCycleCount)) return undefined;
+  const sourceStart = mapping.displayToSource(range.start);
+  const sourceLast = mapping.displayToSource(range.end - 1);
+  if (sourceStart === undefined || sourceLast === undefined) return undefined;
+  const sourceEnd = sourceLast + 1;
+  if (sourceEnd - sourceStart !== range.end - range.start || (sourceStart - range.start) % period !== 0) return undefined;
+  return { start: sourceStart, end: sourceEnd };
+}
+
 interface GhostTraceWindow {
   readonly traceStart: number;
   readonly traceEnd: number;
@@ -394,13 +412,26 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
       : canBoundFoldedValues
         ? remapValueChangesToDisplayWindow(signal.values, mapping, range.start, range.end)
         : remapValueChangesToDisplay(signal.values, mapping);
-    const displaySignal = signal.type === "clock"
-      ? { ...signal, ...(signal.enable ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
-      : { ...signal, values: displayValues ?? signal.values };
-    const foldedRangeIsSafe = mapping.isIdentity || signal.type !== "clock";
-    const bounded = canBoundWaveforms && foldedRangeIsSafe
-      ? boundedWaveJson(mapping.isIdentity ? signal : displaySignal, mapping.isIdentity ? document.timeline.cycleCount : mapping.displayCycleCount, boundedRange ?? range, document.enumDefinitions)
+    const foldedClockRange = canBoundWaveforms && !mapping.isIdentity && signal.type === "clock"
+      ? foldedClockSourceWindow(mapping, range, signal.generator.period)
       : undefined;
+    const displaySignal = signal.type === "clock"
+      ? { ...signal, ...(signal.enable && foldedClockRange === undefined ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
+      : { ...signal, values: displayValues ?? signal.values };
+    const foldedRangeIsSafe = mapping.isIdentity || signal.type !== "clock" || foldedClockRange !== undefined;
+    const boundedRaw = canBoundWaveforms && foldedRangeIsSafe
+      ? boundedWaveJson(foldedClockRange ? signal : mapping.isIdentity ? signal : displaySignal,
+        foldedClockRange ? mapping.sourceCycleCount : mapping.isIdentity ? document.timeline.cycleCount : mapping.displayCycleCount,
+        foldedClockRange ?? boundedRange ?? range,
+        document.enumDefinitions)
+      : undefined;
+    const bounded = boundedRaw && foldedClockRange
+      ? {
+        ...boundedRaw,
+        waveJson: { ...boundedRaw.waveJson, displayWindow: range },
+        windowStart: range.start - (foldedClockRange.start - boundedRaw.windowStart),
+      }
+      : boundedRaw;
     const waveJson = bounded?.waveJson ?? toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions });
     const semanticValues = bounded?.semanticValues ?? (signal.type !== "clock" && valueSignalWaveDomain(signal.type) === "data" ? displayValues!.map((change) => String(change.value)) : undefined);
     const svgMarkup = renderWaveJsonMarkup(waveJson, index, semanticValues);

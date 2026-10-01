@@ -889,6 +889,58 @@ describe("deterministic document export", () => {
     }
   });
 
+  it("bounds a folded selected Clock waveform when the source/display offset preserves its period phase", () => {
+    const base = canonicalFixture();
+    const clock = base.signals[0]!;
+    const enableChanges = Array.from({ length: 2_500 }, (_, index) => ({ start: index * 4, value: index % 2 === 0 ? 1 : 0 }));
+    let numericReads = 0;
+    const countedEnable = new Proxy(enableChanges, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^(0|[1-9]\d*)$/.test(property)) numericReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const document: CanonicalDocument = {
+      ...base,
+      timeline: { ...base.timeline, end: 10_000, cycleCount: 10_000 },
+      signalGroups: [{ ...base.signalGroups[0]!, rows: [clock.id] }],
+      signals: [{ ...clock, generator: { ...clock.generator, period: 4 }, enable: countedEnable }],
+      timeGroups: [{ id: "tg_clock_window" as TimeGroupId, name: "Earlier fold", start: 4, end: 12, presentation: { collapsed: true } }],
+    };
+
+    const range = { start: 100, end: 120 };
+    const selected = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 108, end: 128 } });
+    const selectedWave = JSON.parse(selected.waveforms[0]!.waveJson) as { wave: string; period?: number; sourceWindow: { start: number; end: number }; displayWindow: { start: number; end: number } };
+    const fullDocument = { ...document, signals: [{ ...clock, generator: { ...clock.generator, period: 4 }, enable: enableChanges }] };
+    const full = buildExportScene(fullDocument, { format: "svg", scope: "document" });
+    const fullWave = JSON.parse(full.waveforms[0]!.waveJson) as { wave: string; period?: number };
+
+    expect(selectedWave).toMatchObject({
+      wave: fullWave.wave.slice(range.start / 4, range.end / 4),
+      period: 4,
+      sourceWindow: { start: 108, end: 128 },
+      displayWindow: range,
+    });
+    expect(selectedWave.wave).toHaveLength(5);
+    expect(fullWave.wave.length).toBeGreaterThan(2_000);
+    expect(numericReads).toBeLessThan(100);
+
+    const short = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 108, end: 110 } });
+    const shortWave = JSON.parse(short.waveforms[0]!.waveJson) as { wave: string; sourceWindow?: unknown };
+    expect(shortWave.sourceWindow).toBeUndefined();
+    expect(shortWave.wave.length).toBeGreaterThan(2_000);
+
+    const phaseShiftedDocument = {
+      ...document,
+      timeGroups: [{ id: "tg_clock_phase_shift" as TimeGroupId, name: "Phase-shifting fold", start: 4, end: 14, presentation: { collapsed: true } }],
+      signals: [{ ...clock, generator: { ...clock.generator, period: 4 }, enable: undefined }],
+    };
+    const phaseShifted = buildExportScene(phaseShiftedDocument, { format: "svg", scope: "selected-range", range: { start: 110, end: 130 } });
+    const phaseShiftedWave = JSON.parse(phaseShifted.waveforms[0]!.waveJson) as { wave: string; sourceWindow?: unknown };
+    expect(phaseShiftedWave.sourceWindow).toBeUndefined();
+    expect(phaseShiftedWave.wave.length).toBeGreaterThan(2_000);
+  });
+
   it("bounds folded signal-start Clock counters while preserving global ordinals", () => {
     const base = canonicalFixture();
     const clock = base.signals[0]!;
