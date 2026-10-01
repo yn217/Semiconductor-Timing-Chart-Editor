@@ -269,7 +269,7 @@ function pageLayout(page: NonNullable<ExportSettings["page"]>, contentWidth: num
   });
 }
 
-export function buildExportScene(document: CanonicalDocument, settings: ExportSettings): ExportScene {
+function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSettings): Generator<void, ExportScene, void> {
   for (const annotation of document.annotations) {
     const lane = annotation.type === "measurement" ? annotation.measurementLayout?.lane : undefined;
     if (lane !== undefined && (!Number.isInteger(lane) || lane < 0 || lane > MAX_MEASUREMENT_LANE)) throw new RangeError(`Measurement '${annotation.id}' lane must be an integer from 0 to ${MAX_MEASUREMENT_LANE}.`);
@@ -298,7 +298,8 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
       }
     }
   }
-  const renderedWaves = waveSignals.map((signal, index) => {
+  const renderedWaves: Array<{ signal: Exclude<Signal, { readonly type: "commentRow" }>; waveJson: WaveJsonSignal; svgMarkup: string; windowStart: number; renderedCycleCount: number; width: number; height: number }> = [];
+  for (const [index, signal] of waveSignals.entries()) {
     const boundedRange = waveformRanges.get(signal.id);
     const displayValues = signal.type === "clock" || (canBoundSourceWaveforms && boundedRange !== undefined) ? undefined : remapValueChangesToDisplay(signal.values, mapping);
     const displaySignal = signal.type === "clock"
@@ -311,8 +312,11 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const waveJson = bounded?.waveJson ?? toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions });
     const semanticValues = bounded?.semanticValues ?? (signal.type !== "clock" && valueSignalWaveDomain(signal.type) === "data" ? displayValues!.map((change) => String(change.value)) : undefined);
     const svgMarkup = renderWaveJsonMarkup(waveJson, index, semanticValues);
-    return { signal, waveJson, svgMarkup, windowStart: bounded?.windowStart ?? 0, renderedCycleCount: bounded?.renderedCycleCount ?? mapping.displayCycleCount, ...svgDimensions(svgMarkup) };
-  });
+    renderedWaves.push({ signal, waveJson, svgMarkup, windowStart: bounded?.windowStart ?? 0, renderedCycleCount: bounded?.renderedCycleCount ?? mapping.displayCycleCount, ...svgDimensions(svgMarkup) });
+    // This checkpoint is free in the synchronous builder and lets the browser
+    // export path yield between complete per-Signal WaveDrom materializations.
+    yield;
+  }
   const cycleWidth = (renderedWaves[0]?.width ?? mapping.displayCycleCount * 20) / (renderedWaves[0]?.renderedCycleCount ?? mapping.displayCycleCount);
   const rowHeight = Math.max(ROW_HEIGHT, (renderedWaves[0]?.height ?? 30) + 4);
   const rowLayout = calculateRowLayout(document, new Set(), { includeHidden: false });
@@ -516,6 +520,42 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   for (let cycle = range.start; cycle <= range.end; cycle += 1) ticks.push({ cycle, text: String(mapping.labelFor(cycle)) });
   const page = settings.page ? pageLayout(settings.page, contentWidth, contentHeight) : undefined;
   return Object.freeze({ width: page?.width ?? contentWidth, height: page?.height ?? contentHeight, waveforms, labels, annotations, transactions, groupBands, axisBreaks, edgeCounters, legend, legendPosition: document.legend.position, legendOrientation: document.legend.orientation, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks }, documentLayout, ...(page === undefined ? {} : { page }) });
+}
+
+/** Synchronous deterministic scene API retained for pure callers and tests. */
+export function buildExportScene(document: CanonicalDocument, settings: ExportSettings): ExportScene {
+  const steps = buildExportSceneSteps(document, settings);
+  let step = steps.next();
+  while (!step.done) step = steps.next();
+  return step.value;
+}
+
+async function yieldExportTask(): Promise<void> {
+  const scheduler = (globalThis as typeof globalThis & { scheduler?: { yield?: () => Promise<void> } }).scheduler;
+  if (typeof scheduler?.yield === "function") { await scheduler.yield(); return; }
+  if (typeof globalThis.MessageChannel === "function") {
+    await new Promise<void>((resolve) => {
+      const channel = new MessageChannel();
+      channel.port1.onmessage = () => { channel.port1.close(); channel.port2.close(); resolve(); };
+      channel.port2.postMessage(undefined);
+    });
+    return;
+  }
+  await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
+}
+
+async function buildExportSceneCooperatively(document: CanonicalDocument, settings: ExportSettings): Promise<ExportScene> {
+  const steps = buildExportSceneSteps(document, settings);
+  let sliceStartedAt = globalThis.performance?.now() ?? Date.now();
+  while (true) {
+    const step = steps.next();
+    if (step.done) return step.value;
+    const now = globalThis.performance?.now() ?? Date.now();
+    if (now - sliceStartedAt >= 16) {
+      await yieldExportTask();
+      sliceStartedAt = globalThis.performance?.now() ?? Date.now();
+    }
+  }
 }
 
 const xml = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
@@ -803,7 +843,7 @@ async function renderExportPdf(scene: ExportScene, svg: string): Promise<Uint8Ar
 export class DeterministicExportService implements ExportService {
   async export(request: ExportRequest): Promise<Uint8Array> {
     const settings: ExportSettings = { format: request.format, scope: request.settings?.scope ?? "document", ...request.settings };
-    const scene = buildExportScene(request.snapshot.document, settings);
+    const scene = await buildExportSceneCooperatively(request.snapshot.document, settings);
     const svg = renderExportSvg(scene);
     if (request.format === "svg") return new TextEncoder().encode(svg);
     if (request.format === "png") return rasterizeSvgToPng(svg, scene.width, scene.height, settings.scale ?? 1);

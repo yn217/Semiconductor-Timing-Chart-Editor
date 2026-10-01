@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildExportScene, DeterministicExportService, renderExportSvg } from "@timing-chart-v2/export";
 import { MAX_MEASUREMENT_LANE, type AnnotationId, type BookmarkId, type CanonicalDocument, type ClockSignal, type CommentRow, type GroupId, type SignalId, type TimeGroupId, type TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -203,6 +203,25 @@ describe("deterministic document export", () => {
     const second = await service.export({ format: "pdf", snapshot });
     expect(new TextDecoder().decode(first.slice(0, 8))).toBe("%PDF-1.4");
     expect(first).toEqual(second);
+  });
+
+  it("yields between WaveDrom rows during browser export without changing deterministic SVG", async () => {
+    const document = scaleFixture(2);
+    const settings = { scope: "document" as const };
+    const expected = renderExportSvg(buildExportScene(document, { format: "svg", ...settings }));
+    const service = new DeterministicExportService();
+    const yieldTask = vi.fn(async () => undefined);
+    let now = 0;
+    const performanceNow = vi.spyOn(globalThis.performance, "now").mockImplementation(() => { now += 20; return now; });
+    vi.stubGlobal("scheduler", { yield: yieldTask });
+    try {
+      const actual = new TextDecoder().decode(await service.export({ format: "svg", snapshot: { revision: 0, document }, settings }));
+      expect(yieldTask).toHaveBeenCalled();
+      expect(actual).toBe(expected);
+    } finally {
+      performanceNow.mockRestore();
+      vi.unstubAllGlobals();
+    }
   });
 
   it("renders selected-range WaveDrom inputs as bounded windows without changing source cycles", () => {
