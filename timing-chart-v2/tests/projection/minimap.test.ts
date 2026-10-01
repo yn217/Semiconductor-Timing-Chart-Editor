@@ -48,6 +48,37 @@ describe("MiniMap overview derivation", () => {
     expect(updatedAgain.rows).toEqual(buildMiniMapTransactionOverview(editedAgain).rows);
   });
 
+  it("keeps a one-Transaction update bounded across a 10k overview", () => {
+    const source = canonicalFixture();
+    const transactions = Array.from({ length: 10_000 }, (_, index) => ({
+      id: `txn_scale_${index}`,
+      name: `Transaction ${index}`,
+      start: index % 500,
+      end: (index % 500) + 2,
+      laneId: `lane_${index % 100}`,
+      linkedSignals: [],
+    }));
+    const before = { ...source, transactions };
+    const previous = buildMiniMapTransactionOverview(before);
+    const changedIndex = 4_567;
+    const edited = { ...transactions[changedIndex]!, color: "#123456" };
+    const nextTransactions = [...transactions];
+    nextTransactions[changedIndex] = edited;
+    const next = { ...before, transactions: nextTransactions };
+
+    const updated = updateMiniMapTransactionOverview(previous, transactions, before.transactionGroups, next, [edited.id as never]);
+
+    expect(updated.transactionsVisited).toBe(201); // changed item + old/new 100-entry bucket
+    expect(updated.laneBucketsRebuilt).toBe(1);
+    expect(updated.rows).toHaveLength(100);
+    for (const row of updated.rows) {
+      const oldRow = previous.rows.find((candidate) => candidate.key === row.key)!;
+      if (row.laneId === edited.laneId) expect(row).not.toBe(oldRow);
+      else expect(row).toBe(oldRow);
+    }
+    expect(updated.rows).toEqual(buildMiniMapTransactionOverview(next).rows);
+  });
+
   it("falls back to a full overview when a new lane is introduced", () => {
     const source = canonicalFixture();
     const before = { ...source, transactions: [{ id: "txn_a", name: "A", start: 1, end: 4, laneId: "lane_0", linkedSignals: [] }] };
