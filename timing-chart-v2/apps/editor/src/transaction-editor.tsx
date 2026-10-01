@@ -8,6 +8,7 @@ import type { TransactionEditorCommandActions } from "./application/editor-surfa
 import { EditorIconButton } from "./editor-icon.js";
 import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 import { DraftStatus } from "./draft-status.js";
+import { selectedTransactionsInDocumentOrder } from "./runtime/transaction-selection-index.js";
 
 export function TransactionEditor({ transaction, selectedTransactionIds, document, cyclesPerTc: perTc = 10, history, onSelect, onSelectTransactions, commands, onUndo, onRedo, onDelete, onCancel, onToggleTransactionSignal }: { readonly transaction: Transaction | undefined; readonly selectedTransactionIds?: ReadonlySet<TransactionId>; readonly document: CanonicalDocument; readonly cyclesPerTc?: number; readonly history: HistoryState; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSelectTransactions: (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => void; readonly commands: TransactionEditorCommandActions; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void }) {
   const [name, setName] = useState("Transaction");
@@ -124,6 +125,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   const transactionLastVisibleIndex = shouldVirtualizeTransactions ? Math.min(listEntries.length, Math.ceil((transactionListScrollTop + transactionViewportHeight) / transactionRowHeight) + transactionOverscan) : listEntries.length;
   const renderedEntries = listEntries.slice(transactionFirstVisibleIndex, transactionLastVisibleIndex);
   const selectedIds = selectedTransactionIds ?? new Set<TransactionId>();
+  const selectedTransactions = useMemo(() => selectedTransactionsInDocumentOrder(document.transactions, selectedIds), [document.transactions, selectedIds]);
   const selectionAnchorRef = useRef<TransactionId | undefined>(transaction?.id);
   const selectVisibleRow = (id: TransactionId, event: MouseEvent<HTMLButtonElement>) => {
     const anchor = selectionAnchorRef.current;
@@ -164,7 +166,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   }, [shouldVirtualizeTransactions, transaction?.id, transactionOverscan, transactionRowHeight]);
   const duplicateSelected = () => {
     if (selectedIds.size > 1) {
-      const sources = document.transactions.filter((item) => selectedIds.has(item.id));
+      const sources = selectedTransactions;
       const allocateId = createEntityIdAllocator(document);
       const items = sources.map((item) => ({ transactionId: item.id, newTransactionId: allocateId("transaction") as TransactionId, name: `${item.name} Copy` }));
       const batch = commands.bulkDuplicateTransactions(items);
@@ -193,17 +195,17 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
     commands.updateTransactionFromBottom({ transactionId: transaction.id, name: transaction.name, start: transaction.start, end: transaction.end, ...(transaction.laneId === undefined ? {} : { laneId: transaction.laneId }), ...(transaction.phases === undefined ? {} : { phases: transaction.phases }), ...(transaction.groupId === undefined ? {} : { groupId: transaction.groupId }), ...(transaction.description === undefined ? {} : { description: transaction.description }), color });
   };
   const bulkMoveToGroup = (groupId: TransactionGroup["id"] | undefined) => {
-    const selected = document.transactions.filter((item) => selectedIds.has(item.id));
+    const selected = selectedTransactions;
     if (selected.length === 0) return;
     commands.bulkMoveTransactionsToGroup(selected.map((item) => ({ transactionId: item.id, ...(groupId === undefined ? {} : { groupId }) })));
   };
   const bulkColor = (color: string) => {
-    const selected = document.transactions.filter((item) => selectedIds.has(item.id));
+    const selected = selectedTransactions;
     if (selected.length === 0) return;
     commands.bulkSetTransactionColor(selected.map((item) => item.id), color);
   };
   const bulkDelete = () => {
-    const ids = document.transactions.filter((item) => selectedIds.has(item.id)).map((item) => item.id);
+    const ids = selectedTransactions.map((item) => item.id);
     if (ids.length === 0) return;
     commands.bulkDeleteTransactions(ids);
   };
