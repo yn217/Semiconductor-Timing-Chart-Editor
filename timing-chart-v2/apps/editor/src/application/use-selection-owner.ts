@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import type { AnnotationId, CanonicalDocument, GroupId, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
+import { selectedTransactionsInDocumentOrder, transactionById } from "../runtime/transaction-selection-index.js";
 
 export type SelectionState = Readonly<{
   signalId: SignalId | undefined;
@@ -63,8 +64,8 @@ export function deriveSelectionCapabilities(document: CanonicalDocument, selecti
   const selectedSignal = selection.signalId === undefined ? undefined : signalsById.get(selection.signalId);
   const selectedGroup = selection.groupId === undefined ? undefined : document.signalGroups.find((group) => group.id === selection.groupId);
   const selectedAnnotation = selection.annotationId === undefined ? undefined : document.annotations.find((annotation) => annotation.id === selection.annotationId);
-  const selectedTransaction = selection.transactionId === undefined ? undefined : document.transactions.find((transaction) => transaction.id === selection.transactionId);
-  const selectedTransactions = document.transactions.filter((transaction) => selection.transactionIds.has(transaction.id));
+  const selectedTransaction = selection.transactionId === undefined ? undefined : transactionById(document.transactions, selection.transactionId);
+  const selectedTransactions = selectedTransactionsInDocumentOrder(document.transactions, selection.transactionIds);
   const hasSelectedSignal = selection.signalIds.size > 0 && selectedSignal !== undefined;
   const hasSelectedEntity = hasSelectedSignal || selectedGroup !== undefined || selectedTransaction !== undefined || selectedTransactions.length > 0 || selection.spacerId !== undefined;
   const hasSelectedClipboard = hasSelectedEntity || selectedAnnotation !== undefined;

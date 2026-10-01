@@ -13,6 +13,11 @@ function indexTransactions(transactions: readonly Transaction[]): ReadonlyMap<Tr
   return index;
 }
 
+/** Resolve one selected Transaction through the same immutable collection index. */
+export function transactionById(transactions: readonly Transaction[], id: TransactionId): Transaction | undefined {
+  return indexTransactions(transactions).get(id)?.transaction;
+}
+
 /** Resolve selected Transactions in canonical order while reusing the immutable collection index. */
 export function selectedTransactionsInDocumentOrder(transactions: readonly Transaction[], selectedIds: ReadonlySet<TransactionId>): readonly Transaction[] {
   const index = indexTransactions(transactions);
