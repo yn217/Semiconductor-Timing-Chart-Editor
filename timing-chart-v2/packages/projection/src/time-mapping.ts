@@ -28,10 +28,13 @@ interface FoldOwnerSegment {
   readonly groupIndex: number;
 }
 
-function buildFoldOwnerSegments(timeGroups: readonly TimeGroup[]): readonly FoldOwnerSegment[] {
+function buildFoldOwnerSegments(timeGroups: readonly TimeGroup[]): { readonly segments: readonly FoldOwnerSegment[]; readonly collapsedGroupCount: number } {
   const events = new Map<number, { readonly starts: number[]; readonly ends: number[] }>();
+  let collapsedGroupCount = 0;
   timeGroups.forEach((group, groupIndex) => {
-    if (!group.presentation?.collapsed || group.end <= group.start) return;
+    if (!group.presentation?.collapsed) return;
+    collapsedGroupCount += 1;
+    if (group.end <= group.start) return;
     const start = events.get(group.start) ?? { starts: [], ends: [] };
     start.starts.push(groupIndex);
     events.set(group.start, start);
@@ -39,7 +42,7 @@ function buildFoldOwnerSegments(timeGroups: readonly TimeGroup[]): readonly Fold
     end.ends.push(groupIndex);
     events.set(group.end, end);
   });
-  if (events.size === 0) return [];
+  if (events.size === 0) return { segments: [], collapsedGroupCount };
 
   const points = [...events.keys()].sort((left, right) => left - right);
   const active = new Uint8Array(timeGroups.length);
@@ -88,7 +91,7 @@ function buildFoldOwnerSegments(timeGroups: readonly TimeGroup[]): readonly Fold
       else segments.push({ start: point, end: nextPoint, groupIndex: owner });
     }
   }
-  return segments;
+  return { segments, collapsedGroupCount };
 }
 
 function foldOwnerAtSource(segments: readonly FoldOwnerSegment[], groups: readonly TimeGroup[], sourceCycle: number): TimeGroup | undefined {
@@ -195,8 +198,9 @@ function identityMapping(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">
   };
 }
 
-export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): DisplayTimeMapping {
-  const foldOwnerSegments = buildFoldOwnerSegments(timeGroups);
+function buildDisplayTimeMappingResult(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): { readonly mapping: DisplayTimeMapping; readonly collapsedGroupCount: number } {
+  const foldOwners = buildFoldOwnerSegments(timeGroups);
+  const foldOwnerSegments = foldOwners.segments;
   const collapsedRanges: [number, number][] = [];
   // foldOwnerSegments are already sorted, non-overlapping intervals covering
   // the union of all collapsed groups. Derive the display folds from that
@@ -207,7 +211,7 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
     if (previous && segment.start <= previous[1]) previous[1] = Math.max(previous[1], segment.end);
     else collapsedRanges.push([segment.start, segment.end]);
   }
-  if (collapsedRanges.length === 0) return identityMapping(timeline);
+  if (collapsedRanges.length === 0) return { mapping: identityMapping(timeline), collapsedGroupCount: foldOwners.collapsedGroupCount };
 
   const folds: FoldInterval[] = [];
   let removed = 0;
@@ -244,7 +248,7 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
 
   // LabelAnchor.source is a source-timeline boundary; its display value is
   // the ruler label shown at the corresponding rendered boundary.
-  return {
+  return { mapping: {
     sourceCycleCount: timeline.cycleCount,
     displayCycleCount,
     isIdentity: false,
@@ -260,7 +264,11 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
       const sourceCycle = displayCycle === displayCycleCount ? timeline.cycleCount : displayToSource(displayCycle);
       return sourceCycle === undefined ? displayCycle : labelForSourceCycle(timeline, sourceCycle);
     },
-  };
+  }, collapsedGroupCount: foldOwners.collapsedGroupCount };
+}
+
+export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): DisplayTimeMapping {
+  return buildDisplayTimeMappingResult(timeline, timeGroups).mapping;
 }
 
 export interface DisplayTimeMappingCacheMetrics {
@@ -300,11 +308,12 @@ export class DisplayTimeMappingCache {
     this.lastLabelAnchors = timeline.labelAnchors;
     this.lastTimeGroups = timeGroups;
     const started = Date.now();
-    this.mapping = buildDisplayTimeMapping(timeline, timeGroups);
+    const result = buildDisplayTimeMappingResult(timeline, timeGroups);
+    this.mapping = result.mapping;
     this.builds += 1;
     // Mapping construction visits only the collapsed intervals; no source
     // cycle-sized table is allocated or traversed.
-    this.foldRangesVisited += timeGroups.filter((group) => group.presentation?.collapsed).length;
+    this.foldRangesVisited += result.collapsedGroupCount;
     const durationMs = Date.now() - started;
     this.buildDurationMs += durationMs;
     this.buildDurationsMs.push(durationMs);
