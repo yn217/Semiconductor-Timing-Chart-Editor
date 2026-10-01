@@ -139,3 +139,76 @@ test("keeps right-aligned short frozen labels inside the timing boundary", async
   expect(geometry.paddingRight).toBe("8px");
   expect(geometry.textRight).toBeLessThanOrEqual(geometry.frozenRight - 4);
 });
+
+test("preserves canonical Signal names and safe frozen-column geometry across alignment and overflow policies", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/golden-feature-coverage/timing_chart_feature_coverage_pack/samples/20_transaction_cycle_linked_views.tcd.json"));
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+
+  const shell = page.locator("main.editor-shell");
+  const layout = page.getByTestId("inspector-layout-editor");
+  const signalNames = [
+    ["clk", "CLK"], ["req", "req_valid"], ["tag", "tag"],
+    ["stage", "pipeline_stage"], ["rsp", "rsp_valid"], ["rtag", "rsp_tag"],
+  ] as const;
+
+  for (const alignment of ["left", "center", "right"] as const) {
+    for (const overflow of ["ellipsis", "expand", "wrap"] as const) {
+      await layout.getByLabel("Inspector signal name width").fill("180");
+      await layout.getByLabel("Inspector signal name alignment").selectOption(alignment);
+      await layout.getByLabel("Inspector signal name overflow").selectOption(overflow);
+      await layout.getByTestId("apply-inspector-layout").click();
+      await expect(host).toHaveAttribute("data-editor-idle", "true");
+      await expect(shell).toHaveAttribute("data-layout-overflow", overflow);
+
+      for (const [rowId, expectedName] of signalNames) {
+        const label = host.locator(`[data-role='frozen-row'][data-row-id='${rowId}'] [data-role='frozen-signal-name']`);
+        await expect(label).toHaveText(expectedName);
+      }
+      const shortLabel = host.locator("[data-role='frozen-row'][data-row-id='tag'] [data-role='frozen-signal-name']");
+      const geometry = await shortLabel.evaluate((element) => {
+        const range = element.ownerDocument.createRange();
+        range.selectNodeContents(element);
+        const textRect = range.getBoundingClientRect();
+        const frozenRect = element.closest("[data-role='frozen-label-rows']")!.getBoundingClientRect();
+        return { textLeft: textRect.left, textRight: textRect.right, frozenLeft: frozenRect.left, frozenRight: frozenRect.right };
+      });
+      expect(geometry.textLeft).toBeGreaterThanOrEqual(geometry.frozenLeft + 4);
+      expect(geometry.textRight).toBeLessThanOrEqual(geometry.frozenRight - 4);
+    }
+  }
+
+});
+
+test("keeps right-aligned frozen labels inset during horizontal scroll and zoom", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/showcase/25_long_timeline_stress_showcase.tcd.json"));
+  await expect(page.getByRole("heading", { name: "Long Timeline / Scroll Stress Showcase" })).toBeVisible();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const longLabel = host.locator("[data-role='frozen-row'][data-row-id='long_in_0'] [data-role='frozen-signal-name']");
+  await expect(longLabel).toHaveText("input_req_0");
+  const viewport = host.locator("[data-role='timeline-viewport']");
+  const horizontalScrollbar = page.getByTestId("timeline-hscroll");
+  const scrollRange = await viewport.evaluate((element) => element.scrollWidth - element.clientWidth);
+  expect(scrollRange).toBeGreaterThan(0);
+  await horizontalScrollbar.evaluate((element) => { element.scrollLeft = element.scrollWidth; element.dispatchEvent(new Event("scroll")); });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
+  const scrolledGeometry = await longLabel.evaluate((element) => {
+    const range = element.ownerDocument.createRange();
+    range.selectNodeContents(element);
+    const textRect = range.getBoundingClientRect();
+    const frozenRect = element.closest("[data-role='frozen-label-rows']")!.getBoundingClientRect();
+    return { textRight: textRect.right, frozenRight: frozenRect.right };
+  });
+  expect(scrolledGeometry.textRight).toBeLessThanOrEqual(scrolledGeometry.frozenRight - 4);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Fit All", exact: true }).click();
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBe(0);
+});
