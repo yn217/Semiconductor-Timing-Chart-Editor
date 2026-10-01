@@ -395,6 +395,32 @@ describe("deterministic document export", () => {
     expect(svg).toContain('stroke-dasharray="6 4"');
   });
 
+  it("reuses effective WaveDrom tokens for multiple Ghost Traces from one Signal", () => {
+    const base = canonicalFixture();
+    const source = base.signals[1]!;
+    const ghost = (id: string, start: number, end: number, offset: number) => ({
+      id: id as AnnotationId,
+      type: "ghostTrace" as const,
+      label: id,
+      visible: true,
+      sourceSignalId: source.id,
+      traceOffsetCycles: offset,
+      start: { signalId: source.id, cycle: start, point: "cycle-start" as const },
+      end: { signalId: source.id, cycle: end, point: "cycle-end" as const },
+    });
+    const firstGhost = ghost("ann_ghost_first", 1, 5, -1);
+    const secondGhost = ghost("ann_ghost_second", 3, 7, 1);
+    const combined = buildExportScene({ ...base, annotations: [firstGhost, secondGhost] }, { format: "svg", scope: "document" });
+    const firstOnly = buildExportScene({ ...base, annotations: [firstGhost] }, { format: "svg", scope: "document" });
+    const secondOnly = buildExportScene({ ...base, annotations: [secondGhost] }, { format: "svg", scope: "document" });
+
+    expect(combined.annotations.find((item) => item.id === firstGhost.id)?.tracePoints)
+      .toEqual(firstOnly.annotations.find((item) => item.id === firstGhost.id)?.tracePoints);
+    expect(combined.annotations.find((item) => item.id === secondGhost.id)?.tracePoints)
+      .toEqual(secondOnly.annotations.find((item) => item.id === secondGhost.id)?.tracePoints);
+    expect(renderExportSvg(combined)).toContain('data-annotation-id="ann_ghost_second"');
+  });
+
   it("bounds selected-range Ghost Trace source waveform to the selected and sampled intervals", () => {
     const base = canonicalFixture();
     const source = base.signals[1]!;

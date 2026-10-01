@@ -549,6 +549,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
   }
   const measurementLaneById = allocateMeasurementLanes(measurementSpans);
   const annotations: ExportAnnotation[] = [];
+  const effectiveTraceTokensBySignalId = new Map<SignalId, readonly string[]>();
   for (const annotation of document.annotations) {
     const firstAnchor = annotation.anchor ?? annotation.start ?? annotation.from;
     const lastAnchor = annotation.anchor ?? annotation.end ?? annotation.to ?? firstAnchor;
@@ -575,7 +576,11 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
         endCycle = Math.min(endCycle, boundedTraceWindow.traceEnd);
       }
       const points: ExportPoint[] = [];
-      const traceTokens = effectiveWaveTokens(sourceWave.waveJson.wave);
+      let traceTokens = effectiveTraceTokensBySignalId.get(sourceWave.signal.id);
+      if (!traceTokens) {
+        traceTokens = effectiveWaveTokens(sourceWave.waveJson.wave);
+        effectiveTraceTokensBySignalId.set(sourceWave.signal.id, traceTokens);
+      }
       const tracePeriod = Math.max(1, sourceWave.waveJson.period ?? 1);
       for (let cycle = startCycle; cycle <= endCycle; cycle += 1) {
         if (checkpoint()) yield;
