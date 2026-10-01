@@ -205,6 +205,56 @@ describe("deterministic document export", () => {
     expect(first).toEqual(second);
   });
 
+  it("passes cooperative SVG chunks directly to PNG Blob without a giant joined string", async () => {
+    const base = scaleFixture(2);
+    const document = {
+      ...base,
+      transactions: Array.from({ length: 2_500 }, (_, index) => ({
+        ...base.transactions[0]!,
+        id: `txn_png_${index}` as TransactionId,
+        name: `PNG export transaction ${index.toString().padStart(4, "0")}`,
+      })),
+    };
+    const NativeBlob = globalThis.Blob;
+    const capturedParts: BlobPart[][] = [];
+    class CapturedBlob extends NativeBlob {
+      constructor(parts: BlobPart[], options?: BlobPropertyBag) {
+        capturedParts.push([...parts]);
+        super(parts, options);
+      }
+    }
+    const context = { scale: vi.fn(), fillRect: vi.fn(), drawImage: vi.fn(), fillStyle: "" };
+    const canvas = {
+      width: 0,
+      height: 0,
+      getContext: vi.fn(() => context),
+      toBlob: (callback: BlobCallback) => callback(new CapturedBlob(["png-bytes"], { type: "image/png" })),
+    };
+    class FakeImage {
+      src = "";
+      async decode() { return undefined; }
+    }
+    vi.stubGlobal("Blob", CapturedBlob);
+    vi.stubGlobal("Image", FakeImage);
+    vi.stubGlobal("document", { createElement: vi.fn(() => canvas) });
+    try {
+      const png = await new DeterministicExportService().export({
+        format: "png",
+        snapshot: { revision: 0, document },
+        settings: { scope: "document" },
+      });
+
+      expect(capturedParts[0]!.length).toBeGreaterThan(1);
+      const svg = await new CapturedBlob(capturedParts[0]!, { type: "image/svg+xml" }).text();
+      expect(svg).toContain('data-transaction-id="txn_png_2499"');
+      expect(svg.endsWith("</svg>")).toBe(true);
+      expect(new TextDecoder().decode(png)).toBe("png-bytes");
+      expect(context.drawImage).toHaveBeenCalledOnce();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("yields between WaveDrom rows during browser export without changing deterministic SVG", async () => {
     const document = scaleFixture(2);
     const settings = { scope: "document" as const };

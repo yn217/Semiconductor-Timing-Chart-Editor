@@ -972,13 +972,19 @@ async function encodeSvgChunksCooperatively(chunks: readonly string[]): Promise<
   return output;
 }
 
-export async function rasterizeSvgToPng(svg: string, width: number, height: number, scale = 1): Promise<Uint8Array> {
+type SvgMarkupParts = string | readonly string[];
+
+function svgMarkupBlobParts(svg: SvgMarkupParts): BlobPart[] {
+  return typeof svg === "string" ? [svg] : [...svg];
+}
+
+export async function rasterizeSvgToPng(svg: SvgMarkupParts, width: number, height: number, scale = 1): Promise<Uint8Array> {
   const canvas = document.createElement("canvas");
   canvas.width = Math.ceil(width * scale); canvas.height = Math.ceil(height * scale);
   const context = canvas.getContext("2d");
   if (!context) throw new Error("PNG export requires a 2D Canvas context.");
   context.scale(scale, scale); context.fillStyle = "white"; context.fillRect(0, 0, width, height);
-  const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
+  const url = URL.createObjectURL(new Blob(svgMarkupBlobParts(svg), { type: "image/svg+xml" }));
   try {
     const image = new Image();
     image.src = url;
@@ -1000,8 +1006,8 @@ function renderDeterministicNodePdf(scene: ExportScene, svg: string): Uint8Array
   return new TextEncoder().encode(pdf);
 }
 
-async function renderExportPdf(scene: ExportScene, svg: string): Promise<Uint8Array> {
-  if (typeof document === "undefined") return renderDeterministicNodePdf(scene, svg);
+async function renderExportPdf(scene: ExportScene, svg: SvgMarkupParts): Promise<Uint8Array> {
+  if (typeof document === "undefined") return renderDeterministicNodePdf(scene, typeof svg === "string" ? svg : svg.join(""));
   const png = await rasterizeSvgToPng(svg, scene.width, scene.height);
   const { PDFDocument } = await import("pdf-lib");
   const pdf = await PDFDocument.create();
@@ -1018,8 +1024,7 @@ export class DeterministicExportService implements ExportService {
     const scene = await buildExportSceneCooperatively(request.snapshot.document, settings);
     const svgChunks = await renderExportSvgChunksCooperatively(scene);
     if (request.format === "svg") return encodeSvgChunksCooperatively(svgChunks);
-    const svg = svgChunks.join("");
-    if (request.format === "png") return rasterizeSvgToPng(svg, scene.width, scene.height, settings.scale ?? 1);
-    return renderExportPdf(scene, svg);
+    if (request.format === "png") return rasterizeSvgToPng(svgChunks, scene.width, scene.height, settings.scale ?? 1);
+    return renderExportPdf(scene, svgChunks);
   }
 }
