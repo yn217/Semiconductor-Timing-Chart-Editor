@@ -6,6 +6,39 @@ import { buildSnapIndex } from "../../apps/editor/src/runtime/snap-index.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("buildSnapIndex row lookup", () => {
+  it("reuses shared cycle-boundary X values across Signal geometry adapters", () => {
+    const source = canonicalFixture();
+    const clock = source.signals.find((item) => item.type === "clock")!;
+    const data = source.signals.find((item) => item.type !== "clock" && item.type !== "commentRow")!;
+    const document = { ...source, annotations: [], bookmarks: [], timeline: { ...source.timeline, referenceClock: clock.id } };
+    const boundaries = [0, 1, 2].map((cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle * 40, y: 0 } }));
+    let referenceFindCalls = 0;
+    const makeMap = (signalId: SignalId, xOffset: number, isReference = false) => ({
+      signalId,
+      cycleKeyDomain: "source" as const,
+      cycleBoundaryEntries: () => boundaries.map((entry) => ({ ...entry, position: { ...entry.position, x: entry.position.x + xOffset } })),
+      find: (anchor: { cycle: number; point: string }) => {
+        if (isReference) referenceFindCalls += 1;
+        const boundary = boundaries.find((entry) => entry.cycle === anchor.cycle);
+        if (!boundary) return undefined;
+        const x = anchor.point === "cycle-center" ? boundary.position.x + 20 : boundary.position.x;
+        return { signalId, anchor: anchor as never, point: { x: x + xOffset, y: 0 } };
+      },
+    });
+    const referenceMap = makeMap(clock.id, 0, true);
+    const dataMap = makeMap(data.id, 500);
+    const index = buildSnapIndex(
+      document,
+      { rowLayout: [{ rowId: clock.id, y: 0 }, { rowId: data.id, y: 30 }] } as never,
+      new Map([[clock.id, referenceMap], [data.id, dataMap]]),
+      new DisplayTimeMappingCache().get(document.timeline, document.timeGroups),
+    );
+
+    expect(referenceFindCalls).toBe(0);
+    const dataBoundary = index.neighborsByX(80, "cycle-boundary").before;
+    expect(dataBoundary).toMatchObject({ anchor: { signalId: data.id, cycle: 2 }, point: { x: 80, y: 30 } });
+  });
+
   it("preserves a sparse geometry boundary index instead of probing the full display timeline", () => {
     const source = canonicalFixture();
     const signal = source.signals.find((item) => item.type !== "commentRow")!;

@@ -6,6 +6,9 @@ export function buildSnapIndex(document: CanonicalDocument, projection: RenderPr
   const timeAxis = resolveTimeAxisGeometry(document, maps);
   const axisOwnerSignalId = timeAxis.ownerSignalId;
   const referenceMap = timeAxis.geometry;
+  const sharedBoundaryXByCycle = referenceMap?.cycleBoundaryEntries === undefined
+    ? undefined
+    : new Map(referenceMap.cycleBoundaryEntries().map((entry) => [entry.cycle, entry.position.x] as const));
   const signalIds = new Set(document.signals.map((signal) => signal.id));
   const screenMaps = new Map<SignalId, LocalGeometryMap>([...maps.entries()].map(([id, map]) => [id, {
     signalId: map.signalId,
@@ -22,7 +25,10 @@ export function buildSnapIndex(document: CanonicalDocument, projection: RenderPr
     // documents, even though the underlying geometry was already windowed.
     ...(map.cycleBoundaryEntries === undefined ? {} : {
       cycleBoundaryEntries: (): readonly LocalGeometryEntry[] => map.cycleBoundaryEntries!().map((entry) => {
-        const sharedBoundary = referenceMap?.find({ cycle: entry.cycle, point: "cycle-start", ...(axisOwnerSignalId === undefined ? {} : { signalId: axisOwnerSignalId }) })?.point;
+        const sharedX = sharedBoundaryXByCycle?.get(entry.cycle);
+        const sharedBoundary = sharedX === undefined
+          ? referenceMap?.find({ cycle: entry.cycle, point: "cycle-start", ...(axisOwnerSignalId === undefined ? {} : { signalId: axisOwnerSignalId }) })?.point
+          : { x: sharedX };
         return { ...entry, position: { ...entry.position, x: (sharedBoundary?.x ?? entry.position.x) * xScale } };
       }),
     }),
