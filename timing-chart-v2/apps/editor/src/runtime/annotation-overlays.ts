@@ -90,7 +90,11 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
       && Math.min(annotation.start.cycle, annotation.end.cycle) + offset <= viewport.sourceEnd
       && Math.max(annotation.start.cycle, annotation.end.cycle) + offset >= viewport.sourceStart);
     const timeHit = rawTimeHit || shiftedTraceHit;
-    const rowHit = anchors.some((anchor) => anchor.signalId !== undefined && rowIds.has(anchor.signalId)) || (annotation.sourceSignalId !== undefined && rowIds.has(annotation.sourceSignalId));
+    // A cycle-only anchor is resolved against the projection's shared axis
+    // owner by resolveAnchorPoint(); it has no explicit row ID to test here.
+    // Treat it as row-independent so indexed viewport filtering does not drop
+    // an annotation that the resolver can otherwise project.
+    const rowHit = anchors.some((anchor) => anchor.signalId === undefined || rowIds.has(anchor.signalId)) || (annotation.sourceSignalId !== undefined && rowIds.has(annotation.sourceSignalId));
     return timeHit && rowHit;
   };
   // Pinned Annotations are always candidates and may lie outside the time window, so the time index only narrows the rest.

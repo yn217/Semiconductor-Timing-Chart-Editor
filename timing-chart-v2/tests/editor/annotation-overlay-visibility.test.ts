@@ -192,4 +192,19 @@ describe("annotation visibility and semantic targets", () => {
     expect(metrics.candidateCount).toBeLessThan(document.annotations.length);
     expect(metrics.indexEntriesVisited).toBeLessThan(document.annotations.length / 10);
   });
+
+  it("keeps cycle-only anchors in the indexed viewport projection", () => {
+    const source = canonicalFixture();
+    const signal = source.signals.find((item) => item.type === "clock") ?? source.signals.find((item) => item.type !== "commentRow")!;
+    const target = { id: "ann_cycle_only_visible" as never, type: "text" as const, label: "Cycle only", visible: true, anchor: { cycle: 20, point: "cycle-start" as const } };
+    const fillers = Array.from({ length: 300 }, (_, index) => ({ id: `ann_no_anchor_${index}` as never, type: "marker" as const, label: "No anchor", visible: true }));
+    const document = { ...source, annotations: [...fillers, target] };
+    const projection = projectionFor(signal.id, true);
+    const map = new ImmutableLocalGeometryMap(signal.id, [{ cycle: 20, point: "cycle-start", position: { x: 200, y: 0 } }]);
+    const viewport = { sourceStart: 20, sourceEnd: 21, displayStart: 20, displayEnd: 21, overscanCycles: 0, rowStart: 0, rowEnd: 1, generation: 1, pinnedIds: [] } satisfies DisplayTimeViewport;
+
+    const overlays = projectAnnotationOverlays(document, projection, new Map([[signal.id, map]]), buildDisplayTimeMapping(document.timeline, []), 1, viewport);
+
+    expect(overlays.map((overlay) => overlay.id)).toEqual([target.id]);
+  });
 });
