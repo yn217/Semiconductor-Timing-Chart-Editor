@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import type { AnnotationId, CanonicalDocument, GroupId, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
 import { selectedTransactionsInDocumentOrder, transactionById } from "../runtime/transaction-selection-index.js";
+import { signalGroupSelectionIndex } from "../runtime/signal-group-selection-index.js";
 
 export type SelectionState = Readonly<{
   signalId: SignalId | undefined;
@@ -61,8 +62,9 @@ function signalIndexOf(signals: CanonicalDocument["signals"]) {
 
 export function deriveSelectionCapabilities(document: CanonicalDocument, selection: SelectionState): SelectionCapabilities {
   const signalsById = signalIndexOf(document.signals);
+  const groups = signalGroupSelectionIndex(document.signalGroups);
   const selectedSignal = selection.signalId === undefined ? undefined : signalsById.get(selection.signalId);
-  const selectedGroup = selection.groupId === undefined ? undefined : document.signalGroups.find((group) => group.id === selection.groupId);
+  const selectedGroup = selection.groupId === undefined ? undefined : groups.groupById.get(selection.groupId);
   const selectedAnnotation = selection.annotationId === undefined ? undefined : document.annotations.find((annotation) => annotation.id === selection.annotationId);
   const selectedTransaction = selection.transactionId === undefined ? undefined : transactionById(document.transactions, selection.transactionId);
   const selectedTransactions = selectedTransactionsInDocumentOrder(document.transactions, selection.transactionIds);
@@ -70,16 +72,16 @@ export function deriveSelectionCapabilities(document: CanonicalDocument, selecti
   const hasSelectedEntity = hasSelectedSignal || selectedGroup !== undefined || selectedTransaction !== undefined || selectedTransactions.length > 0 || selection.spacerId !== undefined;
   const hasSelectedClipboard = hasSelectedEntity || selectedAnnotation !== undefined;
   const hasDeletableSelection = hasSelectedEntity || selectedAnnotation !== undefined;
-  const selectedSignalGroup = selectedSignal === undefined ? undefined : document.signalGroups.find((group) => group.rows.includes(selectedSignal.id));
+  const selectedSignalGroup = selectedSignal === undefined ? undefined : groups.groupByRowId.get(selectedSignal.id);
   const canMoveUp = selection.signalIds.size === 1 && selectedSignal !== undefined && selectedSignalGroup !== undefined
-    ? selectedSignalGroup.rows.indexOf(selectedSignal.id) > 0
+    ? (groups.rowIndexByGroupId.get(selectedSignalGroup.id)?.get(selectedSignal.id) ?? -1) > 0
     : selection.signalIds.size === 0 && selectedGroup !== undefined && selection.spacerId === undefined
-      ? document.signalGroups.findIndex((group) => group.id === selectedGroup.id) > 0
+      ? (groups.groupIndexById.get(selectedGroup.id) ?? -1) > 0
       : false;
   const canMoveDown = selection.signalIds.size === 1 && selectedSignal !== undefined && selectedSignalGroup !== undefined
-    ? (() => { const index = selectedSignalGroup.rows.indexOf(selectedSignal.id); return index >= 0 && index < selectedSignalGroup.rows.length - 1; })()
+    ? (() => { const index = groups.rowIndexByGroupId.get(selectedSignalGroup.id)?.get(selectedSignal.id) ?? -1; return index >= 0 && index < selectedSignalGroup.rows.length - 1; })()
     : selection.signalIds.size === 0 && selectedGroup !== undefined && selection.spacerId === undefined
-      ? (() => { const index = document.signalGroups.findIndex((group) => group.id === selectedGroup.id); return index >= 0 && index < document.signalGroups.length - 1; })()
+      ? (() => { const index = groups.groupIndexById.get(selectedGroup.id) ?? -1; return index >= 0 && index < document.signalGroups.length - 1; })()
       : false;
   const canRename = (selection.signalIds.size === 1 && selectedSignal !== undefined) || (selection.signalIds.size === 0 && selection.transactionIds.size <= 1 && (selectedGroup !== undefined || selectedTransaction !== undefined));
   const canShow = (selection.signalIds.size > 0 && selectedSignal !== undefined && [...selection.signalIds].some((id) => signalsById.get(id)?.display.visible === false)) || selectedTransactions.some((transaction) => transaction.visible === false);

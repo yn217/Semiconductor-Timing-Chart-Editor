@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { deriveSelectionCapabilities, type SelectionState } from "../../apps/editor/src/application/use-selection-owner.js";
 import { selectedTransactionsInDocumentOrder, transactionById } from "../../apps/editor/src/runtime/transaction-selection-index.js";
+import { signalGroupSelectionIndex } from "../../apps/editor/src/runtime/signal-group-selection-index.js";
 import type { Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -47,6 +48,53 @@ describe("Transaction selection capability indexing", () => {
       canRename: true,
       canShow: true,
       canHide: false,
+    });
+  });
+
+  it("derives selected Signal capabilities from a cached row-owner index", () => {
+    const rows = Array.from({ length: 10_000 }, (_, index) => `sig_${index}`);
+    const group = { id: "large_group", name: "Large", rows };
+    const guardedRows = new Proxy(rows, {
+      get(target, property, receiver) {
+        if (property === "includes" || property === "indexOf") {
+          return () => { throw new Error(`unexpected row scan via ${String(property)}`); };
+        }
+        return Reflect.get(target, property, receiver) as unknown;
+      },
+    });
+    const guardedGroup = { ...group, rows: guardedRows };
+    const groups = new Proxy([guardedGroup], {
+      get(target, property, receiver) {
+        if (property === "find" || property === "findIndex") {
+          return () => { throw new Error(`unexpected group scan via ${String(property)}`); };
+        }
+        return Reflect.get(target, property, receiver) as unknown;
+      },
+    });
+    const selectedId = "sig_9999" as SignalId;
+    // Warm against the same immutable collection identity before guarding lookup paths.
+    expect(signalGroupSelectionIndex(groups).groupByRowId.get(selectedId)?.id).toBe(group.id);
+    const document = {
+      ...canonicalFixture(),
+      signals: [{ id: selectedId, name: "Selected", type: "signal", display: { name: "Selected", visible: true } }],
+      signalGroups: groups,
+    } as ReturnType<typeof canonicalFixture>;
+    const selection: SelectionState = {
+      signalId: selectedId,
+      signalIds: new Set([selectedId]),
+      groupId: undefined,
+      spacerId: undefined,
+      annotationId: undefined,
+      annotationIds: new Set(),
+      transactionId: undefined,
+      legendSelected: false,
+      transactionIds: new Set(),
+    };
+
+    expect(deriveSelectionCapabilities(document, selection)).toMatchObject({
+      hasSelectedSignal: true,
+      canMoveUp: true,
+      canMoveDown: false,
     });
   });
 });
