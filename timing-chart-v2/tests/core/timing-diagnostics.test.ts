@@ -113,6 +113,58 @@ describe("derived timing diagnostics", () => {
     expect(incremental.diagnostics).toEqual(expectedDiagnostics);
   });
 
+  it("reuses Signal indexes across constraint edits and rebuilds them for a new Signal collection", () => {
+    const source = canonicalFixture();
+    let signalCollectionPasses = 0;
+    const signals = new Proxy(source.signals, {
+      get(target, property, receiver) {
+        if (property === "forEach") return (callback: Parameters<typeof target.forEach>[0], thisArg?: unknown) => {
+          signalCollectionPasses += 1;
+          return target.forEach(callback, thisArg);
+        };
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const initialConstraint: Constraint = { id: "constraint_index_cache", type: "latency", data: {} };
+    const previous = { ...source, signals, constraints: [initialConstraint] };
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    signalCollectionPasses = 0;
+
+    const firstConstraint: Constraint = { ...initialConstraint, data: { triggerSignalId: "missing_first" } };
+    const firstDocument = { ...previous, constraints: [firstConstraint] };
+    const first = deriveTimingDiagnosticsIfInputsChanged(previous, firstDocument, previousDiagnostics);
+    const passesAfterFirstEdit = signalCollectionPasses;
+    const secondConstraint: Constraint = { ...firstConstraint, data: { triggerSignalId: "missing_second" } };
+    const secondDocument = { ...firstDocument, constraints: [secondConstraint] };
+    const second = deriveTimingDiagnosticsIfInputsChanged(firstDocument, secondDocument, first.diagnostics);
+
+    expect(signalCollectionPasses).toBe(passesAfterFirstEdit);
+    expect(first.diagnostics).toEqual(deriveTimingDiagnostics(firstDocument));
+    expect(second.diagnostics).toEqual(deriveTimingDiagnostics(secondDocument));
+
+    let replacementCollectionPasses = 0;
+    const replacementSignals = new Proxy([...signals], {
+      get(target, property, receiver) {
+        if (property === "forEach") return (callback: Parameters<typeof target.forEach>[0], thisArg?: unknown) => {
+          replacementCollectionPasses += 1;
+          return target.forEach(callback, thisArg);
+        };
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const replacementDocument = { ...secondDocument, signals: replacementSignals };
+    const replacementConstraint: Constraint = { ...secondConstraint, data: { triggerSignalId: "missing_replacement" } };
+    const replacementNext = { ...replacementDocument, constraints: [replacementConstraint] };
+    const replacement = deriveTimingDiagnosticsIfInputsChanged(secondDocument, replacementNext, second.diagnostics);
+    expect(replacement.diagnostics).toEqual(deriveTimingDiagnostics(replacementNext));
+    const passesAfterCollectionReplacement = replacementCollectionPasses;
+    const finalConstraint: Constraint = { ...replacementConstraint, data: { triggerSignalId: "missing_final" } };
+    const finalDocument = { ...replacementNext, constraints: [finalConstraint] };
+    const final = deriveTimingDiagnosticsIfInputsChanged(replacementNext, finalDocument, replacement.diagnostics);
+    expect(replacementCollectionPasses).toBe(passesAfterCollectionReplacement);
+    expect(final.diagnostics).toEqual(deriveTimingDiagnostics(finalDocument));
+  });
+
   it("evaluates an added constraint only and rebases retained diagnostic paths after insertion", () => {
     const source = canonicalFixture();
     const retained: Constraint = { id: "constraint_structure_retained", type: "latency", data: {} };

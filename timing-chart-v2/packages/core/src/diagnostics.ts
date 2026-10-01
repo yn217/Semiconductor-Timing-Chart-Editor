@@ -446,7 +446,13 @@ type TimingDiagnosticIndexes = Readonly<{
   signalIndexById: ReadonlyMap<SignalId, number>;
 }>;
 
+// Signal collections are immutable Canonical inputs. Constraint edits often
+// reevaluate rules against the exact same collection, so retain its index
+// without rebuilding a full SignalId map on each edit.
+const timingDiagnosticIndexesBySignals = new WeakMap<CanonicalDocument["signals"], TimingDiagnosticIndexes>();
 function buildTimingDiagnosticIndexes(document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>): TimingDiagnosticIndexes {
+  const cached = timingDiagnosticIndexesBySignals.get(document.signals);
+  if (cached) return cached;
   const signalsById = new Map<SignalId, Signal>();
   const signalIndexById = new Map<SignalId, number>();
   if (enabled.has("protocol") || enabled.has("stability")) {
@@ -455,7 +461,9 @@ function buildTimingDiagnosticIndexes(document: CanonicalDocument, enabled: Read
       signalIndexById.set(signal.id, index);
     });
   }
-  return { signalsById, signalIndexById };
+  const indexes = { signalsById, signalIndexById };
+  timingDiagnosticIndexesBySignals.set(document.signals, indexes);
+  return indexes;
 }
 
 /** Shared derived-rule registry. Results remain outside CanonicalDocument. */
