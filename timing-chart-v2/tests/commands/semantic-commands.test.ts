@@ -902,6 +902,43 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.transactions).toHaveLength(4);
   });
 
+  it("validates and rebuilds a bulk Transaction deletion in one document pass", () => {
+    const source = canonicalFixture();
+    const transactions = Array.from({ length: 40 }, (_, index) => ({
+      ...source.transactions[0]!,
+      id: `txn_single_pass_${index}` as TransactionId,
+    }));
+    let transactionVisits = 0;
+    const observedTransactions = new Proxy(transactions, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\d+$/.test(property) && Number(property) < target.length) transactionVisits += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const document = { ...source, transactions: observedTransactions };
+    const result = planCommand(document, {
+      id: commandId("cmd_txn_single_pass_delete"),
+      type: "transaction.bulkDelete",
+      transactionIds: [transactions[4]!.id, transactions[30]!.id],
+    });
+
+    expect(result).toMatchObject({ ok: true, changeSet: { transactionSemantics: [transactions[4]!.id, transactions[30]!.id] } });
+    expect(transactionVisits).toBe(transactions.length);
+    if (result.ok) {
+      expect(result.document.transactions.map((transaction) => transaction.id)).toEqual(transactions.filter((_, index) => index !== 4 && index !== 30).map((transaction) => transaction.id));
+      expect(result.document.transactions[3]).toBe(transactions[3]);
+    }
+
+    transactionVisits = 0;
+    const rejected = planCommand(document, {
+      id: commandId("cmd_txn_single_pass_delete_missing"),
+      type: "transaction.bulkDelete",
+      transactionIds: [transactions[4]!.id, "txn_missing" as TransactionId],
+    });
+    expect(rejected).toMatchObject({ ok: false, problems: [{ code: "TRANSACTION_NOT_FOUND" }] });
+    expect(transactionVisits).toBe(transactions.length);
+  });
+
   it("keeps product-scale Transaction create, duplicate, and delete to one planner and one History action each", () => {
     const initial = canonicalFixture();
     const transactions = Array.from({ length: 9_000 }, (_, index) => ({

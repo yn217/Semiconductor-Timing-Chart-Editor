@@ -1279,11 +1279,16 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (command.transactionIds.length === 0) return fail("no-op", "NO_OP", "$.transactionIds", "No Transactions were selected for deletion.");
       const selectedIds = new Set(command.transactionIds);
       if (selectedIds.size !== command.transactionIds.length) return fail("invalid", "DUPLICATE_ID", "$.transactionIds", "Bulk Transaction deletion contains duplicate IDs.");
-      const existingIds = new Set(document.transactions.map((item) => item.id));
-      const missing = command.transactionIds.find((id) => !existingIds.has(id));
+      const remainingIds = new Set(selectedIds);
+      const transactions: Transaction[] = [];
+      for (const transaction of document.transactions) {
+        if (selectedIds.has(transaction.id)) remainingIds.delete(transaction.id);
+        else transactions.push(transaction);
+      }
+      const missing = command.transactionIds.find((id) => remainingIds.has(id));
       if (missing !== undefined) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionIds", `Transaction '${missing}' does not exist.`);
       const changeSet: ChangeSet = { transactionSemantics: command.transactionIds, minimapOverview: true };
-      return { ok: true, document: { ...document, transactions: document.transactions.filter((item) => !selectedIds.has(item.id)) }, changeSet, inverseChangeSet: changeSet };
+      return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
     }
     case "transaction.bulkSetVisibility": {
       if (command.transactionIds.length === 0) return fail("no-op", "NO_OP", "$.transactionIds", "No Transactions were selected for visibility change.");
