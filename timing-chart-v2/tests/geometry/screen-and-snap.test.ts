@@ -131,6 +131,54 @@ describe("Screen Geometry and snapping", () => {
     expect(index.entries().some((candidate) => candidate.anchor.cycle === 2 || candidate.anchor.cycle === 3)).toBe(false);
   });
 
+  it("keeps folded non-contiguous source boundaries in the lazy snap index", () => {
+    const source = canonicalFixture();
+    const document = {
+      ...source,
+      timeGroups: [{ id: "time_fold" as TimeGroupId, name: "Fold", start: 2, end: 4, presentation: { collapsed: true, foldStyle: "axis-break" as const, foldLabel: "GAP" } }],
+      signals: [source.signals[0]!],
+      bookmarks: [],
+      annotations: [],
+      timeline: { ...source.timeline, referenceClock: source.signals[0]!.id, cycleCount: 8 },
+    };
+    const signal = document.signals[0]!;
+    const entries = [0, 1, 4, 5, 6, 7, 8].map((cycle, index) => ({
+      cycle,
+      point: "cycle-start" as const,
+      position: { x: index * 10, y: 0 },
+    }));
+    let findCalls = 0;
+    const map = {
+      signalId: signal.id,
+      cycleBoundaryEntries: () => entries,
+      find: (anchor: Parameters<ImmutableLocalGeometryMap["find"]>[0]) => {
+        findCalls += 1;
+        const entry = entries.find((item) => item.cycle === anchor.cycle);
+        return anchor.point === "cycle-start" && entry
+          ? { signalId: signal.id, anchor, point: entry.position }
+          : undefined;
+      },
+    };
+    const sourceByRendered = [0, 1, 4, 5, 6, 7, 8];
+    const renderedBySource = new Map(sourceByRendered.map((sourceCycle, renderedCycle) => [sourceCycle, renderedCycle]));
+    const service = new SemanticSnapCandidateService();
+    const index = service.build({
+      document,
+      geometryMaps: new Map([[signal.id, map]]),
+      rowY: new Map([[signal.id, 0]]),
+      renderedCycleCount: 6,
+      sourceCycleForRenderedCycle: (cycle) => sourceByRendered[cycle],
+      renderedCycleForSourceCycle: (cycle) => renderedBySource.get(cycle),
+    });
+
+    expect(index.entries().filter((candidate) => candidate.kind === "cycle-boundary")).toHaveLength(0);
+    expect(service.metrics().candidateCount).toBeLessThan(10);
+    expect(findCalls).toBe(0);
+    expect(index.nearest({ x: 20, y: 0 }, 1, ["cycle-boundary"]))
+      .toMatchObject({ kind: "cycle-boundary", anchor: { cycle: 4, point: "cycle-start" }, point: { x: 20 } });
+    expect(index.metrics().candidatesVisited).toBeLessThan(10);
+  });
+
   it("builds only against the currently projected viewport rows", () => {
     const source = canonicalFixture();
     const stale = source.signals[0]!;

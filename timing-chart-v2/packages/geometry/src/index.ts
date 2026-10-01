@@ -520,7 +520,7 @@ export class SemanticSnapCandidateService {
       // instead of materializing every transition/value candidate in the
       // retained contiguous source interval. Sparse/folded or unordered maps
       // keep the conservative semantic path below.
-      const indexedSource = eligibleBoundaryEntries && createIndexedCycleSnapSource(signal.id, signal.type, y, map, eligibleBoundaryEntries, input.document.timeline.cycleCount);
+      const indexedSource = eligibleBoundaryEntries && createIndexedCycleSnapSource(signal.id, signal.type, y, map, eligibleBoundaryEntries, input.document.timeline.cycleCount, renderedCycleForSourceCycle);
       if (indexedSource) sources.push(indexedSource);
       if (indexedSource) continue;
       const sourceCycles = boundaryEntries === undefined || boundaryEntries.length === 0
@@ -565,11 +565,20 @@ export class SemanticSnapCandidateService {
   }
 }
 
-function createIndexedCycleSnapSource(signalId: SignalId, signalType: string, rowY: number, map: LocalGeometryMap, entries: readonly LocalGeometryEntry[], terminalCycle: number): SnapCandidateSource | undefined {
+function createIndexedCycleSnapSource(signalId: SignalId, signalType: string, rowY: number, map: LocalGeometryMap, entries: readonly LocalGeometryEntry[], terminalCycle: number, renderedCycleForSourceCycle: (sourceCycle: number) => number | undefined): SnapCandidateSource | undefined {
   if (entries.length < 2) return undefined;
   for (let index = 0; index < entries.length; index += 1) {
     if (!Number.isFinite(entries[index]!.position.x)) return undefined;
-    if (index > 0 && (entries[index]!.position.x < entries[index - 1]!.position.x || entries[index]!.cycle !== entries[index - 1]!.cycle + 1)) return undefined;
+    // Folded timelines intentionally omit hidden source cycles from this
+    // projection, so canonical cycle IDs may have gaps while rendered-cycle
+    // positions remain contiguous. Sparse retained geometry is still rejected
+    // because its rendered-cycle positions have gaps.
+    if (index > 0 && entries[index]!.position.x < entries[index - 1]!.position.x) return undefined;
+    if (index > 0) {
+      const priorRendered = renderedCycleForSourceCycle(entries[index - 1]!.cycle);
+      const currentRendered = renderedCycleForSourceCycle(entries[index]!.cycle);
+      if (priorRendered === undefined || currentRendered === undefined || currentRendered !== priorRendered + 1) return undefined;
+    }
   }
   const lowerBound = (x: number): number => {
     let low = 0;
