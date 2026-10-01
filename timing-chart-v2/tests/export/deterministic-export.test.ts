@@ -224,6 +224,34 @@ describe("deterministic document export", () => {
     }
   });
 
+  it("yields while serializing a dense ruler even when no WaveDrom rows exist", async () => {
+    const base = canonicalFixture();
+    const document = {
+      ...base,
+      timeline: { ...base.timeline, end: 96, cycleCount: 96 },
+      signals: [],
+      signalGroups: [],
+      transactions: [],
+      annotations: [],
+      timeGroups: [],
+    };
+    const settings = { scope: "document" as const };
+    const expected = renderExportSvg(buildExportScene(document, { format: "svg", ...settings }));
+    const service = new DeterministicExportService();
+    const yieldTask = vi.fn(async () => undefined);
+    let now = 0;
+    const performanceNow = vi.spyOn(globalThis.performance, "now").mockImplementation(() => { now += 20; return now; });
+    vi.stubGlobal("scheduler", { yield: yieldTask });
+    try {
+      const actual = new TextDecoder().decode(await service.export({ format: "svg", snapshot: { revision: 0, document }, settings }));
+      expect(yieldTask).toHaveBeenCalled();
+      expect(actual).toBe(expected);
+    } finally {
+      performanceNow.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("renders selected-range WaveDrom inputs as bounded windows without changing source cycles", () => {
     const base = canonicalFixture();
     const document = {

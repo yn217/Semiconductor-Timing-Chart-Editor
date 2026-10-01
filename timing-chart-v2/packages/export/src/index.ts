@@ -730,29 +730,34 @@ function renderLineAnnotationSvg(annotation: ExportAnnotation, metadata: string)
   return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}" data-line-type="${lineType}" data-arrowhead="${arrowhead}"${metadata}>${defs.length ? `<defs>${defs.join("")}</defs>` : ""}<path data-role="annotation-path" d="${path.d}" fill="none" stroke="${xml(color)}" stroke-width="2"${path.dash ? ` stroke-dasharray="${path.dash}"` : ""}${markerAttrs}/>${multilineText(labelX, labelY, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`;
 }
 
-export function renderExportSvg(scene: ExportScene): string {
+function* renderExportSvgSteps(scene: ExportScene): Generator<void, string, void> {
   const out = [`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${scene.width} ${scene.height}" width="${scene.width}" height="${scene.height}" data-export-scene="v2" data-wave-engine="wavedrom-${WAVEDROM_VERSION}">`, `<rect width="100%" height="100%" fill="white"/>`, ...(scene.page ? [`<g data-layer="page-content" transform="translate(${scene.page.contentOffsetX} ${scene.page.contentOffsetY}) scale(${scene.page.contentScale})">`] : [])];
   const layout = scene.documentLayout;
   out.push(`<g data-layer="document-layout" font-family="Segoe UI,Arial,sans-serif" fill="#1e293b"><text data-layout="title" x="12" y="20" font-size="16" font-weight="700">${xml(layout.title)}</text>`);
-  layout.headerLines.forEach((line, index) => out.push(`<text data-layout="header" x="12" y="${38 + index * 14}" font-size="10">${xml(line)}</text>`));
+  for (const [index, line] of layout.headerLines.entries()) {
+    out.push(`<text data-layout="header" x="12" y="${38 + index * 14}" font-size="10">${xml(line)}</text>`);
+    yield;
+  }
   out.push(`</g>`);
   out.push(`<g data-layer="ruler" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#334155" stroke="#d5dde7">`);
   const rulerTop = 24 + 38 + layout.headerLines.length * 14;
-  for (const tick of scene.ruler.ticks) { const x = scene.ruler.x + (tick.cycle - scene.ruler.start) * scene.ruler.cycleWidth; out.push(`<line x1="${x}" y1="${rulerTop}" x2="${x}" y2="${scene.height - 24}"/><text x="${x + 3}" y="${rulerTop - 8}" stroke="none">${xml(tick.text)}</text>`); }
+  for (const tick of scene.ruler.ticks) { const x = scene.ruler.x + (tick.cycle - scene.ruler.start) * scene.ruler.cycleWidth; out.push(`<line x1="${x}" y1="${rulerTop}" x2="${x}" y2="${scene.height - 24}"/><text x="${x + 3}" y="${rulerTop - 8}" stroke="none">${xml(tick.text)}</text>`); yield; }
   out.push(`</g><g data-layer="transactions" font-family="Segoe UI,Arial,sans-serif" font-size="11">`);
-  for (const item of scene.transactions) out.push(`<g data-transaction-id="${xml(item.id)}"><rect x="${item.x}" y="${item.y}" width="${item.width}" height="20" rx="4" fill="#dbeafe" stroke="#2563eb"/><text x="${item.x + 6}" y="${item.y + 14}">${xml(item.name)}</text></g>`);
+  for (const item of scene.transactions) { out.push(`<g data-transaction-id="${xml(item.id)}"><rect x="${item.x}" y="${item.y}" width="${item.width}" height="20" rx="4" fill="#dbeafe" stroke="#2563eb"/><text x="${item.x + 6}" y="${item.y + 14}">${xml(item.name)}</text></g>`); yield; }
   out.push(`</g><g data-layer="group-bands">`);
-  for (const band of scene.groupBands) out.push(`<rect data-group-id="${xml(band.id)}" data-scope="${band.scope}" x="${band.x}" y="${band.y}" width="${band.width}" height="${band.height}" fill="${xml(band.fill)}" fill-opacity="${band.fillOpacity}" stroke="${xml(band.stroke)}"/>`);
+  for (const band of scene.groupBands) { out.push(`<rect data-group-id="${xml(band.id)}" data-scope="${band.scope}" x="${band.x}" y="${band.y}" width="${band.width}" height="${band.height}" fill="${xml(band.fill)}" fill-opacity="${band.fillOpacity}" stroke="${xml(band.stroke)}"/>`); yield; }
   out.push(`</g><g data-layer="axis-breaks" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#52677d" stroke="#52677d">`);
   for (const item of scene.axisBreaks) {
     out.push(`<g data-axis-break-id="${xml(item.id)}" data-source-start="${item.sourceStart}" data-source-end="${item.sourceEnd}"><path d="M${item.x - 4} 22 l4 8 l4 -8 M${item.x - 4} ${scene.height - 30} l4 8 l4 -8" fill="none" stroke-width="1.5"/><text x="${item.x + 8}" y="38" fill="#52677d" stroke="none">${xml(item.name)}</text></g>`);
+    yield;
   }
   out.push(`</g><g data-layer="labels" font-family="Segoe UI,Arial,sans-serif" font-size="11" fill="#1e293b">`);
-  for (const label of scene.labels) out.push(`<text data-label-kind="${label.kind}" x="${label.x}" y="${label.y + 4}"${label.kind === "comment" ? ` fill="#9144d3"` : ""}>${xml(label.text)}</text>`);
+  for (const label of scene.labels) { out.push(`<text data-label-kind="${label.kind}" x="${label.x}" y="${label.y + 4}"${label.kind === "comment" ? ` fill="#9144d3"` : ""}>${xml(label.text)}</text>`); yield; }
   out.push(`</g><g data-layer="waveforms">`);
   for (const wave of scene.waveforms) {
     const inner = wave.svgMarkup.slice(wave.svgMarkup.indexOf(">") + 1, wave.svgMarkup.lastIndexOf("</svg>"));
     out.push(`<svg data-signal-id="${xml(wave.signalId)}" data-role="${xml(wave.role)}" data-wave-json="${xml(wave.waveJson)}" x="${scene.ruler.x}" y="${wave.y - wave.sourceHeight / 2}" width="${wave.width}" height="${wave.sourceHeight}" viewBox="${wave.cropX} 0 ${wave.width} ${wave.sourceHeight}" overflow="hidden" class="WaveDrom">${inner}</svg>`);
+    yield;
   }
   out.push(`</g><g data-layer="annotations" font-family="Segoe UI,Arial,sans-serif" font-size="11" stroke="#dc2626" fill="none">`);
   for (const annotation of scene.annotations) {
@@ -789,15 +794,40 @@ export function renderExportSvg(scene: ExportScene): string {
     else if (annotation.type === "range" || annotation.type === "highlight" || annotation.type === "rectangle" || annotation.type === "ellipse") out.push(renderAreaAnnotationSvg(annotation, metadata, scene.height));
     else if (annotation.type === "verticalLine") out.push(renderVerticalLineSvg(annotation, metadata, scene.height));
     else { const placed = placedLabelPosition(annotation); out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}"><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/>${multilineText(placed?.x ?? Math.min(annotation.x1, annotation.x2) + 4, placed?.y ?? Math.min(annotation.y1, annotation.y2) - 5, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`); }
+    yield;
   }
   out.push(`</g><g data-layer="edge-counters" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#7c3aed" stroke="none">`);
-  for (const edge of scene.edgeCounters) out.push(`<text data-edge-counter-id="${xml(edge.id)}" data-signal-id="${xml(edge.signalId)}" data-edge-kind="${edge.kind}" data-cycle="${edge.cycle}" x="${edge.x}" y="${edge.y}">${xml(edge.label)}</text>`);
+  for (const edge of scene.edgeCounters) { out.push(`<text data-edge-counter-id="${xml(edge.id)}" data-signal-id="${xml(edge.signalId)}" data-edge-kind="${edge.kind}" data-cycle="${edge.cycle}" x="${edge.x}" y="${edge.y}">${xml(edge.label)}</text>`); yield; }
   const footer = [layout.figureNumber, layout.revision, layout.footerText].filter((value) => value.length > 0).join(" · ");
-  out.push(`</g><g data-layer="legend" data-orientation="${scene.legendOrientation}" transform="translate(${scene.legendPosition.x} ${scene.legendPosition.y})" font-family="Segoe UI,Arial,sans-serif" font-size="10">${scene.legend.map((role, index) => `<text x="${scene.legendOrientation === "vertical" ? 12 : 12 + index * 80}" y="${12 + (scene.legendOrientation === "vertical" ? index * 14 : 0)}">${xml(role)}</text>`).join("")}</g>`);
+  const legendItems: string[] = [];
+  for (const [index, role] of scene.legend.entries()) { legendItems.push(`<text x="${scene.legendOrientation === "vertical" ? 12 : 12 + index * 80}" y="${12 + (scene.legendOrientation === "vertical" ? index * 14 : 0)}">${xml(role)}</text>`); yield; }
+  out.push(`</g><g data-layer="legend" data-orientation="${scene.legendOrientation}" transform="translate(${scene.legendPosition.x} ${scene.legendPosition.y})" font-family="Segoe UI,Arial,sans-serif" font-size="10">${legendItems.join("")}</g>`);
   if (footer) out.push(`<text data-layout="footer" x="12" y="${scene.height - 12}" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#52677d">${xml(footer)}</text>`);
   if (scene.page) out.push(`</g>`);
   out.push(`</svg>`);
   return out.join("");
+}
+
+/** Synchronous deterministic SVG API retained for pure callers and tests. */
+export function renderExportSvg(scene: ExportScene): string {
+  const steps = renderExportSvgSteps(scene);
+  let step = steps.next();
+  while (!step.done) step = steps.next();
+  return step.value;
+}
+
+async function renderExportSvgCooperatively(scene: ExportScene): Promise<string> {
+  const steps = renderExportSvgSteps(scene);
+  let sliceStartedAt = globalThis.performance?.now() ?? Date.now();
+  while (true) {
+    const step = steps.next();
+    if (step.done) return step.value;
+    const now = globalThis.performance?.now() ?? Date.now();
+    if (now - sliceStartedAt >= 16) {
+      await yieldExportTask();
+      sliceStartedAt = globalThis.performance?.now() ?? Date.now();
+    }
+  }
 }
 
 export async function rasterizeSvgToPng(svg: string, width: number, height: number, scale = 1): Promise<Uint8Array> {
@@ -844,7 +874,7 @@ export class DeterministicExportService implements ExportService {
   async export(request: ExportRequest): Promise<Uint8Array> {
     const settings: ExportSettings = { format: request.format, scope: request.settings?.scope ?? "document", ...request.settings };
     const scene = await buildExportSceneCooperatively(request.snapshot.document, settings);
-    const svg = renderExportSvg(scene);
+    const svg = await renderExportSvgCooperatively(scene);
     if (request.format === "svg") return new TextEncoder().encode(svg);
     if (request.format === "png") return rasterizeSvgToPng(svg, scene.width, scene.height, settings.scale ?? 1);
     return renderExportPdf(scene, svg);
