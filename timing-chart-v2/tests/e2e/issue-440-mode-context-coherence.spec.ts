@@ -5,9 +5,10 @@ import { startInCycleMode } from "./cycle-startup.js";
 startInCycleMode(test);
 
 /**
- * #440: a hidden-mode entity must never remain an implicit Inspector target. Exact fixture 24: select a Bookmark in Cycle, switch to
- * Transaction (Inspector must not keep exposing the Bookmark / Delete Bookmark), and return (selection preserved, not cleared).
- * View-only mode switches leave Canonical / History / Dirty untouched.
+ * #440: with a primary Signal selected, choosing a Bookmark in the Bottom list
+ * converts it to an explicit local target (Fixed, named in status) instead of
+ * claiming Follow Selection. The primary Inspector/Status remain on the Signal;
+ * mode switches do not expose a hidden-mode destructive Bookmark Inspector.
  */
 for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) {
   test(`Bookmark Inspector target does not survive Cycle -> Transaction at ${viewport.width}x${viewport.height}`, async ({ page }) => {
@@ -20,10 +21,21 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
     await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+    await page.getByTestId("cycle-surface").locator("[data-row-id='psel']").click();
+    await expect(page.getByTestId("selection-status")).toHaveText("PSEL");
+    await expect(page.getByTestId("status-context")).toContainText("Bottom: Follow");
     await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
-    await page.getByTestId("bookmark-editor-panel").getByTestId(/bookmark-row-/).first().click();
+    const bookmarkRow = page.getByTestId("bookmark-editor-panel").getByTestId(/bookmark-row-/).first();
+    await bookmarkRow.click();
     const inspector = page.getByTestId("inspector");
-    await expect(inspector).toHaveAttribute("data-inspector-context", "bookmark");
+    await expect(bookmarkRow).toHaveAttribute("data-selected", "true");
+    await expect(page.getByTestId("selection-status")).toHaveText("PSEL");
+    await expect(page.getByTestId("status-context")).toContainText("Bottom: Fixed · Target: Bookmark APB write");
+    await expect(inspector).toHaveAttribute("data-inspector-context", "signal");
+    await page.getByTestId("bottom-settings").click();
+    await expect(page.getByTestId("follow-selection")).not.toBeChecked();
+    await page.getByTestId("bottom-settings").click();
+    await expect(inspector).toHaveAttribute("data-inspector-context", "signal");
     const revision = await surface.getAttribute("data-canonical-revision");
     const history = await page.getByTestId("history-status").innerText();
     const dirty = await page.getByTestId("dirty-status").innerText();
@@ -35,7 +47,14 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
 
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
     await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Cycle");
-    await expect(inspector, "returning to Cycle restores the preserved Bookmark selection").toHaveAttribute("data-inspector-context", "bookmark");
+    await expect(inspector, "Bookmark remains an explicit Bottom-local target; Cycle Inspector follows the preserved primary Signal selection").toHaveAttribute("data-inspector-context", "signal");
+    await page.getByTestId("bottom-settings").click();
+    await page.getByTestId("follow-selection").check();
+    await page.getByTestId("bottom-settings").click();
+    await expect(page.getByTestId("selection-status")).toHaveText("PSEL");
+    await expect(page.getByTestId("status-context")).toContainText("Bottom: Follow");
+    await expect(inspector, "resuming Follow Selection releases the local Bookmark target").toHaveAttribute("data-inspector-context", "signal");
+    await expect(bookmarkRow).toHaveAttribute("data-selected", "false");
     expect(await surface.getAttribute("data-canonical-revision")).toBe(revision);
     expect(await page.getByTestId("history-status").innerText()).toBe(history);
     expect(await page.getByTestId("dirty-status").innerText()).toBe(dirty);

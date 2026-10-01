@@ -61,6 +61,7 @@ export interface EditorActionsInput {
   readonly bottomPinned: boolean;
   readonly setBottomPinned: (value: boolean) => void;
   readonly followSelection: boolean;
+  readonly setFollowSelection: (value: boolean) => void;
   readonly pinnedBottomSelection: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId; readonly bookmarkId?: BookmarkId } | undefined;
   readonly setPinnedBottomSelection: (value: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId; readonly bookmarkId?: BookmarkId } | undefined) => void;
   readonly selectedSignalId: SignalId | undefined;
@@ -82,6 +83,7 @@ export interface EditorActions {
   readonly selectedBookmarkId: BookmarkId | undefined;
   readonly selectedBookmark: Bookmark | undefined;
   readonly selectBookmark: (id: BookmarkId) => void;
+  readonly clearBookmarkSelection: () => void;
   readonly selectAIEntity: (target: Readonly<{ entityType: AISelectionEntityType; entityId: string }>) => void;
   readonly addBookmarkAtCycle: (cycle: number) => void;
   readonly revealBookmark: (start: number) => void;
@@ -157,7 +159,18 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
   const host = input.hostRef;
   const viewport = input.viewportRef;
 
-  const selectBookmark = (id: BookmarkId) => setSelectedBookmarkId(id);
+  const selectBookmark = (id: BookmarkId) => {
+    // Bookmark rows have their own stable-ID selection owner rather than
+    // replacing the semantic primary selection. Make that local Bottom target
+    // explicit: while Following Selection is enabled, selecting a Bookmark
+    // freezes the Bottom panel on it and advertises the non-following state.
+    if (input.followSelection && !input.bottomPinned) input.setFollowSelection(false);
+    setSelectedBookmarkId(id);
+    // setFollowSelection(false) captures the prior primary selection. The
+    // explicit row selection must win that initial snapshot in this same event.
+    input.setPinnedBottomSelection({ bookmarkId: id });
+  };
+  const clearBookmarkSelection = () => setSelectedBookmarkId(undefined);
   const selectLegend = () => {
     setSelectedBookmarkId(undefined);
     input.selection.selectLegend();
@@ -179,7 +192,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
       bookmark: { id, name: "Bookmark " + start, start },
     });
     if (result.ok) {
-      setSelectedBookmarkId(id);
+      selectBookmark(id);
       input.setBottomTab("Bookmarks");
       input.setBottomVisible(true);
     }
@@ -445,6 +458,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     selectedBookmarkId,
     selectedBookmark,
     selectBookmark,
+    clearBookmarkSelection,
     selectAIEntity,
     addBookmarkAtCycle,
     revealBookmark,

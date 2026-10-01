@@ -479,6 +479,7 @@ export function MinimalCycleView() {
     bottomPinned,
     setBottomPinned,
     followSelection,
+    setFollowSelection: setFollowSelectionWithFreeze,
     pinnedBottomSelection,
     setPinnedBottomSelection,
     selectedSignalId: selectedId,
@@ -499,6 +500,7 @@ export function MinimalCycleView() {
     selectedBookmarkId,
     selectedBookmark,
     selectBookmark,
+    clearBookmarkSelection,
     addBookmarkAtCycle,
     revealBookmark,
     deleteBottomBookmark,
@@ -539,6 +541,12 @@ export function MinimalCycleView() {
     saveAndContinuePendingFileAction,
     requestNewDocument,
   } = actions;
+  const setFollowSelectionFromUi = (value: boolean) => {
+    setFollowSelectionWithFreeze(value);
+    // Bookmark selection is a local Bottom target, not primary selection.
+    // Returning to Follow Selection releases that local target.
+    if (value) clearBookmarkSelection();
+  };
   selectedBookmarkIdRef.current = selectedBookmarkId;
   const bottomBookmark = frozen ? (pinnedBottomSelection!.bookmarkId === undefined ? undefined : bookmarkById.get(pinnedBottomSelection!.bookmarkId)) : (selectedBookmarkId === undefined ? undefined : bookmarkById.get(selectedBookmarkId));
   useEditorDialogRuntime({
@@ -604,7 +612,7 @@ export function MinimalCycleView() {
     bottom: { signal: bottomSignal, group: bottomGroup, annotation: bottomAnnotation, transaction: bottomTransaction, bookmark: bottomBookmark },
     timeline: { range: timelineRange, collapsedGroupIds, setCollapsedGroups, toggleCollapsedGroup },
     setBottomVisible,
-    workspace: { viewMode, setViewMode, activeContext, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionWithFreeze, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, cyclesPerTc, setCyclesPerTc, setRibbonTab },
+    workspace: { viewMode, setViewMode, activeContext, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionFromUi, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, transactionTreeFilterMode, setTransactionTreeFilterMode, cyclesPerTc, setCyclesPerTc, setRibbonTab },
     dialog: { treeAddMenuOpen, setTreeAddMenuOpen, treeMoreMenuOpen, setTreeMoreMenuOpen, bulkRegistrationText, setBulkRegistrationText, bulkRegistrationGroupId, setBulkRegistrationGroupId, bulkRegistrationStatus, setBulkRegistrationStatus, setBulkRegistrationVisible, setHierarchyVisible, contextMenu, setContextMenu, closeTreeAddMenu, closeTreeMoreMenu, bottomResetToken, setBottomResetToken, inspectorResetToken, setInspectorResetToken, setInspectorVisible },
     annotationTargetSignalId,
     referenceClockName: referenceClockSignal?.display.name,
@@ -797,7 +805,7 @@ export function MinimalCycleView() {
     zoom,
     snapEnabled,
     viewMode,
-    statusContext: `Workspace: ${workspacePreset} · ${bottomPinned ? "Bottom: Pinned" : followSelection ? "Bottom: Follow" : "Bottom: Fixed"}${selectedSignal ? ` · Scope: ${selectedSignal.source.instancePath.length > 0 ? selectedSignal.source.instancePath.join("/") : "root"}` : ""}`,
+    statusContext: `Workspace: ${workspacePreset} · ${bottomPinned ? "Bottom: Pinned" : followSelection ? "Bottom: Follow" : "Bottom: Fixed"}${!followSelection || bottomPinned ? ` · Target: ${bottomBookmark ? `Bookmark ${bottomBookmark.name}` : bottomTransaction ? `Transaction ${bottomTransaction.name}` : bottomAnnotation ? `Annotation ${bottomAnnotation.label || bottomAnnotation.type}` : bottomSignal ? `Signal ${bottomSignal.display.name}` : bottomGroup ? `Group ${bottomGroup.name}` : "None"}` : ""}${selectedSignal ? ` · Scope: ${selectedSignal.source.instancePath.length > 0 ? selectedSignal.source.instancePath.join("/") : "root"}` : ""}`,
     hideRevisionDetail: visualReference,
     revision: snapshot.revision,
     undoDepth: history.undoDepth,
