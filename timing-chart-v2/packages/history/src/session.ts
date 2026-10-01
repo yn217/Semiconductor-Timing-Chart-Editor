@@ -34,7 +34,12 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
   readonly #documents: DocumentSession;
   #undo: HistoryEntry[] = [];
   #redo: HistoryEntry[] = [];
-  #cleanDocument: Readonly<CanonicalDocument>;
+  // The savepoint is an identity token, not a strong reference to an old
+  // Canonical root. History entries keep documents alive only while they are
+  // inside the Undo/Redo horizon; a saved root outside that horizon must not
+  // pin its large structural-sharing branches indefinitely.
+  readonly #documentIdentities = new WeakMap<object, symbol>();
+  #cleanDocumentIdentity: symbol;
   #historyMetrics: HistoryMetrics = {
     commandAttempts: 0,
     committedActions: 0,
@@ -47,7 +52,7 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
 
   constructor(initial: CanonicalDocument | ParsedCanonicalDocument) {
     this.#documents = new DocumentSession(initial);
-    this.#cleanDocument = this.#documents.getSnapshot().document;
+    this.#cleanDocumentIdentity = this.#documentIdentity(this.#documents.getSnapshot().document);
   }
 
   getSnapshot(): CanonicalSnapshot {
@@ -59,17 +64,27 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
   }
 
   historyState(): HistoryState {
+    const document = this.getSnapshot().document;
     return {
       canUndo: this.#undo.length > 0,
       canRedo: this.#redo.length > 0,
       undoDepth: this.#undo.length,
       redoDepth: this.#redo.length,
-      dirty: this.getSnapshot().document !== this.#cleanDocument,
+      dirty: this.#documentIdentity(document) !== this.#cleanDocumentIdentity,
     };
   }
 
   markClean(): void {
-    this.#cleanDocument = this.getSnapshot().document;
+    this.#cleanDocumentIdentity = this.#documentIdentity(this.getSnapshot().document);
+  }
+
+  #documentIdentity(document: Readonly<CanonicalDocument>): symbol {
+    let identity = this.#documentIdentities.get(document);
+    if (identity === undefined) {
+      identity = Symbol("canonical-document");
+      this.#documentIdentities.set(document, identity);
+    }
+    return identity;
   }
 
   historyMetrics(): HistoryMetrics {
