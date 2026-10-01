@@ -7,7 +7,7 @@ import type { TransactionLaneCommandActions } from "../application/editor-surfac
 import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
 import { mergeTransactionFoldRanges, transactionFoldRangesIntersecting, type TransactionFoldRange } from "./transaction-fold-index.js";
-import { bookmarksInSourceWindow, indexTransactionIntervals, transactionIntervalsInWindow, transactionRowsInWindow, type TransactionIntervalIndex } from "./transaction-virtual-index.js";
+import { bookmarksInSourceWindow, indexTransactionIntervals, transactionIntervalsInWindow, type TransactionIntervalIndex } from "./transaction-virtual-index.js";
 
 const LANE_ROW_HEIGHT = 40;
 const GROUP_HEADER_HEIGHT = 24;
@@ -70,7 +70,7 @@ function assignStackRows(transactions: readonly Transaction[]): { readonly rowOf
   return { rowOf, rowCount: Math.max(1, rowCount) };
 }
 
-type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly labelTop: number; readonly trackTop: number; readonly labelHeight: number; readonly trackHeight: number; readonly rowOf: ReadonlyMap<TransactionId, number>; readonly treeRowOf: ReadonlyMap<TransactionId, number>; readonly treeRows: readonly Transaction[] };
+type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly labelTop: number; readonly trackTop: number; readonly labelHeight: number; readonly trackHeight: number; readonly rowOf: ReadonlyMap<TransactionId, number> };
 type GroupHeaderBand = { readonly key: string; readonly labelTop: number; readonly trackTop: number; readonly label: string; readonly color: string | undefined; readonly count: number; readonly groupId: string | undefined; readonly collapsed: boolean };
 
 type TransactionDragEdge = "body" | "start" | "end";
@@ -306,10 +306,8 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const mountSerial = useRef(++transactionLanesMountSerial);
   const laneIndexBuilds = useRef(0);
   const stackRowBuilds = useRef(0);
-  const treeRowBuilds = useRef(0);
   const transactionFilterBuilds = useRef(0);
   const stackRowsCache = useRef(new WeakMap<readonly Transaction[], ReturnType<typeof assignStackRows>>());
-  const treeRowsCache = useRef(new WeakMap<readonly Transaction[], Readonly<{ rowOf: ReadonlyMap<TransactionId, number>; ordered: readonly Transaction[] }>>());
   const laneArrayCache = useRef<ReadonlyMap<string, readonly Transaction[]> | undefined>(undefined);
   const laneTransactionCache = useRef<ReadonlyMap<TransactionId, Transaction> | undefined>(undefined);
   const laneKeyCache = useRef<ReadonlyMap<TransactionId, string> | undefined>(undefined);
@@ -557,31 +555,13 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
         stackRowsCache.current.set(laneTransactions, stackRows);
       }
       const { rowOf, rowCount } = stackRows;
-      // #451/#452: the Tree label list needs one row per Transaction
-      // ALWAYS (two Transactions that don't overlap in time still need
-      // two separate, independently-clickable list lines), whereas the
-      // central bars only need a new row when two Transactions actually
-      // overlap -- `rowOf` (time-based) is correct for bar placement but
-      // wrong for the Tree: two sequential, non-overlapping Transactions
-      // in one lane would both land on `rowOf=0` and render on top of
-      // each other in the label column. `treeRowOf` is a separate,
-      // always-one-row-per-Transaction sequence (stable start-then-id
-      // order), and the lane's height is whichever of the two needs more
-      // room, so neither the bars nor the Tree rows ever overlap.
-      let treeRows = treeRowsCache.current.get(laneTransactions);
-      if (!treeRows) {
-        const ordered = [...laneTransactions].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
-        treeRows = { ordered, rowOf: new Map(ordered.map((transaction, index) => [transaction.id, index] as const)) };
-        treeRowBuilds.current += 1;
-        treeRowsCache.current.set(laneTransactions, treeRows);
-      }
-      // Transaction Mode's center label column represents the Lane only;
-      // Transaction names live in the bar header, as in the approved
-      // reference. Keep the label band to one compact Lane row even when
-      // several non-overlapping Transactions share that lane.
+      // The center label column is Lane-only. Transaction navigation and
+      // names belong to the authoritative left Transaction Tree; mirroring
+      // them here creates rows outside the single-row label band whenever
+      // one lane contains multiple sequential Transactions.
       const labelHeight = LANE_ROW_HEIGHT;
       const trackHeight = Math.max(rowCount, 1) * LANE_ROW_HEIGHT;
-      laneBands.push({ key: transactionLaneIdentityKey(section.groupId, laneId), laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf, treeRowOf: treeRows.rowOf, treeRows: treeRows.ordered });
+      laneBands.push({ key: transactionLaneIdentityKey(section.groupId, laneId), laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf });
       labelCursor += labelHeight;
       trackCursor += trackHeight;
     }
@@ -621,11 +601,6 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   const visibleGroupHeaders = groupHeaders.filter((header) => isVisible(header.labelTop, GROUP_HEADER_HEIGHT));
   const bandContainsSelected = (band: LaneBand) => selectedId !== undefined && currentKeys.get(selectedId) === laneKey(band.groupId, band.laneId);
   const visibleLaneBands = laneBands.filter((band) => isVisible(band.labelTop, band.labelHeight) || isVisible(band.trackTop, band.trackHeight) || bandContainsSelected(band));
-  const isTreeTransactionVisible = (band: LaneBand, transaction: Transaction) => {
-    if (isTransactionSelected(transaction.id)) return true;
-    const row = band.treeRowOf.get(transaction.id) ?? 0;
-    return isVisible(band.labelTop + 4 + row * LANE_ROW_HEIGHT, LANE_ROW_HEIGHT);
-  };
   const isTrackTransactionVisible = (band: LaneBand, transaction: Transaction) => {
     if (isTransactionSelected(transaction.id)) return true;
     const row = band.rowOf.get(transaction.id) ?? 0;
@@ -645,7 +620,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   // scrolling .cycle-viewport that drives virtualWindow. Keep its normal CSS
   // top (34px); applying -virtualWindow.top here would subtract the scroll
   // offset a second time and make offscreen lanes unreachable.
-  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-tree-row-builds={treeRowBuilds.current} data-transaction-filter-builds={transactionFilterBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
+  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" data-mount-serial={mountSerial.current} data-lane-index-builds={laneIndexBuilds.current} data-stack-row-builds={stackRowBuilds.current} data-transaction-filter-builds={transactionFilterBuilds.current} style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
       {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
@@ -666,28 +641,10 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
         </div>;
       })}
       {visibleLaneBands.map((band) => {
-        // #451/#452 convergence: the same per-Transaction rows the central
-        // bars occupy are also listed here, by name, in this sticky label
-        // column -- this *is* Transaction Mode's left Tree content for the
-        // Lane/Transaction level (Groups above, Transaction names here),
-        // reading one shared `document.transactions` + `selectedId`/
-        // `onSelect`, not a second selection-owning tree.
-        const laneTransactions = laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? [];
-        const rowStart = (virtualTop - band.labelTop - 4) / LANE_ROW_HEIGHT;
-        const rowEnd = (virtualBottom - band.labelTop - 4) / LANE_ROW_HEIGHT;
-        const selectedRow = selectedId === undefined ? undefined : band.treeRowOf.get(selectedId);
-        const pinned = selectedRow === undefined ? undefined : band.treeRows[selectedRow];
-        const treeCandidates = transactionRowsInWindow(band.treeRows, rowStart, rowEnd, pinned);
+        // Keep the center label plane strictly to Lane identity. Transaction
+        // names and selection live in the dedicated, virtualized left Tree.
         return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" data-lane-id={band.laneId} data-transaction-group-id={band.groupId} data-ungrouped={String(band.groupId === undefined)} style={{ top: band.labelTop, height: band.labelHeight }}>
           <em className="transaction-lane-label-name">{band.laneId.replace(/^lane_(\d+)$/i, "Lane $1")}</em>
-          {/* Transaction Mode GUI realignment ("長い名前は ellipsis +
-              tooltip"): the CSS already truncates a long name with
-              ellipsis (center-columns.css's overflow:hidden/text-overflow:
-              ellipsis on this class), but nothing surfaced the full name
-              once it was cut off. `title` is the same native-tooltip
-              affordance the rest of the app already uses for truncated
-              text, not a new pattern. */}
-          {treeCandidates.filter((transaction) => transaction.visible !== false && isTreeTransactionVisible(band, transaction)).map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(isTransactionSelected(transaction.id))} title={transaction.name} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={(event) => onSelect(transaction.id, event.ctrlKey || event.metaKey)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
         </span>;
       })}
     </div>

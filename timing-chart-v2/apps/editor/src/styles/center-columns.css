@@ -230,14 +230,6 @@
 .transaction-lane-labels .transaction-lane-label { position: absolute; left: 0; right: 0; border-bottom: 1px solid #d9e1ea; color: #53677c; font-size: 10px; }
 .transaction-lane-labels .transaction-lane-label > em { position: absolute; inset: 0; display: flex; align-items: center; padding-left: 12px; font-style: normal; opacity: .7; }
 .transaction-lane-labels .transaction-lane-label > .transaction-lane-label-name { right: auto; bottom: auto; width: 43px; height: 20px; padding-left: 4px; opacity: .8; }
-/* #451: one row per Transaction, positioned to line up with that same
-   Transaction's stacked bar in the track column (`top` is the identical
-   `4 + row * 40` the bar itself uses) -- clicking either one drives the
-   same `onSelect`/`selectedId`. */
-.transaction-lane-label-row { position: absolute; left: 48px; right: 4px; height: 20px; display: flex; align-items: center; gap: 5px; padding: 0 6px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #23364a; font-size: 10px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
-.transaction-lane-label-row:hover { background: #e8eef5; }
-.transaction-lane-label-row[data-selected="true"] { border-color: var(--ds-selection-border, #287ac0); background: var(--ds-selection-bg, #e5f2ff); font-weight: 650; }
-.transaction-lane-label-swatch { flex: none; width: 7px; height: 7px; border-radius: 2px; }
 .transaction-group-header, .transaction-group-header-band { position: absolute; left: 0; right: 0; }
 .transaction-group-header { display: flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 1px solid #c7d2de; background: #eef2f7; color: #2c4257; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
 /* #764: sticky context layer -- pinned to the scroll owner's left edge; the header band itself still scrolls with the lanes. */

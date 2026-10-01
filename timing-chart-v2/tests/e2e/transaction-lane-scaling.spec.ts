@@ -42,14 +42,14 @@ test("10k Transaction fixture keeps mounted lane DOM viewport-bounded", async ({
   const metrics = await page.getByTestId("transaction-lanes").evaluate((element) => ({
     totalHeight: Number.parseFloat((element as HTMLElement).style.height),
     mountedBars: element.querySelectorAll("[data-transaction-id]").length,
-    mountedTreeRows: element.querySelectorAll("[data-testid^='transaction-tree-row-']").length,
+    mountedCenterTransactionLabels: element.querySelectorAll(".transaction-lane-label-row").length,
     filterBuilds: Number((element as HTMLElement).dataset.transactionFilterBuilds),
   }));
   // Transactions are packed into a bounded number of lanes; height is not a
   // proxy for transaction count. The layout must simply be present.
   expect(metrics.totalHeight).toBeGreaterThan(0);
   expect(metrics.mountedBars).toBeLessThan(1_000);
-  expect(metrics.mountedTreeRows).toBeLessThan(1_000);
+  expect(metrics.mountedCenterTransactionLabels).toBe(0);
   const firstVisibleBar = page.getByTestId("transaction-lanes").locator("[data-transaction-id]:visible").first();
   await firstVisibleBar.click();
   await expect(firstVisibleBar).toHaveAttribute("data-selected", "true");
@@ -196,20 +196,19 @@ test("central Transaction surface remains viewport-bounded across 1k/5k/10k with
     const metrics = await page.getByTestId("transaction-lanes").evaluate((element) => ({
       totalHeight: Number.parseFloat((element as HTMLElement).style.height),
       mountedBars: element.querySelectorAll("[data-transaction-id]").length,
-      mountedTreeRows: element.querySelectorAll("[data-testid^='transaction-tree-row-']").length,
+      mountedCenterTransactionLabels: element.querySelectorAll(".transaction-lane-label-row").length,
     }));
     const selected = page.getByTestId("transaction-lanes").locator("[data-transaction-id]:visible").first();
     const lanes = page.getByTestId("transaction-lanes");
     const mountSerial = await lanes.getAttribute("data-mount-serial");
     const laneIndexBuildsBeforeSelection = Number(await lanes.getAttribute("data-lane-index-builds"));
     const stackRowBuildsBeforeSelection = Number(await lanes.getAttribute("data-stack-row-builds"));
-    const treeRowBuildsBeforeSelection = Number(await lanes.getAttribute("data-tree-row-builds"));
     const selectionStarted = await page.evaluate(() => performance.now());
     await selected.evaluate((element) => (element as HTMLButtonElement).click());
     await expect(selected).toHaveAttribute("data-selected", "true");
     await expect(lanes).toHaveAttribute("data-lane-index-builds", String(laneIndexBuildsBeforeSelection));
     await expect(lanes).toHaveAttribute("data-stack-row-builds", String(stackRowBuildsBeforeSelection));
-    await expect(lanes).toHaveAttribute("data-tree-row-builds", String(treeRowBuildsBeforeSelection));
+    expect(metrics.mountedCenterTransactionLabels).toBe(0);
     const selectionMs = await page.evaluate((startedAt) => performance.now() - startedAt, selectionStarted);
     const scrollStarted = await page.evaluate(() => performance.now());
     const mountedIdsBeforeScroll = await lanes.locator("[data-transaction-id]").evaluateAll((bars) => bars.map((bar) => bar.getAttribute("data-transaction-id")).filter((id): id is string => id !== null).sort());
@@ -242,8 +241,8 @@ test("central Transaction surface remains viewport-bounded across 1k/5k/10k with
     // Lane height reflects packed lane layout, not transaction count.
     expect(metrics.totalHeight).toBeGreaterThan(0);
     expect(metrics.mountedBars).toBeLessThan(1_000);
-    expect(metrics.mountedTreeRows).toBeLessThan(1_000);
-    measurements.push({ transactionCount, modeReadyMs: Math.round(modeReady), scrollMs: Math.round(scrollMs), selectionMs: Math.round(selectionMs), repeatedMoveP50Ms: Math.round(orderedMoveDurations[4] ?? 0), repeatedMoveP95Ms: Math.round(orderedMoveDurations[8] ?? 0), mountedBars: metrics.mountedBars, mountedTreeRows: metrics.mountedTreeRows });
+    expect(metrics.mountedCenterTransactionLabels).toBe(0);
+    measurements.push({ transactionCount, modeReadyMs: Math.round(modeReady), scrollMs: Math.round(scrollMs), selectionMs: Math.round(selectionMs), repeatedMoveP50Ms: Math.round(orderedMoveDurations[4] ?? 0), repeatedMoveP95Ms: Math.round(orderedMoveDurations[8] ?? 0), mountedBars: metrics.mountedBars, mountedCenterTransactionLabels: metrics.mountedCenterTransactionLabels });
   }
   await testInfo.attach("transaction-central-scale-latency.json", { body: Buffer.from(JSON.stringify(measurements, null, 2)), contentType: "application/json" });
   console.log(`[transaction-central-scale] ${JSON.stringify(measurements)}`);
@@ -274,14 +273,12 @@ test("single-lane Transaction edits remain bounded on a large sequential fixture
   const selected = lanes.locator("[data-transaction-id]:visible").first();
   await selected.evaluate((element) => (element as HTMLButtonElement).click());
   const stackBuilds = await lanes.getAttribute("data-stack-row-builds");
-  const treeBuilds = await lanes.getAttribute("data-tree-row-builds");
   const stackBuildCount = Number(stackBuilds);
-  const treeBuildCount = Number(treeBuilds);
   const startInput = page.getByTestId("inspector").getByLabel("Transaction start");
   await page.getByTestId("inspector").getByLabel("Transaction end").fill("16");
   await startInput.fill("12");
   await page.getByTestId("inspector").getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
   await expect.poll(() => lanes.getAttribute("data-stack-row-builds")).toBe(String(stackBuildCount + 2));
-  await expect.poll(() => lanes.getAttribute("data-tree-row-builds")).toBe(String(treeBuildCount + 2));
+  await expect(lanes.locator(".transaction-lane-label-row")).toHaveCount(0);
 });

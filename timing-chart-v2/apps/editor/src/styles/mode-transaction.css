@@ -30,7 +30,6 @@
   left: var(--gui-left-width);
   width: var(--gui-frozen-width, 210px);
 }
-.cycle-panel.mode-transaction .transaction-lane-label-row { display: none; }
 .cycle-panel.mode-transaction .transaction-lanes { min-height: calc(100% - 34px); }
 /* Transaction Mode owns its tree in the outer left rail.  The center
    timeline must therefore not reserve the legacy left/frozen columns a
