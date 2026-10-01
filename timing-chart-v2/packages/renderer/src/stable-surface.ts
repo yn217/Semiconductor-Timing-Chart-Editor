@@ -298,10 +298,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       applyWaveformStyle(owner, waveformStyle);
       setCanvasWaveformColor(owner, waveformStyle.color);
     }
-    this.#rowLayoutSource = projection.rowLayout;
-    this.#rowIndex = new Map(rows);
-    this.#navigationRowLayoutSource = projection.navigationRowLayout;
-    this.#navigationRowIndex = new Map(navigationRows);
+    // #indexedRows() above owns these identity-cached indexes. Copying each
+    // complete map here after every presentation-only edit duplicated O(rows)
+    // work without changing the row lookup contents.
   }
 
   counters(): Readonly<RenderCounters> {
