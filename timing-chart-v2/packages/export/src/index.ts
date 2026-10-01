@@ -481,14 +481,19 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
     const second = anchorPoint(annotation, "end", document, rowY, mapping, range.start, cycleWidth);
     return first && second ? [{ id: annotation.id, firstX: first.x, secondX: second.x, ...(annotation.measurementLayout?.lane === undefined ? {} : { explicitLane: annotation.measurementLayout.lane }) }] : [];
   }));
-  const annotations = document.annotations.map((annotation): ExportAnnotation | undefined => {
+  const annotations: ExportAnnotation[] = [];
+  for (const annotation of document.annotations) {
     const firstAnchor = annotation.anchor ?? annotation.start ?? annotation.from;
     const lastAnchor = annotation.anchor ?? annotation.end ?? annotation.to ?? firstAnchor;
     const first = anchorPoint(annotation, annotation.anchor ? "anchor" : annotation.start ? "start" : "from", document, rowY, mapping, range.start, cycleWidth);
     const second = anchorPoint(annotation, annotation.end ? "end" : annotation.to ? "to" : annotation.anchor ? "anchor" : "from", document, rowY, mapping, range.start, cycleWidth);
-    if (!first || !second) return undefined;
+    if (!first || !second) {
+      if (checkpoint()) yield;
+      continue;
+    }
     const sourceWave = annotation.type === "ghostTrace" && annotation.sourceSignalId ? renderedWaveById.get(annotation.sourceSignalId) : undefined;
-    const tracePoints = sourceWave && firstAnchor && lastAnchor ? (() => {
+    let tracePoints: readonly ExportPoint[] | undefined;
+    if (sourceWave && firstAnchor && lastAnchor) {
       const offset = annotation.traceOffsetCycles ?? 0;
       // ghostTraceWindow's selected range is expressed in source-cycle space.
       // Under folds the ExportScene range is display-cycle space, so treating
@@ -506,6 +511,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
       const traceTokens = effectiveWaveTokens(sourceWave.waveJson.wave);
       const tracePeriod = Math.max(1, sourceWave.waveJson.period ?? 1);
       for (let cycle = startCycle; cycle <= endCycle; cycle += 1) {
+        if (checkpoint()) yield;
         const sourceCycle = cycle + offset;
         if (sourceCycle < 0 || sourceCycle > document.timeline.cycleCount) continue;
         const displayCycle = toDisplayPosition(mapping, sourceCycle);
@@ -516,14 +522,15 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
         const localDisplayCycle = displayCycle - sourceWave.windowStart;
         points.push({ x: LABEL_WIDTH + (displayCycle - range.start) * cycleWidth, y: traceYForWaveToken((traceTokens[Math.max(0, Math.min(traceTokens.length - 1, Math.floor(localDisplayCycle / tracePeriod)))] ?? "0"), rowY.get(sourceWave.signal.id) ?? first.y, sourceWave.height) });
       }
-      return points.length > 1 ? points : undefined;
-    })() : undefined;
+      tracePoints = points.length > 1 ? points : undefined;
+    }
     const startFraction = anchorTransitionFraction(annotation.start);
     const endFraction = anchorTransitionFraction(annotation.end);
     const startKind = anchorTransitionKind(annotation.start);
     const endKind = anchorTransitionKind(annotation.end);
-    return { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(startFraction === undefined ? {} : { threshold1: startFraction }), ...(endFraction === undefined ? {} : { threshold2: endFraction }), ...(startKind === undefined ? {} : { transitionKind1: startKind }), ...(endKind === undefined ? {} : { transitionKind2: endKind }), ...(annotation.measurement?.profile === undefined ? {} : { measurementProfile: annotation.measurement.profile }), ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout, measurementLane: measurementLaneById.get(annotation.id) ?? annotation.measurementLayout.lane ?? 0 }), ...(tracePoints === undefined ? {} : { tracePoints }), ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }), ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }), ...(annotation.labelOffset === undefined ? {} : { labelOffsetX: annotation.labelOffset.x, labelOffsetY: annotation.labelOffset.y }), ...(annotation.labelPlacement === undefined ? {} : { labelPlacement: annotation.labelPlacement }), ...(annotation.color === undefined ? {} : { color: annotation.color }), ...(annotation.style === undefined ? {} : { style: annotation.style }) };
-  }).filter((annotation): annotation is ExportAnnotation => annotation !== undefined);
+    annotations.push({ id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(startFraction === undefined ? {} : { threshold1: startFraction }), ...(endFraction === undefined ? {} : { threshold2: endFraction }), ...(startKind === undefined ? {} : { transitionKind1: startKind }), ...(endKind === undefined ? {} : { transitionKind2: endKind }), ...(annotation.measurement?.profile === undefined ? {} : { measurementProfile: annotation.measurement.profile }), ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout, measurementLane: measurementLaneById.get(annotation.id) ?? annotation.measurementLayout.lane ?? 0 }), ...(tracePoints === undefined ? {} : { tracePoints }), ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }), ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }), ...(annotation.labelOffset === undefined ? {} : { labelOffsetX: annotation.labelOffset.x, labelOffsetY: annotation.labelOffset.y }), ...(annotation.labelPlacement === undefined ? {} : { labelPlacement: annotation.labelPlacement }), ...(annotation.color === undefined ? {} : { color: annotation.color }), ...(annotation.style === undefined ? {} : { style: annotation.style }) });
+    if (checkpoint()) yield;
+  }
   const contentHeight = waveTop + totalRowHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
   const legend = document.legend.show ? effectiveLegendEntries(document).map((entry) => entry.label) : [];
   const ticks: ExportRulerTick[] = [];

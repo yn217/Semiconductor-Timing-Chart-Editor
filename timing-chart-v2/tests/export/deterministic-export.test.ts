@@ -393,6 +393,32 @@ describe("deterministic document export", () => {
     ]);
   });
 
+  it("yields while sampling a long folded Ghost Trace without changing SVG bytes", async () => {
+    const base = canonicalFixture();
+    const source = base.signals[1]!;
+    const document = {
+      ...base,
+      timeline: { ...base.timeline, end: 1024, cycleCount: 1024 },
+      timeGroups: [{ id: "tg_long_export" as TimeGroupId, name: "Collapsed", start: 2, end: 1000, presentation: { collapsed: true } }],
+      annotations: [{ id: "ann_long_folded_ghost" as AnnotationId, type: "ghostTrace" as const, label: "Long", visible: true, sourceSignalId: source.id, start: { signalId: source.id, cycle: 0, point: "cycle-start" as const }, end: { signalId: source.id, cycle: 1024, point: "cycle-end" as const } }],
+    };
+    const settings = { scope: "selected-range" as const, range: { start: 0, end: 5 } };
+    const expected = renderExportSvg(buildExportScene(document, { format: "svg", ...settings }));
+    const service = new DeterministicExportService();
+    const yieldTask = vi.fn(async () => undefined);
+    let now = 0;
+    const performanceNow = vi.spyOn(globalThis.performance, "now").mockImplementation(() => { now += 20; return now; });
+    vi.stubGlobal("scheduler", { yield: yieldTask });
+    try {
+      const actual = new TextDecoder().decode(await service.export({ format: "svg", snapshot: { revision: 0, document }, settings }));
+      expect(yieldTask.mock.calls.length).toBeGreaterThan(10);
+      expect(actual).toBe(expected);
+    } finally {
+      performanceNow.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("exports datasheet Measurement dimension markers, extensions, and lane metadata deterministically", () => {
     const base = canonicalFixture();
     const signal = base.signals[1]!;
