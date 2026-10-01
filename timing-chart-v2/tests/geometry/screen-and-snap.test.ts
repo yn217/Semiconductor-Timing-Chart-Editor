@@ -213,6 +213,45 @@ describe("Screen Geometry and snapping", () => {
       .toMatchObject({ kind: "cycle-center", anchor: { cycle: 5_000, point: "cycle-center" } });
   });
 
+  it("resolves non-uniform retained boundaries on demand instead of materializing the window", () => {
+    const source = canonicalFixture();
+    const signal = source.signals.find((item) => item.type !== "commentRow")!;
+    const cycleCount = 10_000;
+    const document = {
+      ...source,
+      signals: [signal],
+      bookmarks: [],
+      annotations: [],
+      timeline: { ...source.timeline, referenceClock: signal.id, cycleCount },
+    };
+    const entries = Array.from({ length: cycleCount + 1 }, (_, cycle) => ({
+      cycle,
+      point: "cycle-start" as const,
+      position: { x: 20 + cycle * 40 + (cycle % 2) * 4, y: 0 },
+    }));
+    let findCalls = 0;
+    const map = {
+      signalId: signal.id,
+      cycleBoundaryEntries: () => entries,
+      find: (anchor: { cycle: number; point: string }) => {
+        findCalls += 1;
+        const entry = entries[anchor.cycle];
+        return anchor.point === "cycle-start" && entry
+          ? { signalId: signal.id, anchor: anchor as never, point: entry.position }
+          : undefined;
+      },
+    };
+    const service = new SemanticSnapCandidateService();
+    const index = service.build({ document, geometryMaps: new Map([[signal.id, map]]), rowY: new Map([[signal.id, 0]]) });
+
+    expect(index.entries().filter((candidate) => candidate.kind === "cycle-boundary")).toHaveLength(0);
+    expect(service.metrics().candidateCount).toBeLessThan(10);
+    expect(index.nearest({ x: entries[5_000]!.position.x, y: 0 }, 1, ["cycle-boundary"]))
+      .toMatchObject({ kind: "cycle-boundary", anchor: { cycle: 5_000, point: "cycle-start" } });
+    expect(findCalls).toBeLessThan(32);
+    expect(index.metrics().candidatesVisited).toBeLessThan(10);
+  });
+
   it("does not reintroduce hidden annotation targets as snap candidates", () => {
     const source = canonicalFixture();
     const hidden = { ...source.signals[0]!, display: { ...source.signals[0]!.display, visible: false } };

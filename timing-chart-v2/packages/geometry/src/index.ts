@@ -476,9 +476,14 @@ export class SemanticSnapCandidateService {
       // expose their bounded boundary index.
       const boundaryEntries = map.cycleBoundaryEntries?.();
       const eligibleBoundaryEntries = boundaryEntries?.filter((entry) => renderedCycleForSourceCycle(entry.cycle) !== undefined || entry.cycle === input.document.timeline.cycleCount);
-      const regularSource = eligibleBoundaryEntries && createRegularCycleSnapSource(signal.id, signal.type, y, map, eligibleBoundaryEntries, input.document.timeline.cycleCount);
-      if (regularSource) sources.push(regularSource);
-      if (regularSource) continue;
+      // The geometry-owned boundary index is also useful when pitch is
+      // non-uniform. Restrict candidate creation to the queried X interval
+      // instead of materializing every transition/value candidate in the
+      // retained, contiguous source window. Sparse/folded or unordered maps
+      // keep the conservative semantic path below.
+      const indexedSource = eligibleBoundaryEntries && createIndexedCycleSnapSource(signal.id, signal.type, y, map, eligibleBoundaryEntries, input.document.timeline.cycleCount);
+      if (indexedSource) sources.push(indexedSource);
+      if (indexedSource) continue;
       const sourceCycles = boundaryEntries === undefined || boundaryEntries.length === 0
         ? Array.from({ length: renderedCycleCount + 1 }, (_, renderedCycle) => sourceCycleForRenderedCycle(renderedCycle))
         : boundaryEntries.map((entry) => entry.cycle);
@@ -521,12 +526,11 @@ export class SemanticSnapCandidateService {
   }
 }
 
-function createRegularCycleSnapSource(signalId: SignalId, signalType: string, rowY: number, map: LocalGeometryMap, entries: readonly LocalGeometryEntry[], terminalCycle: number): SnapCandidateSource | undefined {
+function createIndexedCycleSnapSource(signalId: SignalId, signalType: string, rowY: number, map: LocalGeometryMap, entries: readonly LocalGeometryEntry[], terminalCycle: number): SnapCandidateSource | undefined {
   if (entries.length < 2) return undefined;
-  const step = entries[1]!.position.x - entries[0]!.position.x;
-  if (!Number.isFinite(step) || step <= 0 || entries[1]!.cycle !== entries[0]!.cycle + 1) return undefined;
-  for (let index = 2; index < entries.length; index += 1) {
-    if (entries[index]!.cycle !== entries[index - 1]!.cycle + 1 || Math.abs((entries[index]!.position.x - entries[index - 1]!.position.x) - step) > 1e-6) return undefined;
+  for (let index = 0; index < entries.length; index += 1) {
+    if (!Number.isFinite(entries[index]!.position.x)) return undefined;
+    if (index > 0 && (entries[index]!.position.x < entries[index - 1]!.position.x || entries[index]!.cycle !== entries[index - 1]!.cycle + 1)) return undefined;
   }
   const lowerBound = (x: number): number => {
     let low = 0;
