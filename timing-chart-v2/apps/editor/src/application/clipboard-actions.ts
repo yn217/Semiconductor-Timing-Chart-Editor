@@ -401,12 +401,9 @@ export function useClipboardActions({ application, selection }: { application: E
   // Selection -- the selection Transport-mechanism pattern silently replaced the user's real selection with the bulk target, so a
   // following Delete/Duplicate/Group/Color would act on the wrong scope. This never reads or writes Selection at all.
   const setTransactionsVisibility = (transactionIds: readonly TransactionId[], visible: boolean) => {
-    const current = document();
-    const targets = current.transactions.filter((transaction) => transactionIds.includes(transaction.id) && (transaction.visible ?? true) !== visible);
-    const commands = targets.map((transaction) => ({ id: nextCommandId("route_transaction_visibility"), type: "transaction.update" as const, transactionId: transaction.id, name: transaction.name, start: transaction.start, end: transaction.end, ...(transaction.laneId === undefined ? {} : { laneId: transaction.laneId }), ...(transaction.phases === undefined ? {} : { phases: transaction.phases }), ...(transaction.groupId === undefined ? {} : { groupId: transaction.groupId }), ...(transaction.color === undefined ? {} : { color: transaction.color }), ...(transaction.description === undefined ? {} : { description: transaction.description }), visible }));
-    if (commands.length > 1) return application.executeBatch(nextCommandId("route_transaction_visibility_bulk"), commands);
-    if (commands.length === 1) return application.execute(commands[0]!);
-    return undefined;
+    const ids = [...new Set(transactionIds)];
+    if (ids.length === 0) return undefined;
+    return application.execute({ id: nextCommandId("route_transaction_visibility_bulk"), type: "transaction.bulkSetVisibility", transactionIds: ids, visible });
   };
 
   return { status, available, copy, cut, paste, duplicate, deleteSelection, deleteSignal, deleteAnnotation, deleteTransaction, rename, setVisibility, setSignalVisibility, setTransactionsVisibility, isolateSelection, move, createSignals } as const;
