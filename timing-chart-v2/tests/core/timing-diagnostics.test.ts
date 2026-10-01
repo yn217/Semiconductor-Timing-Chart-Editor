@@ -113,6 +113,39 @@ describe("derived timing diagnostics", () => {
     expect(incremental.diagnostics).toEqual(expectedDiagnostics);
   });
 
+  it("evaluates an added constraint only and rebases retained diagnostic paths after insertion", () => {
+    const source = canonicalFixture();
+    const retained: Constraint = { id: "constraint_structure_retained", type: "latency", data: {} };
+    const previous = { ...source, constraints: [retained] };
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    const added: Constraint = { id: "constraint_structure_added", type: "latency", data: { triggerSignalId: "missing" } };
+    const next = { ...previous, constraints: [added, retained] };
+    const expected = deriveTimingDiagnostics(next);
+    Object.defineProperty(retained, "data", { get() { throw new Error("unchanged constraint must not be reevaluated after insertion"); } });
+
+    const incremental = deriveTimingDiagnosticsIfInputsChanged(previous, next, previousDiagnostics);
+
+    expect(incremental.diagnostics).toEqual(expected);
+    expect(incremental.diagnostics.find((item) => item.objectId === added.id)).toMatchObject({ path: "$.constraints[0].data" });
+  });
+
+  it("removes deleted constraint findings and rebases retained paths without reevaluating unchanged constraints", () => {
+    const source = canonicalFixture();
+    const removed: Constraint = { id: "constraint_structure_removed", type: "latency", data: { triggerSignalId: "missing_removed" } };
+    const retained: Constraint = { id: "constraint_structure_after_remove", type: "latency", data: { triggerSignalId: "missing_retained" } };
+    const previous = { ...source, constraints: [removed, retained] };
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    const next = { ...previous, constraints: [retained] };
+    const expected = deriveTimingDiagnostics(next);
+    Object.defineProperty(retained, "data", { get() { throw new Error("unchanged constraint must not be reevaluated after deletion"); } });
+
+    const incremental = deriveTimingDiagnosticsIfInputsChanged(previous, next, previousDiagnostics);
+
+    expect(incremental.diagnostics).toEqual(expected);
+    expect(incremental.diagnostics.some((item) => item.objectId === removed.id)).toBe(false);
+    expect(incremental.diagnostics.find((item) => item.objectId === retained.id)).toMatchObject({ path: "$.constraints[0].data" });
+  });
+
   it("updates changed Handshakes and only refreshes peers sharing affected stable Signals", () => {
     const source = canonicalFixture();
     const template = source.signals[1]!;
