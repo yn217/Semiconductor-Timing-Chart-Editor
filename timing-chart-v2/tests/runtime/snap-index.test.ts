@@ -75,6 +75,55 @@ describe("buildSnapIndex row lookup", () => {
     expect(dataBoundary).toMatchObject({ anchor: { signalId: data.id, cycle: 2 }, point: { x: 80, y: 30 } });
   });
 
+  it("reuses display-filtered boundary projection and validation across viewport rebuilds", () => {
+    const source = canonicalFixture();
+    const signal = source.signals.find((item) => item.type === "clock")!;
+    const document = {
+      ...source,
+      signals: [signal],
+      bookmarks: [],
+      annotations: [],
+      timeline: { ...source.timeline, referenceClock: signal.id, cycleCount: 256 },
+    };
+    const geometryEntries = Array.from({ length: 257 }, (_, cycle) => ({
+      cycle,
+      point: "cycle-start" as const,
+      position: { x: cycle * 40, y: 0 },
+    }));
+    let boundaryEntryReads = 0;
+    const boundaries = new Proxy(geometryEntries, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^(0|[1-9]\d*)$/.test(property)) boundaryEntryReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const map = {
+      signalId: signal.id,
+      cycleKeyDomain: "source" as const,
+      cycleBoundaryEntries: () => boundaries,
+      find: (anchor: { cycle: number; point: string }) => {
+        const entry = geometryEntries[anchor.cycle];
+        return anchor.point === "cycle-start" && entry
+          ? { signalId: signal.id, anchor: anchor as never, point: entry.position }
+          : undefined;
+      },
+    };
+    const maps = new Map([[signal.id, map]]);
+    const mapping = new DisplayTimeMappingCache().get(document.timeline, document.timeGroups);
+    const projection = { rowLayout: [{ rowId: signal.id, y: 8 }] } as never;
+    const first = buildSnapIndex(document, projection, maps, mapping);
+    const readsAfterFirstBuild = boundaryEntryReads;
+    const second = buildSnapIndex(document, projection, maps, mapping);
+
+    expect(readsAfterFirstBuild).toBeGreaterThan(0);
+    expect(boundaryEntryReads).toBe(readsAfterFirstBuild);
+    expect(second.neighborsByX(5_120, "cycle-boundary").before).toMatchObject({
+      anchor: { signalId: signal.id, cycle: 128 },
+      point: { x: 5_120, y: 8 },
+    });
+    expect(first.neighborsByX(5_120, "cycle-boundary").before).toMatchObject({ anchor: { cycle: 128 } });
+  });
+
   it("preserves a sparse geometry boundary index instead of probing the full display timeline", () => {
     const source = canonicalFixture();
     const signal = source.signals.find((item) => item.type !== "commentRow")!;

@@ -132,6 +132,8 @@ export interface LocalGeometryMap {
   find(anchor: SemanticAnchor): LocalAnchorGeometry | undefined;
   /** Semantic cycle boundaries owned by this geometry map. */
   cycleBoundaryEntries?(): readonly LocalGeometryEntry[];
+  /** True when `cycleBoundaryEntries()` is already filtered by the active display-time mapping. */
+  readonly cycleBoundaryEntriesDisplayFiltered?: boolean;
   /**
    * Directly exposes the immutable geometry entries that represent actual
    * clock edges.  Consumers that need an edge index can use this optional
@@ -468,6 +470,38 @@ export interface SemanticSnapGeometryInput {
   readonly renderedCycleForSourceCycle?: (sourceCycle: number) => number | undefined;
 }
 
+interface IndexedCycleSnapSourceCacheEntry {
+  readonly entries: readonly LocalGeometryEntry[];
+  readonly terminalCycle: number;
+  readonly signalType: string;
+  readonly source: SnapCandidateSource;
+}
+
+const indexedCycleSnapSources = new WeakMap<LocalGeometryMap, IndexedCycleSnapSourceCacheEntry>();
+
+function getIndexedCycleSnapSource(signalId: SignalId, signalType: string, rowY: number, map: LocalGeometryMap, entries: readonly LocalGeometryEntry[], terminalCycle: number, renderedCycleForSourceCycle: (sourceCycle: number) => number | undefined): SnapCandidateSource | undefined {
+  let source: SnapCandidateSource | undefined;
+  if (map.cycleBoundaryEntriesDisplayFiltered) {
+    const cached = indexedCycleSnapSources.get(map);
+    if (cached?.entries === entries && cached.terminalCycle === terminalCycle && cached.signalType === signalType) source = cached.source;
+  }
+  if (!source) {
+    source = createIndexedCycleSnapSource(signalId, signalType, 0, map, entries, terminalCycle, renderedCycleForSourceCycle);
+    if (source && map.cycleBoundaryEntriesDisplayFiltered) indexedCycleSnapSources.set(map, { entries, terminalCycle, signalType, source });
+  }
+  if (!source || rowY === 0) return source;
+  const shift = (candidate: SnapCandidate | undefined) => candidate === undefined ? undefined : { ...candidate, point: { ...candidate.point, y: candidate.point.y + rowY } };
+  return {
+    candidatesNear: (point, tolerance) => source!.candidatesNear(point, tolerance).map((candidate) => shift(candidate)!),
+    ...(source.neighborsByX === undefined ? {} : {
+      neighborsByX: (x: number, kind: SnapKind) => {
+        const neighbors = source!.neighborsByX!(x, kind);
+        return { ...(neighbors.before ? { before: shift(neighbors.before)! } : {}), ...(neighbors.after ? { after: shift(neighbors.after)! } : {}) };
+      },
+    }),
+  };
+}
+
 /** Geometry-owned construction of immutable, screen-local semantic snap candidates. */
 export class SemanticSnapCandidateService {
   #builds = 0;
@@ -514,13 +548,17 @@ export class SemanticSnapCandidateService {
       // Keep the display-range fallback for third-party maps that do not yet
       // expose their bounded boundary index.
       const boundaryEntries = map.cycleBoundaryEntries?.();
-      const eligibleBoundaryEntries = boundaryEntries?.filter((entry) => renderedCycleForSourceCycle(entry.cycle) !== undefined || entry.cycle === input.document.timeline.cycleCount);
+      const eligibleBoundaryEntries = boundaryEntries === undefined
+        ? undefined
+        : map.cycleBoundaryEntriesDisplayFiltered
+          ? boundaryEntries
+          : boundaryEntries.filter((entry) => renderedCycleForSourceCycle(entry.cycle) !== undefined || entry.cycle === input.document.timeline.cycleCount);
       // The geometry-owned boundary index is also useful when pitch is
       // non-uniform. Restrict candidate creation to the queried X interval
       // instead of materializing every transition/value candidate in the
       // retained contiguous source interval. Sparse/folded or unordered maps
       // keep the conservative semantic path below.
-      const indexedSource = eligibleBoundaryEntries && createIndexedCycleSnapSource(signal.id, signal.type, y, map, eligibleBoundaryEntries, input.document.timeline.cycleCount, renderedCycleForSourceCycle);
+      const indexedSource = eligibleBoundaryEntries && getIndexedCycleSnapSource(signal.id, signal.type, y, map, eligibleBoundaryEntries, input.document.timeline.cycleCount, renderedCycleForSourceCycle);
       if (indexedSource) sources.push(indexedSource);
       if (indexedSource) continue;
       const sourceCycles = boundaryEntries === undefined || boundaryEntries.length === 0
