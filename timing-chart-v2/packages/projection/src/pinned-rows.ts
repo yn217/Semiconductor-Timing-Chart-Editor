@@ -17,6 +17,12 @@ export function projectPinnedRows(input: {
   readonly viewportStartY: number;
   readonly leadingHeaderHeight: number;
 }): PinnedRowProjection {
+  // Pinning is an opt-in presentation feature. The normal scroll path has no
+  // sticky rows, so keep it on the shared-layout fast path instead of
+  // filtering every visible row on each viewport projection.
+  if (input.stickyRowIds.length === 0) {
+    return { rowLayout: input.rowLayout, navigationRowLayout: input.navigationRowLayout, pinnedRowIds: [] };
+  }
   const requested = new Set(input.stickyRowIds);
   const visibleRows = input.visibleRowLayout.filter((row) => row.kind === "timing" && row.visible && requested.has(row.rowId));
   if (visibleRows.length === 0) {
