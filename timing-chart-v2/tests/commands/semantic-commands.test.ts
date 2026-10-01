@@ -911,6 +911,52 @@ describe("command execution and atomic history", () => {
     expect(session.historyState().undoDepth).toBe(0);
   });
 
+  it("restores a large set of Transaction links with one atomic bulk planner", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const initialDocument = session.getSnapshot().document;
+    const signalCount = 1_000;
+    const transactionCount = 100;
+    const signals = Array.from({ length: signalCount }, (_, index) => extraSignal(`sig_link_restore_${index}`));
+    const transactions = Array.from({ length: transactionCount }, (_, index) => ({
+      id: `txn_link_restore_${index}` as TransactionId,
+      name: `Transaction ${index}`,
+      start: 1,
+      end: 2,
+      laneId: "lane_0",
+    }));
+    const links = transactions.flatMap((transaction, transactionIndex) =>
+      signals.slice(transactionIndex * 10, transactionIndex * 10 + 10).map((signal) => ({ transactionId: transaction.id, signalId: signal.id })),
+    );
+    const beforePlans = commandPlannerMetrics().internalPlans;
+    const result = session.executeBatch(commandId("cmd_bulk_link_restore"), [
+      { id: commandId("cmd_bulk_link_signals"), type: "signal.bulkCreate", signals, targetGroupId: "grp_main" as GroupId, index: 2 },
+      { id: commandId("cmd_bulk_link_transactions"), type: "transaction.bulkCreate", transactions },
+      { id: commandId("cmd_bulk_link_relationships"), type: "transaction.bulkLinkSignals", links },
+    ]);
+
+    expect(result.ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(3);
+    expect(session.getSnapshot().document.transactions).toHaveLength(transactionCount);
+    expect(session.getSnapshot().document.transactions.every((transaction) => transaction.linkedSignals?.length === 10)).toBe(true);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toBe(initialDocument);
+    expect(session.historyState().undoDepth).toBe(0);
+
+    const beforeRejectedBatch = session.getSnapshot();
+    const rejected = session.executeBatch(commandId("cmd_bulk_link_restore_rejected"), [
+      { id: commandId("cmd_bulk_link_signal_rejected"), type: "signal.bulkCreate", signals: [extraSignal("sig_link_restore_rejected")], targetGroupId: "grp_main" as GroupId, index: 2 },
+      { id: commandId("cmd_bulk_link_transaction_rejected"), type: "transaction.bulkCreate", transactions: [transactions[0]!] },
+      { id: commandId("cmd_bulk_link_invalid_relationships"), type: "transaction.bulkLinkSignals", links: [
+        { transactionId: transactions[0]!.id, signalId: "sig_link_restore_rejected" as SignalId },
+        { transactionId: transactions[0]!.id, signalId: "sig_missing_link_target" as SignalId },
+      ] },
+    ]);
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "SIGNAL_NOT_FOUND" }] });
+    expect(session.getSnapshot()).toBe(beforeRejectedBatch);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+  });
+
   it("creates a copied Group and its Signal/Spacer rows in one atomic planner action", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const signal = extraSignal("sig_group_copy_row");

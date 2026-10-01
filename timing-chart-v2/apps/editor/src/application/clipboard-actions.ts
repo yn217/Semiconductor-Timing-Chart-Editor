@@ -184,8 +184,8 @@ export function useClipboardActions({ application, selection }: { application: E
     if (!target || input.length === 0) return;
     const commands: SemanticCommand[] = [
       { id: nextCommandId("cut_paste_move_signals"), type: "signal.bulkCreate", signals: input.map(({ signal }) => signal), targetGroupId: target.id, index: target.rows.length },
-      ...cutSignalLinksRef.current.map(({ transactionId, signalId }) => ({ id: nextCommandId("cut_paste_restore_link"), type: "transaction.linkSignal" as const, transactionId, signalId })),
     ];
+    if (cutSignalLinksRef.current.length > 0) commands.push({ id: nextCommandId("cut_paste_restore_links"), type: "transaction.bulkLinkSignals", links: cutSignalLinksRef.current });
     const result = application.executeBatch(nextCommandId("cut_paste_move"), commands);
     if (result.ok) { cutSignalsRef.current = false; cutSignalLinksRef.current = []; selection.selectSignals(new Set(input.map(({ signal }) => signal.id)), input[0]!.signal.id); setStatus(`Moved ${input.length} signal${input.length === 1 ? "" : "s"}`); }
   };
@@ -276,7 +276,7 @@ export function useClipboardActions({ application, selection }: { application: E
         setStatus(`Cannot paste Group: a linked source row is missing (${mapped.missingSignalIds.join(", ")}).`);
         return;
       }
-      commands.push(...mapped.links.map(({ transactionId, signalId: targetSignalId }) => ({ id: nextCommandId("paste_group_restore_link"), type: "transaction.linkSignal" as const, transactionId, signalId: targetSignalId })));
+      commands.push({ id: nextCommandId("paste_group_restore_links"), type: "transaction.bulkLinkSignals", links: mapped.links });
     }
     const result = application.executeBatch(nextCommandId(`${operation}_group_batch`), commands);
     if (result.ok) {

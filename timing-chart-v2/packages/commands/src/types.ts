@@ -120,6 +120,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "transaction.move"; transactionId: TransactionId; start: number }>
   | Readonly<{ id: CommandId; type: "transaction.resize"; transactionId: TransactionId; edge: "start" | "end"; value: number }>
   | Readonly<{ id: CommandId; type: "transaction.moveLane"; transactionId: TransactionId; laneId: string }>
+  | Readonly<{ id: CommandId; type: "transaction.bulkLinkSignals"; links: readonly Readonly<{ transactionId: TransactionId; signalId: SignalId }>[] }>
   | Readonly<{ id: CommandId; type: "transaction.linkSignal"; transactionId: TransactionId; signalId: SignalId }>
   | Readonly<{ id: CommandId; type: "transaction.unlinkSignal"; transactionId: TransactionId; signalId: SignalId }>
   | Readonly<{ id: CommandId; type: "transactionGroup.create"; group: TransactionGroup }>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SignalId, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { CommandHistorySession } from "@timing-chart-v2/history";
+import { commandPlannerMetrics } from "@timing-chart-v2/commands";
 import { serializeValidatedCanonicalDocument, parseDocument, type CommandId, type GroupId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { captureGroupTransactionLinks, remapGroupTransactionLinks } from "../../apps/editor/src/application/group-clipboard-links.js";
@@ -63,10 +64,12 @@ describe("Group clipboard external Transaction links", () => {
     const remapped = remapGroupTransactionLinks(captured, new Map([[first.id, newFirst], [second.id, newSecond]]));
     expect(remapped.ok).toBe(true);
     if (!remapped.ok) return;
+    const beforePastePlans = commandPlannerMetrics().internalPlans;
     expect(session.executeBatch(commandId("paste_group_batch"), [
       { id: commandId("paste_group_create"), type: "group.createWithContents", group: { ...group, id: newGroupId, rows: [newFirst, newSecond] }, signals: [{ ...first, id: newFirst }, { ...second, id: newSecond }], index: afterCut.signalGroups.length },
-      ...remapped.links.map(({ transactionId, signalId }, index) => ({ id: commandId(`paste_group_link_${index}`), type: "transaction.linkSignal" as const, transactionId, signalId })),
+      { id: commandId("paste_group_links"), type: "transaction.bulkLinkSignals", links: remapped.links },
     ]).ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforePastePlans).toBe(2);
     expect(session.historyState().undoDepth).toBe(2);
     expect(session.getSnapshot().document.transactions[0]?.linkedSignals).toEqual([source.signals[1]!.id, newFirst, newSecond]);
 
