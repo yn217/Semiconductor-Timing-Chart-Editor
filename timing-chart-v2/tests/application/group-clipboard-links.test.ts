@@ -1,14 +1,24 @@
 import { describe, expect, it } from "vitest";
-import type { SignalId, Transaction, TransactionId } from "@timing-chart-v2/schema";
+import type { RowId, Signal, SignalId, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { commandPlannerMetrics } from "@timing-chart-v2/commands";
 import { serializeValidatedCanonicalDocument, parseDocument, type CommandId, type GroupId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { captureGroupTransactionLinks, remapGroupTransactionLinks } from "../../apps/editor/src/application/group-clipboard-links.js";
+import { resolveGroupSignalsInRowOrder } from "../../apps/editor/src/application/group-clipboard-selection.js";
 
 const commandId = (id: string) => id as CommandId;
 
 describe("Group clipboard external Transaction links", () => {
+  it("resolves only indexed Signal rows in their Group order while skipping Spacers", () => {
+    const source = canonicalFixture();
+    const first = { ...source.signals[0]!, id: "sig_group_order_first" as SignalId };
+    const second = { ...source.signals[1]!, id: "sig_group_order_second" as SignalId };
+    const signalsById = new Map<SignalId, Signal>([[first.id, first], [second.id, second]]);
+
+    expect(resolveGroupSignalsInRowOrder([second.id, "spacer_gap" as RowId, first.id], signalsById)).toEqual([second, first]);
+  });
+
   it("captures and remaps every contained Signal relationship exactly once", () => {
     const first = "sig_first" as SignalId;
     const second = "sig_second" as SignalId;

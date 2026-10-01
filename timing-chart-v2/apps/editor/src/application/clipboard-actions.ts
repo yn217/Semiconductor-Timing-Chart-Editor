@@ -6,6 +6,7 @@ import { nextCommandId } from "../command-id.js";
 import { createEntityIdAllocator, nextEntityId } from "../entity-id.js";
 import { groupId, signalId } from "../minimal-cycle-view-fixture-helpers.js";
 import { captureGroupTransactionLinks, remapGroupTransactionLinks, type GroupTransactionSignalLink } from "./group-clipboard-links.js";
+import { resolveGroupSignalsInRowOrder } from "./group-clipboard-selection.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
 
@@ -137,13 +138,14 @@ export function useClipboardActions({ application, selection }: { application: E
       return;
     }
     if (value.group) {
-      const signalsById = new Map(value.document.signals.map((signal) => [signal.id, signal]));
-      const rows = value.group.rows.flatMap((rowId) => signalsById.has(rowId as SignalId) ? [signalsById.get(rowId as SignalId)!] : []);
-      const groupSignalIds = value.group.rows.filter((rowId) => signalsById.has(rowId as SignalId)) as SignalId[];
+      const signalsById = value.signalById;
+      if (!signalsById) { setStatus("Cannot cut Group: Signal index is unavailable."); return; }
+      const rows = resolveGroupSignalsInRowOrder(value.group.rows, signalsById);
+      const groupSignalIds = rows.map((signal) => signal.id);
       const groupSignalIdSet = new Set(groupSignalIds);
       const cutLinks = captureGroupTransactionLinks(value.document.transactions, groupSignalIdSet);
       const commands: SemanticCommand[] = groupSignalIds.length === 0 ? [] : [{ id: nextCommandId("cut_group_signals"), type: "signal.bulkDelete", signalIds: groupSignalIds }];
-      const groupSpacerIds = value.group.rows.filter((rowId) => !signalsById.has(rowId as SignalId)) as SpacerId[];
+      const groupSpacerIds = value.group.rows.filter((rowId) => !groupSignalIdSet.has(rowId as SignalId)) as SpacerId[];
       if (groupSpacerIds.length > 0) commands.push({ id: nextCommandId("cut_group_spacers"), type: "spacer.bulkDelete", spacerIds: groupSpacerIds });
       commands.push({ id: nextCommandId("cut_group_delete"), type: "group.delete", groupId: value.group.id });
       const result = application.executeBatch(nextCommandId("cut_group"), commands);
