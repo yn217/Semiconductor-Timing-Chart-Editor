@@ -114,11 +114,12 @@ describe("editor surface command controller", () => {
       expect.objectContaining({ id: "test_bottom_transaction_duplicate", type: "transaction.duplicate" }),
       expect.objectContaining({ id: "test_bottom_transaction_update", type: "transaction.update" }),
       expect.objectContaining({ id: "test_bottom_transaction_group", type: "transaction.moveToGroup" }),
+      expect.objectContaining({ id: "test_bottom_transaction_bulk_group", type: "transaction.bulkMoveToGroup" }),
       expect.objectContaining({ id: "test_bottom_transaction_bulk_duplicate", type: "transaction.bulkDuplicate" }),
       expect.objectContaining({ id: "test_bottom_transaction_bulk_delete", type: "transaction.bulkDelete" }),
     ]);
-    expect(executeBatch).toHaveBeenNthCalledWith(1, "test_bottom_transaction_bulk", [expect.objectContaining({ id: "test_bottom_transaction_bulk_group", type: "transaction.moveToGroup" }), expect.objectContaining({ id: "test_bottom_transaction_bulk_group", type: "transaction.moveToGroup" })]);
-    expect(executeBatch).toHaveBeenNthCalledWith(2, "test_bottom_transaction_bulk", [expect.objectContaining({ id: "test_bottom_transaction_bulk_color", type: "transaction.update" })]);
+    expect(executeBatch).toHaveBeenCalledOnce();
+    expect(executeBatch).toHaveBeenCalledWith("test_bottom_transaction_bulk", [expect.objectContaining({ id: "test_bottom_transaction_bulk_color", type: "transaction.update" })]);
   });
 
   it("owns Timeline command construction and keeps range edits batched", () => {

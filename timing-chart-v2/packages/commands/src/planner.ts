@@ -1537,6 +1537,32 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const transactions = [...document.transactions]; transactions[index] = command.groupId === undefined ? (({ groupId: _removed, ...rest }) => rest)(transaction) : { ...transaction, groupId: command.groupId };
       return { ok: true, document: { ...document, transactions }, changeSet: { transactionSemantics: [transaction.id] }, inverseChangeSet: { transactionSemantics: [transaction.id] } };
     }
+    case "transaction.bulkMoveToGroup": {
+      if (command.items.length === 0) return fail("no-op", "NO_OP", "$.items", "No Transactions were selected for Group movement.");
+      const selectedIds = new Set(command.items.map((item) => item.transactionId));
+      if (selectedIds.size !== command.items.length) return fail("invalid", "DUPLICATE_ID", "$.items", "Bulk Transaction Group movement contains duplicate IDs.");
+      const groupIds = new Set((document.transactionGroups ?? []).map((group) => group.id));
+      const targetById = new Map<TransactionId, { readonly index: number; readonly transaction: Transaction }>();
+      document.transactions.forEach((transaction, index) => {
+        if (selectedIds.has(transaction.id)) targetById.set(transaction.id, { index, transaction });
+      });
+      for (const [index, item] of command.items.entries()) {
+        if (!targetById.has(item.transactionId)) return fail("invalid", "TRANSACTION_NOT_FOUND", `$.items[${index}].transactionId`, `Transaction '${item.transactionId}' does not exist.`);
+        if (item.groupId !== undefined && !groupIds.has(item.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", `$.items[${index}].groupId`, `Transaction Group '${item.groupId}' does not exist.`);
+      }
+      const changed = command.items.filter((item) => targetById.get(item.transactionId)!.transaction.groupId !== item.groupId);
+      if (changed.length === 0) return fail("no-op", "NO_OP", "$", "Selected Transactions are already in their requested Groups.");
+      const transactions = document.transactions.slice();
+      for (const item of changed) {
+        const target = targetById.get(item.transactionId)!;
+        transactions[target.index] = item.groupId === undefined
+          ? (({ groupId: _removed, ...rest }) => rest)(target.transaction)
+          : { ...target.transaction, groupId: item.groupId };
+      }
+      const transactionSemantics = changed.map((item) => item.transactionId);
+      const changeSet: ChangeSet = { transactionSemantics, minimapOverview: true };
+      return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
+    }
     case "transaction.setTimeScale": {
       const currentScale = document.transactionTimeScale;
       const scale = command.clearShowSecondaryClock

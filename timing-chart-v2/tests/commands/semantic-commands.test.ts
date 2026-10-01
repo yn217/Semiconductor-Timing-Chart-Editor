@@ -922,6 +922,49 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.transactions).toBe(before);
   });
 
+  it("moves selected Transactions between Groups with one atomic planner/history action", () => {
+    const initial = canonicalFixture();
+    const transactions = Array.from({ length: 1_000 }, (_, index) => ({
+      id: `txn_group_move_${index}` as TransactionId,
+      name: `Transaction ${index}`,
+      start: 1,
+      end: 2,
+      laneId: "lane_0",
+      groupId: "tg_source" as never,
+    }));
+    const session = new CommandHistorySession({
+      ...initial,
+      transactions,
+      transactionGroups: [
+        { id: "tg_source" as never, name: "Source", order: 0 },
+        { id: "tg_target" as never, name: "Target", order: 1 },
+      ],
+    });
+    const before = session.getSnapshot().document.transactions;
+    const beforePlans = commandPlannerMetrics().internalPlans;
+    const result = session.execute({ id: commandId("cmd_txn_bulk_group_move"), type: "transaction.bulkMoveToGroup", items: [
+      { transactionId: transactions[2]!.id, groupId: "tg_target" as never },
+      { transactionId: transactions[900]!.id },
+    ] });
+
+    expect(result.ok).toBe(true);
+    const after = session.getSnapshot().document.transactions;
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    expect(after[2]?.groupId).toBe("tg_target");
+    expect(after[900]?.groupId).toBeUndefined();
+    expect(after[3]).toBe(before[3]);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions).toBe(before);
+
+    const beforeRejected = session.getSnapshot();
+    const rejected = session.execute({ id: commandId("cmd_txn_bulk_group_move_reject"), type: "transaction.bulkMoveToGroup", items: [
+      { transactionId: transactions[2]!.id, groupId: "tg_missing" as never },
+    ] });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "MISSING_CROSS_REFERENCE" }] });
+    expect(session.getSnapshot()).toBe(beforeRejected);
+  });
+
   it("rejects duplicate stable IDs within a Transaction bulk-create atomically", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const before = session.getSnapshot().document;

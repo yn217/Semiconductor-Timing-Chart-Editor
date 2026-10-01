@@ -169,7 +169,7 @@ export function createEditorSurfaceCommandController(input: {
       { id: input.nextCommandId("bottom_transaction_new_group_move"), type: "transaction.moveToGroup", transactionId, groupId: group.id },
     ]),
     moveTransactionToGroup: (transactionId, groupId) => dispatch<"transaction.moveToGroup">("bottom_transaction_group", { type: "transaction.moveToGroup", transactionId, ...(groupId === undefined ? {} : { groupId }) }),
-    bulkMoveTransactionsToGroup: (items) => dispatchBatch<"transaction.moveToGroup">("bottom_transaction_bulk_group", items.map(({ transactionId, groupId }) => ({ type: "transaction.moveToGroup", transactionId, ...(groupId === undefined ? {} : { groupId }) })), "bottom_transaction_bulk"),
+    bulkMoveTransactionsToGroup: (items) => dispatch<"transaction.bulkMoveToGroup">("bottom_transaction_bulk_group", { type: "transaction.bulkMoveToGroup", items }),
     bulkUpdateTransactions: (payloads) => dispatchBatch<"transaction.update">("bottom_transaction_bulk_color", payloads.map((payload) => ({ type: "transaction.update", ...payload })), "bottom_transaction_bulk"),
     bulkDuplicateTransactions: (items) => dispatch<"transaction.bulkDuplicate">("bottom_transaction_bulk_duplicate", { type: "transaction.bulkDuplicate", items }),
     bulkDeleteTransactions: (transactionIds) => dispatch<"transaction.bulkDelete">("bottom_transaction_bulk_delete", { type: "transaction.bulkDelete", transactionIds }),
