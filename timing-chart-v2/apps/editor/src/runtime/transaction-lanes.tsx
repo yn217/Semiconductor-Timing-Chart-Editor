@@ -8,8 +8,8 @@ import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
 import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldRangesIntersecting, type TransactionFoldRange } from "./transaction-fold-index.js";
 import { bookmarksForSourceWindowState, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, transactionGeometryGuidesInSourceWindow, transactionIntervalsForSourceWindowState, type TransactionIntervalIndex, type TransactionSourceWindowState } from "./transaction-virtual-index.js";
+import { TRANSACTION_LANE_ROW_HEIGHT as LANE_ROW_HEIGHT, transactionLaneBandHeights } from "./transaction-lane-layout.js";
 
-const LANE_ROW_HEIGHT = 40;
 const GROUP_HEADER_HEIGHT = 24;
 let transactionLanesMountSerial = 0;
 const EMPTY_TRANSACTION_GROUPS: NonNullable<CanonicalDocument["transactionGroups"]> = [];
@@ -575,8 +575,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       // names belong to the authoritative left Transaction Tree; mirroring
       // them here creates rows outside the single-row label band whenever
       // one lane contains multiple sequential Transactions.
-      const labelHeight = LANE_ROW_HEIGHT;
-      const trackHeight = Math.max(rowCount, 1) * LANE_ROW_HEIGHT;
+      const { labelHeight, trackHeight } = transactionLaneBandHeights(rowCount);
       laneBands.push({ key: transactionLaneIdentityKey(section.groupId, laneId), laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf });
       labelCursor += labelHeight;
       trackCursor += trackHeight;
