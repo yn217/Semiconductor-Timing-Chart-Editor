@@ -265,6 +265,7 @@ export type BottomEditorPanelProps<Tab extends string> = {
   readonly onFollowSelectionChange: (value: boolean) => void;
   readonly pinned: boolean;
   readonly onTogglePinned: () => void;
+  readonly targetLabel?: string | undefined;
   readonly summary?: ReactNode;
   readonly content: ReactNode;
   readonly contentClassName?: string;
@@ -275,7 +276,7 @@ export type BottomEditorPanelProps<Tab extends string> = {
  * the single active-tab content pane. Which editor renders for the active
  * tab is decided by the caller (it depends on the current selection across
  * several owners) and passed in as `content`. */
-export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelectTab, onTabKeyDown, followSelection, onFollowSelectionChange, pinned, onTogglePinned, summary, content, contentClassName }: BottomEditorPanelProps<Tab>) {
+export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelectTab, onTabKeyDown, followSelection, onFollowSelectionChange, pinned, onTogglePinned, targetLabel, summary, content, contentClassName }: BottomEditorPanelProps<Tab>) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLSpanElement>(null);
   usePeerMenuSurface(settingsOpen, () => setSettingsOpen(false));
@@ -295,6 +296,9 @@ export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelec
         const tabId = `bottom-tab-${tab.toLowerCase()}`;
         return <button type="button" role="tab" key={tab} id={tabId} data-bottom-tab={tab} tabIndex={active ? 0 : -1} aria-label={tab} aria-selected={active} aria-controls="bottom-context-content" className={active ? "active" : ""} onClick={() => onSelectTab(tab)} onKeyDown={(event) => onTabKeyDown(event, tab)}>{tab}</button>;
       })}
+      <output className="bottom-target-mode" data-testid="bottom-target-mode" aria-live="polite">
+        {pinned ? `Pinned${targetLabel ? `: ${targetLabel}` : " content"}` : followSelection ? "Following selection" : `Fixed target${targetLabel ? `: ${targetLabel}` : ""}`}
+      </output>
       <span className="bottom-settings-anchor" ref={settingsRef}>
         <button type="button" className="bottom-settings-button" data-testid="bottom-settings" aria-label="Bottom Panel settings" aria-haspopup="true" aria-expanded={settingsOpen} title="Bottom panel behavior: Follow Selection, Pin" onClick={() => setSettingsOpen((open) => !open)}><RibbonIcon name="i-settings" /></button>
         <div className="bottom-settings-popover" data-testid="bottom-settings-popover" role="dialog" aria-label="Bottom Panel Settings" hidden={!settingsOpen} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); setSettingsOpen(false); settingsRef.current?.querySelector<HTMLElement>(".bottom-settings-button")?.focus(); } }}>

@@ -615,6 +615,7 @@ export function useEditorSecondarySurfaces(
       onFollowSelectionChange={workspace.setFollowSelection}
       pinned={workspace.bottomPinned}
       onTogglePinned={workspace.toggleBottomPin}
+      targetLabel={bottom.bookmark ? `Bookmark ${bottom.bookmark.name}` : bottom.transaction ? `Transaction ${bottom.transaction.name}` : bottom.annotation ? `Annotation ${bottom.annotation.label || bottom.annotation.type}` : bottom.signal ? `Signal ${bottom.signal.display.name}` : bottom.group ? `Group ${bottom.group.name}` : undefined}
       {...(workspace.bottomTab === "Annotation" ? { contentClassName: "bottom-content-annotation" } : {})}
       content={
         <>

@@ -633,7 +633,7 @@ export function MinimalCycleView() {
     timelineRuntimeRef.current?.onViewportScroll();
   };
   const shellRibbon = {
-    tabs: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} />,
+    tabs: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} activeContext={activeContext} setViewMode={setViewMode} />,
     main: {
       commands: secondarySurfaces.surfaceCommands,
       tab: ribbonTab,

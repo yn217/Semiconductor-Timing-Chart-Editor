@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { openBottomSettings } from "./bottom-settings";
 
-test("Bottom settings explain Follow Selection and Pin without a persistent status chip", async ({ page }) => {
+test("Bottom target mode stays visible while settings explain Follow Selection and Pin", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -21,7 +21,7 @@ test("Bottom settings explain Follow Selection and Pin without a persistent stat
   expect(iconBox?.width).toBeLessThanOrEqual(18);
   expect(iconBox?.height).toBeGreaterThanOrEqual(16);
   expect(iconBox?.height).toBeLessThanOrEqual(18);
-  await expect(page.getByTestId("bottom-target-mode")).toHaveCount(0);
+  await expect(page.getByTestId("bottom-target-mode")).toHaveText("Following selection");
   await expect(page.getByTestId("bottom-follow-status")).toHaveCount(0);
   await expect(page.getByText("Following Selection", { exact: true })).toHaveCount(0);
   const popover = page.getByTestId("bottom-settings-popover");
@@ -44,6 +44,7 @@ test("Bottom settings explain Follow Selection and Pin without a persistent stat
   await page.getByTestId("follow-selection").uncheck();
   await page.getByTestId("bottom-pin").click();
   await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("bottom-target-mode")).toHaveText("Pinned content");
   await page.keyboard.press("Escape");
   await expect(popover).toBeHidden();
   await expect(gear).toBeFocused();
@@ -59,7 +60,7 @@ test("Bottom settings gear remains right-aligned and layout-stable at supported 
     await page.setViewportSize(viewport);
     const nav = page.getByTestId("bottom-tabs");
     const gear = page.getByTestId("bottom-settings");
-    await expect(page.getByTestId("bottom-target-mode")).toHaveCount(0);
+    await expect(page.getByTestId("bottom-target-mode")).toHaveText("Following selection");
     await expect(gear).toBeVisible();
     const before = {
       nav: await nav.boundingBox(),

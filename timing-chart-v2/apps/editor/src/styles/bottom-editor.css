@@ -37,6 +37,7 @@
 .bottom-tabs button.active { margin-bottom: -1px; border: 1px solid #599df0; border-bottom: 2px solid white; border-radius: 4px 4px 0 0; background: #fff; color: #086fd2; font-weight: 700; }
 
 .bottom-tabs > span { flex: 1; }
+.bottom-target-mode { align-self: center; max-width: min(32vw, 360px); margin-left: auto; padding: 4px 9px; overflow: hidden; border: 1px solid #cbd8e8; border-radius: 12px; background: #edf4fc; color: #34516f; font-size: 10px; line-height: 16px; text-overflow: ellipsis; white-space: nowrap; }
 
 .bottom-content { flex: 1; min-height: 0; overflow: auto; }
 .bottom-content-annotation { display: flex; flex-direction: column; overflow: hidden; }

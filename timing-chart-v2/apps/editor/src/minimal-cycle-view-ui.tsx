@@ -31,9 +31,10 @@ export interface MinimalCycleViewUiSource {
   readonly statusBarUi: ReactNode;
 }
 
-export function MinimalCycleViewRibbonTabs({ ribbonTab, setRibbonTab, viewMode, setViewMode }: any) {
+export function MinimalCycleViewRibbonTabs({ ribbonTab, setRibbonTab, viewMode, activeContext, setViewMode }: any) {
   const tabs = [{ key: "File", label: "File" }, { key: "Home", label: "Home" }, { key: "Insert", label: "Insert" }, { key: "Timeline", label: "Timeline" }, { key: "Annotation", label: "Annotation" }, { key: "View", label: "View" }, { key: "Review", label: "Check" }, { key: "AI", label: "AI" }] as const;
-  return <nav className="ribbon-tabs" aria-label="Ribbon tabs">{tabs.map((tab) => <button type="button" key={tab.key} aria-label={tab.label} className={ribbonTab === tab.key ? "active" : ""} onClick={() => startTransition(() => setRibbonTab(tab.key))}>{tab.label}</button>)}<div className="view-mode"><span>View Mode:</span>{(["Cycle", "Transaction", "Split"] as const).map((mode) => { const label = mode === "Split" ? "Combined" : mode; return <button type="button" key={mode} aria-label={label} title={mode === "Split" ? "Combined Cycle + Transaction view" : undefined} className={viewMode === mode ? "active" : ""} onClick={() => setViewMode(mode)}>{label}</button>; })}</div></nav>;
+  const ribbonContext = viewMode === "Split" ? activeContext : viewMode === "Transaction" ? "Transaction" : "Signal";
+  return <nav className="ribbon-tabs" aria-label="Ribbon tabs">{tabs.map((tab) => <button type="button" key={tab.key} aria-label={tab.label} className={ribbonTab === tab.key ? "active" : ""} onClick={() => startTransition(() => setRibbonTab(tab.key))}>{tab.label}</button>)}<output className="ribbon-context" data-testid="ribbon-context">Ribbon target: {ribbonContext}</output><div className="view-mode"><span>View Mode:</span>{(["Cycle", "Transaction", "Split"] as const).map((mode) => { const label = mode === "Split" ? "Combined" : mode; return <button type="button" key={mode} aria-label={label} title={mode === "Split" ? "Combined Cycle + Transaction view" : undefined} className={viewMode === mode ? "active" : ""} onClick={() => setViewMode(mode)}>{label}</button>; })}</div></nav>;
 }
 
 export function refreshTreeCollapsedMetadata(host: RefObject<HTMLDivElement | null>, collapsedGroups: ReadonlySet<string>): void { const root = host.current; if (root) root.dataset.collapsedGroups = [...collapsedGroups].join(","); }
