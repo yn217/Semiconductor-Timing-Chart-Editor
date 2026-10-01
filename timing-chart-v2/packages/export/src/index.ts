@@ -287,15 +287,19 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
   const canBoundWaveforms = settings.scope === "selected-range";
   const canBoundSourceWaveforms = canBoundWaveforms && mapping.isIdentity;
   const waveformRanges = new Map<SignalId, Readonly<{ start: number; end: number }>>();
-  const ghostSourceSignalIds = new Set(document.annotations.flatMap((annotation) => annotation.type === "ghostTrace" && annotation.sourceSignalId ? [annotation.sourceSignalId] : []));
   if (canBoundSourceWaveforms) {
     for (const signal of waveSignals) waveformRanges.set(signal.id, range);
-    for (const annotation of document.annotations) {
+  }
+  const ghostSourceSignalIds = new Set<SignalId>();
+  for (const annotation of document.annotations) {
+    if (annotation.type === "ghostTrace" && annotation.sourceSignalId) ghostSourceSignalIds.add(annotation.sourceSignalId);
+    if (canBoundSourceWaveforms) {
       const traceWindow = ghostTraceWindow(annotation, document.timeline.cycleCount, range);
       if (traceWindow && annotation.sourceSignalId && waveformRanges.has(annotation.sourceSignalId)) {
         waveformRanges.set(annotation.sourceSignalId, mergeCycleRange(waveformRanges.get(annotation.sourceSignalId), { start: traceWindow.sampleStart, end: traceWindow.sampleEnd }));
       }
     }
+    if (checkpoint()) yield;
   }
   const renderedWaves: Array<{ signal: Exclude<Signal, { readonly type: "commentRow" }>; waveJson: WaveJsonSignal; svgMarkup: string; windowStart: number; renderedCycleCount: number; width: number; height: number }> = [];
   for (const [index, signal] of waveSignals.entries()) {
@@ -476,12 +480,18 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
     }
     if (checkpoint()) yield;
   }
-  const measurementLaneById = allocateMeasurementLanes(document.annotations.flatMap((annotation) => {
-    if (annotation.type !== "measurement" || !annotation.start || !annotation.end) return [];
+  const measurementSpans: Array<{ id: string; firstX: number; secondX: number; explicitLane?: number }> = [];
+  for (const annotation of document.annotations) {
+    if (annotation.type !== "measurement" || !annotation.start || !annotation.end) {
+      if (checkpoint()) yield;
+      continue;
+    }
     const first = anchorPoint(annotation, "start", document, rowY, mapping, range.start, cycleWidth);
     const second = anchorPoint(annotation, "end", document, rowY, mapping, range.start, cycleWidth);
-    return first && second ? [{ id: annotation.id, firstX: first.x, secondX: second.x, ...(annotation.measurementLayout?.lane === undefined ? {} : { explicitLane: annotation.measurementLayout.lane }) }] : [];
-  }));
+    if (first && second) measurementSpans.push({ id: annotation.id, firstX: first.x, secondX: second.x, ...(annotation.measurementLayout?.lane === undefined ? {} : { explicitLane: annotation.measurementLayout.lane }) });
+    if (checkpoint()) yield;
+  }
+  const measurementLaneById = allocateMeasurementLanes(measurementSpans);
   const annotations: ExportAnnotation[] = [];
   for (const annotation of document.annotations) {
     const firstAnchor = annotation.anchor ?? annotation.start ?? annotation.from;

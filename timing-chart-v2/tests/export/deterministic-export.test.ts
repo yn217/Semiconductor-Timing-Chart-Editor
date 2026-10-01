@@ -439,6 +439,37 @@ describe("deterministic document export", () => {
     }
   });
 
+  it("yields while projecting dense Measurement lanes without changing SVG bytes", async () => {
+    const base = canonicalFixture();
+    const signal = base.signals[1]!;
+    const document = {
+      ...base,
+      annotations: Array.from({ length: 256 }, (_, index) => ({
+        id: `ann_measurement_${index}` as AnnotationId,
+        type: "measurement" as const,
+        label: `M${index}`,
+        visible: true,
+        start: { signalId: signal.id, cycle: 1, point: "cycle-start" as const },
+        end: { signalId: signal.id, cycle: 4, point: "cycle-end" as const },
+      })),
+    };
+    const settings = { scope: "document" as const };
+    const expected = renderExportSvg(buildExportScene(document, { format: "svg", ...settings }));
+    const service = new DeterministicExportService();
+    const yieldTask = vi.fn(async () => undefined);
+    let now = 0;
+    const performanceNow = vi.spyOn(globalThis.performance, "now").mockImplementation(() => { now += 20; return now; });
+    vi.stubGlobal("scheduler", { yield: yieldTask });
+    try {
+      const actual = new TextDecoder().decode(await service.export({ format: "svg", snapshot: { revision: 0, document }, settings }));
+      expect(yieldTask).toHaveBeenCalled();
+      expect(actual).toBe(expected);
+    } finally {
+      performanceNow.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("yields during dense Transaction scene projection without changing SVG bytes", async () => {
     const base = canonicalFixture();
     const prototype = base.transactions[0]!;
