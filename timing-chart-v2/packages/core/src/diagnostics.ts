@@ -510,6 +510,23 @@ export function deriveTimingDiagnosticsIfInputsChanged(
   previousDiagnostics: readonly TimingDiagnostic[],
   options: Readonly<{ timingDiagnosticsUnchanged?: boolean }> = {},
 ): Readonly<{ diagnostics: readonly TimingDiagnostic[]; recomputed: boolean }> {
+  // CheckSettings currently only controls which rule categories are enabled.
+  // When that is the sole changed input, preserve findings for still-enabled
+  // categories and evaluate only newly enabled categories. In particular,
+  // disabling a category must not rescan Signals or Constraints.
+  if (previousDocument.signals === nextDocument.signals
+    && previousDocument.constraints === nextDocument.constraints
+    && previousDocument.checkSettings !== nextDocument.checkSettings) {
+    const previousEnabled = enabledDiagnosticCategories(previousDocument);
+    const nextEnabled = enabledDiagnosticCategories(nextDocument);
+    const newlyEnabled = [...nextEnabled].filter((category) => !previousEnabled.has(category));
+    const diagnostics = [
+      ...previousDiagnostics.filter((diagnostic) => nextEnabled.has(diagnostic.category)),
+      ...(newlyEnabled.length > 0 ? deriveTimingDiagnostics(nextDocument, { enabledCategories: newlyEnabled }) : []),
+    ].sort(diagnosticOrder);
+    return { diagnostics, recomputed: newlyEnabled.length > 0 };
+  }
+
   const sharedRuleInputs = previousDocument.constraints === nextDocument.constraints
     && previousDocument.checkSettings === nextDocument.checkSettings;
   if (sharedRuleInputs && (previousDocument.signals === nextDocument.signals

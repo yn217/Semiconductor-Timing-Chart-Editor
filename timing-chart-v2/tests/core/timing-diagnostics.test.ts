@@ -216,7 +216,39 @@ describe("derived timing diagnostics", () => {
     const changedConstraints = { ...current, constraints: [...current.constraints] };
     expect(deriveTimingDiagnosticsIfInputsChanged(current, changedConstraints, currentDiagnostics).recomputed).toBe(true);
     const changedSettings = { ...current, checkSettings: { enabledCategories: ["protocol"] as const } };
-    expect(deriveTimingDiagnosticsIfInputsChanged(current, changedSettings, currentDiagnostics).recomputed).toBe(true);
+    const settingsResult = deriveTimingDiagnosticsIfInputsChanged(current, changedSettings, currentDiagnostics);
+    expect(settingsResult.recomputed).toBe(false);
+    expect(settingsResult.diagnostics).toEqual(deriveTimingDiagnostics(changedSettings));
+  });
+
+  it("changes enabled diagnostic categories without reevaluating retained or disabled rule domains", () => {
+    const source = canonicalFixture();
+    const previous = { ...source, checkSettings: { enabledCategories: ["unknown-value"] as const } };
+    const previousDiagnostics = deriveTimingDiagnostics(previous);
+    const enabledProtocol = { ...previous, checkSettings: { enabledCategories: ["unknown-value", "protocol"] as const } };
+    const enabled = deriveTimingDiagnosticsIfInputsChanged(previous, enabledProtocol, previousDiagnostics);
+    expect(enabled.recomputed).toBe(true);
+    expect(enabled.diagnostics).toEqual(deriveTimingDiagnostics(enabledProtocol));
+
+    let signalCollectionReads = 0;
+    const guardedSignals = new Proxy(enabledProtocol.signals, {
+      get(target, property, receiver) {
+        if ([Symbol.iterator, "map", "forEach", "filter", "find", "some"].includes(property as never)) {
+          signalCollectionReads += 1;
+          throw new Error(`disabled category removal scanned Signals via ${String(property)}`);
+        }
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const withoutProtocol = { ...enabledProtocol, signals: guardedSignals, checkSettings: { enabledCategories: ["unknown-value"] as const } };
+    const disabled = deriveTimingDiagnosticsIfInputsChanged(
+      { ...enabledProtocol, signals: guardedSignals },
+      withoutProtocol,
+      enabled.diagnostics,
+    );
+    expect(signalCollectionReads).toBe(0);
+    expect(disabled.recomputed).toBe(false);
+    expect(disabled.diagnostics).toEqual(deriveTimingDiagnostics(enabledProtocol, { enabledCategories: ["unknown-value"] }));
   });
 
   it("evaluates through a shared rule registry with stable semantic keys", () => {
