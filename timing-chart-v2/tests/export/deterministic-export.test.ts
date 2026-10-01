@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildExportScene, DeterministicExportService, renderExportSvg } from "@timing-chart-v2/export";
-import { MAX_MEASUREMENT_LANE, type AnnotationId, type BookmarkId, type CanonicalDocument, type ClockSignal, type CommentRow, type GroupId, type SignalId, type TimeGroupId, type TransactionId } from "@timing-chart-v2/schema";
+import { MAX_MEASUREMENT_LANE, type AnnotationId, type BookmarkId, type CanonicalDocument, type ClockSignal, type CommentRow, type GroupId, type SignalId, type TimeGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 function scaleFixture(signalCount: number): CanonicalDocument {
@@ -371,6 +371,34 @@ describe("deterministic document export", () => {
       expect(waveform.sourceWidth).toBeLessThan(100_000 * 20);
       expect(waveform.cropX).toBe(0);
     }
+  });
+
+  it("reads only each selected window from 100 value histories with 100k changes", () => {
+    const base = scaleFixture(100);
+    let numericReads = 0;
+    const values = new Proxy([] as ValueSignal["values"], {
+      get(target, property, receiver) {
+        if (property === "length") return 100_000;
+        if (typeof property === "string" && /^(0|[1-9]\d*)$/.test(property)) {
+          numericReads += 1;
+          const index = Number(property);
+          return index < 100_000 ? { start: index, value: index % 2 === 0 ? "00" : "A5" } : undefined;
+        }
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const document: CanonicalDocument = {
+      ...base,
+      timeline: { ...base.timeline, end: 100_000, cycleCount: 100_000 },
+      signals: base.signals.map((signal) => ({ ...signal, values })),
+    };
+
+    const scene = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 90_000, end: 90_020 } });
+
+    expect(scene.waveforms).toHaveLength(100);
+    expect(scene.waveforms.every((wave) => JSON.parse(wave.waveJson).wave.length === 20)).toBe(true);
+    expect(JSON.parse(scene.waveforms[0]!.waveJson).data).toEqual(Array.from({ length: 20 }, (_, index) => index % 2 === 0 ? "0x00" : "0xA5"));
+    expect(numericReads).toBeLessThan(100 * 40);
   });
 
   it("keeps selected-range clock export bounded when the range ends in a partial final period", () => {
