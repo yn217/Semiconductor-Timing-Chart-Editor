@@ -105,6 +105,8 @@ export interface WaveDromAdapter {
   prepareWave?(signalId: SignalId, waveJson: WaveJsonSignal, ownerDocument: Document, semanticValues?: readonly string[]): Promise<RenderedWave>;
   /** Install a previously prepared SVG into its current owner. */
   installWave?(rendered: RenderedWave, mount: Element): RenderedWave;
+  /** Release a detached prepared result that will not be installed. */
+  releasePrepared?(rendered: RenderedWave): void;
   extractLocalGeometry(rendered: RenderedWave): LocalGeometryMap;
   geometryMetrics(): Readonly<{
     readonly last: GeometryExtractionMetrics | undefined;

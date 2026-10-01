@@ -384,7 +384,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   readonly #sharedMarkupCache = new Map<string, MarkupCacheEntry>();
   readonly #renderCallsBySignal = new Map<SignalId, number>();
   readonly #preparedDurationMs = new WeakMap<RenderedWave, number>();
-  readonly #preparedArtifact = new WeakMap<RenderedWave, MarkupCacheEntry>();
+  readonly #preparedArtifact = new Map<RenderedWave, MarkupCacheEntry>();
   readonly #preparedDefinitions = new WeakMap<RenderedWave, SVGElement>();
   readonly #waveMarkupArtifactIdentities = new WeakMap<WaveJsonSignal, WaveMarkupArtifactIdentity>();
   #nextRenderIndex = 0;
@@ -443,8 +443,13 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
 
   async renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues: readonly string[] = []): Promise<RenderedWave> {
     const prepared = await this.prepareWave(signalId, waveJson, mount.ownerDocument, semanticValues);
-    await prepared.svgImageReady;
-    return this.installWave(prepared, mount);
+    try {
+      await prepared.svgImageReady;
+      return this.installWave(prepared, mount);
+    } catch (error) {
+      this.releasePrepared(prepared);
+      throw error;
+    }
   }
 
   async prepareWave(signalId: SignalId, waveJson: WaveJsonSignal, ownerDocument: Document, semanticValues: readonly string[] = EMPTY_SEMANTIC_VALUES): Promise<RenderedWave> {
@@ -604,6 +609,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     };
     if (sharedDefinitions) this.#preparedDefinitions.set(rendered, sharedDefinitions);
     this.#preparedDurationMs.set(rendered, now() - startedAt);
+    this.#retainArtifact(cacheEntry);
     this.#preparedArtifact.set(rendered, cacheEntry);
     return rendered;
   }
@@ -612,43 +618,60 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const preparedDurationMs = this.#preparedDurationMs.get(prepared);
     if (preparedDurationMs === undefined) throw new WaveDromAdapterError("INVALID_PREPARED_WAVE", "WaveDrom SVG must be prepared by this adapter before installation.");
     this.#preparedDurationMs.delete(prepared);
-    const artifact = this.#preparedArtifact.get(prepared) ?? this.#markupCache.get(prepared.signalId)?.artifact;
+    const artifact = this.#preparedArtifact.get(prepared);
     if (!artifact) throw new WaveDromAdapterError("INVALID_PREPARED_WAVE", "Prepared WaveDrom artifact ownership was released before installation.");
+    // Transfer the prepared-result reference to the installed owner. Do not
+    // drop it before acquiring the active owner, so a just-evicted LRU entry
+    // cannot revoke the URL between detached preparation and installation.
     this.#preparedArtifact.delete(prepared);
-    this.#retainArtifact(artifact);
     const existing = this.#active.get(prepared.signalId);
     if (existing) {
       if (existing.mount !== mount) this.#clearOwner(existing);
       else this.#releaseArtifact(existing.artifact);
+      this.#active.delete(prepared.signalId);
     }
-    const stageStartedAt = now();
-    const shared = this.#preparedDefinitions.get(prepared);
-    const localDefinitions = typeof prepared.svg.querySelector === "function" ? prepared.svg.querySelector("defs") : null;
-    const definitions = shared ?? localDefinitions;
-    if (definitions) {
-      installSharedWaveDromDefinitions(mount.ownerDocument, definitions);
-      if (localDefinitions?.isEqualNode(definitions)) localDefinitions.remove();
+    try {
+      const stageStartedAt = now();
+      const shared = this.#preparedDefinitions.get(prepared);
+      const localDefinitions = typeof prepared.svg.querySelector === "function" ? prepared.svg.querySelector("defs") : null;
+      const definitions = shared ?? localDefinitions;
+      if (definitions) {
+        installSharedWaveDromDefinitions(mount.ownerDocument, definitions);
+        if (localDefinitions?.isEqualNode(definitions)) localDefinitions.remove();
+      }
+      this.#preparedDefinitions.delete(prepared);
+      prepared.svg.setAttribute("data-wave-owner", prepared.signalId);
+      prepared.svg.setAttribute("data-wave-render-index", String(prepared.renderIndex));
+      // WaveDrom's default SVG is sized from the row height. The browser's default
+      // preserveAspectRatio=meet therefore leaves the waveform at its intrinsic
+      // brick width when the editor provides a wider screen column. Stretch only
+      // the rendered SVG viewport; Local Geometry removes this root screen matrix.
+      prepared.svg.setAttribute("preserveAspectRatio", "none");
+      mount.setAttribute("data-wave-owner", prepared.signalId);
+      mount.replaceChildren(prepared.svg);
+      const domInstallMs = now() - stageStartedAt;
+      const renderStages = Object.freeze({ ...prepared.renderStages, domInstallMs, totalSignalWallMs: preparedDurationMs + domInstallMs });
+      const rendered: RenderedWave = { ...prepared, renderStages };
+      this.#active.set(prepared.signalId, { mount, rendered, artifact });
+      this.#lastRenderStages = renderStages;
+      const stageTotals = this.#renderStageTotals as Record<string, number>;
+      for (const [key, value] of Object.entries(renderStages)) stageTotals[key] = (stageTotals[key] ?? 0) + value;
+      this.#renderDurationMs += renderStages.totalSignalWallMs;
+      this.#mounts += 1;
+      return rendered;
+    } catch (error) {
+      this.#releaseArtifact(artifact);
+      throw error;
     }
+  }
+
+  releasePrepared(prepared: RenderedWave): void {
+    this.#preparedDurationMs.delete(prepared);
     this.#preparedDefinitions.delete(prepared);
-    prepared.svg.setAttribute("data-wave-owner", prepared.signalId);
-    prepared.svg.setAttribute("data-wave-render-index", String(prepared.renderIndex));
-    // WaveDrom's default SVG is sized from the row height. The browser's default
-    // preserveAspectRatio=meet therefore leaves the waveform at its intrinsic
-    // brick width when the editor provides a wider screen column. Stretch only
-    // the rendered SVG viewport; Local Geometry removes this root screen matrix.
-    prepared.svg.setAttribute("preserveAspectRatio", "none");
-    mount.setAttribute("data-wave-owner", prepared.signalId);
-    mount.replaceChildren(prepared.svg);
-    const domInstallMs = now() - stageStartedAt;
-    const renderStages = Object.freeze({ ...prepared.renderStages, domInstallMs, totalSignalWallMs: preparedDurationMs + domInstallMs });
-    const rendered: RenderedWave = { ...prepared, renderStages };
-    this.#active.set(prepared.signalId, { mount, rendered, artifact });
-    this.#lastRenderStages = renderStages;
-    const stageTotals = this.#renderStageTotals as Record<string, number>;
-    for (const [key, value] of Object.entries(renderStages)) stageTotals[key] = (stageTotals[key] ?? 0) + value;
-    this.#renderDurationMs += renderStages.totalSignalWallMs;
-    this.#mounts += 1;
-    return rendered;
+    const artifact = this.#preparedArtifact.get(prepared);
+    if (!artifact) return;
+    this.#preparedArtifact.delete(prepared);
+    this.#releaseArtifact(artifact);
   }
 
   extractLocalGeometry(rendered: RenderedWave): LocalGeometryMap {
@@ -726,6 +749,12 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     this.#active.clear();
     for (const signalId of this.#markupCache.keys()) this.#deleteBinding(this.#markupCache, signalId);
     for (const signalId of this.#retainedMarkupCache.keys()) this.#deleteBinding(this.#retainedMarkupCache, signalId);
+    for (const [prepared, entry] of this.#preparedArtifact) {
+      this.#preparedDurationMs.delete(prepared);
+      this.#preparedDefinitions.delete(prepared);
+      this.#releaseArtifact(entry);
+    }
+    this.#preparedArtifact.clear();
     for (const entry of this.#sharedMarkupCache.values()) this.#releaseArtifact(entry);
     this.#sharedMarkupCache.clear();
     this.#renderIndices.clear();

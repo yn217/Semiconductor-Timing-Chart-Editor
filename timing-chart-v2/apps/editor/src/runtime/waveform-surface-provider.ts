@@ -87,6 +87,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
   return {
     ...(context.getSourceWindow ? { getSourceWindow: context.getSourceWindow } : {}),
     async mountWaveBatch(requests) {
+      const preparedArtifacts = new Set<RenderedWave>();
+      try {
       const batchStartedAt = globalThis.performance.now();
       const primaryOpenBatch = context.isPrimaryPresentationOpening?.() === true;
       let renderAwaitMs = 0;
@@ -340,6 +342,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             progressiveItem.request.owner.ownerDocument,
             progressiveItem.semanticValues,
           ).then((rendered) => {
+            preparedArtifacts.add(rendered);
             progressivePrepareFinishedAt = globalThis.performance.now();
             return rendered;
           }).catch((error: unknown) => {
@@ -365,6 +368,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         }
         if (progressiveItem && progressivePreparePromise && preparedProgressive) {
           if (!isCurrent(progressiveItem.request)) {
+            context.adapter.releasePrepared?.(preparedProgressive);
             progressivePrepared.set(progressiveItem.request, { stale: true });
             staleProgressiveInstallPreventedCount += 1;
           } else {
@@ -483,7 +487,9 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             try {
               if (supportsDetachedWaveInstall) {
                 rendered = await context.adapter.prepareWave!(item.request.signalId, item.waveJson, item.request.owner.ownerDocument, item.semanticValues);
+                preparedArtifacts.add(rendered);
                 if (!isCurrent(item.request)) {
+                  context.adapter.releasePrepared?.(rendered);
                   return { ...item, rendered: undefined, stale: true };
                 }
                 if (!primaryOpenBatch || item.request.signalId === progressiveSignalId) {
@@ -532,6 +538,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           renderResults.push({ ...item, rendered: undefined, stale: true });
         }
         else if (result.status === "stale-after-run") {
+          if (result.value?.rendered) context.adapter.releasePrepared?.(result.value.rendered);
           const canvasOwner = canvasOwnerBySignal.get(item.request.signalId);
           if (canvasOwner === item.request.owner) {
             disposeWaveCanvas(canvasOwner);
@@ -560,6 +567,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           const value = result.value;
           if (value.rendered && primaryOpenBatch && supportsDetachedWaveInstall && value.request.signalId !== progressiveSignalId) {
             if (!isCurrent(value.request)) {
+              context.adapter.releasePrepared?.(value.rendered);
               requiredNowCount += 1;
               staleAfterRunCount += 1;
               renderResults.push({ ...value, rendered: undefined, stale: true });
@@ -669,6 +677,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         if (!item.rendered || item.installed || item.stale === true || !primaryOpenBatch || !supportsDetachedWaveInstall
           || item.request.signalId === progressiveSignalId) continue;
         if (!isCurrent(item.request)) {
+          context.adapter.releasePrepared?.(item.rendered);
           if (context.geometryRegistry.svgs.get(item.request.signalId) === publishedSvgByRequest.get(item.request)) {
             context.geometryRegistry.svgs.delete(item.request.signalId);
           }
@@ -759,6 +768,12 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         });
       }
       return results;
+      } finally {
+        // Installation transfers each prepared artifact into an active owner;
+        // releasePrepared is then a no-op. Any stale, abandoned, or exceptional
+        // batch result still owned here is explicitly abandoned exactly once.
+        for (const prepared of preparedArtifacts) context.adapter.releasePrepared?.(prepared);
+      }
     },
     async mountWave(id, owner) {
       const item = (await this.mountWaveBatch?.([{ signalId: id, owner }]))?.[0];

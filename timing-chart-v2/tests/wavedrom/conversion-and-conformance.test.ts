@@ -534,6 +534,7 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
       // ownership before the Signal and active-owner references are released.
       const reinserted = await adapter.prepareWave(firstId, { wave: "0" }, ownerDocument);
       expect(reinserted.markupCacheHit).toBe(true);
+      expect((await adapter.prepareWave(firstId, { wave: "0" }, ownerDocument)).markupCacheHit).toBe(true);
       adapter.retainArtifact(firstId);
       expect(adapter.metrics().imageObjectUrlsRevoked).toBe(0);
       adapter.dispose(firstId);
@@ -542,6 +543,27 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
       adapter.disposeAll();
       expect(adapter.metrics()).toMatchObject({ imageObjectUrlsCreated: 65, imageObjectUrlsRevoked: 65, imageObjectUrlsRetained: 0 });
       expect(revokeUrl).toHaveBeenCalledTimes(65);
+
+      // A detached prepared result must own its artifact even after its
+      // per-Signal binding changes and the shared LRU evicts that artifact.
+      const detachedId = signalId("sig_blob_detached_prepare");
+      const detached = await adapter.prepareWave(detachedId, { wave: "0" }, ownerDocument);
+      for (let index = 0; index < 64; index += 1) {
+        await adapter.renderWave(signalId(`sig_blob_detached_churn_${index}`), { wave: "0".repeat(index + 2) }, createMarkupMount(ownerDocument));
+      }
+      const replacement = await adapter.prepareWave(detachedId, { wave: "1" }, ownerDocument);
+      await Promise.all([detached.svgImageReady, replacement.svgImageReady]);
+      expect(detached.markupCacheHit).toBe(false);
+      expect(replacement.markupCacheHit).toBe(false);
+      expect(adapter.metrics().imageObjectUrlsRevoked).toBe(65);
+      adapter.installWave(detached, createMarkupMount(ownerDocument));
+      expect(adapter.metrics().imageObjectUrlsRevoked).toBe(65);
+      adapter.releasePrepared(replacement);
+      expect(() => adapter.installWave(replacement, createMarkupMount(ownerDocument))).toThrow("must be prepared by this adapter");
+      adapter.dispose(detachedId);
+      adapter.disposeAll();
+      expect(adapter.metrics().imageObjectUrlsCreated).toBe(adapter.metrics().imageObjectUrlsRevoked);
+      expect(adapter.metrics().imageObjectUrlsRetained).toBe(0);
     } finally {
       adapter.disposeAll();
       createUrl.mockRestore();
