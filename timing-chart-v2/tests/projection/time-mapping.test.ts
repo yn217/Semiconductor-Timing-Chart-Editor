@@ -23,6 +23,14 @@ describe("buildDisplayTimeMapping", () => {
     expect(resolveSourcePosition(mapping, 10.5, "interpolate")).toBe(5.5);
   });
 
+  it("resolves a visible integer source position with one indexed lookup", () => {
+    const mapping = buildDisplayTimeMapping(timeline(20), [collapsedGroup("g1", 5, 10)]);
+    const sourceToDisplay = vi.spyOn(mapping, "sourceToDisplay");
+
+    expect(resolveSourcePosition(mapping, 12, "floor")).toBe(7);
+    expect(sourceToDisplay).toHaveBeenCalledTimes(1);
+  });
+
   it("resolves floor and ceil through a wide folded range without scanning its hidden cycles", () => {
     const mapping = buildDisplayTimeMapping(timeline(100_000), [collapsedGroup("g1", 10, 99_990)]);
     expect(resolveSourcePosition(mapping, 50_000, "floor")).toBe(9);

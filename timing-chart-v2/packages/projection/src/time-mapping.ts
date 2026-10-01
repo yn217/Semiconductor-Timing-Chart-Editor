@@ -134,7 +134,10 @@ export function resolveSourcePosition(mapping: DisplayTimeMapping, sourceCycle: 
   if (!Number.isFinite(sourceCycle)) return undefined;
   if (sourceCycle >= mapping.sourceCycleCount) return mapping.displayCycleCount;
   const clamped = Math.max(0, sourceCycle);
-  if (Number.isInteger(clamped) && mapping.sourceToDisplay(clamped) !== undefined) return mapping.sourceToDisplay(clamped);
+  if (Number.isInteger(clamped)) {
+    const displayCycle = mapping.sourceToDisplay(clamped);
+    if (displayCycle !== undefined) return displayCycle;
+  }
   if (policy === "omit") return undefined;
   const index = Math.floor(clamped);
   if (policy === "interpolate") {
