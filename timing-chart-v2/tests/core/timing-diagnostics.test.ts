@@ -113,6 +113,50 @@ describe("derived timing diagnostics", () => {
     expect(incremental.diagnostics).toEqual(expectedDiagnostics);
   });
 
+  it("updates changed Handshakes and only refreshes peers sharing affected stable Signals", () => {
+    const source = canonicalFixture();
+    const template = source.signals[1]!;
+    const requestA = { ...template, id: "sig_edit_req_a" as SignalId, name: "REQ_A", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    const ackA = { ...template, id: "sig_edit_ack_a" as SignalId, name: "ACK_A", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 8, value: 1 }] };
+    const requestB = { ...template, id: "sig_edit_req_b" as SignalId, name: "REQ_B", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 3, value: 1 }] };
+    const ackB = { ...template, id: "sig_edit_ack_b" as SignalId, name: "ACK_B", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 9, value: 1 }] };
+    const payloadA = { ...template, id: "sig_edit_payload_a" as SignalId, values: [{ start: 0, value: "00" }, { start: 4, value: "01" }] };
+    const payloadB = { ...template, id: "sig_edit_payload_b" as SignalId, values: [{ start: 0, value: "00" }, { start: 5, value: "01" }] };
+    const unrelatedRequestBase = { ...template, id: "sig_edit_req_unrelated" as SignalId, name: "REQ_UNRELATED", type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 2, value: 1 }] };
+    let unrelatedRequestReads = 0;
+    const unrelatedRequest = { ...unrelatedRequestBase, values: new Proxy(unrelatedRequestBase.values, {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator || property === "forEach" || (typeof property === "string" && /^\\d+$/.test(property))) unrelatedRequestReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    }) };
+    const unrelatedAck = { ...ackA, id: "sig_edit_ack_unrelated" as SignalId };
+    const changed: Constraint = { id: "constraint_edit_changed", type: "handshake", data: { requestSignalId: requestA.id, acknowledgeSignalId: ackA.id, stableSignalIds: [payloadA.id] } };
+    const shared: Constraint = { id: "constraint_edit_shared", type: "handshake", data: { requestSignalId: requestB.id, acknowledgeSignalId: ackB.id, stableSignalIds: [payloadA.id] } };
+    const invalidShared: Constraint = { id: "constraint_edit_invalid_shared", type: "handshake", data: { requestSignalId: requestB.id, acknowledgeSignalId: "missing_ack", stableSignalIds: [payloadA.id] } };
+    const unrelated: Constraint = { id: "constraint_edit_unrelated", type: "handshake", data: { requestSignalId: unrelatedRequest.id, acknowledgeSignalId: unrelatedAck.id, stableSignalIds: [] } };
+    const signals = [source.signals[0]!, requestA, ackA, requestB, ackB, payloadA, payloadB, unrelatedRequest, unrelatedAck];
+
+    for (const categories of [["protocol", "stability"], ["stability"], ["protocol"]] as const) {
+      const baseDocument = withSignals(source, signals, [changed, invalidShared, shared, unrelated]);
+      const previous = { ...baseDocument, checkSettings: { ...baseDocument.checkSettings, enabledCategories: categories } };
+      const previousDiagnostics = deriveTimingDiagnostics(previous);
+      const nextChanged: Constraint = { ...changed, data: { ...changed.data, stableSignalIds: [payloadB.id] } };
+      const next = { ...previous, constraints: [nextChanged, invalidShared, shared, unrelated] };
+      unrelatedRequestReads = 0;
+
+      const incremental = deriveTimingDiagnosticsIfInputsChanged(previous, next, previousDiagnostics);
+      expect(unrelatedRequestReads).toBe(0);
+      expect(incremental.diagnostics).toEqual(deriveTimingDiagnostics(next));
+      expect(incremental.diagnostics).toContainEqual(expect.objectContaining({ code: "HANDSHAKE_CONSTRAINT_INVALID", objectId: invalidShared.id, path: "$.constraints[1].data.acknowledgeSignalId" }));
+      if (categories.includes("stability")) {
+        expect(incremental.diagnostics.filter((item) => item.code === "HANDSHAKE_DATA_UNSTABLE").map((item) => item.entityId).sort()).toEqual([payloadA.id, payloadB.id].sort());
+      } else {
+        expect(incremental.diagnostics.some((item) => item.category === "stability")).toBe(false);
+      }
+    }
+  });
+
   it("reuses derived Problems for unrelated immutable edits and invalidates every diagnostic input", () => {
     const source = canonicalFixture();
     const current = withSignals(source, [source.signals[0]!, { ...source.signals[1]!, values: [{ start: 1, value: "X" }] }]);
