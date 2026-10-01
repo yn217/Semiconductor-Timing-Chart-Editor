@@ -283,6 +283,17 @@ function countPeriodicPoints(start: number, period: number, low: number, high: n
   return Math.max(0, end - first);
 }
 
+function firstValueChangeAfter(changes: readonly ValueSignal["values"][number][], cycle: number): number {
+  let low = 0;
+  let high = changes.length;
+  while (low < high) {
+    const middle = low + ((high - low) >>> 1);
+    if (changes[middle]!.start <= cycle) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
 function simpleClockEdgeIndexBefore(signal: ClockSignal, cycleCount: number, mode: ClockSignal["edgeCounter"]["mode"], countFrom: number, edgeCycle: number): number {
   const { generator } = signal;
   const pulseStart = Math.max(0, generator.start + generator.phase);
@@ -440,13 +451,9 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
       const candidateStart = Math.max(start, sourceRangeStart - oppositeOffset, mapping.isIdentity && rangeLocalCountOrigin ? countFromDisplay - oppositeOffset : start);
       const firstCandidate = Math.max(0, Math.ceil((candidateStart - start) / period));
       const changes = signal.enable ?? [];
-      let enableIndex = 0;
-      let enabled: string | number = 1;
       const firstCycle = start + firstCandidate * period;
-      while (enableIndex < changes.length && changes[enableIndex]!.start <= firstCycle) {
-        enabled = changes[enableIndex]!.value;
-        enableIndex += 1;
-      }
+      let enableIndex = firstValueChangeAfter(changes, firstCycle);
+      let enabled: string | number = enableIndex === 0 ? 1 : changes[enableIndex - 1]!.value;
       let localOrdinal = 0;
       for (let cycle = start + firstCandidate * period; cycle < Math.min(document.timeline.cycleCount, sourceRangeEnd); cycle += period) {
         if (checkpoint()) yield;

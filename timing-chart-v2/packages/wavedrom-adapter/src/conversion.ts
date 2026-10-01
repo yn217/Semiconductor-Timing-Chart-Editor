@@ -90,6 +90,28 @@ function createEnableReader(changes: readonly SignalValueChange[] | undefined): 
   };
 }
 
+/** Return the enable state carried into a bounded clock window plus changes
+ * inside it. Canonical changes are sorted, so a distant window must not walk
+ * the complete enable history just to reconstruct its left-edge state. */
+function enableChangesForWindow(changes: readonly SignalValueChange[] | undefined, start: number, end: number): readonly SignalValueChange[] {
+  if (!changes || changes.length === 0) return [];
+  let low = 0;
+  let high = changes.length;
+  while (low < high) {
+    const middle = low + ((high - low) >>> 1);
+    if (changes[middle]!.start <= start) low = middle + 1;
+    else high = middle;
+  }
+  const carried = low > 0 ? changes[low - 1] : undefined;
+  const result: SignalValueChange[] = carried ? [{ ...carried, start: 0 }] : [];
+  for (let index = low; index < changes.length; index += 1) {
+    const change = changes[index]!;
+    if (change.start >= end) break;
+    result.push({ ...change, start: change.start - start });
+  }
+  return result;
+}
+
 function expandedClockPattern(signal: ClockSignal): readonly string[] {
   const { generator } = signal;
   const totalHalfCycles = generator.period * 2;
@@ -212,18 +234,16 @@ function clockToWaveJsonWindow(source: CanonicalSignalSource, start: number, end
   }
   const inactive = generator.polarity === "positive" ? 0 : 1;
   const active = generator.polarity === "positive" ? 1 : 0;
-  const enableAt = createEnableReader(signal.enable);
+  const localEnableChanges = enableChangesForWindow(signal.enable, start, end);
+  const enableAt = createEnableReader(localEnableChanges);
   const localPulse = Math.floor((start - generator.start) / generator.period);
   const suppressed = new Set(generator.suppressedPeriods ?? []);
   const started = start >= generator.start;
-  const firstActive = started && enableAt(start) && !suppressed.has(localPulse);
-  const localEnableChanges = (signal.enable ?? [])
-    .filter((change) => change.start >= start && change.start < end)
-    .map((change) => ({ ...change, start: change.start - start }));
+  const firstActive = started && enableAt(0) && !suppressed.has(localPulse);
   // Preserve the canonical enable state at the bounded window's left edge.
   // An omitted local change must not be interpreted by createEnableReader as
   // the default HIGH state.
-  const enableAtLeftEdge = enableAt(start) ? 1 : 0;
+  const enableAtLeftEdge = enableAt(0) ? 1 : 0;
   const localEnable = localEnableChanges[0]?.start === 0
     ? localEnableChanges
     : [{ start: 0, value: enableAtLeftEdge }, ...localEnableChanges];

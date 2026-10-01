@@ -792,6 +792,42 @@ describe("deterministic document export", () => {
     ]);
   });
 
+  it("resolves distant selected Clock windows from indexed enable state", () => {
+    const base = canonicalFixture();
+    const clock = base.signals[0]!;
+    let numericReads = 0;
+    const enable = new Proxy(Array.from({ length: 25_000 }, (_, index) => ({ start: index * 4, value: index % 2 === 0 ? 1 : 0 })), {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^(0|[1-9]\d*)$/.test(property)) numericReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const document = {
+      ...base,
+      timeline: { ...base.timeline, end: 100_000, cycleCount: 100_000 },
+      signals: [{
+        ...clock,
+        generator: { ...clock.generator, period: 4, duty: 0.5 },
+        enable,
+        edgeCounter: { ...clock.edgeCounter, show: true, mode: "both" as const, countFrom: "visible-range-start" as const, startNumber: 7 },
+      }, base.signals[1]!],
+    };
+
+    const scene = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 90_000, end: 90_020 } });
+    const wave = scene.waveforms.find((item) => item.signalId === clock.id)!;
+
+    expect(JSON.parse(wave.waveJson).wave).toHaveLength(5);
+    expect(scene.edgeCounters.map(({ cycle, kind, label }) => ({ cycle, kind, label }))).toEqual([
+      { cycle: 90_000, kind: "rising", label: "7" },
+      { cycle: 90_002, kind: "falling", label: "8" },
+      { cycle: 90_008, kind: "rising", label: "9" },
+      { cycle: 90_010, kind: "falling", label: "10" },
+      { cycle: 90_016, kind: "rising", label: "11" },
+      { cycle: 90_018, kind: "falling", label: "12" },
+    ]);
+    expect(numericReads).toBeLessThan(100);
+  });
+
   it("bounds folded range-relative Clock edge enumeration through the shared display mapping", async () => {
     const base = canonicalFixture();
     const clock = base.signals[0]!;
