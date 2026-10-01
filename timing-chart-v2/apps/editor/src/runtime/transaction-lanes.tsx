@@ -6,7 +6,7 @@ import { EditorIcon } from "../editor-icon.js";
 import type { TransactionLaneCommandActions } from "../application/editor-surface-command-controller.js";
 import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
-import { mergeTransactionFoldRanges, transactionFoldRangesIntersecting, type TransactionFoldRange } from "./transaction-fold-index.js";
+import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldRangesIntersecting, type TransactionFoldRange } from "./transaction-fold-index.js";
 import { bookmarksInSourceWindow, indexTransactionIntervals, transactionGeometryGuidesInSourceWindow, transactionIntervalsInWindow, type TransactionIntervalIndex } from "./transaction-virtual-index.js";
 
 const LANE_ROW_HEIGHT = 40;
@@ -402,23 +402,27 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     if (selectedId !== undefined) pinned.add(selectedId);
     return transactionIntervalsInWindow(horizontalDocumentIndex, horizontalSourceWindow.start, horizontalSourceWindow.end, pinned).items;
   }, [horizontalDocumentIndex, horizontalSourceWindow, selectedId, selectedIds]);
+  const collapsedFoldBoundaries = useMemo(() => (rawDocument.timeGroups ?? [])
+    .filter((group) => group.presentation?.collapsed)
+    .flatMap((group) => [group.start, group.end])
+    .sort((left, right) => left - right), [rawDocument.timeGroups]);
   const { cycleXs, boundaryXByCycle } = useMemo(() => {
-    const foldBoundaryCycles = (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).flatMap((group) => [group.start, group.end]);
+    const foldBoundaryCycles = horizontalSourceWindow === undefined
+      ? collapsedFoldBoundaries
+      : transactionFoldBoundariesInWindow(collapsedFoldBoundaries, horizontalSourceWindow.start, horizontalSourceWindow.end);
     const sourceRange = horizontalSourceWindow;
-    const inWindow = (cycle: number) => sourceRange === undefined || (cycle >= sourceRange.start && cycle <= sourceRange.end);
     const transactionCycles = horizontalDocumentCandidates.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).filter((phase) => sourceRange === undefined || (phase.end >= sourceRange.start && phase.start <= sourceRange.end)).flatMap((phase) => [phase.start, phase.end])]);
-    const relevantCycles = [...new Set([...transactionCycles, ...visibleBookmarks.map((bookmark) => bookmark.start), ...foldBoundaryCycles.filter(inWindow)])].sort((left, right) => left - right);
+    const relevantCycles = [...new Set([...transactionCycles, ...visibleBookmarks.map((bookmark) => bookmark.start), ...foldBoundaryCycles])].sort((left, right) => left - right);
     const cycleXs = relevantCycles.flatMap((cycle) => { const x = getScaledBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
     return { cycleXs, boundaryXByCycle: new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const)) };
-  }, [getScaledBoundaryX, horizontalDocumentCandidates, horizontalSourceWindow, presentationRevision, visibleBookmarks]);
+  }, [collapsedFoldBoundaries, getScaledBoundaryX, horizontalDocumentCandidates, horizontalSourceWindow, presentationRevision, visibleBookmarks]);
   const visibleGuideXs = useMemo(() => horizontalSourceWindow === undefined
     ? cycleXs
     : transactionGeometryGuidesInSourceWindow(cycleXs, horizontalSourceWindow.start, horizontalSourceWindow.end), [cycleXs, horizontalSourceWindow]);
   const x = (cycle: number) => boundaryXByCycle.get(cycle);
-  const foldRanges = useMemo<readonly TransactionFoldRange[]>(() => {
-    const ranges = (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const).sort((left, right) => left[0] - right[0] || left[1] - right[1]);
-    return mergeTransactionFoldRanges(ranges);
-  }, [rawDocument.timeGroups]);
+  const foldRanges = useMemo<readonly TransactionFoldRange[]>(() => mergeTransactionFoldRanges(
+    (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const),
+  ), [rawDocument.timeGroups]);
 
   // #452: Group headers only appear once real Groups are in use -- a
   // document with no `transactionGroups` (or none actually referenced)

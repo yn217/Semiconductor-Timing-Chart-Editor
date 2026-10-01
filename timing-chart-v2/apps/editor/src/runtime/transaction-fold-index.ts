@@ -1,5 +1,24 @@
 export type TransactionFoldRange = readonly [start: number, end: number];
 
+/** Return sorted fold boundaries within the inclusive viewport range. */
+export function transactionFoldBoundariesInWindow(
+  boundaries: readonly number[],
+  start: number,
+  end: number,
+): readonly number[] {
+  const lowerBound = (target: number, upper: boolean): number => {
+    let low = 0;
+    let high = boundaries.length;
+    while (low < high) {
+      const middle = low + Math.floor((high - low) / 2);
+      if (upper ? boundaries[middle]! <= target : boundaries[middle]! < target) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  };
+  return boundaries.slice(lowerBound(start, false), lowerBound(end, true));
+}
+
 /** Sort and union fold intervals with a single append/update pass after sorting. */
 export function mergeTransactionFoldRanges(ranges: readonly TransactionFoldRange[]): readonly TransactionFoldRange[] {
   const sorted = [...ranges].sort((left, right) => left[0] - right[0] || left[1] - right[1]);

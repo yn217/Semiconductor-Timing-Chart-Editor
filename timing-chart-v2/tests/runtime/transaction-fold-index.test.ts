@@ -1,7 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { mergeTransactionFoldRanges, transactionFoldRangesIntersecting } from "../../apps/editor/src/runtime/transaction-fold-index.js";
+import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldRangesIntersecting } from "../../apps/editor/src/runtime/transaction-fold-index.js";
 
 describe("Transaction fold interval index", () => {
+  it("slices sorted viewport boundaries with binary lookup and inclusive endpoints", () => {
+    const boundaries = Array.from({ length: 4_000 }, (_, index) => index * 3);
+    let indexedReads = 0;
+    const indexed = new Proxy(boundaries, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\d+$/.test(property)) indexedReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    expect(transactionFoldBoundariesInWindow(indexed, 3_000, 3_009)).toEqual([3_000, 3_003, 3_006, 3_009]);
+    expect(indexedReads).toBeLessThan(32);
+  });
+
   it("merges nested, overlapping, and adjacent folds with a linear union pass", () => {
     expect(mergeTransactionFoldRanges([[20, 30], [2, 8], [4, 12], [12, 14], [40, 45]])).toEqual([[2, 14], [20, 30], [40, 45]]);
   });
