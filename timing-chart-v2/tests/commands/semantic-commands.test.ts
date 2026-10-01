@@ -1494,6 +1494,42 @@ describe("command execution and atomic history", () => {
     expect(session.historyState().undoDepth).toBe(1);
   });
 
+  it("replaces a product-limit Annotation collection in one planner and preserves surviving Group membership", () => {
+    const makeAnnotation = (index: number, labelPrefix: string): Annotation => ({
+      id: `ann_scale_${String(index).padStart(5, "0")}` as AnnotationId,
+      type: "text",
+      label: `${labelPrefix}${index}`,
+      visible: true,
+      anchor: { signalId: "sig_data" as SignalId, cycle: 2, point: "cycle-start" },
+    });
+    const initialAnnotations = Array.from({ length: 20_000 }, (_, index) => makeAnnotation(index, "before-"));
+    const importedAnnotations = Array.from({ length: 20_000 }, (_, index) => makeAnnotation(index + 10_000, "after-"));
+    const initialGroup = {
+      id: "ann_scale_group" as never,
+      name: "Survivors",
+      annotationIds: initialAnnotations.filter((_, index) => index % 2 === 0).map((annotation) => annotation.id),
+    };
+    const initial = { ...canonicalFixture(), annotations: initialAnnotations, annotationGroups: [initialGroup] };
+    const session = new CommandHistorySession(initial);
+    const plannerBefore = commandPlannerMetrics().calls;
+
+    const result = session.execute({ id: commandId("annotation_collection_product_limit"), type: "annotation.replaceCollection", annotations: importedAnnotations });
+
+    expect(result.ok).toBe(true);
+    expect(commandPlannerMetrics().calls - plannerBefore).toBe(1);
+    expect(session.getSnapshot().document.annotations).toEqual(importedAnnotations);
+    const importedIds = new Set(importedAnnotations.map((annotation) => annotation.id));
+    expect(session.getSnapshot().document.annotationGroups?.[0]?.annotationIds).toEqual(
+      initialGroup.annotationIds.filter((id) => importedIds.has(id)),
+    );
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(initial);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.annotations).toEqual(importedAnnotations);
+    expect(session.historyState().undoDepth).toBe(1);
+  });
+
   it("updates Measurement profile atomically and restores it through Undo/Redo", () => {
     const source = canonicalFixture();
     const annotation: Annotation = { id: "ann_measurement_profile" as AnnotationId, type: "measurement", label: "Measurement", visible: true, start: { signalId: "sig_data" as SignalId, cycle: 1, point: "cycle-start" }, end: { signalId: "sig_data" as SignalId, cycle: 4, point: "cycle-end" } };
