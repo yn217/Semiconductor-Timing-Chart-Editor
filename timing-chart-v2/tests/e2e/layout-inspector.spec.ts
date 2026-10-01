@@ -54,6 +54,7 @@ test("cancels layout draft without a canonical mutation", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
   const inspector = page.getByTestId("inspector-layout-editor");
   const revision = await host.getAttribute("data-canonical-revision");
   await inspector.getByLabel("Inspector signal name width").fill("420");
