@@ -965,6 +965,33 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot()).toBe(beforeRejected);
   });
 
+  it("sets selected Transaction colors with one planner/history action", () => {
+    const base = canonicalFixture();
+    const transactions = Array.from({ length: 1_000 }, (_, index) => ({
+      id: `txn_color_${index}` as TransactionId,
+      name: `Transaction ${index}`,
+      start: 1,
+      end: 2,
+      laneId: "lane_0",
+      color: "#112233",
+      description: `Description ${index}`,
+    }));
+    const session = new CommandHistorySession({ ...base, transactions });
+    const before = session.getSnapshot().document.transactions;
+    const beforePlans = commandPlannerMetrics().internalPlans;
+
+    expect(session.execute({ id: commandId("cmd_txn_bulk_color"), type: "transaction.bulkSetColor", transactionIds: [transactions[4]!.id, transactions[800]!.id], color: "#aabbcc" }).ok).toBe(true);
+
+    const after = session.getSnapshot().document.transactions;
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    expect(after[4]).toMatchObject({ color: "#aabbcc", description: transactions[4]!.description });
+    expect(after[800]).toMatchObject({ color: "#aabbcc", description: transactions[800]!.description });
+    expect(after[5]).toBe(before[5]);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions).toBe(before);
+  });
+
   it("rejects duplicate stable IDs within a Transaction bulk-create atomically", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const before = session.getSnapshot().document;

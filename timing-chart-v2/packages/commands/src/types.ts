@@ -113,6 +113,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "transaction.bulkDelete"; transactionIds: readonly TransactionId[] }>
   | Readonly<{ id: CommandId; type: "transaction.bulkSetVisibility"; transactionIds: readonly TransactionId[]; visible: boolean }>
   | Readonly<{ id: CommandId; type: "transaction.bulkMoveToGroup"; items: readonly Readonly<{ transactionId: TransactionId; groupId?: TransactionGroup["id"] }>[] }>
+  | Readonly<{ id: CommandId; type: "transaction.bulkSetColor"; transactionIds: readonly TransactionId[]; color: string }>
   | Readonly<{ id: CommandId; type: "transaction.duplicate"; transactionId: TransactionId; newTransactionId: TransactionId; name?: string }>
   | Readonly<{ id: CommandId; type: "transaction.delete"; transactionId: TransactionId }>
   | Readonly<{ id: CommandId; type: "transaction.rename"; transactionId: TransactionId; name: string }>

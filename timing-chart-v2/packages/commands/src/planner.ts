@@ -1563,6 +1563,26 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const changeSet: ChangeSet = { transactionSemantics, minimapOverview: true };
       return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
     }
+    case "transaction.bulkSetColor": {
+      if (command.transactionIds.length === 0) return fail("no-op", "NO_OP", "$.transactionIds", "No Transactions were selected for color change.");
+      const selectedIds = new Set(command.transactionIds);
+      if (selectedIds.size !== command.transactionIds.length) return fail("invalid", "DUPLICATE_ID", "$.transactionIds", "Bulk Transaction color change contains duplicate IDs.");
+      const targets = new Map<TransactionId, { readonly index: number; readonly transaction: Transaction }>();
+      document.transactions.forEach((transaction, index) => {
+        if (selectedIds.has(transaction.id)) targets.set(transaction.id, { index, transaction });
+      });
+      const missing = command.transactionIds.find((id) => !targets.has(id));
+      if (missing !== undefined) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionIds", `Transaction '${missing}' does not exist.`);
+      const changed = command.transactionIds.filter((id) => targets.get(id)!.transaction.color !== command.color);
+      if (changed.length === 0) return fail("no-op", "NO_OP", "$", "Selected Transactions already use this color.");
+      const transactions = document.transactions.slice();
+      for (const id of changed) {
+        const target = targets.get(id)!;
+        transactions[target.index] = { ...target.transaction, color: command.color };
+      }
+      const changeSet: ChangeSet = { transactionSemantics: changed, minimapOverview: true };
+      return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
+    }
     case "transaction.setTimeScale": {
       const currentScale = document.transactionTimeScale;
       const scale = command.clearShowSecondaryClock

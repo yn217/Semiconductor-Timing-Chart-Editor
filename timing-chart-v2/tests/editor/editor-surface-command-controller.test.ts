@@ -105,7 +105,7 @@ describe("editor surface command controller", () => {
     controller.updateTransactionFromBottom({ transactionId: "transaction_1" as never, name: "Read", start: 2, end: 4 });
     controller.moveTransactionToGroup("transaction_1" as never, "group_1" as never);
     controller.bulkMoveTransactionsToGroup([{ transactionId: "transaction_1" as never }, { transactionId: "transaction_2" as never, groupId: "group_1" as never }]);
-    controller.bulkUpdateTransactions([{ transactionId: "transaction_1" as never, name: "Read", start: 2, end: 4, color: "#123456" }]);
+    controller.bulkSetTransactionColor(["transaction_1" as never, "transaction_2" as never], "#123456");
     controller.bulkDuplicateTransactions([{ transactionId: "transaction_1" as never, newTransactionId: "transaction_3" as never, name: "Read Copy" }]);
     controller.bulkDeleteTransactions(["transaction_1" as never, "transaction_2" as never]);
 
@@ -115,11 +115,11 @@ describe("editor surface command controller", () => {
       expect.objectContaining({ id: "test_bottom_transaction_update", type: "transaction.update" }),
       expect.objectContaining({ id: "test_bottom_transaction_group", type: "transaction.moveToGroup" }),
       expect.objectContaining({ id: "test_bottom_transaction_bulk_group", type: "transaction.bulkMoveToGroup" }),
+      expect.objectContaining({ id: "test_bottom_transaction_bulk_color", type: "transaction.bulkSetColor" }),
       expect.objectContaining({ id: "test_bottom_transaction_bulk_duplicate", type: "transaction.bulkDuplicate" }),
       expect.objectContaining({ id: "test_bottom_transaction_bulk_delete", type: "transaction.bulkDelete" }),
     ]);
-    expect(executeBatch).toHaveBeenCalledOnce();
-    expect(executeBatch).toHaveBeenCalledWith("test_bottom_transaction_bulk", [expect.objectContaining({ id: "test_bottom_transaction_bulk_color", type: "transaction.update" })]);
+    expect(executeBatch).not.toHaveBeenCalled();
   });
 
   it("owns Timeline command construction and keeps range edits batched", () => {

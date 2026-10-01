@@ -200,9 +200,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
   const bulkColor = (color: string) => {
     const selected = document.transactions.filter((item) => selectedIds.has(item.id));
     if (selected.length === 0) return;
-    // #461: same round-trip requirement as applyTransactionDraft/
-    // colorSelected above -- description was still missing here.
-    commands.bulkUpdateTransactions(selected.map((item) => ({ transactionId: item.id, name: item.name, start: item.start, end: item.end, ...(item.laneId === undefined ? {} : { laneId: item.laneId }), ...(item.phases === undefined ? {} : { phases: item.phases }), ...(item.groupId === undefined ? {} : { groupId: item.groupId }), ...(item.description === undefined ? {} : { description: item.description }), color })));
+    commands.bulkSetTransactionColor(selected.map((item) => item.id), color);
   };
   const bulkDelete = () => {
     const ids = document.transactions.filter((item) => selectedIds.has(item.id)).map((item) => item.id);
