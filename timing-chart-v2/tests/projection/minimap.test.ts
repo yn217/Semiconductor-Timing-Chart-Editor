@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildMiniMapOverview, buildMiniMapTransactionOverview, transactionLaneIdentityKey, updateMiniMapTransactionOverview } from "@timing-chart-v2/projection";
-import type { SignalId } from "@timing-chart-v2/schema";
+import type { SignalId, TransactionGroupId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("MiniMap overview derivation", () => {
@@ -46,6 +46,35 @@ describe("MiniMap overview derivation", () => {
     const updatedAgain = updateMiniMapTransactionOverview(updated, next.transactions, next.transactionGroups, editedAgain, [transactions[1]!.id as never]);
     expect(updatedAgain.transactionsVisited).toBe(3);
     expect(updatedAgain.rows).toEqual(buildMiniMapTransactionOverview(editedAgain).rows);
+  });
+
+  it("reuses the immutable Transaction Group presentation index across affected-lane updates", () => {
+    const source = canonicalFixture();
+    const groups = [{ id: "txn_group_index" as TransactionGroupId, name: "Memory", order: 0, color: "#334455" }];
+    let groupVisits = 0;
+    const observedGroups = new Proxy(groups, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\d+$/.test(property) && Number(property) < target.length) groupVisits += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const groupId = groups[0]!.id;
+    const transactions = [
+      { id: "txn_group_index_a", name: "A", start: 1, end: 4, laneId: "lane_a", groupId, linkedSignals: [] },
+      { id: "txn_group_index_b", name: "B", start: 5, end: 8, laneId: "lane_b", groupId, linkedSignals: [] },
+    ];
+    const before = { ...source, transactionGroups: observedGroups, transactions };
+    const previous = buildMiniMapTransactionOverview(before);
+    expect(groupVisits).toBe(groups.length);
+
+    groupVisits = 0;
+    const nextTransactions = transactions.map((transaction, index) => ({ ...transaction, color: index === 0 ? "#123456" : "#654321" }));
+    const next = { ...before, transactions: nextTransactions };
+    const updated = updateMiniMapTransactionOverview(previous, transactions, observedGroups, next, transactions.map((transaction) => transaction.id as never));
+
+    expect(groupVisits).toBe(0);
+    expect(updated.laneBucketsRebuilt).toBe(2);
+    expect(updated.rows).toEqual(buildMiniMapTransactionOverview(next).rows);
   });
 
   it("keeps a one-Transaction update bounded across a 10k overview", () => {

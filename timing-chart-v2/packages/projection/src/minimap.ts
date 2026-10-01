@@ -1,4 +1,4 @@
-import type { CanonicalDocument, RowId, Signal, SignalId, SignalValueChange, Transaction } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, RowId, Signal, SignalId, SignalValueChange, Transaction, TransactionGroup } from "@timing-chart-v2/schema";
 import { transactionLaneIdentityKey } from "./transaction-lane-identity.js";
 
 export type MiniMapTone = "low" | "high" | "clock" | "comment";
@@ -149,6 +149,24 @@ export interface MiniMapTransactionOverview {
 
 type TransactionLaneBucket = { readonly groupId: Transaction["groupId"]; readonly laneId: string; readonly transactions: Transaction[] };
 type TransactionIndex = Readonly<{ byId?: ReadonlyMap<Transaction["id"], Transaction>; indexById: ReadonlyMap<Transaction["id"], number>; byLane: ReadonlyMap<string, TransactionLaneBucket> }>;
+type TransactionGroupPresentationIndex = Readonly<{ colorById: ReadonlyMap<TransactionGroup["id"], string>; orderById: ReadonlyMap<TransactionGroup["id"], number> }>;
+const emptyTransactionGroups: readonly TransactionGroup[] = Object.freeze([]);
+const transactionGroupPresentationIndexes = new WeakMap<readonly TransactionGroup[], TransactionGroupPresentationIndex>();
+
+function transactionGroupPresentationIndex(groups: readonly TransactionGroup[] | undefined): TransactionGroupPresentationIndex {
+  const owner = groups ?? emptyTransactionGroups;
+  const cached = transactionGroupPresentationIndexes.get(owner);
+  if (cached) return cached;
+  const colorById = new Map<TransactionGroup["id"], string>();
+  const orderById = new Map<TransactionGroup["id"], number>();
+  for (const group of owner) {
+    colorById.set(group.id, group.color ?? DEFAULT_TRANSACTION_COLOR);
+    orderById.set(group.id, group.order);
+  }
+  const index = Object.freeze({ colorById, orderById });
+  transactionGroupPresentationIndexes.set(owner, index);
+  return index;
+}
 const transactionIndexes = new WeakMap<readonly Transaction[], TransactionIndex>();
 const transactionOverviewRowIndexes = new WeakMap<MiniMapTransactionOverview, ReadonlyMap<string, number>>();
 
@@ -194,9 +212,7 @@ function sortTransactionSegments(left: MiniMapTransactionSegment, right: MiniMap
  */
 export function buildMiniMapTransactionOverview(document: Pick<CanonicalDocument, "transactions" | "transactionGroups" | "timeline">): MiniMapTransactionOverview {
   const cycleCount = Math.max(1, document.timeline.cycleCount);
-  const groups = document.transactionGroups ?? [];
-  const colorByGroupId = new Map(groups.map((group) => [group.id, group.color ?? DEFAULT_TRANSACTION_COLOR]));
-  const orderByGroupId = new Map(groups.map((group) => [group.id, group.order]));
+  const { colorById: colorByGroupId, orderById: orderByGroupId } = transactionGroupPresentationIndex(document.transactionGroups);
   const byLane = transactionIndex(document.transactions).byLane;
   const orderedBuckets = [...byLane.values()].sort((left, right) => {
     const leftOrder = left.groupId ? orderByGroupId.get(left.groupId) ?? Number.MAX_SAFE_INTEGER : Number.MAX_SAFE_INTEGER;
@@ -264,6 +280,7 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
       // retain the canonical full builder for that uncommon structural case.
       if (nextCount <= 0 || oldCount === 0) return buildMiniMapTransactionOverview(document);
     }
+    const { colorById: colorByGroupId } = transactionGroupPresentationIndex(document.transactionGroups);
     const nextBuckets = new Map(previousIndex.byLane);
     const rows = [...previous.rows];
     let transactionsVisited = changes.length;
@@ -278,8 +295,8 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
       nextBuckets.set(key, bucket);
       const rowIndex = rowIndexes.get(key);
       if (rowIndex === undefined) return buildMiniMapTransactionOverview(document);
-      const group = bucket.groupId ? document.transactionGroups?.find((item) => item.id === bucket.groupId) : undefined;
-      const segments = bucketTransactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? group?.color ?? DEFAULT_TRANSACTION_COLOR })).sort(sortTransactionSegments);
+      const groupColor = bucket.groupId ? colorByGroupId.get(bucket.groupId) : undefined;
+      const segments = bucketTransactions.map((transaction) => ({ start: transaction.start, end: transaction.end, color: transaction.color ?? groupColor ?? DEFAULT_TRANSACTION_COLOR })).sort(sortTransactionSegments);
       rows[rowIndex] = { key, groupId: bucket.groupId, laneId: bucket.laneId, rowIndex, segments };
     }
     const overview = Object.freeze({ cycleCount: previous.cycleCount, rows: Object.freeze(rows), transactionsVisited, laneBucketsRebuilt: affectedLaneIds.size });
@@ -302,7 +319,7 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
     if (!previousIndex.byId.has(id) && next.visible !== false) changedLanes.add(laneKey(next));
   }
   if (changedLanes.size === 0) return previous;
-  const colorByGroupId = new Map((document.transactionGroups ?? []).map((group) => [group.id, group.color ?? DEFAULT_TRANSACTION_COLOR]));
+  const { colorById: colorByGroupId, orderById: orderByGroupId } = transactionGroupPresentationIndex(document.transactionGroups);
   const buildRow = (key: string, rowIndex: number) => {
     const bucket = nextIndex.byLane.get(key);
     if (!bucket || bucket.transactions.length === 0) return undefined;
@@ -316,7 +333,6 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
     if (row) rowsByKey.set(key, row);
     else rowsByKey.delete(key);
   }
-  const orderByGroupId = new Map((document.transactionGroups ?? []).map((group) => [group.id, group.order]));
   const rows = [...rowsByKey.values()].sort((left, right) => {
     const leftOrder = left.groupId === undefined ? Number.MAX_SAFE_INTEGER : orderByGroupId.get(left.groupId) ?? Number.MAX_SAFE_INTEGER;
     const rightOrder = right.groupId === undefined ? Number.MAX_SAFE_INTEGER : orderByGroupId.get(right.groupId) ?? Number.MAX_SAFE_INTEGER;
