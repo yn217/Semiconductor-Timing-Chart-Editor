@@ -68,7 +68,6 @@ import { ClockGeneratorEditor } from "../editors/clock-generator-editor.js";
 import { DocumentProperties } from "../document-properties.js";
 import { TimelineToolbar, type SignalEditorProps } from "../timeline-toolbar.js";
 import { LayoutInspector } from "../layout-inspector.js";
-import { AnnotationEditor } from "../annotation-editor.js";
 import { AdvancedJsonPanel } from "../advanced-json-panel.js";
 import { SignalEditor } from "../editors/signal-editor.js";
 import { InspectorAnnotationEditor } from "../inspector-annotation-editor.js";

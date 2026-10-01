@@ -479,7 +479,7 @@ export class SemanticSnapCandidateService {
       // The geometry-owned boundary index is also useful when pitch is
       // non-uniform. Restrict candidate creation to the queried X interval
       // instead of materializing every transition/value candidate in the
-      // retained, contiguous source window. Sparse/folded or unordered maps
+      // retained contiguous source interval. Sparse/folded or unordered maps
       // keep the conservative semantic path below.
       const indexedSource = eligibleBoundaryEntries && createIndexedCycleSnapSource(signal.id, signal.type, y, map, eligibleBoundaryEntries, input.document.timeline.cycleCount);
       if (indexedSource) sources.push(indexedSource);
