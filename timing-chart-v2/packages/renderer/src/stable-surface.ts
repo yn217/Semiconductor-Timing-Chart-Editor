@@ -8,6 +8,12 @@ export function isWaveMountRequestFresh(request: Pick<WaveMountRequest, "documen
   return (request.documentEpoch === undefined || request.documentEpoch === currentDocumentEpoch) && (request.isFresh?.() ?? true);
 }
 
+/** Release a viewport-evicted owner while keeping its bounded reusable render artifact when supported. */
+export function releaseWaveOwnerForCacheEviction(provider: WaveformSurfaceProvider, signalId: WaveSignalId): void {
+  if (provider.retainWaveArtifact) provider.retainWaveArtifact(signalId);
+  else provider.disposeWave(signalId);
+}
+
 const diagnosticEncoder = new TextEncoder();
 
 function signalTypeLabel(type: string | undefined): string {
@@ -266,7 +272,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     for (const [signalId, owner] of this.#waveOwners) {
       if (this.#waveOwners.size <= waveOwnerCacheLimit) break;
       if (mounted.has(signalId)) continue;
-      owner.remove(); this.#provider.disposeWave(signalId); this.#waveOwners.delete(signalId); this.#dirtyWaves.delete(signalId); this.#waveVersions.delete(signalId); this.#wavePending.delete(signalId);
+      owner.remove(); releaseWaveOwnerForCacheEviction(this.#provider, signalId); this.#waveOwners.delete(signalId); this.#dirtyWaves.delete(signalId); this.#waveVersions.delete(signalId); this.#wavePending.delete(signalId);
       this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
     }
     this.#diagnostics = { ...this.#diagnostics, mountedWaveOwners: [...this.#waveOwners.values()].filter((owner) => owner.isConnected).length, cachedWaveOwners: this.#waveOwners.size, waveOwnerCacheLimit, dirtyWaveSize: this.#dirtyWaves.size, waveVersionSize: this.#waveVersions.size, fullReplaceEpochResets: this.#fullReplaceEpochResets, diagnosticMapPrunePasses: this.#diagnosticMapPrunePasses };
