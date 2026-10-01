@@ -225,15 +225,6 @@ function simpleClockEdgeIndexBefore(signal: ClockSignal, cycleCount: number, mod
   return count;
 }
 
-function clockEnabledAt(changes: ClockSignal["enable"], cycle: number): boolean {
-  let enabled: string | number = 1;
-  for (const change of changes ?? []) {
-    if (change.start > cycle) break;
-    enabled = change.value;
-  }
-  return clockEnabledAtValue(enabled);
-}
-
 function clockEnabledAtValue(value: string | number): boolean {
   return ["1", "true", "high"].includes(String(value).toLowerCase());
 }
@@ -393,10 +384,17 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
       }
     } else {
       const edges: Array<{ kind: "rising" | "falling"; cycle: number }> = [];
+      const changes = signal.enable ?? [];
+      let enableIndex = 0;
+      let enabled: string | number = 1;
       for (let cycle = start; cycle < document.timeline.cycleCount; cycle += period) {
         if (checkpoint()) yield;
+        while (enableIndex < changes.length && changes[enableIndex]!.start <= cycle) {
+          enabled = changes[enableIndex]!.value;
+          enableIndex += 1;
+        }
         const slot = Math.round((cycle - signal.generator.start) / period);
-        if (!clockEnabledAt(signal.enable, cycle) || suppressed.has(slot)) continue;
+        if (!clockEnabledAtValue(enabled) || suppressed.has(slot)) continue;
         edges.push({ kind: activeKind, cycle });
         if (cycle + oppositeOffset < document.timeline.cycleCount) edges.push({ kind: oppositeKind, cycle: cycle + oppositeOffset });
       }

@@ -574,6 +574,28 @@ describe("deterministic document export", () => {
     ]);
   });
 
+  it("walks full-export Clock enable changes once in cycle order", () => {
+    const base = canonicalFixture();
+    const clock = base.signals[0]!;
+    const document = {
+      ...base,
+      timeline: { ...base.timeline, end: 24, cycleCount: 24 },
+      signals: [{
+        ...clock,
+        generator: { ...clock.generator, period: 4, duty: 0.5 },
+        enable: [{ start: 0, value: 1 }, { start: 8, value: 0 }, { start: 16, value: 1 }],
+        edgeCounter: { ...clock.edgeCounter, show: true, mode: "both" as const, labelEvery: 1 },
+      }, base.signals[1]!],
+    };
+
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+
+    expect(scene.edgeCounters.map(({ cycle, kind }) => [cycle, kind])).toEqual([
+      [0, "rising"], [2, "falling"], [4, "rising"], [6, "falling"],
+      [16, "rising"], [18, "falling"], [20, "rising"], [22, "falling"],
+    ]);
+  });
+
   it("uses the configured Bookmark rather than the earliest Bookmark for export", () => {
     const base = canonicalFixture();
     const markerA = { id: "bookmark_a" as BookmarkId, name: "A", start: 1 };
