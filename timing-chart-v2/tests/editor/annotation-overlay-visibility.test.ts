@@ -193,6 +193,36 @@ describe("annotation visibility and semantic targets", () => {
     expect(metrics.indexEntriesVisited).toBeLessThan(document.annotations.length / 10);
   });
 
+  it("bounds Ghost Trace sample resolution to the viewport source window", () => {
+    const source = canonicalFixture();
+    const signal = source.signals[1]!;
+    const cycleCount = 20_000;
+    const annotation = {
+      id: "ghost-long" as never, type: "ghostTrace" as const, label: "Long trace", visible: true,
+      sourceSignalId: signal.id, traceOffsetCycles: 4,
+      start: { signalId: signal.id, cycle: 0, point: "cycle-start" as const },
+      end: { signalId: signal.id, cycle: cycleCount - 1, point: "cycle-start" as const },
+    };
+    const document = { ...source, timeline: { ...source.timeline, cycleCount, end: cycleCount }, annotations: [annotation] };
+    const mapping = buildDisplayTimeMapping(document.timeline, []);
+    const visibleTraceCycles = Array.from({ length: 10 }, (_, index) => 9_996 + index);
+    const visibleSampleCycles = visibleTraceCycles.map((cycle) => cycle + 4);
+    const entries = [0, cycleCount - 1, ...visibleSampleCycles].flatMap((cycle) => [
+      { cycle, point: "cycle-start" as const, position: { x: cycle * 10, y: 0 } },
+      { cycle, point: "transition-center" as const, position: { x: cycle * 10 + 5, y: 0 } },
+    ]);
+    const baseMap = new ImmutableLocalGeometryMap(signal.id, entries);
+    let findCalls = 0;
+    const map = { ...baseMap, find: (anchor: Parameters<typeof baseMap.find>[0]) => { findCalls += 1; return baseMap.find(anchor); } };
+    const viewport = { sourceStart: 10_000, sourceEnd: 10_010, displayStart: 10_000, displayEnd: 10_010, overscanCycles: 0, rowStart: 0, rowEnd: 200, generation: 1, pinnedIds: [] } satisfies DisplayTimeViewport;
+
+    const overlays = projectAnnotationOverlays(document, projectionFor(signal.id, true), new Map([[signal.id, map]]), mapping, 1, viewport);
+
+    expect(overlays).toHaveLength(1);
+    expect(overlays[0]?.tracePoints).toHaveLength(visibleTraceCycles.length * 2);
+    expect(findCalls).toBeLessThan(100);
+  });
+
   it("keeps cycle-only anchors in the indexed viewport projection", () => {
     const source = canonicalFixture();
     const signal = source.signals.find((item) => item.type === "clock") ?? source.signals.find((item) => item.type !== "commentRow")!;

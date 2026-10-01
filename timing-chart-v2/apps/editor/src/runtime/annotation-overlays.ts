@@ -136,8 +136,18 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
         const sourceRowY = sourceRow.y;
         const offset = annotation.traceOffsetCycles ?? 0;
         const points: Point[] = [];
-        const start = Math.max(0, Math.floor(Math.min(firstAnchor.cycle, lastAnchor.cycle)));
-        const end = Math.min(document.timeline.cycleCount, Math.ceil(Math.max(firstAnchor.cycle, lastAnchor.cycle)));
+        const start = Math.max(
+          0,
+          Math.floor(Math.min(firstAnchor.cycle, lastAnchor.cycle)),
+          viewport ? Math.ceil(viewport.sourceStart - offset) : 0,
+        );
+        const end = Math.min(
+          document.timeline.cycleCount,
+          Math.ceil(Math.max(firstAnchor.cycle, lastAnchor.cycle)),
+          // Trace cycle c samples source cycle c + offset. The source window
+          // is half-open, so the greatest integer trace cycle is ceil(end-offset)-1.
+          viewport ? Math.ceil(viewport.sourceEnd - offset) - 1 : document.timeline.cycleCount,
+        );
         for (let cycle = start; cycle <= end; cycle += 1) {
           const sourceCycle = cycle + offset;
           if (sourceCycle < 0 || sourceCycle > document.timeline.cycleCount) continue;
