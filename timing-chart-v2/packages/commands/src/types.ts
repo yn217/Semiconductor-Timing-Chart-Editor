@@ -73,6 +73,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "signal.updateEdgeCounter"; signalId: SignalId; edgeCounter: EdgeCounterSettings }>
   | Readonly<{ id: CommandId; type: "signal.updateResetSemantics"; signalId: SignalId; resetSemantics?: ResetSemantics }>
   | Readonly<{ id: CommandId; type: "spacer.create"; spacer: SpacerRow; targetGroupId: GroupId; index: number }>
+  | Readonly<{ id: CommandId; type: "spacer.bulkDelete"; spacerIds: readonly SpacerId[] }>
   | Readonly<{ id: CommandId; type: "spacer.move"; spacerId: SpacerId; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "spacer.update"; spacerId: SpacerId; height: number }>
   | Readonly<{ id: CommandId; type: "spacer.delete"; spacerId: SpacerId }>

@@ -11,6 +11,7 @@ import type {
   Signal,
   SignalGroup,
   SignalId,
+  SpacerId,
   SignalValueChange,
   SemanticAnchor,
   TimeGroup,
@@ -1057,6 +1058,40 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const nextDocument = { ...document, signalGroups: groups };
       const changeSet: ChangeSet = { rowOrder: [spacer.id], geometryScreenY: geometryRowsFrom(document, spacer.id), minimapOverview: true };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
+    }
+    case "spacer.bulkDelete": {
+      if (command.spacerIds.length === 0) return fail("no-op", "NO_OP", "$.spacerIds", "No Spacers were selected for deletion.");
+      const selectedIds = new Set(command.spacerIds);
+      if (selectedIds.size !== command.spacerIds.length) return fail("invalid", "DUPLICATE_ID", "$.spacerIds", "Bulk Spacer deletion contains duplicate IDs.");
+      const ownerBySpacerId = new Map<SpacerId, GroupId>();
+      for (const group of document.signalGroups) {
+        for (const spacer of group.spacers ?? []) ownerBySpacerId.set(spacer.id, group.id);
+      }
+      for (const spacerId of command.spacerIds) {
+        if (!ownerBySpacerId.has(spacerId)) return fail("invalid", "SPACER_NOT_FOUND", "$.spacerIds", `Spacer '${spacerId}' does not exist.`);
+      }
+
+      const affectedGroupIds = new Set(command.spacerIds.map((spacerId) => ownerBySpacerId.get(spacerId)!));
+      const groups = document.signalGroups.map((group) => {
+        if (!affectedGroupIds.has(group.id)) return group;
+        const remainingSpacers = (group.spacers ?? []).filter((spacer) => !selectedIds.has(spacer.id));
+        const rows = group.rows.filter((rowId) => !selectedIds.has(rowId as SpacerId));
+        if (remainingSpacers.length > 0) return { ...group, rows, spacers: remainingSpacers };
+        const { spacers: _removed, ...withoutSpacers } = group;
+        return { ...withoutSpacers, rows };
+      });
+      const ordered = orderedRows(document);
+      let earliestRemovedRow = ordered.length;
+      for (let index = 0; index < ordered.length; index += 1) {
+        if (selectedIds.has(ordered[index] as SpacerId)) { earliestRemovedRow = index; break; }
+      }
+      const signalById = new Map(document.signals.map((signal) => [signal.id, signal] as const));
+      const geometryScreenY = ordered.slice(earliestRemovedRow).filter((rowId): rowId is SignalId => {
+        const signal = signalById.get(rowId as SignalId);
+        return signal !== undefined && signal.type !== "commentRow" && signal.display.visible !== false;
+      });
+      const changeSet: ChangeSet = { rowOrder: command.spacerIds, geometryScreenY, minimapOverview: true };
+      return { ok: true, document: { ...document, signalGroups: groups }, changeSet, inverseChangeSet: changeSet };
     }
     case "enum.rename": {
       const index = (document.enumDefinitions ?? []).findIndex((definition) => definition.id === command.enumId);

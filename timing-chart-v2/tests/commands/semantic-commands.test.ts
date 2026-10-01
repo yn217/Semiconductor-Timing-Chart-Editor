@@ -957,6 +957,34 @@ describe("command execution and atomic history", () => {
     expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
   });
 
+  it("deletes a large Group Spacer set in one planner pass and invalidates following timing rows", () => {
+    const source = canonicalFixture();
+    const initialGroup = source.signalGroups[0]!;
+    const spacers = Array.from({ length: 1_000 }, (_, index) => ({ id: `spacer_bulk_${index}` as SpacerId, height: 24 }));
+    const withSpacers = {
+      ...source,
+      signalGroups: [{ ...initialGroup, rows: [spacers[0]!.id, ...initialGroup.rows, ...spacers.slice(1).map((spacer) => spacer.id)], spacers }, ...source.signalGroups.slice(1)],
+    };
+    const session = new CommandHistorySession(withSpacers);
+    const beforePlans = commandPlannerMetrics().internalPlans;
+    const result = session.execute({ id: commandId("cmd_bulk_spacer_delete"), type: "spacer.bulkDelete", spacerIds: spacers.map((spacer) => spacer.id) });
+
+    expect(result).toMatchObject({ ok: true, changeSet: { rowOrder: spacers.map((spacer) => spacer.id), geometryScreenY: ["sig_clk", "sig_data"] } });
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    const afterDelete = session.getSnapshot().document.signalGroups[0]!;
+    expect(afterDelete.rows).toEqual(initialGroup.rows);
+    expect(afterDelete).not.toHaveProperty("spacers");
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(withSpacers);
+
+    const beforeReject = session.getSnapshot();
+    const rejected = session.execute({ id: commandId("cmd_bulk_spacer_delete_reject"), type: "spacer.bulkDelete", spacerIds: [spacers[0]!.id, "spacer_missing" as SpacerId] });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "SPACER_NOT_FOUND" }] });
+    expect(session.getSnapshot()).toBe(beforeReject);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+  });
+
   it("creates a copied Group and its Signal/Spacer rows in one atomic planner action", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const signal = extraSignal("sig_group_copy_row");

@@ -143,7 +143,8 @@ export function useClipboardActions({ application, selection }: { application: E
       const groupSignalIdSet = new Set(groupSignalIds);
       const cutLinks = captureGroupTransactionLinks(value.document.transactions, groupSignalIdSet);
       const commands: SemanticCommand[] = groupSignalIds.length === 0 ? [] : [{ id: nextCommandId("cut_group_signals"), type: "signal.bulkDelete", signalIds: groupSignalIds }];
-      commands.push(...value.group.rows.filter((rowId) => !signalsById.has(rowId as SignalId)).map((rowId) => ({ id: nextCommandId("cut_group_spacer"), type: "spacer.delete" as const, spacerId: rowId as SpacerId })));
+      const groupSpacerIds = value.group.rows.filter((rowId) => !signalsById.has(rowId as SignalId)) as SpacerId[];
+      if (groupSpacerIds.length > 0) commands.push({ id: nextCommandId("cut_group_spacers"), type: "spacer.bulkDelete", spacerIds: groupSpacerIds });
       commands.push({ id: nextCommandId("cut_group_delete"), type: "group.delete", groupId: value.group.id });
       const result = application.executeBatch(nextCommandId("cut_group"), commands);
       if (result.ok) {
