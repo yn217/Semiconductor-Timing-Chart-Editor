@@ -22,7 +22,9 @@ test("Lane-only center labels do not overlap for sequential Transactions; the le
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   const base = generatePerformanceDocument({ signalCount: 2, cycleCount: 100, profile: "transaction-heavy" });
-  const transactions = Array.from({ length: 10 }, (_, index) => ({ id: `lane_label_${index}`, name: `Sequential ${index}`, start: index * 2, end: index * 2 + 1, laneId: "shared", linkedSignals: [base.signals[index % base.signals.length]!.id] }));
+  // Use the document's default lane so the no-Group layout doesn't also
+  // synthesize its intentionally reserved empty lane_0 row.
+  const transactions = Array.from({ length: 10 }, (_, index) => ({ id: `lane_label_${index}`, name: `Sequential ${index}`, start: index * 2, end: index * 2 + 1, laneId: "lane_0", linkedSignals: [base.signals[index % base.signals.length]!.id] }));
   const document = { ...base, transactions };
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "lane-labels.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "10");
@@ -30,7 +32,7 @@ test("Lane-only center labels do not overlap for sequential Transactions; the le
 
   const labels = page.getByTestId("transaction-lanes").locator(".transaction-lane-label");
   await expect(labels).toHaveCount(1);
-  await expect(labels).toContainText("shared");
+  await expect(labels).toContainText("Lane 0");
   await expect(page.getByTestId("transaction-lanes").locator(".transaction-lane-label-row")).toHaveCount(0);
   const treeRows = page.locator(".transaction-left-tree-row");
   await expect(treeRows).toHaveCount(10);
