@@ -275,6 +275,26 @@ describe("deterministic document export", () => {
     expect(JSON.parse(wholeDocument.waveforms[1]!.waveJson).wave).toHaveLength(100);
   });
 
+  it("keeps 100 Signal WaveDrom artifacts bounded for a narrow range on a 100k-cycle timeline", () => {
+    const base = scaleFixture(100);
+    const document = {
+      ...base,
+      timeline: { ...base.timeline, cycleCount: 100_000, end: 100_000 },
+      signals: base.signals.map((signal) => ({ ...signal, values: [{ start: 0, value: "00" }, { start: 50_000, value: "A5" }, { start: 99_999, value: "FF" }] })),
+    };
+
+    const scene = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 50_000, end: 50_012 } });
+
+    expect(scene.waveforms).toHaveLength(100);
+    for (const waveform of scene.waveforms) {
+      const waveJson = JSON.parse(waveform.waveJson) as { wave: string; data?: readonly string[] };
+      expect(waveJson.wave).toHaveLength(12);
+      expect(waveJson.data).toEqual(["0xA5"]);
+      expect(waveform.sourceWidth).toBeLessThan(100_000 * 20);
+      expect(waveform.cropX).toBe(0);
+    }
+  });
+
   it("keeps selected-range clock export bounded when the range ends in a partial final period", () => {
     const base = canonicalFixture();
     const sourceClock = base.signals[0] as ClockSignal;
