@@ -85,6 +85,18 @@ describe("buildDisplayTimeMapping", () => {
     expect(mapping.sourceToDisplay(25)).toBe(15);
   });
 
+  it("derives many display folds from the ordered owner index without changing source ownership", () => {
+    const groups = Array.from({ length: 2_000 }, (_, index) => collapsedGroup(`fold_${index}`, index * 3, index * 3 + 2)).reverse();
+    const mapping = buildDisplayTimeMapping(timeline(6_000), groups);
+
+    expect(mapping.displayCycleCount).toBe(2_000);
+    expect(mapping.sourceToDisplay(5_996)).toBe(1_998);
+    expect(mapping.sourceToDisplay(5_997)).toBeUndefined();
+    expect(mapping.sourceToDisplay(5_998)).toBeUndefined();
+    expect(mapping.sourceToDisplay(5_999)).toBe(1_999);
+    expect(mapping.collapsedGroupAtSource(5_998)?.id).toBe("fold_1999");
+  });
+
   it("merges overlapping collapsed ranges while preserving the half-open mapping", () => {
     const mapping = buildDisplayTimeMapping(timeline(20), [collapsedGroup("g1", 4, 10), collapsedGroup("g2", 8, 14)]);
     expect(mapping.displayCycleCount).toBe(10);

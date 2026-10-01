@@ -198,13 +198,14 @@ function identityMapping(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">
 export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): DisplayTimeMapping {
   const foldOwnerSegments = buildFoldOwnerSegments(timeGroups);
   const collapsedRanges: [number, number][] = [];
-  for (const group of timeGroups
-    .filter((group) => group.presentation?.collapsed)
-    .map((group) => [group.start, group.end] as const)
-    .sort((left, right) => left[0] - right[0])) {
+  // foldOwnerSegments are already sorted, non-overlapping intervals covering
+  // the union of all collapsed groups. Derive the display folds from that
+  // shared owner index instead of filtering, mapping, and sorting the same
+  // TimeGroup collection a second time during every mapping rebuild.
+  for (const segment of foldOwnerSegments) {
     const previous = collapsedRanges[collapsedRanges.length - 1];
-    if (previous && group[0] <= previous[1]) previous[1] = Math.max(previous[1], group[1]);
-    else collapsedRanges.push([group[0], group[1]]);
+    if (previous && segment.start <= previous[1]) previous[1] = Math.max(previous[1], segment.end);
+    else collapsedRanges.push([segment.start, segment.end]);
   }
   if (collapsedRanges.length === 0) return identityMapping(timeline);
 
