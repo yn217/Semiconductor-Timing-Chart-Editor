@@ -529,10 +529,15 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
       // The shared LRU has evicted the first entry, but its active owner still
       // uses the URL. Retaining the artifact transfers protection to reopen.
       expect(adapter.metrics()).toMatchObject({ imageObjectUrlsCreated: 65, imageObjectUrlsRevoked: 0, imageObjectUrlsRetained: 65 });
+      // A Signal-binding cache hit can reinsert this artifact after its shared
+      // LRU entry was evicted. That reinsertion must reacquire shared-cache
+      // ownership before the Signal and active-owner references are released.
+      const reinserted = await adapter.prepareWave(firstId, { wave: "0" }, ownerDocument);
+      expect(reinserted.markupCacheHit).toBe(true);
       adapter.retainArtifact(firstId);
       expect(adapter.metrics().imageObjectUrlsRevoked).toBe(0);
       adapter.dispose(firstId);
-      expect(adapter.metrics()).toMatchObject({ imageObjectUrlsRevoked: 1, imageObjectUrlsRetained: 64 });
+      expect(adapter.metrics()).toMatchObject({ imageObjectUrlsRevoked: 0, imageObjectUrlsRetained: 65 });
 
       adapter.disposeAll();
       expect(adapter.metrics()).toMatchObject({ imageObjectUrlsCreated: 65, imageObjectUrlsRevoked: 65, imageObjectUrlsRetained: 0 });

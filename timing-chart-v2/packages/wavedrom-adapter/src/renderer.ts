@@ -479,8 +479,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     const markupCacheHit = cacheEntry !== undefined;
     let markup: string;
     if (cacheEntry) {
-      this.#sharedMarkupCache.delete(cacheKey);
-      this.#sharedMarkupCache.set(cacheKey, cacheEntry);
+      this.#touchSharedMarkupCache(cacheKey, cacheEntry);
       markup = cacheEntry.markup;
       stages.waveJsonBytes = cacheEntry.waveJsonBytes;
       stages.semanticValuesBytes = cacheEntry.semanticValuesBytes;
@@ -512,15 +511,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
         svgMarkupBytes: stages.svgMarkupBytes,
         references: 0,
       };
-      this.#sharedMarkupCache.set(cacheKey, cacheEntry);
-      this.#retainArtifact(cacheEntry);
-      while (this.#sharedMarkupCache.size > SHARED_MARKUP_CACHE_LIMIT) {
-        const oldestKey = this.#sharedMarkupCache.keys().next().value as string | undefined;
-        if (oldestKey === undefined) break;
-        const evicted = this.#sharedMarkupCache.get(oldestKey);
-        this.#sharedMarkupCache.delete(oldestKey);
-        if (evicted) this.#releaseArtifact(evicted);
-      }
+      this.#touchSharedMarkupCache(cacheKey, cacheEntry);
     }
     const binding: SignalMarkupBinding = { key: cacheKey, renderIndex, artifact: cacheEntry };
     this.#setBinding(this.#markupCache, signalId, binding);
@@ -757,6 +748,23 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     if (previous) this.#releaseArtifact(previous.artifact);
     this.#retainArtifact(binding.artifact);
     cache.set(signalId, binding);
+  }
+
+  #touchSharedMarkupCache(key: string, entry: MarkupCacheEntry): void {
+    const current = this.#sharedMarkupCache.get(key);
+    if (current !== entry) {
+      if (current) this.#releaseArtifact(current);
+      this.#retainArtifact(entry);
+    }
+    this.#sharedMarkupCache.delete(key);
+    this.#sharedMarkupCache.set(key, entry);
+    while (this.#sharedMarkupCache.size > SHARED_MARKUP_CACHE_LIMIT) {
+      const oldestKey = this.#sharedMarkupCache.keys().next().value as string | undefined;
+      if (oldestKey === undefined) break;
+      const evicted = this.#sharedMarkupCache.get(oldestKey);
+      this.#sharedMarkupCache.delete(oldestKey);
+      if (evicted) this.#releaseArtifact(evicted);
+    }
   }
 
   #deleteBinding(cache: Map<SignalId, SignalMarkupBinding>, signalId: SignalId): void {
