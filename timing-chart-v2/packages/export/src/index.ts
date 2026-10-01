@@ -198,22 +198,106 @@ function boundedWaveJson(signal: Exclude<Signal, { readonly type: "commentRow" }
   return { waveJson, semanticValues, windowStart: range.start, renderedCycleCount: windowLength };
 }
 
-/** Map a selected display interval back to one contiguous source interval.
- * Clock windows can use the periodic source renderer only when the fold offset
- * preserves the clock's period phase; ranges crossing a fold remain on the
- * full-display path. */
-function foldedClockSourceWindow(mapping: DisplayTimeMapping, range: Readonly<{ start: number; end: number }>, period: number): Readonly<{ start: number; end: number }> | undefined {
+/** Map a selected display interval into period-phase-preserving source spans.
+ * A range may cross folds when every visible span retains the same periodic
+ * phase; otherwise Clock export stays on the full-display path. */
+interface FoldedClockSegment {
+  readonly displayStart: number;
+  readonly displayEnd: number;
+  readonly sourceStart: number;
+  readonly sourceEnd: number;
+}
+
+function foldedClockSourceSegments(mapping: DisplayTimeMapping, range: Readonly<{ start: number; end: number }>, period: number): readonly FoldedClockSegment[] | undefined {
   if (mapping.isIdentity || !Number.isInteger(period) || period < 1 || range.start < 0 || range.end > mapping.displayCycleCount || range.end <= range.start) return undefined;
   // WaveDrom's intrinsic width padding changes the exported cycle pitch for
   // very short artifacts. Conservatively keep windows under five cycles on
   // the full path, unless the document itself is shorter.
   if (range.end - range.start < Math.min(5, mapping.displayCycleCount)) return undefined;
-  const sourceStart = mapping.displayToSource(range.start);
-  const sourceLast = mapping.displayToSource(range.end - 1);
-  if (sourceStart === undefined || sourceLast === undefined) return undefined;
-  const sourceEnd = sourceLast + 1;
-  if (sourceEnd - sourceStart !== range.end - range.start || (sourceStart - range.start) % period !== 0) return undefined;
-  return { start: sourceStart, end: sourceEnd };
+  const firstSource = mapping.displayToSource(range.start);
+  if (firstSource === undefined || (firstSource - range.start) % period !== 0) return undefined;
+  const segments: FoldedClockSegment[] = [];
+  let segmentDisplayStart = range.start;
+  let segmentSourceStart = firstSource;
+  let previousSource = firstSource;
+  for (let display = range.start + 1; display < range.end; display += 1) {
+    const source = mapping.displayToSource(display);
+    if (source === undefined || (source - display) % period !== 0 || source <= previousSource) return undefined;
+    if (source !== previousSource + 1) {
+      segments.push({ displayStart: segmentDisplayStart, displayEnd: display, sourceStart: segmentSourceStart, sourceEnd: previousSource + 1 });
+      segmentDisplayStart = display;
+      segmentSourceStart = source;
+    }
+    previousSource = source;
+  }
+  segments.push({ displayStart: segmentDisplayStart, displayEnd: range.end, sourceStart: segmentSourceStart, sourceEnd: previousSource + 1 });
+  if (segments.some((segment) => segment.displayEnd - segment.displayStart !== segment.sourceEnd - segment.sourceStart)) return undefined;
+  return segments;
+}
+
+function boundedFoldedClockWaveJson(signal: ClockSignal, mapping: DisplayTimeMapping, range: Readonly<{ start: number; end: number }>): Readonly<{ waveJson: WaveJsonSignal; semanticValues: readonly string[]; windowStart: number; renderedCycleCount: number }> | undefined {
+  const period = signal.generator.period;
+  const generator = signal.generator;
+  if (generator.duty !== 0.5 || !Number.isInteger(period) || period < 1 || !Number.isInteger(generator.start) || generator.start % period !== 0 || !Number.isInteger(generator.phase * 2) || range.end - range.start < Math.min(5, mapping.displayCycleCount)) return undefined;
+  const windowStart = Math.floor(range.start / period) * period;
+  const windowEnd = Math.ceil(range.end / period) * period;
+  if (windowEnd > mapping.displayCycleCount) return undefined;
+  const segments = foldedClockSourceSegments(mapping, { start: windowStart, end: windowEnd }, period);
+  if (!segments || segments.length === 0 || segments.some((segment) =>
+    segment.displayStart % period !== 0 || segment.displayEnd % period !== 0 || segment.sourceStart % period !== 0 || segment.sourceEnd % period !== 0
+  )) return undefined;
+
+  const wave: string[] = [];
+  const enable = signal.enable ?? [];
+  let low = 0;
+  let high = enable.length;
+  while (low < high) {
+    const middle = low + ((high - low) >>> 1);
+    if (enable[middle]!.start <= segments[0]!.sourceStart) low = middle + 1;
+    else high = middle;
+  }
+  let enableIndex = low;
+  let activeEnableIndex = enableIndex - 1;
+  let previousEnableStart = activeEnableIndex >= 0 ? enable[activeEnableIndex]!.start : -1;
+  const suppressed = new Set(signal.generator.suppressedPeriods ?? []);
+  const clockToken = signal.generator.polarity === "positive" ? "p" : "n";
+  const staticToken = String(signal.generator.initial);
+  let previous: string | undefined;
+  for (const segment of segments) {
+    for (let displayCycle = segment.displayStart; displayCycle < segment.displayEnd; displayCycle += period) {
+      const sourceCycle = segment.sourceStart + (displayCycle - segment.displayStart);
+      while (enableIndex < enable.length && enable[enableIndex]!.start <= sourceCycle) {
+        const change = enable[enableIndex]!;
+        if (!Number.isInteger(change.start) || change.start < 0 || change.start >= mapping.sourceCycleCount || change.start <= previousEnableStart || change.start % period !== 0) return undefined;
+        previousEnableStart = change.start;
+        activeEnableIndex = enableIndex;
+        enableIndex += 1;
+      }
+      const rawEnable = activeEnableIndex < 0 ? 1 : enable[activeEnableIndex]!.value;
+      const normalizedEnable = String(rawEnable).toLowerCase();
+      const enabled = ["1", "true", "high"].includes(normalizedEnable);
+      if (!enabled && !["0", "false", "low"].includes(normalizedEnable)) return undefined;
+      const pulseSlot = displayCycle < signal.generator.start ? -1 : Math.round((displayCycle - signal.generator.start) / period);
+      const active = displayCycle >= signal.generator.start && enabled && !suppressed.has(pulseSlot);
+      const token = active ? clockToken : staticToken;
+      wave.push(token === previous ? "." : token);
+      previous = token;
+    }
+  }
+  const firstSegment = segments[0]!;
+  const lastSegment = segments[segments.length - 1]!;
+  return {
+    waveJson: {
+      wave: wave.join(""),
+      ...(period === 1 ? {} : { period }),
+      ...(signal.generator.phase === 0 ? {} : { phase: signal.generator.phase }),
+      ...(segments.length === 1 ? { sourceWindow: { start: firstSegment.sourceStart, end: lastSegment.sourceEnd } } : {}),
+      displayWindow: { start: windowStart, end: windowEnd },
+    },
+    semanticValues: [],
+    windowStart,
+    renderedCycleCount: windowEnd - windowStart,
+  };
 }
 
 interface GhostTraceWindow {
@@ -412,26 +496,16 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
       : canBoundFoldedValues
         ? remapValueChangesToDisplayWindow(signal.values, mapping, range.start, range.end)
         : remapValueChangesToDisplay(signal.values, mapping);
-    const foldedClockRange = canBoundWaveforms && !mapping.isIdentity && signal.type === "clock"
-      ? foldedClockSourceWindow(mapping, range, signal.generator.period)
+    const foldedClockBounded = canBoundWaveforms && !mapping.isIdentity && signal.type === "clock"
+      ? boundedFoldedClockWaveJson(signal, mapping, range)
       : undefined;
     const displaySignal = signal.type === "clock"
-      ? { ...signal, ...(signal.enable && foldedClockRange === undefined ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
+      ? { ...signal, ...(signal.enable && foldedClockBounded === undefined ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
       : { ...signal, values: displayValues ?? signal.values };
-    const foldedRangeIsSafe = mapping.isIdentity || signal.type !== "clock" || foldedClockRange !== undefined;
-    const boundedRaw = canBoundWaveforms && foldedRangeIsSafe
-      ? boundedWaveJson(foldedClockRange ? signal : mapping.isIdentity ? signal : displaySignal,
-        foldedClockRange ? mapping.sourceCycleCount : mapping.isIdentity ? document.timeline.cycleCount : mapping.displayCycleCount,
-        foldedClockRange ?? boundedRange ?? range,
-        document.enumDefinitions)
+    const boundedRaw = canBoundWaveforms && (mapping.isIdentity || signal.type !== "clock")
+      ? boundedWaveJson(mapping.isIdentity ? signal : displaySignal, mapping.isIdentity ? document.timeline.cycleCount : mapping.displayCycleCount, boundedRange ?? range, document.enumDefinitions)
       : undefined;
-    const bounded = boundedRaw && foldedClockRange
-      ? {
-        ...boundedRaw,
-        waveJson: { ...boundedRaw.waveJson, displayWindow: range },
-        windowStart: range.start - (foldedClockRange.start - boundedRaw.windowStart),
-      }
-      : boundedRaw;
+    const bounded = foldedClockBounded ?? boundedRaw;
     const waveJson = bounded?.waveJson ?? toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions });
     const semanticValues = bounded?.semanticValues ?? (signal.type !== "clock" && valueSignalWaveDomain(signal.type) === "data" ? displayValues!.map((change) => String(change.value)) : undefined);
     const svgMarkup = renderWaveJsonMarkup(waveJson, index, semanticValues);
