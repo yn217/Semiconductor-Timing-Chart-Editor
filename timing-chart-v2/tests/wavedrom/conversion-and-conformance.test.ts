@@ -745,6 +745,24 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(toWaveJsonWindow({ signal, cycleCount: 100 }, 60, 80)).toEqual({ wave: "1..............0....", sourceWindow: { start: 60, end: 80 }, displayWindow: { start: 60, end: 80 } });
   });
 
+  it("bounds source transition visits to a logarithmic prefix lookup plus the requested window", () => {
+    const sourceChanges = Array.from({ length: 100_000 }, (_, start) => ({ start, value: start % 2 }));
+    let indexedReads = 0;
+    const values = new Proxy(sourceChanges, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\d+$/.test(property)) indexedReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const signal = logicSignal(values as ValueSignal["values"]);
+
+    const bounded = toWaveJsonWindow({ signal, cycleCount: sourceChanges.length }, 90_000, 90_010);
+
+    expect(bounded.wave).toBe("0101010101");
+    expect(bounded.sourceWindow).toEqual({ start: 90_000, end: 90_010 });
+    expect(indexedReads).toBeLessThan(50);
+  });
+
   it("reconstructs a bounded clock window from canonical phase", () => {
     const clock = canonicalFixture().signals[0] as ClockSignal;
     const bounded = toWaveJsonWindow({ signal: clock, cycleCount: 100 }, 20, 40);

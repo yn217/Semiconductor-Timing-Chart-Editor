@@ -263,12 +263,21 @@ export function toWaveJsonWindow(source: CanonicalSignalSource, start: number, e
   const geometryMetadata = geometryWindow.start === semanticWindow.start && geometryWindow.end === semanticWindow.end ? {} : { geometryWindow };
   if (source.signal.type === "clock") return { ...clockToWaveJsonWindow(source, start, end), sourceWindow: semanticWindow, ...geometryMetadata, displayWindow: { start, end } };
   const changes = source.signal.values;
-  let current = changes[0];
-  for (const change of changes) { if (change.start > start) break; current = change; }
+  // Canonical value changes are strictly ordered. Use an upper bound to find
+  // the value carried into the window without walking its entire history.
+  let low = 0;
+  let high = changes.length;
+  while (low < high) {
+    const middle = low + ((high - low) >>> 1);
+    if (changes[middle]!.start <= start) low = middle + 1;
+    else high = middle;
+  }
+  const current = changes[low - 1] ?? changes[0];
   if (!current) throw new WaveDromAdapterError("EMPTY_SIGNAL_VALUES", "Bounded value conversion requires at least one canonical value.");
   const localChanges = [{ start: 0, value: current.value, ...(current.displayLabel === undefined ? {} : { displayLabel: current.displayLabel }) }];
-  for (const change of changes) {
-    if (change.start <= start || change.start >= end) continue;
+  for (let index = low; index < changes.length; index += 1) {
+    const change = changes[index]!;
+    if (change.start >= end) break;
     localChanges.push({ start: change.start - start, value: change.value, ...(change.displayLabel === undefined ? {} : { displayLabel: change.displayLabel }) });
   }
   const localSignal = { ...source.signal, values: localChanges };
