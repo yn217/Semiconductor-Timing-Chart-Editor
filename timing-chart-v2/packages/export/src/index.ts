@@ -761,7 +761,7 @@ function renderLineAnnotationSvg(annotation: ExportAnnotation, metadata: string)
   return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}" data-line-type="${lineType}" data-arrowhead="${arrowhead}"${metadata}>${defs.length ? `<defs>${defs.join("")}</defs>` : ""}<path data-role="annotation-path" d="${path.d}" fill="none" stroke="${xml(color)}" stroke-width="2"${path.dash ? ` stroke-dasharray="${path.dash}"` : ""}${markerAttrs}/>${multilineText(labelX, labelY, annotation.label, `fill="#991b1b" stroke="none"`, annotation.style)}</g>`;
 }
 
-function* renderExportSvgSteps(scene: ExportScene): Generator<void, string, void> {
+function* renderExportSvgSteps(scene: ExportScene): Generator<void, readonly string[], void> {
   let serializedItemsSinceYield = 0;
   const checkpoint = (): boolean => {
     serializedItemsSinceYield += 1;
@@ -856,7 +856,7 @@ function* renderExportSvgSteps(scene: ExportScene): Generator<void, string, void
     yield;
   }
   if (parts.length > 0) chunks.push(parts.join(""));
-  return chunks.join("");
+  return chunks;
 }
 
 /** Synchronous deterministic SVG API retained for pure callers and tests. */
@@ -864,10 +864,10 @@ export function renderExportSvg(scene: ExportScene): string {
   const steps = renderExportSvgSteps(scene);
   let step = steps.next();
   while (!step.done) step = steps.next();
-  return step.value;
+  return step.value.join("");
 }
 
-async function renderExportSvgCooperatively(scene: ExportScene): Promise<string> {
+async function renderExportSvgChunksCooperatively(scene: ExportScene): Promise<readonly string[]> {
   const steps = renderExportSvgSteps(scene);
   let sliceStartedAt = globalThis.performance?.now() ?? Date.now();
   while (true) {
@@ -879,6 +879,36 @@ async function renderExportSvgCooperatively(scene: ExportScene): Promise<string>
       sliceStartedAt = globalThis.performance?.now() ?? Date.now();
     }
   }
+}
+
+async function encodeSvgChunksCooperatively(chunks: readonly string[]): Promise<Uint8Array> {
+  const encoder = new TextEncoder();
+  const encoded: Uint8Array[] = [];
+  let totalBytes = 0;
+  let sliceStartedAt = globalThis.performance?.now() ?? Date.now();
+  for (const chunk of chunks) {
+    const bytes = encoder.encode(chunk);
+    encoded.push(bytes);
+    totalBytes += bytes.byteLength;
+    const now = globalThis.performance?.now() ?? Date.now();
+    if (now - sliceStartedAt >= 16) {
+      await yieldExportTask();
+      sliceStartedAt = globalThis.performance?.now() ?? Date.now();
+    }
+  }
+
+  const output = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const bytes of encoded) {
+    output.set(bytes, offset);
+    offset += bytes.byteLength;
+    const now = globalThis.performance?.now() ?? Date.now();
+    if (now - sliceStartedAt >= 16) {
+      await yieldExportTask();
+      sliceStartedAt = globalThis.performance?.now() ?? Date.now();
+    }
+  }
+  return output;
 }
 
 export async function rasterizeSvgToPng(svg: string, width: number, height: number, scale = 1): Promise<Uint8Array> {
@@ -925,8 +955,9 @@ export class DeterministicExportService implements ExportService {
   async export(request: ExportRequest): Promise<Uint8Array> {
     const settings: ExportSettings = { format: request.format, scope: request.settings?.scope ?? "document", ...request.settings };
     const scene = await buildExportSceneCooperatively(request.snapshot.document, settings);
-    const svg = await renderExportSvgCooperatively(scene);
-    if (request.format === "svg") return new TextEncoder().encode(svg);
+    const svgChunks = await renderExportSvgChunksCooperatively(scene);
+    if (request.format === "svg") return encodeSvgChunksCooperatively(svgChunks);
+    const svg = svgChunks.join("");
     if (request.format === "png") return rasterizeSvgToPng(svg, scene.width, scene.height, settings.scale ?? 1);
     return renderExportPdf(scene, svg);
   }

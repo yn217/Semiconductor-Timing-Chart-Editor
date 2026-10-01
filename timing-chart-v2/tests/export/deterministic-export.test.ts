@@ -252,6 +252,34 @@ describe("deterministic document export", () => {
     }
   });
 
+  it("cooperatively encodes multi-chunk SVG output without changing bytes", async () => {
+    const base = canonicalFixture();
+    const document = {
+      ...base,
+      timeline: { ...base.timeline, end: 4096, cycleCount: 4096 },
+      signals: [],
+      signalGroups: [],
+      transactions: [],
+      annotations: [],
+      timeGroups: [],
+    };
+    const settings = { scope: "document" as const };
+    const expected = renderExportSvg(buildExportScene(document, { format: "svg", ...settings }));
+    const service = new DeterministicExportService();
+    const yieldTask = vi.fn(async () => undefined);
+    let now = 0;
+    const performanceNow = vi.spyOn(globalThis.performance, "now").mockImplementation(() => { now += 20; return now; });
+    vi.stubGlobal("scheduler", { yield: yieldTask });
+    try {
+      const actual = new TextDecoder().decode(await service.export({ format: "svg", snapshot: { revision: 0, document }, settings }));
+      expect(yieldTask.mock.calls.length).toBeGreaterThanOrEqual(4);
+      expect(actual).toBe(expected);
+    } finally {
+      performanceNow.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("renders selected-range WaveDrom inputs as bounded windows without changing source cycles", () => {
     const base = canonicalFixture();
     const document = {
