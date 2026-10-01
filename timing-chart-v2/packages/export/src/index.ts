@@ -467,14 +467,17 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
       x: LABEL_WIDTH + (toDisplayCycle(mapping, group.start, "floor") - range.start) * cycleWidth,
     }))
     .filter((item) => item.x >= LABEL_WIDTH && item.x <= LABEL_WIDTH + (range.end - range.start) * cycleWidth);
-  const transactions = document.transactions.map((transaction): ExportTransaction | undefined => {
+  const transactions: ExportTransaction[] = [];
+  for (const transaction of document.transactions) {
     const laneId = transaction.laneId ?? "lane_0";
     const displayStart = toDisplayCycle(mapping, transaction.start, "floor");
     const displayEnd = Math.max(displayStart + 1, toDisplayCycle(mapping, transaction.end, "ceil"));
-    if (displayEnd <= range.start || displayStart >= range.end) return undefined;
-    const x = LABEL_WIDTH + (Math.max(range.start, displayStart) - range.start) * cycleWidth;
-    return { id: transaction.id, name: transaction.name, laneId, x, y: transactionTop + laneIndex.get(laneId)! * TRANSACTION_HEIGHT, width: (Math.min(range.end, displayEnd) - Math.max(range.start, displayStart)) * cycleWidth, linkedSignals: transaction.linkedSignals ?? [] };
-  }).filter((transaction): transaction is ExportTransaction => transaction !== undefined);
+    if (displayEnd > range.start && displayStart < range.end) {
+      const x = LABEL_WIDTH + (Math.max(range.start, displayStart) - range.start) * cycleWidth;
+      transactions.push({ id: transaction.id, name: transaction.name, laneId, x, y: transactionTop + laneIndex.get(laneId)! * TRANSACTION_HEIGHT, width: (Math.min(range.end, displayEnd) - Math.max(range.start, displayStart)) * cycleWidth, linkedSignals: transaction.linkedSignals ?? [] });
+    }
+    if (checkpoint()) yield;
+  }
   const measurementLaneById = allocateMeasurementLanes(document.annotations.flatMap((annotation) => {
     if (annotation.type !== "measurement" || !annotation.start || !annotation.end) return [];
     const first = anchorPoint(annotation, "start", document, rowY, mapping, range.start, cycleWidth);

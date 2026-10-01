@@ -419,6 +419,35 @@ describe("deterministic document export", () => {
     }
   });
 
+  it("yields during dense Transaction scene projection without changing SVG bytes", async () => {
+    const base = canonicalFixture();
+    const prototype = base.transactions[0]!;
+    const document = {
+      ...base,
+      timeline: { ...base.timeline, end: 1, cycleCount: 1 },
+      signals: [],
+      signalGroups: [],
+      annotations: [],
+      transactions: Array.from({ length: 96 }, (_, index) => ({ ...prototype, id: `txn_dense_${index}` as TransactionId, name: `Dense ${index}`, start: 0, end: 1, phases: [] })),
+      timeGroups: [],
+    };
+    const settings = { scope: "document" as const };
+    const expected = renderExportSvg(buildExportScene(document, { format: "svg", ...settings }));
+    const service = new DeterministicExportService();
+    const yieldTask = vi.fn(async () => undefined);
+    let now = 0;
+    const performanceNow = vi.spyOn(globalThis.performance, "now").mockImplementation(() => { now += 20; return now; });
+    vi.stubGlobal("scheduler", { yield: yieldTask });
+    try {
+      const actual = new TextDecoder().decode(await service.export({ format: "svg", snapshot: { revision: 0, document }, settings }));
+      expect(yieldTask.mock.calls.length).toBeGreaterThanOrEqual(2);
+      expect(actual).toBe(expected);
+    } finally {
+      performanceNow.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("exports datasheet Measurement dimension markers, extensions, and lane metadata deterministically", () => {
     const base = canonicalFixture();
     const signal = base.signals[1]!;
