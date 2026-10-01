@@ -352,10 +352,7 @@ export function useClipboardActions({ application, selection }: { application: E
   const setVisibility = (visible: boolean) => {
     const value = selected();
     if (value.transactions.length > 0) {
-      const commands = value.transactions.filter((transaction) => (transaction.visible ?? true) !== visible).map((transaction) => ({ id: nextCommandId("route_transaction_visibility"), type: "transaction.update" as const, transactionId: transaction.id, name: transaction.name, start: transaction.start, end: transaction.end, ...(transaction.laneId === undefined ? {} : { laneId: transaction.laneId }), ...(transaction.phases === undefined ? {} : { phases: transaction.phases }), ...(transaction.groupId === undefined ? {} : { groupId: transaction.groupId }), ...(transaction.color === undefined ? {} : { color: transaction.color }), ...(transaction.description === undefined ? {} : { description: transaction.description }), visible }));
-      if (commands.length > 1) return application.executeBatch(nextCommandId("route_transaction_visibility_selection"), commands);
-      if (commands.length === 1) return application.execute(commands[0]!);
-      return undefined;
+      return application.execute({ id: nextCommandId("route_transaction_visibility_selection"), type: "transaction.bulkSetVisibility", transactionIds: value.transactions.map((transaction) => transaction.id), visible });
     }
     const commands = value.signals
       .filter(({ signal }) => (signal.display.visible !== false) !== visible)

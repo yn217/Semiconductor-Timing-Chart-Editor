@@ -897,6 +897,31 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.transactions).toHaveLength(4);
   });
 
+  it("changes selected Transaction visibility in one planner/history action", () => {
+    const initial = canonicalFixture();
+    const items = Array.from({ length: 1_000 }, (_, index) => ({
+      id: `txn_visibility_${index}` as TransactionId,
+      name: `Transaction ${index}`,
+      start: 1,
+      end: 2,
+      laneId: "lane_0",
+    }));
+    const session = new CommandHistorySession({ ...initial, transactions: items });
+    const before = session.getSnapshot().document.transactions;
+    const beforePlans = commandPlannerMetrics().internalPlans;
+
+    expect(session.execute({ id: commandId("cmd_txn_bulk_visibility"), type: "transaction.bulkSetVisibility", transactionIds: [items[2]!.id, items[900]!.id], visible: false }).ok).toBe(true);
+
+    const after = session.getSnapshot().document.transactions;
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    expect(after[2]).toMatchObject({ id: items[2]!.id, visible: false });
+    expect(after[900]).toMatchObject({ id: items[900]!.id, visible: false });
+    expect(after[3]).toBe(before[3]);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions).toBe(before);
+  });
+
   it("rejects duplicate stable IDs within a Transaction bulk-create atomically", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const before = session.getSnapshot().document;

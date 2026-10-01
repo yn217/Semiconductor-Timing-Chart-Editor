@@ -1283,6 +1283,26 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const changeSet: ChangeSet = { transactionSemantics: command.transactionIds, minimapOverview: true };
       return { ok: true, document: { ...document, transactions: document.transactions.filter((item) => !selectedIds.has(item.id)) }, changeSet, inverseChangeSet: changeSet };
     }
+    case "transaction.bulkSetVisibility": {
+      if (command.transactionIds.length === 0) return fail("no-op", "NO_OP", "$.transactionIds", "No Transactions were selected for visibility change.");
+      const selectedIds = new Set(command.transactionIds);
+      if (selectedIds.size !== command.transactionIds.length) return fail("invalid", "DUPLICATE_ID", "$.transactionIds", "Bulk Transaction visibility contains duplicate IDs.");
+      const indexed = new Map<TransactionId, { readonly index: number; readonly transaction: Transaction }>();
+      document.transactions.forEach((transaction, index) => {
+        if (selectedIds.has(transaction.id)) indexed.set(transaction.id, { index, transaction });
+      });
+      const missing = command.transactionIds.find((id) => !indexed.has(id));
+      if (missing !== undefined) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionIds", `Transaction '${missing}' does not exist.`);
+      const changed = command.transactionIds.filter((id) => (indexed.get(id)!.transaction.visible ?? true) !== command.visible);
+      if (changed.length === 0) return fail("no-op", "NO_OP", "$", "Transaction visibility is unchanged.");
+      const transactions = document.transactions.slice();
+      for (const id of changed) {
+        const target = indexed.get(id)!;
+        transactions[target.index] = { ...target.transaction, visible: command.visible };
+      }
+      const changeSet: ChangeSet = { transactionSemantics: changed, minimapOverview: true };
+      return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
+    }
     case "transaction.bulkDuplicate": {
       if (command.items.length === 0) return fail("no-op", "NO_OP", "$.items", "Bulk Transaction duplication requires at least one item.");
       const sourceById = new Map(document.transactions.map((item) => [item.id, item]));
