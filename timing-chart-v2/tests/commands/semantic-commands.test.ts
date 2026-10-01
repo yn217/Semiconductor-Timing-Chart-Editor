@@ -902,6 +902,49 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.transactions).toHaveLength(4);
   });
 
+  it("keeps product-scale Transaction create, duplicate, and delete to one planner and one History action each", () => {
+    const initial = canonicalFixture();
+    const transactions = Array.from({ length: 9_000 }, (_, index) => ({
+      id: `txn_product_${index}` as TransactionId,
+      name: `Transaction ${index}`,
+      start: index % 7,
+      end: (index % 7) + 1,
+      laneId: `lane_${index % 20}`,
+      linkedSignals: [],
+    }));
+    const session = new CommandHistorySession(initial);
+
+    const beforeCreatePlans = commandPlannerMetrics().internalPlans;
+    expect(session.execute({ id: commandId("cmd_txn_product_create"), type: "transaction.bulkCreate", transactions }).ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforeCreatePlans).toBe(1);
+    expect(session.getSnapshot().document.transactions).toHaveLength(9_000);
+    expect(session.historyState().undoDepth).toBe(1);
+
+    const duplicatedIds = transactions.slice(0, 1_000).map((transaction) => `${transaction.id}_copy` as TransactionId);
+    const beforeDuplicatePlans = commandPlannerMetrics().internalPlans;
+    expect(session.execute({
+      id: commandId("cmd_txn_product_duplicate"),
+      type: "transaction.bulkDuplicate",
+      items: transactions.slice(0, 1_000).map((transaction, index) => ({ transactionId: transaction.id, newTransactionId: duplicatedIds[index]! })),
+    }).ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforeDuplicatePlans).toBe(1);
+    expect(session.getSnapshot().document.transactions).toHaveLength(10_000);
+    expect(session.historyState().undoDepth).toBe(2);
+
+    const beforeDeletePlans = commandPlannerMetrics().internalPlans;
+    expect(session.execute({ id: commandId("cmd_txn_product_delete"), type: "transaction.bulkDelete", transactionIds: transactions.map((transaction) => transaction.id) }).ok).toBe(true);
+    expect(commandPlannerMetrics().internalPlans - beforeDeletePlans).toBe(1);
+    expect(session.getSnapshot().document.transactions.map((transaction) => transaction.id)).toEqual(duplicatedIds);
+    expect(session.historyState().undoDepth).toBe(3);
+
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions).toHaveLength(10_000);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions).toHaveLength(9_000);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions).toEqual(initial.transactions);
+  });
+
   it("changes selected Transaction visibility in one planner/history action", () => {
     const initial = canonicalFixture();
     const items = Array.from({ length: 1_000 }, (_, index) => ({
