@@ -43,41 +43,56 @@ export function ExportDialog({ snapshot, range, restoreFocusRef, onDiagnostic, o
   const [pageEnabled, setPageEnabled] = useState(false);
   const [foldPolicy, setFoldPolicy] = useState<"respect" | "expand">("respect");
   const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(false);
   const dialogRef = useRef<HTMLElement>(null);
   useExportDialogFocusLoop(dialogRef, restoreFocusRef);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; abortRef.current?.abort(); };
+  }, []);
   const settings = () => ({ scope, ...(scope === "selected-range" ? { range } : {}), scale, ...(pageEnabled ? { page: { size: pageSize, orientation, margin, fit } } : {}), foldPolicy });
-  const exportNow = async () => {
-    setStatus("Generating…");
+  const progressText = (stage: string) => ({ preparing: "Preparing chart…", drawing: "Drawing export…", encoding: "Encoding file…", rasterizing: "Rasterizing image…", finalizing: "Finalizing PDF…" }[stage] ?? "Working…");
+  const cancel = () => abortRef.current?.abort();
+  const close = () => { cancel(); onClose(); };
+  const runExport = async (fileFormat: "svg" | "png" | "pdf", deliver: (bytes: Uint8Array) => Promise<void> | void, failureCode: "EXPORT_FAILED" | "CLIPBOARD_FAILED", failurePath: string, failureOperation: string, failureLabel: string, successText: string) => {
+    if (abortRef.current) return;
+    const abort = new AbortController();
+    abortRef.current = abort;
+    if (mountedRef.current) { setBusy(true); setStatus("Preparing chart…"); }
     try {
-      const bytes = await controller.export({ format, snapshot, settings: settings() });
-      try {
-        controller.download(bytes, `${snapshot.document.document.title || "timing-chart"}.${format}`, format === "svg" ? "image/svg+xml" : format === "png" ? "image/png" : "application/pdf");
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : "Browser download preparation failed.";
-        onDiagnostic({ code: "EXPORT_FAILED", path: "$.export.download", message: `Export download failed: ${reason}`, severity: "error", operation: "document.export.download", operationLabel: `Download ${format.toUpperCase()} export`, source: "export", stage: "storage", recommendation: "Retry the download or choose another export format.", detail: "export-failure:download" });
-        setStatus(`Download failed · ${reason}`);
-        return;
-      }
+      const bytes = await controller.export({ format: fileFormat, snapshot, settings: settings(), signal: abort.signal, onProgress: ({ stage }) => { if (!abort.signal.aborted) setStatus(progressText(stage)); } });
+      if (abort.signal.aborted) { const error = new Error("Export canceled."); error.name = "AbortError"; throw error; }
+      await deliver(bytes);
+      if (abort.signal.aborted) { const error = new Error("Export canceled."); error.name = "AbortError"; throw error; }
       onDiagnostic(undefined);
-      setStatus(`${format.toUpperCase()} ready`);
+      if (mountedRef.current) setStatus(successText);
     } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") { if (mountedRef.current) setStatus("Export canceled"); return; }
       const reason = error instanceof Error ? error.message : "Export generation failed.";
-      onDiagnostic({ code: "EXPORT_FAILED", path: "$.export", message: `Export generation failed: ${reason}`, severity: "error", operation: "document.export.generate", operationLabel: `Generate ${format.toUpperCase()} export`, source: "export", stage: "rasterize", recommendation: "Reduce the selected range or export scale, then retry.", detail: "export-failure:generate" });
-      setStatus(reason);
+      if (!(error instanceof Error && "diagnosticReported" in error)) {
+        onDiagnostic({ code: failureCode, path: failurePath, message: `${failureLabel}: ${reason}`, severity: "error", operation: failureOperation, operationLabel: failureLabel, source: failureCode === "CLIPBOARD_FAILED" ? "clipboard" : "export", stage: failureCode === "CLIPBOARD_FAILED" ? "clipboard-write" : "rasterize", recommendation: failureCode === "CLIPBOARD_FAILED" ? "Allow clipboard access or retry the copy operation." : "Reduce the selected range or export scale, then retry.", detail: failureCode === "CLIPBOARD_FAILED" ? "clipboard-failure:copy" : "export-failure:generate" });
+      }
+      if (mountedRef.current) setStatus(reason);
+    } finally {
+      if (abortRef.current === abort) abortRef.current = null;
+      if (mountedRef.current) setBusy(false);
     }
   };
-  const copyNow = async (copyFormat: "svg" | "png") => {
-    setStatus("Copying…");
+  const exportNow = async () => runExport(format, (bytes) => {
     try {
-      const bytes = await controller.export({ format: copyFormat, snapshot, settings: settings() });
-      await controller.copyImage(bytes, copyFormat);
-      onDiagnostic(undefined);
-      setStatus(`${copyFormat.toUpperCase()} copied`);
+      controller.download(bytes, `${snapshot.document.document.title || "timing-chart"}.${format}`, format === "svg" ? "image/svg+xml" : format === "png" ? "image/png" : "application/pdf");
     } catch (error) {
-      const reason = error instanceof Error ? error.message : "Clipboard export failed.";
-      onDiagnostic({ code: "CLIPBOARD_FAILED", path: "$.clipboard", message: `Clipboard copy failed: ${reason}`, severity: "error", operation: "document.clipboard.copy", operationLabel: `Copy ${copyFormat.toUpperCase()} export`, source: "clipboard", stage: "clipboard-write", recommendation: "Allow clipboard access or retry the copy operation.", detail: "clipboard-failure:copy" });
-      setStatus(reason);
+      const reason = error instanceof Error ? error.message : "Browser download preparation failed.";
+      onDiagnostic({ code: "EXPORT_FAILED", path: "$.export.download", message: `Export download failed: ${reason}`, severity: "error", operation: "document.export.download", operationLabel: `Download ${format.toUpperCase()} export`, source: "export", stage: "storage", recommendation: "Retry the download or choose another export format.", detail: "export-failure:download" });
+      const reported = new Error(`Download failed · ${reason}`) as Error & { diagnosticReported: true };
+      reported.diagnosticReported = true;
+      throw reported;
     }
+  }, "EXPORT_FAILED", "$.export", "document.export.generate", `Generate ${format.toUpperCase()} export`, `${format.toUpperCase()} ready`);
+  const copyNow = async (copyFormat: "svg" | "png") => {
+    await runExport(copyFormat, (bytes) => controller.copyImage(bytes, copyFormat), "CLIPBOARD_FAILED", "$.clipboard", "document.clipboard.copy", `Copy ${copyFormat.toUpperCase()} export`, `${copyFormat.toUpperCase()} copied`);
   };
-  return <div className="modal-backdrop"><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Export Timing Chart" className="export-dialog"><header><h2>Export</h2><button type="button" aria-label="Close export" onClick={onClose}><ExportCloseIcon /></button></header><label>Format<select aria-label="Export format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="svg">SVG</option><option value="png">PNG</option><option value="pdf">PDF</option></select></label><label>Scope<select aria-label="Export scope" value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option value="document">Entire Document</option><option value="selected-range">Selected Range</option></select></label><label>Page Size<select aria-label="Export page size" value={pageSize} onChange={(event) => { setPageEnabled(true); setPageSize(event.target.value as typeof pageSize); }}><option value="A4">A4</option><option value="Letter">Letter</option><option value="wide">Wide</option></select></label><label>Orientation<select aria-label="Export orientation" value={orientation} onChange={(event) => { setPageEnabled(true); setOrientation(event.target.value as typeof orientation); }}><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select></label><label>Fit<select aria-label="Export fit" value={fit} onChange={(event) => { setPageEnabled(true); setFit(event.target.value as typeof fit); }}><option value="width">Fit Width</option><option value="page">Fit Page</option></select></label><label>Margin<input aria-label="Export margin" type="number" min="0" step="1" value={margin} onChange={(event) => { setPageEnabled(true); setMargin(Number(event.target.value)); }} /></label><label>Fold Policy<select aria-label="Export fold policy" value={foldPolicy} onChange={(event) => setFoldPolicy(event.target.value as typeof foldPolicy)}><option value="respect">Respect Axis Break</option><option value="expand">Expand Folded Ranges</option></select></label>{format === "png" && <label>Scale<select aria-label="PNG scale" value={scale} onChange={(event) => setScale(Number(event.target.value))}><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option></select></label>}<div className="export-summary">Canonical source · {snapshot.document.signals.length} signals · {snapshot.document.transactions.length} transactions</div><footer><output>{status}</output><button type="button" onClick={() => void copyNow("svg")}>Copy SVG</button><button type="button" onClick={() => void copyNow("png")}>Copy PNG</button><button type="button" onClick={() => void exportNow()}>Export {format.toUpperCase()}</button></footer></section></div>;
+  return <div className="modal-backdrop"><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Export Timing Chart" className="export-dialog"><header><h2>Export</h2><button type="button" aria-label="Close export" onClick={close}><ExportCloseIcon /></button></header><label>Format<select aria-label="Export format" value={format} disabled={busy} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="svg">SVG</option><option value="png">PNG</option><option value="pdf">PDF</option></select></label><label>Scope<select aria-label="Export scope" value={scope} disabled={busy} onChange={(event) => setScope(event.target.value as typeof scope)}><option value="document">Entire Document</option><option value="selected-range">Selected Range</option></select></label><label>Page Size<select aria-label="Export page size" value={pageSize} disabled={busy} onChange={(event) => { setPageEnabled(true); setPageSize(event.target.value as typeof pageSize); }}><option value="A4">A4</option><option value="Letter">Letter</option><option value="wide">Wide</option></select></label><label>Orientation<select aria-label="Export orientation" value={orientation} disabled={busy} onChange={(event) => { setPageEnabled(true); setOrientation(event.target.value as typeof orientation); }}><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select></label><label>Fit<select aria-label="Export fit" value={fit} disabled={busy} onChange={(event) => { setPageEnabled(true); setFit(event.target.value as typeof fit); }}><option value="width">Fit Width</option><option value="page">Fit Page</option></select></label><label>Margin<input aria-label="Export margin" type="number" min="0" step="1" value={margin} disabled={busy} onChange={(event) => { setPageEnabled(true); setMargin(Number(event.target.value)); }} /></label><label>Fold Policy<select aria-label="Export fold policy" value={foldPolicy} disabled={busy} onChange={(event) => setFoldPolicy(event.target.value as typeof foldPolicy)}><option value="respect">Respect Axis Break</option><option value="expand">Expand Folded Ranges</option></select></label>{format === "png" && <label>Scale<select aria-label="PNG scale" value={scale} disabled={busy} onChange={(event) => setScale(Number(event.target.value))}><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option></select></label>}<div className="export-summary">Canonical source · {snapshot.document.signals.length} signals · {snapshot.document.transactions.length} transactions</div><footer><output role="status" aria-live="polite">{status}</output>{busy ? <button type="button" onClick={cancel}>Cancel Export</button> : <><button type="button" onClick={() => void copyNow("svg")}>Copy SVG</button><button type="button" onClick={() => void copyNow("png")}>Copy PNG</button><button type="button" onClick={() => void exportNow()}>Export {format.toUpperCase()}</button></>}</footer></section></div>;
 }

@@ -205,6 +205,23 @@ describe("deterministic document export", () => {
     expect(first).toEqual(second);
   });
 
+  it("publishes export stages and aborts before the next cooperative stage", async () => {
+    const controller = new AbortController();
+    const stages: string[] = [];
+    const exportPromise = new DeterministicExportService().export({
+      format: "svg",
+      snapshot: { revision: 0, document: scaleFixture(2) },
+      signal: controller.signal,
+      onProgress: ({ stage }) => {
+        stages.push(stage);
+        if (stage === "drawing") controller.abort();
+      },
+    });
+
+    await expect(exportPromise).rejects.toMatchObject({ name: "AbortError" });
+    expect(stages).toEqual(["preparing", "drawing"]);
+  });
+
   it("passes cooperative SVG chunks directly to PNG Blob without a giant joined string", async () => {
     const base = scaleFixture(2);
     const document = {

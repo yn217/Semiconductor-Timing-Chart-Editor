@@ -19,7 +19,12 @@ export interface ExportRequest {
   readonly format: "svg" | "png" | "pdf";
   readonly snapshot: CanonicalSnapshot;
   readonly settings?: Omit<ExportSettings, "format">;
+  readonly signal?: AbortSignal;
+  readonly onProgress?: (progress: ExportProgress) => void;
 }
+
+export type ExportProgressStage = "preparing" | "drawing" | "encoding" | "rasterizing" | "finalizing";
+export interface ExportProgress { readonly stage: ExportProgressStage }
 
 export interface ExportWave { readonly signalId: SignalId; readonly name: string; readonly role: string; readonly y: number; readonly svgMarkup: string; readonly sourceWidth: number; readonly sourceHeight: number; readonly cropX: number; readonly width: number; readonly waveJson: string }
 export interface ExportLabel { readonly text: string; readonly x: number; readonly y: number; readonly kind: "signal" | "comment" | "group" | "annotation" | "transaction" }
@@ -768,29 +773,41 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   return step.value;
 }
 
-async function yieldExportTask(): Promise<void> {
+function throwIfExportAborted(signal: AbortSignal | undefined): void {
+  if (!signal?.aborted) return;
+  const error = new Error("Export canceled.");
+  error.name = "AbortError";
+  throw error;
+}
+
+async function yieldExportTask(signal?: AbortSignal): Promise<void> {
+  throwIfExportAborted(signal);
   const scheduler = (globalThis as typeof globalThis & { scheduler?: { yield?: () => Promise<void> } }).scheduler;
-  if (typeof scheduler?.yield === "function") { await scheduler.yield(); return; }
+  if (typeof scheduler?.yield === "function") { await scheduler.yield(); throwIfExportAborted(signal); return; }
   if (typeof globalThis.MessageChannel === "function") {
     await new Promise<void>((resolve) => {
       const channel = new MessageChannel();
       channel.port1.onmessage = () => { channel.port1.close(); channel.port2.close(); resolve(); };
       channel.port2.postMessage(undefined);
     });
+    throwIfExportAborted(signal);
     return;
   }
   await new Promise<void>((resolve) => globalThis.setTimeout(resolve, 0));
+  throwIfExportAborted(signal);
 }
 
-async function buildExportSceneCooperatively(document: CanonicalDocument, settings: ExportSettings): Promise<ExportScene> {
+async function buildExportSceneCooperatively(document: CanonicalDocument, settings: ExportSettings, signal?: AbortSignal, onProgress?: ExportRequest["onProgress"]): Promise<ExportScene> {
   const steps = buildExportSceneSteps(document, settings);
   let sliceStartedAt = globalThis.performance?.now() ?? Date.now();
   while (true) {
+    throwIfExportAborted(signal);
     const step = steps.next();
     if (step.done) return step.value;
     const now = globalThis.performance?.now() ?? Date.now();
     if (now - sliceStartedAt >= 16) {
-      await yieldExportTask();
+      onProgress?.({ stage: "preparing" });
+      await yieldExportTask(signal);
       sliceStartedAt = globalThis.performance?.now() ?? Date.now();
     }
   }
@@ -1074,32 +1091,36 @@ export function renderExportSvg(scene: ExportScene): string {
   return step.value.join("");
 }
 
-async function renderExportSvgChunksCooperatively(scene: ExportScene): Promise<readonly string[]> {
+async function renderExportSvgChunksCooperatively(scene: ExportScene, signal?: AbortSignal, onProgress?: ExportRequest["onProgress"]): Promise<readonly string[]> {
   const steps = renderExportSvgSteps(scene);
   let sliceStartedAt = globalThis.performance?.now() ?? Date.now();
   while (true) {
+    throwIfExportAborted(signal);
     const step = steps.next();
     if (step.done) return step.value;
     const now = globalThis.performance?.now() ?? Date.now();
     if (now - sliceStartedAt >= 16) {
-      await yieldExportTask();
+      onProgress?.({ stage: "drawing" });
+      await yieldExportTask(signal);
       sliceStartedAt = globalThis.performance?.now() ?? Date.now();
     }
   }
 }
 
-async function encodeSvgChunksCooperatively(chunks: readonly string[]): Promise<Uint8Array> {
+async function encodeSvgChunksCooperatively(chunks: readonly string[], signal?: AbortSignal, onProgress?: ExportRequest["onProgress"]): Promise<Uint8Array> {
   const encoder = new TextEncoder();
   const encoded: Uint8Array[] = [];
   let totalBytes = 0;
   let sliceStartedAt = globalThis.performance?.now() ?? Date.now();
   for (const chunk of chunks) {
+    throwIfExportAborted(signal);
     const bytes = encoder.encode(chunk);
     encoded.push(bytes);
     totalBytes += bytes.byteLength;
     const now = globalThis.performance?.now() ?? Date.now();
     if (now - sliceStartedAt >= 16) {
-      await yieldExportTask();
+      onProgress?.({ stage: "encoding" });
+      await yieldExportTask(signal);
       sliceStartedAt = globalThis.performance?.now() ?? Date.now();
     }
   }
@@ -1107,11 +1128,13 @@ async function encodeSvgChunksCooperatively(chunks: readonly string[]): Promise<
   const output = new Uint8Array(totalBytes);
   let offset = 0;
   for (const bytes of encoded) {
+    throwIfExportAborted(signal);
     output.set(bytes, offset);
     offset += bytes.byteLength;
     const now = globalThis.performance?.now() ?? Date.now();
     if (now - sliceStartedAt >= 16) {
-      await yieldExportTask();
+      onProgress?.({ stage: "encoding" });
+      await yieldExportTask(signal);
       sliceStartedAt = globalThis.performance?.now() ?? Date.now();
     }
   }
@@ -1124,7 +1147,8 @@ function svgMarkupBlobParts(svg: SvgMarkupParts): BlobPart[] {
   return typeof svg === "string" ? [svg] : [...svg];
 }
 
-export async function rasterizeSvgToPng(svg: SvgMarkupParts, width: number, height: number, scale = 1): Promise<Uint8Array> {
+export async function rasterizeSvgToPng(svg: SvgMarkupParts, width: number, height: number, scale = 1, signal?: AbortSignal): Promise<Uint8Array> {
+  throwIfExportAborted(signal);
   const canvas = document.createElement("canvas");
   canvas.width = Math.ceil(width * scale); canvas.height = Math.ceil(height * scale);
   const context = canvas.getContext("2d");
@@ -1134,11 +1158,36 @@ export async function rasterizeSvgToPng(svg: SvgMarkupParts, width: number, heig
   try {
     const image = new Image();
     image.src = url;
-    await image.decode();
+    if (signal) {
+      await new Promise<void>((resolve, reject) => {
+        const abort = () => { image.src = ""; rejectExportAbort(reject); };
+        signal.addEventListener("abort", abort, { once: true });
+        image.decode().then(() => { signal.removeEventListener("abort", abort); resolve(); }, (error) => { signal.removeEventListener("abort", abort); reject(error); });
+        if (signal.aborted) abort();
+      });
+    } else await image.decode();
+    throwIfExportAborted(signal);
     context.drawImage(image, 0, 0, width, height);
   } finally { URL.revokeObjectURL(url); }
-  const png = await new Promise<Blob>((resolve, reject) => canvas.toBlob((value) => value ? resolve(value) : reject(new Error("PNG encoding failed.")), "image/png"));
+  throwIfExportAborted(signal);
+  const png = await new Promise<Blob>((resolve, reject) => {
+    const abort = () => rejectExportAbort(reject);
+    signal?.addEventListener("abort", abort, { once: true });
+    canvas.toBlob((value) => {
+      signal?.removeEventListener("abort", abort);
+      if (signal?.aborted) { rejectExportAbort(reject); return; }
+      if (value) resolve(value); else reject(new Error("PNG encoding failed."));
+    }, "image/png");
+    if (signal?.aborted) abort();
+  });
+  throwIfExportAborted(signal);
   return new Uint8Array(await png.arrayBuffer());
+}
+
+function rejectExportAbort(reject: (error: Error) => void): void {
+  const error = new Error("Export canceled.");
+  error.name = "AbortError";
+  reject(error);
 }
 
 function renderDeterministicNodePdf(scene: ExportScene, svg: string): Uint8Array {
@@ -1152,25 +1201,41 @@ function renderDeterministicNodePdf(scene: ExportScene, svg: string): Uint8Array
   return new TextEncoder().encode(pdf);
 }
 
-async function renderExportPdf(scene: ExportScene, svg: SvgMarkupParts): Promise<Uint8Array> {
+async function renderExportPdf(scene: ExportScene, svg: SvgMarkupParts, signal?: AbortSignal, onProgress?: ExportRequest["onProgress"]): Promise<Uint8Array> {
   if (typeof document === "undefined") return renderDeterministicNodePdf(scene, typeof svg === "string" ? svg : svg.join(""));
-  const png = await rasterizeSvgToPng(svg, scene.width, scene.height);
+  onProgress?.({ stage: "rasterizing" });
+  const png = await rasterizeSvgToPng(svg, scene.width, scene.height, 1, signal);
+  throwIfExportAborted(signal);
+  onProgress?.({ stage: "finalizing" });
+  throwIfExportAborted(signal);
   const { PDFDocument } = await import("pdf-lib");
+  throwIfExportAborted(signal);
   const pdf = await PDFDocument.create();
   pdf.setCreationDate(new Date(0)); pdf.setModificationDate(new Date(0)); pdf.setProducer("Timing Chart V2"); pdf.setCreator("Timing Chart V2");
   const page = pdf.addPage([scene.width, scene.height]);
   const image = await pdf.embedPng(png);
   page.drawImage(image, { x: 0, y: 0, width: scene.width, height: scene.height });
-  return pdf.save({ useObjectStreams: false, addDefaultPage: false });
+  const result = await pdf.save({ useObjectStreams: false, addDefaultPage: false });
+  throwIfExportAborted(signal);
+  return result;
 }
 
 export class DeterministicExportService implements ExportService {
   async export(request: ExportRequest): Promise<Uint8Array> {
     const settings: ExportSettings = { format: request.format, scope: request.settings?.scope ?? "document", ...request.settings };
-    const scene = await buildExportSceneCooperatively(request.snapshot.document, settings);
-    const svgChunks = await renderExportSvgChunksCooperatively(scene);
-    if (request.format === "svg") return encodeSvgChunksCooperatively(svgChunks);
-    if (request.format === "png") return rasterizeSvgToPng(svgChunks, scene.width, scene.height, settings.scale ?? 1);
-    return renderExportPdf(scene, svgChunks);
+    const report = (stage: ExportProgressStage) => { throwIfExportAborted(request.signal); request.onProgress?.({ stage }); };
+    report("preparing");
+    const scene = await buildExportSceneCooperatively(request.snapshot.document, settings, request.signal, request.onProgress);
+    report("drawing");
+    const svgChunks = await renderExportSvgChunksCooperatively(scene, request.signal, request.onProgress);
+    if (request.format === "svg") {
+      report("encoding");
+      return encodeSvgChunksCooperatively(svgChunks, request.signal, request.onProgress);
+    }
+    if (request.format === "png") {
+      report("rasterizing");
+      return rasterizeSvgToPng(svgChunks, scene.width, scene.height, settings.scale ?? 1, request.signal);
+    }
+    return renderExportPdf(scene, svgChunks, request.signal, request.onProgress);
   }
 }
