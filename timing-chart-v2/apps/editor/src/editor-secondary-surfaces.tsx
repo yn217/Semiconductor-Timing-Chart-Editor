@@ -68,6 +68,7 @@ import {
 import type { ContextMenuState } from "./workspace/use-dialog-menu-state.js";
 import { cycleUnitWord } from "./transaction-tc.js";
 import { withStaleImportDiagnostic } from "./application/stale-import-diagnostics.js";
+import { SignalTreeFooter } from "./signal-tree-footer.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type Ref<T> = RefObject<T | null>;
@@ -572,21 +573,7 @@ export function useEditorSecondarySurfaces(
         onRenameTransaction={(transactionId, name) => surfaceCommands.renameTransactions([{ transactionId, name }])}
       />
     ) : null;
-  const workspaceLeftRail = (
-    <div className="left-panel-tail">
-      <span data-testid="left-tree-signal-count">
-        {input.document.signals.length} signals
-      </span>
-      {selected.signal && (
-        <span className="scope-breadcrumb" data-testid="scope-breadcrumb">
-          Scope:{" "}
-          {selected.signal.source.instancePath.length
-            ? selected.signal.source.instancePath.join(" / ")
-            : "(root)"}
-        </span>
-      )}
-    </div>
-  );
+  const workspaceLeftRail = <SignalTreeFooter signalCount={input.document.signals.length} selectedSignal={selected.signal} />;
   const activeBottomContent = workspace.bottomTab === "Signal" ? (
     signalEditor
   ) : workspace.bottomTab === "Annotation" ? (

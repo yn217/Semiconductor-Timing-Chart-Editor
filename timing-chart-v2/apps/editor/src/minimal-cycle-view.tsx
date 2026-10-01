@@ -18,6 +18,7 @@ import { HardwareHierarchyBrowser } from "./hardware-hierarchy-browser.js";
 import { SaveAsDialog } from "./save-as-dialog.js";
 import { DocumentProperties } from "./document-properties.js";
 import { useEditorApplicationOwner } from "./application/use-editor-application-owner.js";
+import { useDocumentEntityIndexes } from "./application/use-document-entity-indexes.js";
 import { useEditorCommandRouter } from "./application/use-editor-command-router.js";
 import { useEditorActions } from "./application/use-editor-actions.js";
 import { useEditorPresentationState } from "./application/use-editor-presentation-state.js";
@@ -338,11 +339,7 @@ export function MinimalCycleView() {
   // View-only navigation updates zoom without replacing the canonical document.
   // Keep entity lookup work on the document boundary so large documents do not
   // linearly rescan every signal during each zoom render.
-  const signalById = useMemo(() => new Map(snapshot.document.signals.map((signal) => [signal.id, signal] as const)), [snapshot.document]);
-  const groupById = useMemo(() => new Map(snapshot.document.signalGroups.map((group) => [group.id, group] as const)), [snapshot.document]);
-  const annotationById = useMemo(() => new Map(snapshot.document.annotations.map((annotation) => [annotation.id, annotation] as const)), [snapshot.document]);
-  const transactionById = useMemo(() => new Map(snapshot.document.transactions.map((transaction) => [transaction.id, transaction] as const)), [snapshot.document]);
-  const bookmarkById = useMemo(() => new Map(snapshot.document.bookmarks.map((bookmark) => [bookmark.id, bookmark] as const)), [snapshot.document]);
+  const { signalById, groupById, annotationById, transactionById, bookmarkById } = useDocumentEntityIndexes(snapshot.document);
   const selectedBookmarkIdRef = useRef<BookmarkId | undefined>(undefined);
   const firstNonCommentSignal = useMemo(() => snapshot.document.signals.find((signal) => signal.type !== "commentRow"), [snapshot.document]);
   const referenceClockSignal = useMemo(() => {
