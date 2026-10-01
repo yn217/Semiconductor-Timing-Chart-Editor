@@ -224,6 +224,28 @@ function ghostTraceWindow(annotation: Annotation, cycleCount: number, range: Rea
   return { traceStart, traceEnd, sampleStart: Math.min(sampleStart, Math.max(0, cycleCount - 1)), sampleEnd: Math.max(sampleEnd, Math.min(cycleCount, sampleStart + 1)) };
 }
 
+function foldedGhostTraceWindow(annotation: Annotation, mapping: DisplayTimeMapping, range: Readonly<{ start: number; end: number }>): Pick<GhostTraceWindow, "traceStart" | "traceEnd"> | undefined {
+  if (annotation.type !== "ghostTrace") return undefined;
+  const firstAnchor = annotation.anchor ?? annotation.start ?? annotation.from;
+  const lastAnchor = annotation.anchor ?? annotation.end ?? annotation.to ?? firstAnchor;
+  if (!firstAnchor || !lastAnchor) return undefined;
+
+  const offset = annotation.traceOffsetCycles ?? 0;
+  const sourceStart = mapping.displayToSource(range.start) ?? 0;
+  // Include the right-hand boundary: Ghost Trace samples are inclusive, and
+  // source positions in a fold immediately after that slot map to its display
+  // cycle via floor semantics. The next display boundary is the exclusive
+  // source limit; at the document end, also retain the terminal sample.
+  const sourceEndExclusive = range.end >= mapping.displayCycleCount
+    ? mapping.sourceCycleCount + 1
+    : mapping.displayToSource(range.end + 1) ?? mapping.sourceCycleCount;
+  const anchorStart = Math.max(0, Math.floor(Math.min(firstAnchor.cycle, lastAnchor.cycle)));
+  const anchorEnd = Math.min(mapping.sourceCycleCount, Math.ceil(Math.max(firstAnchor.cycle, lastAnchor.cycle)));
+  const traceStart = Math.max(anchorStart, Math.ceil(sourceStart - offset));
+  const traceEnd = Math.min(anchorEnd, Math.ceil(sourceEndExclusive - offset) - 1);
+  return traceEnd < traceStart ? undefined : { traceStart, traceEnd };
+}
+
 function mergeCycleRange(current: Readonly<{ start: number; end: number }> | undefined, next: Readonly<{ start: number; end: number }>): Readonly<{ start: number; end: number }> {
   return current === undefined ? next : { start: Math.min(current.start, next.start), end: Math.max(current.end, next.end) };
 }
@@ -568,7 +590,11 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
       // those numbers as source cycles can truncate a trace that is visibly in
       // range. Folded exports keep the semantic anchor span and filter each
       // sample by its shared DisplayTimeMapping below.
-      const boundedTraceWindow = canBoundWaveforms && mapping.isIdentity ? ghostTraceWindow(annotation, document.timeline.cycleCount, range) : undefined;
+      const boundedTraceWindow = canBoundWaveforms
+        ? mapping.isIdentity
+          ? ghostTraceWindow(annotation, document.timeline.cycleCount, range)
+          : foldedGhostTraceWindow(annotation, mapping, range)
+        : undefined;
       let startCycle = Math.max(0, Math.floor(Math.min(firstAnchor.cycle, lastAnchor.cycle)));
       let endCycle = Math.min(document.timeline.cycleCount, Math.ceil(Math.max(firstAnchor.cycle, lastAnchor.cycle)));
       if (boundedTraceWindow) {

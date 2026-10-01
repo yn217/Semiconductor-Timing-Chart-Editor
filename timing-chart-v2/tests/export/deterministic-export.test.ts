@@ -546,6 +546,66 @@ describe("deterministic document export", () => {
     }
   });
 
+  it("bounds folded Ghost Trace sampling to a distant selected display window", async () => {
+    const base = foldedFixture();
+    const source = base.signals[1]!;
+    const document: CanonicalDocument = {
+      ...base,
+      timeline: { ...base.timeline, end: 100_000, cycleCount: 100_000 },
+      signalGroups: [{ ...base.signalGroups[0]!, rows: [source.id] }],
+      signals: [source],
+      annotations: [{ id: "ann_distant_folded_ghost" as AnnotationId, type: "ghostTrace", label: "Distant", visible: true, sourceSignalId: source.id, traceOffsetCycles: -0.5, start: { signalId: source.id, cycle: 0, point: "cycle-start" }, end: { signalId: source.id, cycle: 100_000, point: "cycle-end" } }],
+    };
+    const settings = { scope: "selected-range" as const, range: { start: 50_000, end: 50_010 }, foldPolicy: "respect" as const };
+    const yieldTask = vi.fn(async () => undefined);
+    let now = 0;
+    const performanceNow = vi.spyOn(globalThis.performance, "now").mockImplementation(() => { now += 20; return now; });
+    vi.stubGlobal("scheduler", { yield: yieldTask });
+    try {
+      const scene = buildExportScene(document, { format: "svg", ...settings });
+      const service = new DeterministicExportService();
+      const actual = new TextDecoder().decode(await service.export({ format: "svg", snapshot: { revision: 0, document }, settings }));
+      const ghost = scene.annotations.find((annotation) => annotation.id === "ann_distant_folded_ghost");
+      const sourceWave = scene.waveforms.find((wave) => wave.signalId === source.id)!;
+
+      expect(ghost?.tracePoints).toHaveLength(11);
+      expect(ghost?.tracePoints?.map((point) => point.x)).toEqual(Array.from({ length: 11 }, (_, index) => scene.ruler.x + index * scene.ruler.cycleWidth));
+      expect(JSON.parse(sourceWave.waveJson).wave).toHaveLength(scene.ruler.end - scene.ruler.start);
+      expect(yieldTask.mock.calls.length).toBeLessThan(20);
+      expect(actual).toContain('data-annotation-id="ann_distant_folded_ghost"');
+    } finally {
+      performanceNow.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("retains folded Ghost Trace samples that floor-map to the selected range endpoint", () => {
+    const base = canonicalFixture();
+    const source = base.signals[1]!;
+    const document: CanonicalDocument = {
+      ...base,
+      timeline: { ...base.timeline, end: 8, cycleCount: 8 },
+      timeGroups: [{ id: "tg_trace_endpoint" as TimeGroupId, name: "Collapsed", start: 2, end: 5, presentation: { collapsed: true } }],
+      annotations: [{ id: "ann_trace_endpoint" as AnnotationId, type: "ghostTrace", label: "Endpoint", visible: true, sourceSignalId: source.id, start: { signalId: source.id, cycle: 0, point: "cycle-start" }, end: { signalId: source.id, cycle: 7, point: "cycle-end" } }],
+    };
+
+    const scene = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 0, end: 2 }, foldPolicy: "respect" });
+    const ghost = scene.annotations.find((annotation) => annotation.id === "ann_trace_endpoint");
+    const fullGhost = buildExportScene(document, { format: "svg", scope: "document", foldPolicy: "respect" }).annotations.find((annotation) => annotation.id === "ann_trace_endpoint");
+
+    // Source cycles 2..4 are hidden and floor-map to display cycle 1;
+    // cycle 5 maps to the inclusive selected-range right endpoint (2).
+    expect(ghost?.tracePoints).toEqual(fullGhost?.tracePoints?.filter((point) => point.x <= scene.ruler.x + scene.ruler.cycleWidth * 2));
+    expect(ghost?.tracePoints?.map((point) => point.x)).toEqual([
+      scene.ruler.x,
+      scene.ruler.x + scene.ruler.cycleWidth,
+      scene.ruler.x + scene.ruler.cycleWidth,
+      scene.ruler.x + scene.ruler.cycleWidth,
+      scene.ruler.x + scene.ruler.cycleWidth,
+      scene.ruler.x + scene.ruler.cycleWidth * 2,
+    ]);
+  });
+
   it("yields while projecting dense Measurement lanes without changing SVG bytes", async () => {
     const base = canonicalFixture();
     const signal = base.signals[1]!;
