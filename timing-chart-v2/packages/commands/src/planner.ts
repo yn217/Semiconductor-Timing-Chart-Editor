@@ -1435,17 +1435,20 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
     }
     case "transaction.bulkLinkSignals": {
       if (command.links.length === 0) return fail("no-op", "NO_OP", "$.links", "No Transaction Signal links were selected.");
-      const transactionIndexById = new Map(document.transactions.map((transaction, index) => [transaction.id, index] as const));
+      const requestedTransactionIds = new Set(command.links.map((link) => link.transactionId));
+      const transactionById = new Map<TransactionId, { readonly index: number; readonly transaction: Transaction }>();
+      document.transactions.forEach((transaction, index) => {
+        if (requestedTransactionIds.has(transaction.id)) transactionById.set(transaction.id, { index, transaction });
+      });
       const signalIds = new Set(document.signals.map((signal) => signal.id));
       const linksByTransaction = new Map<TransactionId, { readonly existing: Set<SignalId>; readonly additions: SignalId[] }>();
       for (const [index, link] of command.links.entries()) {
-        const transactionIndex = transactionIndexById.get(link.transactionId);
-        const transaction = transactionIndex === undefined ? undefined : document.transactions[transactionIndex];
-        if (!transaction) return fail("invalid", "TRANSACTION_NOT_FOUND", `$.links[${index}].transactionId`, `Transaction '${link.transactionId}' does not exist.`);
+        const target = transactionById.get(link.transactionId);
+        if (!target) return fail("invalid", "TRANSACTION_NOT_FOUND", `$.links[${index}].transactionId`, `Transaction '${link.transactionId}' does not exist.`);
         if (!signalIds.has(link.signalId)) return fail("invalid", "SIGNAL_NOT_FOUND", `$.links[${index}].signalId`, `Signal '${link.signalId}' does not exist.`);
         let links = linksByTransaction.get(link.transactionId);
         if (!links) {
-          links = { existing: new Set(transaction.linkedSignals ?? []), additions: [] };
+          links = { existing: new Set(target.transaction.linkedSignals ?? []), additions: [] };
           linksByTransaction.set(link.transactionId, links);
         }
         if (links.existing.has(link.signalId)) {
@@ -1454,10 +1457,11 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
         links.existing.add(link.signalId);
         links.additions.push(link.signalId);
       }
-      const transactions = document.transactions.map((transaction) => {
-        const links = linksByTransaction.get(transaction.id);
-        return links ? { ...transaction, linkedSignals: [...(transaction.linkedSignals ?? []), ...links.additions] } : transaction;
-      });
+      const transactions = document.transactions.slice();
+      for (const [transactionId, links] of linksByTransaction) {
+        const target = transactionById.get(transactionId)!;
+        transactions[target.index] = { ...target.transaction, linkedSignals: [...(target.transaction.linkedSignals ?? []), ...links.additions] };
+      }
       const transactionSemantics = [...linksByTransaction.keys()];
       const changeSet: ChangeSet = { transactionSemantics };
       return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
