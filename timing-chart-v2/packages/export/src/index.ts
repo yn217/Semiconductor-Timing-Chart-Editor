@@ -270,9 +270,17 @@ function pageLayout(page: NonNullable<ExportSettings["page"]>, contentWidth: num
 }
 
 function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSettings): Generator<void, ExportScene, void> {
+  let itemsSinceYield = 0;
+  const checkpoint = (): boolean => {
+    itemsSinceYield += 1;
+    if (itemsSinceYield < 64) return false;
+    itemsSinceYield = 0;
+    return true;
+  };
   for (const annotation of document.annotations) {
     const lane = annotation.type === "measurement" ? annotation.measurementLayout?.lane : undefined;
     if (lane !== undefined && (!Number.isInteger(lane) || lane < 0 || lane > MAX_MEASUREMENT_LANE)) throw new RangeError(`Measurement '${annotation.id}' lane must be an integer from 0 to ${MAX_MEASUREMENT_LANE}.`);
+    if (checkpoint()) yield;
   }
   const documentLayout = buildDocumentLayout(document);
   const headerHeight = 38 + documentLayout.headerLines.length * 14;
@@ -365,6 +373,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
       }
       let localOrdinal = 0;
       for (let cycle = start + firstCandidate * period; cycle < Math.min(document.timeline.cycleCount, range.end); cycle += period) {
+        if (checkpoint()) yield;
         while (enableIndex < changes.length && changes[enableIndex]!.start <= cycle) {
           enabled = changes[enableIndex]!.value;
           enableIndex += 1;
@@ -385,6 +394,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
     } else {
       const edges: Array<{ kind: "rising" | "falling"; cycle: number }> = [];
       for (let cycle = start; cycle < document.timeline.cycleCount; cycle += period) {
+        if (checkpoint()) yield;
         const slot = Math.round((cycle - signal.generator.start) / period);
         if (!clockEnabledAt(signal.enable, cycle) || suppressed.has(slot)) continue;
         edges.push({ kind: activeKind, cycle });
@@ -517,7 +527,10 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
   const contentHeight = waveTop + totalRowHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
   const legend = document.legend.show ? effectiveLegendEntries(document).map((entry) => entry.label) : [];
   const ticks: ExportRulerTick[] = [];
-  for (let cycle = range.start; cycle <= range.end; cycle += 1) ticks.push({ cycle, text: String(mapping.labelFor(cycle)) });
+  for (let cycle = range.start; cycle <= range.end; cycle += 1) {
+    ticks.push({ cycle, text: String(mapping.labelFor(cycle)) });
+    if (checkpoint()) yield;
+  }
   const page = settings.page ? pageLayout(settings.page, contentWidth, contentHeight) : undefined;
   return Object.freeze({ width: page?.width ?? contentWidth, height: page?.height ?? contentHeight, waveforms, labels, annotations, transactions, groupBands, axisBreaks, edgeCounters, legend, legendPosition: document.legend.position, legendOrientation: document.legend.orientation, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks }, documentLayout, ...(page === undefined ? {} : { page }) });
 }

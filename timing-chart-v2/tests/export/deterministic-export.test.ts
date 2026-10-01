@@ -224,7 +224,7 @@ describe("deterministic document export", () => {
     }
   });
 
-  it("yields while serializing a dense ruler even when no WaveDrom rows exist", async () => {
+  it("yields while building and serializing a dense ruler even when no WaveDrom rows exist", async () => {
     const base = canonicalFixture();
     const document = {
       ...base,
@@ -244,7 +244,7 @@ describe("deterministic document export", () => {
     vi.stubGlobal("scheduler", { yield: yieldTask });
     try {
       const actual = new TextDecoder().decode(await service.export({ format: "svg", snapshot: { revision: 0, document }, settings }));
-      expect(yieldTask).toHaveBeenCalled();
+      expect(yieldTask.mock.calls.length).toBeGreaterThanOrEqual(2);
       expect(actual).toBe(expected);
     } finally {
       performanceNow.mockRestore();
