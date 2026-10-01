@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { resolve } from "node:path";
 import { startInCycleSample } from "./cycle-startup.js";
 
 startInCycleSample(test);
@@ -116,4 +117,24 @@ test("renders persisted label columns independently from the transient pane spli
   await expect(layout.getByLabel("Inspector signal name width")).toHaveValue("168");
   await expect(layout.getByLabel("Inspector signal name alignment")).toHaveValue("left");
   await expect(layout.getByLabel("Inspector signal name overflow")).toHaveValue("ellipsis");
+});
+
+test("keeps right-aligned short frozen labels inside the timing boundary", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/golden-feature-coverage/timing_chart_feature_coverage_pack/samples/20_transaction_cycle_linked_views.tcd.json"));
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+  const label = host.locator("[data-role='frozen-row'][data-row-id='tag'] [data-role='frozen-signal-name']");
+  await expect(label).toHaveText("tag");
+  const geometry = await label.evaluate((element) => {
+    const range = element.ownerDocument.createRange();
+    range.selectNodeContents(element);
+    const textRect = range.getBoundingClientRect();
+    const frozenRect = element.closest("[data-role='frozen-label-rows']")!.getBoundingClientRect();
+    return { textRight: textRect.right, frozenRight: frozenRect.right, paddingRight: getComputedStyle(element).paddingRight };
+  });
+  expect(geometry.paddingRight).toBe("8px");
+  expect(geometry.textRight).toBeLessThanOrEqual(geometry.frozenRight - 4);
 });

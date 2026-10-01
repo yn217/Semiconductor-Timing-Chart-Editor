@@ -201,11 +201,11 @@
 .editor-shell .surface-host [data-role="frozen-group-header"],
 .editor-shell .surface-host [data-role="timing-group-header"] { display: none; }
 
-.editor-shell .surface-host [data-role="frozen-row"] { width: var(--gui-frozen-width, 209px); grid-template-columns: var(--gui-role-width, 61px) var(--gui-signal-width, 148px); padding: 0; text-align: var(--gui-signal-align, left); }
+.editor-shell .surface-host [data-role="frozen-row"] { width: var(--gui-frozen-width, 209px); grid-template-columns: var(--gui-role-width, 61px) var(--gui-signal-width, 148px); column-gap: 0; padding: 0; }
 
 .editor-shell .surface-host [data-role="signal-role"] { justify-self: center; }
 
-.editor-shell .surface-host [data-role="frozen-signal-name"] { min-width: 0; padding-left: 8px; overflow: hidden; white-space: inherit; text-overflow: inherit; }
+.editor-shell .surface-host [data-role="frozen-signal-name"] { min-width: 0; box-sizing: border-box; padding-inline: 8px; text-align: var(--gui-signal-align, left); overflow: hidden; white-space: inherit; text-overflow: inherit; }
 
 .editor-shell[data-layout-overflow="expand"] .surface-host [data-role="frozen-row"] { overflow: visible; }
 
