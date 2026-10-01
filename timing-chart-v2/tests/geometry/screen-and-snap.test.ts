@@ -151,6 +151,33 @@ describe("Screen Geometry and snapping", () => {
     expect(service.metrics().candidateCount).toBe(index.entries().length);
   });
 
+  it("indexes canonical Signal identity once and visits only retained geometry owners", () => {
+    const source = canonicalFixture();
+    const current = source.signals.find((item) => item.type !== "commentRow")!;
+    let signalIterations = 0;
+    const signals = new Proxy(source.signals, {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator) signalIterations += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const document = { ...source, signals };
+    const map = new ImmutableLocalGeometryMap(current.id, [
+      { cycle: 0, point: "cycle-start", position: { x: 20, y: 0 } },
+    ]);
+    const service = new SemanticSnapCandidateService();
+    const geometryMaps = new Map([[current.id, map]]);
+
+    const first = service.build({ document, geometryMaps, rowY: new Map([[current.id, 30]]) });
+    const iterationsAfterFirstBuild = signalIterations;
+    const second = service.build({ document, geometryMaps, rowY: new Map([[current.id, 30]]) });
+
+    expect(iterationsAfterFirstBuild).toBe(1);
+    expect(signalIterations).toBe(iterationsAfterFirstBuild);
+    expect(first.entries().length).toBeGreaterThan(0);
+    expect(second.entries().map((candidate) => candidate.ownerId).every((ownerId) => ownerId === current.id)).toBe(true);
+  });
+
   it("visits retained geometry boundaries instead of probing every document cycle", () => {
     const source = canonicalFixture();
     const signal = source.signals.find((item) => item.type !== "commentRow")!;

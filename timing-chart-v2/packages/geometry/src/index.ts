@@ -164,19 +164,49 @@ export interface TimeAxisGeometry {
   readonly geometry?: LocalGeometryMap;
 }
 
+type CanonicalSignal = CanonicalDocument["signals"][number];
+interface CanonicalSignalIndex {
+  readonly byId: ReadonlyMap<SignalId, CanonicalSignal>;
+  readonly orderById: ReadonlyMap<SignalId, number>;
+  readonly timingSignals: readonly CanonicalSignal[];
+  readonly visibleTimingSignals: readonly CanonicalSignal[];
+}
+const canonicalSignalIndexes = new WeakMap<CanonicalDocument["signals"], CanonicalSignalIndex>();
+
+function canonicalSignalIndex(signals: CanonicalDocument["signals"]): CanonicalSignalIndex {
+  const cached = canonicalSignalIndexes.get(signals);
+  if (cached) return cached;
+  const byId = new Map<SignalId, CanonicalSignal>();
+  const orderById = new Map<SignalId, number>();
+  const timingSignals: CanonicalSignal[] = [];
+  const visibleTimingSignals: CanonicalSignal[] = [];
+  let order = 0;
+  for (const signal of signals) {
+    byId.set(signal.id, signal);
+    orderById.set(signal.id, order);
+    order += 1;
+    if (signal.type === "commentRow") continue;
+    timingSignals.push(signal);
+    if (signal.display.visible !== false) visibleTimingSignals.push(signal);
+  }
+  const index = Object.freeze({ byId, orderById, timingSignals, visibleTimingSignals });
+  canonicalSignalIndexes.set(signals, index);
+  return index;
+}
+
 export function resolveTimeAxisGeometry(document: Pick<CanonicalDocument, "signals" | "timeline">, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>): TimeAxisGeometry {
+  const signals = canonicalSignalIndex(document.signals);
   const referenceClock = document.timeline.referenceClock;
   if (referenceClock !== undefined) {
     // The canonical signal identity is authoritative.  A renderer may still
     // have a stale extracted map for one frame after delete/restore, but that
     // map must never keep a deleted or converted signal as the time-axis owner.
-    const referenceSignal = document.signals.find((signal) => signal.id === referenceClock);
+    const referenceSignal = signals.byId.get(referenceClock);
     const referenceGeometry = referenceSignal?.type === "clock" ? geometryMaps.get(referenceClock) : undefined;
     if (referenceGeometry) return Object.freeze({ mode: "reference-clock", ownerSignalId: referenceClock, geometry: referenceGeometry });
   }
-  const timingSignals = document.signals.filter((signal) => signal.type !== "commentRow");
-  const owner = timingSignals.find((signal) => signal.display.visible !== false && geometryMaps.has(signal.id))
-    ?? timingSignals.find((signal) => geometryMaps.has(signal.id));
+  const owner = signals.visibleTimingSignals.find((signal) => geometryMaps.has(signal.id))
+    ?? signals.timingSignals.find((signal) => geometryMaps.has(signal.id));
   const geometry = owner === undefined ? undefined : geometryMaps.get(owner.id);
   return geometry === undefined || owner === undefined
     ? Object.freeze({ mode: "clockless" })
@@ -449,11 +479,13 @@ export class SemanticSnapCandidateService {
     const renderedCycleCount = input.renderedCycleCount ?? input.document.timeline.cycleCount;
     const sourceCycleForRenderedCycle = input.sourceCycleForRenderedCycle ?? ((cycle: number) => cycle);
     const renderedCycleForSourceCycle = input.renderedCycleForSourceCycle ?? ((cycle: number) => cycle);
-    const visibleSignalIds = new Set(input.document.signals.filter((signal) => signal.type !== "commentRow" && signal.display.visible !== false).map((signal) => signal.id));
+    const signalsByIdIndex = canonicalSignalIndex(input.document.signals);
+    const signalsById = signalsByIdIndex.byId;
     const resolve = (anchor: SemanticAnchor): Point | undefined => {
       const signalId = anchor.signalId ?? input.axisOwnerSignalId ?? input.document.timeline.referenceClock;
       if (!signalId) return undefined;
-      if (anchor.signalId !== undefined && !visibleSignalIds.has(anchor.signalId)) return undefined;
+      const signal = signalsById.get(signalId);
+      if (!signal || anchor.signalId !== undefined && (signal.type === "commentRow" || signal.display.visible === false)) return undefined;
       if (!input.rowY.has(signalId)) return undefined;
       const renderedCycle = anchor.cycle === input.document.timeline.cycleCount ? renderedCycleCount : renderedCycleForSourceCycle(anchor.cycle);
       if (renderedCycle === undefined) return undefined;
@@ -464,10 +496,17 @@ export class SemanticSnapCandidateService {
       const local = input.geometryMaps.get(signalId)?.find({ ...anchor, signalId, cycle: anchor.cycle });
       return local ? { x: local.point.x, y: (input.rowY.get(signalId) ?? 0) + local.point.y } : undefined;
     };
-    for (const signal of input.document.signals) {
+    // Only mounted/retained owners can contribute waveform snap geometry.
+    // Iterating all canonical Signals here made each viewport-triggered index
+    // rebuild O(total document Signals), even when only a few owners were
+    // mounted. The stable-ID lookup above is retained per immutable canonical
+    // Signals array; this loop is now bounded by the geometry owners.
+    const orderedGeometryMaps = [...input.geometryMaps].sort(([left], [right]) =>
+      (signalsByIdIndex.orderById.get(left) ?? Number.MAX_SAFE_INTEGER) - (signalsByIdIndex.orderById.get(right) ?? Number.MAX_SAFE_INTEGER));
+    for (const [signalId, map] of orderedGeometryMaps) {
+      const signal = signalsById.get(signalId);
+      if (!signal) continue;
       if (signal.type === "commentRow" || signal.display.visible === false || !input.rowY.has(signal.id)) continue;
-      const map = input.geometryMaps.get(signal.id);
-      if (!map) continue;
       const y = input.rowY.get(signal.id) ?? 0;
       // Geometry maps may retain only the currently rendered source interval.
       // Enumerate those semantic boundaries directly instead of scanning the

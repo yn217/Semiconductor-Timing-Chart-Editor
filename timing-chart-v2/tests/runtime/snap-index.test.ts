@@ -6,6 +6,42 @@ import { buildSnapIndex } from "../../apps/editor/src/runtime/snap-index.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("buildSnapIndex row lookup", () => {
+  it("reuses canonical row membership and projected Y for the same immutable inputs", () => {
+    const source = canonicalFixture();
+    const signal = source.signals.find((item) => item.type !== "commentRow")!;
+    let signalMapReads = 0;
+    let rowLayoutIterations = 0;
+    const signals = new Proxy(source.signals, {
+      get(target, property, receiver) {
+        if (property === "map") signalMapReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const rows = new Proxy([{ rowId: signal.id, y: 72 }, { rowId: "stale-row-id", y: 144 }], {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator) rowLayoutIterations += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const document = { ...source, signals };
+    const projection = { rowLayout: rows } as never;
+    const map = new ImmutableLocalGeometryMap(signal.id, [
+      { cycle: 0, point: "cycle-start", position: { x: 20, y: 0 } },
+    ]);
+    const maps = new Map([[signal.id, map]]);
+    const mapping = new DisplayTimeMappingCache().get(document.timeline, document.timeGroups);
+
+    const first = buildSnapIndex(document, projection, maps, mapping);
+    const countsAfterFirstBuild = { signalMapReads, rowLayoutIterations };
+    const second = buildSnapIndex(document, projection, maps, mapping);
+
+    expect(countsAfterFirstBuild).toEqual({ signalMapReads: 1, rowLayoutIterations: 1 });
+    expect({ signalMapReads, rowLayoutIterations }).toEqual(countsAfterFirstBuild);
+    expect(first.entries().some((candidate) => candidate.point.y === 72)).toBe(true);
+    expect(second.entries().some((candidate) => candidate.point.y === 72)).toBe(true);
+    expect(second.entries().some((candidate) => candidate.point.y >= 144)).toBe(false);
+  });
+
   it("reuses shared cycle-boundary X values across Signal geometry adapters", () => {
     const source = canonicalFixture();
     const clock = source.signals.find((item) => item.type === "clock")!;

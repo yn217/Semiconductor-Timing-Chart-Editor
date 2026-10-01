@@ -2,6 +2,26 @@ import type { CanonicalDocument, SemanticAnchor, SignalId } from "@timing-chart-
 import { resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryEntry, type LocalGeometryMap } from "@timing-chart-v2/geometry";
 import type { DisplayTimeMapping, RenderProjection } from "@timing-chart-v2/projection";
 
+const rowYCache = new WeakMap<CanonicalDocument["signals"], WeakMap<RenderProjection["rowLayout"], ReadonlyMap<SignalId, number>>>();
+
+function projectedSignalRows(document: CanonicalDocument, projection: RenderProjection): ReadonlyMap<SignalId, number> {
+  let byLayout = rowYCache.get(document.signals);
+  if (!byLayout) {
+    byLayout = new WeakMap();
+    rowYCache.set(document.signals, byLayout);
+  }
+  const cached = byLayout.get(projection.rowLayout);
+  if (cached) return cached;
+
+  const signalIds = new Set(document.signals.map((signal) => signal.id));
+  const rowY = new Map<SignalId, number>();
+  for (const row of projection.rowLayout) {
+    if (signalIds.has(row.rowId as SignalId)) rowY.set(row.rowId as SignalId, row.y);
+  }
+  byLayout.set(projection.rowLayout, rowY);
+  return rowY;
+}
+
 export function buildSnapIndex(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, service = new SemanticSnapCandidateService(), xScale = 1): ImmutableSnapIndex {
   const timeAxis = resolveTimeAxisGeometry(document, maps);
   const axisOwnerSignalId = timeAxis.ownerSignalId;
@@ -9,7 +29,6 @@ export function buildSnapIndex(document: CanonicalDocument, projection: RenderPr
   const sharedBoundaryXByCycle = referenceMap?.cycleBoundaryEntries === undefined
     ? undefined
     : new Map(referenceMap.cycleBoundaryEntries().map((entry) => [entry.cycle, entry.position.x] as const));
-  const signalIds = new Set(document.signals.map((signal) => signal.id));
   const screenMaps = new Map<SignalId, LocalGeometryMap>([...maps.entries()].map(([id, map]) => [id, {
     signalId: map.signalId,
     cycleKeyDomain: map.cycleKeyDomain,
@@ -38,7 +57,7 @@ export function buildSnapIndex(document: CanonicalDocument, projection: RenderPr
     document,
     geometryMaps: screenMaps,
     ...(axisOwnerSignalId === undefined ? {} : { axisOwnerSignalId }),
-    rowY: new Map(projection.rowLayout.flatMap((row) => signalIds.has(row.rowId as SignalId) ? [[row.rowId as SignalId, row.y] as const] : [])),
+    rowY: projectedSignalRows(document, projection),
     renderedCycleCount: mapping.displayCycleCount,
     sourceCycleForRenderedCycle: (renderedCycle) => renderedCycle === mapping.displayCycleCount ? document.timeline.cycleCount : mapping.displayToSource(renderedCycle),
     renderedCycleForSourceCycle: (sourceCycle) => mapping.sourceToDisplay(sourceCycle),
