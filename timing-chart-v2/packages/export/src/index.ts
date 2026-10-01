@@ -126,6 +126,57 @@ function valueChangesForWindow(signal: ValueSignal, start: number, end: number):
   return changes;
 }
 
+function sourceBoundaryForDisplay(mapping: DisplayTimeMapping, displayCycle: number): number {
+  let low = 0;
+  let high = mapping.sourceCycleCount + 1;
+  while (low < high) {
+    const middle = low + ((high - low) >>> 1);
+    if (mapping.displayBoundaryAtOrAfterSource(middle) < displayCycle) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
+/** Remap only source changes which can affect a selected display window. The
+ * predecessor carries the value into the window; changes hidden in a fold
+ * immediately before the visible resume boundary are retained so the last
+ * hidden value wins exactly as it does in a full remap. */
+function remapValueChangesToDisplayWindow(values: ValueSignal["values"], mapping: DisplayTimeMapping, start: number, end: number): ValueSignal["values"] {
+  const sourceStart = sourceBoundaryForDisplay(mapping, start);
+  const sourceEnd = sourceBoundaryForDisplay(mapping, end);
+  let low = 0;
+  let high = values.length;
+  while (low < high) {
+    const middle = low + ((high - low) >>> 1);
+    if (values[middle]!.start < sourceStart) low = middle + 1;
+    else high = middle;
+  }
+  const carried = low > 0 ? values[low - 1] : undefined;
+  const changes: ValueSignal["values"][number][] = [];
+  let lastValue: ValueSignal["values"][number]["value"] | undefined = carried?.value;
+  let pending: ValueSignal["values"][number] | undefined;
+  let pendingDisplay = -1;
+  const emit = () => {
+    if (pending && pending.value !== lastValue) changes.push({ ...pending, start: pendingDisplay });
+    if (pending) lastValue = pending.value;
+    pending = undefined;
+  };
+  for (let index = low; index < values.length; index += 1) {
+    const change = values[index]!;
+    if (change.start >= sourceEnd) break;
+    const display = mapping.displayBoundaryAtOrAfterSource(change.start);
+    if (display >= end) break;
+    if (display !== pendingDisplay) {
+      if (pendingDisplay >= 0) emit();
+      pendingDisplay = display;
+    }
+    pending = change;
+  }
+  if (pendingDisplay >= 0) emit();
+  if (carried && changes[0]?.start !== start) changes.unshift({ ...carried, start });
+  return changes;
+}
+
 function boundedWaveJson(signal: Exclude<Signal, { readonly type: "commentRow" }>, cycleCount: number, range: Readonly<{ start: number; end: number }>, enumDefinitions: CanonicalDocument["enumDefinitions"]): Readonly<{ waveJson: WaveJsonSignal; semanticValues: readonly string[]; windowStart: number; renderedCycleCount: number }> | undefined {
   if (signal.type === "clock") {
     const period = signal.generator.period;
@@ -304,7 +355,12 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
   const renderedWaves: Array<{ signal: Exclude<Signal, { readonly type: "commentRow" }>; waveJson: WaveJsonSignal; svgMarkup: string; windowStart: number; renderedCycleCount: number; width: number; height: number }> = [];
   for (const [index, signal] of waveSignals.entries()) {
     const boundedRange = waveformRanges.get(signal.id);
-    const displayValues = signal.type === "clock" || (canBoundSourceWaveforms && boundedRange !== undefined) ? undefined : remapValueChangesToDisplay(signal.values, mapping);
+    const canBoundFoldedValues = canBoundWaveforms && !mapping.isIdentity && signal.type !== "clock" && !ghostSourceSignalIds.has(signal.id);
+    const displayValues = signal.type === "clock" || (canBoundSourceWaveforms && boundedRange !== undefined)
+      ? undefined
+      : canBoundFoldedValues
+        ? remapValueChangesToDisplayWindow(signal.values, mapping, range.start, range.end)
+        : remapValueChangesToDisplay(signal.values, mapping);
     const displaySignal = signal.type === "clock"
       ? { ...signal, ...(signal.enable ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
       : { ...signal, values: displayValues ?? signal.values };

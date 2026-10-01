@@ -750,6 +750,32 @@ describe("deterministic document export", () => {
     expect(dataWave.sourceWidth).toBeLessThan(scene.ruler.cycleWidth * 10);
   });
 
+  it("remaps only the source changes needed by a narrow folded export window", () => {
+    const base = foldedFixture();
+    const sourceValues = Array.from({ length: 1_000 }, (_, index) => ({ start: index * 10, value: `V${index}` }));
+    let indexedReads = 0;
+    const trackedValues = new Proxy(sourceValues, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\\d+$/.test(property)) indexedReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const source = base.signals[1]!;
+    const document: CanonicalDocument = {
+      ...base,
+      timeline: { ...base.timeline, end: 10_000, cycleCount: 10_000 },
+      signals: [base.signals[0]!, { ...source, values: trackedValues }],
+    };
+
+    const scene = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 5_000, end: 5_010 }, foldPolicy: "respect" });
+    const wave = scene.waveforms.find((item) => item.signalId === source.id)!;
+
+    expect(scene.ruler).toMatchObject({ start: 4_990, end: 5_000 });
+    expect(JSON.parse(wave.waveJson).wave).toHaveLength(10);
+    expect(indexedReads).toBeLessThan(100);
+    expect(wave.sourceWidth).toBeLessThan(scene.ruler.cycleWidth * scene.ruler.end);
+  });
+
   it("reflects a labelAnchor override in the exported ruler text instead of raw source cycle numbers", () => {
     const scene = buildExportScene(foldedFixture(), { format: "svg", scope: "document", foldPolicy: "respect" });
     const resumeTick = scene.ruler.ticks.find((tick) => tick.cycle === 5);
