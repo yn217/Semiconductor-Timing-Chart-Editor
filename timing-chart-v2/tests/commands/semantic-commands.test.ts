@@ -419,17 +419,22 @@ describe("pure Semantic Command planning", () => {
   });
 
   it("bulk-deletes Signals through one indexed dependency query and one exact History action", () => {
-    const source = { ...canonicalFixture(), transactions: [{ id: "txn_bulk_links" as TransactionId, name: "Linked", start: 1, end: 4, linkedSignals: ["sig_clk" as SignalId, "sig_data" as SignalId] }] };
+    const untouched = { id: "txn_bulk_untouched" as TransactionId, name: "Untouched", start: 5, end: 7 };
+    const linkedAfter = { id: "txn_bulk_linked_after" as TransactionId, name: "Also linked", start: 7, end: 8, linkedSignals: ["sig_data" as SignalId] };
+    const source = { ...canonicalFixture(), transactions: [{ id: "txn_bulk_links" as TransactionId, name: "Linked", start: 1, end: 4, linkedSignals: ["sig_clk" as SignalId, "sig_data" as SignalId] }, untouched, linkedAfter] };
     const session = new CommandHistorySession(source);
+    const untouchedBefore = session.getSnapshot().document.transactions[1];
     const before = canonicalReferenceMetrics();
     const result = session.execute({ id: commandId("cmd_bulk_signal_delete"), type: "signal.bulkDelete", signalIds: ["sig_data" as SignalId, "sig_clk" as SignalId] });
     const after = canonicalReferenceMetrics();
 
-    expect(result).toMatchObject({ ok: true, changeSet: { removedSignals: ["sig_data", "sig_clk"], transactionSemantics: ["txn_bulk_links"], timelineSemantics: true } });
+    expect(result).toMatchObject({ ok: true, changeSet: { removedSignals: ["sig_data", "sig_clk"], transactionSemantics: ["txn_bulk_links", "txn_bulk_linked_after"], timelineSemantics: true } });
     expect(session.getSnapshot().document.signals).toEqual([]);
     expect(session.getSnapshot().document.signalGroups[0]?.rows).toEqual([]);
     expect(session.getSnapshot().document.timeline).not.toHaveProperty("referenceClock");
     expect(session.getSnapshot().document.transactions[0]?.linkedSignals).toEqual([]);
+    expect(session.getSnapshot().document.transactions[1]).toBe(untouchedBefore);
+    expect(session.getSnapshot().document.transactions[2]?.linkedSignals).toEqual([]);
     expect(after.targetQueries - before.targetQueries).toBe(1);
     expect(session.historyState().undoDepth).toBe(1);
     expect(session.undo().ok).toBe(true);

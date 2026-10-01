@@ -141,9 +141,11 @@ function deleteSignals(document: CanonicalDocument, signalIds: readonly SignalId
   const linkedTransactionIds = new Set(references
     .filter((reference) => reference.kind === "transaction.linkedSignal")
     .map((reference) => reference.ownerId));
-  const linkedTransactions = document.transactions.filter((transaction) => linkedTransactionIds.has(transaction.id));
+  const linkedTransactions: Transaction[] = [];
   const transactions = document.transactions.map((transaction) => {
-    if (!linkedTransactionIds.has(transaction.id) || transaction.linkedSignals === undefined) return transaction;
+    if (!linkedTransactionIds.has(transaction.id)) return transaction;
+    linkedTransactions.push(transaction);
+    if (transaction.linkedSignals === undefined) return transaction;
     const linkedSignals = transaction.linkedSignals.filter((id) => !selectedIds.has(id));
     return linkedSignals.length === transaction.linkedSignals.length ? transaction : { ...transaction, linkedSignals };
   });
