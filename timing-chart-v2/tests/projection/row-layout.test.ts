@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildHardwareHierarchyEntries, buildHardwareHierarchyRowIndex, deriveHardwareHierarchyEntries, filterHardwareHierarchyEntries, hardwareHierarchyScopes, hardwareHierarchyScopeBreadcrumbs, DefaultProjectionService, calculateRowLayout, getRowLayoutSourceIndex } from "@timing-chart-v2/projection";
+import { buildHardwareHierarchyEntries, buildHardwareHierarchyRowIndex, deriveHardwareHierarchyEntries, filterHardwareHierarchyEntries, hardwareHierarchyScopes, hardwareHierarchyScopeBreadcrumbs, DefaultProjectionService, calculateRowLayout, getRowLayoutSourceIndex, rowsIntersectingVerticalViewport } from "@timing-chart-v2/projection";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { BookmarkId, CanonicalDocument, GroupId, RowId, SignalId, SpacerId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -29,6 +29,22 @@ function linearMountedRowIds(layout: ReturnType<typeof calculateRowLayout>, view
 }
 
 describe("RowLayout and projection invariants", () => {
+  it("finds viewport-intersecting rows without scanning the full ordered layout", () => {
+    const rows = Array.from({ length: 10_000 }, (_, index) => ({ rowId: `row-${index}`, visible: index !== 5_001, y: index * 20, height: index === 4_999 ? 35 : 18 }));
+    let indexedReads = 0;
+    const observedRows = new Proxy(rows, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\d+$/.test(property)) indexedReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    const actual = rowsIntersectingVerticalViewport(observedRows, 100_000, 100_040);
+
+    expect(actual.map((row) => row.rowId)).toEqual(["row-4999", "row-5000", "row-5002"]);
+    expect(indexedReads).toBeLessThan(40);
+  });
+
   it("reuses canonical Signal IDs when an unrelated document collection changes", () => {
     const document = canonicalFixture();
     const service = new DefaultProjectionService();

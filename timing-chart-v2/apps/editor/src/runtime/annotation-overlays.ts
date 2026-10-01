@@ -1,7 +1,7 @@
 import { anchorTransitionFraction, anchorTransitionKind } from "@timing-chart-v2/schema";
 import type { Annotation, CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { allocateMeasurementLanes, findSourceAnchorGeometry, type LocalGeometryMap, type Point } from "@timing-chart-v2/geometry";
-import type { DisplayTimeMapping, DisplayTimeViewport, RenderProjection } from "@timing-chart-v2/projection";
+import { rowsIntersectingVerticalViewport, type DisplayTimeMapping, type DisplayTimeViewport, type RenderProjection } from "@timing-chart-v2/projection";
 import type { AnnotationOverlayPrimitive } from "@timing-chart-v2/renderer";
 import { annotationAxisOwnerSignalId, resolveAnchorPoint, rowLayoutIndex } from "../resolve-anchor-point.js";
 
@@ -76,7 +76,9 @@ export type AnnotationOverlayProjectionMetrics = Readonly<{ canonicalCount: numb
 
 export function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1, viewport?: DisplayTimeViewport, onMetrics?: (metrics: AnnotationOverlayProjectionMetrics) => void): AnnotationOverlayPrimitive[] {
   const startedAt = performance.now();
-  const rowIds = new Set(projection.rowLayout.filter((row) => row.visible && (!viewport || (row.y + row.height >= viewport.rowStart && row.y <= viewport.rowEnd))).map((row) => row.rowId));
+  const rowIds = new Set((viewport
+    ? rowsIntersectingVerticalViewport(projection.rowLayout, viewport.rowStart, viewport.rowEnd)
+    : projection.rowLayout.filter((row) => row.visible)).map((row) => row.rowId));
   const pinned = new Set(viewport?.pinnedIds ?? []);
   const candidate = (annotation: Annotation): boolean => {
     if (!viewport || pinned.has(annotation.id)) return true;
