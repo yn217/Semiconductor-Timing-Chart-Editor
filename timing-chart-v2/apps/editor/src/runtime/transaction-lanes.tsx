@@ -7,7 +7,7 @@ import type { TransactionLaneCommandActions } from "../application/editor-surfac
 import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
 import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldRangesIntersecting, type TransactionFoldRange } from "./transaction-fold-index.js";
-import { bookmarksInSourceWindow, indexTransactionIntervals, transactionGeometryGuidesInSourceWindow, transactionIntervalsInWindow, type TransactionIntervalIndex } from "./transaction-virtual-index.js";
+import { bookmarksForSourceWindowState, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, transactionGeometryGuidesInSourceWindow, transactionIntervalsForSourceWindowState, type TransactionIntervalIndex, type TransactionSourceWindowState } from "./transaction-virtual-index.js";
 
 const LANE_ROW_HEIGHT = 40;
 const GROUP_HEADER_HEIGHT = 24;
@@ -377,12 +377,18 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   // #767: zoom re-lays the geometry out (X scaled here) instead of CSS-scaling the whole track, which stretched every glyph horizontally.
   const zoomFactor = Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
   const getScaledBoundaryX = useCallback((cycle: number) => { const px = getBoundaryX(cycle); return px === undefined ? undefined : px * zoomFactor; }, [getBoundaryX, zoomFactor]);
-  const [horizontalSourceWindow, setHorizontalSourceWindow] = useState<Readonly<{ start: number; end: number }>>();
-  useEffect(() => {
+  const [horizontalSourceWindow, setHorizontalSourceWindow] = useState<TransactionSourceWindowState>(INITIAL_TRANSACTION_SOURCE_WINDOW);
+  useLayoutEffect(() => {
     const laneRoot = owner.current;
     const viewport = laneRoot?.closest<HTMLElement>(".cycle-viewport");
-    if (!viewport) return;
-    const update = () => setHorizontalSourceWindow(getVisibleSourceWindow(viewport));
+    if (!viewport) { setHorizontalSourceWindow(undefined); return; }
+    const update = () => {
+      const next = getVisibleSourceWindow(viewport);
+      // A temporarily unavailable geometry window is not permission to mount
+      // the whole document. Keep the initial empty state (or last valid window)
+      // until the shared geometry owner can publish a bounded range.
+      if (next !== undefined) setHorizontalSourceWindow(next);
+    };
     update();
     const refreshFrame = requestAnimationFrame(update);
     viewport.addEventListener("scroll", update, { passive: true });
@@ -395,30 +401,33 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   }, [documentEpoch, document.timeline.cycleCount, getVisibleSourceWindow, presentationRevision, viewMode, zoom]);
   const horizontalDocumentIndex = useMemo(() => indexTransactionIntervals(document.transactions), [document.transactions]);
   const orderedBookmarks = useMemo(() => [...bookmarks].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)), [bookmarks]);
-  const visibleBookmarks = useMemo(() => horizontalSourceWindow === undefined ? orderedBookmarks : bookmarksInSourceWindow(orderedBookmarks, horizontalSourceWindow.start, horizontalSourceWindow.end), [horizontalSourceWindow, orderedBookmarks]);
+  const visibleBookmarks = useMemo(() => bookmarksForSourceWindowState(orderedBookmarks, horizontalSourceWindow), [horizontalSourceWindow, orderedBookmarks]);
   const horizontalDocumentCandidates = useMemo(() => {
-    if (horizontalSourceWindow === undefined) return horizontalDocumentIndex.ordered;
     const pinned = new Set<string>(selectedIds ?? []);
     if (selectedId !== undefined) pinned.add(selectedId);
-    return transactionIntervalsInWindow(horizontalDocumentIndex, horizontalSourceWindow.start, horizontalSourceWindow.end, pinned).items;
+    return transactionIntervalsForSourceWindowState(horizontalDocumentIndex, horizontalSourceWindow, pinned);
   }, [horizontalDocumentIndex, horizontalSourceWindow, selectedId, selectedIds]);
   const collapsedFoldBoundaries = useMemo(() => (rawDocument.timeGroups ?? [])
     .filter((group) => group.presentation?.collapsed)
     .flatMap((group) => [group.start, group.end])
     .sort((left, right) => left - right), [rawDocument.timeGroups]);
   const { cycleXs, boundaryXByCycle } = useMemo(() => {
-    const foldBoundaryCycles = horizontalSourceWindow === undefined
-      ? collapsedFoldBoundaries
-      : transactionFoldBoundariesInWindow(collapsedFoldBoundaries, horizontalSourceWindow.start, horizontalSourceWindow.end);
+    const foldBoundaryCycles = horizontalSourceWindow === null
+      ? []
+      : horizontalSourceWindow === undefined
+        ? collapsedFoldBoundaries
+        : transactionFoldBoundariesInWindow(collapsedFoldBoundaries, horizontalSourceWindow.start, horizontalSourceWindow.end);
     const sourceRange = horizontalSourceWindow;
-    const transactionCycles = horizontalDocumentCandidates.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).filter((phase) => sourceRange === undefined || (phase.end >= sourceRange.start && phase.start <= sourceRange.end)).flatMap((phase) => [phase.start, phase.end])]);
+    const transactionCycles = horizontalDocumentCandidates.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).filter((phase) => sourceRange === undefined || (sourceRange !== null && phase.end >= sourceRange.start && phase.start <= sourceRange.end)).flatMap((phase) => [phase.start, phase.end])]);
     const relevantCycles = [...new Set([...transactionCycles, ...visibleBookmarks.map((bookmark) => bookmark.start), ...foldBoundaryCycles])].sort((left, right) => left - right);
     const cycleXs = relevantCycles.flatMap((cycle) => { const x = getScaledBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
     return { cycleXs, boundaryXByCycle: new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const)) };
   }, [collapsedFoldBoundaries, getScaledBoundaryX, horizontalDocumentCandidates, horizontalSourceWindow, presentationRevision, visibleBookmarks]);
-  const visibleGuideXs = useMemo(() => horizontalSourceWindow === undefined
-    ? cycleXs
-    : transactionGeometryGuidesInSourceWindow(cycleXs, horizontalSourceWindow.start, horizontalSourceWindow.end), [cycleXs, horizontalSourceWindow]);
+  const visibleGuideXs = useMemo(() => horizontalSourceWindow === null
+    ? []
+    : horizontalSourceWindow === undefined
+      ? cycleXs
+      : transactionGeometryGuidesInSourceWindow(cycleXs, horizontalSourceWindow.start, horizontalSourceWindow.end), [cycleXs, horizontalSourceWindow]);
   const x = (cycle: number) => boundaryXByCycle.get(cycle);
   const foldRanges = useMemo<readonly TransactionFoldRange[]>(() => mergeTransactionFoldRanges(
     (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const),
@@ -660,10 +669,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       <div className="transaction-bookmark-markers" aria-label="Transaction bookmarks">{visibleBookmarks.map((bookmark) => { const left = x(bookmark.start); return left === undefined ? null : <button type="button" key={bookmark.id} data-bookmark-id={bookmark.id} data-source-cycle={bookmark.start} aria-label={`Go to bookmark ${bookmark.name}`} title={`${bookmark.name}: ${bookmark.start}`} style={{ left }} onClick={() => onNavigateBookmark?.(bookmark.start, bookmark.id)} />; })}</div>
       {visibleGroupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.trackTop, height: GROUP_HEADER_HEIGHT }} />)}
       {visibleLaneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.trackTop, height: band.trackHeight }}>
-        {(horizontalSourceWindow === undefined
-          ? (laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? [])
-          : horizontalCandidatesByLane.get(laneKey(band.groupId, band.laneId)) ?? []
-        ).filter((transaction) => transaction.visible !== false && isTrackTransactionVisible(band, transaction)).map((transaction) => {
+        {(horizontalCandidatesByLane.get(laneKey(band.groupId, band.laneId)) ?? []).filter((transaction) => transaction.visible !== false && isTrackTransactionVisible(band, transaction)).map((transaction) => {
           const startX = x(transaction.start);
           const endX = x(transaction.end);
           if (startX === undefined || endX === undefined) return null;

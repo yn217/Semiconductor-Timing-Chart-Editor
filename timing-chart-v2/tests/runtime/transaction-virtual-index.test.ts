@@ -1,7 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { bookmarksInSourceWindow, indexTransactionIntervals, transactionGeometryGuidesInSourceWindow, transactionIntervalsInWindow, transactionRowsInWindow } from "../../apps/editor/src/runtime/transaction-virtual-index.js";
+import { bookmarksForSourceWindowState, bookmarksInSourceWindow, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, transactionGeometryGuidesInSourceWindow, transactionIntervalsForSourceWindowState, transactionIntervalsInWindow, transactionRowsInWindow } from "../../apps/editor/src/runtime/transaction-virtual-index.js";
 
 describe("Transaction horizontal interval window", () => {
+  it("keeps the initial unmeasured render empty, then applies a bounded or explicit unwindowed source", () => {
+    const transactions = Array.from({ length: 10_000 }, (_, index) => ({ id: `tx-${index}`, start: index * 10, end: index * 10 + 5 }));
+    const index = indexTransactionIntervals(transactions);
+    const bookmarks = transactions.map(({ start }) => ({ start }));
+
+    expect(INITIAL_TRANSACTION_SOURCE_WINDOW).toBeNull();
+    expect(transactionIntervalsForSourceWindowState(index, INITIAL_TRANSACTION_SOURCE_WINDOW)).toEqual([]);
+    expect(bookmarksForSourceWindowState(bookmarks, INITIAL_TRANSACTION_SOURCE_WINDOW)).toEqual([]);
+    expect(transactionIntervalsForSourceWindowState(index, { start: 50_000, end: 50_020 }).map((item) => item.id)).toEqual(["tx-5000", "tx-5001"]);
+    expect(transactionIntervalsForSourceWindowState(index, undefined)).toHaveLength(10_000);
+    expect(bookmarksForSourceWindowState(bookmarks, undefined)).toHaveLength(10_000);
+  });
+
   it("queries a narrow viewport from a 10k sequential lane without visiting the bucket", () => {
     const transactions = Array.from({ length: 10_000 }, (_, index) => ({ id: `tx-${index}`, start: index * 10, end: index * 10 + 5 }));
     const index = indexTransactionIntervals(transactions);

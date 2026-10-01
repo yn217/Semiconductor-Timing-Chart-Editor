@@ -1,4 +1,9 @@
 export type TransactionInterval = Readonly<{ id: string; start: number; end: number }>;
+export type TransactionSourceWindow = Readonly<{ start: number; end: number }>;
+/** null means the first viewport measurement has not run; undefined means
+ * the viewport is unavailable and callers may use the unwindowed fallback. */
+export type TransactionSourceWindowState = TransactionSourceWindow | null | undefined;
+export const INITIAL_TRANSACTION_SOURCE_WINDOW = null;
 
 export type TransactionIntervalIndex<T extends TransactionInterval> = Readonly<{
   ordered: readonly T[];
@@ -27,6 +32,16 @@ export function bookmarksInSourceWindow<T extends Readonly<{ start: number }>>(
     else high = middle;
   }
   return ordered.slice(first, low);
+}
+
+/** Resolve bookmark candidates without treating an unmeasured first render as
+ * an intentionally unwindowed viewport. */
+export function bookmarksForSourceWindowState<T extends Readonly<{ start: number }>>(
+  ordered: readonly T[],
+  sourceWindow: TransactionSourceWindowState,
+): readonly T[] {
+  if (sourceWindow === null) return [];
+  return sourceWindow === undefined ? ordered : bookmarksInSourceWindow(ordered, sourceWindow.start, sourceWindow.end);
 }
 
 /** Slice sorted geometry boundaries to the shared horizontal source window. */
@@ -100,6 +115,19 @@ export function transactionIntervalsInWindow<T extends TransactionInterval>(
   }
   result.sort((left, right) => left.start - right.start || left.end - right.end || left.id.localeCompare(right.id));
   return { items: result, visitedNodes };
+}
+
+/** Resolve bars for the viewport lifecycle: no bars before the first layout
+ * measurement, full list only when no viewport owner exists, indexed slice
+ * once the shared source window is known. */
+export function transactionIntervalsForSourceWindowState<T extends TransactionInterval>(
+  index: TransactionIntervalIndex<T>,
+  sourceWindow: TransactionSourceWindowState,
+  pinnedIds?: ReadonlySet<string>,
+): readonly T[] {
+  if (sourceWindow === null) return [];
+  if (sourceWindow === undefined) return index.ordered;
+  return transactionIntervalsInWindow(index, sourceWindow.start, sourceWindow.end, pinnedIds).items;
 }
 
 /** Select a half-open row window and retain one selected row outside it. */
