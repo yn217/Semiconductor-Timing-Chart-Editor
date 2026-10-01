@@ -14,6 +14,42 @@ function projectionFor(signalId: SignalId, visible: boolean): RenderProjection {
 }
 
 describe("annotation visibility and semantic targets", () => {
+  it("caches clockless axis-owner metadata by Signal collection and avoids per-Annotation Signal scans", () => {
+    const source = canonicalFixture();
+    const signal = source.signals.find((item) => item.type !== "commentRow")!;
+    let indexedSignalReads = 0;
+    const signals = new Proxy(source.signals, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\d+$/.test(property)) indexedSignalReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    const annotations = Array.from({ length: 40 }, (_, cycle) => ({
+      id: `ann_cycle_only_${cycle}` as never,
+      type: "text" as const,
+      label: `Cycle ${cycle}`,
+      visible: true,
+      anchor: { cycle, point: "cycle-start" as const },
+    }));
+    const document = {
+      ...source,
+      signals,
+      timeline: { ...source.timeline, referenceClock: undefined },
+      annotations,
+    };
+    const map = new ImmutableLocalGeometryMap(signal.id, annotations.map((_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle * 10, y: 0 } })));
+    const maps = new Map([[signal.id, map]]);
+    const projection = projectionFor(signal.id, true);
+    const mapping = buildDisplayTimeMapping(document.timeline, []);
+
+    expect(projectAnnotationOverlays(document, projection, maps, mapping)).toHaveLength(40);
+    const readsAfterFirstProjection = indexedSignalReads;
+    expect(projectAnnotationOverlays(document, projection, maps, mapping)).toHaveLength(40);
+
+    expect(readsAfterFirstProjection).toBe(source.signals.length);
+    expect(indexedSignalReads).toBe(readsAfterFirstProjection);
+  });
+
   it("does not resolve an anchor onto a hidden Signal's retained navigation row", () => {
     const document = canonicalFixture();
     const signal = document.signals[1]!;

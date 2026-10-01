@@ -7,7 +7,7 @@ import { annotationFields, projectAnnotationOverlays } from "./annotation-overla
 import { annotationOffsetDeltaFromScreen, withAddedOffset, withSnapOffset } from "./anchor-offset.js";
 import { preferredSnapKinds } from "./snap-policy.js";
 import { normalizeSnapDistance } from "./snap-distance.js";
-import { resolveAnchorPoint } from "../resolve-anchor-point.js";
+import { annotationAxisOwnerSignalId, resolveAnchorPoint } from "../resolve-anchor-point.js";
 import { nextCommandId } from "../command-id.js";
 import type { DocumentEpoch } from "./document-epoch.js";
 
@@ -127,7 +127,7 @@ export class AnnotationInteractionOwner {
     }
     if (!drag.field) return;
     const anchor = drag.field !== "verticalSpanStart" && drag.field !== "verticalSpanEnd" ? annotation?.[drag.field as typeof annotationFields[number]] : undefined;
-    const point = resolveAnchorPoint(anchor, document, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, this.context.timelineGeometry.displayMapping, this.context.timelineGeometry.presentationScale);
+    const point = resolveAnchorPoint(anchor, document, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, this.context.timelineGeometry.displayMapping, this.context.timelineGeometry.presentationScale, false, annotationAxisOwnerSignalId(document, this.context.timelineGeometry.geometryMaps) ?? null);
     if (!annotation || !anchor || !point) return;
     const desired = { x: point.x + screenDx / currentZoom, y: point.y + dy };
     const snap = this.context.isSnapEnabled() ? this.context.timelineGeometry.currentSnapIndex().nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
@@ -188,7 +188,7 @@ export class AnnotationInteractionOwner {
     }
     const field = drag.field ?? annotationFields.find((key) => annotation[key] !== undefined);
     const anchor = field && field !== "verticalSpanStart" && field !== "verticalSpanEnd" ? annotation[field as typeof annotationFields[number]] : undefined;
-    const point = resolveAnchorPoint(anchor, this.context.getDocument(), this.context.getProjection(), this.context.timelineGeometry.geometryMaps, this.context.timelineGeometry.displayMapping, this.context.timelineGeometry.presentationScale);
+    const point = resolveAnchorPoint(anchor, document, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, this.context.timelineGeometry.displayMapping, this.context.timelineGeometry.presentationScale, false, annotationAxisOwnerSignalId(document, this.context.timelineGeometry.geometryMaps) ?? null);
     if (!field || !anchor || !point) return;
     const desired = { x: point.x + rawScreenDx / currentZoom, y: point.y + rawScreenDy };
     const snap = this.context.isSnapEnabled() ? this.context.timelineGeometry.currentSnapIndex().nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
