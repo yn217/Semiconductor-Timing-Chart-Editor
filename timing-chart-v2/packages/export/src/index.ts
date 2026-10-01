@@ -231,7 +231,11 @@ function clockEnabledAt(changes: ClockSignal["enable"], cycle: number): boolean 
     if (change.start > cycle) break;
     enabled = change.value;
   }
-  return ["1", "true", "high"].includes(String(enabled).toLowerCase());
+  return clockEnabledAtValue(enabled);
+}
+
+function clockEnabledAtValue(value: string | number): boolean {
+  return ["1", "true", "high"].includes(String(value).toLowerCase());
 }
 
 function traceYForWaveToken(token: string, row: number, height: number): number {
@@ -335,20 +339,43 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const countFromDisplay = signal.edgeCounter.countFrom === "visible-range-start" || signal.edgeCounter.countFrom === "selected-edge" ? range.start
       : signal.edgeCounter.countFrom === "marker" ? (marker === undefined ? Number.POSITIVE_INFINITY : toDisplayPosition(mapping, marker.start))
         : Number.NEGATIVE_INFINITY;
-    const canBoundEdges = settings.scope === "selected-range" && mapping.isIdentity && (signal.enable?.length ?? 0) === 0 && suppressed.size === 0 && signal.generator.duty > 0 && signal.generator.duty < 1;
+    const simpleBoundedEdges = settings.scope === "selected-range" && mapping.isIdentity && (signal.enable?.length ?? 0) === 0 && suppressed.size === 0 && signal.generator.duty > 0 && signal.generator.duty < 1;
+    // Range-relative counters can enumerate enabled/suppressed clocks locally:
+    // their labels start at the requested range (or an in-range marker), so no
+    // pre-window edges are needed to preserve the counter ordinal.
+    const rangeLocalCountOrigin = Number.isFinite(countFromDisplay) && countFromDisplay >= range.start;
+    const canBoundEdges = simpleBoundedEdges || (settings.scope === "selected-range" && mapping.isIdentity && rangeLocalCountOrigin && signal.generator.duty > 0 && signal.generator.duty < 1);
     const activeKind: "rising" | "falling" = signal.generator.polarity === "positive" ? "rising" : "falling";
     const oppositeKind: "rising" | "falling" = activeKind === "rising" ? "falling" : "rising";
     const selected: Array<{ kind: "rising" | "falling"; cycle: number; ordinal: number }> = [];
     if (canBoundEdges) {
-      const candidateStart = Math.max(start, range.start - oppositeOffset);
+      const candidateStart = Math.max(start, range.start - oppositeOffset, rangeLocalCountOrigin ? countFromDisplay - oppositeOffset : start);
       const firstCandidate = Math.max(0, Math.ceil((candidateStart - start) / period));
+      const changes = signal.enable ?? [];
+      let enableIndex = 0;
+      let enabled: string | number = 1;
+      const firstCycle = start + firstCandidate * period;
+      while (enableIndex < changes.length && changes[enableIndex]!.start <= firstCycle) {
+        enabled = changes[enableIndex]!.value;
+        enableIndex += 1;
+      }
+      let localOrdinal = 0;
       for (let cycle = start + firstCandidate * period; cycle < Math.min(document.timeline.cycleCount, range.end); cycle += period) {
+        while (enableIndex < changes.length && changes[enableIndex]!.start <= cycle) {
+          enabled = changes[enableIndex]!.value;
+          enableIndex += 1;
+        }
+        const slot = Math.round((cycle - signal.generator.start) / period);
+        if (!clockEnabledAtValue(enabled) || suppressed.has(slot)) continue;
         const candidates: Array<{ kind: "rising" | "falling"; cycle: number }> = [];
         if (signal.edgeCounter.mode === "both" || signal.edgeCounter.mode === activeKind) candidates.push({ kind: activeKind, cycle });
         if (signal.edgeCounter.mode === "both" || signal.edgeCounter.mode === oppositeKind) candidates.push({ kind: oppositeKind, cycle: cycle + oppositeOffset });
         for (const edge of candidates) {
           if (edge.cycle < countFromDisplay || edge.cycle < range.start || edge.cycle >= range.end || edge.cycle >= document.timeline.cycleCount) continue;
-          selected.push({ ...edge, ordinal: simpleClockEdgeIndexBefore(signal, document.timeline.cycleCount, signal.edgeCounter.mode, countFromDisplay, edge.cycle) });
+          const ordinal = simpleBoundedEdges
+            ? simpleClockEdgeIndexBefore(signal, document.timeline.cycleCount, signal.edgeCounter.mode, countFromDisplay, edge.cycle)
+            : localOrdinal++;
+          selected.push({ ...edge, ordinal });
         }
       }
     } else {

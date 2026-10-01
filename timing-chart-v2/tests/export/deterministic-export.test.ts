@@ -424,6 +424,29 @@ describe("deterministic document export", () => {
     expect(bounded.edgeCounters.map(({ cycle, kind, label }) => ({ cycle, kind, label }))).toEqual(expected);
   });
 
+  it("bounds range-relative edge counters with enable changes and suppressed periods", () => {
+    const base = canonicalFixture();
+    const clock = base.signals[0]!;
+    const document = {
+      ...base,
+      timeline: { ...base.timeline, end: 100, cycleCount: 100 },
+      signals: [{
+        ...clock,
+        generator: { ...clock.generator, period: 4, duty: 0.5, suppressedPeriods: [14] },
+        enable: [{ start: 0, value: 1 }, { start: 44, value: 0 }, { start: 52, value: 1 }],
+        edgeCounter: { ...clock.edgeCounter, show: true, mode: "both" as const, startNumber: 10, countFrom: "visible-range-start" as const },
+      }, base.signals[1]!],
+    };
+
+    const bounded = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 40, end: 60 } });
+    expect(bounded.edgeCounters.map(({ cycle, kind, label }) => ({ cycle, kind, label }))).toEqual([
+      { cycle: 40, kind: "rising", label: "10" },
+      { cycle: 42, kind: "falling", label: "11" },
+      { cycle: 52, kind: "rising", label: "12" },
+      { cycle: 54, kind: "falling", label: "13" },
+    ]);
+  });
+
   it("uses the configured Bookmark rather than the earliest Bookmark for export", () => {
     const base = canonicalFixture();
     const markerA = { id: "bookmark_a" as BookmarkId, name: "A", start: 1 };
