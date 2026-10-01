@@ -429,12 +429,15 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
     // their labels start at the requested range (or an in-range marker), so no
     // pre-window edges are needed to preserve the counter ordinal.
     const rangeLocalCountOrigin = Number.isFinite(countFromDisplay) && countFromDisplay >= range.start;
-    const canBoundEdges = simpleBoundedEdges || (settings.scope === "selected-range" && mapping.isIdentity && rangeLocalCountOrigin && signal.generator.duty > 0 && signal.generator.duty < 1);
+    const rangeLocalEdges = settings.scope === "selected-range" && rangeLocalCountOrigin && signal.generator.duty > 0 && signal.generator.duty < 1;
+    const canBoundEdges = simpleBoundedEdges || rangeLocalEdges;
     const activeKind: "rising" | "falling" = signal.generator.polarity === "positive" ? "rising" : "falling";
     const oppositeKind: "rising" | "falling" = activeKind === "rising" ? "falling" : "rising";
     const selected: Array<{ kind: "rising" | "falling"; cycle: number; ordinal: number }> = [];
     if (canBoundEdges) {
-      const candidateStart = Math.max(start, range.start - oppositeOffset, rangeLocalCountOrigin ? countFromDisplay - oppositeOffset : start);
+      const sourceRangeStart = mapping.isIdentity ? range.start : mapping.displayToSource(range.start) ?? 0;
+      const sourceRangeEnd = mapping.isIdentity ? range.end : mapping.displayToSource(range.end) ?? document.timeline.cycleCount;
+      const candidateStart = Math.max(start, sourceRangeStart - oppositeOffset, mapping.isIdentity && rangeLocalCountOrigin ? countFromDisplay - oppositeOffset : start);
       const firstCandidate = Math.max(0, Math.ceil((candidateStart - start) / period));
       const changes = signal.enable ?? [];
       let enableIndex = 0;
@@ -445,7 +448,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
         enableIndex += 1;
       }
       let localOrdinal = 0;
-      for (let cycle = start + firstCandidate * period; cycle < Math.min(document.timeline.cycleCount, range.end); cycle += period) {
+      for (let cycle = start + firstCandidate * period; cycle < Math.min(document.timeline.cycleCount, sourceRangeEnd); cycle += period) {
         if (checkpoint()) yield;
         while (enableIndex < changes.length && changes[enableIndex]!.start <= cycle) {
           enabled = changes[enableIndex]!.value;
@@ -457,7 +460,8 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
         if (signal.edgeCounter.mode === "both" || signal.edgeCounter.mode === activeKind) candidates.push({ kind: activeKind, cycle });
         if (signal.edgeCounter.mode === "both" || signal.edgeCounter.mode === oppositeKind) candidates.push({ kind: oppositeKind, cycle: cycle + oppositeOffset });
         for (const edge of candidates) {
-          if (edge.cycle < countFromDisplay || edge.cycle < range.start || edge.cycle >= range.end || edge.cycle >= document.timeline.cycleCount) continue;
+          const displayCycle = toDisplayPosition(mapping, edge.cycle);
+          if (displayCycle < countFromDisplay || displayCycle < range.start || displayCycle >= range.end || edge.cycle >= document.timeline.cycleCount) continue;
           const ordinal = simpleBoundedEdges
             ? simpleClockEdgeIndexBefore(signal, document.timeline.cycleCount, signal.edgeCounter.mode, countFromDisplay, edge.cycle)
             : localOrdinal++;

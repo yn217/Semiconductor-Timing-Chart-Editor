@@ -792,6 +792,39 @@ describe("deterministic document export", () => {
     ]);
   });
 
+  it("bounds folded range-relative Clock edge enumeration through the shared display mapping", async () => {
+    const base = canonicalFixture();
+    const clock = base.signals[0]!;
+    const document: CanonicalDocument = {
+      ...base,
+      timeline: { ...base.timeline, end: 10_000, cycleCount: 10_000 },
+      signalGroups: [{ ...base.signalGroups[0]!, rows: [clock.id] }],
+      signals: [{ ...clock, generator: { ...clock.generator, period: 4 }, edgeCounter: { ...clock.edgeCounter, show: true, mode: "both", countFrom: "visible-range-start", startNumber: 10 } }],
+      timeGroups: [{ id: "tg_edge_window" as TimeGroupId, name: "Collapsed", start: 5, end: 15, presentation: { collapsed: true } }],
+    };
+    const settings = { scope: "selected-range" as const, range: { start: 5_000, end: 5_010 }, foldPolicy: "respect" as const };
+    const yieldTask = vi.fn(async () => undefined);
+    let now = 0;
+    const performanceNow = vi.spyOn(globalThis.performance, "now").mockImplementation(() => { now += 20; return now; });
+    vi.stubGlobal("scheduler", { yield: yieldTask });
+    try {
+      const scene = buildExportScene(document, { format: "svg", ...settings });
+      await new DeterministicExportService().export({ format: "svg", snapshot: { revision: 0, document }, settings });
+
+      expect(scene.edgeCounters.map(({ cycle, kind, label }) => ({ cycle, kind, label }))).toEqual([
+        { cycle: 5_000, kind: "rising", label: "10" },
+        { cycle: 5_002, kind: "falling", label: "11" },
+        { cycle: 5_004, kind: "rising", label: "12" },
+        { cycle: 5_006, kind: "falling", label: "13" },
+        { cycle: 5_008, kind: "rising", label: "14" },
+      ]);
+      expect(yieldTask.mock.calls.length).toBeLessThan(20);
+    } finally {
+      performanceNow.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("walks full-export Clock enable changes once in cycle order", () => {
     const base = canonicalFixture();
     const clock = base.signals[0]!;
