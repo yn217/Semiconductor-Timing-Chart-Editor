@@ -861,6 +861,26 @@ describe("deterministic document export", () => {
     }
   });
 
+  it("bounds folded signal-start Clock counters while preserving global ordinals", () => {
+    const base = canonicalFixture();
+    const clock = base.signals[0]!;
+    const document: CanonicalDocument = {
+      ...base,
+      timeline: { ...base.timeline, end: 100_000, cycleCount: 100_000 },
+      signalGroups: [{ ...base.signalGroups[0]!, rows: [clock.id] }],
+      signals: [{ ...clock, generator: { ...clock.generator, period: 4 }, edgeCounter: { ...clock.edgeCounter, show: true, mode: "both", countFrom: "signal-start", startNumber: 23 } }],
+      timeGroups: [{ id: "tg_signal_start_window" as TimeGroupId, name: "Earlier fold", start: 100, end: 900, presentation: { collapsed: true } }],
+    };
+
+    const full = buildExportScene(document, { format: "svg", scope: "document", foldPolicy: "respect" });
+    const bounded = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 50_800, end: 50_820 }, foldPolicy: "respect" });
+    const selected = full.edgeCounters.filter((edge) => edge.cycle >= 50_800 && edge.cycle < 50_820);
+
+    expect(bounded.edgeCounters.map(({ cycle, kind, label }) => ({ cycle, kind, label }))).toEqual(
+      selected.map(({ cycle, kind, label }) => ({ cycle, kind, label })),
+    );
+  });
+
   it("walks full-export Clock enable changes once in cycle order", () => {
     const base = canonicalFixture();
     const clock = base.signals[0]!;

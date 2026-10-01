@@ -435,7 +435,11 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
     const countFromDisplay = signal.edgeCounter.countFrom === "visible-range-start" || signal.edgeCounter.countFrom === "selected-edge" ? range.start
       : signal.edgeCounter.countFrom === "marker" ? (marker === undefined ? Number.POSITIVE_INFINITY : toDisplayPosition(mapping, marker.start))
         : Number.NEGATIVE_INFINITY;
-    const simpleBoundedEdges = settings.scope === "selected-range" && mapping.isIdentity && (signal.enable?.length ?? 0) === 0 && suppressed.size === 0 && signal.generator.duty > 0 && signal.generator.duty < 1;
+    const simplePeriodicEdges = settings.scope === "selected-range" && (signal.enable?.length ?? 0) === 0 && suppressed.size === 0 && signal.generator.duty > 0 && signal.generator.duty < 1;
+    // A signal-start counter's ordinal is source-time periodic and can be
+    // calculated directly even when the selected display range follows folds.
+    // Other folded origins require their own source-boundary policy.
+    const simpleBoundedEdges = simplePeriodicEdges && (mapping.isIdentity || signal.edgeCounter.countFrom === "signal-start");
     // Range-relative counters can enumerate enabled/suppressed clocks locally:
     // their labels start at the requested range (or an in-range marker), so no
     // pre-window edges are needed to preserve the counter ordinal.
