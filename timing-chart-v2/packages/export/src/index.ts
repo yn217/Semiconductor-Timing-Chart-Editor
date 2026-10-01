@@ -835,7 +835,20 @@ function* renderExportSvgSteps(scene: ExportScene): Generator<void, string, void
   if (footer) out.push(`<text data-layout="footer" x="12" y="${scene.height - 12}" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#52677d">${xml(footer)}</text>`);
   if (scene.page) out.push(`</g>`);
   out.push(`</svg>`);
-  return out.join("");
+  const chunks: string[] = [];
+  let parts: string[] = [];
+  let partCharacters = 0;
+  for (const part of out) {
+    parts.push(part);
+    partCharacters += part.length;
+    if (parts.length < 64 && partCharacters < 256 * 1024) continue;
+    chunks.push(parts.join(""));
+    parts = [];
+    partCharacters = 0;
+    yield;
+  }
+  if (parts.length > 0) chunks.push(parts.join(""));
+  return chunks.join("");
 }
 
 /** Synchronous deterministic SVG API retained for pure callers and tests. */

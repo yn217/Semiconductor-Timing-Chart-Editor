@@ -440,7 +440,7 @@ describe("deterministic document export", () => {
     vi.stubGlobal("scheduler", { yield: yieldTask });
     try {
       const actual = new TextDecoder().decode(await service.export({ format: "svg", snapshot: { revision: 0, document }, settings }));
-      expect(yieldTask.mock.calls.length).toBeGreaterThanOrEqual(2);
+      expect(yieldTask.mock.calls.length).toBeGreaterThanOrEqual(3);
       expect(actual).toBe(expected);
     } finally {
       performanceNow.mockRestore();
