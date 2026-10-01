@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookmarksInSourceWindow, indexTransactionIntervals, transactionIntervalsInWindow, transactionRowsInWindow } from "../../apps/editor/src/runtime/transaction-virtual-index.js";
+import { bookmarksInSourceWindow, indexTransactionIntervals, transactionGeometryGuidesInSourceWindow, transactionIntervalsInWindow, transactionRowsInWindow } from "../../apps/editor/src/runtime/transaction-virtual-index.js";
 
 describe("Transaction horizontal interval window", () => {
   it("queries a narrow viewport from a 10k sequential lane without visiting the bucket", () => {
@@ -24,6 +24,15 @@ describe("Transaction horizontal interval window", () => {
   it("slices sorted Bookmark markers to the source-time window", () => {
     const bookmarks = Array.from({ length: 10_000 }, (_, index) => ({ id: `mark-${index}`, start: index * 10 }));
     expect(bookmarksInSourceWindow(bookmarks, 50_000, 50_030).map((item) => item.id)).toEqual(["mark-5000", "mark-5001", "mark-5002", "mark-5003"]);
+  });
+
+  it("bounds guide DOM candidates to the shared source window while retaining offscreen bar boundaries separately", () => {
+    const boundaries = Array.from({ length: 10_000 }, (_, cycle) => ({ cycle, x: cycle * 2 }));
+    const visible = transactionGeometryGuidesInSourceWindow(boundaries, 4_950, 5_050);
+    expect(visible).toHaveLength(101);
+    expect(visible[0]).toEqual({ cycle: 4_950, x: 9_900 });
+    expect(visible.at(-1)).toEqual({ cycle: 5_050, x: 10_100 });
+    expect(visible.some((boundary) => boundary.cycle === 0 || boundary.cycle === 9_999)).toBe(false);
   });
 });
 

@@ -7,7 +7,7 @@ import type { TransactionLaneCommandActions } from "../application/editor-surfac
 import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
 import { mergeTransactionFoldRanges, transactionFoldRangesIntersecting, type TransactionFoldRange } from "./transaction-fold-index.js";
-import { bookmarksInSourceWindow, indexTransactionIntervals, transactionIntervalsInWindow, type TransactionIntervalIndex } from "./transaction-virtual-index.js";
+import { bookmarksInSourceWindow, indexTransactionIntervals, transactionGeometryGuidesInSourceWindow, transactionIntervalsInWindow, type TransactionIntervalIndex } from "./transaction-virtual-index.js";
 
 const LANE_ROW_HEIGHT = 40;
 const GROUP_HEADER_HEIGHT = 24;
@@ -411,6 +411,9 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     const cycleXs = relevantCycles.flatMap((cycle) => { const x = getScaledBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
     return { cycleXs, boundaryXByCycle: new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const)) };
   }, [getScaledBoundaryX, horizontalDocumentCandidates, horizontalSourceWindow, presentationRevision, visibleBookmarks]);
+  const visibleGuideXs = useMemo(() => horizontalSourceWindow === undefined
+    ? cycleXs
+    : transactionGeometryGuidesInSourceWindow(cycleXs, horizontalSourceWindow.start, horizontalSourceWindow.end), [cycleXs, horizontalSourceWindow]);
   const x = (cycle: number) => boundaryXByCycle.get(cycle);
   const foldRanges = useMemo<readonly TransactionFoldRange[]>(() => {
     const ranges = (rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const).sort((left, right) => left[0] - right[0] || left[1] - right[1]);
@@ -649,7 +652,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
       })}
     </div>
       <div className="transaction-track" data-transaction-track="true" style={{ height: totalHeight }}>
-      <div className="transaction-geometry-guides" aria-hidden="true">{cycleXs.map((value) => <i className="transaction-geometry-line" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}</div>
+      <div className="transaction-geometry-guides" data-total-guide-count={cycleXs.length} data-mounted-guide-count={visibleGuideXs.length} aria-hidden="true">{visibleGuideXs.map((value) => <i className="transaction-geometry-line" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}</div>
       <div className="transaction-bookmark-markers" aria-label="Transaction bookmarks">{visibleBookmarks.map((bookmark) => { const left = x(bookmark.start); return left === undefined ? null : <button type="button" key={bookmark.id} data-bookmark-id={bookmark.id} data-source-cycle={bookmark.start} aria-label={`Go to bookmark ${bookmark.name}`} title={`${bookmark.name}: ${bookmark.start}`} style={{ left }} onClick={() => onNavigateBookmark?.(bookmark.start, bookmark.id)} />; })}</div>
       {visibleGroupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.trackTop, height: GROUP_HEADER_HEIGHT }} />)}
       {visibleLaneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.trackTop, height: band.trackHeight }}>

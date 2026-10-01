@@ -29,6 +29,29 @@ export function bookmarksInSourceWindow<T extends Readonly<{ start: number }>>(
   return ordered.slice(first, low);
 }
 
+/** Slice sorted geometry boundaries to the shared horizontal source window. */
+export function transactionGeometryGuidesInSourceWindow<T extends Readonly<{ cycle: number }>>(
+  ordered: readonly T[],
+  start: number,
+  end: number,
+): readonly T[] {
+  let low = 0;
+  let high = ordered.length;
+  while (low < high) {
+    const middle = low + Math.floor((high - low) / 2);
+    if (ordered[middle]!.cycle < start) low = middle + 1;
+    else high = middle;
+  }
+  const first = low;
+  high = ordered.length;
+  while (low < high) {
+    const middle = low + Math.floor((high - low) / 2);
+    if (ordered[middle]!.cycle <= end) low = middle + 1;
+    else high = middle;
+  }
+  return ordered.slice(first, low);
+}
+
 /** Build an interval index over start-sorted Transactions. Each query prunes
  * subtrees whose intervals end before the viewport or start after it. */
 export function indexTransactionIntervals<T extends TransactionInterval>(items: readonly T[]): TransactionIntervalIndex<T> {
