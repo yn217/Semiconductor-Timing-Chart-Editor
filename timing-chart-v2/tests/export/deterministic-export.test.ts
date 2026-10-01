@@ -321,6 +321,31 @@ describe("deterministic document export", () => {
     expect(JSON.parse(scene.waveforms.find((wave) => wave.signalId === base.signals[0]!.id)!.waveJson).wave).toHaveLength(5);
   });
 
+  it("samples folded Ghost Trace values by display cycle after the fold", () => {
+    const base = canonicalFixture();
+    const source = { ...base.signals[1]!, type: "binary" as const, values: [{ start: 0, value: 0 }, { start: 6, value: 1 }, { start: 7, value: 0 }] };
+    const document = {
+      ...base,
+      timeline: { ...base.timeline, cycleCount: 8, end: 8 },
+      signals: [base.signals[0]!, source],
+      timeGroups: [{ id: "tg_export" as TimeGroupId, name: "Idle", start: 2, end: 5, presentation: { collapsed: true } }],
+      annotations: [{ id: "ann_folded_ghost" as AnnotationId, type: "ghostTrace" as const, label: "Folded", visible: true, sourceSignalId: source.id, start: { signalId: source.id, cycle: 5, point: "cycle-start" as const }, end: { signalId: source.id, cycle: 7, point: "cycle-end" as const } }],
+    };
+
+    const scene = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 5, end: 8 } });
+    const ghost = scene.annotations.find((annotation) => annotation.id === "ann_folded_ghost")!;
+    const traceWave = scene.waveforms.find((wave) => wave.signalId === source.id)!;
+    const wave = JSON.parse(traceWave.waveJson).wave as string;
+    const trace = ghost.tracePoints!;
+    expect(wave).toHaveLength(5);
+    expect(trace).toHaveLength(3);
+    expect(trace.map((point) => point.y)).toEqual([
+      traceWave.y - traceWave.sourceHeight / 2 + 20,
+      traceWave.y - traceWave.sourceHeight / 2,
+      traceWave.y - traceWave.sourceHeight / 2 + 20,
+    ]);
+  });
+
   it("exports datasheet Measurement dimension markers, extensions, and lane metadata deterministically", () => {
     const base = canonicalFixture();
     const signal = base.signals[1]!;

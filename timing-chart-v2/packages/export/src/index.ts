@@ -476,7 +476,12 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const sourceWave = annotation.type === "ghostTrace" && annotation.sourceSignalId ? renderedWaveById.get(annotation.sourceSignalId) : undefined;
     const tracePoints = sourceWave && firstAnchor && lastAnchor ? (() => {
       const offset = annotation.traceOffsetCycles ?? 0;
-      const boundedTraceWindow = canBoundWaveforms ? ghostTraceWindow(annotation, document.timeline.cycleCount, range) : undefined;
+      // ghostTraceWindow's selected range is expressed in source-cycle space.
+      // Under folds the ExportScene range is display-cycle space, so treating
+      // those numbers as source cycles can truncate a trace that is visibly in
+      // range. Folded exports keep the semantic anchor span and filter each
+      // sample by its shared DisplayTimeMapping below.
+      const boundedTraceWindow = canBoundWaveforms && mapping.isIdentity ? ghostTraceWindow(annotation, document.timeline.cycleCount, range) : undefined;
       let startCycle = Math.max(0, Math.floor(Math.min(firstAnchor.cycle, lastAnchor.cycle)));
       let endCycle = Math.min(document.timeline.cycleCount, Math.ceil(Math.max(firstAnchor.cycle, lastAnchor.cycle)));
       if (boundedTraceWindow) {
@@ -491,8 +496,11 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
         if (sourceCycle < 0 || sourceCycle > document.timeline.cycleCount) continue;
         const displayCycle = toDisplayPosition(mapping, sourceCycle);
         if (displayCycle < range.start || displayCycle > range.end) continue;
-        const localSourceCycle = sourceCycle - sourceWave.windowStart;
-        points.push({ x: LABEL_WIDTH + (displayCycle - range.start) * cycleWidth, y: traceYForWaveToken((traceTokens[Math.max(0, Math.min(traceTokens.length - 1, Math.floor(localSourceCycle / tracePeriod)))] ?? "0"), rowY.get(sourceWave.signal.id) ?? first.y, sourceWave.height) });
+        // WaveJSON slots are in the rendered display domain. For identity
+        // windows this is also source time; for folded exports, using the
+        // source cycle here reads the wrong slot after a collapsed interval.
+        const localDisplayCycle = displayCycle - sourceWave.windowStart;
+        points.push({ x: LABEL_WIDTH + (displayCycle - range.start) * cycleWidth, y: traceYForWaveToken((traceTokens[Math.max(0, Math.min(traceTokens.length - 1, Math.floor(localDisplayCycle / tracePeriod)))] ?? "0"), rowY.get(sourceWave.signal.id) ?? first.y, sourceWave.height) });
       }
       return points.length > 1 ? points : undefined;
     })() : undefined;
