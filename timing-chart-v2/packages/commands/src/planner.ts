@@ -6,6 +6,7 @@ import type {
   CommandId,
   CommentRow,
   Layout,
+  GroupId,
   RowId,
   Signal,
   SignalGroup,
@@ -732,6 +733,46 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       rows.splice(command.index, 0, ...addedSignals);
       const signalGroups = [...document.signalGroups];
       signalGroups[groupIndex] = { ...group, rows };
+      const timingSignals = command.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
+      const changeSet: ChangeSet = { addedSignals, rowOrder: addedSignals, waveSemantics: timingSignals, geometryLocal: timingSignals, geometryScreenY: timingSignals, minimapOverview: true };
+      const inverseChangeSet: ChangeSet = { removedSignals: addedSignals, rowOrder: addedSignals, minimapOverview: true };
+      return { ok: true, document: { ...document, signals: [...document.signals, ...command.signals], signalGroups }, changeSet, inverseChangeSet };
+    }
+    case "signal.bulkCreateAcrossGroups": {
+      if (command.signals.length === 0 || command.placements.length === 0) return fail("no-op", "NO_OP", "$.signals", "Bulk registration requires Signals and destination Groups.");
+      const signalIds = new Set<SignalId>();
+      const existingIds = new Set(document.signals.map((signal) => signal.id));
+      for (const [index, signal] of command.signals.entries()) {
+        if (!isStableId(signal.id)) return fail("invalid", "INVALID_STABLE_ID", `$.signals[${index}].id`, "Signal ID must be stable.");
+        if (existingIds.has(signal.id) || signalIds.has(signal.id)) return fail("invalid", "DUPLICATE_ID", `$.signals[${index}].id`, `Signal '${signal.id}' already exists or is duplicated in this batch.`);
+        signalIds.add(signal.id);
+      }
+
+      const placementsByGroup = new Map<GroupId, Readonly<{ index: number; signalIds: readonly SignalId[] }>>();
+      const groupsById = new Map(document.signalGroups.map((group) => [group.id, group] as const));
+      const assignedSignalIds = new Set<SignalId>();
+      for (const [placementIndex, placement] of command.placements.entries()) {
+        if (placementsByGroup.has(placement.targetGroupId)) return fail("invalid", "DUPLICATE_ID", `$.placements[${placementIndex}].targetGroupId`, "Each destination Group may appear only once.");
+        const group = groupsById.get(placement.targetGroupId);
+        if (!group) return fail("invalid", "GROUP_NOT_FOUND", `$.placements[${placementIndex}].targetGroupId`, `Group '${placement.targetGroupId}' does not exist.`);
+        if (!Number.isInteger(placement.index) || placement.index < 0 || placement.index > group.rows.length) return fail("invalid", "INDEX_OUT_OF_RANGE", `$.placements[${placementIndex}].index`, "Signal insertion index is outside the destination Group rows.");
+        if (placement.signalIds.length === 0) return fail("no-op", "NO_OP", `$.placements[${placementIndex}].signalIds`, "Each destination Group must receive at least one Signal.");
+        for (const [signalIndex, id] of placement.signalIds.entries()) {
+          if (!signalIds.has(id) || assignedSignalIds.has(id)) return fail("invalid", "MISSING_CROSS_REFERENCE", `$.placements[${placementIndex}].signalIds[${signalIndex}]`, "Every created Signal must be assigned to exactly one destination Group.");
+          assignedSignalIds.add(id);
+        }
+        placementsByGroup.set(placement.targetGroupId, { index: placement.index, signalIds: placement.signalIds });
+      }
+      if (assignedSignalIds.size !== signalIds.size) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.placements", "Every created Signal must be assigned to exactly one destination Group.");
+
+      const signalGroups = document.signalGroups.map((group) => {
+        const placement = placementsByGroup.get(group.id);
+        if (!placement) return group;
+        const rows = [...group.rows];
+        rows.splice(placement.index, 0, ...placement.signalIds);
+        return { ...group, rows };
+      });
+      const addedSignals = command.signals.map((signal) => signal.id);
       const timingSignals = command.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
       const changeSet: ChangeSet = { addedSignals, rowOrder: addedSignals, waveSemantics: timingSignals, geometryLocal: timingSignals, geometryScreenY: timingSignals, minimapOverview: true };
       const inverseChangeSet: ChangeSet = { removedSignals: addedSignals, rowOrder: addedSignals, minimapOverview: true };

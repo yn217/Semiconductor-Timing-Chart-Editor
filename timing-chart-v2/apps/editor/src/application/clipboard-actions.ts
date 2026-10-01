@@ -196,10 +196,11 @@ export function useClipboardActions({ application, selection }: { application: E
     const allocateId = createEntityIdAllocator(current);
     const selectedSignalId = selection.refs.signalId.current;
     const selectedGroup = placement === "current-selection" ? current.signalGroups.find((item) => selectedSignalId !== undefined && item.rows.includes(selectedSignalId)) : undefined;
+    const groupsById = new Map(current.signalGroups.map((group) => [group.id, group] as const));
     const createdByGroup = new Map<GroupId, { target: SignalGroup; signals: Signal[] }>();
     const created: Signal[] = [];
     for (const source of input) {
-      const target = selectedGroup ?? current.signalGroups.find((item) => item.id === source.groupId) ?? current.signalGroups.at(-1);
+      const target = selectedGroup ?? groupsById.get(source.groupId) ?? current.signalGroups.at(-1);
       if (!target) continue;
       const id = signalId(allocateId(source.signal.type === "commentRow" ? "commentRow" : "signal"));
       const copyOrdinal = created.length + 1;
@@ -211,14 +212,18 @@ export function useClipboardActions({ application, selection }: { application: E
       createdByGroup.set(target.id, bucket);
     }
     if (created.length === 0) return;
-    const commands: SemanticCommand[] = [...createdByGroup.values()].map(({ target, signals }) => ({
-      id: nextCommandId(`${operation}_signals`),
-      type: "signal.bulkCreate",
-      signals,
+    const placements = [...createdByGroup.values()].map(({ target, signals }) => ({
       targetGroupId: target.id,
       index: target.rows.length,
+      signalIds: signals.map((signal) => signal.id),
     }));
-    const result = application.executeBatch(nextCommandId(operation), commands);
+    const command: SemanticCommand = {
+      id: nextCommandId(`${operation}_signals`),
+      type: "signal.bulkCreateAcrossGroups",
+      signals: created,
+      placements,
+    };
+    const result = application.execute(command);
     if (result.ok) {
       const ids = created.map((signal) => signal.id);
       selection.selectSignals(new Set(ids), ids[0]);

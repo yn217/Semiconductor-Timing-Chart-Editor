@@ -794,6 +794,43 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.signals.some((signal) => signal.id === first.id)).toBe(false);
   });
 
+  it("bulk-creates Signals across multiple destination Groups in one planner rebuild", () => {
+    const source = canonicalFixture();
+    const secondGroup: CanonicalDocument["signalGroups"][number] = { id: "grp_bulk_second" as GroupId, name: "Second", rows: [] };
+    const session = new CommandHistorySession({ ...source, signalGroups: [...source.signalGroups, secondGroup] });
+    const first = extraSignal("sig_bulk_multi_first");
+    const second = extraSignal("sig_bulk_multi_second");
+    const beforePlans = commandPlannerMetrics().internalPlans;
+
+    expect(session.execute({ id: commandId("cmd_bulk_multi_group"), type: "signal.bulkCreateAcrossGroups", signals: [first, second], placements: [
+      { targetGroupId: "grp_main" as GroupId, index: 1, signalIds: [first.id] },
+      { targetGroupId: secondGroup.id, index: 0, signalIds: [second.id] },
+    ] })).toMatchObject({ ok: true });
+
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    expect(session.getSnapshot().document.signals.map((signal) => signal.id)).toEqual(["sig_clk", "sig_data", first.id, second.id]);
+    expect(session.getSnapshot().document.signalGroups.map((group) => group.rows)).toEqual([["sig_clk", first.id, "sig_data"], [second.id]]);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals).toEqual(source.signals);
+    expect(session.getSnapshot().document.signalGroups).toEqual([...source.signalGroups, secondGroup]);
+  });
+
+  it("rejects a multi-Group Signal bulk placement atomically when any Signal is unassigned", () => {
+    const source = canonicalFixture();
+    const session = new CommandHistorySession(source);
+    const before = session.getSnapshot();
+    const assigned = extraSignal("sig_bulk_multi_assigned");
+    const unassigned = extraSignal("sig_bulk_multi_unassigned");
+    const result = session.execute({ id: commandId("cmd_bulk_multi_group_reject"), type: "signal.bulkCreateAcrossGroups", signals: [assigned, unassigned], placements: [
+      { targetGroupId: "grp_main" as GroupId, index: 2, signalIds: [assigned.id] },
+    ] });
+
+    expect(result).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "MISSING_CROSS_REFERENCE" }] });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+  });
+
   it("rejects a bulk registration with duplicate incoming IDs before changing the document", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const before = session.getSnapshot();

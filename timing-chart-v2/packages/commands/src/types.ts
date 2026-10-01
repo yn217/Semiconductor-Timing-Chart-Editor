@@ -53,6 +53,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "enum.delete"; enumId: string }>
   | Readonly<{ id: CommandId; type: "signal.create"; signal: Signal; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "signal.bulkCreate"; signals: readonly Signal[]; targetGroupId: GroupId; index: number }>
+  | Readonly<{ id: CommandId; type: "signal.bulkCreateAcrossGroups"; signals: readonly Signal[]; placements: readonly Readonly<{ targetGroupId: GroupId; index: number; signalIds: readonly SignalId[] }>[] }>
   | Readonly<{ id: CommandId; type: "signal.bulkDelete"; signalIds: readonly SignalId[] }>
   | Readonly<{ id: CommandId; type: "signal.delete"; signalId: SignalId }>
   | Readonly<{ id: CommandId; type: "signal.rename"; signalId: SignalId; name: string }>
