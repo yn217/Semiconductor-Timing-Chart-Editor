@@ -355,7 +355,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
   const renderedWaves: Array<{ signal: Exclude<Signal, { readonly type: "commentRow" }>; waveJson: WaveJsonSignal; svgMarkup: string; windowStart: number; renderedCycleCount: number; width: number; height: number }> = [];
   for (const [index, signal] of waveSignals.entries()) {
     const boundedRange = waveformRanges.get(signal.id);
-    const canBoundFoldedValues = canBoundWaveforms && !mapping.isIdentity && signal.type !== "clock" && !ghostSourceSignalIds.has(signal.id);
+    const canBoundFoldedValues = canBoundWaveforms && !mapping.isIdentity && signal.type !== "clock";
     const displayValues = signal.type === "clock" || (canBoundSourceWaveforms && boundedRange !== undefined)
       ? undefined
       : canBoundFoldedValues
@@ -364,7 +364,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
     const displaySignal = signal.type === "clock"
       ? { ...signal, ...(signal.enable ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
       : { ...signal, values: displayValues ?? signal.values };
-    const foldedRangeIsSafe = mapping.isIdentity || (signal.type !== "clock" && !ghostSourceSignalIds.has(signal.id));
+    const foldedRangeIsSafe = mapping.isIdentity || signal.type !== "clock";
     const bounded = canBoundWaveforms && foldedRangeIsSafe
       ? boundedWaveJson(mapping.isIdentity ? signal : displaySignal, mapping.isIdentity ? document.timeline.cycleCount : mapping.displayCycleCount, boundedRange ?? range, document.enumDefinitions)
       : undefined;

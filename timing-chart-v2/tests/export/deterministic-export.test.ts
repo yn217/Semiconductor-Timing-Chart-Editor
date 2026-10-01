@@ -508,7 +508,7 @@ describe("deterministic document export", () => {
     const traceWave = scene.waveforms.find((wave) => wave.signalId === source.id)!;
     const wave = JSON.parse(traceWave.waveJson).wave as string;
     const trace = ghost.tracePoints!;
-    expect(wave).toHaveLength(5);
+    expect(wave).toHaveLength(3);
     expect(trace).toHaveLength(3);
     expect(trace.map((point) => point.y)).toEqual([
       traceWave.y - traceWave.sourceHeight / 2 + 20,
@@ -527,7 +527,10 @@ describe("deterministic document export", () => {
       annotations: [{ id: "ann_long_folded_ghost" as AnnotationId, type: "ghostTrace" as const, label: "Long", visible: true, sourceSignalId: source.id, start: { signalId: source.id, cycle: 0, point: "cycle-start" as const }, end: { signalId: source.id, cycle: 1024, point: "cycle-end" as const } }],
     };
     const settings = { scope: "selected-range" as const, range: { start: 0, end: 5 } };
-    const expected = renderExportSvg(buildExportScene(document, { format: "svg", ...settings }));
+    const scene = buildExportScene(document, { format: "svg", ...settings });
+    const expected = renderExportSvg(scene);
+    const sourceWave = scene.waveforms.find((wave) => wave.signalId === document.annotations[0]!.sourceSignalId)!;
+    expect(JSON.parse(sourceWave.waveJson).wave).toHaveLength(scene.ruler.end - scene.ruler.start);
     const service = new DeterministicExportService();
     const yieldTask = vi.fn(async () => undefined);
     let now = 0;
