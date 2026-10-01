@@ -170,9 +170,9 @@ function transactionGroupPresentationIndex(groups: readonly TransactionGroup[] |
 const transactionIndexes = new WeakMap<readonly Transaction[], TransactionIndex>();
 const transactionOverviewRowIndexes = new WeakMap<MiniMapTransactionOverview, ReadonlyMap<string, number>>();
 
-function transactionIndex(transactions: readonly Transaction[]): TransactionIndex {
+function transactionIndex(transactions: readonly Transaction[], requireById = false): TransactionIndex {
   const cached = transactionIndexes.get(transactions);
-  if (cached?.byId) return cached;
+  if (cached && (!requireById || cached.byId)) return cached;
   const byId = new Map<Transaction["id"], Transaction>();
   const indexById = new Map<Transaction["id"], number>();
   const byLane = new Map<string, TransactionLaneBucket>();
@@ -304,8 +304,8 @@ export function updateMiniMapTransactionOverview(previous: MiniMapTransactionOve
     transactionIndexes.set(document.transactions, { indexById: previousIndex.indexById, byLane: nextBuckets });
     return overview;
   }
-  const previousIndex = transactionIndex(previousTransactions);
-  const nextIndex = transactionIndex(document.transactions);
+  const previousIndex = transactionIndex(previousTransactions, true);
+  const nextIndex = transactionIndex(document.transactions, true);
   if (!previousIndex.byId || !nextIndex.byId) return buildMiniMapTransactionOverview(document);
   const changedLanes = new Set<string>();
   for (const [id, before] of previousIndex.byId) {

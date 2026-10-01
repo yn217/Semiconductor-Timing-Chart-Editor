@@ -108,6 +108,42 @@ describe("MiniMap overview derivation", () => {
     expect(updated.rows).toEqual(buildMiniMapTransactionOverview(next).rows);
   });
 
+  it("reuses the partial transaction index across consecutive change-set updates", () => {
+    const source = canonicalFixture();
+    const transactions = Array.from({ length: 10_000 }, (_, index) => ({
+      id: `txn_consecutive_${index}`,
+      name: `Transaction ${index}`,
+      start: index % 500,
+      end: (index % 500) + 2,
+      laneId: `lane_${index % 100}`,
+      linkedSignals: [],
+    }));
+    const before = { ...source, transactions };
+    let overview = buildMiniMapTransactionOverview(before);
+    const firstIndex = 4_567;
+    const firstChanged = [...transactions];
+    firstChanged[firstIndex] = { ...transactions[firstIndex]!, color: "#123456" };
+    const firstGuarded = new Proxy(firstChanged, {
+      get(target, property, receiver) {
+        if (property === Symbol.iterator || property === "map" || property === "filter" || property === "entries") {
+          return () => { throw new Error(`unexpected whole-collection traversal via ${String(property)}`); };
+        }
+        return Reflect.get(target, property, receiver) as unknown;
+      },
+    });
+    overview = updateMiniMapTransactionOverview(overview, transactions, before.transactionGroups, { ...before, transactions: firstGuarded } as never, [transactions[firstIndex]!.id as never]);
+    expect(overview.transactionsVisited).toBe(201);
+
+    const secondIndex = 4_667;
+    const secondChanged = [...firstChanged];
+    secondChanged[secondIndex] = { ...firstChanged[secondIndex]!, color: "#654321" };
+    const second = updateMiniMapTransactionOverview(overview, firstGuarded, before.transactionGroups, { ...before, transactions: secondChanged } as never, [transactions[secondIndex]!.id as never]);
+
+    expect(second.transactionsVisited).toBe(201);
+    expect(second.laneBucketsRebuilt).toBe(1);
+    expect(second.rows).toEqual(buildMiniMapTransactionOverview({ ...before, transactions: secondChanged }).rows);
+  });
+
   it("falls back to a full overview when a new lane is introduced", () => {
     const source = canonicalFixture();
     const before = { ...source, transactions: [{ id: "txn_a", name: "A", start: 1, end: 4, laneId: "lane_0", linkedSignals: [] }] };
