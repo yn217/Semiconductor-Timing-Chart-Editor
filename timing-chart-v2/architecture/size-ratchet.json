@@ -3,5 +3,5 @@
   "apps/editor/src/minimal-cycle-view.tsx": 882,
   "apps/editor/src/editor-secondary-surfaces.tsx": 711,
   "apps/editor/src/runtime/timeline-surface-controller.ts": 981,
-  "packages/renderer/src/stable-surface.ts": 1450
+  "packages/renderer/src/stable-surface.ts": 1378
 }

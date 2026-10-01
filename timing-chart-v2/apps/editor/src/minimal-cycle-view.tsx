@@ -11,7 +11,6 @@ import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { ContextMenuPanel, MinimalCycleViewTitleBar, RenameDialog, BulkRegistrationDialog } from "./minimal-cycle-view-panels.js";
 import { MinimalCycleViewRibbonTabs } from "./minimal-cycle-view-ui.js";
-import { cycleDocument, transactionDemoDocument, v1ReferenceDocument } from "./fixtures-cycle-reference-documents.js";
 import { signalId } from "./minimal-cycle-view-fixture-helpers.js";
 import { useEditorDialogRuntime } from "./application/use-editor-dialog-runtime.js";
 import { HardwareHierarchyBrowser } from "./hardware-hierarchy-browser.js";
@@ -34,7 +33,7 @@ import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { deriveSelectionCapabilities, useSelectionOwner } from "./application/use-selection-owner.js";
 import { useClipboardActions } from "./application/clipboard-actions.js";
 import { useTimelineNavigationOwner } from "./runtime/use-timeline-navigation-owner.js";
-import { readPreferredViewMode, useWorkspaceUiState } from "./workspace/use-workspace-ui-state.js";
+import { useWorkspaceUiState } from "./workspace/use-workspace-ui-state.js";
 import { useTimelinePresentationState } from "./workspace/use-timeline-presentation-state.js";
 import { useDialogMenuState } from "./workspace/use-dialog-menu-state.js";
 import { useTimelineSurfaceRuntime } from "./runtime/use-timeline-surface-runtime.js";
@@ -44,17 +43,12 @@ import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtim
 import { attachMenuKeyboardNavigation } from "./runtime/interaction-controller.js";
 import { refreshRendererOverlays } from "./runtime/render-coordinator.js";
 import { useEditorDomBridgeEffects } from "./runtime/use-editor-dom-bridge-effects.js";
-import { readStartupDocumentPreference } from "./workspace/startup-document-preference.js";
+import { resolveEditorStartupDocument } from "./workspace/editor-startup-document.js";
 
 export function MinimalCycleView() {
-  const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : undefined;
-  const visualReference = searchParams?.has("visual-reference") === true;
-  // Dev/test entry points for the plain 24-cycle Cycle sample (no demo Transactions/Bookmarks/Annotations): `?cycle-sample` or the
-  // `timing-chart-v2.startup-document=cycle` preference. The product default remains the Transaction demo document.
-  const cycleSample = searchParams?.has("cycle-sample") === true || readStartupDocumentPreference() === "cycle";
-  const initialDocument = visualReference ? v1ReferenceDocument : cycleSample ? cycleDocument : transactionDemoDocument;
+  const { visualReference, initialDocument, productTemplate, initialViewMode } = resolveEditorStartupDocument(typeof window !== "undefined" ? window.location.search : undefined);
   const application = useEditorApplicationOwner(initialDocument);
-  const documentLifecycle = useDocumentLifecycle({ application, productTemplate: cycleDocument, persistText: downloadText });
+  const documentLifecycle = useDocumentLifecycle({ application, productTemplate, persistText: downloadText });
   const exportController = useMemo(() => createEditorExportController(), []);
   const { snapshot, lastChangeSet, history, problem, validationDiagnostics, validationPending, runtimeDiagnostics, setProblem, setRuntimeDiagnostics } = application;
   const host = useRef<HTMLDivElement>(null);
@@ -129,7 +123,7 @@ export function MinimalCycleView() {
   const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId, BookmarkId>({
     documentEpoch,
     cycleCount: snapshot.document.timeline.cycleCount,
-    initialViewMode: visualReference ? "Cycle" : readPreferredViewMode("Transaction"),
+    initialViewMode,
   });
   const {
     ribbonTab, setRibbonTab,

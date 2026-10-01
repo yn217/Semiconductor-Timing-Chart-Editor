@@ -1,8 +1,9 @@
-import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
+import type { RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
 import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, wrapAnnotationLabel } from "@timing-chart-v2/geometry";
 import { createLeftTreeIcon, createRoleBadge } from "./tree-row-dom.js";
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
 import { groupBackgroundColor } from "./group-background.js";
+import { syncGroupHeaderLayer } from "./group-header-dom.js";
 
 export function isWaveMountRequestFresh(request: Pick<WaveMountRequest, "documentEpoch" | "isFresh">, currentDocumentEpoch: number): boolean {
   return (request.documentEpoch === undefined || request.documentEpoch === currentDocumentEpoch) && (request.isFresh?.() ?? true);
@@ -1168,85 +1169,6 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
   name.dataset.role = "frozen-signal-name";
   name.textContent = row.name;
   shell.replaceChildren(role, name);
-}
-
-function syncGroupHeaderLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, headerIds: readonly GroupHeaderLayoutEntry["rowId"][], headers: readonly GroupHeaderLayoutEntry[], surface: string): { creates: number; destroys: number; moves: number } {
-  const active = new Set<string>(headerIds);
-  let creates = 0, destroys = 0, moves = 0;
-  for (const [id, shell] of cache) if (!active.has(id)) { shell.remove(); cache.delete(id); destroys += 1; }
-  const byId = new Map(headers.map((header) => [header.rowId, header]));
-  const ordered: HTMLElement[] = [];
-  for (const id of headerIds) {
-    const header = byId.get(id);
-    if (!header) continue;
-    let shell = cache.get(id);
-    if (!shell) {
-      shell = element(layer.ownerDocument, "div", `${surface}-group-header`);
-      shell.dataset.rowId = id;
-      cache.set(id, shell);
-      creates += 1;
-    }
-    shell.dataset.groupId = header.groupId;
-    shell.dataset.groupName = header.groupName;
-    shell.dataset.groupHeader = "true";
-    if (surface === "left") {
-      shell.setAttribute("role", "treeitem");
-      shell.tabIndex = -1;
-      shell.setAttribute("aria-level", "1");
-      shell.setAttribute("aria-expanded", String(!header.collapsed));
-      shell.setAttribute("aria-selected", "false");
-    }
-    const groupStyleApplies = groupStyleAppliesToSurface(header.groupStyle?.extend, surface);
-    const headerBackground = groupStyleApplies && header.groupStyle?.showBackground
-      ? groupBackgroundColor(header.groupStyle.background, header.groupStyle.opacity)
-      : undefined;
-    if (headerBackground) shell.style.setProperty("--group-background", headerBackground);
-    else shell.style.removeProperty("--group-background");
-    if (groupStyleApplies && header.groupStyle?.border) shell.style.setProperty("--group-border", header.groupStyle.border);
-    else shell.style.removeProperty("--group-border");
-    if (surface === "left") populateGroupHeader(shell, header);
-    else if (surface === "frozen") shell.textContent = header.groupName;
-    else shell.replaceChildren();
-    place(shell, header);
-    ordered.push(shell);
-  }
-  const currentRows = Array.from(layer.children).filter((child) => !(child as HTMLElement).dataset.groupHeader) as HTMLElement[];
-  const combined = [...currentRows, ...ordered];
-  combined.sort((left, right) => {
-    const y = (item: HTMLElement) => Number.parseFloat(item.style.transform.match(/translateY\((-?[0-9.]+)px\)/)?.[1] ?? "0");
-    return y(left) - y(right);
-  });
-  const current = Array.from(layer.children);
-  if (combined.length !== current.length || combined.some((shell, index) => current[index] !== shell)) {
-    layer.replaceChildren(...combined);
-    moves += combined.length;
-  }
-  return { creates, destroys, moves };
-}
-
-function populateGroupHeader(shell: HTMLElement, header: GroupHeaderLayoutEntry): void {
-  const document = shell.ownerDocument;
-  const branch = document.createElement("span");
-  branch.dataset.role = "tree-branch";
-  branch.dataset.groupId = header.groupId;
-  branch.draggable = true;
-  branch.setAttribute("aria-label", `Select ${header.groupName} group`);
-  const collapse = document.createElement("button");
-  collapse.type = "button";
-  collapse.dataset.role = "tree-collapse";
-  collapse.dataset.groupId = header.groupId;
-  collapse.setAttribute("aria-label", `${header.collapsed ? "Expand" : "Collapse"} ${header.groupName} group`);
-  collapse.setAttribute("aria-expanded", String(!header.collapsed));
-  collapse.dataset.collapsed = String(header.collapsed);
-  collapse.append(createLeftTreeIcon(document, header.collapsed ? "chevron-right" : "chevron-down", "surface-icon chevron-icon"));
-  branch.append(collapse, document.createTextNode(` ${header.groupName}`));
-  const more = document.createElement("button");
-  more.type = "button";
-  more.dataset.role = "tree-group-more";
-  more.dataset.groupId = header.groupId;
-  more.setAttribute("aria-label", `More actions for ${header.groupName}`);
-  more.append(createLeftTreeIcon(document, "more", "surface-icon more-icon"));
-  shell.replaceChildren(branch, more);
 }
 
 /** Parses and validates the shared text-style JsonObject shape (used by
