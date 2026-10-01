@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildDisplayTimeMapping, DisplayTimeMappingCache, remapValueChangesToDisplay, resolveSourcePosition } from "@timing-chart-v2/projection";
+import type { DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeGroup, TimeGroupId, Timeline } from "@timing-chart-v2/schema";
 
 function timeline(cycleCount: number, labelAnchors: Timeline["labelAnchors"] = []): Pick<Timeline, "cycleCount" | "labelAnchors"> {
@@ -26,6 +27,26 @@ describe("buildDisplayTimeMapping", () => {
     const mapping = buildDisplayTimeMapping(timeline(100_000), [collapsedGroup("g1", 10, 99_990)]);
     expect(resolveSourcePosition(mapping, 50_000, "floor")).toBe(9);
     expect(resolveSourcePosition(mapping, 50_000, "ceil")).toBe(10);
+  });
+
+  it("uses the shared source-boundary index directly for floor/ceil instead of searching display cycles", () => {
+    const displayToSource = vi.fn(() => undefined);
+    const displayBoundaryAtOrAfterSource = vi.fn((_cycle: number) => 10);
+    const mapping: DisplayTimeMapping = {
+      sourceCycleCount: 100_000,
+      displayCycleCount: 100,
+      isIdentity: false,
+      sourceToDisplay: () => undefined,
+      displayToSource,
+      displayBoundaryAtOrAfterSource,
+      collapsedGroupAtSource: () => undefined,
+      labelFor: (cycle) => cycle,
+    };
+
+    expect(resolveSourcePosition(mapping, 50_000, "floor")).toBe(9);
+    expect(resolveSourcePosition(mapping, 50_000, "ceil")).toBe(10);
+    expect(displayBoundaryAtOrAfterSource.mock.calls).toEqual([[50_001], [50_000]]);
+    expect(displayToSource).not.toHaveBeenCalled();
   });
   it("is the identity mapping when there are no collapsed TimeGroups", () => {
     const mapping = buildDisplayTimeMapping(timeline(10), []);
