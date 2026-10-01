@@ -451,16 +451,15 @@ type TimingDiagnosticIndexes = Readonly<{
 // without rebuilding a full SignalId map on each edit.
 const timingDiagnosticIndexesBySignals = new WeakMap<CanonicalDocument["signals"], TimingDiagnosticIndexes>();
 function buildTimingDiagnosticIndexes(document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>): TimingDiagnosticIndexes {
+  if (!enabled.has("protocol") && !enabled.has("stability")) return { signalsById: new Map(), signalIndexById: new Map() };
   const cached = timingDiagnosticIndexesBySignals.get(document.signals);
   if (cached) return cached;
   const signalsById = new Map<SignalId, Signal>();
   const signalIndexById = new Map<SignalId, number>();
-  if (enabled.has("protocol") || enabled.has("stability")) {
-    document.signals.forEach((signal, index) => {
-      signalsById.set(signal.id, signal);
-      signalIndexById.set(signal.id, index);
-    });
-  }
+  document.signals.forEach((signal, index) => {
+    signalsById.set(signal.id, signal);
+    signalIndexById.set(signal.id, index);
+  });
   const indexes = { signalsById, signalIndexById };
   timingDiagnosticIndexesBySignals.set(document.signals, indexes);
   return indexes;

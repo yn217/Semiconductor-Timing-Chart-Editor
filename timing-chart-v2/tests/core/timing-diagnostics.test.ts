@@ -275,12 +275,14 @@ describe("derived timing diagnostics", () => {
 
   it("changes enabled diagnostic categories without reevaluating retained or disabled rule domains", () => {
     const source = canonicalFixture();
-    const previous = { ...source, checkSettings: { enabledCategories: ["unknown-value"] as const } };
+    const constraint: Constraint = { id: "constraint_category_cache", type: "latency", data: { triggerSignalId: "missing_trigger" } };
+    const previous = { ...source, constraints: [constraint], checkSettings: { enabledCategories: ["unknown-value"] as const } };
     const previousDiagnostics = deriveTimingDiagnostics(previous);
     const enabledProtocol = { ...previous, checkSettings: { enabledCategories: ["unknown-value", "protocol"] as const } };
     const enabled = deriveTimingDiagnosticsIfInputsChanged(previous, enabledProtocol, previousDiagnostics);
     expect(enabled.recomputed).toBe(true);
     expect(enabled.diagnostics).toEqual(deriveTimingDiagnostics(enabledProtocol));
+    expect(enabled.diagnostics).toContainEqual(expect.objectContaining({ code: "LATENCY_CONSTRAINT_INVALID", objectId: constraint.id }));
 
     let signalCollectionReads = 0;
     const guardedSignals = new Proxy(enabledProtocol.signals, {
