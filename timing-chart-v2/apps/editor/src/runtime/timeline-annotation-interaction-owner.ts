@@ -27,7 +27,6 @@ export type AnnotationInteractionContext = Readonly<{
   renderer: Pick<TimingChartRenderer, "updateSnapGuide" | "updateOverlays">;
   timelineGeometry: AnnotationGeometryPort;
   documentEpoch: Pick<DocumentEpoch, "current" | "isCurrent">;
-  getZoom: () => number;
   getDocument: () => CanonicalDocument;
   getProjection: () => RenderProjection;
   isSnapEnabled: () => boolean;
@@ -93,8 +92,8 @@ export class AnnotationInteractionOwner {
     if (!drag) return;
     if (!this.context.documentEpoch.isCurrent(drag.epoch)) { this.cancel(); return; }
     const screenDx = Math.round(event.clientX - drag.startX);
-    const currentZoom = this.context.getZoom();
     const timeAxisMetrics = this.context.timelineGeometry.timeAxisMetrics;
+    const currentZoom = timeAxisMetrics.zoom;
     const dy = Math.round(event.clientY - drag.startY);
     // #421/#423: a whole-annotation move (no field, no label -- dragging
     // the body of e.g. a Dependency/Arrow with no separate anchor/label
@@ -157,8 +156,8 @@ export class AnnotationInteractionOwner {
     if (!this.context.documentEpoch.isCurrent(drag.epoch)) { this.cancel(); return; }
     const rawScreenDx = event.clientX - drag.startX;
     const rawScreenDy = event.clientY - drag.startY;
-    const currentZoom = this.context.getZoom();
     const timeAxisMetrics = this.context.timelineGeometry.timeAxisMetrics;
+    const currentZoom = timeAxisMetrics.zoom;
     const offsetDelta = annotationOffsetDeltaFromScreen({ x: rawScreenDx, y: rawScreenDy }, timeAxisMetrics.presentationScale, currentZoom);
     const dx = offsetDelta.x;
     const dy = offsetDelta.y;

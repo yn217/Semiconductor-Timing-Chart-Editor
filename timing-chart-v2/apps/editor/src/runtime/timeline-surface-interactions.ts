@@ -249,7 +249,7 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
   };
   const treeDrag = new TreeDragInteractionOwner({ rendererHost, getDocument: () => getSnapshot().document, execute });
   const annotationInteraction = new AnnotationInteractionOwner({
-    rendererHost, renderer, timelineGeometry, documentEpoch, getZoom: timelineNavigation.getZoom,
+    rendererHost, renderer, timelineGeometry, documentEpoch,
     getDocument: () => getSnapshot().document, getProjection, isSnapEnabled: () => snapEnabledRef.current,
     execute, executeBatch,
     getDragTargets: (annotationId) => {
