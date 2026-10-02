@@ -133,6 +133,26 @@ describe("TimelineGeometryOwner", () => {
     expect(owner.updateZoom(Number.NaN)).toBe(updated);
   });
 
+  it("resolves screen X with the zoom from its published metrics snapshot", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const geometry = new ImmutableLocalGeometryMap(clockId, [
+      { cycle: 0, point: "cycle-start", position: { x: 0, y: 0 } },
+      { cycle: 1, point: "cycle-start", position: { x: 10, y: 0 } },
+      { cycle: 2, point: "cycle-start", position: { x: 20, y: 0 } },
+    ]);
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => cycleDocument,
+      getProjection: () => ({ rowLayout: [{ rowId: clockId, kind: "timing", visible: true, y: 0 }] } as never),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
+    owner.updateZoom(2);
+
+    expect(owner.cycleBoundaryAtScreenX(20, 0, false)).toBe(1);
+  });
+
   it("uses retained geometry boundaries instead of scanning a large source timeline", () => {
     const clockId = signalId("sig_cycle_clock");
     let findCalls = 0;

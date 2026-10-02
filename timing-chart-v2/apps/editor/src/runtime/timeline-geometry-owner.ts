@@ -301,7 +301,8 @@ export class TimelineGeometryOwner {
     return this.screen.fromScreen(point, { scrollX, scrollY, zoom });
   }
 
-  cycleBoundaryAtScreenX(clientX: number, surfaceLeft: number, zoom: number, snapEnabled: boolean): number | undefined {
+  cycleBoundaryAtScreenX(clientX: number, surfaceLeft: number, snapEnabled: boolean): number | undefined {
+    const { zoom } = this.#timeAxisMetrics;
     const localX = this.screenToLocal({ x: clientX - surfaceLeft, y: 0 }, zoom).x;
     return this.cycleBoundaryAtLocalX(localX, zoom, snapEnabled);
   }

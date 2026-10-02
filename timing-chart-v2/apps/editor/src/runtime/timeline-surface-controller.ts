@@ -556,7 +556,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       setRange: setTimelineRange,
       publishState,
     });
-    const cycleBoundaryAtX = createTimelineCycleBoundaryResolver({ rendererHost, timelineGeometry, getZoom: timelineNavigation.getZoom, isSnapEnabled: () => snapEnabledRef.current });
+    const cycleBoundaryAtX = createTimelineCycleBoundaryResolver({ rendererHost, timelineGeometry, isSnapEnabled: () => snapEnabledRef.current });
     const transactionSnapAxisY = (() => {
       const axisOwner = timelineGeometry.timeAxis.ownerSignalId;
       return axisOwner === undefined ? undefined : projection.rowLayout.find((row) => row.rowId === axisOwner)?.y;
