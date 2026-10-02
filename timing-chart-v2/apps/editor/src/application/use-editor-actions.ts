@@ -19,6 +19,7 @@ import type { CommandHistorySession } from "@timing-chart-v2/history";
 import { createFileActionController } from "./file-action-controller.js";
 import { createSelectionActions } from "./selection-actions.js";
 import { createBottomEditorActions } from "./bottom-editor-actions.js";
+import { transactionInsertion } from "../transaction-insertion.js";
 
 export interface EditorActionsInput {
   readonly document: CanonicalDocument;
@@ -264,12 +265,11 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
   const { deleteBottomSignal, deleteBottomAnnotation, deleteBottomTransaction, toggleTransactionSignal, toggleBottomPin } = bottomActions;
   const createTransaction = (groupId?: TransactionGroup["id"]) => {
     const id = nextEntityId("transaction", input.document) as TransactionId;
+    const at = transactionInsertion(input.document, input.selectedTransactionId, groupId);
     const result = input.commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", {
-      id: input.nextCommandId("tree_transaction_create"),
-      type: "transaction.create",
-      transaction: { id, name: `Transaction ${input.document.transactions.length + 1}`, start: 0, end: Math.min(4, input.document.timeline.cycleCount), laneId: "lane_0", ...(groupId === undefined ? {} : { groupId }) },
-    });
-    if (result.ok) input.selection.selectTransaction(id);
+      id: input.nextCommandId("tree_transaction_create"), type: "transaction.create", ...(at.afterTransactionId === undefined ? {} : { afterTransactionId: at.afterTransactionId }),
+      transaction: { id, name: `Transaction ${input.document.transactions.length + 1}`, start: at.startCycle ?? 0, end: Math.min((at.startCycle ?? 0) + 4, input.document.timeline.cycleCount), ...at.fields },
+    }); if (result.ok) input.selection.selectTransaction(id);
   };
   // #397 Transaction Mode GUI Closure: `transactionGroup.create` already
   // existed at the command/planner layer (full create/rename/update/delete

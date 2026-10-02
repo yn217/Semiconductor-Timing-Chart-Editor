@@ -1284,8 +1284,11 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       if (transaction.phases && transactionPhasesProblem(transaction.phases, transaction.start, transaction.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.transaction.phases", transactionPhasesProblem(transaction.phases, transaction.start, transaction.end)!);
       if (transaction.linkedSignals?.some((id) => !document.signals.some((signal) => signal.id === id))) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.transaction.linkedSignals", "Transaction links must target existing Signals.");
       if (transaction.groupId !== undefined && !(document.transactionGroups ?? []).some((group) => group.id === transaction.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.transaction.groupId", "Transaction Group does not exist.");
+      const anchorIndex = command.afterTransactionId === undefined ? document.transactions.length - 1 : document.transactions.findIndex((item) => item.id === command.afterTransactionId);
+      if (anchorIndex < 0 && command.afterTransactionId !== undefined) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.afterTransactionId", `Transaction '${command.afterTransactionId}' does not exist.`);
+      const transactions = [...document.transactions.slice(0, anchorIndex + 1), transaction, ...document.transactions.slice(anchorIndex + 1)];
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
-      return { ok: true, document: { ...document, transactions: [...document.transactions, transaction] }, changeSet, inverseChangeSet: changeSet };
+      return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
     }
     case "transaction.bulkCreate": {
       if (command.transactions.length === 0) return fail("no-op", "NO_OP", "$.transactions", "Bulk Transaction creation requires at least one item.");

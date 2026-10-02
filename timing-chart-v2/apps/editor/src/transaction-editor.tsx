@@ -8,6 +8,7 @@ import type { TransactionEditorCommandActions } from "./application/editor-surfa
 import { EditorIconButton } from "./editor-icon.js";
 import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 import { DraftStatus } from "./draft-status.js";
+import { transactionInsertion } from "./transaction-insertion.js";
 import { selectedTransactionsInDocumentOrder } from "./runtime/transaction-selection-index.js";
 
 export function TransactionEditor({ transaction, selectedTransactionIds, document, cyclesPerTc: perTc = 10, history, onSelect, onSelectTransactions, commands, onUndo, onRedo, onDelete, onCancel, onToggleTransactionSignal }: { readonly transaction: Transaction | undefined; readonly selectedTransactionIds?: ReadonlySet<TransactionId>; readonly document: CanonicalDocument; readonly cyclesPerTc?: number; readonly history: HistoryState; readonly onSelect: (id: TransactionId, additive?: boolean) => void; readonly onSelectTransactions: (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => void; readonly commands: TransactionEditorCommandActions; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void }) {
@@ -226,7 +227,7 @@ export function TransactionEditor({ transaction, selectedTransactionIds, documen
           "Add" reuses the exact same commands.createTransactionFromBottom
           + default draft values the empty-state create form below already
           uses -- no new command, no second creation path. */}
-      <button type="button" data-testid="bottom-transaction-add" onClick={() => { const id = nextEntityId("transaction", document) as TransactionId; const result = commands.createTransactionFromBottom({ id, name: `Transaction ${document.transactions.length + 1}`, start, end, ...(laneId.trim() ? { laneId: laneId.trim() } : {}) }); if (result.ok) onSelect(id); }}>Add</button>
+      <button type="button" data-testid="bottom-transaction-add" onClick={() => { const id = nextEntityId("transaction", document) as TransactionId; const at = transactionInsertion(document, transaction?.id); const from = at.startCycle ?? start; const result = commands.createTransactionFromBottom({ id, name: `Transaction ${document.transactions.length + 1}`, start: from, end: Math.min(document.timeline.cycleCount, from + Math.max(1, end - start)), ...at.fields, ...(laneId.trim() ? { laneId: laneId.trim() } : {}) }, at.afterTransactionId); if (result.ok) onSelect(id); }}>Add</button>
       <button type="button" data-testid="bottom-transaction-duplicate" disabled={selectedIds.size === 0} title={selectedIds.size === 0 ? "Select a Transaction first" : selectedIds.size === 1 ? "Duplicate selected Transaction" : "Duplicate all selected Transactions"} onClick={duplicateSelected}>Duplicate</button>
       <button type="button" className="danger" data-testid="bottom-transaction-delete" disabled={selectedIds.size === 0} title={selectedIds.size === 0 ? "Select a Transaction first" : "Delete selected Transaction(s)"} onClick={() => selectedIds.size > 1 ? bulkDelete() : onDelete()}>Delete</button>
       <button type="button" data-testid="bottom-transaction-add-group" onClick={addTransactionGroup}>Add Group</button>
