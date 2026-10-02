@@ -93,10 +93,13 @@ test("keeps canonical state unchanged during a dense Transaction preview drag", 
   const history = await page.getByTestId("history-status").textContent();
   const dirty = await page.getByTestId("dirty-status").textContent();
   const countersBefore = JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, number>;
-  const minimapBefore = await page.getByTestId("minimap").getAttribute("data-transaction-overview-builds");
   const diagnosticsBefore = await host.getAttribute("data-renderer-diagnostic-publishes");
   await page.getByTestId("home-snap-toggle").click();
   await expect(page.getByTestId("snap-status")).toHaveText("Snap: Off");
+  // The Snap toggle itself refreshes the MiniMap overview once; the contract here is that the DRAG PREVIEW builds none, so settle first.
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.waitForTimeout(800);
+  const minimapBefore = await page.getByTestId("minimap").getAttribute("data-transaction-overview-builds");
   await transaction.locator("span").hover();
   await page.mouse.down();
   for (let index = 0; index < 120; index += 1) await page.mouse.move(box.x + 20 + (index % 12), box.y + box.height / 2);

@@ -7,7 +7,7 @@ import type { TransactionLaneCommandActions } from "../application/editor-surfac
 import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
 import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldContainingCycle, transactionFoldContainingEndBoundary, transactionFoldRangesIntersecting, transactionVisibleSegments, type TransactionFoldRange } from "./transaction-fold-index.js";
-import { bookmarksForSourceWindowState, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, transactionGeometryGuidesInSourceWindow, transactionIntervalsForSourceWindowState, type TransactionIntervalIndex, type TransactionSourceWindowState } from "./transaction-virtual-index.js";
+import { bookmarksForSourceWindowState, bookmarksHiddenInFolds, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, transactionGeometryGuidesInSourceWindow, transactionIntervalsForSourceWindowState, transactionIntervalsHiddenInFolds, type TransactionIntervalIndex, type TransactionSourceWindowState } from "./transaction-virtual-index.js";
 import { TRANSACTION_LANE_ROW_HEIGHT as LANE_ROW_HEIGHT, transactionLaneBandHeights } from "./transaction-lane-layout.js";
 
 const GROUP_HEADER_HEIGHT = 24;
@@ -392,12 +392,14 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
   }, [documentEpoch, document.timeline.cycleCount, getVisibleSourceWindow, presentationRevision, viewMode, zoom]);
   const horizontalDocumentIndex = useMemo(() => indexTransactionIntervals(document.transactions), [document.transactions]);
   const orderedBookmarks = useMemo(() => [...bookmarks].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)), [bookmarks]);
-  const visibleBookmarks = useMemo(() => bookmarksForSourceWindowState(orderedBookmarks, horizontalSourceWindow), [horizontalSourceWindow, orderedBookmarks]);
+  const visibleBookmarks = useMemo(() => bookmarksHiddenInFolds(orderedBookmarks, mergeTransactionFoldRanges((rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const)), horizontalSourceWindow, bookmarksForSourceWindowState(orderedBookmarks, horizontalSourceWindow)), [horizontalSourceWindow, orderedBookmarks, rawDocument.timeGroups]);
   const horizontalDocumentCandidates = useMemo(() => {
     const pinned = new Set<string>(selectedIds ?? []);
     if (selectedId !== undefined) pinned.add(selectedId);
-    return transactionIntervalsForSourceWindowState(horizontalDocumentIndex, horizontalSourceWindow, pinned);
-  }, [horizontalDocumentIndex, horizontalSourceWindow, selectedId, selectedIds]);
+    const windowed = transactionIntervalsForSourceWindowState(horizontalDocumentIndex, horizontalSourceWindow, pinned);
+    const collapsedFolds = mergeTransactionFoldRanges((rawDocument.timeGroups ?? []).filter((group) => group.presentation?.collapsed).map((group) => [group.start, group.end] as const));
+    return transactionIntervalsHiddenInFolds(horizontalDocumentIndex, collapsedFolds, horizontalSourceWindow, windowed);
+  }, [horizontalDocumentIndex, horizontalSourceWindow, rawDocument.timeGroups, selectedId, selectedIds]);
   const collapsedFoldBoundaries = useMemo(() => (rawDocument.timeGroups ?? [])
     .filter((group) => group.presentation?.collapsed)
     .flatMap((group) => [group.start, group.end])
@@ -656,13 +658,17 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, viewMod
     </div>
       <div className="transaction-track" data-transaction-track="true" style={{ height: totalHeight }}>
       <div className="transaction-geometry-guides" data-total-guide-count={cycleXs.length} data-mounted-guide-count={visibleGuideXs.length} aria-hidden="true">{visibleGuideXs.map((value) => <i className="transaction-geometry-line" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}</div>
-      <div className="transaction-bookmark-markers" aria-label="Transaction bookmarks">{visibleBookmarks.map((bookmark) => { const left = x(bookmark.start); return left === undefined ? null : <button type="button" key={bookmark.id} data-bookmark-id={bookmark.id} data-source-cycle={bookmark.start} aria-label={`Go to bookmark ${bookmark.name}`} title={`${bookmark.name}: ${bookmark.start}`} style={{ left }} onClick={() => onNavigateBookmark?.(bookmark.start, bookmark.id)} />; })}</div>
+      <div className="transaction-bookmark-markers" aria-label="Transaction bookmarks">{visibleBookmarks.map((bookmark) => { const insideFold = transactionFoldContainingCycle(foldRanges, bookmark.start); const left = x(bookmark.start) ?? (insideFold === undefined ? undefined : x(insideFold[1]) ?? x(insideFold[0])); return left === undefined ? null : <button type="button" key={bookmark.id} data-bookmark-id={bookmark.id} data-source-cycle={bookmark.start} aria-label={`Go to bookmark ${bookmark.name}`} title={`${bookmark.name}: ${bookmark.start}`} style={{ left }} onClick={() => onNavigateBookmark?.(bookmark.start, bookmark.id)} />; })}</div>
       {visibleGroupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.trackTop, height: GROUP_HEADER_HEIGHT }} />)}
       {visibleLaneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.trackTop, height: band.trackHeight }}>
         {(horizontalCandidatesByLane.get(laneKey(band.groupId, band.laneId)) ?? []).filter((transaction) => transaction.visible !== false && isTrackTransactionVisible(band, transaction)).map((transaction) => {
           const startX = x(transaction.start);
           const endX = x(transaction.end);
-          if (startX === undefined || endX === undefined) return null;
+          // A Transaction fully inside a collapsed TimeGroup has no rendered X, but must still mount its "hidden in fold" affordance
+          // (selectable, aria-labelled); only Transactions that are neither positioned nor fold-hidden are skipped.
+          const containingFold = transactionFoldContainingCycle(foldRanges, transaction.start);
+          const hiddenInFold = containingFold !== undefined && transaction.end <= containingFold[1];
+          if ((startX === undefined || endX === undefined) && !hiddenInFold) return null;
           const row = band.rowOf.get(transaction.id) ?? 0;
           // #429/#397 Transaction Mode Product Closure P0-4: the bar's own
           // color/Group color was resolved and applied to the Tree row's

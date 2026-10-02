@@ -143,3 +143,40 @@ export function transactionRowsInWindow<T>(
   if (pinnedRow !== undefined && !visible.includes(pinnedRow)) visible.push(pinnedRow);
   return visible;
 }
+
+/** Transactions fully inside a collapsed fold that touches the window. They have no rendered X, but their "hidden in fold" affordance
+ *  must still mount (selectable, labelled); an indexed window slice by source cycle alone never reaches them. */
+export function transactionIntervalsHiddenInFolds<T extends TransactionInterval>(
+  index: TransactionIntervalIndex<T>,
+  folds: readonly (readonly [start: number, end: number])[],
+  sourceWindow: TransactionSourceWindowState,
+  already: readonly T[],
+): readonly T[] {
+  if (sourceWindow === null || sourceWindow === undefined || folds.length === 0) return already;
+  const known = new Set(already.map((transaction) => transaction.id));
+  const extra: T[] = [];
+  for (const [foldStart, foldEnd] of folds) {
+    if (foldEnd < sourceWindow.start || foldStart > sourceWindow.end) continue;
+    for (const transaction of transactionIntervalsInWindow(index, foldStart, foldEnd).items) {
+      if (transaction.start >= foldStart && transaction.end <= foldEnd && !known.has(transaction.id)) { known.add(transaction.id); extra.push(transaction); }
+    }
+  }
+  return extra.length === 0 ? already : [...already, ...extra];
+}
+
+/** Bookmarks inside a collapsed fold that touches the window: no rendered X of their own, but they stay reachable at the fold. */
+export function bookmarksHiddenInFolds<T extends Readonly<{ start: number }>>(
+  ordered: readonly T[],
+  folds: readonly (readonly [start: number, end: number])[],
+  sourceWindow: TransactionSourceWindowState,
+  already: readonly T[],
+): readonly T[] {
+  if (sourceWindow === null || sourceWindow === undefined || folds.length === 0) return already;
+  const known = new Set<T>(already);
+  const extra: T[] = [];
+  for (const [foldStart, foldEnd] of folds) {
+    if (foldEnd < sourceWindow.start || foldStart > sourceWindow.end) continue;
+    for (const bookmark of bookmarksInSourceWindow(ordered, foldStart, foldEnd)) if (!known.has(bookmark)) { known.add(bookmark); extra.push(bookmark); }
+  }
+  return extra.length === 0 ? already : [...already, ...extra];
+}

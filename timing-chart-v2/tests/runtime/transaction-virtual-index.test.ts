@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookmarksForSourceWindowState, bookmarksInSourceWindow, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, transactionGeometryGuidesInSourceWindow, transactionIntervalsForSourceWindowState, transactionIntervalsInWindow, transactionRowsInWindow } from "../../apps/editor/src/runtime/transaction-virtual-index.js";
+import { bookmarksHiddenInFolds, transactionIntervalsHiddenInFolds, bookmarksForSourceWindowState, bookmarksInSourceWindow, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, transactionGeometryGuidesInSourceWindow, transactionIntervalsForSourceWindowState, transactionIntervalsInWindow, transactionRowsInWindow } from "../../apps/editor/src/runtime/transaction-virtual-index.js";
 
 describe("Transaction horizontal interval window", () => {
   it("keeps the initial unmeasured render empty, then applies a bounded or explicit unwindowed source", () => {
@@ -65,5 +65,29 @@ describe("Transaction vertical row window", () => {
     expect(transactionRowsInWindow([0, 1, 2], -5, 2)).toEqual([0, 1]);
     expect(transactionRowsInWindow([0, 1, 2], 2, 99)).toEqual([2]);
     expect(transactionRowsInWindow([], 0, 10)).toEqual([]);
+  });
+});
+
+describe("fold-hidden Transactions and Bookmarks stay mountable (#865 regression)", () => {
+  const folds = [[0, 100]] as const;
+  const transactions = [{ id: "inside", start: 25, end: 35 }, { id: "straddle", start: 90, end: 130 }, { id: "after", start: 150, end: 160 }];
+  const index = indexTransactionIntervals(transactions);
+
+  it("adds Transactions fully inside a collapsed fold that touches the window, and only those", () => {
+    const windowed = transactionIntervalsForSourceWindowState(index, { start: 100, end: 200 });
+    expect(windowed.map((item) => item.id)).not.toContain("inside");
+    const withHidden = transactionIntervalsHiddenInFolds(index, folds, { start: 100, end: 200 }, windowed);
+    expect(withHidden.map((item) => item.id).sort()).toEqual(["after", "inside", "straddle"]);
+    // A fold far from the window contributes nothing; unmeasured / unwindowed states pass through unchanged.
+    expect(transactionIntervalsHiddenInFolds(index, folds, { start: 500, end: 600 }, [])).toEqual([]);
+    expect(transactionIntervalsHiddenInFolds(index, folds, null, [])).toEqual([]);
+    expect(transactionIntervalsHiddenInFolds(index, folds, undefined, index.ordered)).toBe(index.ordered);
+  });
+
+  it("adds Bookmarks inside a touching fold without duplicating windowed ones", () => {
+    const bookmarks = [{ start: 25 }, { start: 120 }];
+    const windowed = bookmarksForSourceWindowState(bookmarks, { start: 100, end: 200 });
+    expect(windowed).toEqual([{ start: 120 }]);
+    expect(bookmarksHiddenInFolds(bookmarks, folds, { start: 100, end: 200 }, windowed).map((bookmark) => bookmark.start)).toEqual([120, 25]);
   });
 });
