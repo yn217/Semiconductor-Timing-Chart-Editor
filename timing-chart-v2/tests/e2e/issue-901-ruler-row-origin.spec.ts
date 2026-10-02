@@ -11,7 +11,7 @@ test("the first waveform row does not start inside the ruler band when Time Grou
   await page.goto("/");
   const surface = page.getByTestId("cycle-surface");
   await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/showcase/21_large_feature_showcase.tcd.json"));
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/showcase/21_large_feature_showcase.tcd.json"));
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
   const boxes = await page.evaluate(() => {
     const ruler = document.querySelector("[data-testid='cycle-ruler']")!.getBoundingClientRect();

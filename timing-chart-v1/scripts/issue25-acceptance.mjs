@@ -5,7 +5,7 @@ import { PNG } from 'pngjs';
 import { chromium } from 'playwright';
 
 const root = 'artifacts/issue25';
-const sampleRoot = 'samples/golden-protocol/timing_chart_sample_pack/samples';
+const sampleRoot = 'samples/old/pre-reset-2026-10-02/golden-protocol/timing_chart_sample_pack/samples';
 const samples = [
   '01_apb_register_access.tcd.json',
   '02_ahb_lite_pipelined_transfer.tcd.json',

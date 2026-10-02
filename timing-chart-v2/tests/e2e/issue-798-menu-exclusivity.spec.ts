@@ -5,7 +5,7 @@ import { startInCycleMode } from "./cycle-startup.js";
 
 startInCycleMode(test);
 
-const fixture = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../samples/showcase/24_protocol_transaction_showcase.tcd.json");
+const fixture = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../samples/old/pre-reset-2026-10-02/showcase/24_protocol_transaction_showcase.tcd.json");
 
 for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) {
 test(`peer menus replace each other at ${viewport.width}x${viewport.height}`, async ({ page }) => {

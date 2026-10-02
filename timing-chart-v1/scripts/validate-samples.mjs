@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const root = path.resolve(process.cwd(), '..', 'timing-chart-v2');
-const dirs = ['samples/golden-protocol', 'samples/golden-feature-coverage'];
+const dirs = ['samples/old/pre-reset-2026-10-02/golden-protocol', 'samples/old/pre-reset-2026-10-02/golden-feature-coverage'];
 const files = dirs.flatMap(dir => {
   const base = path.join(root, dir);
   if (!fs.existsSync(base)) return [];
@@ -47,7 +47,7 @@ for (const file of files) {
   }
 }
 
-const matrix = path.join(root, 'samples/golden-feature-coverage/timing_chart_feature_coverage_pack/coverage_matrix.csv');
+const matrix = path.join(root, 'samples/old/pre-reset-2026-10-02/golden-feature-coverage/timing_chart_feature_coverage_pack/coverage_matrix.csv');
 if (fs.existsSync(matrix)) {
   const rows = fs.readFileSync(matrix, 'utf8').trim().split(/\r?\n/).filter(Boolean);
   if (rows.length < 2) errors.push('coverage_matrix.csv must contain a header and rows');

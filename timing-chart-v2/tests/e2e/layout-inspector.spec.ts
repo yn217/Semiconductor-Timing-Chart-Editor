@@ -124,7 +124,7 @@ test("keeps right-aligned short frozen labels inside the timing boundary", async
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/golden-feature-coverage/timing_chart_feature_coverage_pack/samples/20_transaction_cycle_linked_views.tcd.json"));
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/golden-feature-coverage/timing_chart_feature_coverage_pack/samples/20_transaction_cycle_linked_views.tcd.json"));
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
   const label = host.locator("[data-role='frozen-row'][data-row-id='tag'] [data-role='frozen-signal-name']");
@@ -145,7 +145,7 @@ test("keeps representative APB protocol labels inset in the frozen column", asyn
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/golden-protocol/timing_chart_sample_pack/samples/01_apb_register_access.tcd.json"));
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/golden-protocol/timing_chart_sample_pack/samples/01_apb_register_access.tcd.json"));
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
   for (const [rowId, name] of [["psel", "PSEL"], ["penable", "PENABLE"], ["pslverr", "PSLVERR"]] as const) {
@@ -168,7 +168,7 @@ test("preserves APB label policy and frozen geometry through Save/Open for every
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/golden-protocol/timing_chart_sample_pack/samples/01_apb_register_access.tcd.json"));
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/golden-protocol/timing_chart_sample_pack/samples/01_apb_register_access.tcd.json"));
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
 
@@ -219,7 +219,7 @@ test("preserves canonical Signal names and safe frozen-column geometry across al
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/golden-feature-coverage/timing_chart_feature_coverage_pack/samples/20_transaction_cycle_linked_views.tcd.json"));
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/golden-feature-coverage/timing_chart_feature_coverage_pack/samples/20_transaction_cycle_linked_views.tcd.json"));
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
 
@@ -263,7 +263,7 @@ test("keeps right-aligned frozen labels inset during horizontal scroll and zoom"
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/showcase/25_long_timeline_stress_showcase.tcd.json"));
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/showcase/25_long_timeline_stress_showcase.tcd.json"));
   await expect(page.getByRole("heading", { name: "Long Timeline / Scroll Stress Showcase" })).toBeVisible();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const longLabel = host.locator("[data-role='frozen-row'][data-row-id='long_in_0'] [data-role='frozen-signal-name']");

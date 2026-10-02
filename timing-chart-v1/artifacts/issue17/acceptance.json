@@ -111,7 +111,7 @@
     "labelEveryFixture": true,
     "geometryMap": "WaveDrom runtime"
   },
-  "coverageMatrix": "samples/golden-feature-coverage/timing_chart_feature_coverage_pack/coverage_matrix.csv",
+  "coverageMatrix": "samples/old/pre-reset-2026-10-02/golden-feature-coverage/timing_chart_feature_coverage_pack/coverage_matrix.csv",
   "visualArtifacts": [
     "sample20.png"
   ],

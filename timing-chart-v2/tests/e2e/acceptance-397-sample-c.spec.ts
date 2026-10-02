@@ -8,13 +8,13 @@ startInCycleSample(test);
 // #397 Sample C -- Cycle/Transaction Split (the *other* Split concept:
 // waveform view + Transaction view stacked in one shared viewport, not to
 // be confused with Signal Split's two Cycle viewports -- see Sample D).
-// Reuses Sample A's document (samples/acceptance-397/sample-a-basic-
+// Reuses Sample A's document (samples/old/pre-reset-2026-10-02/acceptance-397/sample-a-basic-
 // transaction-lifecycle.tcd.json): it already has an obvious Transaction/
 // Signal correlation (Read_0/Write_0/... linked to REQUEST/READY/DATA/RESP),
 // loaded through the real production File > Open input.
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
-const samplePath = path.resolve(dirname, "../../samples/acceptance-397/sample-a-basic-transaction-lifecycle.tcd.json");
+const samplePath = path.resolve(dirname, "../../samples/old/pre-reset-2026-10-02/acceptance-397/sample-a-basic-transaction-lifecycle.tcd.json");
 
 async function openSampleAInSplitMode(page: Page) {
   await page.goto("/");

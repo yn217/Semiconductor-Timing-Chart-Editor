@@ -1,0 +1,959 @@
+{
+  "formatVersion": 2,
+  "document": {
+    "id": "current.annotations",
+    "title": "Annotation types and semantic anchors",
+    "header": {
+      "subtitle": "Current product contract",
+      "description": "Annotation types and semantic anchors",
+      "notes": "Authored from the current canonical schema; not migrated from a historical fixture.",
+      "preconditions": [],
+      "constraints": [],
+      "exceptions": []
+    },
+    "footer": {
+      "figureNumber": "CURRENT.ANNOTATIONS",
+      "revision": "Current",
+      "text": "Current-spec reference"
+    }
+  },
+  "timeline": {
+    "start": 0,
+    "end": 64,
+    "timeBase": "cycle",
+    "cycleCount": 64,
+    "edge": "rising",
+    "labelAnchors": [],
+    "referenceClock": "sig.clk"
+  },
+  "signalGroups": [
+    {
+      "id": "group.annotations",
+      "name": "Annotation targets",
+      "rows": [
+        "sig.clk",
+        "sig.reset",
+        "sig.req",
+        "sig.addr",
+        "sig.state",
+        "sig.logic",
+        "sig.event",
+        "sig.pulse"
+      ]
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig.clk",
+      "name": "core_clk",
+      "type": "clock",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "core_clk"
+      },
+      "display": {
+        "name": "core_clk",
+        "visible": true
+      },
+      "generator": {
+        "start": 0,
+        "period": 4,
+        "duty": 0.5,
+        "phase": 0,
+        "initial": 0,
+        "polarity": "positive"
+      },
+      "edgeCounter": {
+        "show": true,
+        "mode": "rising",
+        "startNumber": 0,
+        "countFrom": "signal-start",
+        "labelEvery": 4,
+        "position": "above",
+        "offset": {
+          "x": 0,
+          "y": -6
+        }
+      }
+    },
+    {
+      "id": "sig.reset",
+      "name": "reset_n",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "reset_n"
+      },
+      "display": {
+        "name": "reset_n",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.reset.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.reset.1",
+          "start": 4,
+          "value": 1
+        }
+      ],
+      "resetSemantics": {
+        "polarity": "active-low",
+        "synchronization": "asynchronous",
+        "assertCycle": 0,
+        "deassertCycle": 4
+      }
+    },
+    {
+      "id": "sig.req",
+      "name": "request_valid",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "request_valid"
+      },
+      "display": {
+        "name": "request_valid",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.req.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.req.1",
+          "start": 8,
+          "value": 1
+        },
+        {
+          "id": "change.req.2",
+          "start": 12,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig.addr",
+      "name": "request_address[15:0]",
+      "type": "bus",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "bus"
+        ],
+        "signalName": "request_address",
+        "msb": 15,
+        "lsb": 0
+      },
+      "display": {
+        "name": "request_address[15:0]",
+        "align": "right",
+        "overflow": "ellipsis"
+      },
+      "values": [
+        {
+          "id": "change.addr.0",
+          "start": 0,
+          "value": "0x0000"
+        },
+        {
+          "id": "change.addr.1",
+          "start": 8,
+          "value": "0x1200"
+        }
+      ],
+      "width": 16,
+      "displayFormat": "hex"
+    },
+    {
+      "id": "sig.state",
+      "name": "controller_state",
+      "type": "state",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "controller_state"
+      },
+      "display": {
+        "name": "controller_state",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.state.0",
+          "start": 0,
+          "value": "IDLE"
+        },
+        {
+          "id": "change.state.1",
+          "start": 8,
+          "value": "CAPTURE"
+        }
+      ],
+      "enumId": "enum.controller",
+      "spacingBefore": 3,
+      "spacingAfter": 2
+    },
+    {
+      "id": "sig.logic",
+      "name": "scan_enable",
+      "type": "logic",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "scan_enable"
+      },
+      "display": {
+        "name": "scan_enable",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.logic.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.logic.1",
+          "start": 16,
+          "value": "X"
+        },
+        {
+          "id": "change.logic.2",
+          "start": 20,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig.event",
+      "name": "request_event",
+      "type": "event",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "request_event"
+      },
+      "display": {
+        "name": "request_event",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.event.0",
+          "start": 0,
+          "value": "none"
+        },
+        {
+          "id": "change.event.1",
+          "start": 8,
+          "value": "rise"
+        },
+        {
+          "id": "change.event.2",
+          "start": 12,
+          "value": "fall"
+        }
+      ]
+    },
+    {
+      "id": "sig.pulse",
+      "name": "response_pulse",
+      "type": "pulse",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "response_pulse"
+      },
+      "display": {
+        "name": "response_pulse",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.pulse.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.pulse.1",
+          "start": 12,
+          "value": 1
+        },
+        {
+          "id": "change.pulse.2",
+          "start": 13,
+          "value": 0
+        }
+      ]
+    }
+  ],
+  "bookmarks": [
+    {
+      "id": "bookmark.start",
+      "name": "Request",
+      "start": 8
+    },
+    {
+      "id": "bookmark.done",
+      "name": "Response",
+      "start": 20
+    }
+  ],
+  "timeGroups": [],
+  "annotations": [
+    {
+      "id": "ann.text",
+      "type": "text",
+      "label": "Request accepted",
+      "visible": true,
+      "anchor": {
+        "cycle": 8,
+        "point": "row-center",
+        "signalId": "sig.req"
+      },
+      "labelOffset": {
+        "x": 8,
+        "y": -8
+      },
+      "labelPlacement": "above",
+      "align": "left"
+    },
+    {
+      "id": "ann.text.start",
+      "type": "text",
+      "label": "Start placed",
+      "visible": true,
+      "anchor": {
+        "cycle": 9,
+        "point": "cycle-start"
+      },
+      "labelPlacement": "start",
+      "align": "center"
+    },
+    {
+      "id": "ann.callout",
+      "type": "callout",
+      "label": "Backpressure",
+      "visible": true,
+      "anchor": {
+        "cycle": 16,
+        "point": "transition-center",
+        "signalId": "sig.req",
+        "threshold": 0.5
+      },
+      "lineType": "orthogonal",
+      "arrowhead": "end",
+      "labelPlacement": "end"
+    },
+    {
+      "id": "ann.vline",
+      "type": "verticalLine",
+      "label": "Capture",
+      "visible": true,
+      "anchor": {
+        "cycle": 8,
+        "point": "cycle-start"
+      }
+    },
+    {
+      "id": "ann.range",
+      "type": "range",
+      "label": "Transfer window",
+      "visible": true,
+      "start": {
+        "cycle": 8,
+        "point": "cycle-start"
+      },
+      "end": {
+        "cycle": 20,
+        "point": "cycle-end"
+      }
+    },
+    {
+      "id": "ann.bracket",
+      "type": "bracket",
+      "label": "Latency",
+      "visible": true,
+      "start": {
+        "cycle": 8,
+        "point": "row-center",
+        "signalId": "sig.req"
+      },
+      "end": {
+        "cycle": 20,
+        "point": "row-center",
+        "signalId": "sig.pulse"
+      }
+    },
+    {
+      "id": "ann.highlight",
+      "type": "highlight",
+      "label": "Active interval",
+      "visible": true,
+      "start": {
+        "cycle": 8,
+        "point": "cycle-start"
+      },
+      "end": {
+        "cycle": 16,
+        "point": "cycle-end"
+      },
+      "positionMode": "cycle-snap",
+      "opacity": 0.2,
+      "labelPlacement": "center"
+    },
+    {
+      "id": "ann.highlight.free",
+      "type": "highlight",
+      "label": "Free interval",
+      "visible": true,
+      "start": {
+        "cycle": 17,
+        "point": "cycle-start"
+      },
+      "end": {
+        "cycle": 21,
+        "point": "cycle-end"
+      },
+      "positionMode": "free",
+      "opacity": 0.15
+    },
+    {
+      "id": "ann.marker",
+      "type": "marker",
+      "label": "Response edge",
+      "visible": true,
+      "anchor": {
+        "cycle": 12,
+        "point": "rising-edge",
+        "signalId": "sig.pulse"
+      },
+      "verticalSpan": {
+        "mode": "rows",
+        "startRowId": "sig.req",
+        "endRowId": "sig.pulse"
+      }
+    },
+    {
+      "id": "ann.measure",
+      "type": "measurement",
+      "label": "Request latency",
+      "visible": true,
+      "start": {
+        "cycle": 8,
+        "point": "transition-center",
+        "signalId": "sig.req",
+        "threshold": 0.3,
+        "transition": {
+          "kind": "threshold",
+          "value": 0.3
+        }
+      },
+      "end": {
+        "cycle": 20,
+        "point": "transition-center",
+        "signalId": "sig.pulse",
+        "threshold": 0.7,
+        "transition": {
+          "kind": "threshold",
+          "value": 0.7
+        }
+      },
+      "measurement": {
+        "profile": "30-70",
+        "anchorKind": "threshold"
+      },
+      "measurementLayout": {
+        "startMarker": "bar",
+        "endMarker": "arrow",
+        "arrowLayout": "inward",
+        "extensionLines": "both",
+        "lane": 0
+      },
+      "arrowhead": "bidirectional"
+    },
+    {
+      "id": "ann.measure.ratio",
+      "type": "measurement",
+      "label": "Ratio interval",
+      "visible": true,
+      "start": {
+        "cycle": 8,
+        "point": "transition-center",
+        "signalId": "sig.req",
+        "transition": {
+          "kind": "ratio",
+          "value": 0.25
+        }
+      },
+      "end": {
+        "cycle": 20,
+        "point": "transition-center",
+        "signalId": "sig.pulse",
+        "transition": {
+          "kind": "ratio",
+          "value": 0.75
+        }
+      },
+      "measurement": {
+        "profile": "custom",
+        "anchorKind": "ratio"
+      },
+      "measurementLayout": {
+        "startMarker": "none",
+        "endMarker": "bar",
+        "arrowLayout": "outward",
+        "extensionLines": "start",
+        "lane": 1
+      },
+      "arrowhead": "start"
+    },
+    {
+      "id": "ann.arrow",
+      "type": "arrow",
+      "label": "Control flow",
+      "visible": true,
+      "from": {
+        "cycle": 8,
+        "point": "row-center",
+        "signalId": "sig.req"
+      },
+      "to": {
+        "cycle": 12,
+        "point": "row-center",
+        "signalId": "sig.state"
+      },
+      "lineType": "orthogonal",
+      "arrowhead": "end"
+    },
+    {
+      "id": "ann.dependency",
+      "type": "dependency",
+      "label": "Data dependency",
+      "visible": true,
+      "from": {
+        "cycle": 8,
+        "point": "value-center",
+        "signalId": "sig.addr"
+      },
+      "to": {
+        "cycle": 16,
+        "point": "value-center",
+        "signalId": "sig.state"
+      },
+      "lineType": "curve",
+      "arrowhead": "end"
+    },
+    {
+      "id": "ann.region",
+      "type": "timingRegion",
+      "label": "Setup window",
+      "visible": true,
+      "start": {
+        "cycle": 4,
+        "point": "cycle-start"
+      },
+      "end": {
+        "cycle": 8,
+        "point": "cycle-start"
+      },
+      "opacity": 0.15
+    },
+    {
+      "id": "ann.ghost",
+      "type": "ghostTrace",
+      "label": "Request +2",
+      "visible": true,
+      "start": {
+        "cycle": 8,
+        "point": "row-center",
+        "signalId": "sig.req"
+      },
+      "end": {
+        "cycle": 20,
+        "point": "row-center",
+        "signalId": "sig.req"
+      },
+      "sourceSignalId": "sig.req",
+      "traceOffsetCycles": 2,
+      "opacity": 0.3
+    },
+    {
+      "id": "ann.rectangle",
+      "type": "rectangle",
+      "label": "Decode region",
+      "visible": true,
+      "start": {
+        "cycle": 12,
+        "point": "cycle-start"
+      },
+      "end": {
+        "cycle": 20,
+        "point": "cycle-end"
+      }
+    },
+    {
+      "id": "ann.ellipse",
+      "type": "ellipse",
+      "label": "Sample point",
+      "visible": true,
+      "start": {
+        "cycle": 20,
+        "point": "cycle-start"
+      },
+      "end": {
+        "cycle": 24,
+        "point": "cycle-end"
+      }
+    },
+    {
+      "id": "ann.connector",
+      "type": "connector",
+      "label": "Request to response",
+      "visible": true,
+      "from": {
+        "cycle": 8,
+        "point": "row-center",
+        "signalId": "sig.req"
+      },
+      "to": {
+        "cycle": 20,
+        "point": "row-center",
+        "signalId": "sig.pulse"
+      },
+      "lineType": "diagonal",
+      "arrowhead": "end"
+    },
+    {
+      "id": "ann.textbox",
+      "type": "textbox",
+      "label": "Reset released",
+      "visible": true,
+      "anchor": {
+        "cycle": 4,
+        "point": "row-center",
+        "signalId": "sig.reset"
+      },
+      "labelPlacement": "below",
+      "align": "right",
+      "style": {
+        "labelWrap": true,
+        "labelMaxWidth": 160,
+        "lineHeight": 1.3
+      }
+    },
+    {
+      "id": "ann.point.0",
+      "type": "text",
+      "label": "Anchor cycle-center",
+      "visible": true,
+      "anchor": {
+        "cycle": 12,
+        "point": "cycle-center"
+      }
+    },
+    {
+      "id": "ann.point.1",
+      "type": "text",
+      "label": "Anchor transition-start",
+      "visible": true,
+      "anchor": {
+        "cycle": 12,
+        "point": "transition-start",
+        "signalId": "sig.req"
+      }
+    },
+    {
+      "id": "ann.point.2",
+      "type": "text",
+      "label": "Anchor transition-end",
+      "visible": true,
+      "anchor": {
+        "cycle": 12,
+        "point": "transition-end",
+        "signalId": "sig.req"
+      }
+    },
+    {
+      "id": "ann.point.3",
+      "type": "text",
+      "label": "Anchor falling-edge",
+      "visible": true,
+      "anchor": {
+        "cycle": 12,
+        "point": "falling-edge",
+        "signalId": "sig.req"
+      }
+    },
+    {
+      "id": "ann.point.4",
+      "type": "text",
+      "label": "Anchor value-start",
+      "visible": true,
+      "anchor": {
+        "cycle": 12,
+        "point": "value-start",
+        "signalId": "sig.addr"
+      }
+    },
+    {
+      "id": "ann.profile.0",
+      "type": "measurement",
+      "label": "Profile cycle",
+      "visible": true,
+      "start": {
+        "cycle": 24,
+        "point": "cycle-start"
+      },
+      "end": {
+        "cycle": 28,
+        "point": "cycle-start"
+      },
+      "measurement": {
+        "profile": "cycle",
+        "anchorKind": "threshold"
+      },
+      "measurementLayout": {
+        "startMarker": "arrow",
+        "endMarker": "none",
+        "arrowLayout": "auto",
+        "extensionLines": "none",
+        "lane": 2
+      },
+      "arrowhead": "none"
+    },
+    {
+      "id": "ann.profile.1",
+      "type": "measurement",
+      "label": "Profile 10-90",
+      "visible": true,
+      "start": {
+        "cycle": 24,
+        "point": "transition-center",
+        "signalId": "sig.req",
+        "transition": {
+          "kind": "threshold",
+          "value": 0.1
+        }
+      },
+      "end": {
+        "cycle": 28,
+        "point": "transition-center",
+        "signalId": "sig.pulse",
+        "transition": {
+          "kind": "threshold",
+          "value": 0.9
+        }
+      },
+      "measurement": {
+        "profile": "10-90",
+        "anchorKind": "threshold"
+      },
+      "measurementLayout": {
+        "startMarker": "arrow",
+        "endMarker": "none",
+        "arrowLayout": "auto",
+        "extensionLines": "end",
+        "lane": 3
+      },
+      "arrowhead": "none"
+    },
+    {
+      "id": "ann.profile.2",
+      "type": "measurement",
+      "label": "Profile 20-80",
+      "visible": true,
+      "start": {
+        "cycle": 24,
+        "point": "transition-center",
+        "signalId": "sig.req",
+        "transition": {
+          "kind": "threshold",
+          "value": 0.2
+        }
+      },
+      "end": {
+        "cycle": 28,
+        "point": "transition-center",
+        "signalId": "sig.pulse",
+        "transition": {
+          "kind": "threshold",
+          "value": 0.8
+        }
+      },
+      "measurement": {
+        "profile": "20-80",
+        "anchorKind": "threshold"
+      },
+      "measurementLayout": {
+        "startMarker": "arrow",
+        "endMarker": "none",
+        "arrowLayout": "auto",
+        "extensionLines": "end",
+        "lane": 4
+      },
+      "arrowhead": "none"
+    },
+    {
+      "id": "ann.profile.3",
+      "type": "measurement",
+      "label": "Profile 50%",
+      "visible": true,
+      "start": {
+        "cycle": 24,
+        "point": "transition-center",
+        "signalId": "sig.req",
+        "transition": {
+          "kind": "threshold",
+          "value": 0.5
+        }
+      },
+      "end": {
+        "cycle": 28,
+        "point": "transition-center",
+        "signalId": "sig.pulse",
+        "transition": {
+          "kind": "threshold",
+          "value": 0.5
+        }
+      },
+      "measurement": {
+        "profile": "50%",
+        "anchorKind": "threshold"
+      },
+      "measurementLayout": {
+        "startMarker": "arrow",
+        "endMarker": "none",
+        "arrowLayout": "auto",
+        "extensionLines": "end",
+        "lane": 5
+      },
+      "arrowhead": "none"
+    },
+    {
+      "id": "ann.marker.auto",
+      "type": "marker",
+      "label": "Auto span",
+      "visible": true,
+      "anchor": {
+        "cycle": 32,
+        "point": "cycle-start"
+      },
+      "verticalSpan": {
+        "mode": "auto"
+      }
+    },
+    {
+      "id": "ann.marker.custom",
+      "type": "marker",
+      "label": "Custom span",
+      "visible": true,
+      "anchor": {
+        "cycle": 36,
+        "point": "cycle-start"
+      },
+      "verticalSpan": {
+        "mode": "custom",
+        "startRowId": "sig.req",
+        "endRowId": "sig.pulse",
+        "startOffset": 3,
+        "endOffset": 5
+      }
+    },
+    {
+      "id": "ann.arrow.none",
+      "type": "arrow",
+      "label": "No arrowhead",
+      "visible": true,
+      "from": {
+        "cycle": 40,
+        "point": "cycle-start"
+      },
+      "to": {
+        "cycle": 44,
+        "point": "cycle-start"
+      },
+      "lineType": "straight",
+      "arrowhead": "none"
+    }
+  ],
+  "annotationGroups": [
+    {
+      "id": "ag.protocol",
+      "name": "Protocol markers",
+      "annotationIds": [
+        "ann.text",
+        "ann.text.start",
+        "ann.callout",
+        "ann.vline"
+      ]
+    }
+  ],
+  "legend": {
+    "show": true,
+    "orientation": "horizontal",
+    "usedRolesOnly": true,
+    "position": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "layout": {
+    "roleColumnWidth": 32,
+    "signalNameWidth": 168,
+    "signalNameAlign": "left",
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "overflow": "ellipsis"
+  },
+  "transactions": [],
+  "constraints": [],
+  "checkSettings": {},
+  "enumDefinitions": [
+    {
+      "id": "enum.controller",
+      "name": "Controller state",
+      "entries": [
+        {
+          "value": "IDLE",
+          "label": "Idle"
+        },
+        {
+          "value": "CAPTURE",
+          "label": "Capture"
+        }
+      ]
+    }
+  ]
+}

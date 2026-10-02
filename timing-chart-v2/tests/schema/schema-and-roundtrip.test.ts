@@ -106,8 +106,8 @@ describe("canonical v2 schema and roundtrip", () => {
   it("migrates every retained v1 Golden sample without modifying it", () => {
     const repoRoot = resolve(import.meta.dirname, "../..");
     const manifests = [
-      resolve(repoRoot, "samples/golden-protocol/timing_chart_sample_pack/manifest.json"),
-      resolve(repoRoot, "samples/golden-feature-coverage/timing_chart_feature_coverage_pack/manifest.json"),
+      resolve(repoRoot, "samples/old/pre-reset-2026-10-02/golden-protocol/timing_chart_sample_pack/manifest.json"),
+      resolve(repoRoot, "samples/old/pre-reset-2026-10-02/golden-feature-coverage/timing_chart_feature_coverage_pack/manifest.json"),
     ];
     let count = 0;
     for (const manifestPath of manifests) {
@@ -130,7 +130,7 @@ describe("canonical v2 schema and roundtrip", () => {
 
   it("validates and round-trips every non-Golden showcase sample", () => {
     const repoRoot = resolve(import.meta.dirname, "../..");
-    const directory = resolve(repoRoot, "samples/showcase");
+    const directory = resolve(repoRoot, "samples/old/pre-reset-2026-10-02/showcase");
     const files = [
       "21_large_feature_showcase.tcd.json",
       "22_clockless_annotation_showcase.tcd.json",

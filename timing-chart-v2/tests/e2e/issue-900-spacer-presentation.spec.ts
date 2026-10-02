@@ -11,7 +11,7 @@ test("Spacer rows are presented as spacing, not blank Signal rows", async ({ pag
   await page.goto("/");
   const surface = page.getByTestId("cycle-surface");
   await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/showcase/21_large_feature_showcase.tcd.json"));
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/showcase/21_large_feature_showcase.tcd.json"));
   await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
 
   const left = surface.locator("[data-role='left-row'][data-row-id='sp.clk']");

@@ -17,7 +17,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     await page.goto("/");
     const surface = page.getByTestId("cycle-surface");
     await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
-    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/showcase/24_protocol_transaction_showcase.tcd.json"));
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/showcase/24_protocol_transaction_showcase.tcd.json"));
     await expect(page.getByRole("heading", { name: /Protocol \/ Transaction Showcase/ })).toBeVisible();
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();

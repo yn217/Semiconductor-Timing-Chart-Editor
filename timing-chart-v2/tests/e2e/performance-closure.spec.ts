@@ -384,7 +384,7 @@ test("PR Open gate: browser presentation-ready stays under 1s and within approve
   // fixture starts from the same settled production editor state.
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   const baseline = JSON.parse(readFileSync(resolve(process.cwd(), "tests/performance/open-presentation-baseline.json"), "utf8")) as OpenPerformanceBaseline;
-  const showcasePath = resolve(process.cwd(), "samples/showcase/21_large_feature_showcase.tcd.json");
+  const showcasePath = resolve(process.cwd(), "samples/old/pre-reset-2026-10-02/showcase/21_large_feature_showcase.tcd.json");
   const showcaseBytes = readFileSync(showcasePath);
   const showcase = JSON.parse(showcaseBytes.toString("utf8")) as { document?: { title?: string }; signals?: unknown[]; timeline?: { cycleCount?: number } };
   expect(showcase.signals).toHaveLength(48);

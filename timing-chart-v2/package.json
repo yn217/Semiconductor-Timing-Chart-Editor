@@ -56,8 +56,8 @@
     "check": "npm run check:boundaries && npm run check:runtime-owner-types && npm run check:interactive-controls && npm run check:legacy-css-budget && npm run check:editor-complexity && npm run check:composition-root && npm run check:performance-architecture && npm run check:production-presentation && npm run check:left-tree-icons && npm run check:fix-evidence && npm run check:parity && npm run test && npm run build",
     "test:perf:pr": "playwright test tests/e2e/performance-closure.spec.ts --grep-invert nightly/manual",
     "test:perf:fixed-full-span": "node scripts/run-playwright.mjs --config=playwright.performance.config.ts tests/performance/fixed-full-span-open.spec.ts --workers=1 --trace=off",
-    "test:perf:real-world-pr": "node scripts/run-playwright.mjs --config=playwright.performance.config.ts tests/performance/real-world-showcase-open.spec.ts --grep \"real-world #(21|24)\" --workers=1 --trace=off",
-    "test:perf:real-world-showcases": "node scripts/run-playwright.mjs --config=playwright.performance.config.ts tests/performance/real-world-showcase-open.spec.ts --workers=1 --trace=off",
+    "test:perf:real-world-pr": "node scripts/run-playwright.mjs --config=playwright.performance.config.ts tests/performance/current-performance-samples-open.spec.ts --grep \"perf_100x500_full_span|perf_1000x1000_virtualized\" --workers=1 --trace=off",
+    "test:perf:real-world-showcases": "node scripts/run-playwright.mjs --config=playwright.performance.config.ts tests/performance/current-performance-samples-open.spec.ts --workers=1 --trace=off",
     "test:perf:nightly": "node scripts/run-performance-nightly.mjs",
     "check:ci": "npm run check && npm run check:parity && npm run test:e2e"
   },

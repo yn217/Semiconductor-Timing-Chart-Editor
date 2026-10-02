@@ -399,7 +399,7 @@
     ['feature','18_legend_and_group_reorder.tcd.json','Feature 18 - Legend and group reorder'],
     ['feature','19_header_footer_export.tcd.json','Feature 19 - Header/footer and export'],
     ['feature','20_transaction_cycle_linked_views.tcd.json','Feature 20 - Transaction/cycle linked views']
-  ].map(([category,file,title]) => ({ category, file, title, path: category === 'protocol' ? `../../timing-chart-v2/samples/golden-protocol/timing_chart_sample_pack/samples/${file}` : `../../timing-chart-v2/samples/golden-feature-coverage/timing_chart_feature_coverage_pack/samples/${file}` }));
+  ].map(([category,file,title]) => ({ category, file, title, path: category === 'protocol' ? `../../timing-chart-v2/samples/old/pre-reset-2026-10-02/golden-protocol/timing_chart_sample_pack/samples/${file}` : `../../timing-chart-v2/samples/old/pre-reset-2026-10-02/golden-feature-coverage/timing_chart_feature_coverage_pack/samples/${file}` }));
   controller.sampleCatalog = sampleCatalog;
   controller.actions.openSample = async (sample, options = {}) => {
     const entry = typeof sample === 'string' ? sampleCatalog.find(item => item.file === sample) : sample;

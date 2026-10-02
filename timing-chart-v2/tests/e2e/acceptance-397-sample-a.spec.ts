@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 
 // #397 Sample A -- Basic Transaction lifecycle.
-// Loads samples/acceptance-397/sample-a-basic-transaction-lifecycle.tcd.json
+// Loads samples/old/pre-reset-2026-10-02/acceptance-397/sample-a-basic-transaction-lifecycle.tcd.json
 // through the real production File > Open input (not test-only Canonical/
 // React state injection) and exercises the "Transaction verification"
 // checklist: phase geometry, lane identity, create/rename/move/resize/
@@ -12,7 +12,7 @@ import { expect, test, type Page } from "@playwright/test";
 // Inspector/Bottom convergence -- at both required viewports.
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
-const samplePath = path.resolve(dirname, "../../samples/acceptance-397/sample-a-basic-transaction-lifecycle.tcd.json");
+const samplePath = path.resolve(dirname, "../../samples/old/pre-reset-2026-10-02/acceptance-397/sample-a-basic-transaction-lifecycle.tcd.json");
 
 async function openSampleA(page: Page) {
   await page.goto("/");

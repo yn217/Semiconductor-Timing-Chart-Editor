@@ -27,12 +27,12 @@ describe("canonical clock phase validation", () => {
   });
 
   it("keeps the committed Large Feature Showcase inside the canonical clock contract", async () => {
-    const input = await readFile(new URL("../../samples/showcase/21_large_feature_showcase.tcd.json", import.meta.url), "utf8");
+    const input = await readFile(new URL("../../samples/old/pre-reset-2026-10-02/showcase/21_large_feature_showcase.tcd.json", import.meta.url), "utf8");
     expect(parseDocument(input)).toMatchObject({ ok: true });
   });
 
   it("uses a conventional 50% duty cycle for the showcase AXI clock", async () => {
-    const input = await readFile(new URL("../../samples/showcase/21_large_feature_showcase.tcd.json", import.meta.url), "utf8");
+    const input = await readFile(new URL("../../samples/old/pre-reset-2026-10-02/showcase/21_large_feature_showcase.tcd.json", import.meta.url), "utf8");
     const parsed = parseDocument(input);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;

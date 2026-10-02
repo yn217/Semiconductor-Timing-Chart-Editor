@@ -10,7 +10,7 @@ for (const viewportSize of [{ width: 1280, height: 720 }, { width: 1672, height:
     await page.goto("/");
     const host = page.getByTestId("cycle-surface");
     await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/showcase/21_large_feature_showcase.tcd.json"));
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/old/pre-reset-2026-10-02/showcase/21_large_feature_showcase.tcd.json"));
     await expect(host).toHaveAttribute("data-editor-idle", "true");
     await page.getByRole("tab", { name: "Annotation", exact: true }).click();
     const selectedAnnotationRow = page.locator("[data-annotation-row='a.text']");

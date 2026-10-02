@@ -14,13 +14,13 @@ import { expect, test } from "@playwright/test";
 // under #472) and deriving the bar/phase backgrounds from it via
 // `color-mix`.
 //
-// Loads samples/acceptance-429/sample-transaction-mode-closure.tcd.json
+// Loads samples/old/pre-reset-2026-10-02/acceptance-429/sample-transaction-mode-closure.tcd.json
 // through the real production File > Open input: 6 Transactions across 3
 // Groups (Memory/CPU/Peripheral) + Ungrouped, 3 Lanes, phases, distinct
 // colors, linked Signals, and a non-1:1 Transaction Time Scale.
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
-const samplePath = path.resolve(dirname, "../../samples/acceptance-429/sample-transaction-mode-closure.tcd.json");
+const samplePath = path.resolve(dirname, "../../samples/old/pre-reset-2026-10-02/acceptance-429/sample-transaction-mode-closure.tcd.json");
 
 async function openSample(page: import("@playwright/test").Page) {
   await page.goto("/");

@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
 import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
-const protocolSample = path.resolve(dirname, "../../samples/showcase/24_protocol_transaction_showcase.tcd.json");
+const protocolSample = path.resolve(dirname, "../../samples/old/pre-reset-2026-10-02/showcase/24_protocol_transaction_showcase.tcd.json");
 const protocolDocument = JSON.parse(await readFile(protocolSample, "utf8")) as { readonly signals: readonly unknown[] };
 
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {

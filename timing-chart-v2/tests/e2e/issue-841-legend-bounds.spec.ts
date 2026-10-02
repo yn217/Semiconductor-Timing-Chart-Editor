@@ -248,7 +248,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
       const surface = page.getByTestId("cycle-surface");
       await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
 
-      const fixture = await readFile(new URL("../../samples/showcase/21_large_feature_showcase.tcd.json", import.meta.url));
+      const fixture = await readFile(new URL("../../samples/old/pre-reset-2026-10-02/showcase/21_large_feature_showcase.tcd.json", import.meta.url));
       await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
         name: "21_large_feature_showcase.tcd.json",
         mimeType: "application/json",

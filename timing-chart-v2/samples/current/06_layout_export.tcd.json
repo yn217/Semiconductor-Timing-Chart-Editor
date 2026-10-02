@@ -1,0 +1,457 @@
+{
+  "formatVersion": 2,
+  "document": {
+    "id": "current.layout.export",
+    "title": "Signal labels and export layout",
+    "header": {
+      "subtitle": "Current product contract",
+      "description": "Signal labels and export layout",
+      "notes": "Authored from the current canonical schema; not migrated from a historical fixture.",
+      "preconditions": [],
+      "constraints": [],
+      "exceptions": []
+    },
+    "footer": {
+      "figureNumber": "CURRENT.LAYOUT.EXPORT",
+      "revision": "Current",
+      "text": "Current-spec reference"
+    }
+  },
+  "timeline": {
+    "start": 0,
+    "end": 160,
+    "timeBase": "cycle",
+    "cycleCount": 160,
+    "edge": "rising",
+    "labelAnchors": [],
+    "referenceClock": "sig.clk"
+  },
+  "signalGroups": [
+    {
+      "id": "group.layout",
+      "name": "Label policy",
+      "rows": [
+        "sig.clk",
+        "sig.format.hex",
+        "sig.format.binary",
+        "sig.format.decimal",
+        "sig.format.signed",
+        "sig.format.unsigned",
+        "sig.format.symbolic",
+        "sig.layout.left",
+        "sig.layout.center",
+        "sig.layout.right"
+      ],
+      "style": {
+        "showBackground": true,
+        "background": "#edf4ff",
+        "opacity": 0.1,
+        "extend": "both",
+        "showHeader": true
+      }
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig.clk",
+      "name": "core_clk",
+      "type": "clock",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "timing"
+        ],
+        "signalName": "core_clk"
+      },
+      "display": {
+        "name": "system_clock",
+        "visible": true
+      },
+      "generator": {
+        "start": 0,
+        "period": 4,
+        "duty": 0.5,
+        "phase": 0,
+        "initial": 0,
+        "polarity": "positive"
+      },
+      "edgeCounter": {
+        "show": true,
+        "mode": "rising",
+        "startNumber": 0,
+        "countFrom": "signal-start",
+        "labelEvery": 4,
+        "position": "above",
+        "offset": {
+          "x": 0,
+          "y": -6
+        }
+      }
+    },
+    {
+      "id": "sig.format.hex",
+      "name": "payload_hex",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "registers"
+        ],
+        "signalName": "payload_hex",
+        "msb": 15,
+        "lsb": 0
+      },
+      "display": {
+        "name": "payload_hex",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.format.0.0",
+          "start": 0,
+          "value": "0x002A"
+        },
+        {
+          "id": "change.format.0.1",
+          "start": 32,
+          "value": "0x00F0"
+        }
+      ],
+      "width": 16,
+      "displayFormat": "hex"
+    },
+    {
+      "id": "sig.format.binary",
+      "name": "payload_binary",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "registers"
+        ],
+        "signalName": "payload_binary",
+        "msb": 15,
+        "lsb": 0
+      },
+      "display": {
+        "name": "payload_binary",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.format.1.0",
+          "start": 0,
+          "value": "0x002A"
+        },
+        {
+          "id": "change.format.1.1",
+          "start": 32,
+          "value": "0x00F0"
+        }
+      ],
+      "width": 16,
+      "displayFormat": "binary"
+    },
+    {
+      "id": "sig.format.decimal",
+      "name": "payload_decimal",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "registers"
+        ],
+        "signalName": "payload_decimal",
+        "msb": 15,
+        "lsb": 0
+      },
+      "display": {
+        "name": "payload_decimal",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.format.2.0",
+          "start": 0,
+          "value": "0x002A"
+        },
+        {
+          "id": "change.format.2.1",
+          "start": 32,
+          "value": "0x00F0"
+        }
+      ],
+      "width": 16,
+      "displayFormat": "decimal"
+    },
+    {
+      "id": "sig.format.signed",
+      "name": "payload_signed",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "registers"
+        ],
+        "signalName": "payload_signed",
+        "msb": 15,
+        "lsb": 0
+      },
+      "display": {
+        "name": "payload_signed",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.format.3.0",
+          "start": 0,
+          "value": "0x002A"
+        },
+        {
+          "id": "change.format.3.1",
+          "start": 32,
+          "value": "0x00F0"
+        }
+      ],
+      "width": 16,
+      "displayFormat": "signed"
+    },
+    {
+      "id": "sig.format.unsigned",
+      "name": "payload_unsigned",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "registers"
+        ],
+        "signalName": "payload_unsigned",
+        "msb": 15,
+        "lsb": 0
+      },
+      "display": {
+        "name": "payload_unsigned",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.format.4.0",
+          "start": 0,
+          "value": "0x002A"
+        },
+        {
+          "id": "change.format.4.1",
+          "start": 32,
+          "value": "0x00F0"
+        }
+      ],
+      "width": 16,
+      "displayFormat": "unsigned"
+    },
+    {
+      "id": "sig.format.symbolic",
+      "name": "payload_symbolic",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "soc",
+          "registers"
+        ],
+        "signalName": "payload_symbolic",
+        "msb": 15,
+        "lsb": 0
+      },
+      "display": {
+        "name": "payload_symbolic",
+        "visible": true
+      },
+      "values": [
+        {
+          "id": "change.format.5.0",
+          "start": 0,
+          "value": "0x002A"
+        },
+        {
+          "id": "change.format.5.1",
+          "start": 32,
+          "value": "0x00F0"
+        }
+      ],
+      "width": 16,
+      "displayFormat": "symbolic"
+    },
+    {
+      "id": "sig.layout.left",
+      "name": "short",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "peripheral",
+          "register_block"
+        ],
+        "signalName": "label_left"
+      },
+      "display": {
+        "name": "short",
+        "align": "left",
+        "overflow": "ellipsis"
+      },
+      "values": [
+        {
+          "id": "change.layout.left.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.layout.left.1",
+          "start": 4,
+          "value": 1
+        }
+      ],
+      "resetSemantics": {
+        "polarity": "active-low",
+        "synchronization": "asynchronous",
+        "assertCycle": 0,
+        "deassertCycle": 4
+      }
+    },
+    {
+      "id": "sig.layout.center",
+      "name": "a_very_long_hierarchical_request_address_name",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "peripheral",
+          "register_block"
+        ],
+        "signalName": "label_center"
+      },
+      "display": {
+        "name": "a_very_long_hierarchical_request_address_name",
+        "align": "center",
+        "overflow": "wrap"
+      },
+      "values": [
+        {
+          "id": "change.layout.center.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.layout.center.1",
+          "start": 4,
+          "value": 1
+        }
+      ],
+      "resetSemantics": {
+        "polarity": "active-low",
+        "synchronization": "asynchronous",
+        "assertCycle": 0,
+        "deassertCycle": 4
+      }
+    },
+    {
+      "id": "sig.layout.right",
+      "name": "response_ready",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "soc",
+          "peripheral",
+          "register_block"
+        ],
+        "signalName": "label_right"
+      },
+      "display": {
+        "name": "response_ready",
+        "align": "right",
+        "overflow": "expand"
+      },
+      "values": [
+        {
+          "id": "change.layout.right.0",
+          "start": 0,
+          "value": 0
+        },
+        {
+          "id": "change.layout.right.1",
+          "start": 4,
+          "value": 1
+        }
+      ],
+      "resetSemantics": {
+        "polarity": "active-low",
+        "synchronization": "asynchronous",
+        "assertCycle": 0,
+        "deassertCycle": 4
+      }
+    }
+  ],
+  "bookmarks": [],
+  "timeGroups": [],
+  "annotations": [
+    {
+      "id": "ann.export.shape",
+      "type": "rectangle",
+      "label": "Export region",
+      "visible": true,
+      "start": {
+        "cycle": 8,
+        "point": "cycle-start"
+      },
+      "end": {
+        "cycle": 48,
+        "point": "cycle-end"
+      }
+    },
+    {
+      "id": "ann.export.arrow",
+      "type": "arrow",
+      "label": "Export direction",
+      "visible": true,
+      "from": {
+        "cycle": 8,
+        "point": "cycle-start"
+      },
+      "to": {
+        "cycle": 48,
+        "point": "cycle-start"
+      },
+      "lineType": "diagonal",
+      "arrowhead": "end"
+    }
+  ],
+  "annotationGroups": [],
+  "legend": {
+    "show": true,
+    "orientation": "horizontal",
+    "usedRolesOnly": true,
+    "position": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "layout": {
+    "roleColumnWidth": 72,
+    "signalNameWidth": 220,
+    "signalNameAlign": "right",
+    "rowHeight": 34,
+    "signalSpacing": 5,
+    "overflow": "wrap"
+  },
+  "transactions": [],
+  "constraints": [],
+  "checkSettings": {}
+}
