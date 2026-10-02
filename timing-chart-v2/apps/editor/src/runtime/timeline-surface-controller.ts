@@ -527,7 +527,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       const localScale = timeAxisMetrics.presentationScale * timeAxisMetrics.zoom;
       if (!Number.isFinite(localScale) || localScale <= 0 || sourceViewport.clientWidth <= 0) return undefined;
       const sharedViewport = timelineScrollOwner(sourceViewport);
-      return timelineGeometry.sourceWindowForLocalRange(
+      return timelineGeometry.visibleSourceRangeForLocalRange(
         document,
         sharedViewport.scrollLeft / localScale,
         (sharedViewport.scrollLeft + sharedViewport.clientWidth) / localScale,

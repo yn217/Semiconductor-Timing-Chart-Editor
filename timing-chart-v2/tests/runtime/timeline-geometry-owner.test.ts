@@ -302,6 +302,23 @@ describe("TimelineGeometryOwner", () => {
     expect(owner.sourceWindowForLocalRange(document, cycleCount * 0.8, cycleCount)).toEqual({ start: 0, end: cycleCount });
   });
 
+  it("keeps the visible source interval viewport-bounded when the WaveDrom artifact spans the full document", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 31 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle * 40, y: 0 } })));
+    const document = { ...cycleDocument, timeline: { ...cycleDocument.timeline, cycleCount: 3_000, end: 3_000 } };
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => document,
+      getProjection: () => ({ rowLayout: [{ rowId: clockId, kind: "timing", visible: true, y: 0 }] } as never),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
+
+    expect(owner.sourceWindowForLocalRange(document, 0, 1_120)).toEqual({ start: 0, end: 3_000 });
+    expect(owner.visibleSourceRangeForLocalRange(document, 0, 1_120)).toEqual({ start: 0, end: 30 });
+  });
+
   it("bounds a high-signal-count mid-size document using shared viewport geometry", () => {
     const clockId = signalId("sig_cycle_clock");
     const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 31 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle * 40, y: 0 } })));

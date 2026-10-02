@@ -185,23 +185,32 @@ export class TimelineGeometryOwner {
   }
 
   #lastBoundedWindow: { start: number; end: number; cycleCount: number } | undefined;
-  /** Resolve a local time viewport to canonical source cycles using semantic geometry. */
+  /** Resolve the source span needed by a WaveDrom artifact. */
   sourceWindowForLocalRange(document: CanonicalDocument, localStart: number, localEnd: number, overscan = 2): Readonly<{ start: number; end: number }> {
+    return this.#sourceRangeForLocalRange(document, localStart, localEnd, overscan, true);
+  }
+
+  /** Resolve only the actually visible source interval for viewport-bounded UI projections. */
+  visibleSourceRangeForLocalRange(document: CanonicalDocument, localStart: number, localEnd: number, overscan = 2): Readonly<{ start: number; end: number }> {
+    return this.#sourceRangeForLocalRange(document, localStart, localEnd, overscan, false);
+  }
+
+  #sourceRangeForLocalRange(document: CanonicalDocument, localStart: number, localEnd: number, overscan: number, forWaveformArtifact: boolean): Readonly<{ start: number; end: number }> {
     // Keep low-work documents in one WaveDrom artifact so their geometry stays
     // stable while scrolling. High cycle×signal work uses the same shared
     // viewport geometry path as large documents, even when cycleCount is modest.
     const signalCount = document.signals.length;
     const fullDocumentWindow = usesFullDocumentWaveformWindow(document.timeline.cycleCount, signalCount);
-    if (fullDocumentWindow) return { start: 0, end: document.timeline.cycleCount };
-    if (this.#requestedSourceCycle !== undefined) {
+    if (forWaveformArtifact && fullDocumentWindow) return { start: 0, end: document.timeline.cycleCount };
+    if (forWaveformArtifact && this.#requestedSourceCycle !== undefined) {
       const span = Math.min(waveformWindowCycleBudget(signalCount), document.timeline.cycleCount);
       const start = Math.max(0, Math.min(this.#requestedSourceCycle - Math.floor(span / 2), document.timeline.cycleCount - span));
       return { start, end: Math.min(document.timeline.cycleCount, start + span) };
     }
-    const cached = this.#sourceWindowCache;
+    const cached = forWaveformArtifact ? this.#sourceWindowCache : undefined;
     if (cached?.document === document && cached.localStart === localStart && cached.localEnd === localEnd && cached.overscan === overscan) return cached.result;
     const remember = (result: Readonly<{ start: number; end: number }>) => {
-      this.#sourceWindowCache = { document, localStart, localEnd, overscan, result };
+      if (forWaveformArtifact) this.#sourceWindowCache = { document, localStart, localEnd, overscan, result };
       return result;
     };
     const axis = this.resolveTimeAxis(document);
@@ -216,14 +225,15 @@ export class TimelineGeometryOwner {
       // Match the first viewport tile size so authoritative geometry does not
       // immediately replace this bootstrap artifact with a different window.
       const bootstrapEnd = Math.min(document.timeline.cycleCount, waveformWindowTileSpan(signalCount));
-      return remember({ start: 0, end: bootstrapEnd });
+      if (forWaveformArtifact) return remember({ start: 0, end: bootstrapEnd });
+      return { start: 0, end: bootstrapEnd };
     }
     const entries = this.viewportBoundaryEntries(owner, signalId, mapping, document.timeline.cycleCount);
     // A first WaveDrom paint may expose only presentation-thinned marks. Do
     // not let that partial map become the navigation source for a large
     // document; request the bounded bootstrap window until a windowed render
     // replaces it with semantic boundaries.
-    if (document.timeline.cycleCount > 4096 && entries.length < 512 && localEnd <= 2_048) {
+    if (forWaveformArtifact && document.timeline.cycleCount > 4096 && entries.length < 512 && localEnd <= 2_048) {
       return remember({ start: 0, end: Math.min(document.timeline.cycleCount, 2048) });
     }
     // Retained geometry is intentionally bounded. When the requested local
@@ -267,7 +277,7 @@ export class TimelineGeometryOwner {
     // cycles, but allowing that presentation subset to replace the bounded
     // geometry window would discard offscreen navigation boundaries. DOM stays
     // virtualized; this budget applies only to the source-time geometry artifact.
-    if (!fullDocumentWindow) {
+    if (forWaveformArtifact && !fullDocumentWindow) {
       // Quantize the window to a grid: a window that starts exactly at the viewport start changes on every
       // scroll step, so a sustained drag re-rendered every mounted WaveDrom owner continuously (#621/#637).
       // Use a signal-count-scaled grid so dense documents keep each waveform artifact bounded.

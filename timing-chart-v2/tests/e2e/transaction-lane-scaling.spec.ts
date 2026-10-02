@@ -57,6 +57,85 @@ test("10k Transaction fixture keeps mounted lane DOM viewport-bounded", async ({
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
+test("10k Transactions, 10k Bookmarks, and 2k collapsed folds stay bounded during viewport scrolling", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const base = generatePerformanceDocument({ signalCount: 1, cycleCount: 500, profile: "transaction-heavy" });
+  const cycleCount = 10_000;
+  const document = {
+    ...base,
+    timeline: { ...base.timeline, end: cycleCount, cycleCount },
+    transactions: Array.from({ length: 10_000 }, (_, index) => {
+      const start = (index * 97) % (cycleCount - 200);
+      return { id: `txn_composite_${index}`, name: `Transaction ${index}`, start, end: start + 120, laneId: `lane_${index % 16}`, linkedSignals: [base.signals[index % base.signals.length]!.id] };
+    }),
+    bookmarks: Array.from({ length: 10_000 }, (_, index) => ({ id: `bookmark_composite_${index}`, name: `Bookmark ${index}`, start: index })),
+    timeGroups: Array.from({ length: 2_000 }, (_, index) => {
+      const start = 2 + index * 5;
+      return { id: `fold_composite_${index}`, name: `Fold ${index}`, start, end: start + 1, presentation: { collapsed: true, foldStyle: "axis-break" as const } };
+    }),
+  };
+  expect(document.transactions).toHaveLength(10_000);
+  expect(document.bookmarks).toHaveLength(10_000);
+  expect(document.timeGroups).toHaveLength(2_000);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "transaction-bookmark-fold-composite.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "10000", { timeout: 30_000 });
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  const lanes = page.getByTestId("transaction-lanes");
+  const viewport = page.getByTestId("cycle-viewport");
+  const markers = page.locator(".transaction-bookmark-markers [data-bookmark-id]");
+  await expect(lanes).toBeVisible({ timeout: 60_000 });
+  await expect.poll(() => markers.count()).toBeGreaterThan(0);
+  const before = {
+    revision: await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+  };
+  const initial = await page.evaluate(() => {
+    const lane = document.querySelector<HTMLElement>("[data-testid='transaction-lanes']");
+    const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']");
+    const markers = document.querySelectorAll(".transaction-bookmark-markers [data-bookmark-id]");
+    return {
+      mountedBars: lane?.querySelectorAll("[data-transaction-id]").length ?? 0,
+      mountedMarkers: markers.length,
+      barIds: [...(lane?.querySelectorAll<HTMLElement>("[data-transaction-id]") ?? [])].map((bar) => bar.dataset.transactionId).sort(),
+      bookmarkIds: [...markers].map((marker) => marker.getAttribute("data-bookmark-id")).sort(),
+      scrollWidth: viewport?.scrollWidth ?? 0,
+      clientWidth: viewport?.clientWidth ?? 0,
+      scrollLeft: viewport?.scrollLeft ?? 0,
+    };
+  });
+  console.log(`[transaction-bookmark-fold-composite] ${JSON.stringify({ mountedBars: initial.mountedBars, mountedMarkers: initial.mountedMarkers, scrollWidth: initial.scrollWidth, clientWidth: initial.clientWidth })}`);
+  expect(initial.mountedBars).toBeGreaterThan(0);
+  expect(initial.mountedBars).toBeLessThan(1_000);
+  expect(initial.mountedMarkers).toBeLessThan(1_000);
+  expect(initial.scrollWidth).toBeGreaterThan(initial.clientWidth);
+
+  await viewport.evaluate((element) => {
+    const node = element as HTMLElement;
+    node.scrollLeft = Math.min(node.scrollWidth - node.clientWidth, Math.max(1, node.scrollWidth * 0.6));
+    node.dispatchEvent(new Event("scroll"));
+  });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(initial.scrollLeft);
+  await expect.poll(() => markers.count()).toBeGreaterThan(0);
+  const after = await page.evaluate(() => ({
+    mountedBars: document.querySelector("[data-testid='transaction-lanes']")?.querySelectorAll("[data-transaction-id]").length ?? 0,
+    mountedMarkers: document.querySelectorAll(".transaction-bookmark-markers [data-bookmark-id]").length,
+    barIds: [...(document.querySelector("[data-testid='transaction-lanes']")?.querySelectorAll<HTMLElement>("[data-transaction-id]") ?? [])].map((bar) => bar.dataset.transactionId).sort(),
+    bookmarkIds: [...document.querySelectorAll(".transaction-bookmark-markers [data-bookmark-id]")].map((marker) => marker.getAttribute("data-bookmark-id")).sort(),
+  }));
+  expect(after.mountedBars).toBeLessThan(1_000);
+  expect(after.mountedMarkers).toBeLessThan(1_000);
+  expect(after.mountedBars + after.mountedMarkers).toBeLessThan(2_000);
+  expect(after.barIds).not.toEqual(initial.barIds);
+  expect(after.bookmarkIds).not.toEqual(initial.bookmarkIds);
+  expect(await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
+});
+
 test("standalone Transaction cycle viewport scroll advances the virtualized lane window", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
