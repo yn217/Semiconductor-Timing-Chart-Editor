@@ -140,6 +140,29 @@ test("keeps right-aligned short frozen labels inside the timing boundary", async
   expect(geometry.textRight).toBeLessThanOrEqual(geometry.frozenRight - 4);
 });
 
+test("keeps representative APB protocol labels inset in the frozen column", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/golden-protocol/timing_chart_sample_pack/samples/01_apb_register_access.tcd.json"));
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+  for (const [rowId, name] of [["psel", "PSEL"], ["penable", "PENABLE"], ["pslverr", "PSLVERR"]] as const) {
+    const label = host.locator(`[data-role='frozen-row'][data-row-id='${rowId}'] [data-role='frozen-signal-name']`);
+    await expect(label).toHaveText(name);
+    const geometry = await label.evaluate((element) => {
+      const range = element.ownerDocument.createRange();
+      range.selectNodeContents(element);
+      const textRect = range.getBoundingClientRect();
+      const frozenRect = element.closest("[data-role='frozen-label-rows']")!.getBoundingClientRect();
+      return { textLeft: textRect.left, textRight: textRect.right, frozenLeft: frozenRect.left, frozenRight: frozenRect.right };
+    });
+    expect(geometry.textLeft).toBeGreaterThanOrEqual(geometry.frozenLeft + 4);
+    expect(geometry.textRight).toBeLessThanOrEqual(geometry.frozenRight - 4);
+  }
+});
+
 test("preserves canonical Signal names and safe frozen-column geometry across alignment and overflow policies", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/");
