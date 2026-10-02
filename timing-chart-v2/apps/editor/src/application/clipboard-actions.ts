@@ -6,7 +6,7 @@ import { nextCommandId } from "../command-id.js";
 import { createEntityIdAllocator, nextEntityId } from "../entity-id.js";
 import { groupId, signalId } from "../minimal-cycle-view-fixture-helpers.js";
 import { captureGroupTransactionLinks, remapGroupTransactionLinks, type GroupTransactionSignalLink } from "./group-clipboard-links.js";
-import { resolveClipboardSignalGroupTarget, resolveGroupSignalsInRowOrder } from "./group-clipboard-selection.js";
+import { createClipboardIndexes, resolveClipboardSignalGroupTarget, resolveGroupSignalsInRowOrder } from "./group-clipboard-selection.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
 
@@ -26,46 +26,14 @@ export function useClipboardActions({ application, selection }: { application: E
   const cutSignalsRef = useRef(false);
   const cutSignalLinksRef = useRef<readonly GroupTransactionSignalLink[]>([]);
   const sourceDocumentEpochRef = useRef<number | undefined>(undefined);
-  const signalIndexRef = useRef<Readonly<{ signals: readonly Signal[]; groups: readonly SignalGroup[]; byId: ReadonlyMap<SignalId, Signal>; order: ReadonlyMap<SignalId, number>; owner: ReadonlyMap<SignalId, { groupId: GroupId; index: number }>; groupsById: ReadonlyMap<GroupId, SignalGroup> }> | undefined>(undefined);
-  const transactionIndexRef = useRef<Readonly<{ transactions: readonly Transaction[]; byId: ReadonlyMap<TransactionId, Transaction>; order: ReadonlyMap<TransactionId, number> }> | undefined>(undefined);
+  const [indexResolver] = useState(createClipboardIndexes);
   const document = () => application.runtime.session.current().getSnapshot().document;
-
-  const signalIndexes = (current: ReturnType<typeof document>) => {
-    const cached = signalIndexRef.current;
-    if (cached?.signals === current.signals && cached.groups === current.signalGroups) return cached;
-    const byId = new Map<SignalId, Signal>();
-    const order = new Map<SignalId, number>();
-    current.signals.forEach((signal, index) => {
-      byId.set(signal.id, signal);
-      order.set(signal.id, index);
-    });
-    const owner = new Map<SignalId, { groupId: GroupId; index: number }>();
-    for (const group of current.signalGroups) group.rows.forEach((rowId, index) => { if (byId.has(rowId as SignalId)) owner.set(rowId as SignalId, { groupId: group.id, index }); });
-    const groupsById = new Map(current.signalGroups.map((group) => [group.id, group] as const));
-    const next = { signals: current.signals, groups: current.signalGroups, byId, order, owner, groupsById };
-    signalIndexRef.current = next;
-    return next;
-  };
-
-  const transactionIndexes = (current: ReturnType<typeof document>) => {
-    const cached = transactionIndexRef.current;
-    if (cached?.transactions === current.transactions) return cached;
-    const byId = new Map<TransactionId, Transaction>();
-    const order = new Map<TransactionId, number>();
-    current.transactions.forEach((transaction, index) => {
-      byId.set(transaction.id, transaction);
-      order.set(transaction.id, index);
-    });
-    const next = { transactions: current.transactions, byId, order };
-    transactionIndexRef.current = next;
-    return next;
-  };
 
   const selected = () => {
     const current = document();
     const state = selection.refs.state.current;
-    const signalsIndex = state.signalIds.size > 0 || state.groupId !== undefined ? signalIndexes(current) : undefined;
-    const transactionsIndex = state.transactionIds.size > 0 || state.transactionId !== undefined ? transactionIndexes(current) : undefined;
+    const signalsIndex = state.signalIds.size > 0 || state.groupId !== undefined ? indexResolver.signals(current) : undefined;
+    const transactionsIndex = state.transactionIds.size > 0 || state.transactionId !== undefined ? indexResolver.transactions(current) : undefined;
     const group = state.groupId === undefined ? undefined : signalsIndex?.groupsById.get(state.groupId);
     return {
       document: current,
@@ -191,7 +159,7 @@ export function useClipboardActions({ application, selection }: { application: E
     const current = document();
     const selectedSignalId = selection.refs.signalId.current;
     const selectedGroupId = selection.refs.state.current.groupId;
-    const indexes = signalIndexes(current);
+    const indexes = indexResolver.signals(current);
     const target = resolveClipboardSignalGroupTarget({
       groups: current.signalGroups,
       groupsById: indexes.groupsById,
@@ -214,7 +182,7 @@ export function useClipboardActions({ application, selection }: { application: E
     const current = document();
     const allocateId = createEntityIdAllocator(current);
     const selectedSignalId = selection.refs.signalId.current;
-    const indexes = signalIndexes(current);
+    const indexes = indexResolver.signals(current);
     const selectedGroup = placement === "current-selection"
       ? resolveClipboardSignalGroupTarget({ groups: current.signalGroups, groupsById: indexes.groupsById, ownerBySignalId: indexes.owner, ...(selectedSignalId === undefined ? {} : { selectedSignalId }), fallbackToLast: false })
       : undefined;

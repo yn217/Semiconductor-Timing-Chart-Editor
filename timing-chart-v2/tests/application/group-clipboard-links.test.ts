@@ -5,7 +5,7 @@ import { commandPlannerMetrics } from "@timing-chart-v2/commands";
 import { serializeValidatedCanonicalDocument, parseDocument, type CommandId, type GroupId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { captureGroupTransactionLinks, remapGroupTransactionLinks } from "../../apps/editor/src/application/group-clipboard-links.js";
-import { resolveClipboardSignalGroupTarget, resolveGroupSignalsInRowOrder } from "../../apps/editor/src/application/group-clipboard-selection.js";
+import { createClipboardIndexes, resolveClipboardSignalGroupTarget, resolveGroupSignalsInRowOrder } from "../../apps/editor/src/application/group-clipboard-selection.js";
 
 const commandId = (id: string) => id as CommandId;
 
@@ -32,6 +32,19 @@ describe("Group clipboard external Transaction links", () => {
     expect(resolveClipboardSignalGroupTarget({ groups, groupsById, ownerBySignalId, selectedSignalId, sourceGroupId: last.id })).toBe(first);
     expect(resolveClipboardSignalGroupTarget({ groups, groupsById, ownerBySignalId, sourceGroupId: last.id })).toBe(last);
     expect(resolveClipboardSignalGroupTarget({ groups, groupsById, ownerBySignalId, fallbackToLast: false })).toBeUndefined();
+  });
+
+  it("reuses clipboard indexes for identical immutable collections and rebuilds only changed collections", () => {
+    const source = canonicalFixture();
+    const indexes = createClipboardIndexes();
+    const initial = indexes.signals(source);
+    expect(indexes.signals(source)).toBe(initial);
+    expect(indexes.transactions(source)).toBe(indexes.transactions(source));
+
+    const nextSignals = [...source.signals];
+    const next = { ...source, signals: nextSignals };
+    expect(indexes.signals(next)).not.toBe(initial);
+    expect(indexes.transactions(next)).toBe(indexes.transactions(source));
   });
 
   it("captures and remaps every contained Signal relationship exactly once", () => {
