@@ -249,6 +249,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       },
       isPrimaryPresentationOpening: () => primaryPresentationOpening,
       getTimeAxisMetrics: () => timelineGeometry.timeAxisMetrics,
+      isTimeAxisMetricsCurrent: (generation) => timelineGeometry.timeAxisMetrics.generation === generation,
       onReferenceGeometryReady: () => {
         if (active) {
           refreshRulerAndGridIfNeeded(

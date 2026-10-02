@@ -149,6 +149,7 @@ describe("waveform provider primary geometry readiness", () => {
       markOpenPhase: vi.fn(),
       invalidateSnapIndex: vi.fn(),
       getTimeAxisMetrics,
+      isTimeAxisMetricsCurrent: (generation) => (currentMetrics as { generation?: number } | undefined)?.generation === generation,
       onReferenceGeometryReady: () => {
         currentMetrics = { generation: 9, pxPerDisplayCycle: 40, screenOriginX: 7, presentationScale: 2 };
       },
@@ -344,7 +345,7 @@ describe("waveform provider primary geometry readiness", () => {
     expect(waveMarkupArtifactKey).toHaveBeenCalledTimes(document.signals.length);
   });
 
-  it("does not install a prepared waveform after its request becomes stale", async () => {
+  it("does not install a prepared waveform after request or presentation generation becomes stale", async () => {
     const document = generatePerformanceDocument({ signalCount: 2, cycleCount: 10 });
     const referenceSignalId = document.timeline.referenceClock!;
     const nonReferenceSignalId = document.signals.find((signal) => signal.id !== referenceSignalId)!.id;
@@ -352,6 +353,7 @@ describe("waveform provider primary geometry readiness", () => {
     const imageDecode = deferred<void>();
     const nonReferencePrepareStarted = deferred<void>();
     let nonReferenceIsFresh = true;
+    let presentationGeneration = 1;
     const geometryRegistry = new GeometryRegistry();
     const adapter: WaveDromAdapter = {
       toWaveJson: (source) => toWaveJson(source),
@@ -378,6 +380,8 @@ describe("waveform provider primary geometry readiness", () => {
       markOpenPhase: vi.fn(),
       isPrimaryPresentationOpening: () => true,
       invalidateSnapIndex: vi.fn(),
+      getTimeAxisMetrics: () => ({ generation: presentationGeneration } as never),
+      isTimeAxisMetricsCurrent: (generation) => generation === presentationGeneration,
       getViewMode: () => "Cycle",
     };
     const owner = () => ({ style: { removeProperty: vi.fn() }, dataset: {}, ownerDocument: {} as Document, isConnected: true }) as unknown as HTMLElement;
@@ -391,6 +395,7 @@ describe("waveform provider primary geometry readiness", () => {
     prepared.resolve({ signalId: nonReferenceSignalId, ownerKey: nonReferenceSignalId, svg: {} as SVGSVGElement, renderIndex: 1, waveJson: { wave: "01" }, svgImageReady: imageDecode.promise });
     await vi.waitFor(() => expect(geometryRegistry.maps.has(nonReferenceSignalId)).toBe(true));
     nonReferenceIsFresh = false;
+    presentationGeneration = 2;
     imageDecode.resolve();
     const results = await batch;
 

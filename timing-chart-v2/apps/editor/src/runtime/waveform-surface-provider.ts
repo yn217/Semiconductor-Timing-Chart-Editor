@@ -64,6 +64,8 @@ export type WaveformProviderContext = Readonly<{
   getPresentationScale?: () => number;
   /** Preferred atomic presentation snapshot; captured once for every batch. */
   getTimeAxisMetrics?: () => TimeAxisMetrics;
+  /** Reject async artifacts prepared against a presentation generation that is no longer current. */
+  isTimeAxisMetricsCurrent?: (generation: number) => boolean;
   getViewMode?: () => "Cycle" | "Transaction" | "Split";
 }>;
 
@@ -122,7 +124,10 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         }
       }
       const requestEpoch = requests[0]?.documentEpoch;
-      const isCurrent = (request: { readonly documentEpoch?: number; readonly isFresh?: () => boolean }): boolean => (request.documentEpoch === undefined || context.getDocumentEpoch() === request.documentEpoch) && (request.isFresh?.() ?? true);
+      const isCurrent = (request: { readonly documentEpoch?: number; readonly isFresh?: () => boolean }): boolean => {
+        const metricsCurrent = batchTimeAxisMetrics === undefined || context.isTimeAxisMetricsCurrent?.(batchTimeAxisMetrics.generation) !== false;
+        return metricsCurrent && (request.documentEpoch === undefined || context.getDocumentEpoch() === request.documentEpoch) && (request.isFresh?.() ?? true);
+      };
       if (requestEpoch !== undefined && (requestEpoch !== context.getDocumentEpoch() || requests.some((request) => request.documentEpoch !== requestEpoch))) {
         if (primaryOpenBatch) context.recordOpenWaveBatch?.({
           batchWallMs: Math.max(0, globalThis.performance.now() - batchStartedAt), waveJsonPreparationMs: 0,
