@@ -3,10 +3,11 @@ import { createTimelineViewportRuntime, type TimelineViewportRuntimeContext } fr
 
 function context(): TimelineViewportRuntimeContext {
   let zoom = 1;
+  let publishedZoom = 1;
   let scroll = { left: 0, top: 0 };
   return {
     dom: Object.fromEntries(["viewportRef", "waveformRef", "rulerRef", "gridRef", "overlayRef", "rangeBandRef", "playheadRef"].map((key) => [key, { current: null }])) as TimelineViewportRuntimeContext["dom"],
-    geometry: { getDisplayTimeMapping: () => ({}), getTimeAxisMetrics: () => ({ zoom }), getTimeAxisGeometry: () => ({}), getLocalGeometryMap: () => ({}), sourceCycleToLocalX: (cycle) => cycle * 10, sourceBoundaryToLocalX: (_document, cycle) => cycle * 10, requestSourceCycle: () => undefined, clearRequestedSourceCycle: () => undefined, localXToScreenX: (x) => x },
+    geometry: { getDisplayTimeMapping: () => ({}), getTimeAxisMetrics: () => ({ zoom: publishedZoom }), getTimeAxisGeometry: () => ({}), getLocalGeometryMap: () => ({}), sourceCycleToLocalX: (cycle) => cycle * 10, sourceBoundaryToLocalX: (_document, cycle) => cycle * 10, requestSourceCycle: () => undefined, clearRequestedSourceCycle: () => undefined, localXToScreenX: (x) => x },
     viewport: { getMetrics: () => ({ width: 1000, leftInset: 100 }), getScrollState: () => scroll, setScrollState: (next) => { scroll = { ...scroll, ...next }; }, getZoom: () => zoom, setZoom: (next) => { zoom = next; } },
     document: { getSnapshot: () => ({}), getCanonicalRevision: () => 1, getDocumentEpoch: () => 1 },
     render: { requestRender: vi.fn(), requestOverlayRefresh: vi.fn(), waitForRendererIdle: async () => undefined },
@@ -35,6 +36,18 @@ describe("TimelineViewportRuntime", () => {
     runtime.setZoom(1);
 
     expect(runtimeContext.render.requestRender).toHaveBeenCalledTimes(1);
+  });
+
+  it("republishes zoom when viewport state changed without updating TimeAxisMetrics", () => {
+    const runtimeContext = context();
+    const runtime = createTimelineViewportRuntime(runtimeContext);
+    runtime.attach();
+    runtime.setZoom(1);
+    runtimeContext.viewport.setZoom(2);
+
+    runtime.setZoom(2);
+
+    expect(runtimeContext.render.requestRender).toHaveBeenCalledTimes(2);
   });
 
   it("drops refresh requests from a stale document epoch", () => {

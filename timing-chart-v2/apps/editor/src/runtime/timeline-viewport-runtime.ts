@@ -122,7 +122,7 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
       // becomes idle. Once the initial presentation is applied, reapplying
       // the same zoom only schedules another scroll-layout/render pass (most
       // notably on Inspector property commits) without changing the view.
-      if (zoomPresentationApplied && context.viewport.getZoom() === nextZoom) return;
+      if (zoomPresentationApplied && context.viewport.getZoom() === nextZoom && context.geometry.getTimeAxisMetrics().zoom === nextZoom) return;
       zoomPresentationApplied = true;
       context.viewport.setZoom(nextZoom);
       render("zoom");
