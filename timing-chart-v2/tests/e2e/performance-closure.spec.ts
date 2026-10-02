@@ -15,6 +15,10 @@ test("View-only operations keep canonical validation and render counters unchang
   await start(page);
   const host = page.getByTestId("cycle-surface");
   const surface = host.locator("[data-role='timing-chart-surface']");
+  // Counters and revision are published once the first validation settles; read the baseline only after that.
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/);
+  await expect(host).toHaveAttribute("data-session-counters", /validationRuns/);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
   const before = {
     session: JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, any>,
     render: JSON.parse(await surface.getAttribute("data-render-counters") ?? "{}") as Record<string, any>,
