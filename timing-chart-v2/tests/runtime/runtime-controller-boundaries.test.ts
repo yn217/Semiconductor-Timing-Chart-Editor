@@ -57,12 +57,12 @@ describe("runtime controller boundaries", () => {
       currentSnapIndex: vi.fn(),
       cycleBoundaryAtPointerX: pointerFallback,
       cycleBoundaryAtX: cycleDomFallback,
-      cycleBoundaryAtLocalX: local,
+      cycleBoundaryAtLocalX: (localX, _snapEnabled) => local(localX),
       publishState: vi.fn(),
     });
 
     expect(cycle).toBe(11);
-    expect(local).toHaveBeenCalledWith(42, 2, true);
+    expect(local).toHaveBeenCalledWith(42);
     expect(cycleDomFallback).not.toHaveBeenCalled();
     expect(pointerFallback).not.toHaveBeenCalled();
   });

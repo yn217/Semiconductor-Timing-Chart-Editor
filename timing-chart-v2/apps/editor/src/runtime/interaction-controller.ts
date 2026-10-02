@@ -35,7 +35,7 @@ export function resolveTransactionSnapCycle(context: {
   readonly currentSnapIndex: () => ImmutableSnapIndex;
   readonly cycleBoundaryAtPointerX: (clientX: number) => number | undefined;
   readonly cycleBoundaryAtX: (clientX: number) => number | undefined;
-  readonly cycleBoundaryAtLocalX: (localX: number, zoom: number, snapEnabled: boolean) => number | undefined;
+  readonly cycleBoundaryAtLocalX: (localX: number, snapEnabled: boolean) => number | undefined;
 }): number | undefined {
   const { timeAxis, zoom } = context.timeAxisMetrics;
   if (!context.snapEnabled) {
@@ -43,7 +43,6 @@ export function resolveTransactionSnapCycle(context: {
       ? context.cycleBoundaryAtX(context.clientX)
       : context.cycleBoundaryAtLocalX(
         context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: context.horizontalScroll / zoom, scrollY: 0, zoom }).x,
-        zoom,
         false,
       );
   }
@@ -52,11 +51,10 @@ export function resolveTransactionSnapCycle(context: {
   if (!axisOwner || context.snapAxisRowY === undefined) {
     return context.cycleBoundaryAtLocalX(
       context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: context.horizontalScroll / zoom, scrollY: 0, zoom }).x,
-      zoom,
       true,
     );
   }
   const localPointer = context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: context.horizontalScroll / zoom, scrollY: 0, zoom });
   const snap = context.currentSnapIndex().nearest({ x: localPointer.x, y: context.snapAxisRowY + context.document.layout.rowHeight / 2 }, 14 / zoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
-  return snap?.anchor.cycle ?? context.cycleBoundaryAtLocalX(localPointer.x, zoom, true);
+  return snap?.anchor.cycle ?? context.cycleBoundaryAtLocalX(localPointer.x, true);
 }

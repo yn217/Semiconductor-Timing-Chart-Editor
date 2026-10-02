@@ -305,11 +305,12 @@ export class TimelineGeometryOwner {
   cycleBoundaryAtScreenX(clientX: number, surfaceLeft: number, snapEnabled: boolean): number | undefined {
     const { zoom } = this.#timeAxisMetrics;
     const localX = this.screenToLocal({ x: clientX - surfaceLeft, y: 0 }, zoom).x;
-    return this.cycleBoundaryAtLocalX(localX, zoom, snapEnabled);
+    return this.cycleBoundaryAtLocalX(localX, snapEnabled);
   }
 
   /** Resolve a cycle boundary without consulting any rendered Cycle surface. */
-  cycleBoundaryAtLocalX(localX: number, zoom: number, snapEnabled: boolean): number | undefined {
+  cycleBoundaryAtLocalX(localX: number, snapEnabled: boolean): number | undefined {
+    const { zoom } = this.#timeAxisMetrics;
     const neighbors = this.currentSnapIndex().neighborsByX(localX, "cycle-boundary");
     const { before, after } = neighbors;
     if (!snapEnabled) {

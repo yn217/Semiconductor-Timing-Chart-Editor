@@ -39,7 +39,7 @@ describe("TimelineGeometryOwner", () => {
       const expected = owner.sourceBoundaryToLocalX(document, cycle);
       const stored = entries.find((entry) => entry.anchor.cycle === cycle)?.point.x
         ?? owner.currentSnapIndex().neighborsByX(expected ?? Number.NaN, "cycle-boundary").before?.point.x;
-      const resolved = expected === undefined ? undefined : owner.cycleBoundaryAtLocalX(expected, 1, true);
+      const resolved = expected === undefined ? undefined : owner.cycleBoundaryAtLocalX(expected, true);
       const index = entries.findIndex((entry) => entry.anchor.cycle === cycle);
       return { cycle, expectedBoundaryX: expected, storedBoundaryX: stored, displayMappedX: mapping.sourceToDisplay(cycle), resolvedCycle: resolved, previousBoundaryX: entries[index - 1]?.point.x, nextBoundaryX: entries[index + 1]?.point.x };
     });
@@ -219,9 +219,15 @@ describe("TimelineGeometryOwner", () => {
 
     const snapIndex = owner.currentSnapIndex();
     expect(snapIndex.entries().filter((candidate) => candidate.kind === "cycle-boundary")).toHaveLength(0);
-    expect(owner.cycleBoundaryAtLocalX(20 + 5_000 * 40, 1, true)).toBe(5_000);
-    expect(owner.cycleBoundaryAtLocalX(20 + 5_000.75 * 40, 1, false)).toBe(5_000);
-    expect(owner.cycleBoundaryAtLocalX(20 + cycleCount * 40 - 8, 1, false)).toBe(cycleCount);
+    expect(owner.cycleBoundaryAtLocalX(20 + 5_000 * 40, true)).toBe(5_000);
+    expect(owner.cycleBoundaryAtLocalX(20 + 5_000.75 * 40, false)).toBe(5_000);
+    expect(owner.cycleBoundaryAtLocalX(20 + cycleCount * 40 - 8, false)).toBe(cycleCount);
+    const nearTerminal = 20 + cycleCount * 40 - 20;
+    expect(owner.cycleBoundaryAtLocalX(nearTerminal, false)).toBe(cycleCount);
+    owner.updateZoom(2);
+    // Terminal hit tolerance comes from the published metrics snapshot, not
+    // a separately sampled caller zoom that could belong to another generation.
+    expect(owner.cycleBoundaryAtLocalX(nearTerminal, false)).toBe(cycleCount - 1);
   });
 
   it("limits lazy cycle hit testing to the retained window in a 100k-cycle document", () => {
@@ -245,8 +251,8 @@ describe("TimelineGeometryOwner", () => {
 
     const snapIndex = owner.currentSnapIndex();
     expect(snapIndex.entries().filter((candidate) => candidate.kind === "cycle-boundary")).toHaveLength(0);
-    expect(owner.cycleBoundaryAtLocalX(20 + 1_024 * 40, 1, true)).toBe(1_024);
-    expect(owner.cycleBoundaryAtLocalX(20 + 50_000 * 40, 1, true)).toBe(retainedEnd);
+    expect(owner.cycleBoundaryAtLocalX(20 + 1_024 * 40, true)).toBe(1_024);
+    expect(owner.cycleBoundaryAtLocalX(20 + 50_000 * 40, true)).toBe(retainedEnd);
   });
 
   it("reuses an exact source-window query across mounted owners until geometry invalidation", () => {

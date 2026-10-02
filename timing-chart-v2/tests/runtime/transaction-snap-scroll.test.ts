@@ -18,11 +18,11 @@ describe("Transaction drag screen-to-source conversion", () => {
       currentSnapIndex: () => { throw new Error("no axis owner should query SnapIndex"); },
       cycleBoundaryAtPointerX: vi.fn(),
       cycleBoundaryAtX: vi.fn(),
-      cycleBoundaryAtLocalX: resolveLocal,
+      cycleBoundaryAtLocalX: (localX, _snapEnabled) => resolveLocal(localX),
     });
 
     // localX = (clientX - viewportLeft) / zoom + scrollLeft / zoom
-    expect(resolveLocal).toHaveBeenCalledWith(300, 2, true);
+    expect(resolveLocal).toHaveBeenCalledWith(300);
     expect(cycle).toBe(300);
   });
 });

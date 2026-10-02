@@ -574,7 +574,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         currentSnapIndex: () => timelineGeometry.currentSnapIndex(),
         cycleBoundaryAtPointerX: cycleBoundaryAtX,
         cycleBoundaryAtX,
-        cycleBoundaryAtLocalX: (localX, zoom, snapEnabled) => timelineGeometry.cycleBoundaryAtLocalX(localX, zoom, snapEnabled),
+        cycleBoundaryAtLocalX: (localX, snapEnabled) => timelineGeometry.cycleBoundaryAtLocalX(localX, snapEnabled),
       });
     };
     const initialDocumentEpoch = documentEpoch.current();
