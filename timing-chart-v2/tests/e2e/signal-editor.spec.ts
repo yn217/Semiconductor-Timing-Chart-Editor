@@ -1,5 +1,16 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { startInCycleSample } from "./cycle-startup.js";
+
+// The wave SVG is installed as a blob <image>, so its <use> shapes live in the blob's SVG source rather than the page DOM.
+async function waveSourceUses(owner: Locator): Promise<(string | null)[]> {
+  return owner.evaluate(async (element) => {
+    const href = element.querySelector("image[data-wave-svg-image]")?.getAttribute("href");
+    if (!href) return [];
+    const source = new DOMParser().parseFromString(await (await fetch(href)).text(), "image/svg+xml").documentElement;
+    return [...source.querySelectorAll("use")].map((use) => use.getAttribute("xlink:href") ?? use.getAttribute("href"));
+  });
+}
+
 
 startInCycleSample(test);
 
@@ -211,7 +222,7 @@ test("Bottom Clock editor applies exact non-50% Duty through WaveDrom and preser
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   const editor = page.getByTestId("signal-editor");
   const clockOwner = surface.locator("[data-signal-id='sig_cycle_clock']");
-  const beforeUses = await clockOwner.locator("svg use").evaluateAll((uses) => uses.map((use) => use.getAttribute("xlink:href") ?? use.getAttribute("href")));
+  const beforeUses = await waveSourceUses(clockOwner);
   const beforeCounters = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   const duty = editor.getByLabel("Clock duty");
   await expect(duty).toBeEnabled();
@@ -222,7 +233,7 @@ test("Bottom Clock editor applies exact non-50% Duty through WaveDrom and preser
   await expect(clockOwner).not.toHaveAttribute("data-wave-error");
   await expect(clockOwner.locator("svg")).toHaveCount(1);
   await expect(duty).toHaveValue("0.25");
-  const afterUses = await clockOwner.locator("svg use").evaluateAll((uses) => uses.map((use) => use.getAttribute("xlink:href") ?? use.getAttribute("href")));
+  const afterUses = await waveSourceUses(clockOwner);
   expect(afterUses).not.toEqual(beforeUses);
   const afterCounters = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(afterCounters.waveDromRenders).toBe(beforeCounters.waveDromRenders + 1);
@@ -252,7 +263,7 @@ test("Bottom Clock editor applies suppressed periods and preserves them through 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   const editor = page.getByTestId("signal-editor");
   const clockOwner = surface.locator("[data-signal-id='sig_cycle_clock']");
-  const beforeUses = await clockOwner.locator("svg use").evaluateAll((uses) => uses.map((use) => use.getAttribute("xlink:href") ?? use.getAttribute("href")));
+  const beforeUses = await waveSourceUses(clockOwner);
   await editor.getByLabel("Clock suppressed periods").fill("1, 1");
   await editor.getByTestId("apply-clock-generator").click();
   await expect(page.getByTestId("clock-generator-error")).toContainText("must not contain duplicates");
@@ -262,7 +273,7 @@ test("Bottom Clock editor applies suppressed periods and preserves them through 
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(clockOwner).not.toHaveAttribute("data-wave-error");
-  const afterUses = await clockOwner.locator("svg use").evaluateAll((uses) => uses.map((use) => use.getAttribute("xlink:href") ?? use.getAttribute("href")));
+  const afterUses = await waveSourceUses(clockOwner);
   expect(afterUses).not.toEqual(beforeUses);
   await editor.getByTestId("editor-undo").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
@@ -334,12 +345,21 @@ test("moves the rendered waveform transition to the edited Start cycle, not just
     // WaveDrom keeps a large hidden symbol pool in each SVG. Restrict the
     // geometry probe to visible uses so the acceptance check does not spend
     // a timeout asking Chromium for boxes of hidden template nodes.
-    return wave.locator("use").evaluateAll((nodes) => nodes.flatMap((node) => {
-      const element = node as SVGGraphicsElement;
-      const box = element.getBoundingClientRect();
-      const shape = node.getAttribute("xlink:href") ?? node.getAttribute("href");
-      return box.width > 0 && box.height > 0 && shape?.includes("m") ? [box.x] : [];
-    }));
+    return wave.evaluate(async (svg) => {
+      const href = svg.querySelector("image[data-wave-svg-image]")?.getAttribute("href");
+      if (!href) return [];
+      const source = new DOMParser().parseFromString(await (await fetch(href)).text(), "image/svg+xml").documentElement;
+      const box = svg.getBoundingClientRect();
+      const viewBox = source.getAttribute("viewBox")?.split(/[\s,]+/).map(Number);
+      const width = viewBox && viewBox.length === 4 ? viewBox[2]! : Number(source.getAttribute("width"));
+      return [...source.querySelectorAll("use")].flatMap((node) => {
+        const shape = node.getAttribute("xlink:href") ?? node.getAttribute("href");
+        if (!shape?.includes("m")) return [];
+        let x = 0;
+        for (let parent: Element | null = node; parent && parent !== source; parent = parent.parentElement) x += Number(/translate\(([-\d.]+)/.exec(parent.getAttribute("transform") ?? "")?.[1] ?? 0);
+        return [box.left + x * box.width / width];
+      });
+    });
   };
 
   const beforeXs = await transitionXs();

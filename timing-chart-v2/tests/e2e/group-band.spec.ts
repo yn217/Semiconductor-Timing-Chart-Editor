@@ -30,7 +30,8 @@ test("Group Band Inspector preserves scope/style, derived spacing, persistence a
   await expect(surface.locator("[data-role='timing-row'][data-group-id='grp_cycle_control']").first()).toHaveCSS("opacity", "1");
   const styledTimingHeader = surface.locator("[data-role='timing-group-header'][data-group-id='grp_cycle_control']").first();
   await expect(styledTimingHeader).toHaveCSS("opacity", "1");
-  await expect(styledTimingHeader).toHaveCSS("--group-background", "color-mix(in srgb, #123456 40%, transparent)");
+  // extend=label colors only the label/frozen columns; the waveform-side header must not carry the band fill.
+  await expect(styledTimingHeader).toHaveCSS("--group-background", "")
   const countersAfter = JSON.parse((await surface.getAttribute("data-render-counters"))!);
   expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders);
   expect(countersAfter.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds);
