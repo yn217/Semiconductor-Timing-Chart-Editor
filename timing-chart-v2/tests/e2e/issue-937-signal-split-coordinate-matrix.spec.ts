@@ -70,3 +70,56 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] 
     expect(failures, failures.slice(0, 12).join("\n")).toEqual([]);
   });
 }
+
+/** Lower Range band and Playhead follow the same shared time domain as Upper's, through zoom and scroll. */
+for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] as const) {
+  test(`Signal Split Lower Range band and Playhead sit where Upper's do at ${size.width}x${size.height}`, async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize(size);
+    await page.goto("/");
+    const host = page.getByTestId("cycle-surface");
+    await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+    await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+    await page.getByTestId("view-panel-signal-split").click();
+    await expect(page.getByTestId("cycle-viewport-lower")).toBeVisible();
+    await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
+    // Select Range [8,9) from the Upper Ruler (also moves the Playhead).
+    await page.getByTestId("cycle-ruler").locator("[data-cycle='8']").first().click();
+    await expect(page.getByTestId("range-status")).toHaveText("Range: [8, 9)");
+    const owner = page.getByTestId("cycle-viewport").locator("[data-role='timeline-viewport']");
+
+    const readX = () => page.evaluate(() => {
+      const left = (selector: string) => { const element = document.querySelector<HTMLElement>(selector); return element && !element.hidden ? element.getBoundingClientRect().left : undefined; };
+      return {
+        bandUpper: left("[data-testid='range-selection-band']"), bandLower: left("[data-testid='range-selection-band-lower']"),
+        playUpper: left("[data-testid='cycle-ruler'] [data-role='playhead']"), playLower: left("[data-testid='cycle-ruler-lower'] [data-role='playhead']"),
+      };
+    });
+    const failures: string[] = [];
+    let compared = 0;
+    const check = async (label: string) => {
+      let result = await readX();
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        const bad = (a?: number, b?: number) => a !== undefined && b !== undefined && Math.abs(a - b) > 0.5;
+        if (!bad(result.bandUpper, result.bandLower) && !bad(result.playUpper, result.playLower)) break;
+        await page.waitForTimeout(50);
+        result = await readX();
+      }
+      if (result.bandUpper !== undefined && result.bandLower !== undefined) { compared += 1; if (Math.abs(result.bandUpper - result.bandLower) > 0.5) failures.push(`${label}: range band Lower-Upper = ${(result.bandLower - result.bandUpper).toFixed(2)}px`); }
+      if (result.playUpper !== undefined && result.playLower !== undefined) { compared += 1; if (Math.abs(result.playUpper - result.playLower) > 0.5) failures.push(`${label}: playhead Lower-Upper = ${(result.playLower - result.playUpper).toFixed(2)}px`); }
+    };
+
+    await check("initial");
+    for (const preset of ["50", "200", "400", "800"]) {
+      await page.getByLabel("Zoom preset").selectOption(preset);
+      await expect(page.getByTestId("zoom-status")).toHaveText(`${preset}%`);
+      await owner.evaluate((element) => { element.scrollLeft = 0; });
+      await check(`zoom ${preset}% @left`);
+      await owner.evaluate((element) => { element.scrollLeft = Math.floor(element.scrollWidth / 3); });
+      await check(`zoom ${preset}% @scrolled`);
+    }
+    expect(compared, "Lower and Upper Range band/Playhead were both visible and compared").toBeGreaterThan(2);
+    expect(failures, failures.join("\n")).toEqual([]);
+  });
+}

@@ -13,7 +13,7 @@ export function useSignalSplitPresentationSync(input: TimelineSurfaceRuntimeInpu
     const mirrorPresentation = () => {
       const upperRulerContent = ruler.current;
       const lowerRulerContent = rulerLower.current;
-      if (upperRulerContent && lowerRulerContent) lowerRulerContent.style.transform = upperRulerContent.style.transform;
+      if (upperRulerContent && lowerRulerContent) { lowerRulerContent.style.transform = upperRulerContent.style.transform; lowerRulerContent.style.translate = upperRulerContent.style.translate; lowerRulerContent.style.transformOrigin = upperRulerContent.style.transformOrigin; } // #937: scale, origin AND scroll shift
       // #625: Lower has the same Timeline scroll extent as Upper (Cycle: each pane's TimelineViewport owns its own horizontal scroll).
       const upperOwner = timelineScrollOwner(upperViewport);
       const lowerOwner = timelineScrollOwner(lowerViewport);
@@ -58,7 +58,10 @@ export function useSignalSplitPresentationSync(input: TimelineSurfaceRuntimeInpu
     upperViewport.addEventListener("scroll", onUpperScroll, true);
     lowerViewport.addEventListener("scroll", onLowerScroll, true);
     mirrorPresentation();
+    // Zoom is applied to Upper's ruler on the next frame(s); mirror again once it has landed (otherwise Lower keeps the previous zoom).
+    const settle = requestAnimationFrame(() => requestAnimationFrame(mirrorPresentation));
     return () => {
+      cancelAnimationFrame(settle);
       upperViewport.removeEventListener("scroll", onUpperScroll, true);
       lowerViewport.removeEventListener("scroll", onLowerScroll, true);
     };
