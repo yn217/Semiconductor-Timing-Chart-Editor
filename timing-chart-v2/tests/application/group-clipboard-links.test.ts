@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { RowId, Signal, SignalId, Transaction, TransactionId } from "@timing-chart-v2/schema";
+import type { RowId, Signal, SignalId, SignalGroup, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { commandPlannerMetrics } from "@timing-chart-v2/commands";
 import { serializeValidatedCanonicalDocument, parseDocument, type CommandId, type GroupId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { captureGroupTransactionLinks, remapGroupTransactionLinks } from "../../apps/editor/src/application/group-clipboard-links.js";
-import { resolveGroupSignalsInRowOrder } from "../../apps/editor/src/application/group-clipboard-selection.js";
+import { resolveClipboardSignalGroupTarget, resolveGroupSignalsInRowOrder } from "../../apps/editor/src/application/group-clipboard-selection.js";
 
 const commandId = (id: string) => id as CommandId;
 
@@ -17,6 +17,21 @@ describe("Group clipboard external Transaction links", () => {
     const signalsById = new Map<SignalId, Signal>([[first.id, first], [second.id, second]]);
 
     expect(resolveGroupSignalsInRowOrder([second.id, "spacer_gap" as RowId, first.id], signalsById)).toEqual([second, first]);
+  });
+
+  it("resolves clipboard target Groups from the existing ID indexes with the established priority", () => {
+    const source = canonicalFixture();
+    const groups = source.signalGroups as readonly SignalGroup[];
+    const first = groups[0]!;
+    const last = groups.at(-1)!;
+    const selectedSignalId = first.rows.find((id) => !String(id).startsWith("spacer_")) as SignalId;
+    const groupsById = new Map<GroupId, SignalGroup>(groups.map((group) => [group.id, group]));
+    const ownerBySignalId = new Map<SignalId, { groupId: GroupId; index: number }>([[selectedSignalId, { groupId: first.id, index: 0 }]]);
+
+    expect(resolveClipboardSignalGroupTarget({ groups, groupsById, ownerBySignalId, selectedGroupId: last.id, selectedSignalId, sourceGroupId: first.id })).toBe(last);
+    expect(resolveClipboardSignalGroupTarget({ groups, groupsById, ownerBySignalId, selectedSignalId, sourceGroupId: last.id })).toBe(first);
+    expect(resolveClipboardSignalGroupTarget({ groups, groupsById, ownerBySignalId, sourceGroupId: last.id })).toBe(last);
+    expect(resolveClipboardSignalGroupTarget({ groups, groupsById, ownerBySignalId, fallbackToLast: false })).toBeUndefined();
   });
 
   it("captures and remaps every contained Signal relationship exactly once", () => {

@@ -6,7 +6,7 @@ import { nextCommandId } from "../command-id.js";
 import { createEntityIdAllocator, nextEntityId } from "../entity-id.js";
 import { groupId, signalId } from "../minimal-cycle-view-fixture-helpers.js";
 import { captureGroupTransactionLinks, remapGroupTransactionLinks, type GroupTransactionSignalLink } from "./group-clipboard-links.js";
-import { resolveGroupSignalsInRowOrder } from "./group-clipboard-selection.js";
+import { resolveClipboardSignalGroupTarget, resolveGroupSignalsInRowOrder } from "./group-clipboard-selection.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
 
@@ -191,7 +191,15 @@ export function useClipboardActions({ application, selection }: { application: E
     const current = document();
     const selectedSignalId = selection.refs.signalId.current;
     const selectedGroupId = selection.refs.state.current.groupId;
-    const target = current.signalGroups.find((group) => group.id === selectedGroupId) ?? current.signalGroups.find((group) => selectedSignalId !== undefined && group.rows.includes(selectedSignalId)) ?? current.signalGroups.find((group) => group.id === input[0]?.groupId) ?? current.signalGroups.at(-1);
+    const indexes = signalIndexes(current);
+    const target = resolveClipboardSignalGroupTarget({
+      groups: current.signalGroups,
+      groupsById: indexes.groupsById,
+      ownerBySignalId: indexes.owner,
+      ...(selectedGroupId === undefined ? {} : { selectedGroupId }),
+      ...(selectedSignalId === undefined ? {} : { selectedSignalId }),
+      ...(input[0] === undefined ? {} : { sourceGroupId: input[0].groupId }),
+    });
     if (!target || input.length === 0) return;
     const commands: SemanticCommand[] = [
       { id: nextCommandId("cut_paste_move_signals"), type: "signal.bulkCreate", signals: input.map(({ signal }) => signal), targetGroupId: target.id, index: target.rows.length },
@@ -206,8 +214,11 @@ export function useClipboardActions({ application, selection }: { application: E
     const current = document();
     const allocateId = createEntityIdAllocator(current);
     const selectedSignalId = selection.refs.signalId.current;
-    const selectedGroup = placement === "current-selection" ? current.signalGroups.find((item) => selectedSignalId !== undefined && item.rows.includes(selectedSignalId)) : undefined;
-    const groupsById = new Map(current.signalGroups.map((group) => [group.id, group] as const));
+    const indexes = signalIndexes(current);
+    const selectedGroup = placement === "current-selection"
+      ? resolveClipboardSignalGroupTarget({ groups: current.signalGroups, groupsById: indexes.groupsById, ownerBySignalId: indexes.owner, ...(selectedSignalId === undefined ? {} : { selectedSignalId }), fallbackToLast: false })
+      : undefined;
+    const groupsById = indexes.groupsById;
     const createdByGroup = new Map<GroupId, { target: SignalGroup; signals: Signal[] }>();
     const created: Signal[] = [];
     for (const source of input) {
