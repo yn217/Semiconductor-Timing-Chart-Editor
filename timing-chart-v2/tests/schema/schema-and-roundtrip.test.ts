@@ -23,6 +23,28 @@ import { canonicalFixture } from "../fixtures/canonical.js";
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 describe("canonical v2 schema and roundtrip", () => {
+  it("round-trips every authoritative current sample without semantic drift", () => {
+    const repoRoot = resolve(import.meta.dirname, "../..");
+    const currentDirectory = resolve(repoRoot, "samples/current");
+    const manifest = JSON.parse(readFileSync(resolve(currentDirectory, "manifest.json"), "utf8")) as {
+      readonly samples: readonly { readonly file: string }[];
+    };
+    expect(manifest.samples.length).toBeGreaterThan(0);
+    for (const { file } of manifest.samples) {
+      const input = readFileSync(resolve(currentDirectory, file), "utf8");
+      const opened = parseDocument(input);
+      expect(opened.ok, `${file} should open: ${opened.ok ? "" : JSON.stringify(opened.problems)}`).toBe(true);
+      if (!opened.ok) continue;
+      const saved = serializeCanonicalDocument(opened.document);
+      const reopened = parseDocument(saved);
+      expect(reopened.ok, `${file} should reopen after Save: ${reopened.ok ? "" : JSON.stringify(reopened.problems)}`).toBe(true);
+      if (reopened.ok) {
+        expect(reopened.document, `${file} semantic document after Save/Open`).toEqual(opened.document);
+        expect(serializeCanonicalDocument(reopened.document), `${file} deterministic serialized form`).toBe(saved);
+      }
+    }
+  });
+
   it("round-trips Transaction Groups and semantic Transaction presentation fields", () => {
     const document = clone(canonicalFixture());
     const groupId = "txn_group_roundtrip";
