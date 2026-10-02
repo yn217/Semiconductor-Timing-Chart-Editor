@@ -45,4 +45,36 @@ test("Transaction lanes keep (groupId, laneId) ownership distinct for sentinel a
   const top = async (id: string) => (await lanes.locator(`[data-transaction-id='${id}']`).boundingBox())!.y;
   expect(Math.abs((await top("tx_synthetic")) - (await top("tx_real_ungrouped")))).toBeGreaterThan(8);
   expect(Math.abs((await top("tx_ab_c")) - (await top("tx_a_bc")))).toBeGreaterThan(8);
+  await lanes.locator("[data-transaction-id='tx_ab_c']").click();
+  await expect(lanes.locator("[data-transaction-id='tx_ab_c']")).toHaveAttribute("data-selected", "true");
+  await expect(lanes.locator("[data-transaction-id='tx_a_bc']")).toHaveAttribute("data-selected", "false");
+
+  const realGroupHeader = lanes.locator("[data-testid='transaction-group-header'][data-transaction-group-id='ungrouped']");
+  await realGroupHeader.getByRole("button", { name: "Collapse Real ungrouped" }).click();
+  await expect(realGroupHeader).toHaveAttribute("data-collapsed", "true");
+  await expect(lanes.locator("[data-transaction-id='tx_real_ungrouped']")).toHaveCount(0);
+  await expect(lanes.locator("[data-transaction-id='tx_synthetic']")).toHaveCount(1);
+  await realGroupHeader.getByRole("button", { name: "Expand Real ungrouped" }).click();
+  await expect(realGroupHeader).toHaveAttribute("data-collapsed", "false");
+  await expect(lanes.locator("[data-transaction-id='tx_real_ungrouped']")).toHaveCount(1);
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save As", exact: true }).click();
+  const saveDialog = page.getByRole("dialog", { name: "Save As" });
+  await saveDialog.getByLabel("Save As filename").fill("issue-933-roundtrip");
+  const downloadPromise = page.waitForEvent("download");
+  await saveDialog.getByTestId("save-as-submit").click();
+  const download = await downloadPromise;
+  const savedPath = await download.path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+
+  await expect(lanes.locator("[data-transaction-id='tx_ab_c']")).toHaveCount(1);
+  await expect(lanes.locator("[data-transaction-id='tx_a_bc']")).toHaveCount(1);
+  await expect(lanes.locator("[data-transaction-id='tx_synthetic']")).toHaveCount(1);
+  await expect(lanes.locator("[data-transaction-id='tx_real_ungrouped']")).toHaveCount(1);
+  await expect(lanes.locator("[data-testid='transaction-lane-label'][data-ungrouped='true'][data-lane-id='lane_0']")).toHaveCount(1);
+  await expect(lanes.locator("[data-testid='transaction-lane-label'][data-transaction-group-id='ungrouped'][data-lane-id='lane_0']")).toHaveCount(1);
+  await expect(lanes.locator("[data-testid='transaction-lane-label'][data-transaction-group-id='a:b'][data-lane-id='c']")).toHaveCount(1);
+  await expect(lanes.locator("[data-testid='transaction-lane-label'][data-transaction-group-id='a'][data-lane-id='b:c']")).toHaveCount(1);
 });
