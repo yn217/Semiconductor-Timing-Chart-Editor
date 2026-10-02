@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { RefObject } from "react";
 import { getGestureHint, subscribeGestureHint } from "./runtime/active-gesture-cancellation.js";
 import { cycleUnitWord } from "./transaction-tc.js";
@@ -163,6 +164,21 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
   }, [addMenuOpen, moreMenuOpen]);
   const [transactionMoreOpen, setTransactionMoreOpen] = useState(false);
   const transactionMoreButton = useRef<HTMLButtonElement>(null);
+  const [transactionMenuPosition, setTransactionMenuPosition] = useState<{ readonly left: number; readonly top: number }>();
+  // The Transaction tree header clips its children (overflow:hidden grid), so the menu is portaled to <body> and anchored to the button;
+  // rendered inline it was cut to the first item and sat behind the timeline.
+  useLayoutEffect(() => {
+    if (!transactionMoreOpen) { setTransactionMenuPosition(undefined); return; }
+    const place = () => {
+      const trigger = transactionMoreButton.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      setTransactionMenuPosition({ left: Math.max(8, rect.right - 180), top: rect.bottom + 4 });
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [transactionMoreOpen]);
   usePeerMenuSurface(addMenuOpen, onCloseAddMenu);
   usePeerMenuSurface(moreMenuOpen, onCloseMoreMenu);
   usePeerMenuSurface(transactionMoreOpen, () => setTransactionMoreOpen(false));
@@ -195,7 +211,7 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
       >
         <button type="button" className="tree-add-group-button" aria-label="New Transaction Group" title="New Transaction Group" data-testid="add-transaction-group-tree-visible" onClick={transactionMode.onAddGroup}>+ Group</button>
       </LeftPaneHeaderActions>
-      {transactionMoreOpen && <div className="tree-header-menu" role="menu" aria-label="Transaction tree actions" data-testid="transaction-tree-more-menu">
+      {transactionMoreOpen && transactionMenuPosition && createPortal(<div className="tree-header-menu tree-header-menu--floating" role="menu" aria-label="Transaction tree actions" data-testid="transaction-tree-more-menu" style={transactionMenuPosition}>
         <button type="button" role="menuitem" data-testid="transaction-tree-expand-all" onClick={() => { transactionMode.onExpandAll(); setTransactionMoreOpen(false); }}>Expand All</button>
         <button type="button" role="menuitem" data-testid="transaction-tree-collapse-all" onClick={() => { transactionMode.onCollapseAll(); setTransactionMoreOpen(false); }}>Collapse All</button>
         <hr role="separator" />
@@ -205,7 +221,7 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
         <button type="button" role="menuitem" data-testid="add-transaction-group-tree" onClick={() => { transactionMode.onAddGroup(); setTransactionMoreOpen(false); }}>Add Group…</button>
         <hr role="separator" />
         <button type="button" role="menuitem" disabled={transactionMode.filter === ""} onClick={() => { transactionMode.onFilterChange(""); setTransactionMoreOpen(false); }}>Clear Filter</button>
-      </div>}
+      </div>, document.body)}
     </span>
     <span className="role-column-heading" aria-label="Group">Group</span><span className="signal-column-heading" aria-label="Transaction">Transaction</span>
     <span className="frozen-pane-heading-gutter" aria-hidden="true" />
