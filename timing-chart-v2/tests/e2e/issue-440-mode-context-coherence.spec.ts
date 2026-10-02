@@ -20,9 +20,10 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/showcase/24_protocol_transaction_showcase.tcd.json"));
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
-    await expect(page.getByTestId("ribbon-context")).toHaveText("Ribbon target: Signal");
+    await expect(page.getByTestId("ribbon-context")).toHaveCount(0);
+    await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Cycle");
     await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
-    await page.getByTestId("cycle-surface").locator("[data-row-id='psel']").click();
+    await page.getByTestId("cycle-surface").locator("[data-role='left-row'][data-row-id='psel']").click();
     await expect(page.getByTestId("selection-status")).toHaveText("PSEL");
     await expect(page.getByTestId("cancel-inspector-draft")).toHaveText("Revert draft");
     await expect(page.getByTestId("cancel-inspector-draft")).toHaveAccessibleName("Discard unapplied Inspector draft");
@@ -45,13 +46,13 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     const dirty = await page.getByTestId("dirty-status").innerText();
 
     await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
-    await expect(page.getByTestId("ribbon-context")).toHaveText("Ribbon target: Transaction");
+    await expect(page.getByTestId("ribbon-context")).toHaveCount(0);
     await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
     await expect(inspector).not.toHaveAttribute("data-inspector-context", "bookmark");
     await expect(page.getByRole("button", { name: "Delete Bookmark" })).toHaveCount(0);
 
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
-    await expect(page.getByTestId("ribbon-context")).toHaveText("Ribbon target: Signal");
+    await expect(page.getByTestId("ribbon-context")).toHaveCount(0);
     await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Cycle");
     await expect(inspector, "Bookmark remains an explicit Bottom-local target; Cycle Inspector follows the preserved primary Signal selection").toHaveAttribute("data-inspector-context", "signal");
     await page.getByTestId("bottom-settings").click();
@@ -62,14 +63,14 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     await expect(inspector, "resuming Follow Selection releases the local Bookmark target").toHaveAttribute("data-inspector-context", "signal");
     await expect(bookmarkRow).toHaveAttribute("data-selected", "false");
     await page.locator(".view-mode").getByRole("button", { name: "Combined", exact: true }).click();
-    await expect(page.getByTestId("ribbon-context")).toHaveText("Ribbon target: Signal");
+    await expect(page.getByTestId("ribbon-context")).toHaveCount(0);
     await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Signal");
     await page.getByTestId("transaction-lanes").click({ position: { x: 100, y: 12 } });
     await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Transaction");
-    await expect(page.getByTestId("ribbon-context")).toHaveText("Ribbon target: Transaction");
+    await expect(page.getByTestId("ribbon-context")).toHaveCount(0);
     await page.locator(".surface-host").click({ position: { x: 100, y: 100 } });
     await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Signal");
-    await expect(page.getByTestId("ribbon-context")).toHaveText("Ribbon target: Signal");
+    await expect(page.getByTestId("ribbon-context")).toHaveCount(0);
     expect(await surface.getAttribute("data-canonical-revision")).toBe(revision);
     expect(await page.getByTestId("history-status").innerText()).toBe(history);
     expect(await page.getByTestId("dirty-status").innerText()).toBe(dirty);

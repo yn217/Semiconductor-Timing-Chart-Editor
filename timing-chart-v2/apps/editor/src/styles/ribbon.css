@@ -179,7 +179,6 @@
 .ribbon-tabs > button { height: 31px; padding: 0 13px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: #30425a; }
 
 .ribbon-tabs > button.active { border-bottom-color: #1477e6; color: #086dcc; }
-.ribbon-context { align-self: center; margin: 0 12px; padding: 3px 9px; border: 1px solid #cbd8e8; border-radius: 12px; background: #edf4fc; color: #34516f; font-size: 10px; font-weight: 600; white-space: nowrap; }
 
 .ribbon { display: flex; min-width: 0; height: 147px; overflow-x: hidden; overflow-y: hidden; border-bottom: 1px solid #b9c4d1; background: #fbfcfe; }
 
