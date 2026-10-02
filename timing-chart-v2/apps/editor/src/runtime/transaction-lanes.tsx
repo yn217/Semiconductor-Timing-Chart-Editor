@@ -6,7 +6,7 @@ import { EditorIcon } from "../editor-icon.js";
 import type { TransactionLaneCommandActions } from "../application/editor-surface-command-controller.js";
 import { InlineNameInput } from "../inline-name-input.js";
 import { registerActiveGestureCancel } from "./active-gesture-cancellation.js";
-import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldRangesIntersecting, transactionVisibleSegments, type TransactionFoldRange } from "./transaction-fold-index.js";
+import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldContainingCycle, transactionFoldContainingEndBoundary, transactionFoldRangesIntersecting, transactionVisibleSegments, type TransactionFoldRange } from "./transaction-fold-index.js";
 import { bookmarksForSourceWindowState, indexTransactionIntervals, INITIAL_TRANSACTION_SOURCE_WINDOW, transactionGeometryGuidesInSourceWindow, transactionIntervalsForSourceWindowState, type TransactionIntervalIndex, type TransactionSourceWindowState } from "./transaction-virtual-index.js";
 import { TRANSACTION_LANE_ROW_HEIGHT as LANE_ROW_HEIGHT, transactionLaneBandHeights } from "./transaction-lane-layout.js";
 
@@ -135,9 +135,11 @@ function TransactionBar({ transaction, documentEpoch, viewMode, row, color, sele
   const dragThresholdCrossed = useRef(false);
   const current = preview ?? { start: transaction.start, end: transaction.end };
   const transactionFolds = transactionFoldRangesIntersecting(foldRanges, transaction.start, transaction.end);
-  const containingFold = transactionFolds.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.end <= toCycle);
-  const startHiddenFold = transactionFolds.find(([fromCycle, toCycle]) => transaction.start >= fromCycle && transaction.start < toCycle && transaction.end > toCycle);
-  const endHiddenFold = transactionFolds.find(([fromCycle, toCycle]) => transaction.end > fromCycle && transaction.end <= toCycle && transaction.start < fromCycle);
+  const startFold = transactionFoldContainingCycle(foldRanges, transaction.start);
+  const containingFold = startFold && transaction.end <= startFold[1] ? startFold : undefined;
+  const startHiddenFold = startFold && transaction.end > startFold[1] ? startFold : undefined;
+  const endFold = transactionFoldContainingEndBoundary(foldRanges, transaction.end);
+  const endHiddenFold = endFold && transaction.end > endFold[0] && transaction.start < endFold[0] ? endFold : undefined;
   const resolveCachedBoundaryX = (cycle: number) => {
     const cached = previewBoundaryCache.current.get(cycle);
     if (cached !== undefined) return cached;

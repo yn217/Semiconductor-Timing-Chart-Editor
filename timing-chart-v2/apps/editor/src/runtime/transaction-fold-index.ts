@@ -49,6 +49,38 @@ export function transactionFoldRangesIntersecting(
   return result;
 }
 
+/** Find the merged fold containing a source cycle in logarithmic time. */
+export function transactionFoldContainingCycle(
+  ranges: readonly TransactionFoldRange[],
+  cycle: number,
+): TransactionFoldRange | undefined {
+  let low = 0;
+  let high = ranges.length;
+  while (low < high) {
+    const middle = low + Math.floor((high - low) / 2);
+    if (ranges[middle]![0] <= cycle) low = middle + 1;
+    else high = middle;
+  }
+  const candidate = ranges[low - 1];
+  return candidate && cycle < candidate[1] ? candidate : undefined;
+}
+
+/** Find a fold ending at or after an end boundary, preserving end-hidden semantics. */
+export function transactionFoldContainingEndBoundary(
+  ranges: readonly TransactionFoldRange[],
+  cycle: number,
+): TransactionFoldRange | undefined {
+  let low = 0;
+  let high = ranges.length;
+  while (low < high) {
+    const middle = low + Math.floor((high - low) / 2);
+    if (ranges[middle]![0] < cycle) low = middle + 1;
+    else high = middle;
+  }
+  const candidate = ranges[low - 1];
+  return candidate && cycle <= candidate[1] ? candidate : undefined;
+}
+
 /** Split a source interval around sorted, merged folds in one linear pass. */
 export function transactionVisibleSegments(
   start: number,

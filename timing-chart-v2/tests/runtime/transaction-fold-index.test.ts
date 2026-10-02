@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldRangesIntersecting, transactionVisibleSegments } from "../../apps/editor/src/runtime/transaction-fold-index.js";
+import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldContainingCycle, transactionFoldContainingEndBoundary, transactionFoldRangesIntersecting, transactionVisibleSegments } from "../../apps/editor/src/runtime/transaction-fold-index.js";
 
 describe("Transaction fold interval index", () => {
   it("slices sorted viewport boundaries with binary lookup and inclusive endpoints", () => {
@@ -32,6 +32,23 @@ describe("Transaction fold interval index", () => {
 
     expect(transactionFoldRangesIntersecting(indexed, 15_000, 15_008)).toEqual([[15_000, 15_003]]);
     expect(indexedReads).toBeLessThan(32);
+  });
+
+  it("classifies start/end fold ownership with logarithmic lookup", () => {
+    const ranges = Array.from({ length: 2_000 }, (_, index) => [index * 10 + 2, index * 10 + 5] as const);
+    let indexedReads = 0;
+    const indexed = new Proxy(ranges, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\\d+$/.test(property)) indexedReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    expect(transactionFoldContainingCycle(indexed, 19_994)).toEqual([19_992, 19_995]);
+    expect(transactionFoldContainingCycle(indexed, 19_995)).toBeUndefined();
+    expect(transactionFoldContainingEndBoundary(indexed, 19_995)).toEqual([19_992, 19_995]);
+    expect(transactionFoldContainingEndBoundary(indexed, 19_992)).toBeUndefined();
+    expect(indexedReads).toBeLessThan(100);
   });
 
   it("preserves half-open interval boundaries", () => {
