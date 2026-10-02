@@ -450,7 +450,7 @@ export function useEditorSecondarySurfaces(
               onFilterChange: workspace.setTransactionTreeFilter,
               filterMode: workspace.transactionTreeFilterMode,
               onFilterModeChange: workspace.setTransactionTreeFilterMode,
-              onAdd: input.actions.createTransaction,
+              onAdd: () => input.actions.createTransaction(),
               onAddGroup: input.actions.createTransactionGroup,
               onExpandAll: () => disclosure.expandAll(),
               onCollapseAll: () => disclosure.collapseAll(),
@@ -544,7 +544,8 @@ export function useEditorSecondarySurfaces(
           surfaceCommands.moveTransactionToNewGroup(transactionId, { id: nextEntityId("transactionGroup", input.document) as TransactionGroup["id"], name: `Group ${order + 1}`, order });
         }}
         onContextMenu={openTransactionContextMenu}
-        onCreateTransaction={input.actions.createTransaction}
+        onCreateTransaction={() => input.actions.createTransaction()}
+        onCreateTransactionInGroup={input.actions.createTransaction}
         onClearSelection={input.actions.clearSelection}
         onFocusTransaction={(transactionId) =>
           refs.viewport.current
