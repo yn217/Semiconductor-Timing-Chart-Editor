@@ -611,6 +611,56 @@ describe("pure Semantic Command planning", () => {
     }
   });
 
+  it("changes selected Signal visibility in one planner/history action with atomic mixed updates", () => {
+    const initial = canonicalFixture();
+    const additions = Array.from({ length: 998 }, (_, index) => {
+      const signal = extraSignal(`sig_bulk_visibility_${index}`);
+      return { ...signal, name: `Bulk ${index}`, display: { ...signal.display, name: `Bulk ${index}`, ...(index === 10 ? { visible: false } : {}) } };
+    });
+    const baseGroup = initial.signalGroups[0]!;
+    const document = {
+      ...initial,
+      signals: [...initial.signals, ...additions],
+      signalGroups: initial.signalGroups.map((group) => group.id === baseGroup.id ? { ...group, rows: [...group.rows, ...additions.map((signal) => signal.id)] } : group),
+    };
+    const session = new CommandHistorySession(document);
+    const beforeSignals = session.getSnapshot().document.signals;
+    const beforePlans = commandPlannerMetrics().internalPlans;
+    const changed = ["sig_data" as SignalId, additions[10]!.id, additions[900]!.id];
+
+    expect(session.execute({
+      id: commandId("cmd_signal_bulk_visibility"),
+      type: "signal.bulkSetVisibility",
+      updates: changed.map((signalId, index) => ({ signalId, visible: index === 1 })),
+    }).ok).toBe(true);
+
+    const afterSignals = session.getSnapshot().document.signals;
+    expect(commandPlannerMetrics().internalPlans - beforePlans).toBe(1);
+    expect(afterSignals.find((signal) => signal.id === "sig_data")?.display.visible).toBe(false);
+    expect(afterSignals.find((signal) => signal.id === additions[10]!.id)?.display.visible).toBe(true);
+    expect(afterSignals.find((signal) => signal.id === additions[900]!.id)?.display.visible).toBe(false);
+    expect(afterSignals[0]).toBe(beforeSignals[0]);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals).toBe(beforeSignals);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals).toBe(afterSignals);
+  });
+
+  it("rejects invalid or duplicate IDs in a bulk Signal visibility update without mutation", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const before = session.getSnapshot();
+    const missing = session.execute({ id: commandId("cmd_signal_bulk_visibility_missing"), type: "signal.bulkSetVisibility", updates: [{ signalId: "sig_missing" as SignalId, visible: false }] });
+    expect(missing).toMatchObject({ ok: false, reason: "invalid" });
+    const duplicate = session.execute({ id: commandId("cmd_signal_bulk_visibility_duplicate"), type: "signal.bulkSetVisibility", updates: [
+      { signalId: "sig_data" as SignalId, visible: false },
+      { signalId: "sig_data" as SignalId, visible: true },
+    ] });
+    expect(duplicate).toMatchObject({ ok: false, reason: "invalid" });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState().undoDepth).toBe(0);
+  });
+
   it("plans Signal Editor changes with precise render domains", () => {
     const source = canonicalFixture();
     const moved = planCommand(source, { id: commandId("cmd_move_value"), type: "signal.moveValue", signalId: "sig_data" as SignalId, fromStart: 4, toStart: 3 });

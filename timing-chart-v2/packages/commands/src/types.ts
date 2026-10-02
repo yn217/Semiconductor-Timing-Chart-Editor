@@ -59,6 +59,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "signal.rename"; signalId: SignalId; name: string }>
   | Readonly<{ id: CommandId; type: "signal.move"; signalId: SignalId; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "signal.setVisibility"; signalId: SignalId; visible: boolean }>
+  | Readonly<{ id: CommandId; type: "signal.bulkSetVisibility"; updates: readonly Readonly<{ signalId: SignalId; visible: boolean }>[] }>
   | Readonly<{ id: CommandId; type: "signal.updateValue"; signalId: SignalId; start: number; value: SignalValue; comment?: string }>
   | Readonly<{ id: CommandId; type: "signal.replaceValues"; signalId: SignalId; values: readonly ValueSignal["values"][number][] }>
   | Readonly<{ id: CommandId; type: "signal.replaceValue"; signalId: SignalId; fromStart: number; start: number; value: SignalValue; comment?: string }>

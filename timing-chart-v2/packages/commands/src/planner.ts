@@ -807,6 +807,38 @@ function planCommandInternal(document: CanonicalDocument, command: SemanticComma
       const changeSet: ChangeSet = { rowPresentation: [signal.id], geometryScreenY: changedTimingRows, annotationPosition: annotationsForSignals(document, affectedForAnnotations), minimapOverview: true, timingDiagnosticsUnchanged: true };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
+    case "signal.bulkSetVisibility": {
+      if (command.updates.length === 0) return fail("no-op", "NO_OP", "$.updates", "No Signals were selected for visibility change.");
+      const visibleById = new Map<SignalId, boolean>();
+      for (const [index, update] of command.updates.entries()) {
+        if (visibleById.has(update.signalId)) return fail("invalid", "DUPLICATE_ID", `$.updates[${index}].signalId`, "Bulk Signal visibility contains duplicate IDs.");
+        visibleById.set(update.signalId, update.visible);
+      }
+      const foundIds = new Set<SignalId>();
+      const changedIds: SignalId[] = [];
+      const nextSignals = document.signals.map((signal) => {
+        if (!visibleById.has(signal.id)) return signal;
+        const visible = visibleById.get(signal.id)!;
+        foundIds.add(signal.id);
+        if ((signal.display.visible !== false) === visible) return signal;
+        changedIds.push(signal.id);
+        return { ...signal, display: { ...signal.display, visible } };
+      });
+      const missing = command.updates.find((update) => !foundIds.has(update.signalId));
+      if (missing) return fail("invalid", "SIGNAL_NOT_FOUND", "$.updates", `Signal '${missing.signalId}' does not exist.`);
+      if (changedIds.length === 0) return fail("no-op", "NO_OP", "$.updates", "Signal visibility is unchanged.");
+      const nextDocument = { ...document, signals: nextSignals };
+      const changedTimingRows = changedPositions(orderedVisibleTimingRows(document), orderedVisibleTimingRows(nextDocument));
+      const affectedForAnnotations = [...new Set([...changedIds, ...changedTimingRows])];
+      const changeSet: ChangeSet = {
+        rowPresentation: changedIds,
+        geometryScreenY: changedTimingRows,
+        annotationPosition: annotationsForSignals(document, affectedForAnnotations),
+        minimapOverview: true,
+        timingDiagnosticsUnchanged: true,
+      };
+      return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
+    }
     case "signal.updateValue": {
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
       const signal = document.signals[index];

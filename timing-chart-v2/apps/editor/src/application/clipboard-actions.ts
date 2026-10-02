@@ -356,11 +356,10 @@ export function useClipboardActions({ application, selection }: { application: E
     if (value.transactions.length > 0) {
       return application.execute({ id: nextCommandId("route_transaction_visibility_selection"), type: "transaction.bulkSetVisibility", transactionIds: value.transactions.map((transaction) => transaction.id), visible });
     }
-    const commands = value.signals
+    const updates = value.signals
       .filter(({ signal }) => (signal.display.visible !== false) !== visible)
-      .map(({ signal }) => ({ id: nextCommandId("route_visibility"), type: "signal.setVisibility" as const, signalId: signal.id, visible }));
-    if (commands.length > 1) return application.executeBatch(nextCommandId("route_visibility_selection"), commands);
-    if (commands.length === 1) return application.execute(commands[0]!);
+      .map(({ signal }) => ({ signalId: signal.id, visible }));
+    if (updates.length > 0) return application.execute({ id: nextCommandId("route_visibility_selection"), type: "signal.bulkSetVisibility", updates });
     return undefined;
   };
   // #431 item 9 ("Signal Tree productivity" -- "show only selected"): a
@@ -373,11 +372,10 @@ export function useClipboardActions({ application, selection }: { application: E
     const value = selected();
     const selectedIds = new Set(value.signals.map(({ signal }) => signal.id));
     if (selectedIds.size === 0) return undefined;
-    const commands = value.document.signals
+    const updates = value.document.signals
       .filter((signal) => (signal.display.visible !== false) !== selectedIds.has(signal.id))
-      .map((signal) => ({ id: nextCommandId("route_isolate"), type: "signal.setVisibility" as const, signalId: signal.id, visible: selectedIds.has(signal.id) }));
-    if (commands.length > 1) return application.executeBatch(nextCommandId("route_isolate_selection"), commands);
-    if (commands.length === 1) return application.execute(commands[0]!);
+      .map((signal) => ({ signalId: signal.id, visible: selectedIds.has(signal.id) }));
+    if (updates.length > 0) return application.execute({ id: nextCommandId("route_isolate_selection"), type: "signal.bulkSetVisibility", updates });
     return undefined;
   };
   const move = (direction: -1 | 1) => {
