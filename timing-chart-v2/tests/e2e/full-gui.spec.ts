@@ -9,6 +9,8 @@ startInCycleSample(test);
 async function ready(page: Page) {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  // The canonical revision is published after the first render; specs that capture it as a baseline read null (and Playwright throws) if they run first.
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", /^\d+$/);
 }
 
 // The Inspector's default content is its always-mounted Layout panel

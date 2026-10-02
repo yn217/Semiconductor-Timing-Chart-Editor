@@ -96,7 +96,7 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(page.getByTestId("inspector").getByLabel("Inspector edge counter mode")).toBeVisible();
   await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true })).toBeVisible();
   await expect(page.getByTestId("clock-context-toolbar").locator("svg")).toHaveCount(5);
-  await expect(page.getByTestId("follow-selection").locator(".." )).toContainText("Follow Selection");
+  await expect(page.getByTestId("follow-selection").locator(".." )).toContainText("Follow selection");
   const minimap = page.getByTestId("minimap");
   await expect(minimap).toBeVisible();
   // The approved Golden fixture reserves a compact 115px MiniMap band.
