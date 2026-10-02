@@ -557,23 +557,23 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       publishState,
     });
     const cycleBoundaryAtX = createTimelineCycleBoundaryResolver({ rendererHost, timelineGeometry, isSnapEnabled: () => snapEnabledRef.current });
-    const transactionSnapAxisY = (() => {
-      const axisOwner = timelineGeometry.timeAxis.ownerSignalId;
-      return axisOwner === undefined ? undefined : projection.rowLayout.find((row) => row.rowId === axisOwner)?.y;
-    })();
-    snapTransactionCycle.current = (clientX, surfaceLeft, horizontalScroll = 0) => resolveTransactionSnapCycle({
-      clientX, surfaceLeft, horizontalScroll,
-      snapAxisRowY: transactionSnapAxisY,
-      timeAxis: timelineGeometry.timeAxis,
-      screenGeometry: timelineGeometry.screen,
-      zoom: timelineNavigation.getZoom(),
-      snapEnabled: snapEnabledRef.current,
-      document: sessionController.snapshot().document,
-      currentSnapIndex: () => timelineGeometry.currentSnapIndex(),
-      cycleBoundaryAtPointerX: cycleBoundaryAtX,
-      cycleBoundaryAtX,
-      cycleBoundaryAtLocalX: (localX, zoom, snapEnabled) => timelineGeometry.cycleBoundaryAtLocalX(localX, zoom, snapEnabled),
-    });
+    snapTransactionCycle.current = (clientX, surfaceLeft, horizontalScroll = 0) => {
+      const timeAxisMetrics = timelineGeometry.timeAxisMetrics;
+      const axisOwner = timeAxisMetrics.timeAxis.ownerSignalId;
+      const snapAxisRowY = axisOwner === undefined ? undefined : projection.rowLayout.find((row) => row.rowId === axisOwner)?.y;
+      return resolveTransactionSnapCycle({
+        clientX, surfaceLeft, horizontalScroll,
+        snapAxisRowY,
+        timeAxisMetrics,
+        screenGeometry: timelineGeometry.screen,
+        snapEnabled: snapEnabledRef.current,
+        document: sessionController.snapshot().document,
+        currentSnapIndex: () => timelineGeometry.currentSnapIndex(),
+        cycleBoundaryAtPointerX: cycleBoundaryAtX,
+        cycleBoundaryAtX,
+        cycleBoundaryAtLocalX: (localX, zoom, snapEnabled) => timelineGeometry.cycleBoundaryAtLocalX(localX, zoom, snapEnabled),
+      });
+    };
     const initialDocumentEpoch = documentEpoch.current();
     scheduleInitialTimelineRefresh(renderer, rendererHost, {
       ruler: () => { if (active) timelineRuntime.refreshRuler(); },

@@ -1,5 +1,6 @@
 import type { CanonicalDocument } from "@timing-chart-v2/schema";
-import type { ImmutableSnapIndex, ScreenGeometryProjector, TimeAxisGeometry } from "@timing-chart-v2/geometry";
+import type { ImmutableSnapIndex, ScreenGeometryProjector } from "@timing-chart-v2/geometry";
+import type { TimeAxisMetrics } from "./timeline-geometry-owner.js";
 
 export type EditorEventBinding = {
   readonly target: EventTarget;
@@ -27,9 +28,8 @@ export function resolveTransactionSnapCycle(context: {
   /** Current scroll offset in rendered CSS pixels for the shared time viewport. */
   readonly horizontalScroll: number;
   readonly snapAxisRowY: number | undefined;
-  readonly timeAxis: TimeAxisGeometry;
+  readonly timeAxisMetrics: Pick<TimeAxisMetrics, "timeAxis" | "zoom">;
   readonly screenGeometry: ScreenGeometryProjector;
-  readonly zoom: number;
   readonly snapEnabled: boolean;
   readonly document: CanonicalDocument;
   readonly currentSnapIndex: () => ImmutableSnapIndex;
@@ -37,25 +37,26 @@ export function resolveTransactionSnapCycle(context: {
   readonly cycleBoundaryAtX: (clientX: number) => number | undefined;
   readonly cycleBoundaryAtLocalX: (localX: number, zoom: number, snapEnabled: boolean) => number | undefined;
 }): number | undefined {
+  const { timeAxis, zoom } = context.timeAxisMetrics;
   if (!context.snapEnabled) {
     return context.surfaceLeft === undefined
       ? context.cycleBoundaryAtX(context.clientX)
       : context.cycleBoundaryAtLocalX(
-        context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: context.horizontalScroll / context.zoom, scrollY: 0, zoom: context.zoom }).x,
-        context.zoom,
+        context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: context.horizontalScroll / zoom, scrollY: 0, zoom }).x,
+        zoom,
         false,
       );
   }
-  const axisOwner = context.timeAxis.ownerSignalId;
+  const axisOwner = timeAxis.ownerSignalId;
   if (context.surfaceLeft === undefined) return context.cycleBoundaryAtPointerX(context.clientX);
   if (!axisOwner || context.snapAxisRowY === undefined) {
     return context.cycleBoundaryAtLocalX(
-      context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: context.horizontalScroll / context.zoom, scrollY: 0, zoom: context.zoom }).x,
-      context.zoom,
+      context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: context.horizontalScroll / zoom, scrollY: 0, zoom }).x,
+      zoom,
       true,
     );
   }
-  const localPointer = context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: context.horizontalScroll / context.zoom, scrollY: 0, zoom: context.zoom });
-  const snap = context.currentSnapIndex().nearest({ x: localPointer.x, y: context.snapAxisRowY + context.document.layout.rowHeight / 2 }, 14 / context.zoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
-  return snap?.anchor.cycle ?? context.cycleBoundaryAtLocalX(localPointer.x, context.zoom, true);
+  const localPointer = context.screenGeometry.fromScreen({ x: context.clientX - context.surfaceLeft, y: 0 }, { scrollX: context.horizontalScroll / zoom, scrollY: 0, zoom });
+  const snap = context.currentSnapIndex().nearest({ x: localPointer.x, y: context.snapAxisRowY + context.document.layout.rowHeight / 2 }, 14 / zoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
+  return snap?.anchor.cycle ?? context.cycleBoundaryAtLocalX(localPointer.x, zoom, true);
 }
