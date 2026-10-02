@@ -270,9 +270,9 @@
    border accent + text color with no background fill (see
    .ribbon-tabs > button.active) -- reused here instead of inventing a new
    one, so View's checked state reads as "selected", not as a stuck hover. */
-/* Pressed = accent icon + 2px accent bar under the button. Border, text color and weight stay identical to every other ribbon button,
-   so a View > Panels toggle no longer reads as a different kind of control (the earlier bordered, bold, dark-blue tile did). */
-.ds-ribbon-toggle-button[aria-pressed="true"] { background: transparent; box-shadow: inset 0 -2px 0 #1675d1; }
+/* Pressed = accent-colored icon only. Border, background, bar, text color and weight stay identical to every other ribbon button, so a
+   View > Panels toggle does not read as a different kind of control (bordered tile, then underline bar, were both rejected). */
+.ds-ribbon-toggle-button[aria-pressed="true"] { background: transparent; }
 .ds-ribbon-toggle-button[aria-pressed="true"] .ds-icon-box { color: #1675d1; }
 
 .ds-ribbon-toggle-button[aria-pressed="true"]:hover { background: #edf6ff; }
