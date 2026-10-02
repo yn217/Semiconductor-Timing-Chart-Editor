@@ -18,6 +18,14 @@ export function useSignalSplitPresentationSync(input: TimelineSurfaceRuntimeInpu
       const upperOwner = timelineScrollOwner(upperViewport);
       const lowerOwner = timelineScrollOwner(lowerViewport);
       if (lowerOwner !== lowerViewport && upperOwner !== upperViewport) lowerOwner.style.setProperty("--timeline-min-width", `${upperOwner.scrollWidth}px`);
+      // #937: the Lower Grid/Range band sit outside Lower's TimelineViewport, so they follow the shared horizontal scroll through the same
+      // `--timeline-scroll-left` (+ grid clip window) Upper's syncRulerScroll publishes to its own consumers.
+      if (upperOwner !== upperViewport && zoom > 0) {
+        for (const consumer of lowerViewport.querySelectorAll<HTMLElement>("[data-testid='geometry-grid-lower'], [data-testid='range-selection-band-lower']")) {
+          consumer.style.setProperty("--timeline-scroll-left", String(upperOwner.scrollLeft));
+          if (consumer.dataset.testid === "geometry-grid-lower") { consumer.style.setProperty("--grid-clip-left", `${upperOwner.scrollLeft / zoom}px`); consumer.style.setProperty("--grid-clip-right", `${(upperOwner.scrollLeft + upperOwner.clientWidth) / zoom}px`); }
+        }
+      }
       if (host.current && hostLower.current) {
         hostLower.current.style.width = host.current.style.width;
         const scale = host.current.style.getPropertyValue("--presentation-x-scale");

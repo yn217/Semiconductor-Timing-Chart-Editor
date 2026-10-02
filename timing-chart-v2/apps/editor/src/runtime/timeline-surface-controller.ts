@@ -529,9 +529,10 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // its OWN row content height, not Upper's, so this reuses Upper's
       // inputs with Lower's own totalHeight rather than cloning Upper's
       // grid DOM outright.
-      if (reason === "grid" && gridLayerLower.current && signalSplitRuntimeRef.current) {
+      if (reason !== "scroll" && gridLayerLower.current && signalSplitRuntimeRef.current) { // #937: Lower follows every Upper grid refresh (zoom, fit, ruler, resize), not only the "grid" reason
         const metrics = viewMetricsOwner.snapshot();
         refreshGridPresentation(gridLayerLower.current, document, geometryMaps, mappingCache, gridEnabledRef.current, signalSplitRuntimeRef.current.getTotalHeight(), globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, presentation.screenGeometryScale, transactionCyclesPerTcRef.current, timelineGeometry.timeAxisMetrics);
+        gridLayerLower.current.style.transformOrigin = "0 0"; gridLayerLower.current.style.scale = `${timelineNavigation.getZoom()} 1`; // same CSS zoom as Upper's grid
       }
     };
     timelineRuntime.attach();
@@ -563,7 +564,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       viewport: viewportElement,
       ruler: rulerElement,
       scalable: [gridElement, ...rendererHost.querySelectorAll<HTMLElement>("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface'], [data-role='annotation-overlay-surface'], [data-role='interactive-overlay-surface']")],
-      rulerViewport: rulerViewportElement,
+      extraScalable: () => (gridLayerLower.current ? [gridLayerLower.current] : []), rulerViewport: rulerViewportElement,
       viewMetrics: viewMetricsOwner,
       timelineOffset,
       getPresentationScale: () => timelineGeometry.presentationScale,
