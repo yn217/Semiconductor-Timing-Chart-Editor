@@ -1,5 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { expect, test, type CDPSession } from "@playwright/test";
-import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
 test("engineering fixed-work 100x500 Open renders 100 full-span owners", async ({ page }, testInfo) => {
   test.setTimeout(120_000);
@@ -30,7 +31,7 @@ test("engineering fixed-work 100x500 Open renders 100 full-span owners", async (
   const cdp = await page.context().newCDPSession(page);
   await cdp.send("Performance.enable");
   const browserBefore = await browserMetrics(cdp);
-  const document = generatePerformanceDocument({ signalCount: 100, cycleCount: 500 });
+  const document = JSON.parse(readFileSync(resolve(process.cwd(), "samples/performance/perf_100x500_full_span.tcd.json"), "utf8"));
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
     name: "engineering-fixed-100x500.tcd",
     mimeType: "application/json",
@@ -76,7 +77,7 @@ test("engineering fixed-work 100x500 Open renders 100 full-span owners", async (
 
   const evidence = {
     benchmark: "engineering fixed-work; not product default viewport behavior",
-    fixture: { signals: 100, sourceCycles: 500 },
+    fixture: { path: "samples/performance/perf_100x500_full_span.tcd.json", signals: 100, sourceCycles: 500 },
     rendererWindowOverride: { sourceModuleMatches: sourceWindowOverrideCount, productionConstantsChanged: false },
     renderedOwners: waveWindows,
     measurements,

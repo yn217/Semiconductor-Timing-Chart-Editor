@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "fixtures": [
+    {
+      "id": "100x500_full_span",
+      "file": "perf_100x500_full_span.tcd.json",
+      "purpose": "Fixed engineering Open/render benchmark",
+      "signalCount": 100,
+      "cycleCount": 500,
+      "transactionCount": 12,
+      "annotationCount": 10,
+      "expectedWorkload": "100/100 waveform owners, each source window 0..500",
+      "transitionProfile": "Deterministic mixed Clock/Binary/Bus workload with repeated patterns",
+      "benchmarks": ["tests/performance/fixed-full-span-open.spec.ts"]
+    },
+    {
+      "id": "1000x1000_virtualized",
+      "file": "perf_1000x1000_virtualized.tcd.json",
+      "purpose": "Large document vertical/horizontal virtualization, far scroll, Open/Save scale",
+      "signalCount": 1000,
+      "cycleCount": 1000,
+      "transactionCount": 16,
+      "annotationCount": 12,
+      "expectedWorkload": "Canonical document contains 1,000 rows and 1,000 cycles; mounted waveform owners remain viewport-windowed",
+      "transitionProfile": "Sparse mixed values with hidden-row coverage",
+      "benchmarks": []
+    },
+    {
+      "id": "100x100000_sparse_timeline",
+      "file": "perf_100x100000_sparse_timeline.tcd.json",
+      "purpose": "Sparse product-limit timeline for far-right navigation, mapping, snapping and selected-range export",
+      "signalCount": 100,
+      "cycleCount": 100000,
+      "transactionCount": 12,
+      "annotationCount": 10,
+      "expectedWorkload": "100 canonical rows over 100,000 cycles with sparse values; do not materialize per-cycle transitions",
+      "transitionProfile": "Sparse mixed values; no dense cycle expansion",
+      "benchmarks": []
+    }
+  ]
+}

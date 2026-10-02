@@ -1,0 +1,3015 @@
+{
+  "formatVersion": 2,
+  "document": {
+    "id": "perf_100x100000_standard",
+    "title": "Sparse 100 Signal × 100,000 Cycle timeline benchmark",
+    "header": {
+      "subtitle": "standard",
+      "description": "Generated deterministic performance fixture",
+      "notes": "",
+      "preconditions": [],
+      "constraints": [],
+      "exceptions": []
+    },
+    "footer": {
+      "figureNumber": "",
+      "revision": "P13",
+      "text": ""
+    }
+  },
+  "timeline": {
+    "start": 0,
+    "end": 100000,
+    "cycleCount": 100000,
+    "timeBase": "cycle",
+    "referenceClock": "sig_perf_0",
+    "edge": "rising",
+    "labelAnchors": []
+  },
+  "signalGroups": [
+    {
+      "id": "grp_perf_0",
+      "name": "Group 0",
+      "rows": [
+        "sig_perf_0",
+        "sig_perf_1",
+        "sig_perf_2",
+        "sig_perf_3",
+        "sig_perf_4",
+        "sig_perf_5",
+        "sig_perf_6",
+        "sig_perf_7",
+        "sig_perf_8",
+        "sig_perf_9",
+        "sig_perf_10",
+        "sig_perf_11",
+        "sig_perf_12",
+        "sig_perf_13",
+        "sig_perf_14",
+        "sig_perf_15",
+        "sig_perf_16",
+        "sig_perf_17",
+        "sig_perf_18",
+        "sig_perf_19",
+        "sig_perf_20",
+        "sig_perf_21",
+        "sig_perf_22",
+        "sig_perf_23",
+        "sig_perf_24"
+      ],
+      "spacingAfter": 0
+    },
+    {
+      "id": "grp_perf_1",
+      "name": "Group 1",
+      "rows": [
+        "sig_perf_25",
+        "sig_perf_26",
+        "sig_perf_27",
+        "sig_perf_28",
+        "sig_perf_29",
+        "sig_perf_30",
+        "sig_perf_31",
+        "sig_perf_32",
+        "sig_perf_33",
+        "sig_perf_34",
+        "sig_perf_35",
+        "sig_perf_36",
+        "sig_perf_37",
+        "sig_perf_38",
+        "sig_perf_39",
+        "sig_perf_40",
+        "sig_perf_41",
+        "sig_perf_42",
+        "sig_perf_43",
+        "sig_perf_44",
+        "sig_perf_45",
+        "sig_perf_46",
+        "sig_perf_47",
+        "sig_perf_48",
+        "sig_perf_49"
+      ],
+      "spacingAfter": 4
+    },
+    {
+      "id": "grp_perf_2",
+      "name": "Group 2",
+      "rows": [
+        "sig_perf_50",
+        "sig_perf_51",
+        "sig_perf_52",
+        "sig_perf_53",
+        "sig_perf_54",
+        "sig_perf_55",
+        "sig_perf_56",
+        "sig_perf_57",
+        "sig_perf_58",
+        "sig_perf_59",
+        "sig_perf_60",
+        "sig_perf_61",
+        "sig_perf_62",
+        "sig_perf_63",
+        "sig_perf_64",
+        "sig_perf_65",
+        "sig_perf_66",
+        "sig_perf_67",
+        "sig_perf_68",
+        "sig_perf_69",
+        "sig_perf_70",
+        "sig_perf_71",
+        "sig_perf_72",
+        "sig_perf_73",
+        "sig_perf_74"
+      ],
+      "spacingAfter": 0
+    },
+    {
+      "id": "grp_perf_3",
+      "name": "Group 3",
+      "rows": [
+        "sig_perf_75",
+        "sig_perf_76",
+        "sig_perf_77",
+        "sig_perf_78",
+        "sig_perf_79",
+        "sig_perf_80",
+        "sig_perf_81",
+        "sig_perf_82",
+        "sig_perf_83",
+        "sig_perf_84",
+        "sig_perf_85",
+        "sig_perf_86",
+        "sig_perf_87",
+        "sig_perf_88",
+        "sig_perf_89",
+        "sig_perf_90",
+        "sig_perf_91",
+        "sig_perf_92",
+        "sig_perf_93",
+        "sig_perf_94",
+        "sig_perf_95",
+        "sig_perf_96",
+        "sig_perf_97",
+        "sig_perf_98",
+        "sig_perf_99"
+      ],
+      "spacingAfter": 4
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_perf_0",
+      "name": "CLK_0",
+      "type": "clock",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "clk_0"
+      },
+      "display": {
+        "name": "CLK_0"
+      },
+      "generator": {
+        "start": 0,
+        "period": 2,
+        "duty": 0.5,
+        "phase": 0,
+        "initial": 0,
+        "polarity": "positive"
+      },
+      "edgeCounter": {
+        "show": false,
+        "mode": "rising",
+        "startNumber": 1,
+        "countFrom": "signal-start",
+        "labelEvery": 1,
+        "position": "above",
+        "offset": {
+          "x": 0,
+          "y": -6
+        }
+      }
+    },
+    {
+      "id": "sig_perf_1",
+      "name": "SIG_1",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_1"
+      },
+      "display": {
+        "name": "SIG_1"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_2",
+      "name": "SIG_2",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_2"
+      },
+      "display": {
+        "name": "SIG_2"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_3",
+      "name": "SIG_3",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_3"
+      },
+      "display": {
+        "name": "SIG_3"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_4",
+      "name": "SIG_4",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_4"
+      },
+      "display": {
+        "name": "SIG_4"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_5",
+      "name": "BUS_5",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_5"
+      },
+      "display": {
+        "name": "BUS_5"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "00000005"
+        },
+        {
+          "start": 50000,
+          "value": "00000006"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_6",
+      "name": "SIG_6",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_6"
+      },
+      "display": {
+        "name": "SIG_6"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_7",
+      "name": "SIG_7",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_7"
+      },
+      "display": {
+        "name": "SIG_7"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_8",
+      "name": "SIG_8",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_8"
+      },
+      "display": {
+        "name": "SIG_8"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_9",
+      "name": "SIG_9",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_9"
+      },
+      "display": {
+        "name": "SIG_9"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_10",
+      "name": "BUS_10",
+      "type": "bus",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_10"
+      },
+      "display": {
+        "name": "BUS_10"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "0000000a"
+        },
+        {
+          "start": 50000,
+          "value": "0000000b"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_11",
+      "name": "SIG_11",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_11"
+      },
+      "display": {
+        "name": "SIG_11"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_12",
+      "name": "SIG_12",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_12"
+      },
+      "display": {
+        "name": "SIG_12"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_13",
+      "name": "SIG_13",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_13"
+      },
+      "display": {
+        "name": "SIG_13"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_14",
+      "name": "SIG_14",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_14"
+      },
+      "display": {
+        "name": "SIG_14"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_15",
+      "name": "BUS_15",
+      "type": "bus",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_15"
+      },
+      "display": {
+        "name": "BUS_15"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "0000000f"
+        },
+        {
+          "start": 50000,
+          "value": "00000010"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_16",
+      "name": "SIG_16",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_16"
+      },
+      "display": {
+        "name": "SIG_16"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_17",
+      "name": "SIG_17",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_17"
+      },
+      "display": {
+        "name": "SIG_17"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_18",
+      "name": "SIG_18",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_18"
+      },
+      "display": {
+        "name": "SIG_18"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_19",
+      "name": "SIG_19",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_19"
+      },
+      "display": {
+        "name": "SIG_19"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_20",
+      "name": "BUS_20",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_20"
+      },
+      "display": {
+        "name": "BUS_20"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "00000014"
+        },
+        {
+          "start": 50000,
+          "value": "00000015"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_21",
+      "name": "SIG_21",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_21"
+      },
+      "display": {
+        "name": "SIG_21"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_22",
+      "name": "SIG_22",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_22"
+      },
+      "display": {
+        "name": "SIG_22"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_23",
+      "name": "SIG_23",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_23"
+      },
+      "display": {
+        "name": "SIG_23"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_24",
+      "name": "SIG_24",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_24"
+      },
+      "display": {
+        "name": "SIG_24"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_25",
+      "name": "BUS_25",
+      "type": "bus",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_25"
+      },
+      "display": {
+        "name": "BUS_25"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "00000019"
+        },
+        {
+          "start": 50000,
+          "value": "0000001a"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_26",
+      "name": "SIG_26",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_26"
+      },
+      "display": {
+        "name": "SIG_26"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_27",
+      "name": "SIG_27",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_27"
+      },
+      "display": {
+        "name": "SIG_27"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_28",
+      "name": "SIG_28",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_28"
+      },
+      "display": {
+        "name": "SIG_28"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_29",
+      "name": "SIG_29",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_29"
+      },
+      "display": {
+        "name": "SIG_29"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_30",
+      "name": "BUS_30",
+      "type": "bus",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_30"
+      },
+      "display": {
+        "name": "BUS_30"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "0000001e"
+        },
+        {
+          "start": 50000,
+          "value": "0000001f"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_31",
+      "name": "SIG_31",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_31"
+      },
+      "display": {
+        "name": "SIG_31"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_32",
+      "name": "SIG_32",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_32"
+      },
+      "display": {
+        "name": "SIG_32"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_33",
+      "name": "SIG_33",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_33"
+      },
+      "display": {
+        "name": "SIG_33"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_34",
+      "name": "SIG_34",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_34"
+      },
+      "display": {
+        "name": "SIG_34"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_35",
+      "name": "BUS_35",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_35"
+      },
+      "display": {
+        "name": "BUS_35"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "00000023"
+        },
+        {
+          "start": 50000,
+          "value": "00000024"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_36",
+      "name": "SIG_36",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_36"
+      },
+      "display": {
+        "name": "SIG_36"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_37",
+      "name": "SIG_37",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_37"
+      },
+      "display": {
+        "name": "SIG_37"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_38",
+      "name": "SIG_38",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_38"
+      },
+      "display": {
+        "name": "SIG_38"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_39",
+      "name": "SIG_39",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_39"
+      },
+      "display": {
+        "name": "SIG_39"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_40",
+      "name": "BUS_40",
+      "type": "bus",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_40"
+      },
+      "display": {
+        "name": "BUS_40"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "00000028"
+        },
+        {
+          "start": 50000,
+          "value": "00000029"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_41",
+      "name": "SIG_41",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_41"
+      },
+      "display": {
+        "name": "SIG_41"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_42",
+      "name": "SIG_42",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_42"
+      },
+      "display": {
+        "name": "SIG_42"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_43",
+      "name": "SIG_43",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_43"
+      },
+      "display": {
+        "name": "SIG_43"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_44",
+      "name": "SIG_44",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_44"
+      },
+      "display": {
+        "name": "SIG_44"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_45",
+      "name": "BUS_45",
+      "type": "bus",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_45"
+      },
+      "display": {
+        "name": "BUS_45"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "0000002d"
+        },
+        {
+          "start": 50000,
+          "value": "0000002e"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_46",
+      "name": "SIG_46",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_46"
+      },
+      "display": {
+        "name": "SIG_46"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_47",
+      "name": "SIG_47",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_47"
+      },
+      "display": {
+        "name": "SIG_47"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_48",
+      "name": "SIG_48",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_48"
+      },
+      "display": {
+        "name": "SIG_48"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_49",
+      "name": "SIG_49",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_49"
+      },
+      "display": {
+        "name": "SIG_49"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_50",
+      "name": "BUS_50",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_50"
+      },
+      "display": {
+        "name": "BUS_50"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "00000032"
+        },
+        {
+          "start": 50000,
+          "value": "00000033"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_51",
+      "name": "SIG_51",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_51"
+      },
+      "display": {
+        "name": "SIG_51"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_52",
+      "name": "SIG_52",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_52"
+      },
+      "display": {
+        "name": "SIG_52"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_53",
+      "name": "SIG_53",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_53"
+      },
+      "display": {
+        "name": "SIG_53"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_54",
+      "name": "SIG_54",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_54"
+      },
+      "display": {
+        "name": "SIG_54"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_55",
+      "name": "BUS_55",
+      "type": "bus",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_55"
+      },
+      "display": {
+        "name": "BUS_55"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "00000037"
+        },
+        {
+          "start": 50000,
+          "value": "00000038"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_56",
+      "name": "SIG_56",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_56"
+      },
+      "display": {
+        "name": "SIG_56"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_57",
+      "name": "SIG_57",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_57"
+      },
+      "display": {
+        "name": "SIG_57"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_58",
+      "name": "SIG_58",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_58"
+      },
+      "display": {
+        "name": "SIG_58"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_59",
+      "name": "SIG_59",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_59"
+      },
+      "display": {
+        "name": "SIG_59"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_60",
+      "name": "BUS_60",
+      "type": "bus",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_60"
+      },
+      "display": {
+        "name": "BUS_60"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "0000003c"
+        },
+        {
+          "start": 50000,
+          "value": "0000003d"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_61",
+      "name": "SIG_61",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_61"
+      },
+      "display": {
+        "name": "SIG_61"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_62",
+      "name": "SIG_62",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_62"
+      },
+      "display": {
+        "name": "SIG_62"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_63",
+      "name": "SIG_63",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_63"
+      },
+      "display": {
+        "name": "SIG_63"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_64",
+      "name": "SIG_64",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_64"
+      },
+      "display": {
+        "name": "SIG_64"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_65",
+      "name": "BUS_65",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_65"
+      },
+      "display": {
+        "name": "BUS_65"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "00000041"
+        },
+        {
+          "start": 50000,
+          "value": "00000042"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_66",
+      "name": "SIG_66",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_66"
+      },
+      "display": {
+        "name": "SIG_66"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_67",
+      "name": "SIG_67",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_67"
+      },
+      "display": {
+        "name": "SIG_67"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_68",
+      "name": "SIG_68",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_68"
+      },
+      "display": {
+        "name": "SIG_68"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_69",
+      "name": "SIG_69",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_69"
+      },
+      "display": {
+        "name": "SIG_69"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_70",
+      "name": "BUS_70",
+      "type": "bus",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_70"
+      },
+      "display": {
+        "name": "BUS_70"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "00000046"
+        },
+        {
+          "start": 50000,
+          "value": "00000047"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_71",
+      "name": "SIG_71",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_71"
+      },
+      "display": {
+        "name": "SIG_71"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_72",
+      "name": "SIG_72",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_72"
+      },
+      "display": {
+        "name": "SIG_72"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_73",
+      "name": "SIG_73",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_73"
+      },
+      "display": {
+        "name": "SIG_73"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_74",
+      "name": "SIG_74",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_74"
+      },
+      "display": {
+        "name": "SIG_74"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_75",
+      "name": "BUS_75",
+      "type": "bus",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_75"
+      },
+      "display": {
+        "name": "BUS_75"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "0000004b"
+        },
+        {
+          "start": 50000,
+          "value": "0000004c"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_76",
+      "name": "SIG_76",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_76"
+      },
+      "display": {
+        "name": "SIG_76"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_77",
+      "name": "SIG_77",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_77"
+      },
+      "display": {
+        "name": "SIG_77"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_78",
+      "name": "SIG_78",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_78"
+      },
+      "display": {
+        "name": "SIG_78"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_79",
+      "name": "SIG_79",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_79"
+      },
+      "display": {
+        "name": "SIG_79"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_80",
+      "name": "BUS_80",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_80"
+      },
+      "display": {
+        "name": "BUS_80"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "00000050"
+        },
+        {
+          "start": 50000,
+          "value": "00000051"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_81",
+      "name": "SIG_81",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_81"
+      },
+      "display": {
+        "name": "SIG_81"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_82",
+      "name": "SIG_82",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_82"
+      },
+      "display": {
+        "name": "SIG_82"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_83",
+      "name": "SIG_83",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_83"
+      },
+      "display": {
+        "name": "SIG_83"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_84",
+      "name": "SIG_84",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_84"
+      },
+      "display": {
+        "name": "SIG_84"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_85",
+      "name": "BUS_85",
+      "type": "bus",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_85"
+      },
+      "display": {
+        "name": "BUS_85"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "00000055"
+        },
+        {
+          "start": 50000,
+          "value": "00000056"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_86",
+      "name": "SIG_86",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_86"
+      },
+      "display": {
+        "name": "SIG_86"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_87",
+      "name": "SIG_87",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_87"
+      },
+      "display": {
+        "name": "SIG_87"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_88",
+      "name": "SIG_88",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_88"
+      },
+      "display": {
+        "name": "SIG_88"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_89",
+      "name": "SIG_89",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_89"
+      },
+      "display": {
+        "name": "SIG_89"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_90",
+      "name": "BUS_90",
+      "type": "bus",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_90"
+      },
+      "display": {
+        "name": "BUS_90"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "0000005a"
+        },
+        {
+          "start": 50000,
+          "value": "0000005b"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_91",
+      "name": "SIG_91",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_91"
+      },
+      "display": {
+        "name": "SIG_91"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_92",
+      "name": "SIG_92",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_92"
+      },
+      "display": {
+        "name": "SIG_92"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_93",
+      "name": "SIG_93",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_93"
+      },
+      "display": {
+        "name": "SIG_93"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_94",
+      "name": "SIG_94",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_94"
+      },
+      "display": {
+        "name": "SIG_94"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_95",
+      "name": "BUS_95",
+      "type": "bus",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_95"
+      },
+      "display": {
+        "name": "BUS_95"
+      },
+      "width": 32,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "0000005f"
+        },
+        {
+          "start": 50000,
+          "value": "00000060"
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_96",
+      "name": "SIG_96",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_96"
+      },
+      "display": {
+        "name": "SIG_96"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_97",
+      "name": "SIG_97",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_97"
+      },
+      "display": {
+        "name": "SIG_97"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_98",
+      "name": "SIG_98",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_98"
+      },
+      "display": {
+        "name": "SIG_98"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_perf_99",
+      "name": "SIG_99",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [
+          "perf"
+        ],
+        "signalName": "signal_99"
+      },
+      "display": {
+        "name": "SIG_99"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 50000,
+          "value": 1
+        }
+      ]
+    }
+  ],
+  "bookmarks": [],
+  "timeGroups": [],
+  "annotations": [
+    {
+      "id": "ann_perf_0",
+      "type": "measurement",
+      "label": "M0",
+      "visible": true,
+      "start": {
+        "signalId": "sig_perf_0",
+        "cycle": 0,
+        "point": "cycle-start"
+      },
+      "end": {
+        "signalId": "sig_perf_1",
+        "cycle": 2,
+        "point": "cycle-start"
+      }
+    },
+    {
+      "id": "ann_perf_1",
+      "type": "measurement",
+      "label": "M1",
+      "visible": true,
+      "start": {
+        "signalId": "sig_perf_1",
+        "cycle": 1,
+        "point": "cycle-start"
+      },
+      "end": {
+        "signalId": "sig_perf_2",
+        "cycle": 3,
+        "point": "cycle-start"
+      }
+    },
+    {
+      "id": "ann_perf_2",
+      "type": "measurement",
+      "label": "M2",
+      "visible": true,
+      "start": {
+        "signalId": "sig_perf_2",
+        "cycle": 2,
+        "point": "cycle-start"
+      },
+      "end": {
+        "signalId": "sig_perf_3",
+        "cycle": 4,
+        "point": "cycle-start"
+      }
+    },
+    {
+      "id": "ann_perf_3",
+      "type": "measurement",
+      "label": "M3",
+      "visible": true,
+      "start": {
+        "signalId": "sig_perf_3",
+        "cycle": 3,
+        "point": "cycle-start"
+      },
+      "end": {
+        "signalId": "sig_perf_4",
+        "cycle": 5,
+        "point": "cycle-start"
+      }
+    },
+    {
+      "id": "ann_perf_4",
+      "type": "measurement",
+      "label": "M4",
+      "visible": true,
+      "start": {
+        "signalId": "sig_perf_4",
+        "cycle": 4,
+        "point": "cycle-start"
+      },
+      "end": {
+        "signalId": "sig_perf_5",
+        "cycle": 6,
+        "point": "cycle-start"
+      }
+    },
+    {
+      "id": "ann_perf_5",
+      "type": "measurement",
+      "label": "M5",
+      "visible": true,
+      "start": {
+        "signalId": "sig_perf_5",
+        "cycle": 5,
+        "point": "cycle-start"
+      },
+      "end": {
+        "signalId": "sig_perf_6",
+        "cycle": 7,
+        "point": "cycle-start"
+      }
+    },
+    {
+      "id": "ann_perf_6",
+      "type": "measurement",
+      "label": "M6",
+      "visible": true,
+      "start": {
+        "signalId": "sig_perf_6",
+        "cycle": 6,
+        "point": "cycle-start"
+      },
+      "end": {
+        "signalId": "sig_perf_7",
+        "cycle": 8,
+        "point": "cycle-start"
+      }
+    },
+    {
+      "id": "ann_perf_7",
+      "type": "measurement",
+      "label": "M7",
+      "visible": true,
+      "start": {
+        "signalId": "sig_perf_7",
+        "cycle": 7,
+        "point": "cycle-start"
+      },
+      "end": {
+        "signalId": "sig_perf_8",
+        "cycle": 9,
+        "point": "cycle-start"
+      }
+    },
+    {
+      "id": "ann_perf_8",
+      "type": "measurement",
+      "label": "M8",
+      "visible": true,
+      "start": {
+        "signalId": "sig_perf_8",
+        "cycle": 8,
+        "point": "cycle-start"
+      },
+      "end": {
+        "signalId": "sig_perf_9",
+        "cycle": 10,
+        "point": "cycle-start"
+      }
+    },
+    {
+      "id": "ann_perf_9",
+      "type": "measurement",
+      "label": "M9",
+      "visible": true,
+      "start": {
+        "signalId": "sig_perf_9",
+        "cycle": 9,
+        "point": "cycle-start"
+      },
+      "end": {
+        "signalId": "sig_perf_10",
+        "cycle": 11,
+        "point": "cycle-start"
+      }
+    }
+  ],
+  "annotationGroups": [],
+  "transactions": [
+    {
+      "id": "txn_perf_0",
+      "name": "Transaction 0",
+      "start": 0,
+      "end": 4,
+      "laneId": "lane_0",
+      "linkedSignals": [
+        "sig_perf_0"
+      ]
+    },
+    {
+      "id": "txn_perf_1",
+      "name": "Transaction 1",
+      "start": 3,
+      "end": 7,
+      "laneId": "lane_1",
+      "linkedSignals": [
+        "sig_perf_1"
+      ]
+    },
+    {
+      "id": "txn_perf_2",
+      "name": "Transaction 2",
+      "start": 6,
+      "end": 10,
+      "laneId": "lane_2",
+      "linkedSignals": [
+        "sig_perf_2"
+      ]
+    },
+    {
+      "id": "txn_perf_3",
+      "name": "Transaction 3",
+      "start": 9,
+      "end": 13,
+      "laneId": "lane_3",
+      "linkedSignals": [
+        "sig_perf_3"
+      ]
+    },
+    {
+      "id": "txn_perf_4",
+      "name": "Transaction 4",
+      "start": 12,
+      "end": 16,
+      "laneId": "lane_4",
+      "linkedSignals": [
+        "sig_perf_4"
+      ]
+    },
+    {
+      "id": "txn_perf_5",
+      "name": "Transaction 5",
+      "start": 15,
+      "end": 19,
+      "laneId": "lane_5",
+      "linkedSignals": [
+        "sig_perf_5"
+      ]
+    },
+    {
+      "id": "txn_perf_6",
+      "name": "Transaction 6",
+      "start": 18,
+      "end": 22,
+      "laneId": "lane_6",
+      "linkedSignals": [
+        "sig_perf_6"
+      ]
+    },
+    {
+      "id": "txn_perf_7",
+      "name": "Transaction 7",
+      "start": 21,
+      "end": 25,
+      "laneId": "lane_7",
+      "linkedSignals": [
+        "sig_perf_7"
+      ]
+    },
+    {
+      "id": "txn_perf_8",
+      "name": "Transaction 8",
+      "start": 24,
+      "end": 28,
+      "laneId": "lane_0",
+      "linkedSignals": [
+        "sig_perf_8"
+      ]
+    },
+    {
+      "id": "txn_perf_9",
+      "name": "Transaction 9",
+      "start": 27,
+      "end": 31,
+      "laneId": "lane_1",
+      "linkedSignals": [
+        "sig_perf_9"
+      ]
+    },
+    {
+      "id": "txn_perf_10",
+      "name": "Transaction 10",
+      "start": 30,
+      "end": 34,
+      "laneId": "lane_2",
+      "linkedSignals": [
+        "sig_perf_10"
+      ]
+    },
+    {
+      "id": "txn_perf_11",
+      "name": "Transaction 11",
+      "start": 33,
+      "end": 37,
+      "laneId": "lane_3",
+      "linkedSignals": [
+        "sig_perf_11"
+      ]
+    }
+  ],
+  "constraints": [],
+  "legend": {
+    "show": true,
+    "orientation": "horizontal",
+    "usedRolesOnly": true,
+    "position": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "layout": {
+    "roleColumnWidth": 62,
+    "signalNameWidth": 178,
+    "signalNameAlign": "left",
+    "rowHeight": 30,
+    "signalSpacing": 4,
+    "overflow": "ellipsis"
+  },
+  "checkSettings": {}
+}
