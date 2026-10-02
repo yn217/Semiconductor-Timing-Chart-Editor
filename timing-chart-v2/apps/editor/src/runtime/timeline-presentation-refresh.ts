@@ -82,7 +82,8 @@ export function refreshRangeBandPresentation(viewport: HTMLElement, ruler: HTMLE
 export function refreshTimelinePresentation(context: {
   readonly reason: string; readonly document: CanonicalDocument; readonly ruler: HTMLElement; readonly grid: HTMLElement; readonly viewport: HTMLElement; readonly host: HTMLElement; readonly rulerViewport: HTMLElement; readonly geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>; readonly geometrySvgs: ReadonlyMap<SignalId, SVGSVGElement>; readonly mappingCache: Pick<DisplayTimeMappingCache, "get">; readonly metricsOwner: Pick<ViewMetricsOwner, "update" | "snapshot">; readonly currentZoom: number; readonly previousScale: number; readonly rulerInitialized: boolean; readonly timeAxis: TimeAxisGeometry; readonly totalHeight: number; readonly gridEnabled: boolean; readonly markOpenPhase: (phase: string) => void; readonly onPlayhead: () => void; readonly onRange: () => void; readonly onResize: () => void;
   readonly cyclesPerTc: number;
-  readonly publishTimeAxisMetrics?: (timeAxis: TimeAxisGeometry, presentationScale: number, pxPerDisplayCycle: number | undefined, screenOriginX: number) => TimeAxisMetrics;
+  readonly publishTimeAxisMetrics?: (timeAxis: TimeAxisGeometry, presentationScale: number, pxPerDisplayCycle: number | undefined, screenOriginX: number, zoom: number) => TimeAxisMetrics;
+  readonly publishTimeAxisZoom?: (zoom: number) => TimeAxisMetrics;
   readonly getTimeAxisMetrics?: () => TimeAxisMetrics;
 }): { readonly timeAxis: TimeAxisGeometry; readonly screenGeometryScale: number; readonly rulerInitialized: boolean; readonly waveWidthPxPerDisplayCycle: number | undefined; readonly waveOriginPx: number | undefined } {
   let timeAxis = context.timeAxis; let screenGeometryScale = context.previousScale; let rulerInitialized = context.rulerInitialized;
@@ -98,14 +99,16 @@ export function refreshTimelinePresentation(context: {
     const currentTimeAxis = resolveTimeAxisGeometry(context.document, context.geometryMaps);
     const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, currentTimeAxis.ownerSignalId ? context.geometrySvgs.get(currentTimeAxis.ownerSignalId) : undefined, metrics.zoom, minimumWaveWidth, context.viewport, context.cyclesPerTc);
     timeAxis = rebuilt.timeAxis; screenGeometryScale = rebuilt.scale; waveWidthPxPerDisplayCycle = rebuilt.waveWidthPxPerDisplayCycle; waveOriginPx = rebuilt.waveOriginPx; rulerInitialized = true;
-    sharedMetrics = context.publishTimeAxisMetrics?.(timeAxis, screenGeometryScale, waveWidthPxPerDisplayCycle, waveOriginPx) ?? sharedMetrics;
+    sharedMetrics = context.publishTimeAxisMetrics?.(timeAxis, screenGeometryScale, waveWidthPxPerDisplayCycle, waveOriginPx, context.currentZoom) ?? sharedMetrics;
     context.markOpenPhase("ruler-painted"); syncPresentationScale(context.host, context.currentZoom, screenGeometryScale);
+  } else {
+    sharedMetrics = context.publishTimeAxisZoom?.(context.currentZoom) ?? sharedMetrics;
   }
   if (context.reason !== "scroll") { context.metricsOwner.update({ viewportWidth: context.viewport.clientWidth }); const metrics = context.metricsOwner.snapshot(); refreshGridPresentation(context.grid, context.document, context.geometryMaps, context.mappingCache, context.gridEnabled, context.totalHeight, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, screenGeometryScale, context.cyclesPerTc, sharedMetrics); }
   if (context.reason === "playhead") context.onPlayhead();
   if (context.reason === "range") context.onRange();
   if (context.reason === "resize") context.onResize();
-  if (context.reason !== "scroll") syncRulerScroll(context.ruler, context.viewport, context.currentZoom);
+  if (context.reason !== "scroll") syncRulerScroll(context.ruler, context.viewport, sharedMetrics?.zoom ?? context.currentZoom);
   return { timeAxis, screenGeometryScale, rulerInitialized, waveWidthPxPerDisplayCycle, waveOriginPx };
 }
 

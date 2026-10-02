@@ -438,7 +438,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       },
       viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: timelineScrollOwner(viewportElement).clientWidth, leftInset: fixedColumnsOutsideTimeline(viewportElement) ? 0 : metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: timelineScrollOwner(viewportElement).scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) timelineScrollOwner(viewportElement).scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: timelineNavigation.getZoom, setZoom: timelineNavigation.setZoom },
       document: { getSnapshot: () => sessionController.snapshot().document, getCanonicalRevision: () => sessionController.snapshot().revision, getDocumentEpoch: () => documentEpoch.current() },
-      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; const viewport = timelineScrollOwner(viewportElement); const localScale = timelineGeometry.presentationScale * timelineNavigation.getZoom(); const viewportQuery = timelineGeometry.viewportForLocalRange(viewport.scrollLeft / localScale, (viewport.scrollLeft + viewport.clientWidth) / localScale, viewportElement.scrollTop, viewportElement.scrollTop + viewportElement.clientHeight, documentEpoch.current(), selectedAnnotationRef.current ? [selectedAnnotationRef.current] : []); refreshRendererForReason(renderer, host, reason, sessionController.snapshot().document, projection, geometryMaps, timelineGeometry.timeAxisMetrics, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current, edgeCounterMetrics, viewportQuery); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
+      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; const timeAxisMetrics = timelineGeometry.timeAxisMetrics; const viewport = timelineScrollOwner(viewportElement); const localScale = timeAxisMetrics.presentationScale * timeAxisMetrics.zoom; const viewportQuery = timelineGeometry.viewportForLocalRange(viewport.scrollLeft / localScale, (viewport.scrollLeft + viewport.clientWidth) / localScale, viewportElement.scrollTop, viewportElement.scrollTop + viewportElement.clientHeight, documentEpoch.current(), selectedAnnotationRef.current ? [selectedAnnotationRef.current] : []); refreshRendererForReason(renderer, host, reason, sessionController.snapshot().document, projection, geometryMaps, timeAxisMetrics, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current, edgeCounterMetrics, viewportQuery); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
       lifecycle: { isCurrentEpoch: (epoch) => documentEpoch.isCurrent(epoch) },
     });
     timelineRuntimeRef.current = timelineRuntime;
@@ -493,7 +493,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         onPlayhead: () => refreshPlayhead.current(),
         onRange: () => refreshRangeSelectionBand.current(),
         onResize: () => applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() }),
-        publishTimeAxisMetrics: (timeAxis, scale, width, origin) => timelineGeometry.updatePresentation(timeAxis, scale, width, origin),
+        publishTimeAxisMetrics: (timeAxis, scale, width, origin, zoom) => timelineGeometry.updatePresentation(timeAxis, scale, width, origin, zoom),
+        publishTimeAxisZoom: (zoom) => timelineGeometry.updateZoom(zoom),
         getTimeAxisMetrics: () => timelineGeometry.timeAxisMetrics,
       });
       // #750: a changed geometry scale (cyclesPerTC compression on/off or a new factor) moves every Transaction X; bars/Phases/Bookmarks
@@ -518,7 +519,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     transactionBoundaryX.current = (cycle) => timelineGeometry.sourceBoundaryToLocalX(sessionController.snapshot().document, cycle);
     transactionSourceWindow.current = (sourceViewport) => {
       const document = sessionController.snapshot().document;
-      const localScale = timelineGeometry.presentationScale * timelineNavigation.getZoom();
+      const timeAxisMetrics = timelineGeometry.timeAxisMetrics;
+      const localScale = timeAxisMetrics.presentationScale * timeAxisMetrics.zoom;
       if (!Number.isFinite(localScale) || localScale <= 0 || sourceViewport.clientWidth <= 0) return undefined;
       const sharedViewport = timelineScrollOwner(sourceViewport);
       return timelineGeometry.sourceWindowForLocalRange(
