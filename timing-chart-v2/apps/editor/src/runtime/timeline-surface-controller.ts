@@ -248,9 +248,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         return readiness === "presentation-ready" || readiness === "visible-waveforms-ready" || readiness === "idle";
       },
       isPrimaryPresentationOpening: () => primaryPresentationOpening,
-      getWaveWidthPxPerDisplayCycle: () => timelineGeometry.waveWidthPxPerDisplayCycle,
-      getWaveOriginPx: () => timelineGeometry.waveOriginPx,
-      getPresentationScale: () => timelineGeometry.presentationScale,
+      getTimeAxisMetrics: () => timelineGeometry.timeAxisMetrics,
       onReferenceGeometryReady: () => {
         if (active) {
           refreshRulerAndGridIfNeeded(

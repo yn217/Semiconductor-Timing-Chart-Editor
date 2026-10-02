@@ -21,7 +21,7 @@ describe("TimelineGeometryOwner", () => {
       timeline: { ...cycleDocument.timeline, cycleCount: 20, end: 20 },
       timeGroups: [{ id: "diagnostic-fold" as never, name: "Fold", start: 2, end: 4, presentation: { collapsed: true, foldStyle: "axis-break" as const, foldLabel: "GAP" } }],
     }],
-  ])("round-trips every semantic cycle boundary for %s", (name, document) => {
+  ])("round-trips every visible semantic cycle boundary for %s", (name, document) => {
     const clockId = signalId("sig_cycle_clock");
     const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 21 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle * 10, y: 0 } })));
     const owner = new TimelineGeometryOwner({
@@ -34,17 +34,18 @@ describe("TimelineGeometryOwner", () => {
     owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1);
     const entries = owner.currentSnapIndex().entries().filter((candidate) => candidate.kind === "cycle-boundary").sort((a, b) => a.point.x - b.point.x);
     const mapping = owner.displayMapping;
-    const rows = Array.from({ length: 21 }, (_, cycle) => {
+    const visibleCycles = Array.from({ length: 21 }, (_, cycle) => cycle).filter((cycle) => cycle === document.timeline.cycleCount || mapping.sourceToDisplay(cycle) !== undefined);
+    const rows = visibleCycles.map((cycle) => {
       const expected = owner.sourceBoundaryToLocalX(document, cycle);
-      const stored = entries.find((entry) => entry.anchor.cycle === cycle)?.point.x;
+      const stored = entries.find((entry) => entry.anchor.cycle === cycle)?.point.x
+        ?? owner.currentSnapIndex().neighborsByX(expected ?? Number.NaN, "cycle-boundary").before?.point.x;
       const resolved = expected === undefined ? undefined : owner.cycleBoundaryAtLocalX(expected, 1, true);
       const index = entries.findIndex((entry) => entry.anchor.cycle === cycle);
       return { cycle, expectedBoundaryX: expected, storedBoundaryX: stored, displayMappedX: mapping.sourceToDisplay(cycle), resolvedCycle: resolved, previousBoundaryX: entries[index - 1]?.point.x, nextBoundaryX: entries[index + 1]?.point.x };
     });
     console.table({ configuration: name, rows });
     const firstFailure = rows.find((row) => row.resolvedCycle !== row.cycle);
-    if (name === "normal Cycle") expect(firstFailure).toBeUndefined();
-    else expect(firstFailure).toMatchObject({ cycle: 2, resolvedCycle: 1, expectedBoundaryX: 20 });
+    expect(firstFailure).toBeUndefined();
   });
 
   it("owns source-boundary, presentation-scale, and screen-to-local conversion", () => {
@@ -65,6 +66,43 @@ describe("TimelineGeometryOwner", () => {
     owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry: clockGeometry }, 2);
     expect(owner.sourceBoundaryToLocalX(cycleDocument, 1)).toBe(56);
     expect(owner.screenToLocal({ x: 40, y: 12 }, 2)).toEqual({ x: 20, y: 6 });
+  });
+
+  it("publishes immutable presentation metrics as one generation", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const geometry = new ImmutableLocalGeometryMap(clockId, [
+      { cycle: 0, point: "cycle-start", position: { x: 8, y: 0 } },
+      { cycle: 1, point: "cycle-start", position: { x: 48, y: 0 } },
+    ]);
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => cycleDocument,
+      getProjection: () => ({} as RenderProjection),
+      onSnapIndexBuilt: () => undefined,
+    });
+    const first = owner.timeAxisMetrics;
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 2, 120, 10);
+    const published = owner.timeAxisMetrics;
+
+    expect(Object.isFrozen(published)).toBe(true);
+    expect(published.generation).toBeGreaterThan(first.generation);
+    expect(published).toMatchObject({
+      timeAxis: { mode: "reference-clock", ownerSignalId: clockId },
+      presentationScale: 2,
+      displayCycleCount: owner.displayMapping.displayCycleCount,
+      pxPerDisplayCycle: 120,
+      screenOriginX: 10,
+      localUnitsPerDisplayCycle: 60,
+      localOriginX: 5,
+    });
+    expect(owner.timeAxis).toBe(published.timeAxis);
+    expect(owner.waveWidthPxPerDisplayCycle).toBe(published.pxPerDisplayCycle);
+    expect(owner.waveOriginPx).toBe(published.screenOriginX);
+
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 3, 180, 15);
+    expect(owner.timeAxisMetrics.generation).toBeGreaterThan(published.generation);
+    expect(published).toMatchObject({ presentationScale: 2, pxPerDisplayCycle: 120, screenOriginX: 10 });
   });
 
   it("uses retained geometry boundaries instead of scanning a large source timeline", () => {

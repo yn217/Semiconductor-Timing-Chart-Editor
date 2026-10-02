@@ -36,16 +36,27 @@ export type TimelineGeometryOwnerContext = Readonly<{
   onSnapIndexBuilt: () => void;
 }>;
 
+/** Immutable presentation generation published atomically to horizontal time consumers. */
+export interface TimeAxisMetrics {
+  readonly generation: number;
+  readonly timeAxis: TimeAxisGeometry;
+  readonly mapping: DisplayTimeMapping;
+  readonly presentationScale: number;
+  readonly displayCycleCount: number;
+  readonly pxPerDisplayCycle?: number;
+  readonly screenOriginX?: number;
+  readonly localUnitsPerDisplayCycle?: number;
+  readonly localOriginX?: number;
+}
+
 /** Read-only authority for semantic -> display -> local -> screen timeline geometry. */
 export class TimelineGeometryOwner {
   readonly mappingCache: DisplayTimeMappingCache;
   readonly geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>;
   readonly snapService = new SemanticSnapCandidateService();
   readonly screen = new DefaultScreenGeometryProjector();
-  #timeAxis: TimeAxisGeometry = { mode: "clockless" };
-  #presentationScale = 1;
-  #waveWidthPxPerDisplayCycle: number | undefined;
-  #waveOriginPx: number | undefined;
+  #timeAxisMetrics: TimeAxisMetrics;
+  #presentationGeneration = 0;
   #snapIndex: ImmutableSnapIndex | undefined;
   #viewportBoundaryCache: { readonly geometry: LocalGeometryMap; readonly mapping: DisplayTimeMapping; readonly entries: readonly { readonly cycle: number; readonly x: number }[] } | undefined;
   #sourceWindowCache: { readonly document: CanonicalDocument; readonly localStart: number; readonly localEnd: number; readonly overscan: number; readonly result: Readonly<{ start: number; end: number }> } | undefined;
@@ -54,6 +65,23 @@ export class TimelineGeometryOwner {
   constructor(private readonly context: TimelineGeometryOwnerContext) {
     this.mappingCache = context.mappingCache;
     this.geometryMaps = context.geometryMaps;
+    this.#timeAxisMetrics = this.#createTimeAxisMetrics({ mode: "clockless" }, 1);
+  }
+
+  #createTimeAxisMetrics(timeAxis: TimeAxisGeometry, presentationScale: number, pxPerDisplayCycle?: number, screenOriginX?: number): TimeAxisMetrics {
+    const document = this.context.getDocument();
+    const mapping = this.mappingCache.get(document.timeline, document.timeGroups);
+    return Object.freeze({
+      generation: ++this.#presentationGeneration,
+      timeAxis,
+      mapping,
+      presentationScale,
+      displayCycleCount: mapping.displayCycleCount,
+      ...(pxPerDisplayCycle === undefined ? {} : { pxPerDisplayCycle }),
+      ...(screenOriginX === undefined ? {} : { screenOriginX }),
+      ...(pxPerDisplayCycle === undefined || presentationScale <= 0 ? {} : { localUnitsPerDisplayCycle: pxPerDisplayCycle / presentationScale }),
+      ...(screenOriginX === undefined || presentationScale <= 0 ? {} : { localOriginX: screenOriginX / presentationScale }),
+    });
   }
 
   get displayMapping(): DisplayTimeMapping {
@@ -61,8 +89,9 @@ export class TimelineGeometryOwner {
     return this.mappingCache.get(document.timeline, document.timeGroups);
   }
 
-  get timeAxis(): TimeAxisGeometry { return this.#timeAxis; }
-  get presentationScale(): number { return this.#presentationScale; }
+  get timeAxisMetrics(): TimeAxisMetrics { return this.#timeAxisMetrics; }
+  get timeAxis(): TimeAxisGeometry { return this.#timeAxisMetrics.timeAxis; }
+  get presentationScale(): number { return this.#timeAxisMetrics.presentationScale; }
   get snapIndex(): ImmutableSnapIndex | undefined { return this.#snapIndex; }
   /** Document-wide pixels-per-display-cycle, as of the ruler's last authoritative
    * rebuild (see build-ruler.ts). Bounded (#587) wave-owner mounts read this --
@@ -71,7 +100,7 @@ export class TimelineGeometryOwner {
    * proportional width stays in lockstep with the ruler regardless of which
    * window happens to be currently mounted, or when relative to a ruler rebuild
    * that owner's own window last changed (#614). */
-  get waveWidthPxPerDisplayCycle(): number | undefined { return this.#waveWidthPxPerDisplayCycle; }
+  get waveWidthPxPerDisplayCycle(): number | undefined { return this.#timeAxisMetrics.pxPerDisplayCycle; }
   /** Screen-space X of display-cycle 0, as of the ruler's last authoritative
    * rebuild -- the same coordinate-system origin the ruler's own ticks use
    * (`point.x * scale`, including whatever fixed left margin WaveDrom's own
@@ -79,25 +108,25 @@ export class TimelineGeometryOwner {
    * `left` must be computed in this same coordinate system, not a naive
    * `display * waveWidthPxPerDisplayCycle` with an implicit zero intercept,
    * or every owner ends up offset from the ruler by that fixed margin (#620). */
-  get waveOriginPx(): number | undefined { return this.#waveOriginPx; }
+  get waveOriginPx(): number | undefined { return this.#timeAxisMetrics.screenOriginX; }
 
   updatePresentation(timeAxis: TimeAxisGeometry, presentationScale: number, waveWidthPxPerDisplayCycle?: number, waveOriginPx?: number): void {
-    const geometryChanged = this.#presentationScale !== presentationScale
-      || this.#timeAxis.mode !== timeAxis.mode
-      || this.#timeAxis.ownerSignalId !== timeAxis.ownerSignalId
-      || this.#timeAxis.geometry !== timeAxis.geometry;
-    this.#timeAxis = timeAxis;
-    this.#presentationScale = presentationScale;
-    if (waveWidthPxPerDisplayCycle !== undefined) this.#waveWidthPxPerDisplayCycle = waveWidthPxPerDisplayCycle;
-    if (waveOriginPx !== undefined) this.#waveOriginPx = waveOriginPx;
+    const previous = this.#timeAxisMetrics;
+    const geometryChanged = previous.presentationScale !== presentationScale
+      || previous.timeAxis.mode !== timeAxis.mode
+      || previous.timeAxis.ownerSignalId !== timeAxis.ownerSignalId
+      || previous.timeAxis.geometry !== timeAxis.geometry;
+    this.#timeAxisMetrics = this.#createTimeAxisMetrics(
+      timeAxis,
+      presentationScale,
+      waveWidthPxPerDisplayCycle ?? previous.pxPerDisplayCycle,
+      waveOriginPx ?? previous.screenOriginX,
+    );
     if (geometryChanged) this.invalidateSnapIndex();
   }
 
   reset(): void {
-    this.#timeAxis = { mode: "clockless" };
-    this.#presentationScale = 1;
-    this.#waveWidthPxPerDisplayCycle = undefined;
-    this.#waveOriginPx = undefined;
+    this.#timeAxisMetrics = this.#createTimeAxisMetrics({ mode: "clockless" }, 1);
     this.invalidateSnapIndex();
     this.#requestedSourceCycle = undefined;
   }
@@ -122,7 +151,7 @@ export class TimelineGeometryOwner {
     // Bounded folded geometry is rebased with canonical source identities.
     // Keep the display-cycle lookup as the identity/no-fold fallback.
     const point = findSourceAnchorGeometry(axis.geometry, { signalId: axis.ownerSignalId, cycle, point: "cycle-start" }, displayCycle)?.point;
-    if (point !== undefined) return point.x * this.#presentationScale;
+    if (point !== undefined) return point.x * this.#timeAxisMetrics.presentationScale;
 
     // A bounded WaveDrom render intentionally retains detailed boundary
     // geometry only around its current window. Transaction bars can refer to
@@ -132,8 +161,8 @@ export class TimelineGeometryOwner {
     // DOM nodes or build a Transaction-local time mapper. The display mapping
     // above preserves collapsed TimeGroups and keeps all surfaces on the
     // shared time axis.
-    const pixelsPerDisplayCycle = this.#waveWidthPxPerDisplayCycle;
-    const waveOriginPx = this.#waveOriginPx;
+    const pixelsPerDisplayCycle = this.#timeAxisMetrics.pxPerDisplayCycle;
+    const waveOriginPx = this.#timeAxisMetrics.screenOriginX;
     if (pixelsPerDisplayCycle === undefined || !Number.isFinite(pixelsPerDisplayCycle) || pixelsPerDisplayCycle <= 0
       || waveOriginPx === undefined || !Number.isFinite(waveOriginPx)) return undefined;
     return waveOriginPx + displayCycle * pixelsPerDisplayCycle;
@@ -280,7 +309,7 @@ export class TimelineGeometryOwner {
   currentSnapIndex(): ImmutableSnapIndex {
     if (!this.#snapIndex) {
       const document = this.context.getDocument();
-      this.#snapIndex = buildSnapIndex(document, this.context.getProjection(), this.geometryMaps, this.mappingCache.get(document.timeline, document.timeGroups), this.snapService, this.#presentationScale);
+      this.#snapIndex = buildSnapIndex(document, this.context.getProjection(), this.geometryMaps, this.mappingCache.get(document.timeline, document.timeGroups), this.snapService, this.#timeAxisMetrics.presentationScale);
       this.context.onSnapIndexBuilt();
     }
     return this.#snapIndex;

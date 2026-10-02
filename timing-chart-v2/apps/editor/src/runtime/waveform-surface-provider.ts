@@ -12,6 +12,7 @@ import { displayWindowForSource } from "./display-boundary.js";
 import { waveOwnerPlacement } from "./wave-owner-placement.js";
 import { WaveRenderScheduler } from "./wave-render-scheduler.js";
 import type { OpenWaveBatchMetrics } from "./open-wave-metrics.js";
+import type { TimeAxisMetrics } from "./timeline-geometry-owner.js";
 
 function yieldToBrowserTask(): Promise<void> {
   const browserScheduler = (globalThis as typeof globalThis & { scheduler?: { yield?: () => Promise<void> } }).scheduler;
@@ -61,6 +62,8 @@ export type WaveformProviderContext = Readonly<{
    * margin (#620). */
   getWaveOriginPx?: () => number | undefined;
   getPresentationScale?: () => number;
+  /** Preferred atomic presentation snapshot; captured once for every batch. */
+  getTimeAxisMetrics?: () => TimeAxisMetrics;
   getViewMode?: () => "Cycle" | "Transaction" | "Split";
 }>;
 
@@ -90,6 +93,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const preparedArtifacts = new Set<RenderedWave>();
       try {
       const batchStartedAt = globalThis.performance.now();
+      const timeAxisMetrics = context.getTimeAxisMetrics?.();
       const primaryOpenBatch = context.isPrimaryPresentationOpening?.() === true;
       let renderAwaitMs = 0;
       let renderCount = 0;
@@ -284,11 +288,12 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           }
         }
       }
-      const pxPerDisplayCycle = context.getWaveWidthPxPerDisplayCycle?.();
-      const waveOriginPx = context.getWaveOriginPx?.() ?? 0;
+      const pxPerDisplayCycle = timeAxisMetrics?.pxPerDisplayCycle ?? context.getWaveWidthPxPerDisplayCycle?.();
+      const waveOriginPx = timeAxisMetrics?.screenOriginX ?? context.getWaveOriginPx?.() ?? 0;
+      const presentationScale = timeAxisMetrics?.presentationScale ?? context.getPresentationScale?.() ?? 1;
       const applyOwnerPlacement = (item: PreparedItem): void => {
         if (pxPerDisplayCycle !== undefined && item.rendererStart !== undefined && item.rendererEnd !== undefined && item.rendererEnd > item.rendererStart) {
-          const placement = waveOwnerPlacement({ displayStart: item.rendererStart, displayEnd: item.rendererEnd, pxPerDisplayCycle, waveOriginPx, presentationScale: context.getPresentationScale?.() ?? 1 });
+          const placement = waveOwnerPlacement({ displayStart: item.rendererStart, displayEnd: item.rendererEnd, pxPerDisplayCycle, waveOriginPx, presentationScale });
           item.request.owner.style.width = `${placement.width}px`;
           item.request.owner.style.left = `${placement.left}px`;
         } else {
