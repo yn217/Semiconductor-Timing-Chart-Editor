@@ -2,7 +2,7 @@ import { startTransition } from "react";
 import { flushSync } from "react-dom";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { RenderProjection, VirtualizationWindow } from "@timing-chart-v2/projection";
+import { getRowLayoutSourceIndex, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import type { AnnotationId, CanonicalDocument, DocumentProblem, GroupId, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
 import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { EditorApplicationOwner } from "../application/use-editor-application-owner.js";
@@ -855,13 +855,16 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-row-id]") : null;
       const id = target?.dataset.rowId;
       if (!id) return;
-      const spacerGroup = sessionController.snapshot().document.signalGroups.find((group) => group.rows.includes(id as SpacerId) && group.spacers?.some((spacer) => spacer.id === id));
+      const currentDocument = sessionController.snapshot().document;
+      const sourceIndex = getRowLayoutSourceIndex(currentDocument).index;
+      const spacer = sourceIndex.spacersById.get(id as SpacerId);
+      const spacerGroup = spacer ? currentDocument.signalGroups.find((group) => group.spacers?.some((item) => item.id === spacer.id)) : undefined;
       if (spacerGroup) {
         selection.selectSpacer(spacerGroup.id, id as SpacerId);
         focusTreeItem(target);
         return;
       }
-      const signal = sessionController.snapshot().document.signals.find((candidate) => candidate.id === id);
+      const signal = sourceIndex.signalsById.get(id);
       if (!signal) return;
       const commitSelection = () => selection.selectSignal(signal.id, event.ctrlKey || event.metaKey);
       if (options?.synchronous === true) flushSync(commitSelection); else startTransition(commitSelection);

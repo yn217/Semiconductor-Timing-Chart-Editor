@@ -87,6 +87,23 @@ describe("RowLayout and projection invariants", () => {
     expect(service.diagnostics().rowLayoutSourceIndexBuilds).toBe(1);
   });
 
+  it("resolves a clicked Signal row through the immutable ID index rather than searching Signals", () => {
+    const source = canonicalFixture();
+    const target = source.signals[1]!;
+    const signals = new Proxy(source.signals, {
+      get(targetRows, property, receiver) {
+        if (property === "find") throw new Error("tree row selection must use the stable-ID index");
+        return Reflect.get(targetRows, property, receiver);
+      },
+    });
+    const document = { ...source, signals } as CanonicalDocument;
+
+    const sourceIndex = getRowLayoutSourceIndex(document).index;
+
+    expect(sourceIndex.signalsById.get(target.id)).toBe(target);
+    expect(sourceIndex.signalsById.get("missing-signal")).toBeUndefined();
+  });
+
   it("reuses the immutable row-domain index across projection services sharing canonical collections", () => {
     const source = canonicalFixture();
     let signalMapBuilds = 0;
