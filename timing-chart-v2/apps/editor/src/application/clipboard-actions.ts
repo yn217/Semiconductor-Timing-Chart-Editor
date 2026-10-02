@@ -33,8 +33,12 @@ export function useClipboardActions({ application, selection }: { application: E
   const signalIndexes = (current: ReturnType<typeof document>) => {
     const cached = signalIndexRef.current;
     if (cached?.signals === current.signals && cached.groups === current.signalGroups) return cached;
-    const byId = new Map(current.signals.map((signal, index) => [signal.id, signal] as const));
-    const order = new Map(current.signals.map((signal, index) => [signal.id, index] as const));
+    const byId = new Map<SignalId, Signal>();
+    const order = new Map<SignalId, number>();
+    current.signals.forEach((signal, index) => {
+      byId.set(signal.id, signal);
+      order.set(signal.id, index);
+    });
     const owner = new Map<SignalId, { groupId: GroupId; index: number }>();
     for (const group of current.signalGroups) group.rows.forEach((rowId, index) => { if (byId.has(rowId as SignalId)) owner.set(rowId as SignalId, { groupId: group.id, index }); });
     const groupsById = new Map(current.signalGroups.map((group) => [group.id, group] as const));
@@ -46,8 +50,12 @@ export function useClipboardActions({ application, selection }: { application: E
   const transactionIndexes = (current: ReturnType<typeof document>) => {
     const cached = transactionIndexRef.current;
     if (cached?.transactions === current.transactions) return cached;
-    const byId = new Map(current.transactions.map((transaction, index) => [transaction.id, transaction] as const));
-    const order = new Map(current.transactions.map((transaction, index) => [transaction.id, index] as const));
+    const byId = new Map<TransactionId, Transaction>();
+    const order = new Map<TransactionId, number>();
+    current.transactions.forEach((transaction, index) => {
+      byId.set(transaction.id, transaction);
+      order.set(transaction.id, index);
+    });
     const next = { transactions: current.transactions, byId, order };
     transactionIndexRef.current = next;
     return next;
