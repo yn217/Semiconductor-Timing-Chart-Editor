@@ -56,6 +56,7 @@ describe("renderer overlay refresh reasons", () => {
       mapping,
       presentationScale: 2,
       displayCycleCount: mapping.displayCycleCount,
+      sourceBoundaryToContentX: (sourceCycle: number) => { const display = mapping.sourceToDisplay(sourceCycle); return display === undefined ? undefined : display * 10 * 2; },
     }) satisfies TimeAxisMetrics;
     const renderer = { updateEdgeCounters: vi.fn(), updateOverlays: vi.fn() };
     const host = { current: null };

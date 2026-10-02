@@ -406,6 +406,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       if (rulerLower.current) refreshPlayheadPresentation(rulerLower.current, selectedCycleRef.current, boundaryToLocalX);
     };
     const refreshRangeSelectionBandNow = () => {
+      // #937: the Zoom preset path publishes navigation zoom before the geometry generation catches up; publish it before placing the band.
+      if (timelineGeometry.timeAxisMetrics.zoom !== timelineNavigation.getZoom()) timelineGeometry.updateZoom(timelineNavigation.getZoom());
       const metrics = timelineGeometry.timeAxisMetrics;
       const document = sessionController.snapshot().document;
       const boundaryToLocalX = (cycle: number, snapshot: typeof metrics) => timelineGeometry.sourceBoundaryToLocalX(document, cycle, snapshot);
