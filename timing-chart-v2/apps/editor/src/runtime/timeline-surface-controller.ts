@@ -428,7 +428,6 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     const timelineRuntime = createTimelineViewportRuntime({
       dom: { viewportRef: { current: viewportElement }, waveformRef: { current: rendererHost }, rulerRef: { current: rulerElement }, gridRef: { current: gridElement }, overlayRef: { current: rendererHost.querySelector<HTMLElement>("[data-role='annotation-overlay-surface']") }, rangeBandRef: { current: viewportElement.querySelector<HTMLElement>("[data-role='range-selection-band']") }, playheadRef: { current: rulerElement.querySelector<HTMLElement>("[data-role='playhead']") } },
       geometry: {
-        getDisplayTimeMapping: () => timelineGeometry.displayMapping,
         getTimeAxisMetrics: () => timelineGeometry.timeAxisMetrics,
         getTimeAxisGeometry: () => timelineGeometry.timeAxis.geometry,
         getLocalGeometryMap: () => geometryMaps,
@@ -777,7 +776,6 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     const arrowPicker = new TransitionArrowPicker({
       rendererHost,
       geometry: timelineGeometry,
-      getZoom: () => timelineNavigation.getZoom(),
       getDocument: () => sessionController.snapshot().document,
       execute: (command) => application.execute(command),
       selectAnnotation: (id) => selection.selectAnnotation(id),

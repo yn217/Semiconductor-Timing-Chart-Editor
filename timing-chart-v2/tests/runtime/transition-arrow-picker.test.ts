@@ -22,6 +22,7 @@ describe("TransitionArrowPicker", () => {
     const execute = vi.fn(() => ({ ok: true }));
     const selectAnnotation = vi.fn();
     const setStatus = vi.fn();
+    const screenToLocal = vi.fn(() => ({ x: 40, y: 0 }));
     const host = {
       dataset: {} as DOMStringMap,
       querySelector: () => ({ getBoundingClientRect: () => ({ left: 10, top: 20 }) }),
@@ -29,10 +30,10 @@ describe("TransitionArrowPicker", () => {
     const picker = new TransitionArrowPicker({
       rendererHost: host,
       geometry: {
-        screenToLocal: vi.fn(() => ({ x: 40, y: 0 })),
+        screenToLocal,
+        timeAxisMetrics: { zoom: 2 },
         currentSnapIndex: () => ({ nearest: vi.fn(() => ({ anchor: anchors[snapIndex++]!, kind: "clock-edge" })) }) as never,
       } as never,
-      getZoom: () => 1,
       getDocument: () => document,
       execute,
       selectAnnotation,
@@ -44,6 +45,7 @@ describe("TransitionArrowPicker", () => {
 
     picker.arm("dependency");
     expect(picker.handleClick(event)).toBe(true);
+    expect(screenToLocal).toHaveBeenCalledWith({ x: 40, y: 0 }, 2);
     expect(picker.pending).toEqual(anchors[0]);
     expect(execute).not.toHaveBeenCalled();
 

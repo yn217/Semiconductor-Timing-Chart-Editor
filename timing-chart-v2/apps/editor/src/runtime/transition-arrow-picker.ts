@@ -1,15 +1,14 @@
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { SemanticAnchor, Annotation, AnnotationId, CanonicalDocument } from "@timing-chart-v2/schema";
-import type { TimelineGeometryOwner } from "./timeline-geometry-owner.js";
+import type { TimeAxisMetrics, TimelineGeometryOwner } from "./timeline-geometry-owner.js";
 import { nextCommandId } from "../command-id.js";
 import { nextEntityId } from "../entity-id.js";
 
-type Geometry = Pick<TimelineGeometryOwner, "screenToLocal" | "currentSnapIndex">;
+type Geometry = Pick<TimelineGeometryOwner, "screenToLocal" | "currentSnapIndex"> & Readonly<{ timeAxisMetrics: Pick<TimeAxisMetrics, "zoom"> }>;
 
 export type TransitionArrowPickerContext = Readonly<{
   rendererHost: HTMLElement;
   geometry: Geometry;
-  getZoom: () => number;
   getDocument: () => CanonicalDocument;
   execute: (command: SemanticCommand) => { readonly ok: boolean };
   selectAnnotation: (id: AnnotationId) => void;
@@ -48,7 +47,7 @@ export class TransitionArrowPicker {
     const waveLayer = this.context.rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
     if (!waveLayer) return true;
     const bounds = waveLayer.getBoundingClientRect();
-    const zoom = this.context.getZoom();
+    const zoom = this.context.geometry.timeAxisMetrics.zoom;
     const localPointer = this.context.geometry.screenToLocal({ x: event.clientX - bounds.left, y: 0 }, zoom);
     const snap = this.context.geometry.currentSnapIndex().nearest(
       { x: localPointer.x, y: event.clientY - bounds.top },
