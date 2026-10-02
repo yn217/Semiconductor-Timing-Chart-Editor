@@ -2,7 +2,7 @@ import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { allocateMeasurementLanes } from "@timing-chart-v2/geometry";
 import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, resolveSourcePosition, type DisplayTimeMapping } from "@timing-chart-v2/projection";
 import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, MAX_MEASUREMENT_LANE, anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, valueSignalWaveDomain, wrapAnnotationLabel, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId, type ValueSignal } from "@timing-chart-v2/schema";
-import { renderWaveJsonMarkup, toWaveJson, toWaveJsonWindow, WAVEDROM_VERSION, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
+import { renderWaveJsonMarkup, toWaveJson, toWaveJsonMappedClock, toWaveJsonWindow, WaveDromAdapterError, WAVEDROM_VERSION, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 
 export interface ExportSettings {
   readonly format: "svg" | "png" | "pdf";
@@ -308,6 +308,27 @@ function boundedFoldedClockWaveJson(signal: ClockSignal, mapping: DisplayTimeMap
   };
 }
 
+/** General selected-range fallback for folded Clocks whose folds do not preserve
+ * the period phase required by the compact periodic representation above. */
+function boundedMappedFoldedClockWaveJson(signal: ClockSignal, mapping: DisplayTimeMapping, range: Readonly<{ start: number; end: number }>, enumDefinitions: CanonicalDocument["enumDefinitions"]): Readonly<{ waveJson: WaveJsonSignal; semanticValues: readonly string[]; windowStart: number; renderedCycleCount: number }> | undefined {
+  // Keep WaveDrom's intrinsic-width behavior for tiny windows; this path is
+  // for avoiding document-sized work on substantive selected ranges.
+  if (mapping.isIdentity || range.start < 0 || range.end > mapping.displayCycleCount || range.end - range.start < Math.min(5, mapping.displayCycleCount)) return undefined;
+  const sourceCycles: number[] = [];
+  for (let displayCycle = range.start; displayCycle < range.end; displayCycle += 1) {
+    const sourceCycle = mapping.displayToSource(displayCycle);
+    if (sourceCycle === undefined) return undefined;
+    sourceCycles.push(sourceCycle);
+  }
+  try {
+    const waveJson = toWaveJsonMappedClock({ signal, cycleCount: mapping.sourceCycleCount, enumDefinitions }, sourceCycles);
+    return { waveJson: { ...waveJson, displayWindow: range }, semanticValues: [], windowStart: range.start, renderedCycleCount: range.end - range.start };
+  } catch (error) {
+    if (error instanceof WaveDromAdapterError) return undefined;
+    throw error;
+  }
+}
+
 interface GhostTraceWindow {
   readonly traceStart: number;
   readonly traceEnd: number;
@@ -505,7 +526,7 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
         ? remapValueChangesToDisplayWindow(signal.values, mapping, range.start, range.end)
         : remapValueChangesToDisplay(signal.values, mapping);
     const foldedClockBounded = canBoundWaveforms && !mapping.isIdentity && signal.type === "clock"
-      ? boundedFoldedClockWaveJson(signal, mapping, range)
+      ? boundedFoldedClockWaveJson(signal, mapping, range) ?? boundedMappedFoldedClockWaveJson(signal, mapping, range, document.enumDefinitions)
       : undefined;
     const displaySignal = signal.type === "clock"
       ? { ...signal, ...(signal.enable && foldedClockBounded === undefined ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildExportScene, DeterministicExportService, renderExportSvg } from "@timing-chart-v2/export";
 import { buildDisplayTimeMapping } from "@timing-chart-v2/projection";
+import { toWaveJsonMappedClock } from "@timing-chart-v2/wavedrom-adapter";
 import { MAX_MEASUREMENT_LANE, type AnnotationId, type BookmarkId, type CanonicalDocument, type ClockSignal, type CommentRow, type GroupId, type SignalId, type TimeGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -953,9 +954,14 @@ describe("deterministic document export", () => {
       signals: [{ ...clock, generator: { ...clock.generator, period: 4 }, enable: undefined }],
     };
     const phaseShifted = buildExportScene(phaseShiftedDocument, { format: "svg", scope: "selected-range", range: { start: 110, end: 130 } });
-    const phaseShiftedWave = JSON.parse(phaseShifted.waveforms[0]!.waveJson) as { wave: string; sourceWindow?: unknown };
+    const phaseShiftedWave = JSON.parse(phaseShifted.waveforms[0]!.waveJson) as { wave: string; sourceWindow?: unknown; displayWindow: { start: number; end: number } };
+    const phaseMapping = buildDisplayTimeMapping(phaseShiftedDocument.timeline, phaseShiftedDocument.timeGroups);
+    const phaseSources = Array.from({ length: 20 }, (_, index) => phaseMapping.displayToSource(100 + index)!);
+    const phaseExpected = toWaveJsonMappedClock({ signal: phaseShiftedDocument.signals[0]!, cycleCount: phaseShiftedDocument.timeline.cycleCount, enumDefinitions: phaseShiftedDocument.enumDefinitions }, phaseSources);
     expect(phaseShiftedWave.sourceWindow).toBeUndefined();
-    expect(phaseShiftedWave.wave.length).toBeGreaterThan(2_000);
+    expect(phaseShiftedWave.displayWindow).toEqual({ start: 100, end: 120 });
+    expect(phaseShiftedWave.wave).toBe(phaseExpected.wave);
+    expect(phaseShiftedWave.wave).toHaveLength(20);
   });
 
   it("bounds a selected Clock waveform across multiple period-aligned folds", () => {
@@ -986,6 +992,31 @@ describe("deterministic document export", () => {
     expect(boundedWave.sourceWindow).toBeUndefined();
     expect(boundedWave.wave).toHaveLength((range.end - range.start) / 4);
     expect(fullWave.wave.length).toBeGreaterThan(2_000);
+  });
+
+  it("keeps selected folded Clock export bounded when the fold shifts period phase", () => {
+    const base = canonicalFixture();
+    const clock = base.signals[0]!;
+    const document: CanonicalDocument = {
+      ...base,
+      timeline: { ...base.timeline, end: 10_000, cycleCount: 10_000 },
+      signalGroups: [{ ...base.signalGroups[0]!, rows: [clock.id] }],
+      signals: [{ ...clock, generator: { ...clock.generator, start: 108, period: 4, suppressedPeriods: [0] } }],
+      timeGroups: [{ id: "tg_clock_phase_shift" as TimeGroupId, name: "Phase-shifting fold", start: 4, end: 14, presentation: { collapsed: true } }],
+    };
+    const requestedSourceRange = { start: 100, end: 120 };
+    const scene = buildExportScene(document, { format: "svg", scope: "selected-range", range: requestedSourceRange, foldPolicy: "respect" });
+    const selectedWave = JSON.parse(scene.waveforms[0]!.waveJson) as { wave: string; displayWindow: { start: number; end: number } };
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    const sourceCycles = Array.from({ length: 20 }, (_, index) => mapping.displayToSource(90 + index)!);
+    const expected = toWaveJsonMappedClock({ signal: document.signals[0]!, cycleCount: document.timeline.cycleCount, enumDefinitions: document.enumDefinitions }, sourceCycles);
+    const full = buildExportScene(document, { format: "svg", scope: "document", foldPolicy: "respect" });
+    const fullWave = JSON.parse(full.waveforms[0]!.waveJson) as { wave: string };
+
+    expect(selectedWave.displayWindow).toEqual({ start: 90, end: 110 });
+    expect(selectedWave.wave).toBe(expected.wave);
+    expect(selectedWave.wave).toHaveLength(20);
+    expect(fullWave.wave.length).toBeGreaterThan(1_000);
   });
 
   it("evaluates bounded folded Clock start and suppressed pulse ordinals in source time", () => {
