@@ -1,23 +1,10 @@
-import { findSourceAnchorGeometry, type LocalGeometryMap } from "@timing-chart-v2/geometry";
+import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
 import { waveDomainPaddingPx, waveOwnerPlacement } from "./wave-owner-placement.js";
 import { cachedTimeGroupHierarchy, type CanonicalDocument, type SignalId } from "@timing-chart-v2/schema";
 import { timeGroupOutlineHeight, type DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { presentationCycles } from "../presentation-cycles.js";
-import { displayWindowForSource } from "./display-boundary.js";
-
-/** Resolve a retained geometry boundary's key into the ruler's display domain. */
-export function rulerDisplayCycleForGeometryKey(cycle: number, geometry: Pick<LocalGeometryMap, "cycleKeyDomain">, mapping: DisplayTimeMapping, sourceCycleCount: number): number | undefined {
-  if (geometry.cycleKeyDomain === "display") {
-    return Number.isInteger(cycle) && cycle >= 0 && cycle <= mapping.displayCycleCount ? cycle : undefined;
-  }
-  return cycle === sourceCycleCount ? mapping.displayCycleCount : mapping.sourceToDisplay(cycle);
-}
-
-/** Resolve one canonical boundary against the same source/display domain contract as every other time-axis consumer. */
-export function rulerBoundaryPoint(geometry: LocalGeometryMap, signalId: SignalId, sourceCycle: number, displayCycle: number): { readonly x: number; readonly y: number } | undefined {
-  return findSourceAnchorGeometry(geometry, { signalId, cycle: sourceCycle, point: "cycle-start" }, displayCycle)?.point;
-}
+import { displayBoundaryForGeometryKey, displayWindowForSource, sourceBoundaryGeometryPoint } from "./display-boundary.js";
 
 export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0, viewportElement?: HTMLElement, referenceViewBoxWidth?: number, tcScale = 1): Readonly<{ scale: number; targetWidth: number; waveOriginPx: number }> {
   element.dataset.axisMode = axisMode;
@@ -85,8 +72,8 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
       // Local geometry is keyed by SOURCE cycle; a collapsed group leaves holes in that keying, so resolve the display
       // boundaries back to source cycles exactly as the tick loop below does.
       const sourceOfDisplay = (display: number) => display === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource(display) ?? display);
-      const startPoint = startDisplay === undefined ? undefined : geometry.find({ signalId: axisOwnerSignalId, cycle: sourceOfDisplay(startDisplay), point: "cycle-start" })?.point;
-      const endPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: sourceOfDisplay(endDisplay), point: "cycle-start" })?.point;
+      const startPoint = startDisplay === undefined ? undefined : sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, sourceOfDisplay(startDisplay), startDisplay);
+      const endPoint = sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, sourceOfDisplay(endDisplay), endDisplay);
       if (!startPoint || !endPoint) continue;
       const item = element.ownerDocument.createElement("span");
       item.className = "time-outline-item";
@@ -121,8 +108,8 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   let finalX = 0;
   const cycleZeroSource = mapping.displayToSource(0) ?? 0;
   const cycleOneSource = mapping.displayCycleCount > 0 ? mapping.displayToSource(1) : undefined;
-  const cycleZeroPoint = rulerBoundaryPoint(geometry, axisOwnerSignalId, cycleZeroSource, 0);
-  const cycleOnePoint = cycleOneSource === undefined ? undefined : rulerBoundaryPoint(geometry, axisOwnerSignalId, cycleOneSource, 1);
+  const cycleZeroPoint = sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, cycleZeroSource, 0);
+  const cycleOnePoint = cycleOneSource === undefined ? undefined : sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, cycleOneSource, 1);
   const pixelsPerCycle = cycleZeroPoint && cycleOnePoint ? (cycleOnePoint.x - cycleZeroPoint.x) * scale : Infinity;
   // `geometry.cycleBoundaryEntries()` only covers whatever cycle range the
   // axis-owner signal's bounded/windowed geometry (#587) currently has
@@ -160,7 +147,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   let secondFoundPoint: { readonly x: number } | undefined;
   let secondFoundDisplay: number | undefined;
   for (const entry of boundaryEntries) {
-    const display = rulerDisplayCycleForGeometryKey(entry.cycle, geometry, mapping, document.timeline.cycleCount);
+    const display = displayBoundaryForGeometryKey(entry.cycle, geometry, mapping);
     if (display === undefined) continue;
     if (firstFoundDisplay === undefined || display < firstFoundDisplay) { firstFoundPoint = entry.position; firstFoundDisplay = display; }
     if (secondFoundDisplay === undefined || display > secondFoundDisplay) { secondFoundPoint = entry.position; secondFoundDisplay = display; }
@@ -181,7 +168,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     : 0;
   for (const display of presentationCycles(semanticDisplayCycleCount, pixelsPerCycle, rulerTickBudget, tcScale > 1 ? tcScale : 1)) {
     const sourceCycle = display === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource(display) ?? display);
-    const resolvedPoint = rulerBoundaryPoint(geometry, axisOwnerSignalId, sourceCycle, display);
+    const resolvedPoint = sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, sourceCycle, display);
     const point = resolvedPoint ?? (firstFoundPoint && firstFoundDisplay !== undefined && windowLocalPixelsPerCycle !== undefined
       ? { x: firstFoundPoint.x + (display - firstFoundDisplay) * windowLocalPixelsPerCycle }
       : undefined);
@@ -212,7 +199,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     const anchorCycle = containingFold === undefined ? displayCycle : (containingFold.end < document.timeline.cycleCount ? containingFold.end : Math.max(0, containingFold.start - 1));
     const anchorDisplay = anchorCycle === undefined ? undefined : mapping.sourceToDisplay(anchorCycle);
     if (anchorCycle === undefined || anchorDisplay === undefined) continue;
-    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: anchorCycle, point: "cycle-start" })?.point;
+    const point = sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, anchorCycle, anchorDisplay);
     if (!point) continue;
     const marker = element.ownerDocument.createElement("span");
     marker.className = containingFold === undefined ? "timeline-marker" : "timeline-marker timeline-marker-hidden";
@@ -232,7 +219,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     const anchorCycle = group.end < document.timeline.cycleCount ? group.end : (group.start > 0 ? group.start - 1 : undefined);
     const anchorDisplay = anchorCycle === undefined ? undefined : mapping.sourceToDisplay(anchorCycle);
     if (anchorCycle === undefined || anchorDisplay === undefined) continue;
-    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: anchorCycle, point: "cycle-start" })?.point;
+    const point = sourceBoundaryGeometryPoint(geometry, axisOwnerSignalId, anchorCycle, anchorDisplay);
     if (!point) continue;
     const gap = element.ownerDocument.createElement("span");
     gap.className = "timeline-gap";

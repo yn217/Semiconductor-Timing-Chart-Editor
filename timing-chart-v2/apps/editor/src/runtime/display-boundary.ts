@@ -1,7 +1,23 @@
+import { findSourceAnchorGeometry, type LocalGeometryMap } from "@timing-chart-v2/geometry";
 import type { DisplayTimeMapping } from "@timing-chart-v2/projection";
+import type { SemanticAnchor, SignalId } from "@timing-chart-v2/schema";
 
 export type SourceCycleWindow = Readonly<{ sourceStart: number; sourceEnd: number }>;
 export type DisplayCycleWindow = Readonly<{ displayStart: number; displayEnd: number }>;
+
+/** Converts a retained geometry-map key to the shared display-cycle domain. */
+export function displayBoundaryForGeometryKey(cycle: number, geometry: Pick<LocalGeometryMap, "cycleKeyDomain">, mapping: DisplayTimeMapping): number | undefined {
+  if (geometry.cycleKeyDomain === "display") {
+    return Number.isInteger(cycle) && cycle >= 0 && cycle <= mapping.displayCycleCount ? cycle : undefined;
+  }
+  return cycle === mapping.sourceCycleCount ? mapping.displayCycleCount : mapping.sourceToDisplay(cycle);
+}
+
+/** Resolves a canonical source boundary using the geometry map's declared cycle-key domain. */
+export function sourceBoundaryGeometryPoint(geometry: LocalGeometryMap, signalId: SignalId, sourceCycle: number, displayCycle: number): { readonly x: number; readonly y: number } | undefined {
+  const anchor: SemanticAnchor = { signalId, cycle: sourceCycle, point: "cycle-start" };
+  return findSourceAnchorGeometry(geometry, anchor, displayCycle)?.point;
+}
 
 export function displayBoundaryForSource(mapping: DisplayTimeMapping, sourceCycle: number, sourceCycleCount: number): number | undefined {
   if (!Number.isInteger(sourceCycle) || sourceCycle < 0 || sourceCycle > sourceCycleCount) return undefined;
