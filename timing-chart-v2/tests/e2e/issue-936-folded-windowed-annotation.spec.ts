@@ -20,10 +20,16 @@ for (const { name, signalCount, cycleCount, anchorCycle, scrollToFarWindow } of 
     const surface = page.getByTestId("cycle-surface");
     await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
     const base = generatePerformanceDocument({ signalCount, cycleCount, profile: "standard" });
+    const sourceSignalId = base.signals[1]!.id;
+    const traceStart = anchorCycle - 4;
+    const traceEnd = anchorCycle + 4;
     const document = {
       ...base,
       timeGroups: [{ id: "tg_fold936", name: "Fold", start: 2, end: 6, category: "collapsed", presentation: { collapsed: true, foldStyle: "axis-break", foldLabel: "4 cycles" } }],
-      annotations: [{ id: "ann_936_line", type: "verticalLine", label: `L${anchorCycle}`, visible: true, anchor: { signalId: base.signals[1]!.id, cycle: anchorCycle, point: "cycle-start" } }],
+      annotations: [
+        { id: "ann_936_line", type: "verticalLine", label: `L${anchorCycle}`, visible: true, anchor: { signalId: sourceSignalId, cycle: anchorCycle, point: "cycle-start" } },
+        { id: "ann_936_ghost", type: "ghostTrace", label: `G${anchorCycle}`, visible: true, start: { signalId: sourceSignalId, cycle: traceStart, point: "cycle-start" }, end: { signalId: sourceSignalId, cycle: traceEnd, point: "cycle-start" }, sourceSignalId, traceOffsetCycles: 1 },
+      ],
     };
     await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "p936.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
@@ -40,13 +46,36 @@ for (const { name, signalCount, cycleCount, anchorCycle, scrollToFarWindow } of 
     }
     const tick = page.locator(`.cycle-ruler [data-cycle='${anchorCycle}']`).first();
     const body = surface.locator("[data-role='annotation-owner'][data-annotation-id='ann_936_line'] [data-role='annotation-body']");
+    const ghost = surface.locator("[data-role='annotation-owner'][data-annotation-id='ann_936_ghost']");
+    const ghostPath = ghost.locator("[data-role='ghost-trace-path']");
     await expect(tick).toBeVisible();
     await expect(body).toBeAttached();
+    await expect(ghost).toHaveAttribute("data-source-signal-id", sourceSignalId);
+    await expect(ghost).toHaveAttribute("data-trace-offset-cycles", "1");
+    await expect(ghostPath).toBeAttached();
     const tickBox = (await tick.boundingBox())!;
     const bodyBox = (await body.boundingBox())!;
     const viewportBox = (await page.locator("[data-role='timeline-viewport']").boundingBox())!;
     expect(tickBox.x).toBeGreaterThanOrEqual(viewportBox.x - 1);
     expect(tickBox.x).toBeLessThan(viewportBox.x + viewportBox.width);
     expect(Math.abs(tickBox.x - bodyBox.x), `ruler tick x=${tickBox.x} annotation x=${bodyBox.x}`).toBeLessThan(1.5);
+
+    const comparedTraceSourceCycle = anchorCycle;
+    const comparedTracePointIndex = comparedTraceSourceCycle - traceStart - 1;
+    const traceTick = page.locator(`.cycle-ruler [data-cycle='${comparedTraceSourceCycle}']`).first();
+    await expect(traceTick).toBeVisible();
+    const traceGeometry = await ghostPath.evaluate((element) => {
+      const points = (element.getAttribute("points") ?? "").trim().split(/\s+/).filter(Boolean).map((pair) => pair.split(",").map(Number));
+      const owner = element.closest("[data-role='annotation-owner']")!;
+      return { points, pointCount: points.length, ownerLeft: owner.getBoundingClientRect().left };
+    });
+    const traceTickBox = (await traceTick.boundingBox())!;
+    expect(traceGeometry.pointCount).toBeGreaterThan(1);
+    const tracePoint = traceGeometry.points[comparedTracePointIndex];
+    expect(tracePoint).toHaveLength(2);
+    expect(Number.isFinite(tracePoint![0])).toBe(true);
+    expect(Math.abs(traceGeometry.ownerLeft + tracePoint![0] - traceTickBox.x),
+      `Ghost Trace source cycle ${comparedTraceSourceCycle} x=${traceGeometry.ownerLeft + tracePoint![0]}, ruler x=${traceTickBox.x}`)
+      .toBeLessThan(1.5);
   });
 }
