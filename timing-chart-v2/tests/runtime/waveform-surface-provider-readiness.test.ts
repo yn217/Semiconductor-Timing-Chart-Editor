@@ -82,6 +82,53 @@ describe("waveform provider primary geometry readiness", () => {
     expect(invalidateSnapIndex).toHaveBeenCalledTimes(priorSnapInvalidations + 1);
   });
 
+  it("prefetches offscreen artifacts without installing DOM or publishing geometry", async () => {
+    const document = generatePerformanceDocument({ signalCount: 3, cycleCount: 10 });
+    const signal = document.signals.find((item) => item.type !== "clock")!;
+    const geometryRegistry = new GeometryRegistry();
+    const invalidates = vi.fn();
+    const waveJson = toWaveJson({ signal, cycleCount: document.timeline.cycleCount, enumDefinitions: document.enumDefinitions });
+    const prepared: RenderedWave = { signalId: signal.id, ownerKey: signal.id, svg: {} as SVGSVGElement, renderIndex: 1, waveJson, markupCacheHit: true };
+    const adapter: WaveDromAdapter = {
+      toWaveJson: (source) => toWaveJson(source),
+      waveMarkupArtifactKey: vi.fn(() => "artifact"),
+      renderWave: vi.fn(async () => { throw new Error("Prefetch must not install through renderWave."); }),
+      prepareWave: vi.fn(async () => prepared),
+      installWave: vi.fn(() => { throw new Error("Prefetch must not install a visible owner."); }),
+      releasePrepared: vi.fn(),
+      extractLocalGeometry: vi.fn(() => { throw new Error("Prefetch must not publish extracted geometry."); }),
+      geometryMetrics: () => ({ last: undefined, totalDurationMs: 0, totalUsesVisited: 0, totalGeometryEntriesEmitted: 0, totalDuplicateKeyChecks: 0, totalDuplicateKeyCollisions: 0, totalTransitionBrickLookups: 0, totalSkinPathParses: 0, totalMatrixReads: 0 }),
+      dispose: vi.fn(),
+      metrics: () => ({ renderCalls: 1, waveJsonDurationMs: 0, renderDurationMs: 0, renderCallsBySignal: {}, cacheHits: 1, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 1 }),
+    };
+    const provider = createWaveformSurfaceProvider({
+      sessionController: { snapshot: () => ({ document, revision: 0 }) },
+      getDocumentEpoch: () => 4,
+      mappingCache: new DisplayTimeMappingCache(),
+      adapter,
+      geometryRegistry,
+      markOpenPhase: vi.fn(),
+      invalidateSnapIndex: invalidates,
+      getViewMode: () => "Cycle",
+    });
+
+    const result = await provider.prefetchWaveBatch!([{
+      signalId: signal.id,
+      documentEpoch: 4,
+      ownerDocument: globalThis.document,
+      sourceWindow: { start: 0, end: document.timeline.cycleCount },
+      isFresh: () => true,
+    }]);
+
+    expect(result).toEqual({ requested: 1, prepared: 1, reused: 1, stale: 0, failed: 0 });
+    expect(adapter.prepareWave).toHaveBeenCalledOnce();
+    expect(adapter.installWave).not.toHaveBeenCalled();
+    expect(adapter.renderWave).not.toHaveBeenCalled();
+    expect(adapter.releasePrepared).toHaveBeenCalledWith(prepared);
+    expect(geometryRegistry.maps.size).toBe(0);
+    expect(invalidates).not.toHaveBeenCalled();
+  });
+
   it("declares display keys for a full folded render and source keys for a bounded folded render", async () => {
     const base = canonicalFixture();
     const document = {

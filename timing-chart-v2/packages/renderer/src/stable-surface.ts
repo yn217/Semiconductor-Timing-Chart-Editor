@@ -1,7 +1,7 @@
 import type { RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
 import { ANNOTATION_LABEL_LINE_HEIGHT, ANNOTATION_LABEL_MAX_WIDTH, wrapAnnotationLabel } from "@timing-chart-v2/geometry";
 import { createLeftTreeIcon, createRoleBadge } from "./tree-row-dom.js";
-import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
+import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WavePrefetchRequest, WaveSignalId } from "./types.js";
 import { groupBackgroundColor } from "./group-background.js";
 import { syncGroupHeaderLayer } from "./group-header-dom.js";
 
@@ -80,6 +80,15 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #localGeometryBuildsBySignal = new Map<WaveSignalId, number>();
   #waveBatchScheduled = false;
   #waveBatchSequence = 0;
+  #prefetchRowLayoutSource: readonly RowLayoutEntry[] | undefined;
+  #prefetchSignalIds: readonly WaveSignalId[] = [];
+  #prefetchIndexBySignal = new Map<WaveSignalId, number>();
+  #prefetchPlan: readonly WavePrefetchRequest[] = [];
+  #prefetchPlanKey = "";
+  #prefetchGeneration = 0;
+  #prefetchTask: Promise<void> | undefined;
+  #prefetchAttempted = new Set<string>();
+  #lastPrefetchScrollTop: number | undefined;
   readonly #rowY = new Map<string, number>();
   #canonicalSignalIdsSource: readonly WaveSignalId[] | undefined;
   #canonicalSignalIdSet = new Set<WaveSignalId>();
@@ -96,7 +105,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #pending = new Set<Promise<void>>();
   #layers: Layers | undefined;
   #counters: RenderCounters = { waveDromRenders: 0, localGeometryBuilds: 0, rowPositionUpdates: 0, overlayUpdates: 0 };
-  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, documentEpoch: 0, rowYSize: 0, rowYStaleCount: 0, rowYPrunePasses: 0, dirtyWaveSize: 0, waveVersionSize: 0, fullReplaceEpochResets: 0, staleWaveResultsDropped: 0, diagnosticMapPrunePasses: 0, diagnosticSerializationCount: 0, diagnosticSerializationBytes: 0, diagnosticSerializationDurationMs: 0, diagnosticStringifyCount: 0, diagnosticStringifyDurationMs: 0, diagnosticEncodingCount: 0, diagnosticEncodingDurationMs: 0, diagnosticPublishCount: 0, diagnosticPublishDurationMs: 0 };
+  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveArtifactMarkupCacheHits: 0, waveArtifactMarkupCacheMisses: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, wavePrefetchOwnerCount: 0, wavePrefetchRequestedCount: 0, wavePrefetchPreparedCount: 0, wavePrefetchReusedCount: 0, wavePrefetchStaleCount: 0, wavePrefetchFailedCount: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, documentEpoch: 0, rowYSize: 0, rowYStaleCount: 0, rowYPrunePasses: 0, dirtyWaveSize: 0, waveVersionSize: 0, fullReplaceEpochResets: 0, staleWaveResultsDropped: 0, diagnosticMapPrunePasses: 0, diagnosticSerializationCount: 0, diagnosticSerializationBytes: 0, diagnosticSerializationDurationMs: 0, diagnosticStringifyCount: 0, diagnosticStringifyDurationMs: 0, diagnosticEncodingCount: 0, diagnosticEncodingDurationMs: 0, diagnosticPublishCount: 0, diagnosticPublishDurationMs: 0 };
 
   constructor(provider: WaveformSurfaceProvider) {
     this.#provider = provider;
@@ -188,6 +197,10 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#wavePending.clear();
       this.#waveWindowRetryKeys.clear();
       this.#waveStaleRetryKeys.clear();
+      this.#prefetchGeneration += 1;
+      this.#prefetchPlan = [];
+      this.#prefetchPlanKey = "";
+      this.#prefetchAttempted.clear();
       this.#diagnostics = { ...this.#diagnostics, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, diagnosticMapPrunePasses: this.#diagnosticMapPrunePasses };
       for (const [signalId, owner] of this.#waveOwners) {
         owner.remove();
@@ -269,6 +282,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
           owner.dataset.renderedSourceWindowEnd !== String(sourceWindow.end));
       if (isNew || this.#dirtyWaves.has(signalId) || sourceWindowChanged) this.#queueWave(signalId, owner);
     }
+    this.#updateWavePrefetchPlan(projection, mounted);
     const waveOwnerCacheLimit = Math.max(32, mounted.size * 4);
     for (const [signalId, owner] of this.#waveOwners) {
       if (this.#waveOwners.size <= waveOwnerCacheLimit) break;
@@ -463,6 +477,128 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#navigationRowIndex.clear();
     this.#layers?.root.remove();
     this.#layers = undefined;
+    this.#prefetchGeneration += 1;
+    this.#prefetchPlan = [];
+    this.#prefetchAttempted.clear();
+  }
+
+  #updateWavePrefetchPlan(projection: RenderProjection, mounted: ReadonlySet<WaveSignalId>): void {
+    const layers = this.#layers;
+    if (!layers || !this.#provider.prefetchWaveBatch) return;
+    const viewMode = layers.root.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode;
+    if (viewMode === "Transaction") {
+      this.#prefetchPlan = [];
+      this.#diagnostics = { ...this.#diagnostics, wavePrefetchOwnerCount: 0 };
+      return;
+    }
+    const sourceRows = projection.rowLayout;
+    if (this.#prefetchRowLayoutSource !== sourceRows) {
+      this.#prefetchRowLayoutSource = sourceRows;
+      const ids: WaveSignalId[] = [];
+      const indexBySignal = new Map<WaveSignalId, number>();
+      // Pinned rows are presentation-reordered; avoid prefetching from a layout
+      // whose visual neighbors are not a stable contiguous row interval.
+      if (!sourceRows.some((row) => row.pinned === true)) {
+        for (const row of sourceRows) {
+          if (row.kind !== "timing" || !row.visible || row.signalType === undefined
+            || row.signalType === "clock" || row.signalType === "commentRow") continue;
+          const id = row.rowId as WaveSignalId;
+          indexBySignal.set(id, ids.length);
+          ids.push(id);
+        }
+      }
+      this.#prefetchSignalIds = ids;
+      this.#prefetchIndexBySignal = indexBySignal;
+    }
+    const viewport = layers.root.closest<HTMLElement>(".cycle-viewport");
+    const scrollTop = viewport?.scrollTop ?? 0;
+    const direction = this.#lastPrefetchScrollTop === undefined || scrollTop >= this.#lastPrefetchScrollTop ? 1 : -1;
+    this.#lastPrefetchScrollTop = scrollTop;
+    const mountedIndexes = [...mounted].map((id) => this.#prefetchIndexBySignal.get(id)).filter((index): index is number => index !== undefined);
+    if (mountedIndexes.length === 0 || this.#prefetchSignalIds.length === 0) {
+      this.#prefetchPlan = [];
+      this.#diagnostics = { ...this.#diagnostics, wavePrefetchOwnerCount: 0 };
+      return;
+    }
+    const first = Math.min(...mountedIndexes);
+    const last = Math.max(...mountedIndexes);
+    // Keep the detached preparation window proportional to the current visible
+    // cohort and hard bounded. This covers a typical viewport-sized jump
+    // without increasing connected DOM owners or the row virtualization span.
+    const count = Math.min(24, Math.max(8, mounted.size));
+    let candidates = direction > 0
+      ? this.#prefetchSignalIds.slice(last + 1, last + 1 + count)
+      : this.#prefetchSignalIds.slice(Math.max(0, first - count), first);
+    if (candidates.length === 0) candidates = direction > 0
+      ? this.#prefetchSignalIds.slice(Math.max(0, first - count), first)
+      : this.#prefetchSignalIds.slice(last + 1, last + 1 + count);
+    const sourceOwner = projection.mountedSignalIds.map((id) => this.#waveOwners.get(id)).find((owner) => owner?.isConnected);
+    const sourceWindow = sourceOwner ? this.#provider.getSourceWindow?.(sourceOwner) : undefined;
+    if (!sourceWindow || sourceWindow.end <= sourceWindow.start) {
+      this.#prefetchPlan = [];
+      this.#diagnostics = { ...this.#diagnostics, wavePrefetchOwnerCount: 0 };
+      return;
+    }
+    const generation = this.#prefetchGeneration + 1;
+    const requests = candidates.map((signalId): WavePrefetchRequest => {
+      const version = this.#waveVersions.get(signalId) ?? 0;
+      if (!this.#waveVersions.has(signalId)) this.#waveVersions.set(signalId, version);
+      return {
+        signalId,
+        documentEpoch: this.#documentEpoch,
+        ownerDocument: layers.root.ownerDocument,
+        sourceWindow,
+        isFresh: () => this.#prefetchGeneration === generation
+          && this.#documentEpoch === projection.documentEpoch
+          && this.#waveVersions.get(signalId) === version
+          && this.#canonicalSignalIdSet.has(signalId),
+      };
+    });
+    const key = requests.map((request) => `${request.signalId}@${this.#waveVersions.get(request.signalId)}`).join(",")
+      + `:${sourceWindow.start}-${sourceWindow.end}:${projection.documentEpoch}`;
+    if (key !== this.#prefetchPlanKey) {
+      this.#prefetchGeneration = generation;
+      this.#prefetchPlanKey = key;
+      this.#prefetchPlan = requests;
+    }
+    this.#diagnostics = { ...this.#diagnostics, wavePrefetchOwnerCount: this.#prefetchPlan.length };
+  }
+
+  #startWavePrefetch(): void {
+    if (this.#prefetchTask || !this.#layers || !this.#provider.prefetchWaveBatch || this.#prefetchPlan.length === 0) return;
+    const generation = this.#prefetchGeneration;
+    const plan = this.#prefetchPlan.filter((request) => {
+      const key = `${request.signalId}@${this.#waveVersions.get(request.signalId)}:${request.sourceWindow?.start}-${request.sourceWindow?.end}:${request.documentEpoch}`;
+      if (this.#prefetchAttempted.has(key)) return false;
+      this.#prefetchAttempted.add(key);
+      return true;
+    });
+    if (plan.length === 0) return;
+    while (this.#prefetchAttempted.size > 256) {
+      const oldest = this.#prefetchAttempted.values().next().value as string | undefined;
+      if (oldest === undefined) break;
+      this.#prefetchAttempted.delete(oldest);
+    }
+    const task = this.#provider.prefetchWaveBatch(plan).then((result) => {
+      if (this.#prefetchGeneration !== generation || !this.#layers) return;
+      this.#diagnostics = {
+        ...this.#diagnostics,
+        wavePrefetchRequestedCount: this.#diagnostics.wavePrefetchRequestedCount + result.requested,
+        wavePrefetchPreparedCount: this.#diagnostics.wavePrefetchPreparedCount + result.prepared,
+        wavePrefetchReusedCount: this.#diagnostics.wavePrefetchReusedCount + result.reused,
+        wavePrefetchStaleCount: this.#diagnostics.wavePrefetchStaleCount + result.stale,
+        wavePrefetchFailedCount: this.#diagnostics.wavePrefetchFailedCount + result.failed,
+      };
+      this.#publishCounters();
+    }).catch(() => {
+      if (this.#prefetchGeneration !== generation || !this.#layers) return;
+      this.#diagnostics = { ...this.#diagnostics, wavePrefetchFailedCount: this.#diagnostics.wavePrefetchFailedCount + plan.length };
+      this.#publishCounters();
+    }).finally(() => {
+      if (this.#prefetchTask === task) this.#prefetchTask = undefined;
+      if (this.#prefetchGeneration !== generation) this.#startWavePrefetch();
+    });
+    this.#prefetchTask = task;
   }
 
   #queueWave(signalId: WaveSignalId, owner: HTMLElement): void {
@@ -591,6 +727,13 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       }
       if (item?.result) {
         const delta = item.result;
+        if (item.artifactMarkupCacheHit !== undefined) {
+          this.#diagnostics = {
+            ...this.#diagnostics,
+            waveArtifactMarkupCacheHits: this.#diagnostics.waveArtifactMarkupCacheHits + (item.artifactMarkupCacheHit ? 1 : 0),
+            waveArtifactMarkupCacheMisses: this.#diagnostics.waveArtifactMarkupCacheMisses + (item.artifactMarkupCacheHit ? 0 : 1),
+          };
+        }
         this.#counters = {
           ...this.#counters,
           waveDromRenders: this.#counters.waveDromRenders + delta.waveDromRenders,
@@ -643,6 +786,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     }
     this.#diagnostics = { ...this.#diagnostics, waveBatchPending: this.#waveQueue.size };
     this.#publishCounters();
+    this.#startWavePrefetch();
   }
 
   #publishCounters(): void {

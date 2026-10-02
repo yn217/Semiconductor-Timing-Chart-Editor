@@ -6,13 +6,14 @@ import type { CanonicalDocument, Signal, SignalId, SignalValueChange } from "@ti
 import { valueSignalWaveDomain } from "@timing-chart-v2/schema";
 import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { analyticLocalGeometry, toWaveJsonMappedClock, toWaveJsonWindow, type RenderedWave, type WaveDromAdapter, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
-import type { DisplayTimeMappingCache } from "@timing-chart-v2/projection";
+import type { DisplayTimeMapping, DisplayTimeMappingCache } from "@timing-chart-v2/projection";
 import type { GeometryRegistry } from "./geometry-registry.js";
 import { displayWindowForSource } from "./display-boundary.js";
 import { waveOwnerPlacement } from "./wave-owner-placement.js";
 import { WaveRenderScheduler } from "./wave-render-scheduler.js";
 import type { OpenWaveBatchMetrics } from "./open-wave-metrics.js";
 import type { TimeAxisMetrics } from "./timeline-geometry-owner.js";
+import type { WavePrefetchRequest, WavePrefetchBatchResult } from "@timing-chart-v2/renderer";
 
 function yieldToBrowserTask(): Promise<void> {
   const browserScheduler = (globalThis as typeof globalThis & { scheduler?: { yield?: () => Promise<void> } }).scheduler;
@@ -68,6 +69,81 @@ export type WaveformProviderContext = Readonly<{
   isTimeAxisMetricsCurrent?: (generation: number) => boolean;
   getViewMode?: () => "Cycle" | "Transaction" | "Split";
 }>;
+
+type WaveProjection = Readonly<{
+  waveJson: WaveJsonSignal;
+  semanticValues: readonly string[] | undefined;
+  rendererStart: number | undefined;
+  rendererEnd: number | undefined;
+}>;
+
+function projectWaveSignal(input: {
+  readonly signal: Signal;
+  readonly document: CanonicalDocument;
+  readonly mapping: DisplayTimeMapping;
+  readonly adapter: WaveDromAdapter;
+  readonly sourceWindow?: Readonly<{ start: number; end: number }>;
+  readonly referenceClockPeriod?: number;
+  readonly geometrySourceCyclesCache: Map<string, readonly number[]>;
+  readonly remapValueChanges: (changes: readonly SignalValueChange[], mapping: DisplayTimeMapping) => readonly SignalValueChange[];
+}): WaveProjection {
+  const { signal, document, mapping, adapter, sourceWindow, referenceClockPeriod } = input;
+  let remappedValues: readonly SignalValueChange[] | undefined;
+  const foldedClock = signal.type === "clock" && !mapping.isIdentity;
+  const displaySignal = signal.type === "commentRow" ? signal : signal.type === "clock"
+    ? foldedClock ? signal : { ...signal, ...(signal.enable ? { enable: input.remapValueChanges(signal.enable, mapping) } : {}) }
+    : (remappedValues = input.remapValueChanges(signal.values, mapping), { ...signal, values: remappedValues });
+  const semanticValues = remappedValues !== undefined && signal.type !== "clock" && signal.type !== "commentRow" && valueSignalWaveDomain(signal.type) === "data"
+    ? remappedValues.map((change: { readonly value: string | number }) => String(change.value))
+    : undefined;
+  const source = { signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions };
+  const displayWindow = sourceWindow === undefined ? undefined : displayWindowForSource(mapping, { sourceStart: sourceWindow.start, sourceEnd: sourceWindow.end }, document.timeline.cycleCount);
+  const displayStart = displayWindow?.displayStart;
+  const displayEnd = displayWindow?.displayEnd;
+  const clockPeriod = foldedClock ? undefined : referenceClockPeriod ?? (displaySignal.type === "clock" ? displaySignal.generator.period : undefined);
+  const rendererStart = displayStart === undefined || clockPeriod === undefined
+    ? displayStart
+    : Math.max(0, Math.floor(displayStart / clockPeriod) * clockPeriod);
+  const rendererEnd = displayEnd === undefined || clockPeriod === undefined
+    ? displayEnd
+    : Math.min(mapping.displayCycleCount, Math.ceil(displayEnd / clockPeriod) * clockPeriod);
+  const sourceCyclesForWindow = (start: number, end: number): readonly number[] => {
+    const key = `${start}:${end}:${sourceWindow?.start ?? 0}:${sourceWindow?.end ?? document.timeline.cycleCount}`;
+    const cached = input.geometrySourceCyclesCache.get(key);
+    if (cached) return cached;
+    const sourceCycles = Object.freeze(Array.from({ length: end - start + 1 }, (_, index) => {
+      const displayCycle = start + index;
+      return displayCycle === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource(displayCycle) ?? sourceWindow?.end ?? document.timeline.cycleCount);
+    }));
+    input.geometrySourceCyclesCache.set(key, sourceCycles);
+    return sourceCycles;
+  };
+  const waveJson = foldedClock
+    ? (() => {
+      const visibleStart = rendererStart ?? 0;
+      const visibleEnd = rendererEnd ?? mapping.displayCycleCount;
+      const sourceCycles = sourceCyclesForWindow(visibleStart, visibleEnd);
+      const clockJson = toWaveJsonMappedClock({ signal: displaySignal, cycleCount: document.timeline.cycleCount, enumDefinitions: document.enumDefinitions }, sourceCycles.slice(0, -1));
+      return {
+        ...clockJson,
+        geometrySourceCycles: sourceCycles,
+        geometryCycleDomain: "source" as const,
+        ...(sourceWindow === undefined ? {} : { sourceWindow, displayWindow: { start: visibleStart, end: visibleEnd } }),
+      };
+    })()
+    : sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
+    ? adapter.toWaveJson(source)
+    : toWaveJsonWindow(source, rendererStart, rendererEnd, sourceWindow, {
+      start: rendererStart === 0 ? 0 : (mapping.displayToSource(rendererStart) ?? sourceWindow.start),
+      end: rendererEnd === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource(rendererEnd) ?? sourceWindow.end),
+    });
+  const mappedWaveJson = foldedClock
+    ? waveJson
+    : sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
+    ? { ...waveJson, geometryCycleDomain: "display" as const }
+    : { ...waveJson, geometrySourceCycles: sourceCyclesForWindow(rendererStart, rendererEnd), geometryCycleDomain: "source" as const };
+  return { waveJson: mappedWaveJson, semanticValues, rendererStart, rendererEnd };
+}
 
 export function createWaveformSurfaceProvider(context: WaveformProviderContext): WaveformSurfaceProvider {
   const waveRenderScheduler = new WaveRenderScheduler();
@@ -153,17 +229,6 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       // and leaving Transaction bars without boundary X positions.
       const mapping = context.mappingCache.get(document.timeline, document.timeGroups);
       const geometrySourceCyclesByWindow = new Map<string, readonly number[]>();
-      const geometrySourceCyclesForWindow = (rendererStart: number, rendererEnd: number, sourceStart: number, sourceEnd: number): readonly number[] => {
-        const key = `${rendererStart}:${rendererEnd}:${sourceStart}:${sourceEnd}`;
-        const cached = geometrySourceCyclesByWindow.get(key);
-        if (cached) return cached;
-        const sourceCycles = Object.freeze(Array.from({ length: rendererEnd - rendererStart + 1 }, (_, index) => {
-          const displayCycle = rendererStart + index;
-          return displayCycle === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource(displayCycle) ?? sourceEnd);
-        }));
-        geometrySourceCyclesByWindow.set(key, sourceCycles);
-        return sourceCycles;
-      };
       let referenceGeometryReady = false;
       let geometryRegistryChanged = false;
       let waveSliceStartedAt = globalThis.performance.now();
@@ -209,54 +274,14 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           }
           const signal = signalIndex.byId.get(request.signalId);
           if (!signal) return { request, waveJson: undefined, semanticValues: undefined, error: new Error(`Signal '${request.signalId}' is missing.`), deferred: false, rendererStart: undefined, rendererEnd: undefined };
-          let remappedValues: readonly SignalValueChange[] | undefined;
-          const foldedClock = signal.type === "clock" && !mapping.isIdentity;
-          const displaySignal = signal.type === "commentRow" ? signal : signal.type === "clock"
-            ? foldedClock ? signal : { ...signal, ...(signal.enable ? { enable: context.mappingCache.remapValueChanges(signal.enable, mapping) } : {}) }
-            : (remappedValues = context.mappingCache.remapValueChanges(signal.values, mapping), { ...signal, values: remappedValues });
-          const semanticValues = remappedValues !== undefined && signal.type !== "clock" && signal.type !== "commentRow" && valueSignalWaveDomain(signal.type) === "data" ? remappedValues.map((change: { readonly value: string | number }) => String(change.value)) : undefined;
-          const source = { signal: displaySignal, cycleCount: mapping.displayCycleCount, enumDefinitions: document.enumDefinitions };
-          const sourceWindow = request.sourceWindow;
-          const displayWindow = sourceWindow === undefined ? undefined : displayWindowForSource(mapping, { sourceStart: sourceWindow.start, sourceEnd: sourceWindow.end }, document.timeline.cycleCount);
-          const displayStart = displayWindow?.displayStart;
-          const displayEnd = displayWindow?.displayEnd;
-          const clockPeriod = foldedClock ? undefined : referenceClockPeriod ?? (displaySignal.type === "clock" ? displaySignal.generator.period : undefined);
-          // WaveDrom's clock encoder requires its local window to start/end on
-          // period boundaries. DisplayTimeMapping can place a semantic window
-          // edge between those boundaries (for example around a fold), so align
-          // only the renderer window; keep `sourceWindow` as the canonical
-          // semantic range used for rebasing and geometry.
-          const rendererStart = displayStart === undefined || clockPeriod === undefined
-            ? displayStart
-            : Math.max(0, Math.floor(displayStart / clockPeriod) * clockPeriod);
-          const rendererEnd = displayEnd === undefined || clockPeriod === undefined
-            ? displayEnd
-            : Math.min(mapping.displayCycleCount, Math.ceil(displayEnd / clockPeriod) * clockPeriod);
-          const waveJson = foldedClock
-            ? (() => {
-              const visibleStart = rendererStart ?? 0;
-              const visibleEnd = rendererEnd ?? mapping.displayCycleCount;
-              const sourceCycles = geometrySourceCyclesForWindow(visibleStart, visibleEnd, sourceWindow?.start ?? 0, sourceWindow?.end ?? document.timeline.cycleCount);
-              const clockJson = toWaveJsonMappedClock({ signal: displaySignal, cycleCount: document.timeline.cycleCount, enumDefinitions: document.enumDefinitions }, sourceCycles.slice(0, -1));
-              return {
-                ...clockJson,
-                geometrySourceCycles: sourceCycles,
-                geometryCycleDomain: "source" as const,
-                ...(sourceWindow === undefined ? {} : { sourceWindow, displayWindow: { start: visibleStart, end: visibleEnd } }),
-              };
-            })()
-            : sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
-            ? context.adapter.toWaveJson(source)
-            : toWaveJsonWindow(source, rendererStart, rendererEnd, sourceWindow, {
-              start: rendererStart === 0 ? 0 : (mapping.displayToSource(rendererStart) ?? sourceWindow.start),
-              end: rendererEnd === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource(rendererEnd) ?? sourceWindow.end),
-            });
-          const mappedWaveJson = foldedClock
-            ? waveJson
-            : sourceWindow === undefined || rendererStart === undefined || rendererEnd === undefined || rendererEnd <= rendererStart
-            ? { ...waveJson, geometryCycleDomain: "display" as const }
-            : { ...waveJson, geometrySourceCycles: geometrySourceCyclesForWindow(rendererStart, rendererEnd, sourceWindow.start, sourceWindow.end), geometryCycleDomain: "source" as const };
-          return { request, waveJson: mappedWaveJson, semanticValues, error: undefined, deferred: false, rendererStart, rendererEnd };
+          const projected = projectWaveSignal({
+            signal, document, mapping, adapter: context.adapter,
+            ...(request.sourceWindow === undefined ? {} : { sourceWindow: request.sourceWindow }),
+            ...(referenceClockPeriod === undefined ? {} : { referenceClockPeriod }),
+            geometrySourceCyclesCache: geometrySourceCyclesByWindow,
+            remapValueChanges: (changes, timeMapping) => context.mappingCache.remapValueChanges(changes, timeMapping),
+          });
+          return { request, ...projected, error: undefined, deferred: false };
         } catch (error: unknown) {
           // Projection/conversion failures belong to one Signal only. Keep
           // them as request-local errors so one malformed row cannot reject
@@ -677,7 +702,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
             : geometry;
           publishCycleBoundarySnapshotAccessor(item.request.owner, ownerGeometry);
           if (item.request.signalId === currentReferenceClock) { context.markOpenPhase("reference-geometry-ready"); referenceGeometryReady = true; }
-          return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
+          return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 }, ...(rendered.markupCacheHit === undefined ? {} : { artifactMarkupCacheHit: rendered.markupCacheHit }) };
         } catch (error: unknown) {
           context.geometryRegistry.svgs.delete(item.request.signalId);
           if (!(referenceGeometrySeeded && item.request.signalId === referenceClockId && !useDomGeometrySource())) {
@@ -807,6 +832,73 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         // batch result still owned here is explicitly abandoned exactly once.
         for (const prepared of preparedArtifacts) context.adapter.releasePrepared?.(prepared);
       }
+    },
+    async prefetchWaveBatch(prefetchRequests: readonly WavePrefetchRequest[]): Promise<WavePrefetchBatchResult> {
+      const requested = prefetchRequests.length;
+      if (requested === 0 || context.getViewMode?.() === "Transaction"
+        || context.adapter.prepareWave === undefined || context.adapter.installWave === undefined) {
+        return { requested, prepared: 0, reused: 0, stale: 0, failed: 0 };
+      }
+      const snapshot = context.sessionController.snapshot();
+      const document = snapshot.document;
+      const epoch = context.getDocumentEpoch();
+      const signalIndex = signalIndexFor(document.signals);
+      const referenceClockId = document.timeline.referenceClock ?? signalIndex.firstClockSignalId;
+      const referenceClockPeriod = referenceClockId === undefined ? undefined : signalIndex.byId.get(referenceClockId)?.type === "clock"
+        ? (signalIndex.byId.get(referenceClockId) as Extract<Signal, { type: "clock" }>).generator.period
+        : undefined;
+      const mapping = context.mappingCache.get(document.timeline, document.timeGroups);
+      const geometrySourceCyclesCache = new Map<string, readonly number[]>();
+      const metricsGeneration = context.getTimeAxisMetrics?.().generation;
+      let prepared = 0;
+      let reused = 0;
+      let stale = 0;
+      let failed = 0;
+      const isCurrent = (request: WavePrefetchRequest): boolean =>
+        context.getDocumentEpoch() === request.documentEpoch
+        && request.documentEpoch === epoch
+        && request.isFresh()
+        && (metricsGeneration === undefined || context.isTimeAxisMetricsCurrent?.(metricsGeneration) !== false);
+      const results = await waveRenderScheduler.runBatch(prefetchRequests.map((request) => ({
+        key: request,
+        priority: 0,
+        isCurrent: () => isCurrent(request),
+        run: async () => {
+          if (!isCurrent(request)) return;
+          if (request.signalId === referenceClockId || isCanvasWaveRendererSelected(document)) return;
+          const signal = signalIndex.byId.get(request.signalId);
+          if (!signal || signal.type === "commentRow") return;
+          let rendered: RenderedWave | undefined;
+          try {
+            const projection = projectWaveSignal({
+              signal, document, mapping, adapter: context.adapter,
+              ...(request.sourceWindow === undefined ? {} : { sourceWindow: request.sourceWindow }),
+              ...(referenceClockPeriod === undefined ? {} : { referenceClockPeriod }),
+              geometrySourceCyclesCache,
+              remapValueChanges: (changes, timeMapping) => context.mappingCache.remapValueChanges(changes, timeMapping),
+            });
+            if (!isCurrent(request)) return;
+            context.adapter.waveMarkupArtifactKey?.(projection.waveJson, projection.semanticValues);
+            rendered = await context.adapter.prepareWave!(request.signalId, projection.waveJson, request.ownerDocument, projection.semanticValues);
+            if (!isCurrent(request)) return;
+            if (rendered.svgImageReady) await rendered.svgImageReady;
+            if (!isCurrent(request)) return;
+            prepared += 1;
+            if (rendered.markupCacheHit === true) reused += 1;
+          } catch {
+            failed += 1;
+          } finally {
+            if (rendered) context.adapter.releasePrepared?.(rendered);
+          }
+        },
+      })), {
+        budgetMs: 32,
+        now: () => globalThis.performance.now(),
+        shouldYield: () => true,
+        yieldToNextTask: yieldToBrowserTask,
+      });
+      stale += results.filter((result) => result.status === "stale-before-run" || result.status === "stale-after-run").length;
+      return { requested, prepared, reused, stale, failed };
     },
     async mountWave(id, owner) {
       const item = (await this.mountWaveBatch?.([{ signalId: id, owner }]))?.[0];
