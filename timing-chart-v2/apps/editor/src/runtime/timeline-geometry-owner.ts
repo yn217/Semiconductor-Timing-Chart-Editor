@@ -65,7 +65,7 @@ export class TimelineGeometryOwner {
   constructor(private readonly context: TimelineGeometryOwnerContext) {
     this.mappingCache = context.mappingCache;
     this.geometryMaps = context.geometryMaps;
-    this.#timeAxisMetrics = this.#createTimeAxisMetrics({ mode: "clockless" }, 1);
+    this.#timeAxisMetrics = this.#createTimeAxisMetrics(resolveTimeAxisGeometry(context.getDocument(), this.geometryMaps), 1);
   }
 
   #createTimeAxisMetrics(timeAxis: TimeAxisGeometry, presentationScale: number, pxPerDisplayCycle?: number, screenOriginX?: number): TimeAxisMetrics {
@@ -85,8 +85,7 @@ export class TimelineGeometryOwner {
   }
 
   get displayMapping(): DisplayTimeMapping {
-    const document = this.context.getDocument();
-    return this.mappingCache.get(document.timeline, document.timeGroups);
+    return this.#timeAxisMetrics.mapping;
   }
 
   get timeAxisMetrics(): TimeAxisMetrics { return this.#timeAxisMetrics; }
@@ -112,21 +111,23 @@ export class TimelineGeometryOwner {
 
   updatePresentation(timeAxis: TimeAxisGeometry, presentationScale: number, waveWidthPxPerDisplayCycle?: number, waveOriginPx?: number): void {
     const previous = this.#timeAxisMetrics;
-    const geometryChanged = previous.presentationScale !== presentationScale
-      || previous.timeAxis.mode !== timeAxis.mode
-      || previous.timeAxis.ownerSignalId !== timeAxis.ownerSignalId
-      || previous.timeAxis.geometry !== timeAxis.geometry;
-    this.#timeAxisMetrics = this.#createTimeAxisMetrics(
+    const next = this.#createTimeAxisMetrics(
       timeAxis,
       presentationScale,
       waveWidthPxPerDisplayCycle ?? previous.pxPerDisplayCycle,
       waveOriginPx ?? previous.screenOriginX,
     );
+    const geometryChanged = previous.presentationScale !== presentationScale
+      || previous.timeAxis.mode !== timeAxis.mode
+      || previous.timeAxis.ownerSignalId !== timeAxis.ownerSignalId
+      || previous.timeAxis.geometry !== timeAxis.geometry
+      || previous.mapping !== next.mapping;
+    this.#timeAxisMetrics = next;
     if (geometryChanged) this.invalidateSnapIndex();
   }
 
   reset(): void {
-    this.#timeAxisMetrics = this.#createTimeAxisMetrics({ mode: "clockless" }, 1);
+    this.#timeAxisMetrics = this.#createTimeAxisMetrics(resolveTimeAxisGeometry(this.context.getDocument(), this.geometryMaps), 1);
     this.invalidateSnapIndex();
     this.#requestedSourceCycle = undefined;
   }
@@ -139,13 +140,13 @@ export class TimelineGeometryOwner {
   clearRequestedSourceCycle(): void { this.#requestedSourceCycle = undefined; }
 
   resolveTimeAxis(document: CanonicalDocument = this.context.getDocument()): TimeAxisGeometry {
-    return resolveTimeAxisGeometry(document, this.geometryMaps);
+    return document === this.context.getDocument() ? this.#timeAxisMetrics.timeAxis : resolveTimeAxisGeometry(document, this.geometryMaps);
   }
 
   sourceBoundaryToLocalX(document: CanonicalDocument, cycle: number): number | undefined {
     const axis = this.resolveTimeAxis(document);
     if (!axis.geometry || axis.ownerSignalId === undefined) return undefined;
-    const mapping = this.mappingCache.get(document.timeline, document.timeGroups);
+    const mapping = document === this.context.getDocument() ? this.#timeAxisMetrics.mapping : this.mappingCache.get(document.timeline, document.timeGroups);
     const displayCycle = displayBoundaryForSource(mapping, cycle, document.timeline.cycleCount);
     if (displayCycle === undefined) return undefined;
     // Bounded folded geometry is rebased with canonical source identities.
@@ -309,7 +310,7 @@ export class TimelineGeometryOwner {
   currentSnapIndex(): ImmutableSnapIndex {
     if (!this.#snapIndex) {
       const document = this.context.getDocument();
-      this.#snapIndex = buildSnapIndex(document, this.context.getProjection(), this.geometryMaps, this.mappingCache.get(document.timeline, document.timeGroups), this.snapService, this.#timeAxisMetrics.presentationScale);
+      this.#snapIndex = buildSnapIndex(document, this.context.getProjection(), this.geometryMaps, this.#timeAxisMetrics.mapping, this.snapService, this.#timeAxisMetrics.presentationScale);
       this.context.onSnapIndexBuilt();
     }
     return this.#snapIndex;
