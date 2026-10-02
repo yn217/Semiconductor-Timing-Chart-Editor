@@ -23,7 +23,7 @@ export interface TransactionLaneCommandActions {
 }
 
 export interface TransactionEditorCommandActions {
-  readonly createTransactionFromBottom: (transaction: Transaction) => CommandResult;
+  readonly createTransactionFromBottom: (transaction: Transaction, afterTransactionId?: TransactionId) => CommandResult;
   readonly createTransactionGroup: (group: TransactionGroup) => CommandResult;
   readonly duplicateTransactionById: (transactionId: TransactionId, newTransactionId: TransactionId, name: string) => CommandResult;
   readonly deleteTransaction: (transactionId: TransactionId) => CommandResult;
@@ -82,7 +82,7 @@ export interface RibbonCommandActions {
   readonly createCommentRow: (commentRow: CommentRow, targetGroupId: GroupId, index: number) => CommandResult;
   readonly createGroup: (group: SignalGroup, index: number) => CommandResult;
   readonly createSpacer: (spacer: SpacerRow, targetGroupId: GroupId, index: number) => CommandResult;
-  readonly createTransaction: (transaction: Transaction) => CommandResult;
+  readonly createTransaction: (transaction: Transaction, afterTransactionId?: TransactionId) => CommandResult;
   readonly duplicateTransaction: (transaction: Transaction) => CommandResult;
   readonly createTransactionGroup: (group: TransactionGroup) => CommandResult;
   readonly renameSignals: (items: readonly { readonly signalId: SignalId; readonly name: string }[]) => CommandResult;
@@ -160,7 +160,7 @@ export function createEditorSurfaceCommandController(input: {
     resize: (transactionId, edge, value) => dispatch<"transaction.resize">("transaction_snap_resize", { type: "transaction.resize", transactionId, edge, value }),
     renameTransactionGroup: (groupId, name) => dispatch<"transactionGroup.rename">("transaction_group_rename", { type: "transactionGroup.rename", groupId, name }),
     deleteTransactionGroup: (groupId) => dispatch<"transactionGroup.delete">("transaction_group_delete", { type: "transactionGroup.delete", groupId }),
-    createTransactionFromBottom: (transaction) => dispatch<"transaction.create">("transaction_create", { type: "transaction.create", transaction }),
+    createTransactionFromBottom: (transaction, afterTransactionId) => dispatch<"transaction.create">("transaction_create", { type: "transaction.create", transaction, ...(afterTransactionId === undefined ? {} : { afterTransactionId }) }),
     duplicateTransactionById: (transactionId, newTransactionId, name) => dispatch<"transaction.duplicate">("bottom_transaction_duplicate", { type: "transaction.duplicate", transactionId, newTransactionId, name }),
     deleteTransaction: (transactionId) => dispatch<"transaction.delete">("bottom_transaction_delete", { type: "transaction.delete", transactionId }),
     updateTransactionFromBottom: (payload) => dispatch<"transaction.update">("bottom_transaction_update", { type: "transaction.update", ...payload }),
@@ -184,7 +184,7 @@ export function createEditorSurfaceCommandController(input: {
     renameGroup: (groupId, name) => dispatch<"group.rename">("group_rename", { type: "group.rename", groupId, name }),
     updateGroupProperties: (payload) => dispatch<"group.updateProperties">("group_properties", { type: "group.updateProperties", ...payload }),
     createSpacer: (spacer, targetGroupId, index) => dispatch<"spacer.create">("spacer_create", { type: "spacer.create", spacer, targetGroupId, index }),
-    createTransaction: (transaction) => dispatch<"transaction.create">("home_transaction_create", { type: "transaction.create", transaction }),
+    createTransaction: (transaction, afterTransactionId) => dispatch<"transaction.create">("home_transaction_create", { type: "transaction.create", transaction, ...(afterTransactionId === undefined ? {} : { afterTransactionId }) }),
     duplicateTransaction: (transaction) => dispatch<"transaction.create">("home_transaction_duplicate", { type: "transaction.create", transaction }),
     createTransactionGroup: (group) => dispatch<"transactionGroup.create">("home_transaction_group_create", { type: "transactionGroup.create", group }),
     renameSignals: (items) => dispatchBatch<"signal.rename">("find_replace_rename", items.map(({ signalId, name }) => ({ type: "signal.rename", signalId, name }))),
