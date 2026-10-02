@@ -136,3 +136,43 @@ test("Ruler/Grid/Wave agree within 0.5px and Playhead/Range sit on the Ruler acr
   assertTight("fit all", await boundaries(page, cycles));
   await overlayVsRuler(page, "fit all");
 });
+
+test("Ruler/Grid/Wave stay within 0.5px when panel visibility changes the timeline width (Inspector, Signal Tree, Bottom, MiniMap)", async ({ page }) => {
+  test.setTimeout(120_000);
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "p937p.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(longReferenceClockDocument())) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='128']")).toHaveCount(1);
+  await expect.poll(() => page.locator("svg[data-wave-owner='sig_cycle_clock'] image[data-wave-svg-image]").count(), { timeout: 30_000 }).toBe(1);
+  const cycles = [0, 1, 10, 32, 64, 127] as const;
+  await waitForPresentation(page);
+  assertTight("initial", await boundaries(page, cycles));
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  const ribbon = page.getByTestId("ribbon");
+  const toggle = async (name: string, label: string) => {
+    await ribbon.getByRole("button", { name, exact: true }).click();
+    await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
+    await page.waitForTimeout(250);
+    await waitForPresentation(page);
+    assertTight(label, await boundaries(page, cycles));
+  };
+  const widthBefore = await page.getByTestId("cycle-viewport").evaluate((element) => element.clientWidth);
+  await toggle("Inspector", "Inspector hidden");
+  expect(await page.getByTestId("cycle-viewport").evaluate((element) => element.clientWidth), "hiding the Inspector must change the timeline width (otherwise this check is vacuous)").toBeGreaterThan(widthBefore);
+  await toggle("Inspector", "Inspector shown");
+  await toggle("Signal Tree", "Signal Tree hidden");
+  await toggle("Signal Tree", "Signal Tree shown");
+  await toggle("Bottom Editor", "Bottom hidden");
+  await toggle("Bottom Editor", "Bottom shown");
+  await toggle("MiniMap", "MiniMap hidden");
+  await toggle("MiniMap", "MiniMap shown");
+  // Zoomed + scrolled after the layout churn.
+  await page.getByLabel("Zoom preset").selectOption("200");
+  await waitForPresentation(page);
+  await timelineOwner(page).evaluate((element) => { element.scrollLeft = Math.min(300, element.scrollWidth); });
+  await waitForPresentation(page);
+  assertTight("200% scrolled after panel churn", await boundaries(page, cycles));
+});
