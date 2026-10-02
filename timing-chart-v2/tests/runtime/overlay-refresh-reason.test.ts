@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
-import type { RenderProjection } from "@timing-chart-v2/projection";
+import { resolveTimeAxisGeometry, type LocalGeometryMap } from "@timing-chart-v2/geometry";
+import { buildDisplayTimeMapping, type RenderProjection } from "@timing-chart-v2/projection";
 import { refreshRendererForReason } from "../../apps/editor/src/runtime/render-coordinator.js";
+import type { TimeAxisMetrics } from "../../apps/editor/src/runtime/timeline-geometry-owner.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 function projection(): RenderProjection {
@@ -17,13 +18,50 @@ describe("renderer overlay refresh reasons", () => {
     const base = canonicalFixture();
     const document = { ...base, signals: [{ ...base.signals[0]!, edgeCounter: { ...base.signals[0]!.edgeCounter, show: true, mode: "rising" as const } }, base.signals[1]!] };
     const renderer = { updateEdgeCounters: vi.fn(), updateOverlays: vi.fn() };
-    const mappingCache = { get: vi.fn(() => { throw new Error("range refresh must not resolve annotation mapping"); }) };
+    const timeAxisMetrics = Object.freeze({
+      generation: 1,
+      timeAxis: resolveTimeAxisGeometry(document, new Map([["sig_clk", clockGeometry()]])),
+      mapping: buildDisplayTimeMapping(document.timeline, []),
+      presentationScale: 1,
+      displayCycleCount: document.timeline.cycleCount,
+    }) satisfies TimeAxisMetrics;
 
-    refreshRendererForReason(renderer, { current: null }, "range", document, projection(), new Map([["sig_clk", clockGeometry()]]), mappingCache, 1, { start: 0, end: 8 }, 0, undefined);
+    refreshRendererForReason(renderer, { current: null }, "range", document, projection(), new Map([["sig_clk", clockGeometry()]]), timeAxisMetrics, { start: 0, end: 8 }, 0, undefined);
 
     expect(renderer.updateEdgeCounters).toHaveBeenCalledOnce();
     expect(renderer.updateOverlays).not.toHaveBeenCalled();
     expect(renderer.updateEdgeCounters.mock.lastCall?.[0]).toHaveLength(8);
-    expect(mappingCache.get).not.toHaveBeenCalled();
+  });
+
+  it("projects annotation overlays using the captured TimeAxisMetrics mapping and scale", () => {
+    const base = canonicalFixture();
+    const signal = base.signals[0]!;
+    const document = {
+      ...base,
+      timeGroups: [{ id: "fold" as never, name: "Fold", start: 2, end: 4, presentation: { collapsed: true, foldStyle: "axis-break" as const, foldLabel: "2 cycles" } }],
+      annotations: [{ id: "ann" as never, type: "text" as const, label: "Fold edge", visible: true, anchor: { signalId: signal.id, cycle: 4, point: "cycle-start" as const } }],
+    };
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    const geometry: LocalGeometryMap = {
+      signalId: signal.id,
+      find(anchor) {
+        if (anchor.signalId !== signal.id || anchor.point !== "cycle-start") return undefined;
+        const display = mapping.sourceToDisplay(anchor.cycle);
+        return display === undefined ? undefined : { signalId: signal.id, anchor, point: { x: display * 10, y: 0 } };
+      },
+    };
+    const timeAxisMetrics = Object.freeze({
+      generation: 7,
+      timeAxis: resolveTimeAxisGeometry(document, new Map([[signal.id, geometry]])),
+      mapping,
+      presentationScale: 2,
+      displayCycleCount: mapping.displayCycleCount,
+    }) satisfies TimeAxisMetrics;
+    const renderer = { updateEdgeCounters: vi.fn(), updateOverlays: vi.fn() };
+    const host = { current: null };
+
+    refreshRendererForReason(renderer, host, "selection", document, projection(), new Map([[signal.id, geometry]]), timeAxisMetrics, { start: 0, end: 8 }, 0, undefined);
+
+    expect(renderer.updateOverlays.mock.lastCall?.[0]).toMatchObject([{ id: "ann", anchors: [{ x: 40 }] }]);
   });
 });
