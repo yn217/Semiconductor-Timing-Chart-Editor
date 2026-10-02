@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { RenderProjection, VirtualizationWindow } from "@timing-chart-v2/projection";
-import type { Annotation, AnnotationId, CanonicalDocument, DocumentProblem, GroupId, SemanticAnchor, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CanonicalDocument, DocumentProblem, GroupId, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
 import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { EditorApplicationOwner } from "../application/use-editor-application-owner.js";
 import { useDocumentLifecycle } from "../application/use-document-lifecycle.js";
@@ -31,13 +31,13 @@ import { publishRendererState } from "./runtime-diagnostics.js";
 import { applyRendererHostSizing } from "./renderer-host-sizing.js";
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import { nextCommandId } from "../command-id.js";
-import { nextEntityId } from "../entity-id.js";
 import type { BottomPinnedSelection, TreeTypeFilter } from "../workspace/use-workspace-ui-state.js";
 import type { ContextMenuState } from "../workspace/use-dialog-menu-state.js";
 import { resetInspectorAccordionState } from "../inspector-accordion.js";
 import { deriveTransactionExtent } from "./transaction-extent.js";
 import { createTransactionPresentationRefreshRequester, shouldRefreshTransactionPresentation } from "./transaction-presentation-refresh.js";
 import { createTreeKeyboardController } from "./tree-keyboard-controller.js";
+import { TransitionArrowPicker } from "./transition-arrow-picker.js";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 type TimelineRange = Readonly<{ start: number; end: number }>;
@@ -715,8 +715,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       setPinnedSignalIds([]);
       resetInspectorAccordionState();
        interactionHandle?.cancel();
-      pendingArrow = undefined;
-      pendingArrowAnnotationType = "arrow";
+      arrowPicker.reset();
       delete rendererHost.dataset.arrowPick;
       delete rendererHost.dataset.editorIdle;
       delete rendererHost.dataset.cycleViewReady;
@@ -775,18 +774,22 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     });
 
     const onViewportKeyDown = createTimelineViewportKeyDownHandler(viewportElement);
-    let pendingArrow: "armed" | SemanticAnchor | undefined;
+    const arrowPicker = new TransitionArrowPicker({
+      rendererHost,
+      geometry: timelineGeometry,
+      getZoom: () => timelineNavigation.getZoom(),
+      getDocument: () => sessionController.snapshot().document,
+      execute: (command) => application.execute(command),
+      selectAnnotation: (id) => selection.selectAnnotation(id),
+      publishState,
+      setProblem,
+      setStatus: setArrowPickStatus,
+    });
     // #375: the picked-transitions workflow is shared by both line-shaped
     // types that need real geometry-anchored endpoints -- Arrow and
     // Dependency -- so it must produce whichever type the Annotation type
     // dropdown currently has selected, not a type hardcoded to "arrow".
-    let pendingArrowAnnotationType: "arrow" | "dependency" = "arrow";
-    armArrowPick.current = (annotationType) => {
-      pendingArrow = "armed";
-      pendingArrowAnnotationType = annotationType;
-      setArrowPickStatus("from");
-      rendererHost.dataset.arrowPick = "from";
-    };
+    armArrowPick.current = arrowPicker.arm;
     const { onKeyDown: onTreeKeyDown, focusItem: focusTreeItem } = createTreeKeyboardController(rendererHost, treeFocusRowIdRef);
     const onSelect = (event: MouseEvent, options?: { readonly synchronous?: boolean }) => {
       const closestFromEvent = <T extends Element>(selector: string): T | null => {
@@ -841,34 +844,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // overlay sits above the actual waveform.  The snap resolver still uses
       // semantic geometry; this only keeps the overlay from swallowing the
       // browser click before that resolver runs.
-      if (pendingArrow && event.target instanceof Element && event.target.closest("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface'], [data-role='annotation-overlay-surface'], [data-role='interactive-overlay-surface']")) {
-        const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
-        if (!waveLayer) return;
-        const bounds = waveLayer.getBoundingClientRect();
-        const currentZoom = timelineNavigation.getZoom();
-        const localPointer = timelineGeometry.screenToLocal({ x: event.clientX - bounds.left, y: 0 }, currentZoom);
-        const snap = timelineGeometry.currentSnapIndex().nearest({ x: localPointer.x, y: event.clientY - bounds.top }, 12 / currentZoom, ["clock-edge", "signal-transition", "bus-transition"]);
-        publishState();
-        if (!snap) {
-          setProblem("No rendered transition is within the 12 px snap tolerance.");
-          return;
-        }
-        if (pendingArrow === "armed") {
-          pendingArrow = snap.anchor;
-          setArrowPickStatus("to");
-          rendererHost.dataset.arrowPick = "to";
-          rendererHost.dataset.snapKind = snap.kind;
-          return;
-        }
-        const annotation: Annotation = { id: nextEntityId("annotation", sessionController.snapshot().document) as AnnotationId, type: pendingArrowAnnotationType, label: "Transition", visible: true, color: "#d04a36", from: pendingArrow, to: snap.anchor, lineType: "straight", arrowhead: "end" };
-        const result = application.execute({ id: nextCommandId("annotation_transition_arrow"), type: "annotation.create", annotation });
-      if (result.ok) selection.selectAnnotation(annotation.id);
-        pendingArrow = undefined;
-        setArrowPickStatus("idle");
-        delete rendererHost.dataset.arrowPick;
-        rendererHost.dataset.snapKind = snap.kind;
-        return;
-      }
+      if (arrowPicker.handleClick(event)) return;
       const annotationOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]") : null;
       if (annotationOwner?.dataset.annotationId) {
         const id = annotationOwner.dataset.annotationId as AnnotationId;
@@ -927,8 +903,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       timelineRuntime,
       getProjection: () => projection,
       getTimelineOffset: timelineOffset,
-      getPendingArrow: () => pendingArrow,
-      clearPendingArrow: () => { pendingArrow = undefined; },
+      getPendingArrow: () => arrowPicker.pending,
+      clearPendingArrow: arrowPicker.clear,
       applyCanvasCycleSelection,
       onSelect,
       onTreeKeyDown,

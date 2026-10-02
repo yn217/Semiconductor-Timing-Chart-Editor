@@ -65,6 +65,7 @@ controllers are extracted incrementally.
 | Runtime helper boundaries | `runtime/render-invalidation.ts`, `runtime/editor-dom-bridge.ts`, `runtime/viewport-projection.ts`, `runtime/waveform-surface-provider.ts`, `runtime/timeline-presentation-refresh.ts`, `runtime/runtime-diagnostics.ts` | existing runtime owners | PR6 helper split; no compatibility barrel |
 | Runtime viewport controller | `runtime/viewport-controller.ts` | view-only viewport/navigation callbacks | second-pass owner boundary |
 | Runtime interaction controller | `runtime/interaction-controller.ts` | pointer/keyboard binding and transaction snap callbacks | second-pass owner boundary |
+| Transition arrow picker | `runtime/transition-arrow-picker.ts` | two-click snapped Arrow/Dependency creation lifecycle | extracted from the timeline surface controller; mutation remains through `EditorApplicationOwner` |
 | Runtime document refresh lifecycle | `runtime/document-lifecycle-controller.ts` | current document epoch/lifecycle guard | second-pass owner boundary |
 | Runtime render coordinator | `runtime/render-coordinator.ts` | renderer overlay and edge-counter refresh | second-pass owner boundary |
 | Timeline surface controller | `runtime/timeline-surface-controller.ts` | renderer/projection/geometry/gesture lifecycle | explicit non-React runtime owner |
