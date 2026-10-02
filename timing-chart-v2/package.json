@@ -57,6 +57,7 @@
     "test:perf:pr": "playwright test tests/e2e/performance-closure.spec.ts --grep-invert nightly/manual",
     "test:perf:fixed-full-span": "node scripts/run-playwright.mjs --config=playwright.performance.config.ts tests/performance/fixed-full-span-open.spec.ts --workers=1 --trace=off",
     "test:perf:real-world-pr": "node scripts/run-playwright.mjs --config=playwright.performance.config.ts tests/performance/current-performance-samples-open.spec.ts --grep \"perf_100x500_full_span|perf_1000x1000_virtualized\" --workers=1 --trace=off",
+    "test:perf:open-closure-prod": "npm --workspace @timing-chart-v2/editor run build && playwright test --config=playwright.prod-closure.config.ts --workers=1",
     "test:perf:real-world-showcases": "node scripts/run-playwright.mjs --config=playwright.performance.config.ts tests/performance/current-performance-samples-open.spec.ts --workers=1 --trace=off",
     "test:perf:nightly": "node scripts/run-performance-nightly.mjs",
     "check:ci": "npm run check && npm run check:parity && npm run test:e2e"
