@@ -162,4 +162,41 @@ describe("selected Clock Edge Counter origin", () => {
     expect(overlays.map((overlay) => overlay.label)).toEqual(["20", "21", "22", "23"]);
     expect(overlays[0]?.x).toBe(20); // display boundary 2 maps to source cycle 4
   });
+
+  it("keeps signal-start numbering continuous when only a distant source window is rendered", () => {
+    const base = canonicalFixture();
+    const clock = { ...base.signals[0]!, generator: { ...base.signals[0]!.generator, period: 2, duty: 0.5 }, edgeCounter: { ...base.signals[0]!.edgeCounter, show: true, mode: "both" as const, startNumber: 1, countFrom: "signal-start" as const } };
+    const document = { ...base, timeline: { ...base.timeline, cycleCount: 12, end: 12 }, signals: [clock, base.signals[1]!] };
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    const map = new ImmutableLocalGeometryMap("sig_clk", [6, 8, 10].flatMap((cycle) => [
+      { cycle, point: "rising-edge" as const, position: { x: cycle * 10, y: 0 } },
+      { cycle, point: "falling-edge" as const, position: { x: cycle * 10 + 5, y: 0 } },
+    ]));
+
+    const overlays = projectEdgeCounters(document, projection(), new Map([["sig_clk", map]]), mapping, { start: 6, end: 12 }, 6);
+
+    expect(overlays.map((overlay) => overlay.label)).toEqual(["7", "8", "9", "10", "11", "12"]);
+  });
+
+  it("keeps signal-start ordinals across gated and suppressed source periods", () => {
+    const base = canonicalFixture();
+    const clock = {
+      ...base.signals[0]!,
+      generator: { ...base.signals[0]!.generator, period: 2, duty: 0.5, suppressedPeriods: [1] },
+      enable: [{ start: 0, value: 1 }, { start: 4, value: 0 }, { start: 8, value: 1 }],
+      edgeCounter: { ...base.signals[0]!.edgeCounter, show: true, mode: "both" as const, startNumber: 1, countFrom: "signal-start" as const },
+    };
+    const document = { ...base, timeline: { ...base.timeline, cycleCount: 12, end: 12 }, signals: [clock, base.signals[1]!] };
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    const map = new ImmutableLocalGeometryMap("sig_clk", [8, 10].flatMap((cycle) => [
+      { cycle, point: "rising-edge" as const, position: { x: cycle * 10, y: 0 } },
+      { cycle, point: "falling-edge" as const, position: { x: cycle * 10 + 5, y: 0 } },
+    ]));
+
+    const overlays = projectEdgeCounters(document, projection(), new Map([["sig_clk", map]]), mapping, { start: 8, end: 12 }, 8);
+
+    // Period 1 is suppressed and periods 2/3 are gated off, so the visible
+    // period 4 starts after only period 0 contributed edges.
+    expect(overlays.map((overlay) => overlay.label)).toEqual(["3", "4", "5", "6"]);
+  });
 });
