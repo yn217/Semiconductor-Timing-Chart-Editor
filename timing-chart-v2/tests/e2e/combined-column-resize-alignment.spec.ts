@@ -18,7 +18,7 @@ test("Combined keeps Transaction and Cycle source boundaries aligned after colum
     return [cycle, { cycle: cycleBox?.x, transaction: cycle === 10 ? transactionBox?.x : cycle === 60 ? transactionBox?.x! + transactionBox.width : phaseBox?.x }];
   })));
   const before = await readX();
-  for (const cycle of points) expect(Math.abs(before[cycle].cycle - before[cycle].transaction)).toBeLessThan(1);
+  for (const cycle of points) expect(Math.abs(before[cycle].cycle - before[cycle].transaction)).toBeLessThanOrEqual(0.5);
   const layout = page.getByTestId("inspector-layout-editor");
   await layout.getByLabel("Inspector role column width").fill("82");
   await layout.getByLabel("Inspector signal name width").fill("196");
@@ -26,7 +26,7 @@ test("Combined keeps Transaction and Cycle source boundaries aligned after colum
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const after = await readX();
   for (const cycle of points) {
-    expect(Math.abs(after[cycle].cycle - after[cycle].transaction)).toBeLessThan(1);
+    expect(Math.abs(after[cycle].cycle - after[cycle].transaction)).toBeLessThanOrEqual(0.5);
     expect((after[cycle].transaction - before[cycle].transaction)).toBeCloseTo(after[cycle].cycle - before[cycle].cycle, 0);
   }
 });

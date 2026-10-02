@@ -255,7 +255,7 @@
 .transaction-lane { position: absolute; left: 0; width: 100%; border-bottom: 1px solid #c9d6e3; }
 .transaction-lane:hover { background: rgb(214 229 245 / 45%); }
 .transaction-lane > button:has(.transaction-phases) { height: 32px; align-items: start; }
-.transaction-phases { position: absolute; inset: 15px 0 0; pointer-events: none; }
+.transaction-phases { position: absolute; inset: 15px -1px 0; pointer-events: none; }
 /* #429/#397 Transaction Mode Product Closure P0-4: derive both the bar's
    header strip and its phase segments from the one `--transaction-color`
    custom property set per-bar in transaction-lanes.tsx (Transaction color,
