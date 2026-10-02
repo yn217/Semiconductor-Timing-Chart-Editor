@@ -1,5 +1,5 @@
 import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
-import type { RenderProjection } from "@timing-chart-v2/projection";
+import type { DisplayTimeMapping, RenderProjection } from "@timing-chart-v2/projection";
 import type { EdgeCounterOverlayPrimitive } from "@timing-chart-v2/renderer";
 import { resolveEdgeCounterMarker, type CanonicalDocument, type SignalId } from "@timing-chart-v2/schema";
 
@@ -35,10 +35,11 @@ interface EdgeIndex {
   readonly falling: readonly EdgePoint[];
 }
 
-const edgeIndexCache = new WeakMap<object, EdgeIndex>();
+const edgeIndexCache = new WeakMap<object, WeakMap<object, EdgeIndex>>();
 
-function edgeIndexFor(map: LocalGeometryMap, metrics?: EdgeCounterProjectionMetrics): EdgeIndex | undefined {
-  const indexed = edgeIndexCache.get(map);
+function edgeIndexFor(map: LocalGeometryMap, mapping: DisplayTimeMapping, metrics?: EdgeCounterProjectionMetrics): EdgeIndex | undefined {
+  let byMapping = edgeIndexCache.get(map);
+  const indexed = byMapping?.get(mapping);
   if (indexed) {
     if (metrics) metrics.edgeCounterEdgeIndexHits += 1;
     return indexed;
@@ -46,29 +47,34 @@ function edgeIndexFor(map: LocalGeometryMap, metrics?: EdgeCounterProjectionMetr
   if (!map.edgeEntries) return undefined;
   const all = map.edgeEntries().flatMap((entry) => {
     if (entry.point !== "rising-edge" && entry.point !== "falling-edge") return [];
-    return [{ x: entry.position.x, y: entry.position.y, kind: entry.point === "rising-edge" ? "rising" as const : "falling" as const, cycle: entry.cycle }];
+    const cycle = map.cycleKeyDomain === "display" ? mapping.displayToSource(entry.cycle) : entry.cycle;
+    return cycle === undefined ? [] : [{ x: entry.position.x, y: entry.position.y, kind: entry.point === "rising-edge" ? "rising" as const : "falling" as const, cycle }];
   }).sort((left, right) => left.x - right.x || left.kind.localeCompare(right.kind));
   const index = { all: Object.freeze(all), rising: Object.freeze(all.filter((edge) => edge.kind === "rising")), falling: Object.freeze(all.filter((edge) => edge.kind === "falling")) };
-  edgeIndexCache.set(map, index);
+  byMapping ??= new WeakMap<object, EdgeIndex>();
+  byMapping.set(mapping, index);
+  edgeIndexCache.set(map, byMapping);
   if (metrics) metrics.edgeCounterEdgeIndexBuilds += 1;
   return index;
 }
 
-function fallbackEdges(document: CanonicalDocument, signal: Extract<CanonicalDocument["signals"][number], { readonly type: "clock" }>, map: LocalGeometryMap, metrics?: EdgeCounterProjectionMetrics): EdgePoint[] {
+function fallbackEdges(document: CanonicalDocument, signal: Extract<CanonicalDocument["signals"][number], { readonly type: "clock" }>, map: LocalGeometryMap, mapping: DisplayTimeMapping, metrics?: EdgeCounterProjectionMetrics): EdgePoint[] {
   const edges: EdgePoint[] = [];
   for (let cycle = 0; cycle < document.timeline.cycleCount; cycle += 1) {
     if (metrics) metrics.edgeCounterCyclesProbed += 1;
     for (const kind of ["rising", "falling"] as const) {
       if (signal.edgeCounter.mode !== "both" && signal.edgeCounter.mode !== kind) continue;
       if (metrics) metrics.edgeCounterGeometryLookups += 1;
-      const local = map.find({ signalId: signal.id, cycle, point: kind === "rising" ? "rising-edge" : "falling-edge" });
+      const geometryCycle = map.cycleKeyDomain === "display" ? mapping.sourceToDisplay(cycle) : cycle;
+      if (geometryCycle === undefined) continue;
+      const local = map.find({ signalId: signal.id, cycle: geometryCycle, point: kind === "rising" ? "rising-edge" : "falling-edge" });
       if (local) edges.push({ x: local.point.x, y: local.point.y, kind, cycle });
     }
   }
   return edges.sort((left, right) => left.x - right.x || left.kind.localeCompare(right.kind));
 }
 
-export function projectEdgeCounters(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, visibleRange: Readonly<{ start: number; end: number }>, selectedCycle: number, xScale = 1, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics): EdgeCounterOverlayPrimitive[] {
+export function projectEdgeCounters(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, visibleRange: Readonly<{ start: number; end: number }>, selectedCycle: number, xScale = 1, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics): EdgeCounterOverlayPrimitive[] {
   const rowYBySignalId = new Map(projection.rowLayout.map((row) => [row.rowId, row.y]));
   return document.signals.flatMap((signal) => {
     if (signal.type !== "clock" || !signal.edgeCounter.show) return [];
@@ -76,8 +82,8 @@ export function projectEdgeCounters(document: CanonicalDocument, projection: Ren
     const map = maps.get(signal.id);
     const rowY = rowYBySignalId.get(signal.id) ?? 0;
     if (!map) return [];
-    const indexed = edgeIndexFor(map, metrics);
-    const edges = (indexed ? signal.edgeCounter.mode === "both" ? indexed.all : signal.edgeCounter.mode === "rising" ? indexed.rising : indexed.falling : fallbackEdges(document, signal, map, metrics)).map((edge) => ({ ...edge, x: edge.x * xScale, y: rowY + edge.y }));
+    const indexed = edgeIndexFor(map, mapping, metrics);
+    const edges = (indexed ? signal.edgeCounter.mode === "both" ? indexed.all : signal.edgeCounter.mode === "rising" ? indexed.rising : indexed.falling : fallbackEdges(document, signal, map, mapping, metrics)).map((edge) => ({ ...edge, x: edge.x * xScale, y: rowY + edge.y }));
     const marker = resolveEdgeCounterMarker(document, signal.edgeCounter);
     const selectedEdgeIndex = selectedEdge?.signalId === signal.id
       ? edges.findIndex((edge) => edge.cycle === selectedEdge.cycle && edge.kind === selectedEdge.kind)
