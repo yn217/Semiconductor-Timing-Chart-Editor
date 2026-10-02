@@ -9,7 +9,10 @@ startInCycleMode(test);
  * Signal geometry is display-keyed (small, full render) or source-keyed (large document, bounded window), with a collapsed fold
  * in front of the anchor.
  */
-for (const { name, signalCount, cycleCount } of [{ name: "full render", signalCount: 6, cycleCount: 64 }, { name: "bounded window", signalCount: 60, cycleCount: 10_000 }]) {
+for (const { name, signalCount, cycleCount, anchorCycle, scrollToFarWindow } of [
+  { name: "full render", signalCount: 6, cycleCount: 64, anchorCycle: 24, scrollToFarWindow: false },
+  { name: "bounded window after far re-window", signalCount: 60, cycleCount: 10_000, anchorCycle: 9_980, scrollToFarWindow: true },
+]) {
   test(`folded verticalLine anchor aligns with its Ruler tick (${name})`, async ({ page }) => {
     test.setTimeout(180_000);
     await page.setViewportSize({ width: 1672, height: 941 });
@@ -20,18 +23,30 @@ for (const { name, signalCount, cycleCount } of [{ name: "full render", signalCo
     const document = {
       ...base,
       timeGroups: [{ id: "tg_fold936", name: "Fold", start: 2, end: 6, category: "collapsed", presentation: { collapsed: true, foldStyle: "axis-break", foldLabel: "4 cycles" } }],
-      annotations: [{ id: "ann_936_line", type: "verticalLine", label: "L24", visible: true, anchor: { signalId: base.signals[1]!.id, cycle: 24, point: "cycle-start" } }],
+      annotations: [{ id: "ann_936_line", type: "verticalLine", label: `L${anchorCycle}`, visible: true, anchor: { signalId: base.signals[1]!.id, cycle: anchorCycle, point: "cycle-start" } }],
     };
     await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "p936.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
     await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
-    const tick = page.locator(".cycle-ruler [data-cycle='24']").first();
+    const viewport = page.getByTestId("cycle-viewport");
+    if (scrollToFarWindow) {
+      const dimensions = await page.locator("[data-role='timeline-viewport']").evaluate((element) => ({ scrollWidth: element.scrollWidth, clientWidth: element.clientWidth }));
+      expect(dimensions.scrollWidth).toBeGreaterThan(dimensions.clientWidth);
+      const timelineViewport = page.locator("[data-role='timeline-viewport']");
+      await timelineViewport.evaluate((element) => { element.scrollLeft = element.scrollWidth - element.clientWidth; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+      await expect.poll(() => timelineViewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+      await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+    }
+    const tick = page.locator(`.cycle-ruler [data-cycle='${anchorCycle}']`).first();
     const body = surface.locator("[data-role='annotation-owner'][data-annotation-id='ann_936_line'] [data-role='annotation-body']");
     await expect(tick).toBeVisible();
     await expect(body).toBeAttached();
     const tickBox = (await tick.boundingBox())!;
     const bodyBox = (await body.boundingBox())!;
+    const viewportBox = (await page.locator("[data-role='timeline-viewport']").boundingBox())!;
+    expect(tickBox.x).toBeGreaterThanOrEqual(viewportBox.x - 1);
+    expect(tickBox.x).toBeLessThan(viewportBox.x + viewportBox.width);
     expect(Math.abs(tickBox.x - bodyBox.x), `ruler tick x=${tickBox.x} annotation x=${bodyBox.x}`).toBeLessThan(1.5);
   });
 }

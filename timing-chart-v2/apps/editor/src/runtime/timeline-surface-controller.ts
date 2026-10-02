@@ -424,6 +424,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     publishState = () => publishRendererState(rendererHost, sessionController.current(), viewMetricsOwner, adapter, geometryRegistry, projectionCoordinator, renderer, mappingCache, timelineGeometry.snapService, timelineGeometry.snapIndex, rulerBuilds, edgeCounterResolvePasses, timelineNavigation.getZoom(), application.validatorInvocationsRef.current, edgeCounterMetrics);
     publishStateRef.current = () => publishState();
     let frame = 0;
+    let scrollOverlayRefreshGeneration = 0;
     // Definite-assignment: assigned below before the viewport runtime's
     // returned closures can ever be invoked (matches this file's rangeInteractions/
     // treeDrag forward-declaration convention); no dummy body is reachable.
@@ -466,6 +467,18 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
             renderer.update(projection);
             rendererHost.dataset.viewportStartY = String(window.viewportStartY);
             publishState();
+            // Annotation overlays are viewport-filtered too. A scroll can
+            // move a previously-offscreen source anchor into view without
+            // changing the mounted Signal rows; refresh after any newly
+            // requested geometry has settled, and discard superseded scroll
+            // continuations so rapid scrolling publishes only the latest
+            // viewport's overlays.
+            const refreshGeneration = ++scrollOverlayRefreshGeneration;
+            const refreshEpoch = documentEpoch.current();
+            void renderer.whenIdle().then(() => {
+              if (!active || !rendererHost.isConnected || refreshGeneration !== scrollOverlayRefreshGeneration || !documentEpoch.isCurrent(refreshEpoch)) return;
+              timelineRuntime.refreshOverlays();
+            });
           },
         }));
         return;
