@@ -30,15 +30,15 @@ async function measure(page: Page) {
   });
 }
 
-for (const size of sizes) {
-  test(`Transaction bars and Bookmark markers stay on the Ruler across zoom and scroll at ${size.width}x${size.height}`, async ({ page }) => {
+for (const mode of ["Transaction", "Combined"] as const) for (const size of sizes) {
+  test(`${mode}: bars and Bookmark markers stay on the Ruler across zoom and scroll at ${size.width}x${size.height}`, async ({ page }) => {
     test.setTimeout(120_000);
     await page.setViewportSize(size);
     await page.goto("/?transaction-demo");
     const surface = page.getByTestId("cycle-surface");
     await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
-    await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
-    await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
+    await page.locator(".view-mode").getByRole("button", { name: mode, exact: true }).click();
+    await expect(page.getByTestId("view-mode-status")).toHaveText(`Mode: ${mode}`);
     await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
     await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
     const owner = page.locator("[data-testid='cycle-viewport']");
