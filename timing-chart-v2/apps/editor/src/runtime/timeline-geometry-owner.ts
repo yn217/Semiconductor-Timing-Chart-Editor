@@ -42,6 +42,7 @@ export interface TimeAxisMetrics {
   readonly timeAxis: TimeAxisGeometry;
   readonly mapping: DisplayTimeMapping;
   readonly presentationScale: number;
+  readonly zoom: number;
   readonly displayCycleCount: number;
   readonly pxPerDisplayCycle?: number;
   readonly screenOriginX?: number;
@@ -65,10 +66,10 @@ export class TimelineGeometryOwner {
   constructor(private readonly context: TimelineGeometryOwnerContext) {
     this.mappingCache = context.mappingCache;
     this.geometryMaps = context.geometryMaps;
-    this.#timeAxisMetrics = this.#createTimeAxisMetrics(resolveTimeAxisGeometry(context.getDocument(), this.geometryMaps), 1);
+    this.#timeAxisMetrics = this.#createTimeAxisMetrics(resolveTimeAxisGeometry(context.getDocument(), this.geometryMaps), 1, 1);
   }
 
-  #createTimeAxisMetrics(timeAxis: TimeAxisGeometry, presentationScale: number, pxPerDisplayCycle?: number, screenOriginX?: number): TimeAxisMetrics {
+  #createTimeAxisMetrics(timeAxis: TimeAxisGeometry, presentationScale: number, zoom: number, pxPerDisplayCycle?: number, screenOriginX?: number): TimeAxisMetrics {
     const document = this.context.getDocument();
     const mapping = this.mappingCache.get(document.timeline, document.timeGroups);
     return Object.freeze({
@@ -76,6 +77,7 @@ export class TimelineGeometryOwner {
       timeAxis,
       mapping,
       presentationScale,
+      zoom,
       displayCycleCount: mapping.displayCycleCount,
       ...(pxPerDisplayCycle === undefined ? {} : { pxPerDisplayCycle }),
       ...(screenOriginX === undefined ? {} : { screenOriginX }),
@@ -109,11 +111,12 @@ export class TimelineGeometryOwner {
    * or every owner ends up offset from the ruler by that fixed margin (#620). */
   get waveOriginPx(): number | undefined { return this.#timeAxisMetrics.screenOriginX; }
 
-  updatePresentation(timeAxis: TimeAxisGeometry, presentationScale: number, waveWidthPxPerDisplayCycle?: number, waveOriginPx?: number): TimeAxisMetrics {
+  updatePresentation(timeAxis: TimeAxisGeometry, presentationScale: number, waveWidthPxPerDisplayCycle?: number, waveOriginPx?: number, zoom = this.#timeAxisMetrics.zoom): TimeAxisMetrics {
     const previous = this.#timeAxisMetrics;
     const next = this.#createTimeAxisMetrics(
       timeAxis,
       presentationScale,
+      zoom,
       waveWidthPxPerDisplayCycle ?? previous.pxPerDisplayCycle,
       waveOriginPx ?? previous.screenOriginX,
     );
@@ -127,8 +130,18 @@ export class TimelineGeometryOwner {
     return next;
   }
 
+  /** Publish zoom changes through the same immutable presentation snapshot as
+   * the ruler mapping so consumers cannot observe a new viewport zoom paired
+   * with an older time-axis generation. */
+  updateZoom(zoom: number): TimeAxisMetrics {
+    if (!Number.isFinite(zoom) || zoom <= 0 || zoom === this.#timeAxisMetrics.zoom) return this.#timeAxisMetrics;
+    const previous = this.#timeAxisMetrics;
+    this.#timeAxisMetrics = Object.freeze({ ...previous, generation: ++this.#presentationGeneration, zoom });
+    return this.#timeAxisMetrics;
+  }
+
   reset(): void {
-    this.#timeAxisMetrics = this.#createTimeAxisMetrics(resolveTimeAxisGeometry(this.context.getDocument(), this.geometryMaps), 1);
+    this.#timeAxisMetrics = this.#createTimeAxisMetrics(resolveTimeAxisGeometry(this.context.getDocument(), this.geometryMaps), 1, 1);
     this.invalidateSnapIndex();
     this.#requestedSourceCycle = undefined;
   }

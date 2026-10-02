@@ -105,6 +105,34 @@ describe("TimelineGeometryOwner", () => {
     expect(published).toMatchObject({ presentationScale: 2, pxPerDisplayCycle: 120, screenOriginX: 10 });
   });
 
+  it("publishes zoom changes as a new immutable time-axis generation", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const geometry = new ImmutableLocalGeometryMap(clockId, [
+      { cycle: 0, point: "cycle-start", position: { x: 8, y: 0 } },
+      { cycle: 1, point: "cycle-start", position: { x: 48, y: 0 } },
+    ]);
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => cycleDocument,
+      getProjection: () => ({} as RenderProjection),
+      onSnapIndexBuilt: () => undefined,
+    });
+    const before = owner.timeAxisMetrics;
+
+    const updated = owner.updateZoom(2);
+
+    expect(Object.isFrozen(updated)).toBe(true);
+    expect(updated).not.toBe(before);
+    expect(updated.generation).toBeGreaterThan(before.generation);
+    expect(updated).toMatchObject({ zoom: 2, presentationScale: before.presentationScale });
+    expect(updated.mapping).toBe(before.mapping);
+    expect(updated.timeAxis).toBe(before.timeAxis);
+    expect(before.zoom).toBe(1);
+    expect(owner.updateZoom(2)).toBe(updated);
+    expect(owner.updateZoom(Number.NaN)).toBe(updated);
+  });
+
   it("uses retained geometry boundaries instead of scanning a large source timeline", () => {
     const clockId = signalId("sig_cycle_clock");
     let findCalls = 0;
