@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 import { startInCycleSample } from "./cycle-startup.js";
 
 startInCycleSample(test);
@@ -123,3 +124,36 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] 
     expect(failures, failures.join("\n")).toEqual([]);
   });
 }
+
+/** GUI-SIGNAL-SPLIT acceptance: vertical scroll is independent per pane while the horizontal time domain stays shared. */
+test("Signal Split keeps vertical scroll independent per pane and the horizontal origin shared", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const base = generatePerformanceDocument({ signalCount: 100, cycleCount: 100, profile: "standard" });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "split-vertical.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(base)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", "100", { timeout: 60_000 });
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("view-panel-signal-split").click();
+  await expect(page.getByTestId("cycle-viewport-lower")).toBeVisible();
+  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 30_000 });
+  const upper = page.getByTestId("cycle-viewport");
+  const lower = page.getByTestId("cycle-viewport-lower");
+  const tops = () => Promise.all([upper.evaluate((element) => element.scrollTop), lower.evaluate((element) => element.scrollTop)]);
+  expect(await upper.evaluate((element) => element.scrollHeight - element.clientHeight), "Upper really has vertical overflow").toBeGreaterThan(200);
+  expect(await lower.evaluate((element) => element.scrollHeight - element.clientHeight), "Lower really has vertical overflow").toBeGreaterThan(200);
+
+  await upper.evaluate((element) => { element.scrollTop = 400; });
+  await expect.poll(async () => (await tops())[0]).toBe(400);
+  expect((await tops())[1], "scrolling Upper must not move Lower").toBe(0);
+  await lower.evaluate((element) => { element.scrollTop = 250; });
+  await expect.poll(async () => (await tops())[1]).toBe(250);
+  expect((await tops())[0], "scrolling Lower must not move Upper").toBe(400);
+
+  // The shared horizontal origin is unaffected by the vertical scrolls.
+  const result = await ticksAndGrid(page);
+  for (const row of [...result.grid, ...result.wave]) expect(Math.abs(row.delta), `${row.cycle} Lower vs Upper X after vertical scrolls`).toBeLessThanOrEqual(0.5);
+});
