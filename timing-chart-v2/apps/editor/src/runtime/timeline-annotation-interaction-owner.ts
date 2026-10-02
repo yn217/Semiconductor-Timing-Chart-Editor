@@ -122,12 +122,12 @@ export class AnnotationInteractionOwner {
       const previewOffsetDelta = annotationOffsetDeltaFromScreen({ x: screenDx, y: dy }, timeAxisMetrics.presentationScale, currentZoom);
       const previewLabelOffset = { x: (annotation.labelOffset?.x ?? 0) + previewOffsetDelta.x, y: (annotation.labelOffset?.y ?? -14) + previewOffsetDelta.y };
       const previewDocument: CanonicalDocument = { ...document, annotations: document.annotations.map((item) => item.id === annotation.id ? { ...item, labelOffset: previewLabelOffset } : item) };
-      this.context.renderer.updateOverlays(projectAnnotationOverlays(previewDocument, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale));
+      this.context.renderer.updateOverlays(projectAnnotationOverlays(previewDocument, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale, undefined, undefined, timeAxisMetrics));
       return;
     }
     if (!drag.field) return;
     const anchor = drag.field !== "verticalSpanStart" && drag.field !== "verticalSpanEnd" ? annotation?.[drag.field as typeof annotationFields[number]] : undefined;
-    const point = resolveAnchorPoint(anchor, document, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale, false, annotationAxisOwnerSignalId(document, this.context.timelineGeometry.geometryMaps) ?? null);
+    const point = resolveAnchorPoint(anchor, document, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale, false, annotationAxisOwnerSignalId(document, this.context.timelineGeometry.geometryMaps) ?? null, timeAxisMetrics);
     if (!annotation || !anchor || !point) return;
     const desired = { x: point.x + screenDx / currentZoom, y: point.y + dy };
     const snap = this.context.isSnapEnabled() ? this.context.timelineGeometry.currentSnapIndex().nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
@@ -135,7 +135,7 @@ export class AnnotationInteractionOwner {
     const previewOffsetDelta = annotationOffsetDeltaFromScreen({ x: screenDx, y: dy }, timeAxisMetrics.presentationScale, currentZoom);
     const previewAnchor = snap ? withSnapOffset(snap.anchor, desired, snap.point, timeAxisMetrics.presentationScale) : withAddedOffset(anchor, previewOffsetDelta.x, previewOffsetDelta.y);
     const previewDocument: CanonicalDocument = { ...document, annotations: document.annotations.map((item) => item.id === annotation.id ? { ...item, [drag.field as AnnotationField]: previewAnchor } : item) };
-    this.context.renderer.updateOverlays(projectAnnotationOverlays(previewDocument, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale));
+    this.context.renderer.updateOverlays(projectAnnotationOverlays(previewDocument, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale, undefined, undefined, timeAxisMetrics));
     if (!snap) {
       this.context.renderer.updateSnapGuide();
       delete this.context.rendererHost.dataset.snapKind;
@@ -189,7 +189,7 @@ export class AnnotationInteractionOwner {
     }
     const field = drag.field ?? annotationFields.find((key) => annotation[key] !== undefined);
     const anchor = field && field !== "verticalSpanStart" && field !== "verticalSpanEnd" ? annotation[field as typeof annotationFields[number]] : undefined;
-    const point = resolveAnchorPoint(anchor, document, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale, false, annotationAxisOwnerSignalId(document, this.context.timelineGeometry.geometryMaps) ?? null);
+    const point = resolveAnchorPoint(anchor, document, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale, false, annotationAxisOwnerSignalId(document, this.context.timelineGeometry.geometryMaps) ?? null, timeAxisMetrics);
     if (!field || !anchor || !point) return;
     const desired = { x: point.x + rawScreenDx / currentZoom, y: point.y + rawScreenDy };
     const snap = this.context.isSnapEnabled() ? this.context.timelineGeometry.currentSnapIndex().nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
@@ -238,7 +238,7 @@ export class AnnotationInteractionOwner {
     // must match).
     if (drag?.field || drag?.label) {
       const timeAxisMetrics = this.context.timelineGeometry.timeAxisMetrics;
-      this.context.renderer.updateOverlays(projectAnnotationOverlays(this.context.getDocument(), this.context.getProjection(), this.context.timelineGeometry.geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale));
+      this.context.renderer.updateOverlays(projectAnnotationOverlays(this.context.getDocument(), this.context.getProjection(), this.context.timelineGeometry.geometryMaps, timeAxisMetrics.mapping, timeAxisMetrics.presentationScale, undefined, undefined, timeAxisMetrics));
     }
     this.#drag = undefined;
     this.context.renderer.updateSnapGuide();

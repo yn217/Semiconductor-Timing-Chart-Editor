@@ -4,6 +4,7 @@ import { allocateMeasurementLanes, findSourceAnchorGeometry, type LocalGeometryM
 import { rowsIntersectingVerticalViewport, type DisplayTimeMapping, type DisplayTimeViewport, type RenderProjection } from "@timing-chart-v2/projection";
 import type { AnnotationOverlayPrimitive } from "@timing-chart-v2/renderer";
 import { annotationAxisOwnerSignalId, resolveAnchorPoint, rowLayoutIndex } from "../resolve-anchor-point.js";
+import type { TimeAxisMetrics } from "./timeline-geometry-owner.js";
 
 export const annotationFields = ["anchor", "start", "end", "from", "to"] as const;
 
@@ -103,7 +104,9 @@ function measurementAnchorLabel(annotation: Pick<Annotation, "label" | "measurem
 
 export type AnnotationOverlayProjectionMetrics = Readonly<{ canonicalCount: number; candidateCount: number; resolvedCount: number; durationMs: number; indexEntriesVisited: number; pinnedInjectedCount: number }>;
 
-export function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1, viewport?: DisplayTimeViewport, onMetrics?: (metrics: AnnotationOverlayProjectionMetrics) => void): AnnotationOverlayPrimitive[] {
+export function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1, viewport?: DisplayTimeViewport, onMetrics?: (metrics: AnnotationOverlayProjectionMetrics) => void, timeAxisMetrics?: TimeAxisMetrics): AnnotationOverlayPrimitive[] {
+  mapping = timeAxisMetrics?.mapping ?? mapping;
+  xScale = timeAxisMetrics?.presentationScale ?? xScale;
   const startedAt = performance.now();
   const rowIds = new Set((viewport
     ? rowsIntersectingVerticalViewport(projection.rowLayout, viewport.rowStart, viewport.rowEnd)
@@ -142,14 +145,14 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
   const measurementSpans = candidates.flatMap((annotation) => {
     if (annotation.type !== "measurement" || !annotation.start || !annotation.end) return [];
     const continuous = annotation.positionMode === "free";
-    const first = resolveAnchorPoint(annotation.start, document, projection, maps, mapping, xScale, continuous, axisOwnerSignalId);
-    const second = resolveAnchorPoint(annotation.end, document, projection, maps, mapping, xScale, continuous, axisOwnerSignalId);
+    const first = resolveAnchorPoint(annotation.start, document, projection, maps, mapping, xScale, continuous, axisOwnerSignalId, timeAxisMetrics);
+    const second = resolveAnchorPoint(annotation.end, document, projection, maps, mapping, xScale, continuous, axisOwnerSignalId, timeAxisMetrics);
     return first && second ? [{ id: annotation.id, firstX: first.x, secondX: second.x, ...(annotation.measurementLayout?.lane === undefined ? {} : { explicitLane: annotation.measurementLayout.lane }) }] : [];
   });
   const measurementLaneById = allocateMeasurementLanes(measurementSpans);
   const overlays = candidates.flatMap((annotation) => {
     const anchors = annotationFields.flatMap((field) => {
-      const point = resolveAnchorPoint(annotation[field], document, projection, maps, mapping, xScale, annotation.positionMode === "free", axisOwnerSignalId);
+      const point = resolveAnchorPoint(annotation[field], document, projection, maps, mapping, xScale, annotation.positionMode === "free", axisOwnerSignalId, timeAxisMetrics);
       const fraction = anchorTransitionFraction(annotation[field]);
       const kind = anchorTransitionKind(annotation[field]);
       return point ? [{ field, ...point, ...(fraction === undefined ? {} : { threshold: fraction }), ...(kind === undefined ? {} : { transitionKind: kind }) }] : [];

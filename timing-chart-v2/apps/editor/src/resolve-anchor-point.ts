@@ -1,6 +1,7 @@
 import { findSourceAnchorGeometry, type LocalGeometryMap, type Point } from "@timing-chart-v2/geometry";
 import { resolveSourcePosition, type DisplayTimeMapping, type RenderProjection } from "@timing-chart-v2/projection";
 import type { CanonicalDocument, SemanticAnchor, SignalId } from "@timing-chart-v2/schema";
+import type { TimeAxisMetrics } from "./runtime/timeline-geometry-owner.js";
 
 // #863: row lookups go through an index keyed by the rowLayout array identity instead of a linear find per anchor.
 const rowIndexByLayout = new WeakMap<RenderProjection["rowLayout"], ReadonlyMap<string, RenderProjection["rowLayout"][number]>>();
@@ -45,7 +46,7 @@ export function rowLayoutIndex(rowLayout: RenderProjection["rowLayout"]): Readon
   return index;
 }
 
-export function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1, continuous = false, resolvedAxisOwnerSignalId?: SignalId | null): Point | undefined {
+export function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1, continuous = false, resolvedAxisOwnerSignalId?: SignalId | null, timeAxisMetrics?: TimeAxisMetrics): Point | undefined {
   if (!anchor) return undefined;
   const axisOwnerSignalId = resolvedAxisOwnerSignalId === undefined ? annotationAxisOwnerSignalId(document, maps) : resolvedAxisOwnerSignalId ?? undefined;
   const signalId = anchor.signalId ?? axisOwnerSignalId;
@@ -68,5 +69,6 @@ export function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document:
       return axisMap ? findSourceAnchorGeometry(axisMap, { ...anchor, signalId: axisOwnerSignalId }, renderedCycle)?.point : undefined;
     })()
     : undefined;
-  return { x: (sharedBoundary?.x ?? local.point.x) * xScale, y: rowY + local.point.y };
+  const authoritativeX = anchor.point === "cycle-start" ? timeAxisMetrics?.sourceBoundaryToContentX(anchor.cycle) : undefined;
+  return { x: authoritativeX ?? (sharedBoundary?.x ?? local.point.x) * xScale, y: rowY + local.point.y };
 }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ImmutableLocalGeometryMap } from "@timing-chart-v2/geometry";
 import { buildDisplayTimeMapping, type DisplayTimeViewport, type RenderProjection } from "@timing-chart-v2/projection";
 import type { SignalId } from "@timing-chart-v2/schema";
+import type { TimeAxisMetrics } from "../../apps/editor/src/runtime/timeline-geometry-owner.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { projectAnnotationOverlays } from "../../apps/editor/src/runtime/annotation-overlays.js";
 import { resolveAnchorPoint } from "../../apps/editor/src/resolve-anchor-point.js";
@@ -114,6 +115,41 @@ describe("annotation visibility and semantic targets", () => {
       { cycle: 2, point: "cycle-start", position: { x: 999, y: 0 } },
     ], [], "source");
     expect(resolveAnchorPoint(anchor, document, projection, new Map([[signal.id, wrongSourceFallback]]), mapping)).toBeUndefined();
+  });
+
+  it("uses the captured TimeAxisMetrics generation for cycle-start overlay X", () => {
+    const source = canonicalFixture();
+    const signal = source.signals[1]!;
+    const document = {
+      ...source,
+      timeGroups: [{ id: "fold" as never, name: "Fold", start: 2, end: 4, presentation: { collapsed: true, foldStyle: "axis-break" as const, foldLabel: "2 cycles" } }],
+      annotations: [{ id: "ann_snapshot" as never, type: "text" as const, label: "Snapshot", visible: true, anchor: { signalId: signal.id, cycle: 4, point: "cycle-start" as const } }],
+    };
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    // The display-keyed map must be queried with the folded snapshot mapping
+    // (source cycle 4 -> display cycle 2), not the stale identity mapping.
+    const geometry = new ImmutableLocalGeometryMap(signal.id, [
+      { cycle: 2, point: "cycle-start", position: { x: 20, y: 0 } },
+    ], [], "display");
+    const metrics = {
+      generation: 42,
+      mapping,
+      presentationScale: 3,
+      sourceBoundaryToContentX: (cycle: number) => 700 + cycle,
+    } as TimeAxisMetrics;
+
+    const overlays = projectAnnotationOverlays(
+      document,
+      projectionFor(signal.id, true),
+      new Map([[signal.id, geometry]]),
+      buildDisplayTimeMapping(document.timeline, []), // deliberately stale caller mapping
+      0.5, // deliberately stale caller scale
+      undefined,
+      undefined,
+      metrics,
+    );
+
+    expect(overlays[0]?.anchors[0]?.x).toBe(704);
   });
 
   it.each([0, 1])("keeps Ghost Trace source samples aligned across full display and bounded source geometry after a fold (offset %i)", (offset) => {
