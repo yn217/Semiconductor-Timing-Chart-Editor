@@ -6,7 +6,7 @@ function context(): TimelineViewportRuntimeContext {
   let scroll = { left: 0, top: 0 };
   return {
     dom: Object.fromEntries(["viewportRef", "waveformRef", "rulerRef", "gridRef", "overlayRef", "rangeBandRef", "playheadRef"].map((key) => [key, { current: null }])) as TimelineViewportRuntimeContext["dom"],
-    geometry: { getDisplayTimeMapping: () => ({}), getTimeAxisGeometry: () => ({}), getLocalGeometryMap: () => ({}), sourceCycleToLocalX: (cycle) => cycle * 10, sourceBoundaryToLocalX: (_document, cycle) => cycle * 10, localXToScreenX: (x) => x },
+    geometry: { getDisplayTimeMapping: () => ({}), getTimeAxisMetrics: () => ({ zoom }), getTimeAxisGeometry: () => ({}), getLocalGeometryMap: () => ({}), sourceCycleToLocalX: (cycle) => cycle * 10, sourceBoundaryToLocalX: (_document, cycle) => cycle * 10, requestSourceCycle: () => undefined, clearRequestedSourceCycle: () => undefined, localXToScreenX: (x) => x },
     viewport: { getMetrics: () => ({ width: 1000, leftInset: 100 }), getScrollState: () => scroll, setScrollState: (next) => { scroll = { ...scroll, ...next }; }, getZoom: () => zoom, setZoom: (next) => { zoom = next; } },
     document: { getSnapshot: () => ({}), getCanonicalRevision: () => 1, getDocumentEpoch: () => 1 },
     render: { requestRender: vi.fn(), requestOverlayRefresh: vi.fn(), waitForRendererIdle: async () => undefined },
@@ -72,5 +72,19 @@ describe("TimelineViewportRuntime", () => {
 
     expect(runtimeContext.viewport.setScrollState).not.toHaveBeenCalled();
     expect(runtimeContext.geometry.clearRequestedSourceCycle).not.toHaveBeenCalled();
+  });
+
+  it("uses the shared TimeAxisMetrics zoom for bookmark navigation", () => {
+    const runtimeContext = context();
+    runtimeContext.geometry.sourceBoundaryToLocalX = (_document, cycle) => cycle * 30;
+    runtimeContext.geometry.getTimeAxisMetrics = () => ({ zoom: 2 });
+    const setScrollState = vi.fn();
+    runtimeContext.viewport.setScrollState = setScrollState;
+    const runtime = createTimelineViewportRuntime(runtimeContext);
+    runtime.attach();
+
+    runtime.navigateToCycle(10);
+
+    expect(setScrollState).toHaveBeenCalledWith({ left: 250 });
   });
 });

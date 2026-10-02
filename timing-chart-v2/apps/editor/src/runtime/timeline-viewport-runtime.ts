@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import type { TimeAxisMetrics } from "./timeline-geometry-owner.js";
 
 export type TimelineViewportRuntimeContext = {
   readonly dom: {
@@ -12,6 +13,7 @@ export type TimelineViewportRuntimeContext = {
   };
   readonly geometry: {
     readonly getDisplayTimeMapping: () => unknown;
+    readonly getTimeAxisMetrics: () => Pick<TimeAxisMetrics, "zoom">;
     readonly getTimeAxisGeometry: () => unknown;
     readonly getLocalGeometryMap: () => unknown;
     readonly sourceCycleToLocalX: (cycle: number) => number | undefined;
@@ -176,7 +178,8 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
           else globalThis.setTimeout(retry, 0);
           return;
         }
-        context.viewport.setScrollState({ left: Math.max(0, Math.round(context.geometry.localXToScreenX(localX) * context.viewport.getZoom() - context.viewport.getMetrics().width * 0.35)) });
+        const { zoom } = context.geometry.getTimeAxisMetrics();
+        context.viewport.setScrollState({ left: Math.max(0, Math.round(context.geometry.localXToScreenX(localX) * zoom - context.viewport.getMetrics().width * 0.35)) });
         context.geometry.clearRequestedSourceCycle();
         render("navigate-cycle");
       };

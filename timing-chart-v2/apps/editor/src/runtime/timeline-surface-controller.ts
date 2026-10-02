@@ -429,6 +429,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       dom: { viewportRef: { current: viewportElement }, waveformRef: { current: rendererHost }, rulerRef: { current: rulerElement }, gridRef: { current: gridElement }, overlayRef: { current: rendererHost.querySelector<HTMLElement>("[data-role='annotation-overlay-surface']") }, rangeBandRef: { current: viewportElement.querySelector<HTMLElement>("[data-role='range-selection-band']") }, playheadRef: { current: rulerElement.querySelector<HTMLElement>("[data-role='playhead']") } },
       geometry: {
         getDisplayTimeMapping: () => timelineGeometry.displayMapping,
+        getTimeAxisMetrics: () => timelineGeometry.timeAxisMetrics,
         getTimeAxisGeometry: () => timelineGeometry.timeAxis.geometry,
         getLocalGeometryMap: () => geometryMaps,
         sourceCycleToLocalX: (cycle) => timelineGeometry.sourceBoundaryToLocalX(sessionController.snapshot().document, cycle),
