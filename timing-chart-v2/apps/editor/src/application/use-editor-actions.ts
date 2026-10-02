@@ -101,7 +101,7 @@ export interface EditorActions {
   readonly selectTransaction: (id: TransactionId, additive?: boolean) => void;
   readonly selectTransactions: (ids: ReadonlySet<TransactionId>, primary?: TransactionId) => void;
   readonly toggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => CommandResult;
-  readonly createTransaction: () => void;
+  readonly createTransaction: (groupId?: TransactionGroup["id"]) => void;
   readonly createTransactionGroup: () => void;
   readonly renameTransactionGroup: (groupId: TransactionGroup["id"], name: string) => void;
   readonly duplicateAnnotation: (annotation: Annotation) => void;
@@ -262,12 +262,12 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     selectedBookmarkId,
   });
   const { deleteBottomSignal, deleteBottomAnnotation, deleteBottomTransaction, toggleTransactionSignal, toggleBottomPin } = bottomActions;
-  const createTransaction = () => {
+  const createTransaction = (groupId?: TransactionGroup["id"]) => {
     const id = nextEntityId("transaction", input.document) as TransactionId;
     const result = input.commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", {
       id: input.nextCommandId("tree_transaction_create"),
       type: "transaction.create",
-      transaction: { id, name: `Transaction ${input.document.transactions.length + 1}`, start: 0, end: Math.min(4, input.document.timeline.cycleCount), laneId: "lane_0" },
+      transaction: { id, name: `Transaction ${input.document.transactions.length + 1}`, start: 0, end: Math.min(4, input.document.timeline.cycleCount), laneId: "lane_0", ...(groupId === undefined ? {} : { groupId }) },
     });
     if (result.ok) input.selection.selectTransaction(id);
   };

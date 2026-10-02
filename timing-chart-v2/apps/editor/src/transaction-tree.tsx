@@ -71,6 +71,7 @@ export function TransactionTree({
   onMoveToNewGroup,
   onContextMenu,
   onCreateTransaction,
+  onCreateTransactionInGroup,
   onFocusTransaction,
   onClearSelection,
   onDelete,
@@ -108,6 +109,7 @@ export function TransactionTree({
     transactionId: TransactionId,
   ) => void;
   readonly onCreateTransaction?: () => void;
+  readonly onCreateTransactionInGroup?: (groupId: TransactionGroup["id"]) => void;
   readonly onFocusTransaction?: (transactionId: TransactionId) => void;
   readonly onClearSelection?: () => void;
   readonly onDelete?: () => void;
@@ -487,7 +489,7 @@ export function TransactionTree({
   const menuItems: readonly TransactionTreeMenuItem[] = selectedMenuGroup
     ? [
         { label: "Rename Group", movesFocus: true, run: () => rename(selectedMenuGroup) },
-        { label: "New Transaction", run: () => onCreateTransaction?.() },
+        { label: "New Transaction", run: () => (onCreateTransactionInGroup ? onCreateTransactionInGroup(selectedMenuGroup.id) : onCreateTransaction?.()) },
         { label: "Select Children", run: () => groupTransactions(selectedMenuGroup.id).forEach((transaction, index) => onSelect(transaction.id, index > 0)) },
         ...(onDeleteGroup ? [{ label: "Delete Group", run: () => onDeleteGroup(selectedMenuGroup.id) }] : []),
         ...(onSetGroupVisibility ? [
