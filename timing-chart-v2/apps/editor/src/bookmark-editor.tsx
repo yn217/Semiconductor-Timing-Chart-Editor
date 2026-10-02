@@ -5,12 +5,14 @@ import type { EditorSurfaceCommandController } from "./application/editor-surfac
 import { nextEntityId } from "./entity-id.js";
 import { findAdjacentBookmark } from "./runtime/bookmark-navigation.js";
 import { DraftStatus } from "./draft-status.js";
+import { reconcileExternalDraftFields } from "./runtime/external-draft-reconciliation.js";
 
 // #772 (Failure B): an unapplied Bookmark Name/Cycle/Comment draft is kept across a row switch -- BookmarkEditor remounts per selected
 // Bookmark (its React `key` includes the id), so a per-id module store, not component state, is what survives that remount. Mirrors
 // #763's Transaction Phase draft store: one shared owner, dropped on Apply, on a stale/deleted Bookmark, or on document replacement.
 type BookmarkDraftFields = Readonly<{ name: string; start: number; comment: string }>;
-const bookmarkDrafts = new Map<string, { readonly base: BookmarkDraftFields; readonly draft: BookmarkDraftFields }>();
+type BookmarkDraft = { readonly base: BookmarkDraftFields; readonly draft: BookmarkDraftFields; readonly conflicts: readonly (keyof BookmarkDraftFields)[] };
+const bookmarkDrafts = new Map<string, BookmarkDraft>();
 const bookmarkDraftListeners = new Set<() => void>();
 let bookmarkDraftVersion = 0;
 const notifyBookmarkDrafts = () => { bookmarkDraftVersion += 1; for (const listener of [...bookmarkDraftListeners]) listener(); };
@@ -21,13 +23,17 @@ function pendingBookmarkDraft(bookmark: Bookmark | undefined): BookmarkDraftFiel
   if (!bookmark) return undefined;
   const entry = bookmarkDrafts.get(bookmark.id);
   if (!entry) return undefined;
-  const base = fieldsOf(bookmark);
-  if (!fieldsEqual(entry.base, base)) { bookmarkDrafts.delete(bookmark.id); return undefined; }
-  return fieldsEqual(entry.draft, base) ? undefined : entry.draft;
+  const latest = fieldsOf(bookmark);
+  const resolution = reconcileExternalDraftFields(entry.base, entry.draft, latest);
+  const next = { base: resolution.base, draft: resolution.value, conflicts: resolution.conflicts };
+  if (fieldsEqual(next.draft, latest) && next.conflicts.length === 0) { bookmarkDrafts.delete(bookmark.id); return undefined; }
+  bookmarkDrafts.set(bookmark.id, next);
+  return next.draft;
 }
-function setBookmarkDraft(bookmark: Bookmark, draft: BookmarkDraftFields): void {
-  const base = fieldsOf(bookmark);
-  if (fieldsEqual(draft, base)) bookmarkDrafts.delete(bookmark.id); else bookmarkDrafts.set(bookmark.id, { base, draft });
+function setBookmarkDraft(bookmark: Bookmark, draft: BookmarkDraftFields, previous?: BookmarkDraft): void {
+  const base = previous?.base ?? fieldsOf(bookmark);
+  const conflicts = previous?.conflicts ?? [];
+  if (fieldsEqual(draft, base) && conflicts.length === 0) bookmarkDrafts.delete(bookmark.id); else bookmarkDrafts.set(bookmark.id, { base, draft, conflicts });
   notifyBookmarkDrafts();
 }
 export function clearBookmarkDraft(bookmarkId: string): void { if (bookmarkDrafts.delete(bookmarkId)) notifyBookmarkDrafts(); }
@@ -37,7 +43,12 @@ export function retainedBookmarkDrafts(bookmarks: readonly Bookmark[], exceptId:
   const kept: { id: string; name: string }[] = [];
   for (const [id, entry] of [...bookmarkDrafts]) {
     const bookmark = bookmarks.find((item) => item.id === id);
-    if (!bookmark || !fieldsEqual(entry.base, fieldsOf(bookmark))) { bookmarkDrafts.delete(id); notifyBookmarkDrafts(); continue; }
+    if (!bookmark) { bookmarkDrafts.delete(id); notifyBookmarkDrafts(); continue; }
+    const latest = fieldsOf(bookmark);
+    const resolution = reconcileExternalDraftFields(entry.base, entry.draft, latest);
+    const reconciled = { base: resolution.base, draft: resolution.value, conflicts: resolution.conflicts };
+    if (fieldsEqual(reconciled.draft, latest) && reconciled.conflicts.length === 0) { bookmarkDrafts.delete(id); notifyBookmarkDrafts(); continue; }
+    if (!fieldsEqual(reconciled.base, entry.base) || !fieldsEqual(reconciled.draft, entry.draft) || reconciled.conflicts.join() !== entry.conflicts.join()) { bookmarkDrafts.set(id, reconciled); notifyBookmarkDrafts(); }
     if (id === exceptId) continue;
     kept.push({ id, name: bookmark.name });
   }
@@ -57,6 +68,7 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
   // #772: this component remounts per selected Bookmark (see the `key` at its call site), so a retained draft is seeded here from the
   // shared store rather than from a `useEffect` that would never see a stale, already-unmounted instance again.
   const retained = pendingBookmarkDraft(bookmark);
+  const retainedEntry = bookmark ? bookmarkDrafts.get(bookmark.id) : undefined;
   const [editName, setEditName] = useState(retained?.name ?? bookmark?.name ?? "");
   const [editStart, setEditStart] = useState(retained?.start ?? bookmark?.start ?? 0);
   const [editComment, setEditComment] = useState(retained?.comment ?? bookmark?.comment ?? "");
@@ -65,18 +77,30 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
   // an earlier selection. Only a remount with an existing draft should use the
   // "kept from earlier" announcement.
   const [wasRetained] = useState(() => retained !== undefined);
+  const [externalConflict, setExternalConflict] = useState<readonly (keyof BookmarkDraftFields)[]>(retainedEntry?.conflicts ?? []);
   useSyncExternalStore(subscribeBookmarkDrafts, () => bookmarkDraftVersion, () => 0);
   const otherDrafts = retainedBookmarkDrafts(document.bookmarks, bookmark?.id);
-  const updateDraft = (next: BookmarkDraftFields) => { if (bookmark) setBookmarkDraft(bookmark, next); };
+  const updateDraft = (next: BookmarkDraftFields) => { if (bookmark) setBookmarkDraft(bookmark, next, bookmarkDrafts.get(bookmark.id)); };
   // Re-sync local fields to the committed Bookmark when it changes WITHOUT a remount (Undo/Redo/an external command while the same
   // Bookmark stays selected). Skips its very first run so it never overwrites the retained draft this component just seeded from.
   const mounted = useRef(false);
   useEffect(() => {
     if (!mounted.current) { mounted.current = true; return; }
-    setEditName(bookmark?.name ?? "");
-    setEditStart(bookmark?.start ?? 0);
-    setEditComment(bookmark?.comment ?? "");
-    if (bookmark) clearBookmarkDraft(bookmark.id);
+    if (!bookmark) return;
+    const latest = fieldsOf(bookmark);
+    const current = bookmarkDrafts.get(bookmark.id);
+    if (!current) {
+      setEditName(latest.name); setEditStart(latest.start); setEditComment(latest.comment); setExternalConflict([]);
+      return;
+    }
+    // The shared draft store can already have been reconciled while this render
+    // was preparing the retained-draft list. Use that authoritative value,
+    // rather than React state captured before the same Canonical update.
+    const resolution = reconcileExternalDraftFields(current.base, current.draft, latest);
+    setEditName(resolution.value.name); setEditStart(resolution.value.start); setEditComment(resolution.value.comment);
+    setExternalConflict(resolution.conflicts);
+    if (fieldsEqual(resolution.value, latest) && resolution.conflicts.length === 0) clearBookmarkDraft(bookmark.id);
+    else bookmarkDrafts.set(bookmark.id, { base: resolution.base, draft: resolution.value, conflicts: resolution.conflicts });
   }, [bookmark?.name, bookmark?.start, bookmark?.comment]);
   const ordered = [...document.bookmarks].sort((left, right) => left.start - right.start);
   const duplicate = () => {
@@ -103,6 +127,9 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
   // Apply when the draft is byte-for-byte identical to the committed
   // Bookmark, so a no-op Apply can't manufacture an empty History entry.
   const hasChanges = bookmark !== undefined && (editName !== bookmark.name || editStart !== bookmark.start || editComment !== (bookmark.comment ?? ""));
+  const canonicalFields = bookmark ? fieldsOf(bookmark) : undefined;
+  const reloadLatest = () => { if (!bookmark || !canonicalFields) return; setEditName(canonicalFields.name); setEditStart(canonicalFields.start); setEditComment(canonicalFields.comment); setExternalConflict([]); clearBookmarkDraft(bookmark.id); };
+  const keepDraft = () => { if (!bookmark || !canonicalFields) return; const draft = { name: editName, start: editStart, comment: editComment }; setExternalConflict([]); bookmarkDrafts.set(bookmark.id, { base: canonicalFields, draft, conflicts: [] }); notifyBookmarkDrafts(); };
   const containingGroups = bookmark === undefined ? [] : document.timeGroups.filter((group) => group.presentation?.collapsed && bookmark.start >= group.start && bookmark.start < group.end);
   const collapsedGroupNames = (start: number) => document.timeGroups.filter((group) => group.presentation?.collapsed && start >= group.start && start < group.end).map((group) => group.name);
   const expandAndJump = () => { for (const group of containingGroups) commands.updateTimeGroupPresentation(group.id, { ...(group.presentation ?? {}), collapsed: false, foldStyle: "none", foldLabel: group.presentation?.foldLabel || group.name }); onReveal(bookmark!.start); };
@@ -115,16 +142,17 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
     {bookmark
       ? <>
           {otherDrafts.length > 0 && <p className="transaction-retained-drafts" role="status" data-testid="bookmark-retained-drafts">Unapplied Bookmark drafts are kept for: {otherDrafts.map((item) => <span key={item.id} className="transaction-retained-draft" data-bookmark-id={item.id}><button type="button" aria-label={`Discard the unapplied draft for ${item.name}`} onClick={() => clearBookmarkDraft(item.id)}>{item.name} Discard</button></span>)}</p>}
-          <form id="bookmark-properties-form" onSubmit={(event) => { event.preventDefault(); if (!hasChanges) return; commands.updateBookmark({ bookmarkId: bookmark.id, name: editName.trim() || "Bookmark", start: editStart, comment: editComment }); }}>
+          <form id="bookmark-properties-form" onSubmit={(event) => { event.preventDefault(); if (!hasChanges || externalConflict.length > 0) return; const result = commands.updateBookmark({ bookmarkId: bookmark.id, name: editName.trim() || "Bookmark", start: editStart, comment: editComment }); if (result.ok) clearBookmarkDraft(bookmark.id); }}>
             <label>Name<input aria-label="Bottom Bookmark name" value={editName} onChange={(event) => { setEditName(event.target.value); updateDraft({ name: event.target.value, start: editStart, comment: editComment }); }} /></label>
             <label>Cycle<input aria-label="Bottom Bookmark cycle" type="number" min="0" max={document.timeline.cycleCount - 1} value={editStart} onChange={(event) => { const value = Number(event.target.value); setEditStart(value); updateDraft({ name: editName, start: value, comment: editComment }); }} /></label>
             <label>Comment<input aria-label="Bottom Bookmark comment" value={editComment} onChange={(event) => { setEditComment(event.target.value); updateDraft({ name: editName, start: editStart, comment: event.target.value }); }} /></label>
           </form>
+          {externalConflict.length > 0 && <div role="alert" data-testid="bottom-bookmark-draft-conflict"><span>Bookmark changed elsewhere ({externalConflict.join(", " )}). Reload the latest values or keep your draft before applying.</span><div><button type="button" onClick={reloadLatest}>Reload latest</button><button type="button" onClick={keepDraft}>Keep my draft</button></div></div>}
           <div className="bottom-sticky-actions">
             {hasChanges && <DraftStatus testId="bottom-bookmark-unapplied" {...(wasRetained ? { label: "Unapplied changes (kept from earlier)" } : {})} />}
             <span className="bottom-sticky-buttons">
               <button type="button" data-testid="cancel-bottom-bookmark" onClick={() => { if (bookmark) { clearBookmarkDraft(bookmark.id); setEditName(bookmark.name); setEditStart(bookmark.start); setEditComment(bookmark.comment ?? ""); } onCancel(); }}>Cancel</button>
-              <button type="submit" form="bookmark-properties-form" data-testid="apply-bottom-bookmark" disabled={!hasChanges}>Apply Changes</button>
+              <button type="submit" form="bookmark-properties-form" data-testid="apply-bottom-bookmark" disabled={!hasChanges || externalConflict.length > 0}>Apply Changes</button>
             </span>
           </div>
         </>
