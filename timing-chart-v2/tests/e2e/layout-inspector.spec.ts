@@ -163,6 +163,57 @@ test("keeps representative APB protocol labels inset in the frozen column", asyn
   }
 });
 
+test("preserves APB label policy and frozen geometry through Save/Open for every policy", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(resolve("samples/golden-protocol/timing_chart_sample_pack/samples/01_apb_register_access.tcd.json"));
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+
+  const layout = page.getByTestId("inspector-layout-editor");
+  const signalNames = [["psel", "PSEL"], ["penable", "PENABLE"], ["pslverr", "PSLVERR"]] as const;
+  for (const alignment of ["left", "center", "right"] as const) {
+    for (const overflow of ["ellipsis", "expand", "wrap"] as const) {
+      await layout.getByLabel("Inspector role column width").fill("74");
+      await layout.getByLabel("Inspector signal name width").fill("180");
+      await layout.getByLabel("Inspector signal name alignment").selectOption(alignment);
+      await layout.getByLabel("Inspector signal name overflow").selectOption(overflow);
+      await layout.getByTestId("apply-inspector-layout").click();
+      await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+      const download = page.waitForEvent("download");
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+      await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+      const savedPath = await (await download).path();
+      expect(savedPath, `${alignment}/${overflow} Save output`).toBeTruthy();
+      await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+      await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+      await expect(layout.getByLabel("Inspector role column width")).toHaveValue("74");
+      await expect(layout.getByLabel("Inspector signal name width")).toHaveValue("180");
+      await expect(layout.getByLabel("Inspector signal name alignment")).toHaveValue(alignment);
+      await expect(layout.getByLabel("Inspector signal name overflow")).toHaveValue(overflow);
+      await expect(page.locator("main.editor-shell")).toHaveAttribute("data-layout-overflow", overflow);
+      for (const [rowId, expectedName] of signalNames) {
+        const label = host.locator(`[data-role='frozen-row'][data-row-id='${rowId}'] [data-role='frozen-signal-name']`);
+        await expect(label).toHaveText(expectedName);
+        const geometry = await label.evaluate((element) => {
+          const range = element.ownerDocument.createRange();
+          range.selectNodeContents(element);
+          const textRect = range.getBoundingClientRect();
+          const frozenRect = element.closest("[data-role='frozen-label-rows']")!.getBoundingClientRect();
+          return { textLeft: textRect.left, textRight: textRect.right, frozenLeft: frozenRect.left, frozenRight: frozenRect.right };
+        });
+        expect(geometry.textLeft, `${alignment}/${overflow}/${expectedName} left boundary`).toBeGreaterThanOrEqual(geometry.frozenLeft + 4);
+        expect(geometry.textRight, `${alignment}/${overflow}/${expectedName} right boundary`).toBeLessThanOrEqual(geometry.frozenRight - 4);
+      }
+      await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+    }
+  }
+});
+
 test("preserves canonical Signal names and safe frozen-column geometry across alignment and overflow policies", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/");
