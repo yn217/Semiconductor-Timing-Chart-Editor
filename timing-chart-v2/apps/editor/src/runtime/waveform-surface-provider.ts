@@ -93,7 +93,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const preparedArtifacts = new Set<RenderedWave>();
       try {
       const batchStartedAt = globalThis.performance.now();
-      const timeAxisMetrics = context.getTimeAxisMetrics?.();
+      let batchTimeAxisMetrics: TimeAxisMetrics | undefined;
+      let presentationSnapshotCaptured = false;
       const primaryOpenBatch = context.isPrimaryPresentationOpening?.() === true;
       let renderAwaitMs = 0;
       let renderCount = 0;
@@ -288,10 +289,16 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           }
         }
       }
-      const pxPerDisplayCycle = timeAxisMetrics?.pxPerDisplayCycle ?? context.getWaveWidthPxPerDisplayCycle?.();
-      const waveOriginPx = timeAxisMetrics?.screenOriginX ?? context.getWaveOriginPx?.() ?? 0;
-      const presentationScale = timeAxisMetrics?.presentationScale ?? context.getPresentationScale?.() ?? 1;
       const applyOwnerPlacement = (item: PreparedItem): void => {
+        // Capture after reference geometry has synchronously refreshed the ruler,
+        // then keep one immutable generation for every owner in this batch.
+        if (!presentationSnapshotCaptured) {
+          batchTimeAxisMetrics = context.getTimeAxisMetrics?.();
+          presentationSnapshotCaptured = true;
+        }
+        const pxPerDisplayCycle = batchTimeAxisMetrics?.pxPerDisplayCycle ?? context.getWaveWidthPxPerDisplayCycle?.();
+        const waveOriginPx = batchTimeAxisMetrics?.screenOriginX ?? context.getWaveOriginPx?.() ?? 0;
+        const presentationScale = batchTimeAxisMetrics?.presentationScale ?? context.getPresentationScale?.() ?? 1;
         if (pxPerDisplayCycle !== undefined && item.rendererStart !== undefined && item.rendererEnd !== undefined && item.rendererEnd > item.rendererStart) {
           const placement = waveOwnerPlacement({ displayStart: item.rendererStart, displayEnd: item.rendererEnd, pxPerDisplayCycle, waveOriginPx, presentationScale });
           item.request.owner.style.width = `${placement.width}px`;
