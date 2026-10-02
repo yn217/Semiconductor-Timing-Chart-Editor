@@ -987,6 +987,37 @@ describe("deterministic document export", () => {
     expect(fullWave.wave.length).toBeGreaterThan(2_000);
   });
 
+  it("evaluates bounded folded Clock start and suppressed pulse ordinals in source time", () => {
+    const base = canonicalFixture();
+    const clock = base.signals[0]!;
+    const document: CanonicalDocument = {
+      ...base,
+      timeline: { ...base.timeline, end: 200, cycleCount: 200 },
+      signalGroups: [{ ...base.signalGroups[0]!, rows: [clock.id] }],
+      signals: [{ ...clock, generator: { ...clock.generator, start: 108, period: 4, suppressedPeriods: [1] } }],
+      timeGroups: [{ id: "tg_clock_source_start" as TimeGroupId, name: "Earlier fold", start: 20, end: 28, presentation: { collapsed: true } }],
+    };
+
+    const scene = buildExportScene(document, { format: "svg", scope: "selected-range", range: { start: 104, end: 120 }, foldPolicy: "respect" });
+    const wave = JSON.parse(scene.waveforms[0]!.waveJson) as { wave: string; displayWindow: { start: number; end: number } };
+
+    // Display 100 maps to source 108, where this delayed Clock starts.
+    expect(wave.displayWindow).toEqual({ start: 96, end: 112 });
+    expect(wave.wave).toBe("0p0p");
+
+    const foldedPulseDocument: CanonicalDocument = {
+      ...document,
+      signals: [{ ...clock, generator: { ...clock.generator, start: 96, period: 4, suppressedPeriods: [1] } }],
+      timeGroups: [{ id: "tg_clock_hidden_suppression" as TimeGroupId, name: "Hidden pulse", start: 100, end: 108, presentation: { collapsed: true } }],
+    };
+    const afterHiddenPulse = buildExportScene(foldedPulseDocument, { format: "svg", scope: "selected-range", range: { start: 96, end: 120 }, foldPolicy: "respect" });
+    const foldedWave = JSON.parse(afterHiddenPulse.waveforms[0]!.waveJson) as { wave: string };
+
+    // Source pulse 1 (cycle 100) is hidden in the fold; it must not suppress
+    // the visible source pulse 3 (cycle 108) that resumes at display cycle 100.
+    expect(foldedWave.wave).toBe("p...");
+  });
+
   it("bounds folded signal-start Clock counters while preserving global ordinals", () => {
     const base = canonicalFixture();
     const clock = base.signals[0]!;

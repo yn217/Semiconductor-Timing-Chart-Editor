@@ -282,8 +282,11 @@ function boundedFoldedClockWaveJson(signal: ClockSignal, mapping: DisplayTimeMap
       const normalizedEnable = String(rawEnable).toLowerCase();
       const enabled = ["1", "true", "high"].includes(normalizedEnable);
       if (!enabled && !["0", "false", "low"].includes(normalizedEnable)) return undefined;
-      const pulseSlot = displayCycle < signal.generator.start ? -1 : Math.round((displayCycle - signal.generator.start) / period);
-      const active = displayCycle >= signal.generator.start && enabled && !suppressed.has(pulseSlot);
+      // Generator start and suppressedPeriods are canonical source-cycle
+      // semantics. A folded display cycle can have a different ordinal even
+      // when its source/display offset preserves the waveform period phase.
+      const pulseSlot = sourceCycle < signal.generator.start ? -1 : Math.round((sourceCycle - signal.generator.start) / period);
+      const active = sourceCycle >= signal.generator.start && enabled && !suppressed.has(pulseSlot);
       const token = active ? clockToken : staticToken;
       wave.push(token === previous ? "." : token);
       previous = token;
