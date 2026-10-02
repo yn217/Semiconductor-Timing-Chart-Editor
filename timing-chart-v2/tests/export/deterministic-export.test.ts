@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildExportScene, DeterministicExportService, renderExportSvg } from "@timing-chart-v2/export";
+import { buildDisplayTimeMapping } from "@timing-chart-v2/projection";
 import { MAX_MEASUREMENT_LANE, type AnnotationId, type BookmarkId, type CanonicalDocument, type ClockSignal, type CommentRow, type GroupId, type SignalId, type TimeGroupId, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -1016,6 +1017,49 @@ describe("deterministic document export", () => {
     // Source pulse 1 (cycle 100) is hidden in the fold; it must not suppress
     // the visible source pulse 3 (cycle 108) that resumes at display cycle 100.
     expect(foldedWave.wave).toBe("p...");
+  });
+
+  it("preserves source pulse ordinals across multiple folds with enable and suppression", () => {
+    const base = canonicalFixture();
+    const clock = base.signals[0]!;
+    const document: CanonicalDocument = {
+      ...base,
+      timeline: { ...base.timeline, end: 200, cycleCount: 200 },
+      signalGroups: [{ ...base.signalGroups[0]!, rows: [clock.id] }],
+      signals: [{
+        ...clock,
+        generator: { ...clock.generator, start: 108, period: 4, suppressedPeriods: [1, 5, 7] },
+        enable: [{ start: 108, value: 1 }, { start: 120, value: 0 }, { start: 132, value: 1 }],
+      }],
+      timeGroups: [
+        { id: "tg_clock_before_start_multi" as TimeGroupId, name: "Before start", start: 20, end: 28, presentation: { collapsed: true } },
+        { id: "tg_clock_hidden_pulse_multi" as TimeGroupId, name: "Hidden pulse", start: 124, end: 132, presentation: { collapsed: true } },
+      ],
+    };
+    const sourceRange = { start: 104, end: 140 };
+    const scene = buildExportScene(document, { format: "svg", scope: "selected-range", range: sourceRange, foldPolicy: "respect" });
+    const wave = JSON.parse(scene.waveforms[0]!.waveJson) as { wave: string; displayWindow?: { start: number; end: number } };
+
+    // Build the oracle from canonical source cycles: display slots only choose
+    // which source pulses are visible; start, enable, and suppression remain
+    // source-domain properties.
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    const expectedTokens: string[] = [];
+    let previousToken: string | undefined;
+    for (let display = 96; display < 124; display += 4) {
+      const source = mapping.displayToSource(display)!;
+      const enable = [...document.signals[0]!.enable!].reverse().find((change) => change.start <= source)?.value ?? 1;
+      const generator = document.signals[0]!.generator;
+      const ordinal = source < generator.start ? -1 : (source - generator.start) / generator.period;
+      const active = source >= generator.start && Boolean(enable) && !generator.suppressedPeriods?.includes(ordinal);
+      const token = active ? (generator.polarity === "positive" ? "p" : "n") : String(generator.initial);
+      expectedTokens.push(token === previousToken ? "." : token);
+      previousToken = token;
+    }
+
+    expect(wave.displayWindow).toEqual({ start: 96, end: 124 });
+    expect(wave.wave).toBe(expectedTokens.join(""));
+    expect(wave.wave).toBe("0p0p0p0");
   });
 
   it("bounds folded signal-start Clock counters while preserving global ordinals", () => {
