@@ -468,6 +468,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       if (reason === "navigate-cycle") renderer.update(projection);
       const document = sessionController.snapshot().document;
       if (reason === "ruler") rulerBuilds += 1;
+      const scaleBefore = timelineGeometry.presentationScale;
       const presentation = refreshTimelinePresentation({
         reason,
         document,
@@ -482,7 +483,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         mappingCache,
         metricsOwner: viewMetricsOwner,
         currentZoom: timelineNavigation.getZoom(),
-        previousScale: timelineGeometry.presentationScale,
+        previousScale: scaleBefore,
         rulerInitialized,
         timeAxis: timelineGeometry.timeAxis,
         totalHeight: projection.totalHeight,
@@ -491,9 +492,9 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         onPlayhead: () => refreshPlayhead.current(),
         onRange: () => refreshRangeSelectionBand.current(),
         onResize: () => applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() }),
+        publishTimeAxisMetrics: (timeAxis, scale, width, origin) => timelineGeometry.updatePresentation(timeAxis, scale, width, origin),
+        getTimeAxisMetrics: () => timelineGeometry.timeAxisMetrics,
       });
-      const scaleBefore = timelineGeometry.presentationScale;
-      timelineGeometry.updatePresentation(presentation.timeAxis, presentation.screenGeometryScale, presentation.waveWidthPxPerDisplayCycle, presentation.waveOriginPx);
       // #750: a changed geometry scale (cyclesPerTC compression on/off or a new factor) moves every Transaction X; bars/Phases/Bookmarks
       // are memoized on the presentation revision, so publish it.
       if (Math.abs(timelineGeometry.presentationScale - scaleBefore) > 1e-9) { setTransactionPresentationRevision((value) => value + 1); requestAnimationFrame(() => timelineNavigation.setZoom(timelineNavigation.getZoom())); }
@@ -509,7 +510,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       // grid DOM outright.
       if (reason === "grid" && gridLayerLower.current && signalSplitRuntimeRef.current) {
         const metrics = viewMetricsOwner.snapshot();
-        refreshGridPresentation(gridLayerLower.current, document, geometryMaps, mappingCache, gridEnabledRef.current, signalSplitRuntimeRef.current.getTotalHeight(), globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, presentation.screenGeometryScale, transactionCyclesPerTcRef.current);
+        refreshGridPresentation(gridLayerLower.current, document, geometryMaps, mappingCache, gridEnabledRef.current, signalSplitRuntimeRef.current.getTotalHeight(), globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, presentation.screenGeometryScale, transactionCyclesPerTcRef.current, timelineGeometry.timeAxisMetrics);
       }
     };
     timelineRuntime.attach();

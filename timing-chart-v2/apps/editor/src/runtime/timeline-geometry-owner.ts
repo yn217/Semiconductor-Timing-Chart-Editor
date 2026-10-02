@@ -109,7 +109,7 @@ export class TimelineGeometryOwner {
    * or every owner ends up offset from the ruler by that fixed margin (#620). */
   get waveOriginPx(): number | undefined { return this.#timeAxisMetrics.screenOriginX; }
 
-  updatePresentation(timeAxis: TimeAxisGeometry, presentationScale: number, waveWidthPxPerDisplayCycle?: number, waveOriginPx?: number): void {
+  updatePresentation(timeAxis: TimeAxisGeometry, presentationScale: number, waveWidthPxPerDisplayCycle?: number, waveOriginPx?: number): TimeAxisMetrics {
     const previous = this.#timeAxisMetrics;
     const next = this.#createTimeAxisMetrics(
       timeAxis,
@@ -124,6 +124,7 @@ export class TimelineGeometryOwner {
       || previous.mapping !== next.mapping;
     this.#timeAxisMetrics = next;
     if (geometryChanged) this.invalidateSnapIndex();
+    return next;
   }
 
   reset(): void {
