@@ -44,6 +44,10 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     }
     const withInspector = await metrics(page);
     expect(withInspector.sh, JSON.stringify(withInspector)).toBeLessThanOrEqual(Math.max(withInspector.ch, withInspector.content) + 1);
+    // #945: a track that fills the viewport fits exactly (no phantom horizontal overflow), so create real overflow by zooming in.
+    await page.getByLabel("Ribbon tabs").getByRole("button", { name: "View", exact: true }).click();
+    for (let step = 0; step < 4; step += 1) await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
+    await expect.poll(() => owner(page).evaluate((el) => el.scrollWidth - el.clientWidth)).toBeGreaterThan(1);
     const maxHorizontalScroll = await owner(page).evaluate((el) => el.scrollWidth - el.clientWidth);
     expect(maxHorizontalScroll).toBeGreaterThan(1);
     const verticalBeforeHorizontalScroll = await owner(page).evaluate((el) => el.scrollTop);
