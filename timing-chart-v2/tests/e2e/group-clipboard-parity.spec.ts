@@ -10,6 +10,7 @@ test("copies, pastes, and duplicates a group as one semantic batch", async ({ pa
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/); // published after the first render
   const surface = host.locator("[data-role='timing-chart-surface']");
   const ribbon = page.getByTestId("ribbon");
   const sourceRows = surface.locator("[data-role='left-row'][data-group-id='grp_cycle_control'][data-row-id]");

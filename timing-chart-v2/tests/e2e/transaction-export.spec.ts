@@ -7,6 +7,7 @@ startInCycleSample(test);
 async function ready(page: Page) {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", /^\d+$/); // published after the first render
 }
 
 async function createTransaction(page: Page, name = "DMA Read", start = 2, end = 6) {
