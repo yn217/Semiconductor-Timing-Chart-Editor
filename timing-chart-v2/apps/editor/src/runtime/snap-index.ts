@@ -1,9 +1,10 @@
 import type { CanonicalDocument, SemanticAnchor, SignalId } from "@timing-chart-v2/schema";
-import { resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryEntry, type LocalGeometryMap } from "@timing-chart-v2/geometry";
+import { findSourceAnchorGeometry, resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryEntry, type LocalGeometryMap } from "@timing-chart-v2/geometry";
 import type { DisplayTimeMapping, RenderProjection } from "@timing-chart-v2/projection";
 
 interface SharedBoundaryIndex {
   readonly entries: readonly LocalGeometryEntry[];
+  readonly mapping: DisplayTimeMapping;
   readonly xByCycle: ReadonlyMap<number, number>;
 }
 
@@ -18,13 +19,29 @@ interface ScreenMapAdapterCacheEntry {
 const sharedBoundaryIndexes = new WeakMap<LocalGeometryMap, SharedBoundaryIndex>();
 const screenMapAdapters = new WeakMap<LocalGeometryMap, ScreenMapAdapterCacheEntry>();
 
-function sharedBoundaryIndex(referenceMap: LocalGeometryMap | undefined): SharedBoundaryIndex | undefined {
+function sourceCycleForGeometryKey(cycle: number, map: LocalGeometryMap, mapping: DisplayTimeMapping): number | undefined {
+  if (map.cycleKeyDomain !== "display") {
+    return cycle === mapping.sourceCycleCount || mapping.sourceToDisplay(cycle) !== undefined ? cycle : undefined;
+  }
+  if (cycle === mapping.displayCycleCount) return mapping.sourceCycleCount;
+  return mapping.displayToSource(cycle);
+}
+
+function displayCycleForSourceCycle(cycle: number, mapping: DisplayTimeMapping): number | undefined {
+  return cycle === mapping.sourceCycleCount ? mapping.displayCycleCount : mapping.sourceToDisplay(cycle);
+}
+
+function sharedBoundaryIndex(referenceMap: LocalGeometryMap | undefined, mapping: DisplayTimeMapping): SharedBoundaryIndex | undefined {
   if (!referenceMap?.cycleBoundaryEntries) return undefined;
   const entries = referenceMap.cycleBoundaryEntries();
   const cached = sharedBoundaryIndexes.get(referenceMap);
-  if (cached?.entries === entries) return cached;
-  const xByCycle = new Map(entries.map((entry) => [entry.cycle, entry.position.x] as const));
-  const index = { entries, xByCycle };
+  if (cached?.entries === entries && cached.mapping === mapping) return cached;
+  const xByCycle = new Map<number, number>();
+  for (const entry of entries) {
+    const sourceCycle = sourceCycleForGeometryKey(entry.cycle, referenceMap, mapping);
+    if (sourceCycle !== undefined) xByCycle.set(sourceCycle, entry.position.x);
+  }
+  const index = { entries, mapping, xByCycle };
   sharedBoundaryIndexes.set(referenceMap, index);
   return index;
 }
@@ -32,16 +49,18 @@ function sharedBoundaryIndex(referenceMap: LocalGeometryMap | undefined): Shared
 function screenMapAdapter(map: LocalGeometryMap, referenceMap: LocalGeometryMap | undefined, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, xScale: number): LocalGeometryMap {
   const cached = screenMapAdapters.get(map);
   if (cached && cached.referenceMap === referenceMap && cached.axisOwnerSignalId === axisOwnerSignalId && cached.mapping === mapping && cached.xScale === xScale) return cached.adapter;
-  const sharedBoundaries = sharedBoundaryIndex(referenceMap);
+  const sharedBoundaries = sharedBoundaryIndex(referenceMap, mapping);
   let displayFilteredBoundaries: readonly LocalGeometryEntry[] | undefined;
   const adapter: LocalGeometryMap = {
     signalId: map.signalId,
-    cycleKeyDomain: map.cycleKeyDomain,
+    cycleKeyDomain: "source",
     find: (anchor: SemanticAnchor) => {
-      const local = map.find(anchor);
+      const displayCycle = displayCycleForSourceCycle(anchor.cycle, mapping);
+      if (displayCycle === undefined) return undefined;
+      const local = findSourceAnchorGeometry(map, anchor, displayCycle);
       if (!local) return undefined;
       const sharedBoundary = anchor.point === "cycle-start"
-        ? referenceMap?.find({ ...anchor, ...(axisOwnerSignalId === undefined ? {} : { signalId: axisOwnerSignalId }) })?.point
+        ? referenceMap && findSourceAnchorGeometry(referenceMap, { ...anchor, ...(axisOwnerSignalId === undefined ? {} : { signalId: axisOwnerSignalId }) }, displayCycle)?.point
         : undefined;
       return { ...local, point: { ...local.point, x: (sharedBoundary?.x ?? local.point.x) * xScale } };
     },
@@ -51,12 +70,14 @@ function screenMapAdapter(map: LocalGeometryMap, referenceMap: LocalGeometryMap 
         if (displayFilteredBoundaries) return displayFilteredBoundaries;
         const projected: LocalGeometryEntry[] = [];
         for (const entry of map.cycleBoundaryEntries!()) {
-          if (mapping.sourceToDisplay(entry.cycle) === undefined && entry.cycle !== mapping.sourceCycleCount) continue;
-          const sharedX = sharedBoundaries?.xByCycle.get(entry.cycle);
-          const sharedBoundary = sharedX === undefined
-            ? referenceMap?.find({ cycle: entry.cycle, point: "cycle-start", ...(axisOwnerSignalId === undefined ? {} : { signalId: axisOwnerSignalId }) })?.point
-            : { x: sharedX };
-          projected.push({ ...entry, position: { ...entry.position, x: (sharedBoundary?.x ?? entry.position.x) * xScale } });
+          const sourceCycle = sourceCycleForGeometryKey(entry.cycle, map, mapping);
+          if (sourceCycle === undefined) continue;
+          const sharedX = sharedBoundaries?.xByCycle.get(sourceCycle);
+          const sourceDisplayCycle = displayCycleForSourceCycle(sourceCycle, mapping);
+          const sharedBoundary = sharedX === undefined && referenceMap && sourceDisplayCycle !== undefined
+            ? findSourceAnchorGeometry(referenceMap, { cycle: sourceCycle, point: "cycle-start", ...(axisOwnerSignalId === undefined ? {} : { signalId: axisOwnerSignalId }) } as SemanticAnchor, sourceDisplayCycle)?.point
+            : sharedX === undefined ? undefined : { x: sharedX };
+          projected.push({ ...entry, cycle: sourceCycle, position: { ...entry.position, x: (sharedBoundary?.x ?? entry.position.x) * xScale } });
         }
         displayFilteredBoundaries = Object.freeze(projected);
         return projected;

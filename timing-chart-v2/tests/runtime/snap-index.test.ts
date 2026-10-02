@@ -75,6 +75,56 @@ describe("buildSnapIndex row lookup", () => {
     expect(dataBoundary).toMatchObject({ anchor: { signalId: data.id, cycle: 2 }, point: { x: 80, y: 30 } });
   });
 
+  it("normalizes display-domain folded boundaries to canonical source cycles", () => {
+    const source = canonicalFixture();
+    const clock = source.signals.find((item) => item.type === "clock")!;
+    const data = source.signals.find((item) => item.type === "bus")!;
+    const document = {
+      ...source,
+      timeline: { ...source.timeline, referenceClock: clock.id },
+      timeGroups: [{ id: "fold_2_4", name: "Fold", start: 2, end: 4, presentation: { collapsed: true, foldStyle: "axis-break" } }],
+    };
+    const mapping = new DisplayTimeMappingCache().get(document.timeline, document.timeGroups);
+    expect(mapping.displayCycleCount).toBe(6);
+    const displayEntries = Array.from({ length: mapping.displayCycleCount + 1 }, (_, cycle) => ({
+      cycle,
+      point: "cycle-start" as const,
+      position: { x: cycle * 40, y: 0 },
+    }));
+    const sourceEntries = [0, 1, 4, 5, 6, 7, 8].map((cycle) => ({
+      cycle,
+      point: "cycle-start" as const,
+      position: { x: (cycle === mapping.sourceCycleCount ? mapping.displayCycleCount : mapping.sourceToDisplay(cycle)!) * 40 + 500, y: 0 },
+    }));
+    const makeMap = (signalId: SignalId, entries: typeof displayEntries, domain: "source" | "display") => ({
+      signalId,
+      cycleKeyDomain: domain,
+      cycleBoundaryEntries: () => entries,
+      find: (anchor: { cycle: number; point: string }) => {
+        const entry = entries.find((candidate) => candidate.cycle === anchor.cycle && candidate.point === anchor.point);
+        return entry ? { signalId, anchor: anchor as never, point: entry.position } : undefined;
+      },
+    });
+    const projection = { rowLayout: [{ rowId: clock.id, y: 0 }, { rowId: data.id, y: 30 }] } as never;
+    const displayIndex = buildSnapIndex(document, projection, new Map([
+      [clock.id, makeMap(clock.id, displayEntries, "display")],
+      [data.id, makeMap(data.id, displayEntries, "display")],
+    ]), mapping);
+    const mixedDomainIndex = buildSnapIndex(document, projection, new Map([
+      [clock.id, makeMap(clock.id, displayEntries, "display")],
+      [data.id, makeMap(data.id, sourceEntries, "source")],
+    ]), mapping);
+    const expected = [0, 1, 4, 5, 6, 7, 8].map((cycle) => ({ cycle, x: (cycle === mapping.sourceCycleCount ? mapping.displayCycleCount : mapping.sourceToDisplay(cycle)!) * 40 }));
+    const boundariesFor = (index: ReturnType<typeof buildSnapIndex>, signalId: SignalId, rowY: number) => expected.map(({ x }) => {
+      const candidate = index.nearest({ x, y: rowY }, 0, ["cycle-boundary"]);
+      return candidate?.anchor.signalId === signalId ? { cycle: candidate.anchor.cycle, x: candidate.point.x } : undefined;
+    });
+    expect(boundariesFor(displayIndex, clock.id, 0)).toEqual(expected);
+    expect(boundariesFor(displayIndex, data.id, 30)).toEqual(expected);
+    expect(boundariesFor(mixedDomainIndex, data.id, 30)).toEqual(expected);
+    expect(displayIndex.nearest({ x: 80, y: 0 }, 0, ["cycle-boundary"])).toMatchObject({ anchor: { signalId: clock.id, cycle: 4 }, point: { x: 80 } });
+  });
+
   it("reuses display-filtered boundary projection and validation across viewport rebuilds", () => {
     const source = canonicalFixture();
     const signal = source.signals.find((item) => item.type === "clock")!;
