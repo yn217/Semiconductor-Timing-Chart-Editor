@@ -86,7 +86,8 @@ test("authored label wrap width is shared by live overlay and SVG export", async
   await editor.getByTestId("apply-annotation-properties").click();
 
   const label = callout.locator("[data-role='annotation-label']");
-  await expect(label).toHaveCSS("line-height", "1.8");
+  // The authored unitless 1.8 resolves to px in computed style (1.8 x the 10px label font = 18px).
+  await expect(label).toHaveCSS("line-height", "18px");
   const liveText = await label.textContent();
   expect(liveText?.split("\n").length).toBeGreaterThan(2);
   const annotationId = await callout.getAttribute("data-annotation-id");
@@ -109,6 +110,7 @@ test("annotation label placement presets move the live label between its semanti
 
   const range = await addAnnotation(page, "range");
   const editor = page.getByTestId("annotation-editor");
+  await editor.getByRole("button", { name: "Style", exact: true }).click(); // Label placement lives in the Inspector Style section
   const placement = editor.getByLabel("Annotation label placement", { exact: true });
   const position = async () => range.locator("[data-role='annotation-label']").evaluate((element) => {
     const match = (element as HTMLElement).style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/);

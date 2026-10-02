@@ -51,6 +51,7 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
   const [arrowhead, setArrowhead] = useState<NonNullable<Annotation["arrowhead"]>>(annotation.arrowhead ?? "end");
   const [labelX, setLabelX] = useState(annotation.labelOffset?.x ?? 0);
   const [labelY, setLabelY] = useState(annotation.labelOffset?.y ?? -14);
+  const [labelPlacement, setLabelPlacement] = useState<NonNullable<Annotation["labelPlacement"]>>(annotation.labelPlacement ?? "center");
   const [opacity, setOpacity] = useState(annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16));
   const [traceOffsetCycles, setTraceOffsetCycles] = useState(annotation.traceOffsetCycles ?? 0);
   const [measurementProfile, setMeasurementProfile] = useState<MeasurementProfile>(annotation.measurement?.profile ?? "cycle");
@@ -101,6 +102,7 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
     || (annotation.type === "ghostTrace" && traceOffsetCycles !== (annotation.traceOffsetCycles ?? 0))
     || labelX !== (annotation.labelOffset?.x ?? 0)
     || labelY !== (annotation.labelOffset?.y ?? -14)
+    || labelPlacement !== (annotation.labelPlacement ?? "center")
     || JSON.stringify(styleDraft) !== JSON.stringify(annotation.style ?? {});
   // Spread the shared preserve-everything base FIRST -- this form only
   // exposes drafts for label/color/visible/lineType/arrowhead, so without
@@ -113,7 +115,7 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
   // mutation path, not two.
   const apply = (event?: React.FormEvent) => {
     event?.preventDefault();
-    commands.updateAnnotationProperties({ annotationId: annotation.id, ...annotationPropertiesBase(annotation), label, visible, color, ...(lineControlsEnabled ? { lineType, arrowhead } : {}), ...(isOpacityType ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}), labelOffset: { x: labelX, y: labelY }, style: styleDraft });
+    commands.updateAnnotationProperties({ annotationId: annotation.id, ...annotationPropertiesBase(annotation), label, visible, color, ...(lineControlsEnabled ? { lineType, arrowhead } : {}), ...(isOpacityType ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}), labelOffset: { x: labelX, y: labelY }, labelPlacement, style: styleDraft });
   };
   // #775: this one effect used to reload EVERY local draft field whenever ANY canonical field of this Annotation changed, so applying
   // one independent sub-editor (Anchor, Vertical Span, Measurement, Position Mode...) silently discarded an unrelated unapplied
@@ -123,7 +125,7 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
   // to a different Annotation (a real entity change, not a partial commit) still does the full reset it always did.
   const baseRef = useRef<{
     id: AnnotationId; label: string; color: string; visible: boolean; lineType: NonNullable<Annotation["lineType"]>; arrowhead: NonNullable<Annotation["arrowhead"]>;
-    labelX: number; labelY: number; opacity: number; traceOffsetCycles: number; measurementProfile: MeasurementProfile; measurementKind: TransitionAnchorKind;
+    labelX: number; labelY: number; labelPlacement: NonNullable<Annotation["labelPlacement"]>; opacity: number; traceOffsetCycles: number; measurementProfile: MeasurementProfile; measurementKind: TransitionAnchorKind;
     measurementStart: string; measurementEnd: string; measurementLayout: MeasurementLayout; verticalSpanMode: NonNullable<Annotation["verticalSpan"]>["mode"];
     verticalSpanStartRowId: SignalId | undefined; verticalSpanEndRowId: SignalId | undefined; verticalSpanStartOffset: number; verticalSpanEndOffset: number;
     styleDraft: Annotation["style"]; anchorField: AnchorField; anchorX: number; anchorY: number; anchorCycle: number; anchorSignalId: SignalId | undefined; anchorPoint: SemanticAnchor["point"];
@@ -133,7 +135,7 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
     const next = {
       id: annotation.id, label: annotation.label, color: annotation.color ?? "#d04a36", visible: annotation.visible,
       lineType: annotation.lineType ?? "straight", arrowhead: annotation.arrowhead ?? "end",
-      labelX: annotation.labelOffset?.x ?? 0, labelY: annotation.labelOffset?.y ?? -14,
+      labelX: annotation.labelOffset?.x ?? 0, labelY: annotation.labelOffset?.y ?? -14, labelPlacement: annotation.labelPlacement ?? "center",
       opacity: annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16), traceOffsetCycles: annotation.traceOffsetCycles ?? 0,
       measurementProfile: annotation.measurement?.profile ?? "cycle", measurementKind: annotation.measurement?.anchorKind ?? "threshold",
       measurementStart: String(Math.round((anchorTransitionFraction(annotation.start) ?? 0.3) * 100)),
@@ -161,6 +163,7 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
     merge("lineType", lineType, setLineType);
     merge("arrowhead", arrowhead, setArrowhead);
     merge("labelX", labelX, setLabelX);
+    merge("labelPlacement", labelPlacement, setLabelPlacement);
     merge("labelY", labelY, setLabelY);
     merge("opacity", opacity, setOpacity);
     merge("traceOffsetCycles", traceOffsetCycles, setTraceOffsetCycles);
@@ -225,6 +228,7 @@ export function InspectorAnnotationEditor({ annotation, document, viewport, comm
       <InspectorSection sectionId="style" title="Style" open={sections.style ?? false} onToggle={() => toggle("style")}>
         <StrokeFillToolbar idPrefix="inspector-stroke-fill" style={styleDraft} onChange={setStyleDraft} strokeDisabled={!!annotationCapabilityDisabledReason(annotation.type, "stroke")} strokeReason={annotationCapabilityDisabledReason(annotation.type, "stroke")} fillDisabled={!!annotationCapabilityDisabledReason(annotation.type, "fill")} fillReason={annotationCapabilityDisabledReason(annotation.type, "fill")} />
         <AnnotationLabelLayoutToolbar idPrefix="inspector-annotation-label-layout" style={styleDraft} onChange={setStyleDraft} />
+        <label>Label placement<select aria-label="Annotation label placement" value={labelPlacement} onChange={(event) => setLabelPlacement(event.target.value as NonNullable<Annotation["labelPlacement"]>)}><option value="start">Start</option><option value="center">Center</option><option value="end">End</option><option value="above">Above</option><option value="below">Below</option></select></label>
         {lineControlsEnabled && <><label>Line<select aria-label="Annotation line type" value={lineType} onChange={(event) => setLineType(event.target.value as typeof lineType)}><option value="straight">Straight</option><option value="orthogonal">Orthogonal</option><option value="curve">Curve</option><option value="diagonal">Diagonal</option></select></label><label>Arrow<select aria-label="Annotation arrowhead" value={arrowhead} onChange={(event) => setArrowhead(event.target.value as typeof arrowhead)}><option value="end">End</option><option value="start">Start</option><option value="bidirectional">Both</option><option value="none">None</option></select></label></>}</InspectorSection>
       <section className="inspector-annotation-preview"><button type="button" data-testid="annotation-preview-action" onClick={() => { setPreviewRevision((value) => value + 1); onPreview?.(annotation.id, { label, color, ...(isOpacityType ? { opacity } : {}) }); }}>Preview draft only</button><output data-testid="annotation-preview-status">{previewRevision === 0 ? "Preview ready" : `Previewing draft (updated ${previewRevision}) · canonical data unchanged`}</output></section>
       <section><button type="button" className="danger" onClick={onDelete}>Delete Annotation</button></section>
