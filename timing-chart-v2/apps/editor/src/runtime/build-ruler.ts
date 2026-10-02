@@ -177,6 +177,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     tick.dataset.cycle = String(mapping.labelFor(display));
     tick.dataset.displayCycle = String(display);
     tick.dataset.sourceCycle = String(sourceCycle);
+    tick.dataset.geometrySourceCycle = String(sourceCycle);
     tick.className = "cycle-tick";
     tick.style.left = `${point.x * scale}px`;
     tick.style.top = `${outlineHeight}px`;
@@ -205,6 +206,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     marker.className = containingFold === undefined ? "timeline-marker" : "timeline-marker timeline-marker-hidden";
     marker.dataset.bookmarkId = bookmark.id;
     marker.dataset.sourceCycle = String(bookmark.start);
+    marker.dataset.geometrySourceCycle = String(anchorCycle);
     if (containingFold !== undefined) marker.dataset.insideCollapsed = containingFold.name;
     marker.style.left = `${point.x * scale}px`;
     marker.style.top = `${outlineHeight + 19}px`;
@@ -224,6 +226,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     const gap = element.ownerDocument.createElement("span");
     gap.className = "timeline-gap";
     gap.dataset.timeGroupId = group.id;
+    gap.dataset.geometrySourceCycle = String(anchorCycle);
     gap.style.left = `${point.x * scale}px`;
     gap.style.top = `${outlineHeight + 2}px`;
     gap.textContent = group.presentation?.foldLabel ?? group.name;

@@ -6,6 +6,39 @@ import { renderGeometryGrid } from "../render-geometry-grid.js";
 import type { ViewMetricsOwner } from "./view-metrics.js";
 import type { TimeAxisMetrics } from "./timeline-geometry-owner.js";
 import { buildRuler } from "./build-ruler.js";
+import { displayWindowForSource } from "./display-boundary.js";
+import { waveOwnerPlacement } from "./wave-owner-placement.js";
+
+/** Reapply ruler-owned boundaries and already-mounted waveform owners from the just-published generation. */
+export function applyPublishedTimeAxisMetrics(ruler: HTMLElement, viewport: HTMLElement | undefined, metrics: TimeAxisMetrics): void {
+  for (const boundary of ruler.querySelectorAll<HTMLElement>("[data-geometry-source-cycle]")) {
+    const cycle = Number(boundary.dataset.geometrySourceCycle);
+    if (!Number.isInteger(cycle)) continue;
+    const x = metrics.sourceBoundaryToContentX(cycle);
+    if (x !== undefined && Number.isFinite(x)) boundary.style.left = `${x}px`;
+  }
+  const widthOwner = viewport ?? ruler.closest<HTMLElement>("[data-testid='cycle-viewport']");
+  if (!widthOwner || metrics.pxPerDisplayCycle === undefined || metrics.screenOriginX === undefined) return;
+  for (const owner of widthOwner.querySelectorAll<HTMLElement>("[data-wave-owner]")) {
+    if (owner.tagName !== "DIV") continue;
+    const sourceStart = Number(owner.dataset.renderedSourceWindowStart);
+    const sourceEnd = Number(owner.dataset.renderedSourceWindowEnd);
+    if (!Number.isInteger(sourceStart) || !Number.isInteger(sourceEnd) || sourceEnd <= sourceStart) continue;
+    const displayWindow = displayWindowForSource(metrics.mapping, { sourceStart, sourceEnd }, metrics.mapping.sourceCycleCount);
+    if (!displayWindow) continue;
+    const placement = waveOwnerPlacement({
+      displayStart: displayWindow.displayStart,
+      displayEnd: displayWindow.displayEnd,
+      pxPerDisplayCycle: metrics.pxPerDisplayCycle,
+      waveOriginPx: metrics.screenOriginX,
+      presentationScale: metrics.presentationScale,
+      viewBoxWidth: owner.querySelector<SVGSVGElement>(":scope > svg")?.viewBox.baseVal.width,
+      metrics,
+    });
+    owner.style.width = `${placement.width}px`;
+    owner.style.left = `${placement.left}px`;
+  }
+}
 
 // #572 introduced a reference-SVG screen-scale measurement meant only to
 // correct browser sub-pixel/DPI rounding around build-ruler.ts's own
@@ -100,6 +133,7 @@ export function refreshTimelinePresentation(context: {
     const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, currentTimeAxis.ownerSignalId ? context.geometrySvgs.get(currentTimeAxis.ownerSignalId) : undefined, metrics.zoom, minimumWaveWidth, context.viewport, context.cyclesPerTc);
     timeAxis = rebuilt.timeAxis; screenGeometryScale = rebuilt.scale; waveWidthPxPerDisplayCycle = rebuilt.waveWidthPxPerDisplayCycle; waveOriginPx = rebuilt.waveOriginPx; rulerInitialized = true;
     sharedMetrics = context.publishTimeAxisMetrics?.(timeAxis, screenGeometryScale, waveWidthPxPerDisplayCycle, waveOriginPx, context.currentZoom) ?? sharedMetrics;
+    if (sharedMetrics) applyPublishedTimeAxisMetrics(context.ruler, context.viewport, sharedMetrics);
     context.markOpenPhase("ruler-painted"); syncPresentationScale(context.host, context.currentZoom, screenGeometryScale);
   } else {
     sharedMetrics = context.publishTimeAxisZoom?.(context.currentZoom) ?? sharedMetrics;
