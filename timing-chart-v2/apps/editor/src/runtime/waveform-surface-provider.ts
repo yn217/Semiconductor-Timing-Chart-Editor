@@ -321,7 +321,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         const waveOriginPx = batchTimeAxisMetrics?.screenOriginX ?? context.getWaveOriginPx?.() ?? 0;
         const presentationScale = batchTimeAxisMetrics?.presentationScale ?? context.getPresentationScale?.() ?? 1;
         if (pxPerDisplayCycle !== undefined && item.rendererStart !== undefined && item.rendererEnd !== undefined && item.rendererEnd > item.rendererStart) {
-          const placement = waveOwnerPlacement({ displayStart: item.rendererStart, displayEnd: item.rendererEnd, pxPerDisplayCycle, waveOriginPx, presentationScale });
+          const placement = waveOwnerPlacement({ displayStart: item.rendererStart, displayEnd: item.rendererEnd, pxPerDisplayCycle, waveOriginPx, presentationScale, metrics: batchTimeAxisMetrics });
           item.request.owner.style.width = `${placement.width}px`;
           item.request.owner.style.left = `${placement.left}px`;
         } else {

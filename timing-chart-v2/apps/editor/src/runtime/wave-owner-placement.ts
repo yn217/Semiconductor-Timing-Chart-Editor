@@ -1,4 +1,5 @@
 import { WAVEDROM_ORIGIN_X } from "@timing-chart-v2/geometry";
+import type { TimeAxisMetrics } from "./timeline-geometry-owner.js";
 
 /** WaveDrom's default skin pads every rendered SVG by 20.5 units on the left and 19.5 on the right (viewBox = 40 * cycles + 40). */
 const WAVEDROM_HORIZONTAL_PADDING = 2 * WAVEDROM_ORIGIN_X - 1;
@@ -19,14 +20,18 @@ export function waveOwnerPlacement(input: {
   /** Screen pixels per local geometry unit (the ruler's presentation scale). */
   readonly presentationScale: number;
   readonly viewBoxWidth?: number | undefined;
+  /** When present, boundary X/pitch/scale must come from this captured generation. */
+  readonly metrics?: Pick<TimeAxisMetrics, "displayBoundaryToContentX" | "pxPerDisplayCycle" | "presentationScale"> | undefined;
 }): { readonly left: number; readonly width: number } {
-  const scale = input.presentationScale;
+  const scale = input.metrics?.presentationScale ?? input.presentationScale;
+  const pxPerDisplayCycle = input.metrics?.pxPerDisplayCycle ?? input.pxPerDisplayCycle;
   // Without a rendered SVG yet, the box is the window's cycle span plus the two margins (the span already is in screen px).
   const width = input.viewBoxWidth !== undefined && Number.isFinite(input.viewBoxWidth) && input.viewBoxWidth > 0
     ? input.viewBoxWidth * scale
-    : (input.displayEnd - input.displayStart) * input.pxPerDisplayCycle + WAVEDROM_HORIZONTAL_PADDING * scale;
+    : (input.displayEnd - input.displayStart) * pxPerDisplayCycle + WAVEDROM_HORIZONTAL_PADDING * scale;
+  const boundaryX = input.metrics?.displayBoundaryToContentX(input.displayStart);
   return {
-    left: input.displayStart * input.pxPerDisplayCycle + input.waveOriginPx - WAVEDROM_ORIGIN_X * scale,
+    left: (boundaryX ?? input.displayStart * input.pxPerDisplayCycle + input.waveOriginPx) - WAVEDROM_ORIGIN_X * scale,
     width,
   };
 }
