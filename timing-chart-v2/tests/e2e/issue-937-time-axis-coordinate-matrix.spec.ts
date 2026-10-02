@@ -176,3 +176,46 @@ test("Ruler/Grid/Wave stay within 0.5px when panel visibility changes the timeli
   await waitForPresentation(page);
   assertTight("200% scrolled after panel churn", await boundaries(page, cycles));
 });
+
+test("Ruler and Grid stay on the same X for every labelled cycle through fold -> unfold of a Time Group", async ({ page }) => {
+  test.setTimeout(120_000);
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "p937f.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(longReferenceClockDocument())) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='128']")).toHaveCount(1);
+  await expect.poll(() => page.locator("svg[data-wave-owner='sig_cycle_clock'] image[data-wave-svg-image]").count(), { timeout: 30_000 }).toBe(1);
+
+  const rulerVsGrid = async (label: string) => {
+    await waitForPresentation(page);
+    const rows = await page.evaluate(() => {
+      const ticks = new Map([...document.querySelectorAll<HTMLElement>("[data-testid='cycle-ruler'] .cycle-tick[data-cycle]")].map((tick) => [tick.dataset.cycle!, tick.getBoundingClientRect().left] as const));
+      return [...document.querySelectorAll<HTMLElement>("[data-testid='geometry-grid'] [data-role='geometry-grid-line'][data-cycle]")]
+        .flatMap((line) => ticks.has(line.dataset.cycle!) ? [{ cycle: line.dataset.cycle!, delta: line.getBoundingClientRect().left - ticks.get(line.dataset.cycle!)! }] : []);
+    });
+    expect(rows.length, `${label}: labelled cycles present in both Ruler and Grid`).toBeGreaterThan(10);
+    for (const row of rows) expect(Math.abs(row.delta), `${label}: grid vs ruler @${row.cycle}`).toBeLessThanOrEqual(0.5);
+    return rows.length;
+  };
+  await rulerVsGrid("before fold");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const timeline = page.getByTestId("timeline-editor");
+  await timeline.getByLabel("Timeline range end").fill("30");
+  await timeline.getByLabel("Timeline range start").fill("20");
+  await timeline.getByTestId("time-group-create").click();
+  const groupId = (await timeline.locator("[data-time-group-id]").first().getAttribute("data-time-group-id"))!;
+  await timeline.getByTestId(`time-group-collapse-${groupId}`).click();
+  await expect(page.locator(".cycle-ruler [data-time-group-id]")).toHaveCount(1);
+  await rulerVsGrid("folded");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Zoom preset").selectOption("200");
+  await expect(page.getByTestId("zoom-status")).toHaveText("200%");
+  await rulerVsGrid("folded @200%");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+
+  await timeline.getByTestId(`time-group-expand-${groupId}`).click(); // the same control flips from collapse to expand once folded
+  await expect(page.locator(".cycle-ruler [data-time-group-id]")).toHaveCount(0);
+  await rulerVsGrid("unfolded");
+});
