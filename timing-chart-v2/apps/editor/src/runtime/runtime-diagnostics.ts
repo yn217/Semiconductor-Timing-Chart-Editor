@@ -53,7 +53,12 @@ type OpenReadiness = "opening" | "document-ready" | "presentation-ready" | "visi
 const OPEN_READINESS_ORDER: readonly OpenReadiness[] = ["opening", "document-ready", "presentation-ready", "visible-waveforms-ready", "idle"];
 
 /** Owns open/first-paint instrumentation for the editor runtime bridge. */
-export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentationReady?: () => void, onVisibleWaveformsReady?: () => void): OpenPhaseTracker {
+/**
+ * `hasNoReferenceSignal` reports a clockless document (no referenceClock and no Clock signal): it has no reference signal whose geometry could ever be
+ * published (and none is rendered in Transaction/Combined), so the ordered readiness would never pass the reference-geometry gate and
+ * data-cycle-view-ready / data-editor-idle would never be published. The gate is emitted right before the visible waveforms are reported ready.
+ */
+export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentationReady?: () => void, onVisibleWaveformsReady?: () => void, hasNoReferenceSignal?: () => boolean): OpenPhaseTracker {
   const marks: Record<string, number> = {};
   let active = false;
   let rowShellPainted = false;
@@ -120,6 +125,7 @@ export function createOpenPhaseTracker(rendererHost: HTMLElement, onPresentation
   };
   const mark = (phase: string, phaseTimestamp = globalThis.performance.now()): void => {
     if (!active || marks[phase] !== undefined) return;
+    if (phase === "visible-waveforms-ready" && marks["reference-geometry-ready"] === undefined && hasNoReferenceSignal?.() === true) mark("reference-geometry-ready", phaseTimestamp);
     marks[phase] = phaseTimestamp;
     globalThis.performance.mark(`timing-chart-v2:${phase}`);
     if (phase === "canonical-replaced") advanceReadiness("document-ready", phaseTimestamp);
