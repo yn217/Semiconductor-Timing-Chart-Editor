@@ -48,6 +48,10 @@ export interface TimeAxisMetrics {
   readonly screenOriginX?: number;
   readonly localUnitsPerDisplayCycle?: number;
   readonly localOriginX?: number;
+  /** Converts canonical source boundaries to unscrolled content X in this generation. */
+  readonly sourceBoundaryToContentX: (sourceCycle: number) => number | undefined;
+  /** Converts display-domain boundaries to the same unscrolled content-X space. */
+  readonly displayBoundaryToContentX: (displayCycle: number) => number | undefined;
 }
 
 /** Read-only authority for semantic -> display -> local -> screen timeline geometry. */
@@ -72,6 +76,17 @@ export class TimelineGeometryOwner {
   #createTimeAxisMetrics(timeAxis: TimeAxisGeometry, presentationScale: number, zoom: number, pxPerDisplayCycle?: number, screenOriginX?: number): TimeAxisMetrics {
     const document = this.context.getDocument();
     const mapping = this.mappingCache.get(document.timeline, document.timeGroups);
+    const sourceBoundaryToContentX = (sourceCycle: number): number | undefined => {
+      const displayCycle = displayBoundaryForSource(mapping, sourceCycle, mapping.sourceCycleCount);
+      if (displayCycle === undefined) return undefined;
+      if (timeAxis.geometry && timeAxis.ownerSignalId !== undefined) {
+        const point = findSourceAnchorGeometry(timeAxis.geometry, { signalId: timeAxis.ownerSignalId, cycle: sourceCycle, point: "cycle-start" }, displayCycle)?.point;
+        if (point !== undefined) return point.x * presentationScale;
+      }
+      if (pxPerDisplayCycle === undefined || !Number.isFinite(pxPerDisplayCycle) || pxPerDisplayCycle <= 0
+        || screenOriginX === undefined || !Number.isFinite(screenOriginX)) return undefined;
+      return screenOriginX + displayCycle * pxPerDisplayCycle;
+    };
     return Object.freeze({
       generation: ++this.#presentationGeneration,
       timeAxis,
@@ -83,6 +98,14 @@ export class TimelineGeometryOwner {
       ...(screenOriginX === undefined ? {} : { screenOriginX }),
       ...(pxPerDisplayCycle === undefined || presentationScale <= 0 ? {} : { localUnitsPerDisplayCycle: pxPerDisplayCycle / presentationScale }),
       ...(screenOriginX === undefined || presentationScale <= 0 ? {} : { localOriginX: screenOriginX / presentationScale }),
+      sourceBoundaryToContentX,
+      displayBoundaryToContentX: (displayCycle: number): number | undefined => {
+        if (!Number.isInteger(displayCycle) || displayCycle < 0 || displayCycle > mapping.displayCycleCount) return undefined;
+        const sourceCycle = displayCycle === mapping.displayCycleCount
+          ? mapping.sourceCycleCount
+          : mapping.displayToSource(displayCycle);
+        return sourceCycle === undefined ? undefined : sourceBoundaryToContentX(sourceCycle);
+      },
     });
   }
 
@@ -159,6 +182,7 @@ export class TimelineGeometryOwner {
 
   sourceBoundaryToLocalX(document: CanonicalDocument, cycle: number, metrics: TimeAxisMetrics = this.#timeAxisMetrics): number | undefined {
     const currentDocument = document === this.context.getDocument();
+    if (currentDocument) return metrics.sourceBoundaryToContentX(cycle);
     const axis = currentDocument ? metrics.timeAxis : this.resolveTimeAxis(document);
     if (!axis.geometry || axis.ownerSignalId === undefined) return undefined;
     const mapping = currentDocument ? metrics.mapping : this.mappingCache.get(document.timeline, document.timeGroups);

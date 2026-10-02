@@ -96,6 +96,9 @@ describe("TimelineGeometryOwner", () => {
       localUnitsPerDisplayCycle: 60,
       localOriginX: 5,
     });
+    expect(published.sourceBoundaryToContentX(1)).toBe(96);
+    expect(published.displayBoundaryToContentX(1)).toBe(96);
+    expect(published.displayBoundaryToContentX(-1)).toBeUndefined();
     expect(owner.timeAxis).toBe(published.timeAxis);
     expect(owner.waveWidthPxPerDisplayCycle).toBe(published.pxPerDisplayCycle);
     expect(owner.waveOriginPx).toBe(published.screenOriginX);
@@ -103,6 +106,8 @@ describe("TimelineGeometryOwner", () => {
     owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 3, 180, 15);
     expect(owner.timeAxisMetrics.generation).toBeGreaterThan(published.generation);
     expect(published).toMatchObject({ presentationScale: 2, pxPerDisplayCycle: 120, screenOriginX: 10 });
+    expect(published.sourceBoundaryToContentX(1)).toBe(96);
+    expect(owner.timeAxisMetrics.sourceBoundaryToContentX(1)).toBe(144);
   });
 
   it("projects range boundaries from the captured metrics generation after a newer one is published", () => {
