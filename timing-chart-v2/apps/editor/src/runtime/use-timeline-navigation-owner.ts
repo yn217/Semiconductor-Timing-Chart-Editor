@@ -14,6 +14,7 @@ export type TimelineNavigationAttachment = Readonly<{
   viewport: HTMLElement;
   ruler: HTMLElement;
   scalable: readonly HTMLElement[];
+  extraScalable?: () => readonly HTMLElement[];
   rulerViewport: HTMLElement;
   viewMetrics: ViewMetricsOwner;
   timelineOffset: () => number;
@@ -127,6 +128,7 @@ export function useTimelineNavigationOwner(viewMode: "Cycle" | "Transaction" | "
         viewport: context.viewport,
         ruler: context.ruler,
         scalable: context.scalable,
+        ...(context.extraScalable ? { extraScalable: context.extraScalable } : {}),
         leftPaneWidth: context.viewMetrics.snapshot().leftPaneWidth,
         frozenPaneWidth: context.viewMetrics.snapshot().frozenPaneWidth,
         inspectorWidth: context.viewMetrics.snapshot().inspectorWidth,
