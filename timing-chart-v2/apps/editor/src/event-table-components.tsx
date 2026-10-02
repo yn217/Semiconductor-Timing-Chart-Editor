@@ -38,7 +38,7 @@ export function ValueEditorControl({ signal, enumDefinition, value, onChange, ar
   </>;
 }
 
-export function EventRow({ signal, enumDefinition, change, end, index, selected, checked, canDuplicate, onToggleChecked, onSelect, onDuplicate, commands, draggable, onDragStart, onDragOver, onDrop, onDragEnd }: {
+export function EventRow({ signal, enumDefinition, change, end, index, selected, checked, editing, canDuplicate, onToggleChecked, onSelect, onEditingChange, onDuplicate, commands, draggable, onDragStart, onDragOver, onDrop, onDragEnd }: {
   readonly signal: ValueSignal;
   readonly enumDefinition?: EnumDefinition | undefined;
   readonly change: ValueSignal["values"][number];
@@ -48,6 +48,7 @@ export function EventRow({ signal, enumDefinition, change, end, index, selected,
   // change point's own `start` cycle remains the one true identity).
   readonly index: number;
   readonly selected: boolean;
+  readonly editing: boolean;
   // Bulk-selection checkbox state, separate from `selected` (the single-
   // row click-highlight already driving this row's own inline Draft) --
   // feeds only the table footer's bulk actions in event-table.tsx.
@@ -55,6 +56,7 @@ export function EventRow({ signal, enumDefinition, change, end, index, selected,
   readonly canDuplicate: boolean;
   readonly onToggleChecked: () => void;
   readonly onSelect: (start: number) => void;
+  readonly onEditingChange: (editing: boolean) => void;
   readonly onDuplicate: () => void;
   readonly commands: Pick<SignalEditorCommandActions, "replaceValue" | "removeValue">;
   readonly draggable?: boolean;
@@ -69,12 +71,11 @@ export function EventRow({ signal, enumDefinition, change, end, index, selected,
   const [externalConflict, setExternalConflict] = useState(false);
   const baseRef = useRef({ start: change.start, value: String(change.value), comment: change.comment ?? "" });
   // Visual Quality Closure follow-up (#402/#426), Section 7: a row reads
-  // as plain text at rest -- inline inputs only exist while `isEditing`.
+  // as plain text at rest -- inline inputs only exist while editing is active.
   // This is presentation-only; the Draft/Apply contract underneath is
   // unchanged (`hasChanges`/`cancel` still gate Save and restore the last-
   // committed values exactly as before, they just also now drive whether
   // the row is showing them at all).
-  const [isEditing, setIsEditing] = useState(false);
   // #402: Draft->Apply -- Save must stay disabled while this row's Draft is
   // byte-for-byte identical to its committed `change`, so a no-op submit
   // can't manufacture an empty History entry, and a Cancel action must be
@@ -85,13 +86,13 @@ export function EventRow({ signal, enumDefinition, change, end, index, selected,
   const hasChanges = start !== change.start || value !== String(change.value) || comment !== (change.comment ?? "");
   useEffect(() => {
     const latest = { start: change.start, value: String(change.value), comment: change.comment ?? "" };
-    const resolution = reconcileExternalDraft(baseRef.current, { start, value, comment }, latest, isEditing, (left, right) => left.start === right.start && left.value === right.value && left.comment === right.comment);
+    const resolution = reconcileExternalDraft(baseRef.current, { start, value, comment }, latest, editing, (left, right) => left.start === right.start && left.value === right.value && left.comment === right.comment);
     if (resolution.kind === "rebase") {
       setStart(resolution.value.start); setValue(resolution.value.value); setComment(resolution.value.comment);
       baseRef.current = resolution.value;
       setExternalConflict(false);
     } else if (resolution.kind === "conflict") setExternalConflict(true);
-  }, [change.start, change.value, change.comment, start, value, comment, isEditing]);
+  }, [change.start, change.value, change.comment, start, value, comment, editing]);
   const reloadLatest = () => {
     const latest = { start: change.start, value: String(change.value), comment: change.comment ?? "" };
     setStart(latest.start); setValue(latest.value); setComment(latest.comment);
@@ -103,9 +104,9 @@ export function EventRow({ signal, enumDefinition, change, end, index, selected,
     setExternalConflict(false);
   };
   const cancel = () => { reloadLatest(); };
-  const startEditing = () => { onSelect(change.start); setIsEditing(true); };
-  const stopEditing = () => { cancel(); setIsEditing(false); };
-  return <form className={`event-row${selected ? " selected" : ""}${isEditing ? " editing" : ""}`} role="row" data-event-id={change.id ?? `start-${change.start}`} data-event-start={change.start} draggable={false} onDragEnter={onDragOver} onDragOver={onDragOver} onDropCapture={onDrop} onDrop={onDrop} onDragEnd={onDragEnd} onClick={() => onSelect(change.start)} onSubmit={(event) => {
+  const startEditing = () => { onSelect(change.start); onEditingChange(true); };
+  const stopEditing = () => { cancel(); onEditingChange(false); };
+  return <form className={`event-row${selected ? " selected" : ""}${editing ? " editing" : ""}`} role="row" data-event-id={change.id ?? `start-${change.start}`} data-event-start={change.start} draggable={false} onDragEnter={onDragOver} onDragOver={onDragOver} onDropCapture={onDrop} onDrop={onDrop} onDragEnd={onDragEnd} onClick={() => onSelect(change.start)} onSubmit={(event) => {
     event.preventDefault();
     if (!hasChanges || externalConflict) return;
     const result = commands.replaceValue(signal.id, change.start, start, value, comment);
@@ -116,7 +117,7 @@ export function EventRow({ signal, enumDefinition, change, end, index, selected,
     if (result.ok) {
       baseRef.current = { start, value, comment };
       setExternalConflict(false);
-      setIsEditing(false);
+      onEditingChange(false);
     }
   }}>
     {/* Visual Quality Closure pass (#402/#426): "Select transition N" (not
@@ -131,14 +132,14 @@ export function EventRow({ signal, enumDefinition, change, end, index, selected,
         positional `.nth()` matching -- read-only rows add up to 3 more
         <output> elements than before (Start/Value/Comment), which would
         otherwise shift any existing "the 2nd <output>" style locator. */}
-    {isEditing
+    {editing
       ? <input aria-label={`Start ${change.start}`} type="number" min="0" step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} />
       : <output data-testid={`event-row-start-${change.start}`}>{change.start}</output>}
     <output data-testid={`event-row-end-${change.start}`}>{end}</output><output data-testid={`event-row-duration-${change.start}`}>{end - change.start}</output>
-    {isEditing
+    {editing
       ? <ValueEditorControl signal={signal} enumDefinition={enumDefinition} value={value} onChange={setValue} ariaLabel={`Value ${change.start}`} listId={`event-row-value-options-${change.start}`} />
       : <output data-testid={`event-row-value-${change.start}`}>{formatEventRowValue(signal, change)}</output>}
-    {isEditing
+    {editing
       ? <input aria-label={`Comment ${change.start}`} value={comment} onChange={(event) => setComment(event.target.value)} />
       : <output className="event-row-comment" data-testid={`event-row-comment-${change.start}`}>{change.comment ?? ""}</output>}
     {/* Visual Quality Closure pass: Cancel/Save/Remove sitting side by side
@@ -154,10 +155,10 @@ export function EventRow({ signal, enumDefinition, change, end, index, selected,
         announced to assistive tech and still visually present, just not
         ~110px of running text competing for the same narrow column. */}
     <span className="event-actions">
-      {isEditing && externalConflict && <span role="alert" data-testid={`event-row-draft-conflict-${change.start}`}>Transition changed elsewhere. Reload latest or keep this draft before saving.</span>}
-      {isEditing && externalConflict && <><button type="button" onClick={(event) => { event.stopPropagation(); reloadLatest(); }}>Reload latest</button><button type="button" onClick={(event) => { event.stopPropagation(); keepDraft(); }}>Keep my draft</button></>}
-      {isEditing && hasChanges && <span className="event-row-dirty-dot" role="status" title="Unapplied changes" aria-label="Unapplied changes" data-testid={`event-row-unapplied-${change.start}`} />}
-      {isEditing
+      {editing && externalConflict && <span role="alert" data-testid={`event-row-draft-conflict-${change.start}`}>Transition changed elsewhere. Reload latest or keep this draft before saving.</span>}
+      {editing && externalConflict && <><button type="button" onClick={(event) => { event.stopPropagation(); reloadLatest(); }}>Reload latest</button><button type="button" onClick={(event) => { event.stopPropagation(); keepDraft(); }}>Keep my draft</button></>}
+      {editing && hasChanges && <span className="event-row-dirty-dot" role="status" title="Unapplied changes" aria-label="Unapplied changes" data-testid={`event-row-unapplied-${change.start}`} />}
+      {editing
         ? <>
           <button type="button" onClick={(event) => { event.stopPropagation(); stopEditing(); }} data-testid={`event-row-cancel-${change.start}`}>Cancel</button>
           <button type="submit" disabled={!hasChanges || externalConflict}>Save</button>
