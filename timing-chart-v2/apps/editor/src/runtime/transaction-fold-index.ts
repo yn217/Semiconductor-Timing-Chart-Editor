@@ -48,3 +48,22 @@ export function transactionFoldRangesIntersecting(
   for (let index = low; index < ranges.length && ranges[index]![0] < end; index += 1) result.push(ranges[index]!);
   return result;
 }
+
+/** Split a source interval around sorted, merged folds in one linear pass. */
+export function transactionVisibleSegments(
+  start: number,
+  end: number,
+  folds: readonly TransactionFoldRange[],
+): readonly { readonly start: number; readonly end: number }[] {
+  const visible: { start: number; end: number }[] = [];
+  let cursor = start;
+  for (const [foldStart, foldEnd] of folds) {
+    const clippedStart = Math.max(start, foldStart);
+    const clippedEnd = Math.min(end, foldEnd);
+    if (clippedEnd <= cursor || clippedStart >= end) continue;
+    if (clippedStart > cursor) visible.push({ start: cursor, end: clippedStart });
+    cursor = Math.max(cursor, clippedEnd);
+  }
+  if (cursor < end) visible.push({ start: cursor, end });
+  return visible;
+}

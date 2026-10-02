@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldRangesIntersecting } from "../../apps/editor/src/runtime/transaction-fold-index.js";
+import { mergeTransactionFoldRanges, transactionFoldBoundariesInWindow, transactionFoldRangesIntersecting, transactionVisibleSegments } from "../../apps/editor/src/runtime/transaction-fold-index.js";
 
 describe("Transaction fold interval index", () => {
   it("slices sorted viewport boundaries with binary lookup and inclusive endpoints", () => {
@@ -38,5 +38,23 @@ describe("Transaction fold interval index", () => {
     const ranges = mergeTransactionFoldRanges([[10, 20], [30, 40]]);
     expect(transactionFoldRangesIntersecting(ranges, 20, 30)).toEqual([]);
     expect(transactionFoldRangesIntersecting(ranges, 19, 31)).toEqual([[10, 20], [30, 40]]);
+  });
+
+  it("splits a long transaction around thousands of folds with a single linear pass", () => {
+    const ranges = Array.from({ length: 2_000 }, (_, index) => [index * 10 + 2, index * 10 + 5] as const);
+    let indexedReads = 0;
+    const indexed = new Proxy(ranges, {
+      get(target, property, receiver) {
+        if (typeof property === "string" && /^\\d+$/.test(property)) indexedReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+
+    const segments = transactionVisibleSegments(0, 20_000, indexed);
+
+    expect(segments).toHaveLength(2_001);
+    expect(segments.slice(0, 2)).toEqual([{ start: 0, end: 2 }, { start: 5, end: 12 }]);
+    expect(segments.at(-1)).toEqual({ start: 19_995, end: 20_000 });
+    expect(indexedReads).toBeLessThanOrEqual(ranges.length);
   });
 });
