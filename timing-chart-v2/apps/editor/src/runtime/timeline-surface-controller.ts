@@ -406,12 +406,15 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       if (rulerLower.current) refreshPlayheadPresentation(rulerLower.current, selectedCycleRef.current, boundaryToLocalX);
     };
     const refreshRangeSelectionBandNow = () => {
-      refreshRangeBandPresentation(viewportElement, rulerElement, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(sessionController.snapshot().document, cycle), timelineGeometry.timeAxisMetrics.zoom, timelineOffset(), projection.totalHeight);
+      const metrics = timelineGeometry.timeAxisMetrics;
+      const document = sessionController.snapshot().document;
+      const boundaryToLocalX = (cycle: number, snapshot: typeof metrics) => timelineGeometry.sourceBoundaryToLocalX(document, cycle, snapshot);
+      refreshRangeBandPresentation(viewportElement, rulerElement, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, boundaryToLocalX, metrics, timelineOffset(), projection.totalHeight);
       // Signal Split View (#200): the range band's horizontal extent comes
       // from the one shared time mapping, but its vertical extent must span
       // Lower's OWN row content, not Upper's -- reusing Upper's totalHeight
       // here would stretch/shrink the band to the wrong pane's height.
-      if (viewportLower.current && rulerLower.current && signalSplitRuntimeRef.current) refreshRangeBandPresentation(viewportLower.current, rulerLower.current, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(sessionController.snapshot().document, cycle), timelineGeometry.timeAxisMetrics.zoom, timelineOffset(), signalSplitRuntimeRef.current.getTotalHeight());
+      if (viewportLower.current && rulerLower.current && signalSplitRuntimeRef.current) refreshRangeBandPresentation(viewportLower.current, rulerLower.current, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, boundaryToLocalX, metrics, timelineOffset(), signalSplitRuntimeRef.current.getTotalHeight());
     };
     refreshRangeSelectionBand.current = refreshRangeSelectionBandNow;
     const refreshRangePreview = () => {

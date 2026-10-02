@@ -105,6 +105,27 @@ describe("TimelineGeometryOwner", () => {
     expect(published).toMatchObject({ presentationScale: 2, pxPerDisplayCycle: 120, screenOriginX: 10 });
   });
 
+  it("projects range boundaries from the captured metrics generation after a newer one is published", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const geometry = new ImmutableLocalGeometryMap(clockId, [
+      { cycle: 0, point: "cycle-start", position: { x: 8, y: 0 } },
+      { cycle: 1, point: "cycle-start", position: { x: 48, y: 0 } },
+    ]);
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => cycleDocument,
+      getProjection: () => ({} as RenderProjection),
+      onSnapIndexBuilt: () => undefined,
+    });
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1, 100, 0, 1);
+    const captured = owner.timeAxisMetrics;
+    owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 2, 200, 10, 2);
+
+    expect(owner.sourceBoundaryToLocalX(cycleDocument, 1, captured)).toBe(48);
+    expect(owner.timeAxisMetrics.zoom).toBe(2);
+  });
+
   it("publishes zoom changes as a new immutable time-axis generation", () => {
     const clockId = signalId("sig_cycle_clock");
     const geometry = new ImmutableLocalGeometryMap(clockId, [

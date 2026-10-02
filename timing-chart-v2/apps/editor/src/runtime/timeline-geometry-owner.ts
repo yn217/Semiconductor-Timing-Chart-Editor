@@ -157,16 +157,17 @@ export class TimelineGeometryOwner {
     return document === this.context.getDocument() ? this.#timeAxisMetrics.timeAxis : resolveTimeAxisGeometry(document, this.geometryMaps);
   }
 
-  sourceBoundaryToLocalX(document: CanonicalDocument, cycle: number): number | undefined {
-    const axis = this.resolveTimeAxis(document);
+  sourceBoundaryToLocalX(document: CanonicalDocument, cycle: number, metrics: TimeAxisMetrics = this.#timeAxisMetrics): number | undefined {
+    const currentDocument = document === this.context.getDocument();
+    const axis = currentDocument ? metrics.timeAxis : this.resolveTimeAxis(document);
     if (!axis.geometry || axis.ownerSignalId === undefined) return undefined;
-    const mapping = document === this.context.getDocument() ? this.#timeAxisMetrics.mapping : this.mappingCache.get(document.timeline, document.timeGroups);
+    const mapping = currentDocument ? metrics.mapping : this.mappingCache.get(document.timeline, document.timeGroups);
     const displayCycle = displayBoundaryForSource(mapping, cycle, document.timeline.cycleCount);
     if (displayCycle === undefined) return undefined;
     // Bounded folded geometry is rebased with canonical source identities.
     // Keep the display-cycle lookup as the identity/no-fold fallback.
     const point = findSourceAnchorGeometry(axis.geometry, { signalId: axis.ownerSignalId, cycle, point: "cycle-start" }, displayCycle)?.point;
-    if (point !== undefined) return point.x * this.#timeAxisMetrics.presentationScale;
+    if (point !== undefined) return point.x * (currentDocument ? metrics.presentationScale : this.#timeAxisMetrics.presentationScale);
 
     // A bounded WaveDrom render intentionally retains detailed boundary
     // geometry only around its current window. Transaction bars can refer to
@@ -176,8 +177,8 @@ export class TimelineGeometryOwner {
     // DOM nodes or build a Transaction-local time mapper. The display mapping
     // above preserves collapsed TimeGroups and keeps all surfaces on the
     // shared time axis.
-    const pixelsPerDisplayCycle = this.#timeAxisMetrics.pxPerDisplayCycle;
-    const waveOriginPx = this.#timeAxisMetrics.screenOriginX;
+    const pixelsPerDisplayCycle = currentDocument ? metrics.pxPerDisplayCycle : this.#timeAxisMetrics.pxPerDisplayCycle;
+    const waveOriginPx = currentDocument ? metrics.screenOriginX : this.#timeAxisMetrics.screenOriginX;
     if (pixelsPerDisplayCycle === undefined || !Number.isFinite(pixelsPerDisplayCycle) || pixelsPerDisplayCycle <= 0
       || waveOriginPx === undefined || !Number.isFinite(waveOriginPx)) return undefined;
     return waveOriginPx + displayCycle * pixelsPerDisplayCycle;

@@ -62,16 +62,16 @@ export function refreshPlayheadPresentation(ruler: HTMLElement, cycle: number, b
   playhead.style.left = `${playheadX}px`;
 }
 
-export function refreshRangeBandPresentation(viewport: HTMLElement, ruler: HTMLElement, rendererHost: HTMLElement, active: boolean, preview: string | undefined, range: { readonly start: number; readonly end: number }, boundaryToLocalX: (cycle: number) => number | undefined, zoom: number, timeDomainLeft: number, totalHeight: number): void {
+export function refreshRangeBandPresentation(viewport: HTMLElement, ruler: HTMLElement, rendererHost: HTMLElement, active: boolean, preview: string | undefined, range: { readonly start: number; readonly end: number }, boundaryToLocalX: (cycle: number, metrics: TimeAxisMetrics) => number | undefined, metrics: TimeAxisMetrics, timeDomainLeft: number, totalHeight: number): void {
   const band = viewport.querySelector<HTMLElement>("[data-role='range-selection-band']");
   const rulerBand = ruler.querySelector<HTMLElement>("[data-role='range-selection-ruler-band']");
   if (!band) return;
   if (!active && !preview) { band.hidden = true; if (rulerBand) rulerBand.hidden = true; for (const tick of ruler.querySelectorAll<HTMLElement>("[data-cycle]")) delete tick.dataset.rangeSelected; return; }
   const [startText, endText] = (preview ?? `${range.start}:${range.end}`).split(":");
   const start = Number(startText); const end = Number(endText);
-  const startLocalX = boundaryToLocalX(start); const endLocalX = boundaryToLocalX(end);
+  const startLocalX = boundaryToLocalX(start, metrics); const endLocalX = boundaryToLocalX(end, metrics);
   if (startLocalX === undefined || endLocalX === undefined || !Number.isInteger(start) || !Number.isInteger(end) || end <= start) { band.hidden = true; return; }
-  const startX = startLocalX * zoom; const endX = endLocalX * zoom;
+  const startX = startLocalX * metrics.zoom; const endX = endLocalX * metrics.zoom;
   if (!Number.isFinite(startX) || !Number.isFinite(endX) || endX <= startX) { band.hidden = true; return; }
   band.hidden = false; band.dataset.rangeStart = String(start); band.dataset.rangeEnd = String(end); band.dataset.source = "ruler-local-geometry"; band.style.left = `${timeDomainLeft + startX}px`; band.style.width = `${endX - startX}px`; band.style.top = "34px"; band.style.height = `${Math.max(totalHeight, viewport.clientHeight - 34)}px`; band.setAttribute("aria-label", `Selected time range [${start}, ${end})`);
   if (rulerBand) { rulerBand.hidden = false; rulerBand.dataset.rangeStart = String(start); rulerBand.dataset.rangeEnd = String(end); rulerBand.dataset.source = "ruler-local-geometry"; rulerBand.style.left = `${startLocalX}px`; rulerBand.style.width = `${endLocalX - startLocalX}px`; rulerBand.setAttribute("aria-label", `Selected time range [${start}, ${end})`); }
