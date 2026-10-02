@@ -39,6 +39,7 @@ test("rejects non-timing and incompatible annotation anchors before replacing th
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/); // published after the first render; reading it earlier yielded null
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
     history: await page.getByTestId("history-status").textContent(),
@@ -140,6 +141,7 @@ test("creates a geometry-backed 30/70 threshold Measurement and preserves it thr
   await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/); // published after the first render; reading it earlier yielded null
   await selectRequestSignal(host);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline range start").fill("3");
@@ -257,6 +259,7 @@ test("Snap toggle and zoom preserve the derived candidate service without mutati
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/); // published after the first render; reading it earlier yielded null
   const surface = host.locator("[data-role='timing-chart-surface']");
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
@@ -475,6 +478,7 @@ test("cancels an active Annotation drag when New replaces the document", async (
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", /^\d+$/); // published after the first render; reading it earlier yielded null
   await selectRequestSignal(host);
   const owner = await createAnnotation(page, "dependency");
   const body = owner.locator("[data-role='annotation-body']");
