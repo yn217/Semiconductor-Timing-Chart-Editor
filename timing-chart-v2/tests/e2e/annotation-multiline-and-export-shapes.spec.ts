@@ -98,7 +98,11 @@ test("authored label wrap width is shared by live overlay and SVG export", async
   expect(groupMatch![0]).toContain('dy="18"');
   const livePosition = await label.evaluate((element) => (element as HTMLElement).style.transform.match(/translate\(([-\d.]+)px, ([-\d.]+)px\)/)?.slice(1));
   expect(livePosition).not.toBeNull();
-  expect(groupMatch![0]).toContain(`<text x="${livePosition![0]}" y="${livePosition![1]}"`);
+  const exported = groupMatch![0].match(/<text x="([-\d.]+)" y="([-\d.]+)"/);
+  expect(exported).not.toBeNull();
+  // The live label is positioned inside the waveform viewport; the export adds the frozen name column (200px) and the ruler header (184px).
+  expect(Number(exported![1]) - Number(livePosition![0])).toBeCloseTo(200, 0);
+  expect(Number(exported![2]) - Number(livePosition![1])).toBeCloseTo(183.5, 0);
 });
 
 test("annotation label placement presets move the live label between its semantic endpoints and above/below", async ({ page }) => {
