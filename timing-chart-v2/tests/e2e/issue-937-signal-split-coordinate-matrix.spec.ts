@@ -17,7 +17,11 @@ async function ticksAndGrid(page: Page) {
     });
     const upper = pick("cycle-ruler", "geometry-grid"); const lower = pick("cycle-ruler-lower", "geometry-grid-lower");
     const deltas = (a: Map<string, number>, b: Map<string, number>) => [...a].filter(([cycle]) => b.has(cycle)).map(([cycle, x]) => ({ cycle, delta: b.get(cycle)! - x }));
-    return { tick: deltas(upper.ticks, lower.ticks), grid: deltas(upper.grid, lower.grid), counts: [upper.ticks.size, lower.ticks.size, upper.grid.size, lower.grid.size] };
+    // The same Signal's wave owner in each pane must start at the same X (same shared time domain).
+    const ownerLefts = (paneTestId: string) => new Map([...document.querySelectorAll<HTMLElement>(`[data-testid='${paneTestId}'] [data-role='wave-owner'][data-signal-id]`)].map((owner) => [owner.dataset.signalId!, owner.getBoundingClientRect().left] as const));
+    const upperOwners = ownerLefts("cycle-viewport"); const lowerOwners = ownerLefts("cycle-viewport-lower");
+    const waves = [...upperOwners].filter(([id]) => lowerOwners.has(id)).map(([id, x]) => ({ cycle: `wave:${id}`, delta: lowerOwners.get(id)! - x }));
+    return { wave: waves, tick: deltas(upper.ticks, lower.ticks), grid: deltas(upper.grid, lower.grid), counts: [upper.ticks.size, lower.ticks.size, upper.grid.size, lower.grid.size] };
   });
 }
 
@@ -37,15 +41,16 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] 
 
     const failures: string[] = [];
     let compared = 0;
+    let wavesCompared = 0;
     const check = async (label: string) => {
       // The Lower pane mirrors Upper's scroll on the next frame(s); allow up to ~1s to settle before judging.
       let result = await ticksAndGrid(page);
-      for (let attempt = 0; attempt < 20 && result.grid.some((row) => Math.abs(row.delta) > 0.5); attempt += 1) {
+      for (let attempt = 0; attempt < 20 && [...result.grid, ...result.wave].some((row) => Math.abs(row.delta) > 0.5); attempt += 1) {
         await page.waitForTimeout(50);
         result = await ticksAndGrid(page);
       }
-      for (const [kind, rows] of [["grid", result.grid]] as const) {
-        for (const row of rows) { compared += 1; if (Math.abs(row.delta) > 0.5) failures.push(`${label}: ${kind} cycle ${row.cycle} Lower-Upper = ${row.delta.toFixed(2)}px`); }
+      for (const [kind, rows] of [["grid", result.grid], ["wave", result.wave]] as const) {
+        for (const row of rows) { compared += 1; if (kind === "wave") wavesCompared += 1; if (Math.abs(row.delta) > 0.5) failures.push(`${label}: ${kind} cycle ${row.cycle} Lower-Upper = ${row.delta.toFixed(2)}px`); }
       }
     };
 
@@ -61,6 +66,7 @@ for (const size of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }] 
       await check(`zoom ${preset}% @far-right`);
     }
     expect(compared, "Upper and Lower share enough labelled grid lines to compare").toBeGreaterThan(20);
+    expect(wavesCompared, "at least one Signal wave owner is mounted in both panes").toBeGreaterThan(0);
     expect(failures, failures.slice(0, 12).join("\n")).toEqual([]);
   });
 }
