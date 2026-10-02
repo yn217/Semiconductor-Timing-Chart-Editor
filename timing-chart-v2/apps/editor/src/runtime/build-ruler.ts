@@ -267,7 +267,13 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   const geometryWidth = windowIndependentWidth ?? (Number.isFinite(referenceViewBoxWidth) && (referenceViewBoxWidth ?? 0) > 0
     ? referenceViewBoxWidth!
     : finalX + 24);
-  const targetWidth = Math.max(Math.ceil(geometryWidth * scale), Math.ceil(minimumWidth));
+  // #945: standalone Transaction sizes the track to fill the scroll owner (`minimumWidth` = its clientWidth). The time-domain box adds the
+  // WaveDrom margins on top of the track, so filling with the full clientWidth made the content always clientWidth+margin wide: a phantom
+  // horizontal scrollbar whose own height then forced a vertical one, whose width shrank clientWidth, which rebuilt the ruler narrower, and so
+  // on every frame. Reserve the margins inside the minimum so a filled track exactly fits.
+  const fillsViewport = element.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction";
+  const minimumTrackWidth = fillsViewport ? Math.max(0, minimumWidth - waveDomainPaddingPx(scale)) : minimumWidth;
+  const targetWidth = Math.max(Math.ceil(geometryWidth * scale), Math.ceil(minimumTrackWidth));
   // The time-domain box is the whole rendered SVG: the cycle span plus WaveDrom's left/right margins (the ticks start one
   // left margin in), so the terminal boundary and the last cycle cell stay inside the ruler/overlay/interactive layers.
   const timeDomainWidth = targetWidth + waveDomainPaddingPx(scale);
