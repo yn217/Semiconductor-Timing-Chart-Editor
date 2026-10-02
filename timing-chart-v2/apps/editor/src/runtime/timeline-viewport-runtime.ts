@@ -12,7 +12,7 @@ export type TimelineViewportRuntimeContext = {
     readonly playheadRef: RefObject<HTMLElement | null>;
   };
   readonly geometry: {
-    readonly getTimeAxisMetrics: () => Pick<TimeAxisMetrics, "zoom" | "mapping">;
+    readonly getTimeAxisMetrics: () => Pick<TimeAxisMetrics, "zoom" | "localXToSourceBoundary">;
     readonly getTimeAxisGeometry: () => unknown;
     readonly getLocalGeometryMap: () => unknown;
     readonly sourceCycleToLocalX: (cycle: number) => number | undefined;
@@ -188,7 +188,7 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
       void context.render.waitForRendererIdle().then(move);
     },
     sourceBoundaryToLocalX: (document, cycle) => { assertActive(); return context.geometry.sourceBoundaryToLocalX(document, cycle); },
-    screenXToSourceCycle: (screenX) => { assertActive(); const { zoom, mapping } = context.geometry.getTimeAxisMetrics(); if (!Number.isFinite(zoom) || zoom <= 0) return undefined; return mapping.displayToSource(screenX / zoom); },
+    screenXToSourceCycle: (screenX) => { assertActive(); const metrics = context.geometry.getTimeAxisMetrics(); if (!Number.isFinite(metrics.zoom) || metrics.zoom <= 0) return undefined; return metrics.localXToSourceBoundary(screenX / metrics.zoom); },
     refreshRuler: () => { render("ruler"); },
     refreshGrid: () => { render("grid"); },
     refreshPlayhead: () => { render("playhead"); },

@@ -7,7 +7,7 @@ function context(): TimelineViewportRuntimeContext {
   let scroll = { left: 0, top: 0 };
   return {
     dom: Object.fromEntries(["viewportRef", "waveformRef", "rulerRef", "gridRef", "overlayRef", "rangeBandRef", "playheadRef"].map((key) => [key, { current: null }])) as TimelineViewportRuntimeContext["dom"],
-    geometry: { getTimeAxisMetrics: () => ({ zoom: publishedZoom, mapping: { displayToSourceCycle: () => undefined } as never }), getTimeAxisGeometry: () => ({}), getLocalGeometryMap: () => ({}), sourceCycleToLocalX: (cycle) => cycle * 10, sourceBoundaryToLocalX: (_document, cycle) => cycle * 10, requestSourceCycle: () => undefined, clearRequestedSourceCycle: () => undefined, localXToScreenX: (x) => x },
+    geometry: { getTimeAxisMetrics: () => ({ zoom: publishedZoom, localXToSourceBoundary: (x: number) => Math.round(x / 10) }), getTimeAxisGeometry: () => ({}), getLocalGeometryMap: () => ({}), sourceCycleToLocalX: (cycle) => cycle * 10, sourceBoundaryToLocalX: (_document, cycle) => cycle * 10, requestSourceCycle: () => undefined, clearRequestedSourceCycle: () => undefined, localXToScreenX: (x) => x },
     viewport: { getMetrics: () => ({ width: 1000, leftInset: 100 }), getScrollState: () => scroll, setScrollState: (next) => { scroll = { ...scroll, ...next }; }, getZoom: () => zoom, setZoom: (next) => { zoom = next; } },
     document: { getSnapshot: () => ({}), getCanonicalRevision: () => 1, getDocumentEpoch: () => 1 },
     render: { requestRender: vi.fn(), requestOverlayRefresh: vi.fn(), waitForRendererIdle: async () => undefined },
@@ -101,14 +101,14 @@ describe("TimelineViewportRuntime", () => {
     expect(setScrollState).toHaveBeenCalledWith({ left: 250 });
   });
 
-  it("maps cursor screen X with the same zoom snapshot as the DisplayTimeMapping", () => {
+  it("maps cursor content X with the immutable metrics inverse and the same zoom snapshot", () => {
     const runtimeContext = context();
-    const displayX = vi.fn((x: number) => x / 10);
-    runtimeContext.geometry.getTimeAxisMetrics = () => ({ zoom: 2, mapping: { displayToSource: displayX } as never });
+    const inverse = vi.fn((x: number) => Math.round(x / 10));
+    runtimeContext.geometry.getTimeAxisMetrics = () => ({ zoom: 2, localXToSourceBoundary: inverse });
     const runtime = createTimelineViewportRuntime(runtimeContext);
     runtime.attach();
 
     expect(runtime.screenXToSourceCycle(80)).toBe(4);
-    expect(displayX).toHaveBeenCalledWith(40);
+    expect(inverse).toHaveBeenCalledWith(40);
   });
 });

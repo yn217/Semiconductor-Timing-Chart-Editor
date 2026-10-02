@@ -68,6 +68,29 @@ describe("TimelineGeometryOwner", () => {
     expect(owner.screenToLocal({ x: 40, y: 12 }, 2)).toEqual({ x: 20, y: 6 });
   });
 
+  it("inverts content X through the captured folded display mapping", () => {
+    const clockId = signalId("sig_cycle_clock");
+    const document = {
+      ...cycleDocument,
+      timeline: { ...cycleDocument.timeline, cycleCount: 20, end: 20 },
+      timeGroups: [{ id: "fold-inverse" as never, name: "Fold", start: 2, end: 4, presentation: { collapsed: true, foldStyle: "axis-break" as const, foldLabel: "GAP" } }],
+    };
+    const geometry = new ImmutableLocalGeometryMap(clockId, Array.from({ length: 21 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: 20.5 + cycle * 40, y: 0 } })));
+    const owner = new TimelineGeometryOwner({
+      mappingCache: new DisplayTimeMappingCache(),
+      geometryMaps: new Map([[clockId, geometry]]),
+      getDocument: () => document,
+      getProjection: () => ({} as RenderProjection),
+      onSnapIndexBuilt: () => undefined,
+    });
+    const metrics = owner.updatePresentation({ mode: "reference-clock", ownerSignalId: clockId, geometry }, 1, 40, 20.5);
+
+    expect(metrics.localXToSourceBoundary(20.5 + 2 * 40)).toBe(4);
+    expect(metrics.localXToSourceBoundary(20.5 + 3 * 40)).toBe(5);
+    expect(metrics.localXToSourceBoundary(20.5 + metrics.displayCycleCount * 40)).toBe(20);
+    expect(metrics.localXToSourceBoundary(20.5 - 21)).toBeUndefined();
+  });
+
   it("publishes immutable presentation metrics as one generation", () => {
     const clockId = signalId("sig_cycle_clock");
     const geometry = new ImmutableLocalGeometryMap(clockId, [
@@ -99,6 +122,9 @@ describe("TimelineGeometryOwner", () => {
     expect(published.sourceBoundaryToContentX(1)).toBe(96);
     expect(published.displayBoundaryToContentX(1)).toBe(96);
     expect(published.displayBoundaryToContentX(-1)).toBeUndefined();
+    expect(published.localXToSourceBoundary(96)).toBe(1);
+    expect(published.localXToSourceBoundary(10 + published.displayCycleCount * 120)).toBe(cycleDocument.timeline.cycleCount);
+    expect(published.localXToSourceBoundary(Number.NaN)).toBeUndefined();
     expect(owner.timeAxis).toBe(published.timeAxis);
     expect(owner.waveWidthPxPerDisplayCycle).toBe(published.pxPerDisplayCycle);
     expect(owner.waveOriginPx).toBe(published.screenOriginX);

@@ -52,6 +52,8 @@ export interface TimeAxisMetrics {
   readonly sourceBoundaryToContentX: (sourceCycle: number) => number | undefined;
   /** Converts display-domain boundaries to the same unscrolled content-X space. */
   readonly displayBoundaryToContentX: (displayCycle: number) => number | undefined;
+  /** Resolves content X to the nearest canonical source boundary in this generation. */
+  readonly localXToSourceBoundary: (localX: number) => number | undefined;
 }
 
 /** Read-only authority for semantic -> display -> local -> screen timeline geometry. */
@@ -105,6 +107,15 @@ export class TimelineGeometryOwner {
           ? mapping.sourceCycleCount
           : mapping.displayToSource(displayCycle);
         return sourceCycle === undefined ? undefined : sourceBoundaryToContentX(sourceCycle);
+      },
+      localXToSourceBoundary: (localX: number): number | undefined => {
+        if (!Number.isFinite(localX) || pxPerDisplayCycle === undefined || !Number.isFinite(pxPerDisplayCycle) || pxPerDisplayCycle <= 0
+          || screenOriginX === undefined || !Number.isFinite(screenOriginX)) return undefined;
+        const displayBoundary = Math.round((localX - screenOriginX) / pxPerDisplayCycle);
+        if (displayBoundary < 0 || displayBoundary > mapping.displayCycleCount) return undefined;
+        return displayBoundary === mapping.displayCycleCount
+          ? mapping.sourceCycleCount
+          : mapping.displayToSource(displayBoundary);
       },
     });
   }
