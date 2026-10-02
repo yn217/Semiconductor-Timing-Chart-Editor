@@ -1,10 +1,23 @@
-import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
+import { findSourceAnchorGeometry, type LocalGeometryMap } from "@timing-chart-v2/geometry";
 import { waveDomainPaddingPx, waveOwnerPlacement } from "./wave-owner-placement.js";
 import { cachedTimeGroupHierarchy, type CanonicalDocument, type SignalId } from "@timing-chart-v2/schema";
 import { timeGroupOutlineHeight, type DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { presentationCycles } from "../presentation-cycles.js";
 import { displayWindowForSource } from "./display-boundary.js";
+
+/** Resolve a retained geometry boundary's key into the ruler's display domain. */
+export function rulerDisplayCycleForGeometryKey(cycle: number, geometry: Pick<LocalGeometryMap, "cycleKeyDomain">, mapping: DisplayTimeMapping, sourceCycleCount: number): number | undefined {
+  if (geometry.cycleKeyDomain === "display") {
+    return Number.isInteger(cycle) && cycle >= 0 && cycle <= mapping.displayCycleCount ? cycle : undefined;
+  }
+  return cycle === sourceCycleCount ? mapping.displayCycleCount : mapping.sourceToDisplay(cycle);
+}
+
+/** Resolve one canonical boundary against the same source/display domain contract as every other time-axis consumer. */
+export function rulerBoundaryPoint(geometry: LocalGeometryMap, signalId: SignalId, sourceCycle: number, displayCycle: number): { readonly x: number; readonly y: number } | undefined {
+  return findSourceAnchorGeometry(geometry, { signalId, cycle: sourceCycle, point: "cycle-start" }, displayCycle)?.point;
+}
 
 export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0, viewportElement?: HTMLElement, referenceViewBoxWidth?: number, tcScale = 1): Readonly<{ scale: number; targetWidth: number; waveOriginPx: number }> {
   element.dataset.axisMode = axisMode;
@@ -106,8 +119,10 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   // retained value is only a first-paint fallback; keeping it over a valid
   // SVG matrix lets ruler/grid pitch drift after layout or zoom changes.
   let finalX = 0;
-  const cycleZeroPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: 0, point: "cycle-start" })?.point;
-  const cycleOnePoint = mapping.displayCycleCount > 0 ? geometry.find({ signalId: axisOwnerSignalId, cycle: 1, point: "cycle-start" })?.point : undefined;
+  const cycleZeroSource = mapping.displayToSource(0) ?? 0;
+  const cycleOneSource = mapping.displayCycleCount > 0 ? mapping.displayToSource(1) : undefined;
+  const cycleZeroPoint = rulerBoundaryPoint(geometry, axisOwnerSignalId, cycleZeroSource, 0);
+  const cycleOnePoint = cycleOneSource === undefined ? undefined : rulerBoundaryPoint(geometry, axisOwnerSignalId, cycleOneSource, 1);
   const pixelsPerCycle = cycleZeroPoint && cycleOnePoint ? (cycleOnePoint.x - cycleZeroPoint.x) * scale : Infinity;
   // `geometry.cycleBoundaryEntries()` only covers whatever cycle range the
   // axis-owner signal's bounded/windowed geometry (#587) currently has
@@ -145,7 +160,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   let secondFoundPoint: { readonly x: number } | undefined;
   let secondFoundDisplay: number | undefined;
   for (const entry of boundaryEntries) {
-    const display = mapping.sourceToDisplay(entry.cycle) ?? (entry.cycle === document.timeline.cycleCount ? mapping.displayCycleCount : undefined);
+    const display = rulerDisplayCycleForGeometryKey(entry.cycle, geometry, mapping, document.timeline.cycleCount);
     if (display === undefined) continue;
     if (firstFoundDisplay === undefined || display < firstFoundDisplay) { firstFoundPoint = entry.position; firstFoundDisplay = display; }
     if (secondFoundDisplay === undefined || display > secondFoundDisplay) { secondFoundPoint = entry.position; secondFoundDisplay = display; }
@@ -166,7 +181,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
     : 0;
   for (const display of presentationCycles(semanticDisplayCycleCount, pixelsPerCycle, rulerTickBudget, tcScale > 1 ? tcScale : 1)) {
     const sourceCycle = display === mapping.displayCycleCount ? document.timeline.cycleCount : (mapping.displayToSource(display) ?? display);
-    const resolvedPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: sourceCycle, point: "cycle-start" })?.point;
+    const resolvedPoint = rulerBoundaryPoint(geometry, axisOwnerSignalId, sourceCycle, display);
     const point = resolvedPoint ?? (firstFoundPoint && firstFoundDisplay !== undefined && windowLocalPixelsPerCycle !== undefined
       ? { x: firstFoundPoint.x + (display - firstFoundDisplay) * windowLocalPixelsPerCycle }
       : undefined);
