@@ -76,15 +76,15 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
   });
 }
 
-test("Bottom follow and pin state is visible beside the tab strip and in settings", async ({ page }) => {
+test("Bottom follow is implicit and exceptional pin state is visible in the tab strip", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
-  await expect(page.getByTestId("bottom-target-mode")).toHaveText("Following selection");
+  await expect(page.getByTestId("bottom-target-mode")).toHaveCount(0);
   await page.getByTestId("bottom-settings").click();
   await expect(page.getByTestId("follow-selection")).toBeChecked();
   await page.getByTestId("bottom-pin").click();
   await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
   await page.getByTestId("bottom-pin").click();
   await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
-  await expect(page.getByTestId("bottom-target-mode")).toHaveText("Following selection");
+  await expect(page.getByTestId("bottom-target-mode")).toHaveCount(0);
 });

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { openBottomSettings } from "./bottom-settings";
 
-test("Bottom target mode stays visible while settings explain Follow Selection and Pin", async ({ page }) => {
+test("Bottom settings explain Follow Selection and Pin without a persistent normal-state chip", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -21,7 +21,7 @@ test("Bottom target mode stays visible while settings explain Follow Selection a
   expect(iconBox?.width).toBeLessThanOrEqual(18);
   expect(iconBox?.height).toBeGreaterThanOrEqual(16);
   expect(iconBox?.height).toBeLessThanOrEqual(18);
-  await expect(page.getByTestId("bottom-target-mode")).toHaveText("Following selection");
+  await expect(page.getByTestId("bottom-target-mode")).toHaveCount(0);
   await expect(page.getByTestId("bottom-follow-status")).toHaveCount(0);
   await expect(page.getByText("Following Selection", { exact: true })).toHaveCount(0);
   const popover = page.getByTestId("bottom-settings-popover");
@@ -60,7 +60,7 @@ test("Bottom settings gear remains right-aligned and layout-stable at supported 
     await page.setViewportSize(viewport);
     const nav = page.getByTestId("bottom-tabs");
     const gear = page.getByTestId("bottom-settings");
-    await expect(page.getByTestId("bottom-target-mode")).toHaveText("Following selection");
+    await expect(page.getByTestId("bottom-target-mode")).toHaveCount(0);
     await expect(gear).toBeVisible();
     const before = {
       nav: await nav.boundingBox(),
