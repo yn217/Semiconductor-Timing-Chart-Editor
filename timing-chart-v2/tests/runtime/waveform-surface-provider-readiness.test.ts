@@ -196,7 +196,7 @@ describe("waveform provider primary geometry readiness", () => {
       getTimeAxisMetrics,
       isTimeAxisMetricsCurrent: (generation) => (currentMetrics as { generation?: number } | undefined)?.generation === generation,
       onReferenceGeometryReady: () => {
-        currentMetrics = { generation: 9, pxPerDisplayCycle: 40, screenOriginX: 7, presentationScale: 2 };
+        currentMetrics = { generation: 9, pxPerDisplayCycle: 40, screenOriginX: 7, presentationScale: 2, displayBoundaryToContentX: (displayCycle: number) => 7 + displayCycle * 40 };
       },
     });
 
