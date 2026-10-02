@@ -15,7 +15,9 @@ export function deriveRenderInvalidation(changeSet: ChangeSet, referenceSignalId
   const referenceWaveChanged = referenceSignalId !== undefined && (full || changeSet.timelineSemantics === true || changeSet.timeGroupSemantics !== undefined || changeSet.waveSemantics?.includes(referenceSignalId) === true || changeSet.geometryLocal?.includes(referenceSignalId) === true);
   const refreshRuler = full || changeSet.timelineSemantics === true || changeSet.transactionTimeScale === true || changeSet.timeGroupSemantics !== undefined || changeSet.bookmarkPosition !== undefined || referenceWaveChanged;
   const refreshGrid = full || changeSet.timelineSemantics === true || changeSet.transactionTimeScale === true || changeSet.timeGroupSemantics !== undefined || referenceWaveChanged;
-  // rowPresentation covers Signal Show/Hide: it changes RowLayout visibility, so Annotation/Dependency geometry anchored to those rows must be reprojected (#898).
-  const refreshOverlays = refreshRuler || changeSet.rowOrder !== undefined || changeSet.rowPresentation !== undefined || changeSet.geometryScreenY !== undefined || changeSet.edgeCounter !== undefined || (changeSet.annotationPosition?.length ?? 0) > 0 || (changeSet.annotationStyle?.length ?? 0) > 0 || (changeSet.annotationOrder?.length ?? 0) > 0 || (changeSet.annotationGroups?.length ?? 0) > 0 || (changeSet.addedSignals?.length ?? 0) > 0 || (changeSet.removedSignals?.length ?? 0) > 0;
+  // Row presentation also covers label-only edits such as Signal rename.
+  // Operations that actually move/hide rows carry geometryScreenY and/or
+  // annotationPosition explicitly, so those remain overlay invalidations.
+  const refreshOverlays = refreshRuler || changeSet.rowOrder !== undefined || changeSet.geometryScreenY !== undefined || changeSet.edgeCounter !== undefined || (changeSet.annotationPosition?.length ?? 0) > 0 || (changeSet.annotationStyle?.length ?? 0) > 0 || (changeSet.annotationOrder?.length ?? 0) > 0 || (changeSet.annotationGroups?.length ?? 0) > 0 || (changeSet.addedSignals?.length ?? 0) > 0 || (changeSet.removedSignals?.length ?? 0) > 0;
   return { snapDependenciesChanged, referenceWaveChanged, refreshRuler, refreshGrid, refreshOverlays };
 }
