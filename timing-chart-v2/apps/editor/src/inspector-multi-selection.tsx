@@ -16,7 +16,8 @@ import { MiniMap } from "./minimap.js";
  * correctly across the whole selection via `registry.execute("selection.
  * visibility"/"selection.delete")` -- the exact same commands the
  * single-signal Inspector, Ribbon and context menu already use, reused
- * here rather than inventing a second bulk-mutation path. */
+ * here rather than inventing a second bulk-mutation path. The shared action
+ * routes multi-Signal changes through one bulk visibility planner. */
 export function InspectorMultiSelection({ count, registry, document, viewport, onCancel, onClose }: { readonly count: number; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly onCancel: () => void; readonly onClose: () => void }) {
   return <aside className="inspector" data-testid="inspector" data-inspector-context="multi-selection" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <InspectorHeaderBar onClose={onClose} />
@@ -25,10 +26,8 @@ export function InspectorMultiSelection({ count, registry, document, viewport, o
       <p className="inspector-note">Individual properties (Name, Role, Style) aren't shown for a multi-selection -- select one Signal to edit its own fields, or use these actions to act on all {count} at once.</p>
       <button type="button" data-testid="multi-selection-show" onClick={() => registry.execute("selection.visibility", { visible: true })}>Show All</button>
       <button type="button" data-testid="multi-selection-hide" onClick={() => registry.execute("selection.visibility", { visible: false })}>Hide All</button>
-      {/* #431 item 9 ("Signal Tree productivity"): "show only selected" was
-          a listed, unimplemented acceptance item -- composes the existing
-          `signal.setVisibility` command across the whole document (no new
-          command/Canonical field), same batch shape as Show/Hide All. */}
+      {/* #431 item 9 ("Signal Tree productivity"): "show only selected" uses
+          the same atomic bulk visibility planner as Show/Hide All. */}
       <button type="button" data-testid="multi-selection-isolate" title="Hide every other Signal, keep only this selection visible" onClick={() => registry.execute("selection.isolate")}>Show Only Selected</button>
       <button type="button" className="danger" data-testid="multi-selection-delete" onClick={() => registry.execute("selection.delete")}>Delete Selected</button>
     </section>
