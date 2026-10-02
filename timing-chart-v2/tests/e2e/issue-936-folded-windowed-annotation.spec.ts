@@ -79,3 +79,44 @@ for (const { name, signalCount, cycleCount, anchorCycle, scrollToFarWindow } of 
       .toBeLessThan(1.5);
   });
 }
+
+/**
+ * #936 re-window: after scrolling far enough that the bounded window is REPLACED, the folded Signal-anchored annotations still land on
+ * the Ruler tick of their canonical source cycle. A verticalLine is placed at every cycle in 4900..5100 so whichever labelled ticks are
+ * visible after the jump have a matching annotation.
+ */
+test("folded Signal-anchored annotations stay on the Ruler after the bounded window is replaced by a far scroll", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const surface = page.getByTestId("cycle-surface");
+  await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
+  const base = generatePerformanceDocument({ signalCount: 60, cycleCount: 10_000, profile: "standard" });
+  const document = {
+    ...base,
+    timeGroups: [{ id: "tg_fold936b", name: "Fold", start: 2, end: 6, category: "collapsed", presentation: { collapsed: true, foldStyle: "axis-break", foldLabel: "4 cycles" } }],
+    annotations: Array.from({ length: 201 }, (_, index) => ({ id: `ann_936_w${4900 + index}`, type: "verticalLine", label: `W${4900 + index}`, visible: true, anchor: { signalId: base.signals[1]!.id, cycle: 4900 + index, point: "cycle-start" } })),
+  };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "p936b.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+  await page.locator(".view-mode").getByRole("button", { name: "Cycle", exact: true }).click();
+  await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+  const owner = page.locator("[data-role='timeline-viewport']");
+  const windowStart = () => page.locator("[data-role='wave-owner'][data-rendered-source-window-start]").first().getAttribute("data-rendered-source-window-start");
+  const startBefore = await windowStart();
+  await owner.evaluate((element) => { element.scrollLeft = Math.floor(element.scrollWidth * 0.49); });
+  // Wait for the bounded window to be replaced (rendered source window moves away from the start).
+  await expect.poll(async () => (await windowStart()) !== startBefore, { timeout: 30_000 }).toBe(true);
+  await expect(surface).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+
+  const measured = await page.evaluate(() => {
+    const ticks = [...document.querySelectorAll<HTMLElement>(".cycle-ruler [data-cycle]")].map((tick) => ({ cycle: tick.dataset.cycle!, x: tick.getBoundingClientRect().left }));
+    const rows = ticks.flatMap((tick) => {
+      const body = document.querySelector<HTMLElement>(`[data-role='annotation-owner'][data-annotation-id='ann_936_w${tick.cycle}'] [data-role='annotation-body']`);
+      return body ? [{ cycle: tick.cycle, delta: body.getBoundingClientRect().left - tick.x }] : [];
+    });
+    return { ticks: ticks.length, rows };
+  });
+  expect(measured.rows.length, `visible labelled ticks with an annotation after the re-window (ticks=${measured.ticks})`).toBeGreaterThan(0);
+  for (const row of measured.rows) expect(Math.abs(row.delta), `annotation for cycle ${row.cycle} vs its Ruler tick after re-window`).toBeLessThan(1.5);
+});
