@@ -9,6 +9,7 @@ import {
   canShareValueLabelGeometry,
   renderWaveJsonMarkup,
   renderWaveJsonMarkupWithMetrics,
+  toWaveJsonMappedClock,
   toWaveJson,
   toWaveJsonWindow,
   VALUE_LABEL_LAYOUT_POLICY,
@@ -229,6 +230,22 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(toWaveJson({ signal: sparseEnable, cycleCount: 12 })).toEqual({ wave: "p.0.p.", period: 2 });
     const badEnableAlign = { ...base, generator: { ...base.generator, period: 2 }, enable: [{ start: 1, value: 1 }] } as ClockSignal;
     expect(() => toWaveJson({ signal: badEnableAlign, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNALIGNED_CLOCK_ENABLE" }));
+  });
+
+  it("projects Clock start, phase, gating and suppressed pulse identity through visible source cycles", () => {
+    const base = canonicalFixture().signals[0] as ClockSignal;
+    const delayed: ClockSignal = { ...base, generator: { ...base.generator, start: 4, period: 4, phase: 0.5 } };
+    const sourceWindow = { signal: delayed, cycleCount: 12 };
+    const mappedCycles = [0, 1, 4, 5, 6, 7]; // fold [2,4), whose length is not a period multiple
+    const projected = toWaveJsonMappedClock(sourceWindow, mappedCycles);
+    expect(projected).toMatchObject({ wave: "..1.0.", phase: 0.5, clock: { expanded: true, initial: 0 } });
+
+    const suppressed: ClockSignal = { ...base, generator: { ...base.generator, period: 4, suppressedPeriods: [1] } };
+    const cyclesAroundFold = [0, 1, 2, 3, 8, 9, 10, 11]; // source pulse 1 is hidden; source pulse 2 remains active
+    expect(toWaveJsonMappedClock({ signal: suppressed, cycleCount: 12 }, cyclesAroundFold).wave).toBe("1.0.1.0.");
+
+    const gated: ClockSignal = { ...base, generator: { ...base.generator, period: 4 }, enable: [{ start: 0, value: 1 }, { start: 8, value: 0 }] };
+    expect(toWaveJsonMappedClock({ signal: gated, cycleCount: 12 }, cyclesAroundFold).wave).toBe("1.0.....");
   });
 
   it("uses WaveDrom continuation for held levels in expanded-duty clock windows", () => {

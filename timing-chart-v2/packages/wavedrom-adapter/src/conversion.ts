@@ -112,7 +112,7 @@ function enableChangesForWindow(changes: readonly SignalValueChange[] | undefine
   return result;
 }
 
-function expandedClockPattern(signal: ClockSignal): readonly string[] {
+function expandedClockPattern(signal: ClockSignal, allowActiveInitial = false): readonly string[] {
   const { generator } = signal;
   const totalHalfCycles = generator.period * 2;
   const activeHalfCycles = Math.round(totalHalfCycles * generator.duty);
@@ -120,7 +120,7 @@ function expandedClockPattern(signal: ClockSignal): readonly string[] {
     throw new WaveDromAdapterError("UNSUPPORTED_CLOCK_DUTY", "Pinned WaveDrom can represent non-50% duty only when the integer period contains exact half-cycle boundaries.");
   }
   const inactiveLevel = generator.polarity === "positive" ? 0 : 1;
-  if (generator.initial !== inactiveLevel) {
+  if (generator.initial !== inactiveLevel && !allowActiveInitial) {
     throw new WaveDromAdapterError("UNSUPPORTED_CLOCK_DUTY_INITIAL", "Non-50% duty expansion requires the generator initial level to be the inactive clock level.");
   }
   const inactiveToken = String(inactiveLevel);
@@ -133,6 +133,98 @@ function expandedClockPattern(signal: ClockSignal): readonly string[] {
   return Object.freeze([
     `${fullActive.repeat(activeFullCycles)}${activeHalfCycles % 2 === 1 ? activeToken : ""}${fullInactive.repeat(inactiveFullCycles)}`,
   ]);
+}
+
+/** Project canonical Clock semantics onto an ordered set of visible source
+ * cycles. The input list is display-slot order and may skip source cycles
+ * hidden by Axis Breaks. Unlike rendering the Clock against a compressed
+ * cycleCount, this keeps generator start, gating and suppression ordinals in
+ * canonical source time. */
+export function toWaveJsonMappedClock(source: CanonicalSignalSource, sourceCycles: readonly number[]): WaveJsonSignal {
+  validateSource(source);
+  const signal = source.signal;
+  if (signal.type !== "clock") throw new WaveDromAdapterError("NON_CLOCK_SIGNAL", "Mapped Clock conversion requires a Clock Signal.");
+  if (sourceCycles.length === 0) throw new WaveDromAdapterError("EMPTY_CLOCK_WINDOW", "Mapped Clock conversion requires at least one visible source cycle.");
+  const { generator } = signal;
+  if (!Number.isInteger(generator.period) || generator.period < 1) throw new WaveDromAdapterError("UNSUPPORTED_CLOCK_PERIOD", "WaveDrom clock conversion requires a positive integer period.");
+  if (!Number.isInteger(generator.phase * 2)) throw new WaveDromAdapterError("UNSUPPORTED_CLOCK_PHASE", "WaveDrom geometry requires phase aligned to a half cycle.");
+  if (!Number.isInteger(generator.start) || generator.start < 0 || generator.start % generator.period !== 0) throw new WaveDromAdapterError("UNALIGNED_CLOCK_START", "Clock start must align to its WaveDrom period.");
+  assertChangePoints(signal.enable ?? [], source.cycleCount);
+  if ((signal.enable ?? []).some((change) => change.start % generator.period !== 0)) throw new WaveDromAdapterError("UNALIGNED_CLOCK_ENABLE", "Clock enable changes must align to the generator period.");
+  let previousCycle = -1;
+  for (const cycle of sourceCycles) {
+    if (!Number.isInteger(cycle) || cycle < 0 || cycle >= source.cycleCount || cycle <= previousCycle) {
+      throw new WaveDromAdapterError("INVALID_CLOCK_SOURCE_CYCLES", "Mapped Clock source cycles must be strictly increasing and inside the canonical timeline.");
+    }
+    previousCycle = cycle;
+  }
+
+  const pattern = generator.period === 1 && generator.duty === 0.5
+    ? generator.polarity === "positive" ? "p" : "n"
+    : expandedClockPattern(signal, generator.duty === 0.5)[0]!;
+  const staticLevel = String(generator.initial);
+  const suppressed = new Set(generator.suppressedPeriods ?? []);
+  const enable = signal.enable ?? [];
+  const enableValueAt = (slotStart: number): string | number => {
+    let low = 0;
+    let high = enable.length;
+    while (low < high) {
+      const middle = (low + high) >>> 1;
+      if (enable[middle]!.start <= slotStart) low = middle + 1;
+      else high = middle;
+    }
+    return low === 0 ? 1 : enable[low - 1]!.value;
+  };
+  const normalizeEnabled = (value: string | number): boolean => {
+    const normalized = String(value).toLowerCase();
+    if (["1", "true", "high"].includes(normalized)) return true;
+    if (["0", "false", "low"].includes(normalized)) return false;
+    throw new WaveDromAdapterError("UNSUPPORTED_CLOCK_ENABLE", `Clock enable value '${String(value)}' is not binary.`);
+  };
+  const firstCycle = sourceCycles[0]!;
+  const firstSlotStart = Math.floor(firstCycle / generator.period) * generator.period;
+  let enableLow = 0;
+  let enableHigh = enable.length;
+  while (enableLow < enableHigh) {
+    const middle = (enableLow + enableHigh) >>> 1;
+    if (enable[middle]!.start <= firstSlotStart) enableLow = middle + 1;
+    else enableHigh = middle;
+  }
+  let enableIndex = enableLow;
+  let enabled: string | number = enableIndex === 0 ? 1 : enable[enableIndex - 1]!.value;
+  const enabledAt = (slotStart: number): boolean => {
+    while (enableIndex < enable.length && enable[enableIndex]!.start <= slotStart) {
+      enabled = enable[enableIndex]!.value;
+      enableIndex += 1;
+    }
+    return normalizeEnabled(enabled);
+  };
+  const tokenAt = (cycle: number, allowAdvance: boolean): string => {
+    const slotStart = Math.floor(cycle / generator.period) * generator.period;
+    const isEnabled = allowAdvance ? enabledAt(slotStart) : normalizeEnabled(enableValueAt(slotStart));
+    const pulseSlot = slotStart < generator.start ? -1 : (slotStart - generator.start) / generator.period;
+    const active = slotStart >= generator.start && isEnabled && !suppressed.has(pulseSlot);
+    return active ? (pattern[cycle - slotStart] ?? staticLevel) : staticLevel;
+  };
+  const endLevel = (token: string, previous: 0 | 1): 0 | 1 => token === "p" ? 0 : token === "n" ? 1 : token === "0" || token === "1" ? Number(token) as 0 | 1 : previous;
+  let level: 0 | 1 = Number(generator.initial) as 0 | 1;
+  if (firstCycle > 0) level = endLevel(tokenAt(firstCycle - 1, false), level);
+  const initial = level;
+  const wave: string[] = [];
+  for (const cycle of sourceCycles) {
+    const token = tokenAt(cycle, true);
+    if (token === "0" || token === "1") {
+      const target = Number(token) as 0 | 1;
+      wave.push(level === target ? "." : token);
+    } else wave.push(token);
+    const emitted = wave[wave.length - 1]!;
+    level = endLevel(emitted, level);
+  }
+  return {
+    wave: wave.join(""),
+    ...(generator.phase === 0 ? {} : { phase: generator.phase }),
+    clock: { expanded: true, polarity: generator.polarity, initial },
+  };
 }
 
 function expandedClockToWaveJson(signal: ClockSignal, cycleCount: number, gaps: readonly number[] | undefined): WaveJsonSignal {

@@ -126,6 +126,51 @@ describe("waveform provider primary geometry readiness", () => {
     expect(findSourceAnchorGeometry(boundedMap, sourceAnchor, displayCycle)?.point.x).toBe(100.5);
   });
 
+  it("projects a folded live Clock from canonical source cycles and publishes source-domain geometry", async () => {
+    const base = canonicalFixture();
+    const clockId = base.timeline.referenceClock!;
+    const document = {
+      ...base,
+      timeline: { ...base.timeline, cycleCount: 12, end: 12 },
+      signals: base.signals.map((signal) => signal.id === clockId && signal.type === "clock"
+        ? { ...signal, generator: { ...signal.generator, period: 4, start: 4 } }
+        : signal),
+      timeGroups: [{ id: "fold" as never, name: "Fold", start: 2, end: 4, presentation: { collapsed: true, foldStyle: "axis-break" as const, foldLabel: "2 cycles" } }],
+    };
+    const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+    const rendered: WaveJsonSignal[] = [];
+    const geometryRegistry = new GeometryRegistry();
+    const adapter: WaveDromAdapter = {
+      toWaveJson: (source) => toWaveJson(source),
+      renderWave: vi.fn(async (signalId, waveJson) => {
+        rendered.push(waveJson);
+        return { signalId, ownerKey: signalId, svg: {} as SVGSVGElement, renderIndex: 0, waveJson };
+      }),
+      extractLocalGeometry: vi.fn(() => { throw new Error("SVG extraction is not used in analytic mode."); }),
+      geometryMetrics: () => ({ last: undefined, totalDurationMs: 0, totalUsesVisited: 0, totalGeometryEntriesEmitted: 0, totalDuplicateKeyChecks: 0, totalDuplicateKeyCollisions: 0, totalTransitionBrickLookups: 0, totalSkinPathParses: 0, totalMatrixReads: 0 }),
+      dispose: vi.fn(),
+      metrics: () => ({ renderCalls: 1, waveJsonDurationMs: 0, renderDurationMs: 0, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 1, mounts: 1, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 1, allocatedRenderIndices: 1 }),
+    };
+    const provider = createWaveformSurfaceProvider({
+      sessionController: { snapshot: () => ({ document, revision: 0 }) },
+      getDocumentEpoch: () => 1,
+      mappingCache: new DisplayTimeMappingCache(),
+      adapter,
+      geometryRegistry,
+      markOpenPhase: vi.fn(),
+      invalidateSnapIndex: vi.fn(),
+      getViewMode: () => "Cycle",
+    });
+    await provider.mountWaveBatch!([{ signalId: clockId, owner: { style: { removeProperty: vi.fn() }, dataset: {}, isConnected: true } as unknown as HTMLElement, documentEpoch: 1 }]);
+
+    expect(mapping.displayCycleCount).toBe(10);
+    expect(rendered[0]).toMatchObject({ wave: "..1.0.1.0.", geometryCycleDomain: "source", clock: { expanded: true } });
+    expect(rendered[0]!.geometrySourceCycles).toEqual([0, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    const clockGeometry = geometryRegistry.maps.get(clockId);
+    expect(clockGeometry?.cycleKeyDomain).toBe("source");
+    expect(findSourceAnchorGeometry(clockGeometry!, { signalId: clockId, cycle: 4, point: "cycle-start" }, mapping.sourceToDisplay(4)!)).toBeDefined();
+  });
+
   it("captures one presentation metrics generation after reference geometry refresh", async () => {
     const document = generatePerformanceDocument({ signalCount: 2, cycleCount: 10 });
     const referenceSignalId = document.timeline.referenceClock!;
