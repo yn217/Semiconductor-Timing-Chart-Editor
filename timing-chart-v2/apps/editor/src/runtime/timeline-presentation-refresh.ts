@@ -44,7 +44,7 @@ export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDo
   // vertically); the grid spans the Transaction lanes instead.
   const standaloneTransaction = grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction";
   const gridHeight = standaloneTransaction ? (grid.parentElement?.querySelector<HTMLElement>(".transaction-lanes")?.offsetHeight ?? 0) : totalHeight;
-  renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, gridHeight, sharedMetrics?.mapping ?? mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), sharedMetrics?.presentationScale ?? screenGeometryScale, timeAxis.mode, grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? cyclesPerTc : 1);
+  renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, gridHeight, sharedMetrics?.mapping ?? mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), sharedMetrics?.presentationScale ?? screenGeometryScale, timeAxis.mode, grid.closest<HTMLElement>("[data-view-mode]")?.dataset.viewMode === "Transaction" ? cyclesPerTc : 1, sharedMetrics);
 }
 
 export function refreshRulerAndGridIfNeeded(isInitialized: () => boolean, refreshRuler: () => void, refreshGrid: () => void): void {
