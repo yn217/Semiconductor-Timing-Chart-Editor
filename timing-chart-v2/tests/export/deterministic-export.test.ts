@@ -1290,4 +1290,17 @@ describe("deterministic document export", () => {
     expect(scene.labels.filter((label) => label.kind === "signal")).toHaveLength(3);
     expect(scene.height).toBe(flat.height);
   });
+
+  it("places cycle-center / cycle-end anchors on the same boundary as the live geometry and stacks fully overlapping Measurements on distinct lanes (#866)", () => {
+    const base = scaleFixture(2);
+    const signalId = base.signals[0]!.id;
+    const measurement = (id: string) => ({ id: id as AnnotationId, type: "measurement" as const, label: id, visible: true, start: { signalId, cycle: 3, point: "cycle-start" as const }, end: { signalId, cycle: 3, point: "cycle-end" as const }, measurementLayout: { arrowLayout: "inward" as const, startMarker: "arrow" as const, endMarker: "arrow" as const, extensionLines: "start" as const } });
+    const scene = buildExportScene({ ...base, annotations: [measurement("m_a"), measurement("m_b"), { id: "m_center" as AnnotationId, type: "marker" as const, label: "c", visible: true, anchor: { signalId, cycle: 3, point: "cycle-center" as const } }] }, { format: "svg", scope: "document" });
+    const [first, second] = ["m_a", "m_b"].map((id) => scene.annotations.find((annotation) => annotation.id === id)!);
+    const cycleWidth = second!.x2 - second!.x1;
+    expect(cycleWidth).toBeGreaterThan(0);
+    expect(first!.measurementLane).not.toBe(second!.measurementLane);
+    const center = scene.annotations.find((annotation) => annotation.id === "m_center")!;
+    expect(center.x1 - first!.x1).toBeCloseTo(cycleWidth / 2, 5);
+  });
 });

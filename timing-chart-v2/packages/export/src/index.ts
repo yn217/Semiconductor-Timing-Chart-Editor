@@ -387,7 +387,9 @@ function anchorPoint(annotation: Annotation, field: "anchor" | "start" | "end" |
   const signalId = anchor.signalId ?? document.timeline.referenceClock;
   const displayCycle = toDisplayCycle(mapping, anchor.cycle, "floor");
   const fraction = anchorTransitionFraction(anchor);
-  const thresholdOffset = fraction === undefined ? 0 : Math.max(0, Math.min(1, fraction));
+  // Semantic cycle points resolve to the same boundary the live geometry map reports: start = 0, center = 1/2, end = 1 cycle.
+  const cyclePointOffset = anchor.point === "cycle-center" ? 0.5 : anchor.point === "cycle-end" ? 1 : 0;
+  const thresholdOffset = fraction === undefined ? cyclePointOffset : Math.max(0, Math.min(1, fraction));
   return { x: LABEL_WIDTH + (displayCycle + thresholdOffset) * cycleWidth - start * cycleWidth + (anchor.offset?.x ?? 0), y: ((signalId ? rowY.get(signalId) : undefined) ?? 48) + (anchor.offset?.y ?? 0) };
 }
 
