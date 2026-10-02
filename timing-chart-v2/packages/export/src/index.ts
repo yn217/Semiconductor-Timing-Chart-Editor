@@ -760,14 +760,25 @@ function* buildExportSceneSteps(document: CanonicalDocument, settings: ExportSet
       for (let cycle = startCycle; cycle <= endCycle; cycle += 1) {
         if (checkpoint()) yield;
         const sourceCycle = cycle + offset;
-        if (sourceCycle < 0 || sourceCycle > document.timeline.cycleCount) continue;
-        const displayCycle = toDisplayPosition(mapping, sourceCycle);
-        if (displayCycle < range.start || displayCycle > range.end) continue;
-        // WaveJSON slots are in the rendered display domain. For identity
-        // windows this is also source time; for folded exports, using the
-        // source cycle here reads the wrong slot after a collapsed interval.
-        const localDisplayCycle = displayCycle - sourceWave.windowStart;
-        points.push({ x: LABEL_WIDTH + (displayCycle - range.start) * cycleWidth, y: traceYForWaveToken((traceTokens[Math.max(0, Math.min(traceTokens.length - 1, Math.floor(localDisplayCycle / tracePeriod)))] ?? "0"), rowY.get(sourceWave.signal.id) ?? first.y, sourceWave.height) });
+        if (sourceCycle >= 0 && sourceCycle <= document.timeline.cycleCount) {
+          const displayCycle = toDisplayPosition(mapping, sourceCycle);
+          if (displayCycle >= range.start && displayCycle <= range.end) {
+            // WaveJSON slots are in the rendered display domain. For identity
+            // windows this is also source time; for folded exports, using the
+            // source cycle here reads the wrong slot after a collapsed interval.
+            const localDisplayCycle = displayCycle - sourceWave.windowStart;
+            const y = traceYForWaveToken((traceTokens[Math.max(0, Math.min(traceTokens.length - 1, Math.floor(localDisplayCycle / tracePeriod)))] ?? "0"), rowY.get(sourceWave.signal.id) ?? first.y, sourceWave.height);
+            const point = { x: LABEL_WIDTH + (displayCycle - range.start) * cycleWidth, y };
+            const previousPoint = points[points.length - 1];
+            if (previousPoint?.x !== point.x || previousPoint.y !== point.y) points.push(point);
+          }
+        }
+        // Every source sample inside one collapsed group resolves to the same
+        // display boundary and WaveJSON slot, hence the same Ghost Trace point.
+        // Skip the hidden source span in one step instead of walking up to the
+        // entire fold length for a narrow selected-range export.
+        const collapsedGroup = mapping.collapsedGroupAtSource(sourceCycle);
+        if (collapsedGroup) cycle = Math.max(cycle, Math.ceil(collapsedGroup.end - offset) - 1);
       }
       tracePoints = points.length > 1 ? points : undefined;
     }

@@ -564,7 +564,7 @@ describe("deterministic document export", () => {
     ]);
   });
 
-  it("yields while sampling a long folded Ghost Trace without changing SVG bytes", async () => {
+  it("skips redundant samples in a long collapsed Ghost Trace while preserving its visible path", async () => {
     const base = canonicalFixture();
     const source = base.signals[1]!;
     const document = {
@@ -577,7 +577,10 @@ describe("deterministic document export", () => {
     const scene = buildExportScene(document, { format: "svg", ...settings });
     const expected = renderExportSvg(scene);
     const sourceWave = scene.waveforms.find((wave) => wave.signalId === document.annotations[0]!.sourceSignalId)!;
+    const trace = scene.annotations.find((annotation) => annotation.id === "ann_long_folded_ghost")!.tracePoints!;
     expect(JSON.parse(sourceWave.waveJson).wave).toHaveLength(scene.ruler.end - scene.ruler.start);
+    expect(trace.map((point) => point.x)).toEqual([0, 1, 2, 3].map((displayCycle) => scene.ruler.x + displayCycle * scene.ruler.cycleWidth));
+    expect(trace).toHaveLength(4);
     const service = new DeterministicExportService();
     const yieldTask = vi.fn(async () => undefined);
     let now = 0;
@@ -585,7 +588,7 @@ describe("deterministic document export", () => {
     vi.stubGlobal("scheduler", { yield: yieldTask });
     try {
       const actual = new TextDecoder().decode(await service.export({ format: "svg", snapshot: { revision: 0, document }, settings }));
-      expect(yieldTask.mock.calls.length).toBeGreaterThan(10);
+      expect(yieldTask.mock.calls.length).toBeLessThan(10);
       expect(actual).toBe(expected);
     } finally {
       performanceNow.mockRestore();
@@ -642,12 +645,13 @@ describe("deterministic document export", () => {
 
     // Source cycles 2..4 are hidden and floor-map to display cycle 1;
     // cycle 5 maps to the inclusive selected-range right endpoint (2).
-    expect(ghost?.tracePoints).toEqual(fullGhost?.tracePoints?.filter((point) => point.x <= scene.ruler.x + scene.ruler.cycleWidth * 2));
+    // The hidden points are identical duplicates, so the selected-range path
+    // is compared with the full path after only consecutive duplicate removal.
+    const fullVisiblePath = fullGhost?.tracePoints?.filter((point) => point.x <= scene.ruler.x + scene.ruler.cycleWidth * 2)
+      .filter((point, index, points) => index === 0 || point.x !== points[index - 1]!.x || point.y !== points[index - 1]!.y);
+    expect(ghost?.tracePoints).toEqual(fullVisiblePath);
     expect(ghost?.tracePoints?.map((point) => point.x)).toEqual([
       scene.ruler.x,
-      scene.ruler.x + scene.ruler.cycleWidth,
-      scene.ruler.x + scene.ruler.cycleWidth,
-      scene.ruler.x + scene.ruler.cycleWidth,
       scene.ruler.x + scene.ruler.cycleWidth,
       scene.ruler.x + scene.ruler.cycleWidth * 2,
     ]);
