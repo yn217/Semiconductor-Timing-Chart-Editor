@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { validateCanonicalDocument } from "@timing-chart-v2/schema";
-import type { AnnotationType, CanonicalDocument } from "@timing-chart-v2/schema";
+import { ANNOTATION_TYPES, validateCanonicalDocument } from "@timing-chart-v2/schema";
+import type { CanonicalDocument } from "@timing-chart-v2/schema";
 
 // #777: samples/current-v2/*.tcd.json is the "current specification" reference pack -- distinct from the
 // immutable Legacy V1 Golden fixtures (samples/01-20), which stay formatVersion 1 and prove migration, not
@@ -10,19 +10,6 @@ import type { AnnotationType, CanonicalDocument } from "@timing-chart-v2/schema"
 // the schema or the issue's own required coverage, instead of the mistake surfacing only much later as a
 // stale-sample bug report.
 const SAMPLES_DIR = path.resolve(import.meta.dirname, "../../samples/current-v2");
-
-// Every AnnotationType the schema currently defines -- kept in one place (types.ts) and read here via the
-// exported union rather than duplicated as a literal list, per the issue's own "derive from the schema
-// rather than duplicating a hard-coded second specification" instruction. TypeScript enforces this list
-// stays a superset of the real union at compile time (an added/removed AnnotationType member that isn't
-// reflected here fails `tsc -b`, since `satisfies readonly AnnotationType[]` requires an exact type match
-// is not required, but any narrowing/widening mismatch against the declared array literal type is caught).
-const ALL_ANNOTATION_TYPES = ["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency", "timingRegion", "ghostTrace", "rectangle", "ellipse", "connector", "textbox"] as const satisfies readonly AnnotationType[];
-// Compile-time check that the literal list above is not missing any current AnnotationType member: if the
-// schema's union grows, this line fails to typecheck until the literal list is updated to match.
-type AssertAllAnnotationTypesCovered = AnnotationType extends (typeof ALL_ANNOTATION_TYPES)[number] ? true : ["missing AnnotationType member(s) in ALL_ANNOTATION_TYPES -- update the literal list to match packages/schema/src/types.ts"];
-const _assertAllAnnotationTypesCovered: AssertAllAnnotationTypesCovered = true;
-void _assertAllAnnotationTypesCovered;
 
 function loadFixture(name: string): CanonicalDocument {
   const text = fs.readFileSync(path.join(SAMPLES_DIR, name), "utf8");
@@ -71,7 +58,14 @@ describe("#777 current-v2 sample pack drift guard", () => {
   it("01_cycle_reference contains every currently-defined AnnotationType", () => {
     const document = loadFixture("01_cycle_reference.tcd.json");
     const present = new Set(document.annotations.map((annotation) => annotation.type));
-    for (const type of ALL_ANNOTATION_TYPES) expect(present.has(type), `01_cycle_reference is missing annotation type ${type} -- every current AnnotationType must be represented so this fixture proves the full enum loads without validation/runtime errors`).toBe(true);
+    for (const type of ANNOTATION_TYPES) expect(present.has(type), `01_cycle_reference is missing annotation type ${type} -- every current AnnotationType must be represented so this fixture proves the full enum loads without validation/runtime errors`).toBe(true);
+  });
+
+  it("keeps the published JSON Schema Annotation enum aligned with the schema-owned runtime registry", () => {
+    const schema = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, "../../packages/schema/src/canonical-document.schema.json"), "utf8")) as {
+      $defs?: { annotation?: { properties?: { type?: { enum?: readonly string[] } } } };
+    };
+    expect(schema.$defs?.annotation?.properties?.type?.enum).toEqual(ANNOTATION_TYPES);
   });
 
   it("uses a conventional 50% duty cycle for the current-v2 AXI reference clock", () => {
