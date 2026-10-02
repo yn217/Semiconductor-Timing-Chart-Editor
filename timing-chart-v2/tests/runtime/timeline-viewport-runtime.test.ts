@@ -47,4 +47,30 @@ describe("TimelineViewportRuntime", () => {
     runtime.refreshRuler();
     expect(runtimeContext.render.requestRender).not.toHaveBeenCalled();
   });
+
+  it("drops a pending cycle reveal when the document epoch changes before renderer idle", async () => {
+    let currentEpoch = 1;
+    let resolveIdle!: () => void;
+    const runtimeContext = context();
+    runtimeContext.lifecycle.isCurrentEpoch = (epoch) => epoch === currentEpoch;
+    runtimeContext.geometry.sourceBoundaryToLocalX = () => undefined;
+    runtimeContext.geometry.requestSourceCycle = vi.fn();
+    runtimeContext.geometry.clearRequestedSourceCycle = vi.fn();
+    runtimeContext.viewport.setScrollState = vi.fn();
+    runtimeContext.render.waitForRendererIdle = () => new Promise<void>((resolve) => { resolveIdle = resolve; });
+    const runtime = createTimelineViewportRuntime(runtimeContext);
+    runtime.attach();
+
+    runtime.navigateToCycle(148);
+    expect(runtimeContext.geometry.requestSourceCycle).toHaveBeenCalledWith(148);
+    expect(runtimeContext.viewport.setScrollState).not.toHaveBeenCalled();
+
+    currentEpoch = 2;
+    runtime.onDocumentEpochChanged(2);
+    resolveIdle();
+    await Promise.resolve();
+
+    expect(runtimeContext.viewport.setScrollState).not.toHaveBeenCalled();
+    expect(runtimeContext.geometry.clearRequestedSourceCycle).not.toHaveBeenCalled();
+  });
 });

@@ -153,16 +153,25 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
     navigateToCycle: (cycle) => {
       assertActive();
       if (!attached) return;
+      const requestEpoch = documentEpoch;
       const document = context.document.getSnapshot();
       let retries = 0;
       const maxRetries = 8;
+      const isRequestCurrent = () => attached
+        && !disposed
+        && documentEpoch === requestEpoch
+        && context.lifecycle.isCurrentEpoch(requestEpoch);
       const move = () => {
+        // Renderer-idle callbacks can outlive the document that initiated a
+        // Bookmark reveal. Never apply an old source-cycle target to a newly
+        // opened/replaced document.
+        if (!isRequestCurrent()) return;
         const localX = context.geometry.sourceBoundaryToLocalX(document, cycle);
         if (localX === undefined) {
           if (retries++ >= maxRetries) return;
           context.geometry.requestSourceCycle(cycle);
           render("navigate-cycle-retry");
-          const retry = () => { if (attached) void context.render.waitForRendererIdle().then(move); };
+          const retry = () => { if (isRequestCurrent()) void context.render.waitForRendererIdle().then(move); };
           if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(retry);
           else globalThis.setTimeout(retry, 0);
           return;
