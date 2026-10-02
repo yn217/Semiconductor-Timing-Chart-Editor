@@ -176,7 +176,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     let markOpenPhase: (phase: string, timestamp?: number) => void = () => undefined;
     const openPhaseTracker = createOpenPhaseTracker(rendererHost, undefined, () => {
       input.application.runPendingTimingDiagnostics(() => markOpenPhase("diagnostics-ready"));
-    });
+    }, () => { const openDocument = sessionController.snapshot().document; return openDocument.timeline.referenceClock === undefined && !openDocument.signals.some((signal) => signal.type === "clock"); });
     markOpenPhase = openPhaseTracker.mark;
     const beginOpenMeasurement = openPhaseTracker.begin;
     // Direct reload/startup has no File Open command to begin the phase
