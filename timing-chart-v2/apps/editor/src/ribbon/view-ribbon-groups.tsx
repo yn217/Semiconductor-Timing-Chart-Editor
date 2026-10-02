@@ -34,8 +34,8 @@ export function buildViewRibbonGroups(context: ViewRibbonContext): readonly Ribb
     },
     {
       id: "view-panels", majorGroup: "Panels", caption: "Panels", items: [
-        { kind: "custom", id: "panel-inspector", render: () => <DsRibbonToggleButton key="panel-inspector" ariaLabel="Inspector" checked={inspectorVisible} icon={<RibbonIcon name="i-settings" />} onClick={onToggleInspector}>Inspector</DsRibbonToggleButton> },
-        { kind: "custom", id: "panel-bottom", render: () => <DsRibbonToggleButton key="panel-bottom" ariaLabel="Bottom Editor" checked={bottomVisible} icon={<RibbonIcon name="i-preview" />} onClick={onToggleBottom}><span>Bottom</span><span>Editor</span></DsRibbonToggleButton> },
+        { kind: "custom", id: "panel-inspector", render: () => <DsRibbonToggleButton key="panel-inspector" ariaLabel="Inspector" checked={inspectorVisible} icon={<RibbonIcon name="i-panel-right" />} onClick={onToggleInspector}>Inspector</DsRibbonToggleButton> },
+        { kind: "custom", id: "panel-bottom", render: () => <DsRibbonToggleButton key="panel-bottom" ariaLabel="Bottom Editor" checked={bottomVisible} icon={<RibbonIcon name="i-panel-bottom" />} onClick={onToggleBottom}><span>Bottom</span><span>Editor</span></DsRibbonToggleButton> },
         // #431 P0-1: Bottom Panel Hidden/Compact/Expanded -- Hidden stays
         // the existing "Bottom Editor" toggle above (unchanged behavior,
         // unchanged tests); these two presets cover the other half without
@@ -47,10 +47,10 @@ export function buildViewRibbonGroups(context: ViewRibbonContext): readonly Ribb
         // when the panel is visible AND already exactly at that height,
         // not merely "closest to" (a manual drag in between shows neither
         // as selected, which is correct -- it's neither preset anymore).
-        { kind: "custom", id: "bottom-size-compact", render: () => <DsRibbonToggleButton key="bottom-size-compact" dataTestId="view-panel-bottom-compact" ariaLabel="Bottom Compact" checked={bottomVisible && bottomHeight === 180} icon={<RibbonIcon name="i-preview" />} onClick={() => onSetBottomSize("compact")}>Compact</DsRibbonToggleButton> },
-        { kind: "custom", id: "bottom-size-expanded", render: () => <DsRibbonToggleButton key="bottom-size-expanded" dataTestId="view-panel-bottom-expanded" ariaLabel="Bottom Expanded" checked={bottomVisible && bottomHeight === 420} icon={<RibbonIcon name="i-preview" />} onClick={() => onSetBottomSize("expanded")}>Expanded</DsRibbonToggleButton> },
-        { kind: "custom", id: "panel-tree", render: () => <DsRibbonToggleButton key="panel-tree" dataTestId="view-panel-tree" ariaLabel="Signal Tree" checked={signalTreeVisible} icon={<RibbonIcon name="i-group" />} onClick={onToggleSignalTree}>Signal Tree</DsRibbonToggleButton> },
-        { kind: "custom", id: "panel-minimap", render: () => <DsRibbonToggleButton key="panel-minimap" dataTestId="view-panel-minimap" ariaLabel="MiniMap" checked={minimapEnabled} icon={<RibbonIcon name="i-preview" />} onClick={onToggleMinimap}>MiniMap</DsRibbonToggleButton> },
+        { kind: "custom", id: "bottom-size-compact", render: () => <DsRibbonToggleButton key="bottom-size-compact" dataTestId="view-panel-bottom-compact" ariaLabel="Bottom Compact" checked={bottomVisible && bottomHeight === 180} icon={<RibbonIcon name="i-panel-bottom-compact" />} onClick={() => onSetBottomSize("compact")}>Compact</DsRibbonToggleButton> },
+        { kind: "custom", id: "bottom-size-expanded", render: () => <DsRibbonToggleButton key="bottom-size-expanded" dataTestId="view-panel-bottom-expanded" ariaLabel="Bottom Expanded" checked={bottomVisible && bottomHeight === 420} icon={<RibbonIcon name="i-panel-bottom-expanded" />} onClick={() => onSetBottomSize("expanded")}>Expanded</DsRibbonToggleButton> },
+        { kind: "custom", id: "panel-tree", render: () => <DsRibbonToggleButton key="panel-tree" dataTestId="view-panel-tree" ariaLabel="Signal Tree" checked={signalTreeVisible} icon={<RibbonIcon name="i-panel-left" />} onClick={onToggleSignalTree}>Signal Tree</DsRibbonToggleButton> },
+        { kind: "custom", id: "panel-minimap", render: () => <DsRibbonToggleButton key="panel-minimap" dataTestId="view-panel-minimap" ariaLabel="MiniMap" checked={minimapEnabled} icon={<RibbonIcon name="i-minimap" />} onClick={onToggleMinimap}>MiniMap</DsRibbonToggleButton> },
         // Named "Signal Split" (not just "Split") specifically to stay
         // distinct from the unrelated Cycle/Transaction/Split ViewMode tab
         // group -- this toggles two independent-scroll viewports over the
