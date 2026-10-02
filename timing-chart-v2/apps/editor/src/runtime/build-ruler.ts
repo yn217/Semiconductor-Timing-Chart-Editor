@@ -78,6 +78,8 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
       const item = element.ownerDocument.createElement("span");
       item.className = "time-outline-item";
       item.dataset.outlineTimeGroupId = group.id;
+      item.dataset.geometrySourceCycle = String(sourceOfDisplay(startDisplay));
+      item.dataset.geometryEndSourceCycle = String(sourceOfDisplay(endDisplay));
       item.style.left = `${startPoint.x * scale}px`;
       item.style.width = `${Math.max(18, (endPoint.x - startPoint.x) * scale)}px`;
       const toggle = element.ownerDocument.createElement("button");

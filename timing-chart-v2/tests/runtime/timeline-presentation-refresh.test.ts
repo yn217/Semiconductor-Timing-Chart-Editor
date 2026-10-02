@@ -74,6 +74,28 @@ describe("Open ruler/grid readiness", () => {
     expect(owner.style.width).toBe("180px");
   });
 
+  it("reapplies TimeGroup outline start and end from the same published generation", () => {
+    const outline = {
+      dataset: { geometrySourceCycle: "2", geometryEndSourceCycle: "6" },
+      style: { left: "stale", width: "stale" },
+    };
+    const ruler = { querySelectorAll: () => [outline], closest: () => undefined } as unknown as HTMLElement;
+    const mapping = {
+      sourceToDisplay: (cycle: number) => cycle,
+      sourceCycleCount: 10,
+    } as never;
+    const metrics = Object.freeze({
+      generation: 14,
+      mapping,
+      sourceBoundaryToContentX: (cycle: number) => 30 + cycle * 12,
+    }) as never;
+
+    applyPublishedTimeAxisMetrics(ruler, undefined, metrics);
+
+    expect(outline.style.left).toBe("54px");
+    expect(outline.style.width).toBe("48px");
+  });
+
   it("projects both range boundaries and zoom from one captured metrics generation", () => {
     const element = () => ({ hidden: true, dataset: {} as Record<string, string>, style: {} as Record<string, string>, setAttribute: vi.fn() });
     const band = element();

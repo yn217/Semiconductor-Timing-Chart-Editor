@@ -15,7 +15,13 @@ export function applyPublishedTimeAxisMetrics(ruler: HTMLElement, viewport: HTML
     const cycle = Number(boundary.dataset.geometrySourceCycle);
     if (!Number.isInteger(cycle)) continue;
     const x = metrics.sourceBoundaryToContentX(cycle);
-    if (x !== undefined && Number.isFinite(x)) boundary.style.left = `${x}px`;
+    if (x === undefined || !Number.isFinite(x)) continue;
+    boundary.style.left = `${x}px`;
+    const endCycle = Number(boundary.dataset.geometryEndSourceCycle);
+    if (Number.isInteger(endCycle)) {
+      const endX = metrics.sourceBoundaryToContentX(endCycle);
+      if (endX !== undefined && Number.isFinite(endX)) boundary.style.width = `${Math.max(18, endX - x)}px`;
+    }
   }
   const widthOwner = viewport ?? ruler.closest<HTMLElement>("[data-testid='cycle-viewport']");
   if (!widthOwner || metrics.pxPerDisplayCycle === undefined || metrics.screenOriginX === undefined) return;
