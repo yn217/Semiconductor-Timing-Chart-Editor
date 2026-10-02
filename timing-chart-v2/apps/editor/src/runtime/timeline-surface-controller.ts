@@ -291,7 +291,8 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       getSourceWindow: (owner) => {
         const viewport = timelineScrollOwner(owner.closest<HTMLElement>(".cycle-viewport") ?? viewportElement);
         const document = sessionController.snapshot().document;
-        const localScale = timelineGeometry.presentationScale * timelineNavigation.getZoom();
+        const timeAxisMetrics = timelineGeometry.timeAxisMetrics;
+        const localScale = timeAxisMetrics.presentationScale * timeAxisMetrics.zoom;
         const window = timelineGeometry.sourceWindowForLocalRange(document, viewport.scrollLeft / localScale, (viewport.scrollLeft + viewport.clientWidth) / localScale);
         // Transaction bars are projected from the same Cycle geometry. For a
         // small/medium document, retain boundaries covering the canonical
@@ -405,12 +406,12 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       if (rulerLower.current) refreshPlayheadPresentation(rulerLower.current, selectedCycleRef.current, boundaryToLocalX);
     };
     const refreshRangeSelectionBandNow = () => {
-      refreshRangeBandPresentation(viewportElement, rulerElement, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(sessionController.snapshot().document, cycle), timelineNavigation.getZoom(), timelineOffset(), projection.totalHeight);
+      refreshRangeBandPresentation(viewportElement, rulerElement, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(sessionController.snapshot().document, cycle), timelineGeometry.timeAxisMetrics.zoom, timelineOffset(), projection.totalHeight);
       // Signal Split View (#200): the range band's horizontal extent comes
       // from the one shared time mapping, but its vertical extent must span
       // Lower's OWN row content, not Upper's -- reusing Upper's totalHeight
       // here would stretch/shrink the band to the wrong pane's height.
-      if (viewportLower.current && rulerLower.current && signalSplitRuntimeRef.current) refreshRangeBandPresentation(viewportLower.current, rulerLower.current, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(sessionController.snapshot().document, cycle), timelineNavigation.getZoom(), timelineOffset(), signalSplitRuntimeRef.current.getTotalHeight());
+      if (viewportLower.current && rulerLower.current && signalSplitRuntimeRef.current) refreshRangeBandPresentation(viewportLower.current, rulerLower.current, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(sessionController.snapshot().document, cycle), timelineGeometry.timeAxisMetrics.zoom, timelineOffset(), signalSplitRuntimeRef.current.getTotalHeight());
     };
     refreshRangeSelectionBand.current = refreshRangeSelectionBandNow;
     const refreshRangePreview = () => {
@@ -445,7 +446,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     timelineRender = (reason) => {
       rendererHost.dataset.timelineRefreshReason = reason;
       if (reason === "scroll") {
-        syncRulerScroll(rulerElement, viewportElement, timelineNavigation.getZoom());
+        syncRulerScroll(rulerElement, viewportElement, timelineGeometry.timeAxisMetrics.zoom);
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(() => projectViewportWindow({
           viewport: viewportElement,
@@ -935,7 +936,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
         // scrollable overlay surface. The runtime render path is intentionally
         // coalesced, but ruler alignment must be immediate for pointer/test
         // observers that sample geometry in the same task.
-        syncRulerScroll(rulerElement, viewportElement, timelineNavigation.getZoom());
+        syncRulerScroll(rulerElement, viewportElement, timelineGeometry.timeAxisMetrics.zoom);
         timelineRuntime.onViewportScroll();
       },
       onViewportKeyDown,
